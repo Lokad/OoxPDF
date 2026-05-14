@@ -26,6 +26,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
+    DocxTests.DocxSyntheticParagraphRendersText,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);
