@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj" />
+    <Project Path="src/Lokad.OoxPdf/Lokad.OoxPdf.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj" />
+    <Project Path="tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj" />
+  </Folder>
+</Solution>
