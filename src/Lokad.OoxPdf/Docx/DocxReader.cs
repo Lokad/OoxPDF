@@ -86,6 +86,11 @@ internal sealed class DocxReader
             foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
             {
                 string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
+                if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
+                {
+                    text = "{PAGE}";
+                }
+
                 XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
                 string? characterStyleId = (string?)runProperties?
                     .Element(WordprocessingNamespace + "rStyle")
@@ -104,6 +109,15 @@ internal sealed class DocxReader
                 }
 
                 images.AddRange(ReadInlineImages(run, package, relationships));
+            }
+
+            foreach (XElement field in paragraph.Elements(WordprocessingNamespace + "fldSimple"))
+            {
+                string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
+                if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null));
+                }
             }
 
             if (runs.Count > 0 || images.Count > 0)

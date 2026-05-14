@@ -42,6 +42,7 @@ internal sealed class DocxRenderer
         IReadOnlyList<int> glyphs = allRuns
             .SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value))
             .Concat(tableRunes)
+            .Concat("0123456789".EnumerateRunes().Select(rune => rune.Value))
             .ToArray();
         if (glyphs.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
         {
@@ -60,10 +61,11 @@ internal sealed class DocxRenderer
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
         void FinishPage()
         {
+            int pageNumber = pages.Count + 1;
             if (embedded is not null)
             {
-                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, x, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d));
-                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, x, width, Math.Max(18d, document.MarginBottomPoints / 2d));
+                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, x, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d), pageNumber);
+                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, x, width, Math.Max(18d, document.MarginBottomPoints / 2d), pageNumber);
             }
 
             IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
@@ -166,7 +168,8 @@ internal sealed class DocxRenderer
         PdfEmbeddedFont embedded,
         double x,
         double width,
-        double startY)
+        double startY,
+        int pageNumber)
     {
         double cursorY = startY;
         foreach (DocxParagraph paragraph in paragraphs)
@@ -177,7 +180,7 @@ internal sealed class DocxRenderer
             }
 
             double fontSize = Math.Min(12d, paragraph.Runs.Max(r => r.FontSize));
-            string text = string.Concat(paragraph.Runs.Select(r => r.Text));
+            string text = string.Concat(paragraph.Runs.Select(r => r.Text)).Replace("{PAGE}", pageNumber.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
             DocxTextRun firstRun = paragraph.Runs[0];
             RgbColor color = ReadColor(firstRun.ColorHex);
             double lineWidth = embedded.MeasureTextPoints(text, fontSize);
