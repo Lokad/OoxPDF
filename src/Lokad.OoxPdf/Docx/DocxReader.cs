@@ -162,10 +162,11 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual column break");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "keepLines").Any() ||
+        if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
+            document.Descendants(WordprocessingNamespace + "keepLines").Any() ||
             document.Descendants(WordprocessingNamespace + "widowControl").Any())
         {
-            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "paragraph keep-lines/widow-orphan rule");
+            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "paragraph keep/widow-orphan rule");
         }
 
         if (document.Descendants(WordprocessingNamespace + "pPr").Elements(WordprocessingNamespace + "sectPr").Any())
@@ -272,7 +273,6 @@ internal sealed class DocxReader
             resolvedParagraph.SpacingAfterPoints ?? 6d,
             resolvedParagraph.LineSpacingFactor ?? 1.25d,
             resolvedParagraph.LineSpacingPoints,
-            resolvedParagraph.KeepWithNext ?? false,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
     }
 
@@ -708,8 +708,7 @@ internal sealed class DocxReader
             }
         }
 
-        bool? keepWithNext = ReadOnOff(properties?.Element(WordprocessingNamespace + "keepNext"));
-        return new DocxResolvedParagraphProperties(alignment, before, after, lineFactor, linePoints, keepWithNext);
+        return new DocxResolvedParagraphProperties(alignment, before, after, lineFactor, linePoints);
     }
 
     private static DocxTextAlignment? ReadAlignment(XElement? properties)
@@ -805,7 +804,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>());
     }
@@ -828,8 +827,7 @@ internal sealed class DocxReader
         double? SpacingBeforePoints,
         double? SpacingAfterPoints,
         double? LineSpacingFactor,
-        double? LineSpacingPoints,
-        bool? KeepWithNext)
+        double? LineSpacingPoints)
     {
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -838,8 +836,7 @@ internal sealed class DocxReader
                 other.SpacingBeforePoints ?? SpacingBeforePoints,
                 other.SpacingAfterPoints ?? SpacingAfterPoints,
                 other.LineSpacingFactor ?? LineSpacingFactor,
-                other.LineSpacingPoints ?? LineSpacingPoints,
-                other.KeepWithNext ?? KeepWithNext);
+                other.LineSpacingPoints ?? LineSpacingPoints);
         }
     }
 
