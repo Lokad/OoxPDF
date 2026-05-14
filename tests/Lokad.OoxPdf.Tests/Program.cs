@@ -30,6 +30,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
+    PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,

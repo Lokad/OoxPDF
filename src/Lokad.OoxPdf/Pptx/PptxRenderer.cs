@@ -673,8 +673,22 @@ internal sealed class PptxRenderer
                 TextAlignment alignment = ReadAlignment(paragraph);
                 double cursorX = textX;
                 double maxFontSize = 18d;
-                foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
+                foreach (XElement child in paragraph.Elements())
                 {
+                    if (child.Name == DrawingNamespace + "br")
+                    {
+                        cursorY -= maxFontSize * 1.2d;
+                        cursorX = textX;
+                        maxFontSize = 18d;
+                        continue;
+                    }
+
+                    if (child.Name != DrawingNamespace + "r")
+                    {
+                        continue;
+                    }
+
+                    XElement run = child;
                     string text = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
                     if (text.Length == 0)
                     {

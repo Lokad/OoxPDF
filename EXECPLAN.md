@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets and line breaks, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
 - [x] PNG support covers Adam7 interlaced RGBA images.
@@ -132,7 +132,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 ## Next Implementation Targets
 
 1. Continue DOCX page geometry/pagination work: resolve page-height rounding, replace fixed table row height with row-height semantics, and add diagnostics for unsupported pagination controls.
-2. Continue PPTX text spacing and text-frame layout fixes: preserve line breaks/tabs, paragraph spacing, vertical anchoring, autofit, and clipping.
+2. Continue PPTX text spacing and text-frame layout fixes: preserve tabs, paragraph spacing, vertical anchoring, autofit, and clipping.
 3. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
 5. Improve diagnostics severity so visible-content omissions are release-blocking.
@@ -159,7 +159,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-50 passed, 0 failed
+51 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.
