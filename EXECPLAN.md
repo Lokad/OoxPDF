@@ -183,6 +183,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Bullet glyph placement, hanging indents, and continuation-line alignment are now covered by a public synthetic fixture before using private slide-1 evidence.
   - `pptx-ladder-04-serif-title-underline` at `artifacts/visual/pptx-ladder-04-serif-title-underline/20260514-224715`: page count and dimensions matched, diagnostics were empty, MAE `0.481747`, changed-pixel ratio threshold 16 `0.005513`.
   - Large centered serif text over a dark background and underlined mixed-run text are now covered by a public synthetic fixture before using private slide-1 evidence.
+  - `pptx-ladder-04-mixed-paragraph-stack` at `artifacts/visual/pptx-ladder-04-mixed-paragraph-stack/20260514-225350`: page count and dimensions matched, diagnostics were empty, MAE `3.041919`, changed-pixel ratio threshold 16 `0.027087`.
+  - This fixture is intentionally not gated yet. It exposes remaining Ladder 4 gaps in multi-paragraph vertical rhythm, mixed large/small text stacks, and exact serif text metrics; a broad default line-spacing change was rejected because it regressed existing text tests and worsened this fixture.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -247,7 +249,7 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - [x] Ladder 1: solid slide backgrounds and master/layout background inheritance in isolation.
 - [x] Ladder 2: one plain text box with fixed bounds, one font size, one font family, no wrapping, and baseline locked against reference.
 - [x] Ladder 3: text wrapping with preserved spaces, explicit line breaks, tabs, paragraph alignment, body insets, vertical anchor, and overflow behavior.
-- [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs, bullet hanging indents, paragraph spacing, and line spacing.
+- [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs, bullet hanging indents, paragraph spacing, and line spacing. Current open substep: split the failing mixed paragraph stack into smaller fixtures for paragraph-to-paragraph vertical advance, mixed font-size stacks, and wrapped bullet continuation before tightening the combined fixture gate.
 - [ ] Ladder 5: basic shapes: rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths, rotation, flips, and clipping-free z-order.
 - [ ] Ladder 6: preset and connector shapes: arrows, connector endpoints, arrowheads, dashes, line caps/joins, callouts, and common freeform/custom path fallbacks.
 - [ ] Ladder 7: images: JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior, rotation/flip interactions, and unsupported image diagnostics.

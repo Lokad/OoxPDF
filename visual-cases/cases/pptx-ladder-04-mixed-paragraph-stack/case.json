@@ -1,0 +1,14 @@
+{
+  "id": "pptx-ladder-04-mixed-paragraph-stack",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-mixed-paragraph-stack.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "paragraph-stack"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}
