@@ -1,0 +1,13 @@
+{
+  "id": "docx-basic-paragraphs",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-basic-paragraphs.docx",
+  "dpi": 144,
+  "tags": ["docx", "paragraphs", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

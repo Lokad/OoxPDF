@@ -39,11 +39,18 @@ Supported:
 
 - Document package discovery.
 - Basic page size extraction.
-- Blank PDF page output for simple documents.
+- Page margin extraction.
+- Basic body paragraphs and text runs.
+- Document defaults, paragraph styles, and character styles for common run and paragraph properties.
+- Simple paragraph page breaking.
+
+Partial or approximated:
+
+- Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
+- Bold and italic are PDF drawing approximations and do not yet select matching font faces.
 
 Unsupported or ignored:
 
-- Paragraph text layout.
 - Numbering and lists.
 - Inline images.
 - Tables.

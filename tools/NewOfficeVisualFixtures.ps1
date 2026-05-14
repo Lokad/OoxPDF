@@ -169,6 +169,42 @@ try {
     finally {
         $doc.Close($false)
     }
+
+    $basic = $word.Documents.Add()
+    try {
+        $basic.PageSetup.PageWidth = 612
+        $basic.PageSetup.PageHeight = 792
+        $basic.PageSetup.TopMargin = 72
+        $basic.PageSetup.BottomMargin = 72
+        $basic.PageSetup.LeftMargin = 72
+        $basic.PageSetup.RightMargin = 72
+        $basic.Content.Text = "Quarterly memo`r`nRevenue grew across regions with stable margins.`r`nCentered note"
+
+        $title = $basic.Paragraphs.Item(1).Range
+        $title.Font.Name = "Arial"
+        $title.Font.Size = 24
+        $title.Font.Bold = $true
+        $title.Font.Color = Rgb 47 128 237
+        $title.ParagraphFormat.SpaceAfter = 12
+
+        $body = $basic.Paragraphs.Item(2).Range
+        $body.Font.Name = "Arial"
+        $body.Font.Size = 12
+        $body.Font.Color = Rgb 30 30 30
+        $body.ParagraphFormat.SpaceAfter = 12
+
+        $note = $basic.Paragraphs.Item(3).Range
+        $note.Font.Name = "Arial"
+        $note.Font.Size = 14
+        $note.Font.Italic = $true
+        $note.Font.Color = Rgb 39 174 96
+        $note.ParagraphFormat.Alignment = 1
+
+        $basic.SaveAs2((Join-Path $cases "docx-basic-paragraphs.docx"), 16)
+    }
+    finally {
+        $basic.Close($false)
+    }
 }
 finally {
     if ($word -ne $null) {
