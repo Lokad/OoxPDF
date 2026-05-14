@@ -715,12 +715,17 @@ internal sealed class PptxRenderer
                 cursorY -= spacingBefore;
                 double cursorX = paragraphTextX;
                 double maxFontSize = 18d;
+                var paragraphRuns = new List<TextRun>();
+                double paragraphEndX = paragraphTextX;
                 foreach (XElement child in paragraph.Elements())
                 {
                     if (child.Name == DrawingNamespace + "br")
                     {
+                        AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
+                        paragraphRuns.Clear();
                         cursorY -= maxFontSize * lineSpacingFactor;
                         cursorX = paragraphTextX;
+                        paragraphEndX = paragraphTextX;
                         maxFontSize = 18d;
                         continue;
                     }
@@ -769,20 +774,55 @@ internal sealed class PptxRenderer
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        paragraphEndX = Math.Max(paragraphEndX, bulletX + bulletText!.Length * fontSize * 0.42d);
                         bulletPending = false;
                     }
 
                     double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
-                    runs.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
+                    paragraphRuns.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.42d;
+                    paragraphEndX = Math.Max(paragraphEndX, cursorX);
                 }
 
+                AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                 cursorY -= maxFontSize * lineSpacingFactor + spacingAfter;
             }
         }
 
         return runs;
+    }
+
+    private static void AddAlignedParagraphRuns(List<TextRun> runs, List<TextRun> paragraphRuns, TextAlignment alignment, double textX, double textWidth, double paragraphEndX)
+    {
+        if (paragraphRuns.Count == 0)
+        {
+            return;
+        }
+
+        if (paragraphRuns.Count == 1)
+        {
+            runs.AddRange(paragraphRuns);
+            return;
+        }
+
+        double paragraphWidth = Math.Max(0d, paragraphEndX - textX);
+        double offset = alignment switch
+        {
+            TextAlignment.Center => Math.Max(0d, textWidth - paragraphWidth) / 2d,
+            TextAlignment.Right => Math.Max(0d, textWidth - paragraphWidth),
+            _ => 0d
+        };
+
+        foreach (TextRun run in paragraphRuns)
+        {
+            runs.Add(run with
+            {
+                X = run.X + offset,
+                Width = Math.Max(1d, run.Width - offset),
+                Alignment = TextAlignment.Left
+            });
+        }
     }
 
     private static bool ParagraphHasVisibleContent(XElement paragraph)

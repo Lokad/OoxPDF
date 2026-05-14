@@ -101,6 +101,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Private PPTX slide-2 rerun `artifacts/private-visual/lokad-value-based/20260514-193029`:
   - Run-level text highlights now render as background rectangles.
   - Remaining slide-2 generic gaps include finer mixed-run text advance, title positioning, and exact highlight bounds.
+- Private PPTX slide-2 rerun `artifacts/private-visual/lokad-value-based/20260514-193918`:
+  - Centered mixed-run paragraphs now align as one paragraph instead of independently centering each run.
+  - Remaining slide-2 generic gaps include exact text metrics, small footer text fit, and exact highlight bounds.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -252,7 +255,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-75 passed, 0 failed
+76 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.
