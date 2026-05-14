@@ -1193,13 +1193,14 @@ internal sealed class PptxRenderer
     private static double ReadFirstLineBaselineOffset(XElement textBody, XElement? defaultParagraphProperties)
     {
         const double defaultFontSize = 18d;
+        const double baselineOffsetFactor = 0.95d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             foreach (XElement child in paragraph.Elements())
             {
                 if (child.Name == DrawingNamespace + "br")
                 {
-                    return defaultFontSize * 0.75d;
+                    return defaultFontSize * baselineOffsetFactor;
                 }
 
                 if (child.Name != DrawingNamespace + "r")
@@ -1211,7 +1212,7 @@ internal sealed class PptxRenderer
                 if (runProperties?.Attribute("sz") is { } size)
                 {
                     double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
-                    return fontSize * 0.75d;
+                    return fontSize * baselineOffsetFactor;
                 }
 
                 if (defaultParagraphProperties?
@@ -1219,14 +1220,14 @@ internal sealed class PptxRenderer
                     .Attribute("sz") is { } defaultSize)
                 {
                     double fontSize = int.Parse(defaultSize.Value, CultureInfo.InvariantCulture) / 100d;
-                    return fontSize * 0.75d;
+                    return fontSize * baselineOffsetFactor;
                 }
 
-                return defaultFontSize * 0.75d;
+                return defaultFontSize * baselineOffsetFactor;
             }
         }
 
-        return defaultFontSize * 0.75d;
+        return defaultFontSize * baselineOffsetFactor;
     }
 
     private static string? ReadBulletText(XElement? paragraphProperties)
