@@ -20,7 +20,8 @@ internal sealed record DocxParagraph(
     DocxTextAlignment Alignment,
     double SpacingBeforePoints,
     double SpacingAfterPoints,
-    double LineSpacingFactor);
+    double LineSpacingFactor,
+    string? ListLabel);
 
 internal sealed record DocxTextRun(
     string Text,

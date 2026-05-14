@@ -11,7 +11,9 @@ internal sealed class DocxReader
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string StylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
+    private const string NumberingRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
+    private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
 
     public DocxDocument Read(OoxPackage package)
     {
@@ -29,7 +31,8 @@ internal sealed class DocxReader
             .LastOrDefault();
 
         DocxStyleSet styles = LoadStyles(package, documentPart.Name);
-        IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles);
+        DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name);
+        IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering);
 
         if (pageSize is null)
         {
@@ -51,9 +54,10 @@ internal sealed class DocxReader
         return new DocxDocument(width, height, left, right, top, bottom, paragraphs);
     }
 
-    private static IReadOnlyList<DocxParagraph> ReadParagraphs(XDocument document, DocxStyleSet styles)
+    private static IReadOnlyList<DocxParagraph> ReadParagraphs(XDocument document, DocxStyleSet styles, DocxNumberingSet numbering)
     {
         var paragraphs = new List<DocxParagraph>();
+        var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
@@ -92,11 +96,39 @@ internal sealed class DocxReader
                     resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
                     resolvedParagraph.SpacingBeforePoints ?? 0d,
                     resolvedParagraph.SpacingAfterPoints ?? 6d,
-                    resolvedParagraph.LineSpacingFactor ?? 1.25d));
+                    resolvedParagraph.LineSpacingFactor ?? 1.25d,
+                    CreateListLabel(paragraphProperties, numbering, numberingCounters)));
             }
         }
 
         return paragraphs;
+    }
+
+    private static string? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
+    {
+        XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
+        string? numId = (string?)numberingProperties?
+            .Element(WordprocessingNamespace + "numId")
+            ?.Attribute(WordprocessingNamespace + "val");
+        int level = numberingProperties?
+            .Element(WordprocessingNamespace + "ilvl")
+            ?.Attribute(WordprocessingNamespace + "val") is { } levelAttribute
+            ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
+            : 0;
+        if (numId is null || !numbering.NumToAbstract.TryGetValue(numId, out string? abstractId) || !numbering.Levels.TryGetValue((abstractId, level), out DocxNumberingLevel? numberingLevel))
+        {
+            return null;
+        }
+
+        if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
+        {
+            return "\u2022";
+        }
+
+        var key = (numId, level);
+        counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : numberingLevel.Start;
+        string numberText = counters[key].ToString(CultureInfo.InvariantCulture);
+        return numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
     }
 
     private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName)
@@ -149,6 +181,57 @@ internal sealed class DocxReader
         }
 
         return new DocxStyleSet(runDefaults, paragraphDefaults, paragraphStyles, characterStyles);
+    }
+
+    private static DocxNumberingSet LoadNumbering(OoxPackage package, string documentPartName)
+    {
+        OoxRelationship? numberingRelationship = package.GetRelationships(documentPartName)
+            .FirstOrDefault(r => !r.IsExternal && r.Type == NumberingRelationshipType && r.ResolvedTarget is not null);
+        OoxPart? numberingPart = numberingRelationship?.ResolvedTarget is null
+            ? package.Parts.FirstOrDefault(p => p.ContentType == NumberingContentType)
+            : package.GetPart(numberingRelationship.ResolvedTarget);
+        if (numberingPart is null)
+        {
+            return DocxNumberingSet.Empty;
+        }
+
+        using Stream stream = numberingPart.OpenRead();
+        XDocument numberingXml = SafeXml.Load(stream);
+        var levels = new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>();
+        foreach (XElement abstractNum in numberingXml.Root?.Elements(WordprocessingNamespace + "abstractNum") ?? [])
+        {
+            string? abstractId = (string?)abstractNum.Attribute(WordprocessingNamespace + "abstractNumId");
+            if (abstractId is null)
+            {
+                continue;
+            }
+
+            foreach (XElement level in abstractNum.Elements(WordprocessingNamespace + "lvl"))
+            {
+                int levelIndex = level.Attribute(WordprocessingNamespace + "ilvl") is { } ilvl
+                    ? int.Parse(ilvl.Value, CultureInfo.InvariantCulture)
+                    : 0;
+                int start = level.Element(WordprocessingNamespace + "start")?.Attribute(WordprocessingNamespace + "val") is { } startValue
+                    ? int.Parse(startValue.Value, CultureInfo.InvariantCulture)
+                    : 1;
+                string format = (string?)level.Element(WordprocessingNamespace + "numFmt")?.Attribute(WordprocessingNamespace + "val") ?? "decimal";
+                string text = (string?)level.Element(WordprocessingNamespace + "lvlText")?.Attribute(WordprocessingNamespace + "val") ?? "%" + (levelIndex + 1) + ".";
+                levels[(abstractId, levelIndex)] = new DocxNumberingLevel(format, text, start);
+            }
+        }
+
+        var numToAbstract = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (XElement num in numberingXml.Root?.Elements(WordprocessingNamespace + "num") ?? [])
+        {
+            string? numId = (string?)num.Attribute(WordprocessingNamespace + "numId");
+            string? abstractId = (string?)num.Element(WordprocessingNamespace + "abstractNumId")?.Attribute(WordprocessingNamespace + "val");
+            if (numId is not null && abstractId is not null)
+            {
+                numToAbstract[numId] = abstractId;
+            }
+        }
+
+        return new DocxNumberingSet(numToAbstract, levels);
     }
 
     private static DocxResolvedParagraphProperties ResolveParagraphProperties(XElement? directProperties, string? paragraphStyleId, DocxStyleSet styles)
@@ -289,6 +372,17 @@ internal sealed class DocxReader
     }
 
     private sealed record DocxStyle(DocxResolvedParagraphProperties Paragraph, DocxResolvedRunProperties Run);
+
+    private sealed record DocxNumberingSet(
+        IReadOnlyDictionary<string, string> NumToAbstract,
+        IReadOnlyDictionary<(string AbstractId, int Level), DocxNumberingLevel> Levels)
+    {
+        public static DocxNumberingSet Empty { get; } = new(
+            new Dictionary<string, string>(),
+            new Dictionary<(string AbstractId, int Level), DocxNumberingLevel>());
+    }
+
+    private sealed record DocxNumberingLevel(string Format, string Text, int Start);
 
     private readonly record struct DocxResolvedParagraphProperties(
         DocxTextAlignment? Alignment,
