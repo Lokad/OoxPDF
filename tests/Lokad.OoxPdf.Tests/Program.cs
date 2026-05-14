@@ -46,6 +46,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticTableRendersCellsAndText,
     DocxTests.DocxSyntheticTableKeepsBodyOrder,
     DocxTests.DocxSyntheticTableUsesRowHeights,
+    DocxTests.DocxSyntheticTableRowsBreakAcrossPages,
     DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
     DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,

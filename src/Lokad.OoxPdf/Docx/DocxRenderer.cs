@@ -79,7 +79,7 @@ internal sealed class DocxRenderer
         {
             if (element is DocxTableElement tableElement)
             {
-                RenderTable(tableElement.Table, document, graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
+                RenderTable(tableElement.Table, document, ref graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
                 continue;
             }
 
@@ -205,7 +205,7 @@ internal sealed class DocxRenderer
     private static void RenderTable(
         DocxTable table,
         DocxDocument document,
-        PdfGraphicsBuilder graphics,
+        ref PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         PdfFontResource? fontResource,
         PdfEmbeddedFont? embedded,
@@ -226,6 +226,11 @@ internal sealed class DocxRenderer
         foreach (DocxTableRow row in table.Rows)
         {
             double rowHeight = row.HeightPoints ?? defaultRowHeight;
+            if (cursorY - rowHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
+            {
+                finishPage();
+            }
+
             double cellX = x;
             double cellY = cursorY - rowHeight;
             for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
