@@ -2,7 +2,7 @@
 
 This ExecPlan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-If a `.agent/PLANS.md` file exists in the repository, maintain this document in accordance with that file. This ExecPlan is self-contained and should be sufficient for a coding agent or novice contributor to continue from a clean working tree.
+If a `PLANS.md` file exists in the repository, maintain this document in accordance with that file. This ExecPlan is self-contained and should be sufficient for a coding agent or novice contributor to continue from a clean working tree.
 
 ## Purpose / Big Picture
 
@@ -15,64 +15,64 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 ## Progress
 
 - [x] (2026-05-14) ExecPlan authored from the product requirements and validation strategy.
-- [ ] Create repository skeleton with `src/`, `tests/`, `tools/`, `docs/`, `visual-cases/`, and `artifacts/`.
-- [ ] Add `.gitignore`, `Directory.Build.props`, solution file, README placeholder, LICENSE placeholder, and NuGet metadata placeholders.
-- [ ] Create `src/Lokad.OoxPdf/Lokad.OoxPdf.csproj` targeting `net10.0` with no `PackageReference`.
-- [ ] Create `src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj` referencing the library project only.
-- [ ] Create `tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj` as a dependency-free console test runner.
-- [ ] Create `tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj` as a dependency-free console tool.
-- [ ] Implement public API shells: `OoxPdfConverter`, `OoxPdfOptions`, `OoxPdfInputKind`, diagnostics types, and font resolver types.
-- [ ] Implement CLI argument parsing for `convert input output`, `--diagnostics`, and `--strict`.
-- [ ] Implement minimal diagnostics collection and JSON writing in the CLI.
-- [ ] Implement test runner infrastructure with assertions and clear pass/fail exit codes.
-- [ ] Add a unit test proving the public API can be called and rejects missing files predictably.
-- [ ] Implement OOXML ZIP opening with central package part lookup.
-- [ ] Add ZIP safety limits for entry count, individual part size, and total uncompressed size.
-- [ ] Implement safe package part path normalization and path traversal rejection.
-- [ ] Implement XML reader settings that disable DTDs and external entity resolution.
-- [ ] Parse `[Content_Types].xml`.
-- [ ] Parse package-level `_rels/.rels`.
-- [ ] Parse part-level relationship files such as `ppt/slides/_rels/slide1.xml.rels`.
-- [ ] Add unit tests for content types, relationships, and relationship target resolution.
-- [ ] Implement central unit conversion helpers for EMU, twips, half-points, inches, and PDF points.
-- [ ] Implement minimal PDF writer that emits one blank page with deterministic objects.
-- [ ] Add PDF structure tests for header, catalog, page tree, xref, trailer, and one page.
-- [ ] Extend PDF writer to support multiple blank pages with specified width and height.
-- [ ] Add structure tests proving page count and page sizes are encoded in produced PDFs.
-- [ ] Implement PPTX package discovery: presentation part, slide list, slide parts, slide size.
-- [ ] Wire PPTX conversion to emit one blank PDF page per slide with correct slide dimensions.
-- [ ] Add a small synthetic PPTX fixture or fixture generator for slide count and size tests.
-- [ ] Implement DOCX package discovery: main document part and basic section page size.
-- [ ] Wire DOCX conversion to emit one blank PDF page with default or discovered page dimensions.
-- [ ] Add a small synthetic DOCX fixture or fixture generator for basic document discovery tests.
-- [ ] Add `tools/RasterizePdf.ps1` using vendored `tools/vendor/pdfium/win-x64/pdfium_test.exe`.
-- [ ] Add `tools/RenderReference.ps1` for PowerPoint `.pptx` to slide PNG export.
-- [ ] Extend `tools/RenderReference.ps1` for Word `.docx` to reference PDF and PNG rasterization.
-- [ ] Add `tools/CheckVisualCase.ps1` orchestration script.
-- [ ] Implement first minimal `VisualDiff` command that discovers reference and candidate PNGs and writes `metrics.json`.
-- [ ] Extend `VisualDiff` to write `index.html` with side-by-side image tags.
-- [ ] Implement minimal PNG reader for truecolor and truecolor-alpha PNGs in `VisualDiff`.
-- [ ] Implement minimal PNG writer or reusable image output path for generated side-by-side and diff images.
-- [ ] Extend `VisualDiff` to compute dimensions, mean absolute error, root mean squared error, and changed pixel ratios.
-- [ ] Create `visual-cases/README.md` documenting how to run visual validation.
-- [ ] Create first PPTX visual case manifest for a simple slide deck.
-- [ ] Create first DOCX visual case manifest for a simple one-page document.
-- [ ] Validate that a blank-page PPTX conversion can be visually compared against PowerPoint output.
-- [ ] Validate that a blank-page DOCX conversion can be visually compared against Word output.
-- [ ] Implement PDF graphics state, RGB fill, RGB stroke, rectangles, lines, and simple paths.
-- [ ] Add PDF structure tests for drawing operators.
-- [ ] Parse PPTX slide background fill and render solid color backgrounds.
-- [ ] Parse PPTX solid-fill rectangles and render them.
-- [ ] Parse PPTX lines and render them.
-- [ ] Parse PPTX ellipse geometry and render it with Bézier approximation.
-- [ ] Parse PPTX rotation and flip transforms for basic shapes.
-- [ ] Add visual case for PPTX shapes and update assessment template.
-- [ ] Implement font discovery on Windows from `C:\Windows\Fonts` with a deterministic cache.
-- [ ] Implement TrueType/OpenType table directory parsing.
-- [ ] Parse required font tables: `cmap`, `head`, `hhea`, `hmtx`, `maxp`, `name`, `OS/2`, and `post`.
-- [ ] Implement simple Unicode-to-glyph mapping for common Microsoft fonts.
-- [ ] Implement glyph advance measurement from `hmtx`.
-- [ ] Add font parser and measurement unit tests using installed fonts when available and skipped tests when absent.
+- [x] (2026-05-14) Create repository skeleton with `src/`, `tests/`, `tools/`, `docs/`, `visual-cases/`, and `artifacts/`.
+- [x] (2026-05-14) Add `.gitignore`, `Directory.Build.props`, `.slnx` solution file, README placeholder, LICENSE placeholder, and NuGet metadata placeholders.
+- [x] (2026-05-14) Create `src/Lokad.OoxPdf/Lokad.OoxPdf.csproj` targeting `net10.0` with no `PackageReference`.
+- [x] (2026-05-14) Create `src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj` referencing the library project only.
+- [x] (2026-05-14) Create `tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj` as a dependency-free console test runner.
+- [x] (2026-05-14) Create `tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj` as a dependency-free console tool.
+- [x] (2026-05-14) Implement public API shells: `OoxPdfConverter`, `OoxPdfOptions`, `OoxPdfInputKind`, diagnostics types, and font resolver types.
+- [x] (2026-05-14) Implement CLI argument parsing for `convert input output`, `--diagnostics`, and `--strict`.
+- [x] (2026-05-14) Implement minimal diagnostics collection and JSON writing in the CLI.
+- [x] (2026-05-14) Implement test runner infrastructure with assertions and clear pass/fail exit codes.
+- [x] (2026-05-14) Add a unit test proving the public API can be called and rejects missing files predictably.
+- [x] (2026-05-14) Implement OOXML ZIP opening with central package part lookup.
+- [x] (2026-05-14) Add ZIP safety limits for entry count, individual part size, and total uncompressed size.
+- [x] (2026-05-14) Implement safe package part path normalization and path traversal rejection.
+- [x] (2026-05-14) Implement XML reader settings that disable DTDs and external entity resolution.
+- [x] (2026-05-14) Parse `[Content_Types].xml`.
+- [x] (2026-05-14) Parse package-level `_rels/.rels`.
+- [x] (2026-05-14) Parse part-level relationship files such as `ppt/slides/_rels/slide1.xml.rels`.
+- [x] (2026-05-14) Add unit tests for content types, relationships, and relationship target resolution.
+- [x] (2026-05-14) Implement central unit conversion helpers for EMU, twips, half-points, inches, and PDF points.
+- [x] (2026-05-14) Implement minimal PDF writer that emits one blank page with deterministic objects.
+- [x] (2026-05-14) Add PDF structure tests for header, catalog, page tree, xref, trailer, and one page.
+- [x] (2026-05-14) Extend PDF writer to support multiple blank pages with specified width and height.
+- [x] (2026-05-14) Add structure tests proving page count and page sizes are encoded in produced PDFs.
+- [x] (2026-05-14) Implement PPTX package discovery: presentation part, slide list, slide parts, slide size.
+- [x] (2026-05-14) Wire PPTX conversion to emit one blank PDF page per slide with correct slide dimensions.
+- [x] (2026-05-14) Add a small synthetic PPTX fixture or fixture generator for slide count and size tests.
+- [x] (2026-05-14) Implement DOCX package discovery: main document part and basic section page size.
+- [x] (2026-05-14) Wire DOCX conversion to emit one blank PDF page with default or discovered page dimensions.
+- [x] (2026-05-14) Add a small synthetic DOCX fixture or fixture generator for basic document discovery tests.
+- [x] (2026-05-14) Retrieve `pdfium-win-x64.tgz` from bblanchon PDFium binaries and add `tools/RasterizePdf.ps1` using a dependency-free PDFium DLL rasterizer tool.
+- [x] (2026-05-14) Add `tools/RenderReference.ps1` for PowerPoint `.pptx` to slide PNG export.
+- [x] (2026-05-14) Extend `tools/RenderReference.ps1` for Word `.docx` to reference PDF and PNG rasterization.
+- [x] (2026-05-14) Add `tools/CheckVisualCase.ps1` orchestration script.
+- [x] (2026-05-14) Implement first minimal `VisualDiff` command that discovers reference and candidate PNGs and writes `metrics.json`.
+- [x] (2026-05-14) Extend `VisualDiff` to write `index.html` with side-by-side image tags.
+- [x] (2026-05-14) Implement minimal PNG reader for truecolor and truecolor-alpha PNGs in `VisualDiff`.
+- [x] (2026-05-14) Implement minimal PNG writer or reusable image output path for generated side-by-side and diff images.
+- [x] (2026-05-14) Extend `VisualDiff` to compute dimensions, mean absolute error, root mean squared error, and changed pixel ratios.
+- [x] (2026-05-14) Create `visual-cases/README.md` documenting how to run visual validation.
+- [x] (2026-05-14) Create first PPTX visual case manifest for a simple slide deck.
+- [x] (2026-05-14) Create first DOCX visual case manifest for a simple one-page document.
+- [x] (2026-05-14) Validate that a blank-page PPTX conversion can be visually compared against PowerPoint output.
+- [x] (2026-05-14) Validate that a blank-page DOCX conversion can be visually compared against Word output.
+- [x] (2026-05-14) Implement PDF graphics state, RGB fill, RGB stroke, rectangles, lines, and simple paths.
+- [x] (2026-05-14) Add PDF structure tests for drawing operators.
+- [x] (2026-05-14) Parse PPTX slide background fill and render solid color backgrounds.
+- [x] (2026-05-14) Parse PPTX solid-fill rectangles and render them.
+- [x] (2026-05-14) Parse PPTX lines and render them.
+- [x] (2026-05-14) Parse PPTX ellipse geometry and render it with Bézier approximation.
+- [x] (2026-05-14) Parse PPTX rotation and flip transforms for basic shapes.
+- [x] (2026-05-14) Add visual case for PPTX shapes and update assessment template.
+- [x] (2026-05-14) Implement font discovery on Windows from `C:\Windows\Fonts` with a deterministic cache.
+- [x] (2026-05-14) Implement TrueType/OpenType table directory parsing.
+- [x] (2026-05-14) Parse required font tables: `cmap`, `head`, `hhea`, `hmtx`, `maxp`, `name`, `OS/2`, and `post`.
+- [x] (2026-05-14) Implement simple Unicode-to-glyph mapping for common Microsoft fonts.
+- [x] (2026-05-14) Implement glyph advance measurement from `hmtx`.
+- [x] (2026-05-14) Add font parser and measurement unit tests using installed fonts when available and skipped tests when absent.
 - [ ] Implement PDF embedded TrueType/CID font objects sufficient for Unicode text output.
 - [ ] Implement ToUnicode CMap generation for embedded text.
 - [ ] Add PDF text structure tests proving text content uses embedded fonts and ToUnicode maps.
@@ -128,18 +128,49 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [ ] Add `docs/Diagnostics.md` with diagnostic code conventions.
 - [ ] Add `docs/VisualValidation.md` explaining Office reference rendering, PDFium rasterization, and agent assessment.
 - [ ] Add README quick start with library, CLI, and visual validation examples.
-- [ ] Add NuGet package metadata and verify `dotnet pack -c Release` creates a dependency-free package.
+- [x] (2026-05-14) Add NuGet package metadata and verify `dotnet pack -c Release` creates a dependency-free package.
 - [ ] Run full build and tests from clean checkout.
-- [ ] Run at least one PPTX visual case and record `assessment.md`.
-- [ ] Run at least one DOCX visual case and record `assessment.md`.
+- [x] (2026-05-14) Run at least one PPTX visual case and record `assessment.md`.
+- [x] (2026-05-14) Run at least one DOCX visual case and record `assessment.md`.
 - [ ] Complete first retrospective entry with remaining gaps and next implementation priorities.
 
 ## Surprises & Discoveries
 
-No implementation discoveries have been recorded yet. As work proceeds, add observations here with short evidence.
+- Observation: The .NET 10 SDK in this workspace creates `Lokad.OoxPdf.slnx` for `dotnet new sln -n Lokad.OoxPdf`, not `Lokad.OoxPdf.sln`.
+  Evidence: Running `dotnet new sln -n Lokad.OoxPdf` produced `Lokad.OoxPdf.slnx`; `dotnet sln Lokad.OoxPdf.slnx add ...` accepted all four projects, and `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeded with 0 warnings and 0 errors.
 
-- Observation: None yet.
-  Evidence: This ExecPlan has not yet been implemented.
+- Observation: The initial dependency-free test runner and public API shell build on the installed .NET 10 SDK.
+  Evidence: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` printed `PASS PublicApiRejectsMissingInput`, `PASS AutoDetectsPptxExtension`, `PASS AutoDetectsDocxExtension`, and `3 passed, 0 failed`.
+
+- Observation: The first OOXML package layer can be tested with synthetic ZIP packages rather than checked-in Office binaries.
+  Evidence: `OoxmlTests.ParsesContentTypesAndRelationships` builds an in-memory ZIP with `[Content_Types].xml`, `_rels/.rels`, and presentation parts; the full test run now prints `7 passed, 0 failed`.
+
+- Observation: The minimal PDF writer can produce deterministic single-page and multi-page blank PDFs without external libraries.
+  Evidence: `PdfWriterTests.WritesSingleBlankPagePdfStructure` and `PdfWriterTests.WritesMultipleBlankPagesWithPageSizes` validate header, catalog, page tree, xref, trailer, page count, and media boxes; the full test run now prints `9 passed, 0 failed`.
+
+- Observation: The first PPTX and DOCX conversions can be validated without Office by generating minimal OOXML ZIP packages in tests.
+  Evidence: `PptxSyntheticTwoSlidesProducesTwoPdfPages` verifies a two-slide synthetic PPTX produces two PDF pages with a 960 by 540 media box, and `DocxSyntheticDocumentProducesOnePdfPage` verifies a synthetic DOCX produces one 612 by 792 point page; the full test run now prints `11 passed, 0 failed`.
+
+- Observation: The minimal visual comparison command can create browsable artifacts before pixel-level PNG parsing exists.
+  Evidence: Running `dotnet tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll <reference> <candidate> <comparison>` against temporary PNG filenames wrote `metrics.json` and `index.html`.
+
+- Observation: VisualDiff can now read ordinary RGB/RGBA PNGs and compute pixel metrics without `System.Drawing.Common` or third-party packages.
+  Evidence: A smoke run using two temporary 2 by 1 PNGs wrote `ReferenceWidth: 2`, `ReferenceHeight: 1`, `MeanAbsoluteError: 0`, `RootMeanSquaredError: 0`, and `DimensionsMatch: true` in `metrics.json`.
+
+- Observation: The renderer now emits non-blank PDF graphics for simple PPTX slides.
+  Evidence: `PptxSyntheticShapesProduceDrawingOperators` converts a synthetic slide with a white background, red rectangle with blue stroke, green ellipse, and black line, then verifies the expected PDF drawing operators; the full test run now prints `13 passed, 0 failed`.
+
+- Observation: The requested bblanchon PDFium archive provides `bin/pdfium.dll`, headers, libraries, and license files, but not `pdfium_test.exe`.
+  Evidence: After extracting `https://github.com/bblanchon/pdfium-binaries/releases/latest/download/pdfium-win-x64.tgz`, `tools/vendor/pdfium/win-x64/bin/pdfium.dll` exists and no `.exe` file is present. A new `tools/Lokad.OoxPdf.PdfiumRasterizer` console tool P/Invokes the DLL and successfully produced `page-001.png` from a small hand-written PDF.
+
+- Observation: PowerPoint exports simple blank slides as indexed PNGs, so VisualDiff needs palette PNG support in addition to RGB/RGBA.
+  Evidence: The first `pptx-blank` visual run failed on a reference PNG with `bitDepth=1 colorType=3`; after adding palette/grayscale support, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json` completed successfully.
+
+- Observation: Visual validation now works end to end for blank PPTX, blank DOCX, and simple PPTX shapes on this Windows machine with Office installed.
+  Evidence: `pptx-blank` run `20260514-132845` has matching 1920 by 1080 reference/candidate images and zero pixel error; `docx-blank` run `20260514-132733` has matching 1224 by 1584 images and zero pixel error; `pptx-shapes` run `20260514-132846` has matching 1920 by 1080 images with mean absolute error `0.23382511091820987` and changed pixel ratio at threshold 16 of `0.0032373649691358024`.
+
+- Observation: Common Windows TrueType fonts are sufficient to validate the first font parser slice.
+  Evidence: `WindowsFontResolverFindsInstalledFonts` discovers installed fonts through `C:\Windows\Fonts`, and `OpenTypeParserMapsBasicLatinGlyphs` loads `arial.ttf`, reads the family name, required table records, `maxp` glyph count, selected `OS/2` metrics, selected `post` metrics, maps `A` through `cmap`, and reads a positive advance from `hmtx`; the full test run now prints `16 passed, 0 failed`.
 
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
@@ -169,13 +200,16 @@ Examples of discoveries that belong here include: Office COM automation requirin
   Rationale: It is not a reliable cross-platform rendering foundation in modern .NET, and the project needs predictable dependency-free behavior. PNG and JPEG parsing should be implemented directly where required.
   Date/Author: 2026-05-14 / ExecPlan author.
 
+- Decision: Use the bblanchon `pdfium.dll` binary with a local dependency-free P/Invoke rasterizer tool instead of expecting `pdfium_test.exe`.
+  Rationale: The requested latest `pdfium-win-x64.tgz` package contains the PDFium DLL but no `pdfium_test.exe`. A small tool under `tools/` keeps PDFium isolated to validation while preserving the no-runtime-dependency rule for `src/Lokad.OoxPdf`.
+  Date/Author: 2026-05-14 / Codex.
+
 ## Outcomes & Retrospective
 
-No implementation outcome has been achieved yet. At the end of each major milestone, add a short entry here. Each entry should state what now works, how it was validated, what remains incomplete, and what should be tackled next.
-
-Expected first retrospective entry after Phase 0:
-
-The repository now builds, the library has a public API, the CLI can produce blank PDFs for recognized PPTX and DOCX inputs, and the visual harness can create Office references and candidate comparison folders. Rendering is intentionally minimal, but the end-to-end validation path exists.
+- Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` prints `16 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering only covers simple PPTX solid backgrounds, rectangles, lines, ellipses, and basic rotation/flip transforms. Font parsing covers the first usable subset but does not yet model every required `maxp`, `OS/2`, and `post` field. PPTX text, images, themes, masters, DOCX text layout, and unsupported-feature diagnostics remain incomplete.
+  Next target: Complete the remaining font table models and implement PDF font embedding plus ToUnicode maps so PPTX text boxes can be rendered and visually assessed.
 
 ## Context and Orientation
 
@@ -210,7 +244,7 @@ Create this layout. Some directories will be empty at first, but they should exi
       LICENSE
       .gitignore
       Directory.Build.props
-      Lokad.OoxPdf.sln
+      Lokad.OoxPdf.slnx
       src/
         Lokad.OoxPdf/
           Lokad.OoxPdf.csproj
@@ -413,12 +447,12 @@ Create `tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj` as an executable tar
 
 Create `tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj` as an executable targeting `net10.0`.
 
-Create `Lokad.OoxPdf.sln` and add all projects.
+Create `Lokad.OoxPdf.slnx` and add all projects. With the .NET 10 SDK used in this workspace, `dotnet new sln -n Lokad.OoxPdf` creates an `.slnx` file.
 
 Validation for this milestone is:
 
-    dotnet restore
-    dotnet build
+    dotnet restore Lokad.OoxPdf.slnx --tl:off -v minimal
+    dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
     dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release
 
 The pack command should produce a `.nupkg` under `src/Lokad.OoxPdf/bin/Release/` and the generated NuGet package should not list dependencies.
@@ -647,10 +681,10 @@ Create the solution and projects:
     dotnet new console -n Lokad.OoxPdf.Cli -o src/Lokad.OoxPdf.Cli -f net10.0
     dotnet new console -n Lokad.OoxPdf.Tests -o tests/Lokad.OoxPdf.Tests -f net10.0
     dotnet new console -n Lokad.OoxPdf.VisualDiff -o tools/Lokad.OoxPdf.VisualDiff -f net10.0
-    dotnet sln add src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
-    dotnet sln add src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj
-    dotnet sln add tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj
-    dotnet sln add tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj
+    dotnet sln Lokad.OoxPdf.slnx add src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
+    dotnet sln Lokad.OoxPdf.slnx add src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj
+    dotnet sln Lokad.OoxPdf.slnx add tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj
+    dotnet sln Lokad.OoxPdf.slnx add tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj
     dotnet add src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj reference src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
     dotnet add tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj reference src/Lokad.OoxPdf/Lokad.OoxPdf.csproj
 
@@ -698,8 +732,8 @@ Create `artifacts/.gitkeep`.
 
 After the skeleton exists, run:
 
-    dotnet restore
-    dotnet build
+    dotnet restore Lokad.OoxPdf.slnx --tl:off -v minimal
+    dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
 
 Expected result:
 
@@ -759,9 +793,9 @@ Open `comparison/index.html` and verify that both reference and candidate images
 
 As each milestone completes, run the standard validation set:
 
-    dotnet build
+    dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
     dotnet run --project tests/Lokad.OoxPdf.Tests
-    dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release
+    dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
 
 Before declaring any visual feature complete, run the relevant visual case with:
 
@@ -785,9 +819,9 @@ Update the assessment with a rating from 0 to 5:
 
 The project is acceptable at the end of Phase 0 when a clean checkout can run:
 
-    dotnet build
+    dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
     dotnet run --project tests/Lokad.OoxPdf.Tests
-    dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release
+    dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
 
 and all commands succeed. The generated NuGet package must not list third-party dependencies.
 
