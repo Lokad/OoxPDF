@@ -62,6 +62,11 @@ internal sealed class OpenTypeFont
             throw new InvalidDataException("Font file is too small.");
         }
 
+        if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
+        {
+            bytes = ExtractCollectionFont(bytes, 0);
+        }
+
         ushort numTables = U16(bytes, 4);
         var tables = new Dictionary<string, TableRecord>(StringComparer.Ordinal);
         int offset = 12;
@@ -269,12 +274,88 @@ internal sealed class OpenTypeFont
         return BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(offset, 4));
     }
 
+    private static void W32(byte[] bytes, int offset, uint value)
+    {
+        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(offset, 4), value);
+    }
+
     private static double FixedToDouble(int value)
     {
         return value / 65536d;
     }
 
+    private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
+    {
+        if (bytes.Length < 16)
+        {
+            throw new InvalidDataException("TrueType collection header is too small.");
+        }
+
+        uint fontCount = U32(bytes, 8);
+        if (fontIndex < 0 || fontIndex >= fontCount)
+        {
+            throw new InvalidDataException("TrueType collection font index is out of range.");
+        }
+
+        uint fontOffset = U32(bytes, 12 + fontIndex * 4);
+        if (fontOffset > bytes.Length - 12)
+        {
+            throw new InvalidDataException("TrueType collection font offset is invalid.");
+        }
+
+        ushort numTables = U16(bytes, (int)fontOffset + 4);
+        int directoryLength = 12 + numTables * 16;
+        if (fontOffset + directoryLength > bytes.Length)
+        {
+            throw new InvalidDataException("TrueType collection table directory is invalid.");
+        }
+
+        var records = new CollectionTableRecord[numTables];
+        int directoryOffset = (int)fontOffset + 12;
+        for (int i = 0; i < numTables; i++)
+        {
+            int recordOffset = directoryOffset + i * 16;
+            uint tableOffset = U32(bytes, recordOffset + 8);
+            uint tableLength = U32(bytes, recordOffset + 12);
+            if (tableOffset + tableLength > bytes.Length)
+            {
+                throw new InvalidDataException("TrueType collection table exceeds file length.");
+            }
+
+            records[i] = new CollectionTableRecord(tableOffset, tableLength);
+        }
+
+        int outputLength = directoryLength;
+        foreach (CollectionTableRecord record in records)
+        {
+            outputLength = Align4(outputLength);
+            outputLength += (int)record.Length;
+        }
+
+        var output = new byte[Align4(outputLength)];
+        Array.Copy(bytes, (int)fontOffset, output, 0, directoryLength);
+
+        int writeOffset = directoryLength;
+        for (int i = 0; i < records.Length; i++)
+        {
+            CollectionTableRecord record = records[i];
+            writeOffset = Align4(writeOffset);
+            Array.Copy(bytes, (int)record.Offset, output, writeOffset, (int)record.Length);
+            W32(output, 12 + i * 16 + 8, (uint)writeOffset);
+            writeOffset += (int)record.Length;
+        }
+
+        return output;
+    }
+
+    private static int Align4(int value)
+    {
+        return (value + 3) & ~3;
+    }
+
     private readonly record struct TableRecord(int Offset, int Length);
+
+    private readonly record struct CollectionTableRecord(uint Offset, uint Length);
 
     internal readonly record struct Os2Metrics(
         ushort Version,

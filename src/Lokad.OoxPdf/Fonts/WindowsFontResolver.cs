@@ -25,6 +25,16 @@ public sealed class WindowsFontResolver : IFontResolver
             return exact;
         }
 
+        foreach (string alias in ResolveAliases(request.FamilyName))
+        {
+            FontResolution? aliasMatch = cache.Value.FirstOrDefault(f =>
+                f.FamilyName.Equals(alias, StringComparison.OrdinalIgnoreCase));
+            if (aliasMatch is not null)
+            {
+                return aliasMatch with { IsFallback = true };
+            }
+        }
+
         FontResolution? arial = cache.Value.FirstOrDefault(f =>
             f.FamilyName.Equals("Arial", StringComparison.OrdinalIgnoreCase));
         if (arial is not null)
@@ -51,7 +61,9 @@ public sealed class WindowsFontResolver : IFontResolver
 
         var fonts = new List<FontResolution>();
         foreach (string path in Directory.EnumerateFiles(fontsDirectory, "*.*", SearchOption.TopDirectoryOnly)
-                     .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) || p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
+                     .Where(p => p.EndsWith(".ttf", StringComparison.OrdinalIgnoreCase) ||
+                         p.EndsWith(".otf", StringComparison.OrdinalIgnoreCase) ||
+                         p.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase))
                      .Order(StringComparer.OrdinalIgnoreCase))
         {
             try
@@ -73,5 +85,12 @@ public sealed class WindowsFontResolver : IFontResolver
             .Select(g => g.First())
             .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static IReadOnlyList<string> ResolveAliases(string familyName)
+    {
+        return familyName.Equals("Cambria Math", StringComparison.OrdinalIgnoreCase)
+            ? ["Cambria"]
+            : [];
     }
 }

@@ -45,4 +45,36 @@ internal static class FontTests
         TestAssert.True(glyph > 0, "Expected a glyph mapping for 'A'.");
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
     }
+
+    public static void WindowsFontResolverMapsCambriaMathToCambria()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory) ||
+            !Directory.EnumerateFiles(fontsDirectory, "cambria*.ttf", SearchOption.TopDirectoryOnly).Any())
+        {
+            return;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        FontResolution resolved = resolver.Resolve(new FontRequest("Cambria Math"));
+
+        TestAssert.Equal("Cambria", resolved.FamilyName);
+        TestAssert.NotNull(resolved.FontFilePath);
+    }
+
+    public static void OpenTypeParserLoadsTrueTypeCollections()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string cambriaCollection = Path.Combine(fontsDirectory, "cambria.ttc");
+        if (!File.Exists(cambriaCollection))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(cambriaCollection);
+
+        TestAssert.True(font.FamilyName.Length > 0, "Expected a family name from the first TTC face.");
+        TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the first TTC face.");
+        TestAssert.True(font.TableTags.Contains("cmap"), "Expected cmap table from the first TTC face.");
+    }
 }

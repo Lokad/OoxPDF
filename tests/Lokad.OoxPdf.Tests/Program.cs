@@ -34,8 +34,10 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
+    PptxTests.PptxSyntheticTextBoxOffsetsLargeTextByFontSize,
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
     PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
+    PptxTests.PptxSyntheticTextBoxSkipsEmptyParagraphs,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,
     PptxTests.PptxSyntheticTextBoxClipsOverflow,
     PptxTests.PptxSyntheticTableRendersGridAndText,
@@ -65,4 +67,6 @@ return TestRunner.Run(
     ImagingTests.PngImageReadsGrayscalePixels,
     ImagingTests.PngImageReadsAdam7TruecolorAlphaPixels,
     FontTests.WindowsFontResolverFindsInstalledFonts,
-    FontTests.OpenTypeParserMapsBasicLatinGlyphs);
+    FontTests.OpenTypeParserMapsBasicLatinGlyphs,
+    FontTests.WindowsFontResolverMapsCambriaMathToCambria,
+    FontTests.OpenTypeParserLoadsTrueTypeCollections);

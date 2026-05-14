@@ -673,10 +673,15 @@ internal sealed class PptxRenderer
                 TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody)),
                 _ => 0d
             };
-            double cursorY = document.SlideHeightPoints - yTop - insets.Top - 14d - verticalOffset;
+            double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody) - verticalOffset;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
+                if (!ParagraphHasVisibleContent(paragraph))
+                {
+                    continue;
+                }
+
                 TextAlignment alignment = ReadAlignment(paragraph);
                 XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
                 double spacingBefore = ReadParagraphSpacing(paragraphProperties, "spcBef");
@@ -747,6 +752,14 @@ internal sealed class PptxRenderer
         return runs;
     }
 
+    private static bool ParagraphHasVisibleContent(XElement paragraph)
+    {
+        return paragraph.Elements().Any(child =>
+            child.Name == DrawingNamespace + "r" ||
+            child.Name == DrawingNamespace + "br" ||
+            child.Name == DrawingNamespace + "tab");
+    }
+
     private static TextInsets ReadTextInsets(XElement textBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
@@ -787,6 +800,37 @@ internal sealed class PptxRenderer
         return 1.2d;
     }
 
+    private static double ReadFirstLineBaselineOffset(XElement textBody)
+    {
+        const double defaultOffset = 14d;
+        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        {
+            foreach (XElement child in paragraph.Elements())
+            {
+                if (child.Name == DrawingNamespace + "br")
+                {
+                    return defaultOffset;
+                }
+
+                if (child.Name != DrawingNamespace + "r")
+                {
+                    continue;
+                }
+
+                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
+                if (runProperties?.Attribute("sz") is { } size)
+                {
+                    double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
+                    return Math.Max(defaultOffset, fontSize * 0.75d);
+                }
+
+                return defaultOffset;
+            }
+        }
+
+        return defaultOffset;
+    }
+
     private static string? ReadBulletText(XElement? paragraphProperties)
     {
         if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
@@ -815,6 +859,11 @@ internal sealed class PptxRenderer
         double height = 0d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
+            if (!ParagraphHasVisibleContent(paragraph))
+            {
+                continue;
+            }
+
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
             double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
             height += ReadParagraphSpacing(paragraphProperties, "spcBef");
