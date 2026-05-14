@@ -42,6 +42,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] Unsupported PPTX and DOCX image formats now emit release-blocking `IMAGE_UNSUPPORTED_FORMAT` diagnostics while continuing the conversion.
 - [x] PowerPoint reference export is sorted numerically so decks with more than 9 slides compare against the correct candidate pages.
 - [x] Private PPTX assessment completed on a large 84-slide deck without exposing private contents.
+- [x] Private-safe PPTX slide inventory tooling reports per-slide feature counts without exposing slide text or images.
 - [x] Private DOCX assessment completed on an 18-candidate-page document without exposing private contents.
 - [x] VisualDiff computes overlap metrics even when reference/candidate raster dimensions differ by a small page-rounding mismatch.
 
@@ -77,6 +78,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Mean absolute error: `16.223412`; max mean absolute error: `75.220066`; mean changed-pixel ratio at threshold 16: `0.176527`.
   - Private visual inspection found the generated `output.pdf` is not acceptable on any slide. Aggregate pixel metrics are useful for regression tracking but are not evidence of visual correctness for this deck.
   - Working hypothesis: broad PPTX failure is caused by interacting slide-level issues, especially z-order, master/layout/placeholder inheritance, theme resolution, text/image/table/chart placement, and missing effects rather than one isolated unsupported primitive.
+- Private PPTX inventory `artifacts/private-visual/lokad-value-based/inventory/20260514-182157.json`:
+  - 84 slides inventoried without exposing text or images.
+  - Feature counts: 72 slides with pictures, 61 with grouped content, 11 with tables, 9 with charts, 23 with effects, 10 with transparency, and 84 with inherited layout/master content.
+  - Slide-level totals: 1846 shapes, 440 pictures, 12 table nodes, and 9 chart nodes.
+  - Initial simplest-slide strategy should start with slide 1, which is structurally small but still exercises slide content plus inherited layout/master content.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -135,7 +141,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ### PPTX Private Deck Recovery Plan
 
-- [ ] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
+- [x] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
 - [ ] Select the first private slide and exhaust it before moving on: inspect reference vs candidate, list every visible failure, implement or diagnose each generic gap, rerender, and repeat until the slide is acceptable or every remaining issue is explicitly planned.
 - [ ] After the first slide is exhausted, continue one private slide at a time. Prefer the next simplest failing slide before typical and worst slides so foundational ordering/inheritance/text/image problems are isolated early.
 - [ ] Maintain a private per-slide checklist with only public-safe fields: slide number, private rating, missing content, wrong order, wrong placement, wrong sizing, wrong text layout, wrong styling, and unsupported features lacking diagnostics.
@@ -199,8 +205,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Start PPTX private deck recovery with a private-safe slide inventory tool and representative-slide gates before adding more isolated PPTX primitives.
-2. Fix PPTX slide composition order and master/layout/placeholder inheritance based on the private inventory.
+1. Select and exhaust the first private PPTX slide, starting with slide 1 from the inventory, before adding more isolated PPTX primitives.
+2. Fix PPTX slide composition order and master/layout/placeholder inheritance based on the selected slide evidence.
 3. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
 4. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 5. Improve diagnostics coverage for other visible-content omissions that still lack feature-specific diagnostics.
