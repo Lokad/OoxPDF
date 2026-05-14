@@ -15,12 +15,10 @@ internal sealed class DocxRenderer
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
-        var graphics = new PdfGraphicsBuilder();
-        IReadOnlyList<PdfFontResource> fonts = RenderParagraphs(document, graphics);
-        return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints, graphics.ToString(), fonts)];
+        return RenderParagraphs(document);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderParagraphs(DocxDocument document, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document)
     {
         string familyName = document.Paragraphs
             .SelectMany(p => p.Runs)
@@ -29,17 +27,26 @@ internal sealed class DocxRenderer
         FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
         if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
         {
-            return [];
+            return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
         IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs.SelectMany(p => p.Runs).ToArray();
         OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
         PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, allRuns.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
         var resource = new PdfFontResource("F1", embedded);
+        var pages = new List<PdfPage>();
+        var graphics = new PdfGraphicsBuilder();
 
         double x = document.MarginLeftPoints;
         double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        void FinishPage()
+        {
+            pages.Add(new PdfPage(document.PageWidthPoints, document.PageHeightPoints, graphics.ToString(), [resource]));
+            graphics = new PdfGraphicsBuilder();
+            cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        }
+
         foreach (DocxParagraph paragraph in document.Paragraphs)
         {
             cursorY -= paragraph.SpacingBeforePoints;
@@ -50,9 +57,9 @@ internal sealed class DocxRenderer
             RgbColor color = ReadColor(firstRun.ColorHex);
             foreach (string line in WrapWords(text, width, paragraphFontSize, embedded))
             {
-                if (cursorY < document.MarginBottomPoints)
+                if (cursorY - lineHeight < document.MarginBottomPoints && graphics.ToString().Length > 0)
                 {
-                    break;
+                    FinishPage();
                 }
 
                 double lineWidth = embedded.MeasureTextPoints(line, paragraphFontSize);
@@ -82,7 +89,12 @@ internal sealed class DocxRenderer
             cursorY -= paragraph.SpacingAfterPoints;
         }
 
-        return [resource];
+        if (graphics.ToString().Length > 0 || pages.Count == 0)
+        {
+            FinishPage();
+        }
+
+        return pages;
     }
 
     private static RgbColor ReadColor(string? hex)

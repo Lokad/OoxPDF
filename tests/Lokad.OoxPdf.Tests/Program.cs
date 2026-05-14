@@ -28,6 +28,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     DocxTests.DocxSyntheticParagraphRendersText,
     DocxTests.DocxSyntheticStylesApplyToParagraphText,
+    DocxTests.DocxSyntheticParagraphsBreakAcrossPages,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);

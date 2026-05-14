@@ -102,7 +102,7 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Parse DOCX body paragraphs and runs with basic run formatting.
 - [x] (2026-05-14) Implement DOCX page setup from section properties: page size, margins, and orientation.
 - [x] (2026-05-14) Implement DOCX paragraph layout with margins, spacing before/after, alignment, and line spacing.
-- [ ] Implement DOCX text line breaking and page breaking.
+- [x] (2026-05-14) Implement DOCX text line breaking and page breaking.
 - [x] (2026-05-14) Render simple DOCX paragraphs into PDF.
 - [ ] Add DOCX basic paragraphs visual case.
 - [ ] Parse DOCX numbering part for simple bullets and decimal numbering.
@@ -214,6 +214,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: Common DOCX style defaults and simple paragraph/character styles can be resolved during parsing before rendering.
   Evidence: `DocxSyntheticStylesApplyToParagraphText` builds a synthetic styles part with document defaults, a paragraph style, and a character style, then verifies the resolved font size, blue color, italic approximation, and underline stroke in PDF output; the full test run now prints `30 passed, 0 failed`.
 
+- Observation: Simple DOCX paragraph rendering can continue onto additional PDF pages instead of dropping overflow text.
+  Evidence: `DocxSyntheticParagraphsBreakAcrossPages` builds a synthetic DOCX with 45 paragraphs and verifies the produced PDF page tree contains two pages; the full test run now prints `31 passed, 0 failed`.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -249,9 +252,9 @@ Examples of discoveries that belong here include: Office COM automation requirin
 ## Outcomes & Retrospective
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
-  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `30 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and one-page DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, and basic run formatting. DOCX page breaking, visual paragraph cases, and unsupported DOCX diagnostics remain incomplete.
-  Next target: Implement DOCX page breaking and add a DOCX basic paragraphs visual case.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `31 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, basic run formatting, and page breaking. DOCX visual paragraph cases and unsupported DOCX diagnostics remain incomplete.
+  Next target: Add and assess a DOCX basic paragraphs visual case.
 
 ## Context and Orientation
 
