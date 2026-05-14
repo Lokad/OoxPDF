@@ -4,5 +4,6 @@ obj/
 .idea/
 artifacts/**
 !artifacts/.gitkeep
+private-cases/**
 *.user
 *.suo

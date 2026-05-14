@@ -60,6 +60,8 @@ See [docs/Diagnostics.md](docs/Diagnostics.md) for diagnostic code conventions a
 
 See [docs/RenderingModel.md](docs/RenderingModel.md) for the package, layout, page, and PDF writer architecture.
 
+See [docs/PrivateValidation.md](docs/PrivateValidation.md) for local-only validation of documents that must not be versioned or made public.
+
 ## Development
 
 ```powershell
