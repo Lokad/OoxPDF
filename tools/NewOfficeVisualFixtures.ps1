@@ -68,6 +68,42 @@ try {
     finally {
         $text.Close()
     }
+
+    Add-Type -AssemblyName System.Drawing
+    $imagePath = Join-Path $env:TEMP ("ooxpdf-image-" + [guid]::NewGuid() + ".png")
+    $bitmap = [System.Drawing.Bitmap]::new(160, 90)
+    try {
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        try {
+            $graphics.Clear([System.Drawing.Color]::FromArgb(47, 128, 237))
+            $brush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(235, 87, 87))
+            try {
+                $graphics.FillRectangle($brush, 40, 20, 80, 50)
+            }
+            finally {
+                $brush.Dispose()
+            }
+        }
+        finally {
+            $graphics.Dispose()
+        }
+        $bitmap.Save($imagePath, [System.Drawing.Imaging.ImageFormat]::Png)
+    }
+    finally {
+        $bitmap.Dispose()
+    }
+
+    $images = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $images.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+        $slide.Shapes.AddPicture($imagePath, $false, $true, 144, 144, 432, 243) | Out-Null
+        $images.SaveAs((Join-Path $cases "pptx-images.pptx"), 24)
+    }
+    finally {
+        $images.Close()
+        Remove-Item -LiteralPath $imagePath -Force -ErrorAction SilentlyContinue
+    }
 }
 finally {
     if ($powerPoint -ne $null) {
