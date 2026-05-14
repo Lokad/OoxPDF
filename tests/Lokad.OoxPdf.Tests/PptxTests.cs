@@ -1,5 +1,6 @@
 using System.Text;
 using Lokad.OoxPdf;
+using Lokad.OoxPdf.Diagnostics;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -625,6 +626,52 @@ internal static class PptxTests
         TestAssert.Contains("72 396 144 72 re S", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("> Tj", pdf);
+    }
+
+    public static void PptxUnsupportedFeaturesEmitDiagnostics()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                    <p:graphicFrame>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram"/></a:graphic>
+                    </p:graphicFrame>
+                    <p:pic><p:nvPicPr><p:cNvPr id="2" name="Video"/><p:cNvPicPr/><p:nvPr><p:video/></p:nvPr></p:nvPicPr><p:blipFill><a:blip><a:videoFile/></a:blip></p:blipFill></p:pic>
+                    <p:pic><p:nvPicPr><p:cNvPr id="3" name="Audio"/><p:cNvPicPr/><p:nvPr><p:audio/></p:nvPr></p:nvPicPr><p:blipFill><a:blip><a:audioFile/></a:blip></p:blipFill></p:pic>
+                    <p:oleObj/>
+                  </p:spTree></p:cSld>
+                  <p:transition/>
+                  <p:timing/>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
+        TestAssert.Equal(7, ids.Length);
+        TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_CHART", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_OLE_OBJECT", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", string.Join("|", ids));
+        TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
     }
 
     private static string BasicContentTypes()

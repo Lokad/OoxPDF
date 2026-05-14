@@ -95,9 +95,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Parse PPTX tables into fills, borders, and text cells for simple grid tables.
 - [x] (2026-05-14) Render PPTX tables with fixed row and column geometry.
 - [x] (2026-05-14) Add PPTX table visual case.
-- [ ] Detect PPTX charts, SmartArt, videos, audio, OLE objects, transitions, and animations.
-- [ ] Emit stable diagnostics for unsupported PPTX features without crashing.
-- [ ] Add tests proving unsupported PPTX features are diagnostic-visible.
+- [x] (2026-05-14) Detect PPTX charts, SmartArt, videos, audio, OLE objects, transitions, and animations.
+- [x] (2026-05-14) Emit stable diagnostics for unsupported PPTX features without crashing.
+- [x] (2026-05-14) Add tests proving unsupported PPTX features are diagnostic-visible.
 - [ ] Implement DOCX style part parsing for document defaults, paragraph styles, and character styles.
 - [ ] Parse DOCX body paragraphs and runs with basic run formatting.
 - [ ] Implement DOCX page setup from section properties: page size, margins, and orientation.
@@ -205,6 +205,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: The first Office-authored PPTX table visual case renders the core table content but exposes simplified border and cell text layout.
   Evidence: `pptx-table` run `20260514-140923` has matching 1920 by 1080 reference/candidate images, mean absolute error `2.446560329861111`, changed pixel ratio at threshold 16 of `0.019048996913580248`, and an assessment rating of 4. The assessment records darker black grid borders and approximate vertical text placement as the main defects.
 
+- Observation: Unsupported PPTX feature detection can run before rendering and aggregate repeated feature warnings per slide.
+  Evidence: `PptxUnsupportedFeaturesEmitDiagnostics` builds a synthetic slide containing transition, animation, video, audio, OLE, chart, and SmartArt markers, then verifies stable `PPTX_UNSUPPORTED_*` warning diagnostics scoped to slide 1; the full test run now prints `28 passed, 0 failed`.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -240,9 +243,9 @@ Examples of discoveries that belong here include: Office COM automation requirin
 ## Outcomes & Retrospective
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
-  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `27 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, and fixed-grid tables with simple fills, black borders, and text. DOCX text layout and unsupported-feature diagnostics remain incomplete.
-  Next target: Implement unsupported-feature diagnostics for PPTX.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `28 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, and warning diagnostics for common unsupported PPTX slide features. DOCX text layout and unsupported DOCX diagnostics remain incomplete.
+  Next target: Implement DOCX style and paragraph text layout.
 
 ## Context and Orientation
 

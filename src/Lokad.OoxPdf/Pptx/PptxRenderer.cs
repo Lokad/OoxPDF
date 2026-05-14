@@ -2,6 +2,7 @@ using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
+using Lokad.OoxPdf.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -12,6 +13,7 @@ internal sealed class PptxRenderer
 {
     private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -23,11 +25,12 @@ internal sealed class PptxRenderer
             .ToArray();
     }
 
-    public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package)
+    public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         var pages = new List<PdfPage>(document.Slides.Count);
-        foreach (PptxSlide slide in document.Slides)
+        for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
+            PptxSlide slide = document.Slides[slideIndex];
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
@@ -37,6 +40,7 @@ internal sealed class PptxRenderer
 
             using Stream stream = slidePart.OpenRead();
             XDocument slideXml = SafeXml.Load(stream);
+            EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
             var graphics = new PdfGraphicsBuilder();
             PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
@@ -64,6 +68,78 @@ internal sealed class PptxRenderer
         }
 
         return pages;
+    }
+
+    private static void EmitUnsupportedFeatureDiagnostics(XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        void Emit(string id, string feature)
+        {
+            if (!emitted.Add(id))
+            {
+                return;
+            }
+
+            diagnosticSink(new OoxPdfDiagnostic(
+                id,
+                OoxPdfSeverity.Warning,
+                $"Unsupported PPTX feature '{feature}' was detected and ignored.",
+                partName,
+                SlideIndex: slideIndex,
+                Feature: feature,
+                Fallback: "Ignored"));
+        }
+
+        if (slideXml.Descendants(PresentationNamespace + "transition").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_TRANSITION", "transition");
+        }
+
+        if (slideXml.Descendants(PresentationNamespace + "timing").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_ANIMATION", "animation");
+        }
+
+        if (slideXml.Descendants(PresentationNamespace + "video").Any() ||
+            slideXml.Descendants(DrawingNamespace + "videoFile").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_VIDEO", "video");
+        }
+
+        if (slideXml.Descendants(PresentationNamespace + "audio").Any() ||
+            slideXml.Descendants(DrawingNamespace + "audioFile").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_AUDIO", "audio");
+        }
+
+        if (slideXml.Descendants(PresentationNamespace + "oleObj").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
+        }
+
+        if (slideXml.Descendants(ChartNamespace + "chart").Any() ||
+            HasGraphicDataUri(slideXml, "drawingml/2006/chart"))
+        {
+            Emit("PPTX_UNSUPPORTED_CHART", "chart");
+        }
+
+        if (HasGraphicDataUri(slideXml, "drawingml/2006/diagram"))
+        {
+            Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
+        }
+    }
+
+    private static bool HasGraphicDataUri(XDocument slideXml, string marker)
+    {
+        return slideXml
+            .Descendants(DrawingNamespace + "graphicData")
+            .Select(element => (string?)element.Attribute("uri"))
+            .Any(uri => uri?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)

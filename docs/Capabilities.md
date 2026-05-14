@@ -31,7 +31,7 @@ Unsupported or ignored:
 
 - Charts, SmartArt, videos, audio, OLE objects, transitions, animations, macros, and ActiveX.
 - Complex effects such as shadows, gradients, transparency, 3D, and most custom geometry.
-- Unsupported PPTX features are not yet surfaced through stable diagnostics.
+- Charts, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides.
 
 ## DOCX
 
