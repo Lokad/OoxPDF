@@ -88,7 +88,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Private PPTX slide-1 rerun `artifacts/private-visual/lokad-value-based/20260514-185419`:
   - Direct bullet characters now render on slide text.
   - TTC font discovery and large-text baseline handling make the title/body text structurally close enough to expose the next slide-1 gap.
-  - Remaining slide-1 generic gap is bullet hanging-indent geometry from `marL`/`indent`; broader typography still needs per-run fonts and more exact line metrics.
+- Private PPTX slide-1 rerun `artifacts/private-visual/lokad-value-based/20260514-185955`:
+  - Bullet hanging indents from `marL`/`indent` now separate bullet glyphs from bullet text.
+  - Remaining slide-1 generic gaps are exact line metrics/wrapping and broader typography fidelity, including per-run font resources.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -240,7 +242,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-69 passed, 0 failed
+70 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

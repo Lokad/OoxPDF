@@ -689,15 +689,20 @@ internal sealed class PptxRenderer
                 double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties);
                 bool bulletPending = bulletText is not null;
+                ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
+                double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
+                double paragraphTextX = bulletText is null
+                    ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
+                    : textX + Math.Max(0d, indent.MarginLeft);
                 cursorY -= spacingBefore;
-                double cursorX = textX;
+                double cursorX = paragraphTextX;
                 double maxFontSize = 18d;
                 foreach (XElement child in paragraph.Elements())
                 {
                     if (child.Name == DrawingNamespace + "br")
                     {
                         cursorY -= maxFontSize * lineSpacingFactor;
-                        cursorX = textX;
+                        cursorX = paragraphTextX;
                         maxFontSize = 18d;
                         continue;
                     }
@@ -720,12 +725,6 @@ internal sealed class PptxRenderer
                         continue;
                     }
 
-                    if (bulletPending)
-                    {
-                        text = bulletText + " " + text;
-                        bulletPending = false;
-                    }
-
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
                     double fontSize = runProperties?.Attribute("sz") is { } size
                         ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
@@ -741,7 +740,15 @@ internal sealed class PptxRenderer
                     bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                     bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                    runs.Add(new TextRun(text, cursorX, cursorY, textWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
+                    if (bulletPending)
+                    {
+                        double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
+                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
+                        bulletPending = false;
+                    }
+
+                    double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
+                    runs.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
@@ -787,6 +794,20 @@ internal sealed class PptxRenderer
         }
 
         return 0d;
+    }
+
+    private static ParagraphIndent ReadParagraphIndent(XElement? paragraphProperties)
+    {
+        return new ParagraphIndent(
+            ReadParagraphEmuAttribute(paragraphProperties, "marL"),
+            ReadParagraphEmuAttribute(paragraphProperties, "indent"));
+    }
+
+    private static double ReadParagraphEmuAttribute(XElement? paragraphProperties, string attributeName)
+    {
+        return paragraphProperties?.Attribute(attributeName) is { } attribute
+            ? OoxUnits.EmuToPoints(long.Parse(attribute.Value, CultureInfo.InvariantCulture))
+            : 0d;
     }
 
     private static double ReadLineSpacingFactor(XElement? paragraphProperties)
@@ -1257,6 +1278,8 @@ internal sealed class PptxRenderer
         string? FontFamily);
 
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
+
+    private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
     private enum TextAlignment
     {
