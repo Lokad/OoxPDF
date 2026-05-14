@@ -6,7 +6,7 @@ This ExecPlan is the current working plan for `Lokad.OoxPdf`. It intentionally o
 
 `Lokad.OoxPdf` is a dependency-free .NET library that converts `.pptx` and `.docx` OOXML documents to static PDF. The library must not call Office, PDFium, PowerShell, external executables, or third-party packages. Office and PDFium are allowed only in `tools/` for validation.
 
-The project is now past the initial vertical slice. The next phase is fidelity: use public visual cases and private local-only documents to identify missing Office features, implement them as small scoped commits, and keep diagnostics honest when a feature is still missing.
+The project is now past the initial vertical slice. The next phase is fidelity: use public visual cases as the implementation ladder, use private local-only documents only to discover missing Office features, and keep diagnostics honest when a feature is still missing.
 
 ## Repository Map
 
@@ -270,7 +270,7 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series styles, stacked/grouped variants, and chart diagnostics.
 - [ ] Ladder 12: effects and advanced fills: transparency, gradients, pattern fills, shadows, glows, soft edges, picture fills, and explicit diagnostics for unsupported effects.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive fixture text, images, layout, or styling from private documents.
-- [ ] Run the relevant public visual case after each rung change; run private PPTX only as a coarse acceptance check after a rung passes.
+- [ ] Run the relevant public visual case after each rung change; run private PPTX only as feature-discovery smoke evidence until the public ladder is much more complete.
 
 ### PPTX Private Deck Recovery Plan
 
@@ -339,9 +339,9 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 
 ## Next Implementation Targets
 
-1. Rerun `lokad-value-based`, inspect slide 1 as the current acceptance target, and list public-safe gaps against the existing gated ladder.
-2. For every slide-1 gap not covered by a passing public fixture, create or tighten the smallest public synthetic fixture or feature-combination case first.
-3. Only after the relevant public fixture is close to pixel-perfect and gated, update the renderer and rerun the private slide as acceptance evidence.
+1. Continue PPTX Ladder 4 bottom-up: split combined styled-text cases into smaller public fixtures, tighten each fixture toward near pixel-perfect output, and only then revisit larger combinations.
+2. Use `lokad-value-based` only to discover public-safe feature gaps. Do not optimize for private-deck MAE or changed-pixel ratios while the public ladder is incomplete.
+3. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest public synthetic fixture first.
 4. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
 5. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 
@@ -353,8 +353,8 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
-- PPTX fidelity uses a hybrid loop: private slides identify acceptance gaps and combinations; implementation proceeds through minimal public synthetic fixtures that are made close to pixel-perfect and gated before private reruns are used as evidence.
-- Private PPTX pages may regress while lower public rungs are rebuilt, but an accepted private slide should remain stable unless a deliberate lower-rung correction changes its expected outcome.
+- PPTX fidelity is bottom-up: minimal public synthetic fixtures are made close to pixel-perfect and gated before larger public combinations or private documents matter.
+- Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation targets.
 - DOCX fidelity still proceeds one private page at a time until a comparable public DOCX ladder exists. Convert each generic private failure into a public synthetic test where feasible.
 
 ## Validation
