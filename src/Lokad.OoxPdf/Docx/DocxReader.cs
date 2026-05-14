@@ -157,9 +157,10 @@ internal sealed class DocxReader
         }
 
         if (document.Descendants(WordprocessingNamespace + "br").Any(br =>
+            string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase) ||
             string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "column", StringComparison.OrdinalIgnoreCase)))
         {
-            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual column break");
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual page or column break");
         }
 
         if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
@@ -296,19 +297,10 @@ internal sealed class DocxReader
                     elements.Add(new DocxPageBreakElement());
                 }
 
-                foreach (XElement? fragment in SplitParagraphByManualPageBreaks(element))
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
+                if (paragraph is not null)
                 {
-                    if (fragment is null)
-                    {
-                        elements.Add(new DocxPageBreakElement());
-                        continue;
-                    }
-
-                    DocxParagraph? paragraph = ReadParagraph(fragment, styles, numbering, numberingCounters, package, relationships);
-                    if (paragraph is not null)
-                    {
-                        elements.Add(new DocxParagraphElement(paragraph));
-                    }
+                    elements.Add(new DocxParagraphElement(paragraph));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
@@ -322,64 +314,6 @@ internal sealed class DocxReader
         }
 
         return elements;
-    }
-
-    private static IEnumerable<XElement?> SplitParagraphByManualPageBreaks(XElement paragraph)
-    {
-        XElement CreateParagraph() => new(
-            paragraph.Name,
-            paragraph.Attributes(),
-            paragraph.Element(WordprocessingNamespace + "pPr") is { } properties ? new XElement(properties) : null);
-
-        XElement currentParagraph = CreateParagraph();
-        foreach (XElement child in paragraph.Elements().Where(e => e.Name != WordprocessingNamespace + "pPr"))
-        {
-            if (child.Name != WordprocessingNamespace + "r")
-            {
-                currentParagraph.Add(new XElement(child));
-                continue;
-            }
-
-            XElement currentRun = CreateRunShell(child);
-            foreach (XElement runChild in child.Elements())
-            {
-                if (runChild.Name == WordprocessingNamespace + "br" &&
-                    string.Equals((string?)runChild.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase))
-                {
-                    AddRunIfNotEmpty(currentParagraph, currentRun);
-                    yield return currentParagraph;
-                    yield return null;
-                    currentParagraph = CreateParagraph();
-                    currentRun = CreateRunShell(child);
-                    continue;
-                }
-
-                currentRun.Add(new XElement(runChild));
-            }
-
-            AddRunIfNotEmpty(currentParagraph, currentRun);
-        }
-
-        yield return currentParagraph;
-    }
-
-    private static XElement CreateRunShell(XElement run)
-    {
-        var shell = new XElement(run.Name, run.Attributes());
-        if (run.Element(WordprocessingNamespace + "rPr") is { } properties)
-        {
-            shell.Add(new XElement(properties));
-        }
-
-        return shell;
-    }
-
-    private static void AddRunIfNotEmpty(XElement paragraph, XElement run)
-    {
-        if (run.Elements().Any(e => e.Name != WordprocessingNamespace + "rPr"))
-        {
-            paragraph.Add(run);
-        }
     }
 
     private static IReadOnlyList<DocxParagraph> ReadReferencedHeaderFooterParagraphs(

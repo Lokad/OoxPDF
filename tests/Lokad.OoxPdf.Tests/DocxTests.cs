@@ -303,50 +303,6 @@ internal static class DocxTests
         TestAssert.Contains("/Type /Pages /Count 2", pdf);
     }
 
-    public static void DocxSyntheticManualPageBreakStartsNewPage()
-    {
-        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
-        if (!File.Exists(arial))
-        {
-            return;
-        }
-
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:p><w:r><w:t>First</w:t><w:br w:type="page"/><w:t>Second</w:t></w:r></w:p>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Type /Pages /Count 2", pdf);
-        TestAssert.True(diagnostics.All(d => d.Id != "DOCX_UNSUPPORTED_MANUAL_BREAK"), "Manual page breaks should be rendered, not diagnosed as unsupported.");
-    }
-
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -917,7 +873,7 @@ internal static class DocxTests
                       <w:r><w:drawing><wp:anchor/></w:drawing></w:r>
                       <w:r><w:footnoteReference w:id="2"/></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
-                      <w:r><w:br w:type="column"/></w:r>
+                      <w:r><w:br w:type="page"/></w:r>
                     </w:p>
                     <m:oMath/>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:cols w:num="2"/></w:sectPr>

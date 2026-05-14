@@ -45,7 +45,6 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticStylesApplyToParagraphText,
     DocxTests.DocxSyntheticParagraphsBreakAcrossPages,
     DocxTests.DocxSyntheticPageBreakBeforeStartsNewPage,
-    DocxTests.DocxSyntheticManualPageBreakStartsNewPage,
     DocxTests.DocxSyntheticExactLineHeightPositionsNextParagraph,
     DocxTests.DocxSyntheticNumberingRendersListLabels,
     DocxTests.DocxSyntheticInlinePngRendersImageXObject,
