@@ -682,6 +682,8 @@ internal sealed class PptxRenderer
                 double spacingBefore = ReadParagraphSpacing(paragraphProperties, "spcBef");
                 double spacingAfter = ReadParagraphSpacing(paragraphProperties, "spcAft");
                 double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
+                string? bulletText = ReadBulletText(paragraphProperties);
+                bool bulletPending = bulletText is not null;
                 cursorY -= spacingBefore;
                 double cursorX = textX;
                 double maxFontSize = 18d;
@@ -711,6 +713,12 @@ internal sealed class PptxRenderer
                     if (text.Length == 0)
                     {
                         continue;
+                    }
+
+                    if (bulletPending)
+                    {
+                        text = bulletText + " " + text;
+                        bulletPending = false;
                     }
 
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
@@ -777,6 +785,16 @@ internal sealed class PptxRenderer
         }
 
         return 1.2d;
+    }
+
+    private static string? ReadBulletText(XElement? paragraphProperties)
+    {
+        if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
+        {
+            return null;
+        }
+
+        return (string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char");
     }
 
     private static TextVerticalAnchor ReadVerticalAnchor(XElement textBody)
