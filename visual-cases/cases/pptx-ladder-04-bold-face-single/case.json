@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-bold-face-single",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bold-face-single.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "font-face", "bold"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.24,
+    "maxChangedPixelRatioAtThreshold16": 0.0022
+  },
+  "allowedUnsupportedFeatures": []
+}

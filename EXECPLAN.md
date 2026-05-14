@@ -191,6 +191,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Formatting-only empty paragraphs now consume vertical advance using their own paragraph/run formatting or the paragraph default, without borrowing a preceding large-title font.
   - `pptx-ladder-04-bold-italic-face` at `artifacts/visual/pptx-ladder-04-bold-italic-face/20260514-233419`: page count and dimensions matched, diagnostics were empty, MAE `2.512482`, changed-pixel ratio threshold 16 `0.018524`.
   - Font resolution now selects bold/italic faces when available, and synthetic bold/italic is applied only when the requested face cannot be resolved.
+  - Split font-face anchors:
+    - `pptx-ladder-04-bold-face-single` at `artifacts/visual/pptx-ladder-04-bold-face-single/20260514-234212`: MAE `0.229329`, changed-pixel ratio threshold 16 `0.002122`.
+    - `pptx-ladder-04-italic-face-single` at `artifacts/visual/pptx-ladder-04-italic-face-single/20260514-234221`: MAE `0.259048`, changed-pixel ratio threshold 16 `0.002407`.
+    - `pptx-ladder-04-bold-italic-face-single` at `artifacts/visual/pptx-ladder-04-bold-italic-face-single/20260514-234229`: MAE `0.253966`, changed-pixel ratio threshold 16 `0.002414`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.
