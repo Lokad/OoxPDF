@@ -134,6 +134,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Slide 4 mean absolute error: `5.739969`; changed-pixel ratio at threshold 16: `0.062321`.
   - Deck mean absolute error: `15.834825`; max mean absolute error: `75.834314`; mean changed-pixel ratio at threshold 16: `0.177074`.
   - Remaining slide-4 generic gaps include large-title font substitution/advance, exact title size, icon/text placement precision, and fine text wrapping.
+- Private PPTX slide-5 inspection from `artifacts/private-visual/lokad-value-based/20260514-204901`:
+  - Slide 5 mean absolute error: `14.77`; changed-pixel ratio at threshold 16: `0.15`.
+  - The dominant generic gap is chart fidelity: the current static bar fallback lacks category/value axes, labels, stacked/overlay series styling, reference lines, annotations, and Office chart style colors.
+  - Text blocks and separators are present but still affected by fine text metrics and run-boundary spacing.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
