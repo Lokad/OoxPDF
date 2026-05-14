@@ -260,7 +260,7 @@ This plan intentionally starts with a minimal vertical slice that produces valid
   Evidence: `README.md` includes library, CLI, and visual validation examples; `docs/RenderingModel.md`, `docs/VisualValidation.md`, `docs/Capabilities.md`, and `docs/Diagnostics.md` describe the current renderer pipeline, validation harness, supported features, limitations, and CLI diagnostic behavior.
 
 - Observation: The committed tree validates from a fresh local clone.
-  Evidence: A clean checkout at `C:\Users\JoannesVermorel\AppData\Local\Temp\ooxpdf-clean-75b38906b39042769d8dca62c8c53add` ran `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` with 0 warnings and 0 errors, `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` with `42 passed, 0 failed`, and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` successfully.
+  Evidence: A clean checkout at `C:\Users\JoannesVermorel\AppData\Local\Temp\ooxpdf-clean-2b811ce4b2a049dbac41d99fb77fee1e` ran `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` with 0 warnings and 0 errors, `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` with `42 passed, 0 failed`, and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` successfully.
 
 - Observation: The final representative visual smoke cases pass after switching validation scripts to build tools with `--tl:off` and run the DLLs directly.
   Evidence: `pptx-blank` run `20260514-150349` and `docx-blank` run `20260514-150402` both produced matching reference/candidate dimensions and zero mean absolute error in `comparison/metrics.json`.
