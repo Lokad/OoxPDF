@@ -857,7 +857,6 @@ internal sealed class PptxRenderer
                 _ => 0d
             };
             double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody, defaultParagraphProperties) - verticalOffset;
-            double? previousParagraphFontSize = null;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
@@ -873,13 +872,7 @@ internal sealed class PptxRenderer
                     if (ParagraphHasLayoutContent(paragraph))
                     {
                         XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                        double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
-                        if (endRunProperties?.Attribute("sz") is null && previousParagraphFontSize is { } previousFontSize)
-                        {
-                            emptyFontSize = Math.Max(emptyFontSize, previousFontSize);
-                        }
-
-                        cursorY -= spacingBefore + emptyFontSize * paragraphAdvanceFactor + spacingAfter;
+                        cursorY -= spacingBefore + ReadFontSize(endRunProperties, defaultRunProperties) * paragraphAdvanceFactor + spacingAfter;
                     }
 
                     continue;
@@ -988,7 +981,6 @@ internal sealed class PptxRenderer
 
                 AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                 cursorY -= maxFontSize * paragraphAdvanceFactor + spacingAfter;
-                previousParagraphFontSize = maxFontSize;
             }
         }
 
@@ -1302,7 +1294,6 @@ internal sealed class PptxRenderer
     private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties)
     {
         double height = 0d;
-        double? previousParagraphFontSize = null;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
@@ -1316,13 +1307,7 @@ internal sealed class PptxRenderer
                 if (ParagraphHasLayoutContent(paragraph))
                 {
                     XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                    double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
-                    if (endRunProperties?.Attribute("sz") is null && previousParagraphFontSize is { } previousFontSize)
-                    {
-                        emptyFontSize = Math.Max(emptyFontSize, previousFontSize);
-                    }
-
-                    height += emptyFontSize * paragraphAdvanceFactor;
+                    height += ReadFontSize(endRunProperties, defaultRunProperties) * paragraphAdvanceFactor;
                     height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");
                 }
 
@@ -1358,7 +1343,6 @@ internal sealed class PptxRenderer
             }
 
             height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");
-            previousParagraphFontSize = maxFontSize;
         }
 
         return height;
