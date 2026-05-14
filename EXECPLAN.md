@@ -98,6 +98,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Anonymized structure survey found no direct manual page/column breaks, no direct paragraph keep rules, no direct paragraph spacing, no inline/anchored drawings, and one section.
   - The same survey found 198 body paragraphs, 13 body tables, 129 table rows, 422 table cells, 45 numbered paragraphs, 24 style-level spacing definitions, 30 style-level keep-rule definitions, 36 numbering levels with indents, 13 table preferred widths, 422 cell widths, 18 cell vertical-alignment declarations, and 1 repeating table-header row.
   - Working hypothesis: the 17th candidate page is driven by accumulated small layout errors, especially style-derived paragraph spacing/keep rules, numbering indents/hanging indents, and table sizing/header behavior rather than an explicit page-break feature.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-180723`:
+  - Reference output had 16 pages; candidate output had 17 pages.
+  - Candidate still has one extra page; paired-page mean absolute error was `19.226760`, and mean changed-pixel ratio at threshold 16 was `0.158228`.
+  - Diagnostics now identify the public-safe pagination risk categories: `DOCX_NUMBERING_INDENT`, `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_PARAGRAPH_SPACING`, `DOCX_STYLE_TABLE_STYLE`, `DOCX_UNSUPPORTED_TABLE_HEADER_ROW`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+  - Next implementation should start with layout tracing or one of those diagnosed categories; avoid broad paragraph parser rewrites until drift location is known.
 
 ## Backlog
 
