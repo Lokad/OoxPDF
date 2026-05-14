@@ -163,11 +163,6 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual page or column break");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "pageBreakBefore").Any())
-        {
-            Emit("DOCX_UNSUPPORTED_PAGE_BREAK_BEFORE", "paragraph page-break-before");
-        }
-
         if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
             document.Descendants(WordprocessingNamespace + "keepLines").Any() ||
             document.Descendants(WordprocessingNamespace + "widowControl").Any())
@@ -295,6 +290,13 @@ internal sealed class DocxReader
         {
             if (element.Name == WordprocessingNamespace + "p")
             {
+                if (element
+                    .Element(WordprocessingNamespace + "pPr")
+                    ?.Element(WordprocessingNamespace + "pageBreakBefore") is not null)
+                {
+                    elements.Add(new DocxPageBreakElement());
+                }
+
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
                 if (paragraph is not null)
                 {

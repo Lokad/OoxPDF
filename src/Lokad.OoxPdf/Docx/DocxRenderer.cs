@@ -77,6 +77,16 @@ internal sealed class DocxRenderer
 
         foreach (DocxBodyElement element in document.BodyElements)
         {
+            if (element is DocxPageBreakElement)
+            {
+                if (HasPageContent(graphics, pageImages))
+                {
+                    FinishPage();
+                }
+
+                continue;
+            }
+
             if (element is DocxTableElement tableElement)
             {
                 RenderTable(tableElement.Table, document, ref graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
