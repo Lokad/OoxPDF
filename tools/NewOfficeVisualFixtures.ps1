@@ -332,6 +332,44 @@ try {
     finally {
         $tableDoc.Close($false)
     }
+
+    $headerFooter = $word.Documents.Add()
+    try {
+        $headerFooter.PageSetup.PageWidth = 612
+        $headerFooter.PageSetup.PageHeight = 792
+        $headerFooter.PageSetup.TopMargin = 72
+        $headerFooter.PageSetup.BottomMargin = 72
+        $headerFooter.PageSetup.LeftMargin = 72
+        $headerFooter.PageSetup.RightMargin = 72
+        $headerFooter.Content.Text = "Header and footer sample`r`nThis document checks static header text and footer page numbering."
+
+        $header = $headerFooter.Sections.Item(1).Headers.Item(1).Range
+        $header.Text = "Confidential memo"
+        $header.Font.Name = "Arial"
+        $header.Font.Size = 10
+        $header.Font.Color = Rgb 90 90 90
+        $header.ParagraphFormat.Alignment = 1
+
+        $footer = $headerFooter.Sections.Item(1).Footers.Item(1).Range
+        $footer.Text = "Page "
+        $footer.Font.Name = "Arial"
+        $footer.Font.Size = 10
+        $footer.Font.Color = Rgb 90 90 90
+        $footer.Collapse(0)
+        $footer.Fields.Add($footer, 33) | Out-Null
+        $headerFooter.Sections.Item(1).Footers.Item(1).Range.ParagraphFormat.Alignment = 1
+
+        $body = $headerFooter.Paragraphs.Item(1).Range
+        $body.Font.Name = "Arial"
+        $body.Font.Size = 22
+        $body.Font.Bold = $true
+        $body.Font.Color = Rgb 47 128 237
+
+        $headerFooter.SaveAs2((Join-Path $cases "docx-headers-footers.docx"), 16)
+    }
+    finally {
+        $headerFooter.Close($false)
+    }
 }
 finally {
     if ($word -ne $null) {

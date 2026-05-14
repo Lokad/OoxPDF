@@ -83,12 +83,18 @@ internal sealed class DocxReader
             DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles);
             var runs = new List<DocxTextRun>();
             var images = new List<DocxInlineImage>();
+            bool pageInstructionSeen = false;
             foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
             {
                 string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
                 if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
                 {
                     text = "{PAGE}";
+                    pageInstructionSeen = true;
+                }
+                else if (pageInstructionSeen && text.Trim().All(char.IsDigit))
+                {
+                    text = string.Empty;
                 }
 
                 XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
