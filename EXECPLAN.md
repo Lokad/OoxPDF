@@ -104,6 +104,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Reference output had 16 pages; candidate output had 17 pages.
   - Candidate still has one extra page; paired-page mean absolute error was `19.226760`, and mean changed-pixel ratio at threshold 16 was `0.158228`.
   - Diagnostics now identify the public-safe pagination risk categories: `DOCX_NUMBERING_INDENT`, `DOCX_STYLE_PARAGRAPH_KEEP_RULE`, `DOCX_STYLE_PARAGRAPH_SPACING`, `DOCX_STYLE_TABLE_STYLE`, `DOCX_UNSUPPORTED_TABLE_HEADER_ROW`, and `DOCX_UNSUPPORTED_TABLE_STYLE`.
+  - Private visual inspection found DOCX tables in `output.pdf` are visibly wrong enough to require their own recovery track, not just incremental pagination tuning.
   - Next implementation should start with layout tracing or one of those diagnosed categories; avoid broad paragraph parser rewrites until drift location is known.
 
 ## Backlog
@@ -169,6 +170,17 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no matching break exists; previous paragraph-splitting attempts changed the private page count and were reverted.
 - [ ] After each scoped fix, run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/user-requirements-spec.json` and record only page counts, aggregate metrics, diagnostics, and worst-page numbers.
 
+### DOCX Table Recovery Plan
+
+- [ ] Add a DOCX table inventory/trace mode that reports public-safe table metrics per table: row count, column count, grid columns, preferred table width, cell width declarations, row height declarations, header rows, vertical alignment, margins, borders, shading, grid spans, vertical merges, and page index.
+- [ ] Select representative private tables for repeated inspection: one simple table, one typical dense table, and one worst table. Record only table ordinal/page, private rating, and public-safe feature gaps.
+- [ ] Fix the table layout model before cosmetic styling: resolve `tblGrid`, `tblW`, `tcW`, page content width, percentage/auto widths, and grid scaling consistently.
+- [ ] Compute row heights from actual cell content: wrap text within cell width, include cell margins, respect explicit `trHeight` rules, and avoid the current fixed/default row-height behavior for content-heavy rows.
+- [ ] Render cell text as paragraphs instead of flattened cell text: preserve paragraph breaks, basic run styling, numbering/bullets inside cells, alignment, and line spacing.
+- [ ] Implement table and cell styling: table styles, conditional first/header row formatting, cell shading, per-edge borders, border widths/colors, and vertical alignment.
+- [ ] Implement structural table features: horizontal merges (`gridSpan`), vertical merges (`vMerge`), repeating header rows across page breaks, and page-break behavior inside rows.
+- [ ] Add synthetic public tests for each table capability before using the private document as evidence; never derive fixtures from private table content.
+
 ### PDF/Infrastructure
 
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
@@ -182,8 +194,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 1. Start PPTX private deck recovery with a private-safe slide inventory tool and representative-slide gates before adding more isolated PPTX primitives.
 2. Fix PPTX slide composition order and master/layout/placeholder inheritance based on the private inventory.
-3. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
-4. Continue PPTX primitive fidelity only after slide-level ordering/inheritance is measurable: text autofit, image placeholder crop/fit, table styles, and chart fallbacks.
+3. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
+4. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 5. Improve diagnostics coverage for other visible-content omissions that still lack feature-specific diagnostics.
 
 ## Decisions
