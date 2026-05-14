@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-all-caps",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-all-caps.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "caps"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.19,
+    "maxChangedPixelRatioAtThreshold16": 0.002
+  },
+  "allowedUnsupportedFeatures": []
+}

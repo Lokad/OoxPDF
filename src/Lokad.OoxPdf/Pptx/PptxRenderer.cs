@@ -622,13 +622,13 @@ internal sealed class PptxRenderer
             double maxFontSize = 12d;
             foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
             {
-                string text = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+                string text = ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, null);
                 if (text.Length == 0)
                 {
                     continue;
                 }
 
-                XElement? runProperties = run.Element(DrawingNamespace + "rPr");
                 double fontSize = runProperties?.Attribute("sz") is { } size
                     ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                     : 12d;
@@ -917,13 +917,13 @@ internal sealed class PptxRenderer
                     }
 
                     XElement run = child;
-                    string text = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                    XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+                    string text = ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, defaultRunProperties);
                     if (text.Length == 0)
                     {
                         continue;
                     }
 
-                    XElement? runProperties = run.Element(DrawingNamespace + "rPr");
                     double fontSize = ReadFontSize(runProperties, defaultRunProperties);
                     maxFontSize = Math.Max(maxFontSize, fontSize);
                     RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
@@ -1160,6 +1160,14 @@ internal sealed class PptxRenderer
     {
         string? value = (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)
+    {
+        string? value = (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
+        return value is "all"
+            ? text.ToUpperInvariant()
+            : text;
     }
 
     private static TextInsets ReadTextInsets(XElement textBody)

@@ -209,6 +209,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Explicit PPTX tab stops (`a:tabLst/a:tab @pos`) now place following text at the next declared tab position before falling back to the existing heuristic advance.
   - `pptx-ladder-04-strikethrough-single` at `artifacts/visual/pptx-ladder-04-strikethrough-single/20260515-001236`: page count and dimensions matched, diagnostics were empty, MAE `0.268133`, changed-pixel ratio threshold 16 `0.002249`.
   - Single-run strikethrough (`a:rPr @strike`) now renders and is locked by a public visual gate.
+  - `pptx-ladder-04-all-caps` at `artifacts/visual/pptx-ladder-04-all-caps/20260515-001508`: page count and dimensions matched, diagnostics were empty, MAE `0.182496`, changed-pixel ratio threshold 16 `0.001935`.
+  - Run-level all-caps text (`a:rPr @cap="all"`) now transforms text before measurement and drawing in the public ladder.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.
