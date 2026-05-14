@@ -666,7 +666,13 @@ internal sealed class PptxRenderer
             double textX = x + insets.Left;
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
-            double cursorY = document.SlideHeightPoints - yTop - insets.Top - 14d;
+            double verticalOffset = ReadVerticalAnchor(textBody) switch
+            {
+                TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody)) / 2d),
+                TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody)),
+                _ => 0d
+            };
+            double cursorY = document.SlideHeightPoints - yTop - insets.Top - 14d - verticalOffset;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
@@ -770,6 +776,63 @@ internal sealed class PptxRenderer
         }
 
         return 1.2d;
+    }
+
+    private static TextVerticalAnchor ReadVerticalAnchor(XElement textBody)
+    {
+        string? anchor = (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("anchor");
+        return anchor switch
+        {
+            "ctr" => TextVerticalAnchor.Middle,
+            "b" => TextVerticalAnchor.Bottom,
+            _ => TextVerticalAnchor.Top
+        };
+    }
+
+    private static double EstimateTextHeight(XElement textBody)
+    {
+        double height = 0d;
+        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        {
+            XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
+            double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
+            height += ReadParagraphSpacing(paragraphProperties, "spcBef");
+            double maxFontSize = 18d;
+            bool hasLineContent = false;
+            foreach (XElement child in paragraph.Elements())
+            {
+                if (child.Name == DrawingNamespace + "br")
+                {
+                    height += maxFontSize * lineSpacingFactor;
+                    maxFontSize = 18d;
+                    hasLineContent = false;
+                    continue;
+                }
+
+                if (child.Name != DrawingNamespace + "r")
+                {
+                    continue;
+                }
+
+                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
+                double fontSize = runProperties?.Attribute("sz") is { } size
+                    ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
+                    : 18d;
+                maxFontSize = Math.Max(maxFontSize, fontSize);
+                hasLineContent = true;
+            }
+
+            if (hasLineContent || maxFontSize > 0d)
+            {
+                height += maxFontSize * lineSpacingFactor;
+            }
+
+            height += ReadParagraphSpacing(paragraphProperties, "spcAft");
+        }
+
+        return height;
     }
 
     private static bool IsPlaceholder(XElement shape)
@@ -1082,6 +1145,13 @@ internal sealed class PptxRenderer
         Left,
         Center,
         Right
+    }
+
+    private enum TextVerticalAnchor
+    {
+        Top,
+        Middle,
+        Bottom
     }
 
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
