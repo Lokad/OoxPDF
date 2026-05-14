@@ -671,13 +671,18 @@ internal sealed class PptxRenderer
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
                 TextAlignment alignment = ReadAlignment(paragraph);
+                XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
+                double spacingBefore = ReadParagraphSpacing(paragraphProperties, "spcBef");
+                double spacingAfter = ReadParagraphSpacing(paragraphProperties, "spcAft");
+                double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
+                cursorY -= spacingBefore;
                 double cursorX = textX;
                 double maxFontSize = 18d;
                 foreach (XElement child in paragraph.Elements())
                 {
                     if (child.Name == DrawingNamespace + "br")
                     {
-                        cursorY -= maxFontSize * 1.2d;
+                        cursorY -= maxFontSize * lineSpacingFactor;
                         cursorX = textX;
                         maxFontSize = 18d;
                         continue;
@@ -720,7 +725,7 @@ internal sealed class PptxRenderer
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
-                cursorY -= maxFontSize * 1.2d;
+                cursorY -= maxFontSize * lineSpacingFactor + spacingAfter;
             }
         }
 
@@ -743,6 +748,28 @@ internal sealed class PptxRenderer
             ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
             : defaultEmu;
         return OoxUnits.EmuToPoints(emu);
+    }
+
+    private static double ReadParagraphSpacing(XElement? paragraphProperties, string elementName)
+    {
+        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + elementName);
+        if (spacing?.Element(DrawingNamespace + "spcPts")?.Attribute("val") is { } points)
+        {
+            return int.Parse(points.Value, CultureInfo.InvariantCulture) / 100d;
+        }
+
+        return 0d;
+    }
+
+    private static double ReadLineSpacingFactor(XElement? paragraphProperties)
+    {
+        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + "lnSpc");
+        if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
+        {
+            return Math.Max(0.1d, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
+        }
+
+        return 1.2d;
     }
 
     private static bool IsPlaceholder(XElement shape)

@@ -32,6 +32,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
+    PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,
