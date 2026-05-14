@@ -887,6 +887,14 @@ internal sealed class PptxRenderer
             OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
             if (imagePart is null)
             {
+                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                    "IMAGE_MISSING_PART",
+                    OoxPdfSeverity.Error,
+                    "Referenced image part was missing and the image was ignored.",
+                    relationship.ResolvedTarget,
+                    SlideIndex: slideIndex,
+                    Feature: "image",
+                    Fallback: "Ignored"));
                 continue;
             }
 
@@ -940,12 +948,21 @@ internal sealed class PptxRenderer
                 PngImage png = PngImage.Read(bytes);
                 return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
             }
+
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_UNSUPPORTED_FORMAT",
+                OoxPdfSeverity.Error,
+                $"Image '{imagePart.ContentType}' could not be rendered and was ignored: Unsupported image content type.",
+                imagePart.Name,
+                SlideIndex: slideIndex,
+                Feature: imagePart.ContentType,
+                Fallback: "Ignored"));
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_UNSUPPORTED_FORMAT",
-                OoxPdfSeverity.Warning,
+                OoxPdfSeverity.Error,
                 $"Image '{imagePart.ContentType}' could not be rendered and was ignored: {ex.Message}",
                 imagePart.Name,
                 SlideIndex: slideIndex,

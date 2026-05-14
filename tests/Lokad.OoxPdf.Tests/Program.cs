@@ -48,6 +48,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticExactLineHeightPositionsNextParagraph,
     DocxTests.DocxSyntheticNumberingRendersListLabels,
     DocxTests.DocxSyntheticInlinePngRendersImageXObject,
+    DocxTests.DocxUnsupportedPngImageEmitsDiagnostic,
     DocxTests.DocxSyntheticTableRendersCellsAndText,
     DocxTests.DocxSyntheticTableKeepsBodyOrder,
     DocxTests.DocxSyntheticTableUsesRowHeights,

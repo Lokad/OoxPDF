@@ -39,7 +39,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, keep/widow rules, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
 - [x] PNG support covers Adam7 interlaced RGBA images.
-- [x] Unsupported PPTX image formats now emit `IMAGE_UNSUPPORTED_FORMAT` diagnostics instead of aborting the entire conversion.
+- [x] Unsupported PPTX and DOCX image formats now emit release-blocking `IMAGE_UNSUPPORTED_FORMAT` diagnostics while continuing the conversion.
 - [x] PowerPoint reference export is sorted numerically so decks with more than 9 slides compare against the correct candidate pages.
 - [x] Private PPTX assessment completed on a large 84-slide deck without exposing private contents.
 - [x] Private DOCX assessment completed on an 18-candidate-page document without exposing private contents.
@@ -91,7 +91,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 ### Release-Blocking Fidelity
 
 - [x] Implement Adam7 interlaced PNG decoding so embedded interlaced images render instead of being skipped.
-- [ ] Make omitted embedded image content release-blocking: either render it, use a safe fallback, or emit an explicit high-severity diagnostic.
+- [x] Make omitted embedded image content release-blocking: render supported JPEG/PNG, otherwise emit explicit high-severity diagnostics.
 - [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static grouped-bar fallback.
 - [ ] Extend PPTX chart rendering beyond basic bar fallbacks: cached image fallbacks when present, labels, legends, axes, line charts, pie charts, stacked/grouped variants, and style fidelity.
 - [ ] Fix DOCX page geometry and pagination fidelity: section page size/margins, paragraph spacing, manual page/column breaks, and keep/widow page-break decisions.
@@ -131,7 +131,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
 - [ ] Add font subsetting to reduce output size while keeping deterministic output.
 - [ ] Add image deduplication and compression choices for large decks.
-- [ ] Improve diagnostics severity model so release-blocking omissions are distinguishable from harmless approximations.
+- [x] Improve diagnostics severity model so embedded-image omissions are distinguishable from harmless approximations.
 - [x] Add visual comparison support for dimension-near-matches, so a 1-pixel raster rounding mismatch can still produce pixel metrics.
 - [ ] Add private-case summary tooling that reports page count, dimension mismatches, diagnostics grouped by feature, and worst visual pages without exposing content.
 
@@ -141,7 +141,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 2. Continue PPTX text spacing and text-frame layout fixes: autofit, shrink-to-fit, and overflow behavior beyond hard clipping.
 3. Dense PPTX image placement fidelity, especially placeholder-bound images, crop modes, and rotation/flip interactions on image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
-5. Improve diagnostics severity so visible-content omissions are release-blocking.
+5. Improve diagnostics coverage for other visible-content omissions that still lack feature-specific diagnostics.
 
 ## Decisions
 
@@ -165,7 +165,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-61 passed, 0 failed
+62 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

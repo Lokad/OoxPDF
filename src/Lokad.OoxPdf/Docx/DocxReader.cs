@@ -456,7 +456,8 @@ internal sealed class DocxReader
                 OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cx")),
                 OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
                 imagePart.ContentType,
-                imagePart.Bytes));
+                imagePart.Bytes,
+                imagePart.Name));
         }
 
         return images;

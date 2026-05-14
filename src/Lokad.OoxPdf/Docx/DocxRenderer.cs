@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Imaging;
 using Lokad.OoxPdf.Pdf;
@@ -9,17 +10,17 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed class DocxRenderer
 {
-    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document)
+    public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (document.BodyElements.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
-        return RenderParagraphs(document);
+        return RenderParagraphs(document, diagnosticSink);
     }
 
-    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document)
+    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         string familyName = document.Paragraphs
             .Concat(document.HeaderParagraphs)
@@ -143,7 +144,7 @@ internal sealed class DocxRenderer
 
             foreach (DocxInlineImage image in paragraph.Images)
             {
-                PdfImageXObject? xObject = CreateImage(image);
+                PdfImageXObject? xObject = CreateImage(image, diagnosticSink, pages.Count + 1);
                 if (xObject is null)
                 {
                     continue;
@@ -281,22 +282,43 @@ internal sealed class DocxRenderer
         return graphics.ToString().Length > 0 || images.Count > 0;
     }
 
-    private static PdfImageXObject? CreateImage(DocxInlineImage image)
+    private static PdfImageXObject? CreateImage(DocxInlineImage image, Action<OoxPdfDiagnostic>? diagnosticSink, int pageIndex)
     {
-        if (image.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-            image.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            JpegInfo info = JpegInfo.Read(image.Bytes);
-            return PdfImageXObject.Jpeg(info.Width, info.Height, image.Bytes);
+            if (image.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                image.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                JpegInfo info = JpegInfo.Read(image.Bytes);
+                return PdfImageXObject.Jpeg(info.Width, info.Height, image.Bytes);
+            }
+
+            if (image.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+            {
+                PngImage png = PngImage.Read(image.Bytes);
+                return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
+        {
+            EmitImageDiagnostic(diagnosticSink, image, pageIndex, ex.Message);
+            return null;
         }
 
-        if (image.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
-        {
-            PngImage png = PngImage.Read(image.Bytes);
-            return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
-        }
-
+        EmitImageDiagnostic(diagnosticSink, image, pageIndex, "Unsupported image content type.");
         return null;
+    }
+
+    private static void EmitImageDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, DocxInlineImage image, int pageIndex, string reason)
+    {
+        diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+            "IMAGE_UNSUPPORTED_FORMAT",
+            OoxPdfSeverity.Error,
+            $"Image '{image.ContentType}' could not be rendered and was ignored: {reason}",
+            image.PartName,
+            PageIndex: pageIndex,
+            Feature: image.ContentType,
+            Fallback: "Ignored"));
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)

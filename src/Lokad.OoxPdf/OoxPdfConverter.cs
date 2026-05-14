@@ -30,7 +30,7 @@ public static class OoxPdfConverter
         IReadOnlyList<PdfPage> pages = inputKind switch
         {
             OoxPdfInputKind.Pptx => new PptxRenderer().RenderPages(new PptxReader().Read(package), package, options.DiagnosticSink),
-            OoxPdfInputKind.Docx => new DocxRenderer().RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink)),
+            OoxPdfInputKind.Docx => new DocxRenderer().RenderBlankPages(new DocxReader().Read(package, options.DiagnosticSink), options.DiagnosticSink),
             _ => throw new NotSupportedException($"Unsupported input kind '{inputKind}'.")
         };
 
