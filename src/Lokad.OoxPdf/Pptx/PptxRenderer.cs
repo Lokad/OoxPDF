@@ -652,6 +652,7 @@ internal sealed class PptxRenderer
     private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders)
     {
         var runs = new List<TextRun>();
+        var advanceEstimator = new TextAdvanceEstimator();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
             if (!includePlaceholders && IsPlaceholder(shape))
@@ -781,13 +782,13 @@ internal sealed class PptxRenderer
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
                         paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
-                        paragraphEndX = Math.Max(paragraphEndX, bulletX + bulletText!.Length * fontSize * 0.42d);
+                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface));
                         bulletPending = false;
                     }
 
                     double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
                     paragraphRuns.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
-                    cursorX += text.Length * fontSize * 0.42d;
+                    cursorX += advanceEstimator.Measure(text, fontSize, typeface);
                     paragraphEndX = Math.Max(paragraphEndX, cursorX);
                 }
 
@@ -1398,6 +1399,53 @@ internal sealed class PptxRenderer
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
     private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font);
+
+    private sealed class TextAdvanceEstimator
+    {
+        private readonly WindowsFontResolver resolver = new();
+        private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
+
+        public double Measure(string text, double fontSize, string? familyName)
+        {
+            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName);
+            if (font is null)
+            {
+                return text.Length * fontSize * 0.42d;
+            }
+
+            double units = 0d;
+            foreach (Rune rune in text.EnumerateRunes())
+            {
+                ushort glyph = font.MapCodePoint(rune.Value);
+                units += font.GetAdvanceWidth(glyph);
+            }
+
+            return units * fontSize / font.UnitsPerEm;
+        }
+
+        private OpenTypeFont? ResolveFont(string familyName)
+        {
+            if (fonts.TryGetValue(familyName, out OpenTypeFont? cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                FontResolution resolution = resolver.Resolve(new FontRequest(familyName));
+                cached = resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath)
+                    ? null
+                    : OpenTypeFont.Load(resolution.FontFilePath);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
+            {
+                cached = null;
+            }
+
+            fonts[familyName] = cached;
+            return cached;
+        }
+    }
 
     private enum TextAlignment
     {

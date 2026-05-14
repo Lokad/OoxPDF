@@ -107,6 +107,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Private PPTX slide-2 rerun `artifacts/private-visual/lokad-value-based/20260514-195155`:
   - Text frames now allow vertical overflow unless `bodyPr vertOverflow="clip"` is set, exposing previously clipped small footer text.
   - Remaining slide-2 generic gaps are fine typography/metrics: placeholder word fit, mixed-run advance, exact highlight bounds, and line placement.
+- Private PPTX slide-2 rerun `artifacts/private-visual/lokad-value-based/20260514-195905`:
+  - Mixed-run cursor advance now uses resolved font metrics instead of character-count heuristics.
+  - Remaining slide-2 gaps are mostly font availability/substitution, exact text fit, and highlight/underline bounds.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.

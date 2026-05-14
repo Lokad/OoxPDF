@@ -327,7 +327,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 126.36 450.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 130.806 450.9 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
@@ -508,8 +508,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 178.2 450.9 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 216 450.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 177.478 450.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 212.502 450.9 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesListStyleDefaults()
