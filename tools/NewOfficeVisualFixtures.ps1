@@ -69,6 +69,63 @@ try {
         $text.Close()
     }
 
+    $corporate = $powerPoint.Presentations.Add($false)
+    try {
+        $master = $corporate.SlideMaster
+        $master.Background.Fill.ForeColor.RGB = Rgb 245 247 250
+
+        $band = $master.Shapes.AddShape(1, 0, 0, 720, 84)
+        $band.Fill.ForeColor.RGB = Rgb 31 78 121
+        $band.Line.Visible = 0
+
+        $rule = $master.Shapes.AddShape(1, 0, 84, 720, 6)
+        $rule.Fill.ForeColor.RGB = Rgb 112 173 71
+        $rule.Line.Visible = 0
+
+        $footer = $master.Shapes.AddTextbox(1, 54, 488, 612, 24)
+        $footer.TextFrame.TextRange.Text = "Quarterly operating review"
+        $footer.TextFrame.TextRange.Font.Name = "Aptos"
+        $footer.TextFrame.TextRange.Font.Size = 10
+        $footer.TextFrame.TextRange.Font.Color.RGB = Rgb 95 95 95
+
+        $layout = $master.CustomLayouts.Item(1)
+        $slide = $corporate.Slides.AddSlide(1, $layout)
+        $title = $slide.Shapes.AddTextbox(1, 54, 28, 612, 42)
+        $title.TextFrame.TextRange.Text = "Regional growth dashboard"
+        $title.TextFrame.TextRange.Font.Name = "Aptos Display"
+        $title.TextFrame.TextRange.Font.Size = 26
+        $title.TextFrame.TextRange.Font.Bold = $true
+        $title.TextFrame.TextRange.Font.Color.RGB = Rgb 255 255 255
+
+        $subtitle = $slide.Shapes.AddTextbox(1, 54, 112, 420, 64)
+        $subtitle.TextFrame.TextRange.Text = "The themed master supplies the banner, rule, background, and footer while the slide carries local KPI content."
+        $subtitle.TextFrame.TextRange.Font.Name = "Aptos"
+        $subtitle.TextFrame.TextRange.Font.Size = 18
+        $subtitle.TextFrame.TextRange.Font.Color.RGB = Rgb 45 45 45
+
+        $kpi = $slide.Shapes.AddShape(1, 54, 216, 180, 108)
+        $kpi.Fill.ForeColor.RGB = Rgb 255 255 255
+        $kpi.Line.ForeColor.RGB = Rgb 31 78 121
+        $kpi.Line.Weight = 1.5
+        $kpi.TextFrame.TextRange.Text = "North`r+14%"
+        $kpi.TextFrame.TextRange.Font.Name = "Aptos"
+        $kpi.TextFrame.TextRange.Font.Size = 24
+        $kpi.TextFrame.TextRange.Font.Color.RGB = Rgb 31 78 121
+
+        $callout = $slide.Shapes.AddShape(9, 432, 204, 162, 126)
+        $callout.Fill.ForeColor.RGB = Rgb 112 173 71
+        $callout.Line.Visible = 0
+        $callout.TextFrame.TextRange.Text = "Plan on track"
+        $callout.TextFrame.TextRange.Font.Name = "Aptos"
+        $callout.TextFrame.TextRange.Font.Size = 18
+        $callout.TextFrame.TextRange.Font.Color.RGB = Rgb 255 255 255
+
+        $corporate.SaveAs((Join-Path $cases "pptx-corporate-theme.pptx"), 24)
+    }
+    finally {
+        $corporate.Close()
+    }
+
     Add-Type -AssemblyName System.Drawing
     $imagePath = Join-Path $env:TEMP ("ooxpdf-image-" + [guid]::NewGuid() + ".png")
     $bitmap = [System.Drawing.Bitmap]::new(160, 90)

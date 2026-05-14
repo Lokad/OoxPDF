@@ -8,4 +8,4 @@ Run a case from the repository root:
 
 The script writes timestamped outputs under `artifacts/visual/<case-id>/<run-id>/`, including Office reference PNGs, the candidate PDF, candidate PNGs, `comparison/metrics.json`, `comparison/index.html`, and `assessment.md`.
 
-PowerPoint and Word reference rendering require Microsoft Office COM automation on Windows. Candidate PDF rasterization requires `tools/vendor/pdfium/win-x64/pdfium_test.exe`.
+PowerPoint and Word reference rendering require Microsoft Office COM automation on Windows. Candidate PDF rasterization requires `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.
