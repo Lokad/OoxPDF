@@ -143,7 +143,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Add image deduplication and compression choices for large decks.
 - [x] Improve diagnostics severity model so embedded-image omissions are distinguishable from harmless approximations.
 - [x] Add visual comparison support for dimension-near-matches, so a 1-pixel raster rounding mismatch can still produce pixel metrics.
-- [ ] Add private-case summary tooling that reports page count, dimension mismatches, diagnostics grouped by feature, and worst visual pages without exposing content.
+- [x] Add private-case summary tooling that reports page count, dimension mismatches, diagnostics grouped by feature, and worst visual pages without exposing content.
 
 ## Next Implementation Targets
 

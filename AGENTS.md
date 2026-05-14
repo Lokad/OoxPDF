@@ -29,6 +29,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
+- `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
