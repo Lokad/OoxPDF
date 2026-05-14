@@ -37,6 +37,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
+    PptxTests.PptxSyntheticTextBoxHonorsExplicitTabStops,
     PptxTests.PptxSyntheticTextBoxOffsetsLargeTextByFontSize,
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,

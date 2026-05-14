@@ -881,6 +881,7 @@ internal sealed class PptxRenderer
                 string? bulletText = ReadBulletText(paragraphProperties);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
+                IReadOnlyList<double> tabStops = ReadTabStops(paragraphProperties);
                 double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
                 double paragraphTextX = bulletText is null
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
@@ -905,7 +906,7 @@ internal sealed class PptxRenderer
 
                     if (child.Name == DrawingNamespace + "tab")
                     {
-                        cursorX += maxFontSize * 2.2d;
+                        cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, maxFontSize);
                         continue;
                     }
 
@@ -1203,6 +1204,37 @@ internal sealed class PptxRenderer
         return paragraphProperties?.Attribute(attributeName) is { } attribute
             ? OoxUnits.EmuToPoints(long.Parse(attribute.Value, CultureInfo.InvariantCulture))
             : 0d;
+    }
+
+    private static IReadOnlyList<double> ReadTabStops(XElement? paragraphProperties)
+    {
+        if (paragraphProperties?.Element(DrawingNamespace + "tabLst") is not { } tabList)
+        {
+            return Array.Empty<double>();
+        }
+
+        return tabList
+            .Elements(DrawingNamespace + "tab")
+            .Select(tab => tab.Attribute("pos") is { } position
+                ? OoxUnits.EmuToPoints(long.Parse(position.Value, CultureInfo.InvariantCulture))
+                : double.NaN)
+            .Where(position => !double.IsNaN(position))
+            .Order()
+            .ToArray();
+    }
+
+    private static double ResolveNextTabX(double cursorX, double paragraphTextX, IReadOnlyList<double> tabStops, double fontSize)
+    {
+        double current = cursorX - paragraphTextX;
+        foreach (double tabStop in tabStops)
+        {
+            if (tabStop > current + 0.01d)
+            {
+                return paragraphTextX + tabStop;
+            }
+        }
+
+        return cursorX + fontSize * 2.2d;
     }
 
     private static LineSpacing ReadLineSpacing(XElement? paragraphProperties, XElement? defaultParagraphProperties)
