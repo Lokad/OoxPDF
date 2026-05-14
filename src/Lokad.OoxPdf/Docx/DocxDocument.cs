@@ -7,11 +7,13 @@ internal sealed record DocxDocument(
     double MarginRightPoints,
     double MarginTopPoints,
     double MarginBottomPoints,
+    IReadOnlyList<DocxParagraph> HeaderParagraphs,
+    IReadOnlyList<DocxParagraph> FooterParagraphs,
     IReadOnlyList<DocxParagraph> Paragraphs,
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [], [], [])
     {
     }
 }

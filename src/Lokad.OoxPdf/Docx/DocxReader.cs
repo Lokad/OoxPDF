@@ -15,6 +15,8 @@ internal sealed class DocxReader
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string StylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
     private const string NumberingRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering";
+    private const string HeaderRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header";
+    private const string FooterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
     private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
 
@@ -40,10 +42,12 @@ internal sealed class DocxReader
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering, package, relationships);
         IReadOnlyList<DocxTable> tables = ReadTables(document);
+        IReadOnlyList<DocxParagraph> headers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference");
+        IReadOnlyList<DocxParagraph> footers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, FooterRelationshipType, "footerReference");
 
         if (pageSize is null)
         {
-            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, paragraphs, tables);
+            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, headers, footers, paragraphs, tables);
         }
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
@@ -58,7 +62,7 @@ internal sealed class DocxReader
         double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
-        return new DocxDocument(width, height, left, right, top, bottom, paragraphs, tables);
+        return new DocxDocument(width, height, left, right, top, bottom, headers, footers, paragraphs, tables);
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphs(
@@ -116,6 +120,49 @@ internal sealed class DocxReader
         }
 
         return paragraphs;
+    }
+
+    private static IReadOnlyList<DocxParagraph> ReadReferencedHeaderFooterParagraphs(
+        XDocument document,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        string relationshipType,
+        string referenceElementName)
+    {
+        var paragraphs = new List<DocxParagraph>();
+        foreach (XElement reference in document.Descendants(WordprocessingNamespace + referenceElementName))
+        {
+            string? relationshipId = (string?)reference.Attribute(RelationshipsNamespace + "id");
+            if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.Type != relationshipType || relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            OoxPart? part = package.GetPart(relationship.ResolvedTarget);
+            if (part is null)
+            {
+                continue;
+            }
+
+            using Stream stream = part.OpenRead();
+            XDocument partXml = SafeXml.Load(stream);
+            paragraphs.AddRange(ReadParagraphElements(partXml.Root?.Elements(WordprocessingNamespace + "p") ?? [], styles, numbering, package, package.GetRelationships(part.Name).Where(r => !r.IsExternal && r.ResolvedTarget is not null).ToDictionary(r => r.Id, StringComparer.Ordinal)));
+        }
+
+        return paragraphs;
+    }
+
+    private static IReadOnlyList<DocxParagraph> ReadParagraphElements(
+        IEnumerable<XElement> paragraphElements,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        var wrapper = new XDocument(new XElement(WordprocessingNamespace + "document", new XElement(WordprocessingNamespace + "body", paragraphElements)));
+        return ReadParagraphs(wrapper, styles, numbering, package, relationships);
     }
 
     private static IReadOnlyList<DocxTable> ReadTables(XDocument document)

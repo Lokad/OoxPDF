@@ -11,7 +11,7 @@ internal sealed class DocxRenderer
 {
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document)
     {
-        if (document.Paragraphs.Count == 0 && document.Tables.Count == 0)
+        if (document.Paragraphs.Count == 0 && document.Tables.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
@@ -22,11 +22,17 @@ internal sealed class DocxRenderer
     private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document)
     {
         string familyName = document.Paragraphs
+            .Concat(document.HeaderParagraphs)
+            .Concat(document.FooterParagraphs)
             .SelectMany(p => p.Runs)
             .Select(r => r.FontFamily)
             .FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
         FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
-        IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs.SelectMany(p => p.Runs).ToArray();
+        IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs
+            .Concat(document.HeaderParagraphs)
+            .Concat(document.FooterParagraphs)
+            .SelectMany(p => p.Runs)
+            .ToArray();
         IEnumerable<int> tableRunes = document.Tables
             .SelectMany(t => t.Rows)
             .SelectMany(r => r.Cells)
@@ -54,6 +60,12 @@ internal sealed class DocxRenderer
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
         void FinishPage()
         {
+            if (embedded is not null)
+            {
+                RenderStaticParagraphs(document.HeaderParagraphs, graphics, embedded, x, width, document.PageHeightPoints - Math.Max(18d, document.MarginTopPoints / 2d));
+                RenderStaticParagraphs(document.FooterParagraphs, graphics, embedded, x, width, Math.Max(18d, document.MarginBottomPoints / 2d));
+            }
+
             IReadOnlyList<PdfFontResource> fonts = resource is null ? [] : [resource];
             pages.Add(new PdfPage(document.PageWidthPoints, document.PageHeightPoints, graphics.ToString(), fonts, pageImages.ToArray()));
             graphics = new PdfGraphicsBuilder();
@@ -146,6 +158,38 @@ internal sealed class DocxRenderer
         }
 
         return pages;
+    }
+
+    private static void RenderStaticParagraphs(
+        IReadOnlyList<DocxParagraph> paragraphs,
+        PdfGraphicsBuilder graphics,
+        PdfEmbeddedFont embedded,
+        double x,
+        double width,
+        double startY)
+    {
+        double cursorY = startY;
+        foreach (DocxParagraph paragraph in paragraphs)
+        {
+            if (paragraph.Runs.Count == 0)
+            {
+                continue;
+            }
+
+            double fontSize = Math.Min(12d, paragraph.Runs.Max(r => r.FontSize));
+            string text = string.Concat(paragraph.Runs.Select(r => r.Text));
+            DocxTextRun firstRun = paragraph.Runs[0];
+            RgbColor color = ReadColor(firstRun.ColorHex);
+            double lineWidth = embedded.MeasureTextPoints(text, fontSize);
+            double lineX = paragraph.Alignment switch
+            {
+                DocxTextAlignment.Center => x + Math.Max(0, width - lineWidth) / 2d,
+                DocxTextAlignment.Right => x + Math.Max(0, width - lineWidth),
+                _ => x
+            };
+            graphics.DrawGlyphText("F1", fontSize, lineX, cursorY, color.Red, color.Green, color.Blue, embedded.EncodeGlyphHex(text), firstRun.Italic);
+            cursorY -= fontSize * 1.2d;
+        }
     }
 
     private static void RenderTable(

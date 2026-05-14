@@ -32,6 +32,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticNumberingRendersListLabels,
     DocxTests.DocxSyntheticInlinePngRendersImageXObject,
     DocxTests.DocxSyntheticTableRendersCellsAndText,
+    DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);
