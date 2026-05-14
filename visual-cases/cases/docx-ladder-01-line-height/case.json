@@ -1,0 +1,16 @@
+{
+  "id": "docx-ladder-01-line-height",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-line-height.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph", "line-height"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.015,
+    "maxChangedPixelRatioAtThreshold16": 0.0004
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -126,7 +126,10 @@ internal sealed class DocxRenderer
                         _ => x
                     };
                     string glyphHex = embedded.EncodeGlyphHex(line);
-                    double baselineY = cursorY - paragraphFontSize * baselineOffsetFactor;
+                    double baselineOffset = paragraph.LineSpacingPoints is null
+                        ? paragraphFontSize * baselineOffsetFactor
+                        : Math.Max(0d, lineHeight - paragraphFontSize * 0.299d);
+                    double baselineY = cursorY - baselineOffset;
                     graphics.DrawGlyphText("F1", paragraphFontSize, lineX, baselineY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
                     if (firstRun.Bold)
                     {
