@@ -1,4 +1,16 @@
-# ExecPlans
+
+## .NET Commands
+
+Use `--tl:off` to avoid dynamic terminal logger output.
+
+```powershell
+dotnet restore Foo.slnx --tl:off -v minimal
+dotnet build   Foo.slnx --tl:off --nologo -v minimal
+dotnet test    tests/Foo.Tests/Foo.Tests.csproj --tl:off --nologo -v minimal
+dotnet pack    src/Foo/Foo.csproj --tl:off --nologo -v minimal --no-restore
+```
+
+## ExecPlans
 
 When writing complex features or significant refactors, use an ExecPlan (as described in PLANS.md) from design to implementation.
 
