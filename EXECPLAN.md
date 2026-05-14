@@ -30,10 +30,12 @@ Every PPTX and DOCX fidelity task should start from what Office actually emits, 
 
 1. Create or select the smallest public synthetic `.pptx` or `.docx` that isolates one feature.
 2. Export that file with Office to the reference PDF and inspect the PDF/raster output: page boxes, draw order, text positions, fills/strokes, images, and pagination.
-3. Render the same OOXML with `ooxpdf`, inspect the candidate PDF/raster output, and identify the smallest visible or structural difference.
-4. Implement the smallest renderer change that closes that difference without using private document content.
-5. Lock the case with a public visual manifest once it is pixel-perfect or as close as realistically possible.
-6. Revisit unit tests touched by the feature: keep tests that protect public API, diagnostics, parsing, safety, and deterministic PDF structure; rewrite brittle operator-position tests when Office-PDF inspection shows a better behavioral assertion.
+3. Inspect Office's observable PDF composition strategy for the feature: text objects and matrices, path/fill/stroke operators, clipping, image masks, transparency groups, resource reuse, and draw order.
+4. Render the same OOXML with `ooxpdf`, inspect the candidate PDF/raster output, and identify the smallest visible or structural difference.
+5. Prefer renderer/PDF-writer changes that converge toward Office-like PDF structure when practical, not arbitrary PDF output that only happens to match a narrow raster case.
+6. Implement the smallest renderer change that closes that difference without using private document content.
+7. Lock the case with a public visual manifest once it is pixel-perfect or as close as realistically possible.
+8. Revisit unit tests touched by the feature: keep tests that protect public API, diagnostics, parsing, safety, and deterministic PDF structure; rewrite brittle operator-position tests when Office-PDF inspection shows a better behavioral assertion.
 
 Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. Their Office PDFs may be inspected locally to identify generic gaps, but renderer changes should be driven by public synthetic fixtures unless a safety or diagnostics issue is involved.
 
@@ -379,6 +381,8 @@ Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, syn
 
 ### PDF/Infrastructure
 
+- [ ] Audit current PDF generation patterns against Office reference PDFs: text grouping, text matrices, clipping regions, image masks, transparency state, path construction, stroke/fill order, resource naming/reuse, and page content stream organization.
+- [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
 - [ ] Add font subsetting to reduce output size while keeping deterministic output.
 - [ ] Add image deduplication and compression choices for large decks.
@@ -403,6 +407,7 @@ Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, syn
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
 - Office-exported PDFs are the primary fidelity reference. Raster metrics are useful gates after manual/agent inspection confirms the candidate is targeting the same Office behavior.
+- Emulate Office's observable rendering strategy where it matters for fidelity: PDF operator structure, resource usage, clipping, transparency, image placement, and text positioning should move toward Office-like patterns when practical. Do not depend on Office at runtime or claim byte-for-byte PDF equivalence.
 - PPTX fidelity is bottom-up: minimal public synthetic fixtures are made close to pixel-perfect and gated before larger public combinations or private documents matter.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation targets.
 - DOCX fidelity should move to the same Office-PDF-first public ladder as PPTX. Private pages remain acceptance evidence and gap discovery, not the main implementation driver.
