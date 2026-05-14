@@ -173,6 +173,14 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Single-run centered paragraphs now receive the same alignment offset as mixed-run centered paragraphs.
   - `pptx-ladder-03-text-anchor-overflow` at `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260514-214416`: page count and dimensions matched, diagnostics were empty, MAE `0.413942`, changed-pixel ratio threshold 16 `0.003552`.
   - Clipped PPTX text frames now suppress lines that cannot fit inside the clip box.
+- Private PPTX acceptance rerun `artifacts/private-visual/lokad-value-based/20260514-223939`:
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Slide 1 mean absolute error: `18.001507`; changed-pixel ratio at threshold 16: `0.147195`.
+  - Slide-1 public-safe gaps map to styled text/list fixtures: large centered serif title placement, white text over dark image background, underlined run bounds, and multi-paragraph bullet list wrapping/line spacing.
+- Public PPTX ladder styled-text rerun:
+  - `pptx-ladder-04-bullet-wrap` at `artifacts/visual/pptx-ladder-04-bullet-wrap/20260514-224326`: page count and dimensions matched, diagnostics were empty, MAE `1.253179`, changed-pixel ratio threshold 16 `0.009518`.
+  - Bullet glyph placement, hanging indents, and continuation-line alignment are now covered by a public synthetic fixture before using private slide-1 evidence.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
