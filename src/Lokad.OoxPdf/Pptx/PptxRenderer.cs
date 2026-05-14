@@ -655,14 +655,65 @@ internal sealed class PptxRenderer
     {
         XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
         XElement? colorContainer = solidFill ?? element;
-        string? hex = (string?)colorContainer?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
+        string? hex = (string?)srgbColor?.Attribute("val");
         if (RgbColor.TryParse(hex, out color))
         {
+            color = ApplyColorTransforms(srgbColor, color);
             return true;
         }
 
-        string? schemeColor = (string?)colorContainer?.Element(DrawingNamespace + "schemeClr")?.Attribute("val");
-        return schemeColor is not null && theme.TryResolveColor(schemeColor, out color);
+        XElement? schemeColorElement = colorContainer?.Element(DrawingNamespace + "schemeClr");
+        string? schemeColor = (string?)schemeColorElement?.Attribute("val");
+        if (schemeColor is not null && theme.TryResolveColor(schemeColor, out color))
+        {
+            color = ApplyColorTransforms(schemeColorElement, color);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
+    {
+        if (colorElement is null)
+        {
+            return color;
+        }
+
+        double red = color.Red;
+        double green = color.Green;
+        double blue = color.Blue;
+        foreach (XElement transform in colorElement.Elements())
+        {
+            double value = ParseOptionalLongAttribute(transform, "val", 100000) / 100000d;
+            switch (transform.Name.LocalName)
+            {
+                case "lumMod":
+                case "shade":
+                    red *= value;
+                    green *= value;
+                    blue *= value;
+                    break;
+                case "lumOff":
+                    red += 255d * value;
+                    green += 255d * value;
+                    blue += 255d * value;
+                    break;
+                case "tint":
+                    red += (255d - red) * value;
+                    green += (255d - green) * value;
+                    blue += (255d - blue) * value;
+                    break;
+            }
+        }
+
+        return new RgbColor(ToByte(red), ToByte(green), ToByte(blue));
+    }
+
+    private static byte ToByte(double value)
+    {
+        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
     }
 
     private static bool TryReadLine(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth)
@@ -819,10 +870,31 @@ internal sealed class PptxRenderer
                         bulletPending = false;
                     }
 
-                    double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
-                    paragraphRuns.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
-                    cursorX += advanceEstimator.Measure(text, fontSize, typeface);
-                    paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                    foreach (string segment in SplitFlowSegments(text))
+                    {
+                        string currentSegment = segment;
+                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface);
+                        if (cursorX > paragraphTextX && cursorX + segmentWidth > textX + textWidth)
+                        {
+                            AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
+                            paragraphRuns.Clear();
+                            cursorY -= maxFontSize * lineSpacingFactor;
+                            cursorX = paragraphTextX;
+                            paragraphEndX = paragraphTextX;
+                            maxFontSize = fontSize;
+                            currentSegment = currentSegment.TrimStart();
+                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface);
+                        }
+
+                        if (currentSegment.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
+                        cursorX += segmentWidth;
+                        paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                    }
                 }
 
                 AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
@@ -831,6 +903,34 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static IEnumerable<string> SplitFlowSegments(string text)
+    {
+        int index = 0;
+        while (index < text.Length)
+        {
+            int start = index;
+            while (index < text.Length && text[index] == ' ')
+            {
+                index++;
+            }
+
+            while (index < text.Length && text[index] != ' ')
+            {
+                index++;
+            }
+
+            while (index < text.Length && text[index] == ' ')
+            {
+                index++;
+            }
+
+            if (index > start)
+            {
+                yield return text[start..index];
+            }
+        }
     }
 
     private static void AddAlignedParagraphRuns(List<TextRun> runs, List<TextRun> paragraphRuns, TextAlignment alignment, double textX, double textWidth, double paragraphEndX)

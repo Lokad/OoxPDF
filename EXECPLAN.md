@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, connector lines, down-arrow preset shapes, rotation/flip, common theme colors/fonts, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, vertical anchoring, clipping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, connector lines, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, direct and style-level keep/widow rules, style spacing variants, numbering indents, table styles/header rows, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
@@ -115,6 +115,13 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - 84 candidate pages, all dimensions matched reference pages.
   - Mean absolute error: `15.755963`; max mean absolute error: `75.403370`; mean changed-pixel ratio at threshold 16: `0.174249`.
   - Remaining slide-3 generic gaps include inherited banner fidelity, text-frame wrapping/overlap, fine text metrics, line/fill color transforms, and icon/image placement precision.
+- Private PPTX slide-3 rerun `artifacts/private-visual/lokad-value-based/20260514-202523`:
+  - Scheme luminance transforms now make inherited gray banner/ribbon fills visible.
+  - Mixed-run paragraph wrapping now flows runs onto shared lines instead of wrapping each run independently.
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Slide 3 mean absolute error: `12.545817`; changed-pixel ratio at threshold 16: `0.145434`.
+  - Deck mean absolute error: `15.770431`; max mean absolute error: `75.640299`; mean changed-pixel ratio at threshold 16: `0.175994`.
+  - Remaining slide-3 generic gaps include text autofit/fit-to-box, fine font metrics/substitution, exact highlight bounds, and icon/image placement precision.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
