@@ -216,6 +216,26 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Media and dynamic features: videos, audio, animations, transitions, and OLE/ActiveX should remain static/diagnostic-only unless a reliable fallback is available.
 - [ ] Comments/notes: speaker notes and comments should be ignored with diagnostics or exposed through an optional mode, not silently dropped.
 
+### PPTX Synthetic Fidelity Ladder
+
+Build these as public, minimal, one-slide fixtures. Each rung must have an Office-rendered reference, candidate raster output, strict page/dimension checks, expected diagnostics, and a visual gate once the primitive is close. It is acceptable for private deck pages to regress while early rungs are rebuilt; the goal is a strict bottom-up progression.
+
+- [ ] Ladder 0: blank slide, page size, white/default background, deterministic PDF bytes, and no diagnostics.
+- [ ] Ladder 1: solid slide backgrounds and master/layout background inheritance in isolation.
+- [ ] Ladder 2: one plain text box with fixed bounds, one font size, one font family, no wrapping, and baseline locked against reference.
+- [ ] Ladder 3: text wrapping with preserved spaces, explicit line breaks, tabs, paragraph alignment, body insets, vertical anchor, and overflow behavior.
+- [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs, bullet hanging indents, paragraph spacing, and line spacing.
+- [ ] Ladder 5: basic shapes: rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths, rotation, flips, and clipping-free z-order.
+- [ ] Ladder 6: preset and connector shapes: arrows, connector endpoints, arrowheads, dashes, line caps/joins, callouts, and common freeform/custom path fallbacks.
+- [ ] Ladder 7: images: JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior, rotation/flip interactions, and unsupported image diagnostics.
+- [ ] Ladder 8: grouped content: nested group transforms, grouped pictures, grouped text, grouped shapes, child coordinate scaling, z-order, and clips.
+- [ ] Ladder 9: slide inheritance: placeholders, master/layout text styles, hidden placeholders, footer/date/slide number placeholders, theme fonts, and theme color transforms.
+- [ ] Ladder 10: tables: fixed grid, per-edge borders, fills, cell margins, vertical alignment, merged cells, rich text inside cells, and table styles.
+- [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series styles, stacked/grouped variants, and chart diagnostics.
+- [ ] Ladder 12: effects and advanced fills: transparency, gradients, pattern fills, shadows, glows, soft edges, picture fills, and explicit diagnostics for unsupported effects.
+- [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive fixture text, images, layout, or styling from private documents.
+- [ ] Run the relevant public visual case after each rung change; run private PPTX only as a coarse acceptance check after a rung passes.
+
 ### PPTX Private Deck Recovery Plan
 
 - [x] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
@@ -282,11 +302,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Select and exhaust the first private PPTX slide, starting with slide 1 from the inventory, before adding more isolated PPTX primitives.
-2. Fix PPTX slide composition order and master/layout/placeholder inheritance based on the selected slide evidence.
-3. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
-4. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
-5. Improve diagnostics coverage for other visible-content omissions that still lack feature-specific diagnostics.
+1. Switch PPTX fidelity work to the synthetic ladder: create or tighten Ladder 0 and Ladder 1 first, then advance one rung at a time.
+2. Add or update public visual fixtures and gates for each ladder rung before using the private PPTX deck to drive more implementation.
+3. Use private PPTX slides 1-10 as acceptance evidence only after the relevant synthetic rungs pass; record only public-safe gaps and metrics.
+4. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
+5. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 
 ## Decisions
 
@@ -296,7 +316,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
-- Current fidelity work proceeds one private PPTX slide or one private DOCX page at a time. Exhaust the selected slide/page before moving on, and convert each generic private failure into a public synthetic test where feasible.
+- PPTX fidelity work proceeds bottom-up through the public synthetic ladder. Private PPTX pages may regress during early ladder work; they are acceptance evidence, not the primary development driver.
+- DOCX fidelity still proceeds one private page at a time until a comparable public DOCX ladder exists. Convert each generic private failure into a public synthetic test where feasible.
 
 ## Validation
 
@@ -311,7 +332,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-77 passed, 0 failed
+80 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.
