@@ -136,12 +136,15 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 ### PPTX Private Deck Recovery Plan
 
 - [ ] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
-- [ ] Select three representative private slides for repeated inspection: one simplest failing slide, one typical content-heavy slide, and one worst slide. Record only slide numbers, ratings, and public-safe feature gaps in private artifacts and anonymized summaries.
+- [ ] Select the first private slide and exhaust it before moving on: inspect reference vs candidate, list every visible failure, implement or diagnose each generic gap, rerender, and repeat until the slide is acceptable or every remaining issue is explicitly planned.
+- [ ] After the first slide is exhausted, continue one private slide at a time. Prefer the next simplest failing slide before typical and worst slides so foundational ordering/inheritance/text/image problems are isolated early.
+- [ ] Maintain a private per-slide checklist with only public-safe fields: slide number, private rating, missing content, wrong order, wrong placement, wrong sizing, wrong text layout, wrong styling, and unsupported features lacking diagnostics.
 - [ ] Establish private visual gates for those representative slides: page count and dimensions must match, diagnostics must explain omissions, and a private human/agent rating must improve before optimizing aggregate deck metrics.
 - [ ] Fix slide composition order first: master, layout, slide background, inherited placeholders, slide shapes, groups, pictures, tables, charts, and overlays must render in PowerPoint z-order.
 - [ ] Audit and fix master/layout/placeholder inheritance, including placeholder matching, hidden placeholders, text/body placeholders, footer/date/slide-number placeholders, theme variants, and background styles.
 - [ ] Build slide-level diagnostics for unsupported or approximated visible content: effects, transparent fills, complex shapes, chart fallbacks, SmartArt, media/OLE, unsupported images, and placeholder fallbacks.
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets, font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart cached-image fallbacks and labels.
+- [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not derive public fixtures from private slide content.
 - [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX fix and summarize only counts, diagnostics, worst-page numbers, and private ratings.
 
 ### DOCX Feature Survey
@@ -160,6 +163,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ### DOCX 16-vs-17 Page Mismatch Plan
 
+- [ ] Select the first private page and exhaust it before moving on: inspect reference vs candidate, list every visible failure, implement or diagnose each generic gap, rerender, and repeat until the page is acceptable or every remaining issue is explicitly planned.
+- [ ] Continue one private page at a time after the first page. Prefer pages with obvious table/pagination failures before using document-wide aggregate metrics.
+- [ ] Maintain a private per-page checklist with only public-safe fields: page number, private rating, missing content, wrong order, wrong placement, wrong sizing, wrong text layout, table defects, pagination drift, and unsupported features lacking diagnostics.
 - [ ] Add an internal DOCX layout trace mode that records public-safe per-page counts and consumed vertical space by block kind, so private runs can locate where candidate pagination drifts without exposing text.
 - [x] Extend DOCX diagnostics to inspect styles and numbering parts, not just direct `word/document.xml` elements, so style-level spacing, keep rules, indents, table styles, and numbering layout risks are visible.
 - [ ] Implement style-derived paragraph spacing accurately, including before/after values, `contextualSpacing`, `beforeAutospacing`/`afterAutospacing`, and Word-like adjacent paragraph spacing collapse.
@@ -168,6 +174,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from content, cell vertical alignment, cell margins, and repeating header rows.
 - [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and widow/orphan control with synthetic tests and private page-count checks.
 - [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no matching break exists; previous paragraph-splitting attempts changed the private page count and were reverted.
+- [ ] For every generic capability fixed from a private page, add a small public synthetic test. Do not derive public fixtures from private page content.
 - [ ] After each scoped fix, run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/user-requirements-spec.json` and record only page counts, aggregate metrics, diagnostics, and worst-page numbers.
 
 ### DOCX Table Recovery Plan
@@ -205,7 +212,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Private documents remain under ignored `private-cases/`; generated private artifacts remain under ignored `artifacts/private-visual/`.
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
-- Pixel metrics are evidence, not the final truth. Human/agent visual inspection remains necessary for representative cases.
+- Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
+- Current fidelity work proceeds one private PPTX slide or one private DOCX page at a time. Exhaust the selected slide/page before moving on, and convert each generic private failure into a public synthetic test where feasible.
 
 ## Validation
 
