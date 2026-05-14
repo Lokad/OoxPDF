@@ -197,6 +197,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
     - `pptx-ladder-04-bold-italic-face-single` at `artifacts/visual/pptx-ladder-04-bold-italic-face-single/20260514-234229`: MAE `0.253966`, changed-pixel ratio threshold 16 `0.002414`.
   - `pptx-ladder-04-character-spacing` at `artifacts/visual/pptx-ladder-04-character-spacing/20260514-235026`: page count and dimensions matched, diagnostics were empty, MAE `0.920131`, changed-pixel ratio threshold 16 `0.006839`.
   - Run-level `spc` character spacing now affects text advance, wrapping, PDF text state, underline/highlight extents, and fallback measurement.
+  - `pptx-ladder-04-baseline-shift` at `artifacts/visual/pptx-ladder-04-baseline-shift/20260514-235445`: page count and dimensions matched, diagnostics were empty, MAE `0.269687`, changed-pixel ratio threshold 16 `0.002153`.
+  - Run-level `baseline` now shifts superscript/subscript text, highlights, and underlines relative to the paragraph baseline.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

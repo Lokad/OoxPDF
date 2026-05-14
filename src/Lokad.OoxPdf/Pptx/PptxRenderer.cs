@@ -643,7 +643,7 @@ internal sealed class PptxRenderer
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, color, null, bold, italic, underline, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, 0d, color, null, bold, italic, underline, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
@@ -942,13 +942,14 @@ internal sealed class PptxRenderer
                     bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                     double characterSpacing = ReadCharacterSpacing(runProperties, defaultRunProperties);
+                    double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, fontSize);
                     RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
                         ? highlightColor
                         : null;
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, 0d, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
                         paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
@@ -974,7 +975,7 @@ internal sealed class PptxRenderer
                             continue;
                         }
 
-                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, color, highlight, bold, italic, underline, alignment, typeface));
+                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, highlight, bold, italic, underline, alignment, typeface));
                         cursorX += segmentWidth;
                         paragraphEndX = Math.Max(paragraphEndX, cursorX);
                     }
@@ -1143,6 +1144,13 @@ internal sealed class PptxRenderer
     {
         return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
             ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
+            : 0d;
+    }
+
+    private static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
+    {
+        return (runProperties?.Attribute("baseline") ?? defaultRunProperties?.Attribute("baseline")) is { } baseline
+            ? fontSize * int.Parse(baseline.Value, CultureInfo.InvariantCulture) / 100000d
             : 0d;
     }
 
@@ -1586,23 +1594,24 @@ internal sealed class PptxRenderer
                     _ => run.X
                 };
 
+                double baselineY = cursorY + run.BaselineOffset;
                 if (run.HighlightColor is { } highlight)
                 {
                     graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
-                    graphics.FillRectangle(x, cursorY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
+                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
                 }
 
-                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
+                graphics.DrawGlyphText(resourceName, run.FontSize, x, baselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
                 if (syntheticBold)
                 {
-                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
+                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, baselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
                 }
 
                 if (run.Underline)
                 {
                     graphics.SetStrokeRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                     graphics.SetLineWidth(Math.Max(0.5d, run.FontSize / 18d));
-                    graphics.StrokeLine(x, cursorY - run.FontSize * 0.12d, x + lineWidth, cursorY - run.FontSize * 0.12d);
+                    graphics.StrokeLine(x, baselineY - run.FontSize * 0.12d, x + lineWidth, baselineY - run.FontSize * 0.12d);
                 }
             }
 
@@ -1741,6 +1750,7 @@ internal sealed class PptxRenderer
         double ClipHeight,
         double FontSize,
         double CharacterSpacing,
+        double BaselineOffset,
         RgbColor Color,
         RgbColor? HighlightColor,
         bool Bold,
