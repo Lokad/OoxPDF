@@ -675,7 +675,13 @@ internal sealed class PptxRenderer
             double textX = x + insets.Left;
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
-            double textClipY = document.SlideHeightPoints - yTop - insets.Top - textHeight;
+            bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
+            double textClipY = clipsVerticalOverflow
+                ? document.SlideHeightPoints - yTop - insets.Top - textHeight
+                : 0d;
+            double textClipHeight = clipsVerticalOverflow
+                ? textHeight
+                : document.SlideHeightPoints;
             RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
                 ? fontColor
                 : null;
@@ -774,13 +780,13 @@ internal sealed class PptxRenderer
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
                         paragraphEndX = Math.Max(paragraphEndX, bulletX + bulletText!.Length * fontSize * 0.42d);
                         bulletPending = false;
                     }
 
                     double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
-                    paragraphRuns.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
+                    paragraphRuns.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.42d;
                     paragraphEndX = Math.Max(paragraphEndX, cursorX);
                 }
@@ -843,6 +849,14 @@ internal sealed class PptxRenderer
             ReadInset(bodyProperties, "bIns", 45720));
     }
 
+    private static bool ClipsVerticalOverflow(XElement textBody)
+    {
+        string? overflow = (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("vertOverflow");
+        return overflow?.Equals("clip", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
     private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
     {
         long emu = element?.Attribute(attributeName) is { } attribute
@@ -891,14 +905,14 @@ internal sealed class PptxRenderer
 
     private static double ReadFirstLineBaselineOffset(XElement textBody)
     {
-        const double defaultOffset = 14d;
+        const double defaultFontSize = 18d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             foreach (XElement child in paragraph.Elements())
             {
                 if (child.Name == DrawingNamespace + "br")
                 {
-                    return defaultOffset;
+                    return defaultFontSize * 0.75d;
                 }
 
                 if (child.Name != DrawingNamespace + "r")
@@ -910,14 +924,14 @@ internal sealed class PptxRenderer
                 if (runProperties?.Attribute("sz") is { } size)
                 {
                     double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
-                    return Math.Max(defaultOffset, fontSize * 0.75d);
+                    return fontSize * 0.75d;
                 }
 
-                return defaultOffset;
+                return defaultFontSize * 0.75d;
             }
         }
 
-        return defaultOffset;
+        return defaultFontSize * 0.75d;
     }
 
     private static string? ReadBulletText(XElement? paragraphProperties)

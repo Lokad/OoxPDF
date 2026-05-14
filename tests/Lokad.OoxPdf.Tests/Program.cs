@@ -47,6 +47,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxSkipsEmptyParagraphs,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,
     PptxTests.PptxSyntheticTextBoxClipsOverflow,
+    PptxTests.PptxSyntheticTextBoxAllowsVerticalOverflowByDefault,
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,
