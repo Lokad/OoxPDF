@@ -168,6 +168,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Public PPTX ladder text rerun:
   - `pptx-ladder-02-plain-text` at `artifacts/visual/pptx-ladder-02-plain-text/20260514-213736`: page count and dimensions matched, diagnostics were empty, MAE `0.043046`, changed-pixel ratio threshold 16 `0.000511`.
   - First-line PPTX text baselines now use a lower Office-aligned offset for plain top-anchored text boxes.
+- Public PPTX ladder text-flow rerun:
+  - `pptx-ladder-03-text-flow` at `artifacts/visual/pptx-ladder-03-text-flow/20260514-214108`: page count and dimensions matched, diagnostics were empty, MAE `0.414685`, changed-pixel ratio threshold 16 `0.003763`.
+  - Single-run centered paragraphs now receive the same alignment offset as mixed-run centered paragraphs.
+  - Ladder 3 remains open for separate vertical anchoring and overflow fixtures.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.

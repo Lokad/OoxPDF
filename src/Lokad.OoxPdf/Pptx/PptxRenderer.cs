@@ -1093,12 +1093,6 @@ internal sealed class PptxRenderer
             return;
         }
 
-        if (paragraphRuns.Count == 1)
-        {
-            runs.AddRange(paragraphRuns);
-            return;
-        }
-
         double paragraphWidth = Math.Max(0d, paragraphEndX - textX);
         double offset = alignment switch
         {
