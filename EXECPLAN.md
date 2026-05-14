@@ -70,6 +70,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Diagnostics: 9 chart static fallback informational diagnostics.
   - Text-frame body insets are now honored.
   - Mean absolute error: `17.525889`; max mean absolute error: `76.657147`; mean changed-pixel ratio at threshold 16: `0.188083`.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-175356`:
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Grouped picture transforms and text clipping are now honored.
+  - Mean absolute error: `16.223412`; max mean absolute error: `75.220066`; mean changed-pixel ratio at threshold 16: `0.176527`.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -85,6 +90,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - All 16 rasterized page dimensions matched after A4 media-box normalization.
   - Mean absolute error: `19.88376`; mean changed-pixel ratio at threshold 16: `0.163965`.
   - Diagnostics were empty.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-175910`:
+  - Reference output had 16 pages; candidate output had 17 pages.
+  - Candidate has one extra page; paired-page mean absolute error was `19.226760`, and mean changed-pixel ratio at threshold 16 was `0.158228`.
+  - Diagnostics were empty.
+  - This keeps DOCX pagination fidelity as the top active risk; attempted manual-break and keep-with-next heuristics were reverted because they did not resolve the private page-count mismatch.
 
 ## Backlog
 
