@@ -48,6 +48,47 @@ if ($LASTEXITCODE -ne 0) {
     throw "VisualDiff failed with exit code $LASTEXITCODE."
 }
 
+$metricsPath = Join-Path $comparisonDir "metrics.json"
+$metrics = Get-Content -Raw -LiteralPath $metricsPath | ConvertFrom-Json
+$referencePages = @(Get-ChildItem -LiteralPath $referenceDir -Filter "page-*.png")
+$candidatePages = @(Get-ChildItem -LiteralPath $candidateDir -Filter "page-*.png")
+
+if ($manifest.expected.pageCountMustMatch -eq $true -and $referencePages.Count -ne $candidatePages.Count) {
+    throw "Page count mismatch. Reference: $($referencePages.Count). Candidate: $($candidatePages.Count)."
+}
+
+if ($manifest.expected.dimensionsMustMatch -eq $true) {
+    $mismatched = @($metrics | Where-Object { $_.DimensionsMatch -ne $true })
+    if ($mismatched.Count -ne 0) {
+        $pages = ($mismatched | ForEach-Object { $_.Page }) -join ", "
+        throw "Dimension mismatch on page(s): $pages."
+    }
+}
+
+if ($manifest.expected.maxMeanAbsoluteError -ne $null) {
+    $maxMae = [double]$manifest.expected.maxMeanAbsoluteError
+    $exceeded = @($metrics | Where-Object { [double]$_.MeanAbsoluteError -gt $maxMae })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property MeanAbsoluteError -Descending | Select-Object -First 1
+        throw "Mean absolute error gate failed. Page $($worst.Page) was $($worst.MeanAbsoluteError), limit is $maxMae."
+    }
+}
+
+if ($manifest.expected.maxChangedPixelRatioAtThreshold16 -ne $null) {
+    $maxChanged = [double]$manifest.expected.maxChangedPixelRatioAtThreshold16
+    $exceeded = @($metrics | Where-Object { [double]$_.ChangedPixelRatioAtThreshold16 -gt $maxChanged })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property ChangedPixelRatioAtThreshold16 -Descending | Select-Object -First 1
+        throw "Changed-pixel ratio gate failed. Page $($worst.Page) was $($worst.ChangedPixelRatioAtThreshold16), limit is $maxChanged."
+    }
+}
+
+$diagnosticItems = @(Get-Content -Raw -LiteralPath $diagnostics | ConvertFrom-Json)
+if ($manifest.expected.diagnosticsMustBeEmpty -eq $true -and $diagnosticItems.Count -ne 0) {
+    $ids = ($diagnosticItems | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ", "
+    throw "Expected no diagnostics, but found: $ids."
+}
+
 $assessment = @"
 # Visual assessment: $($manifest.id)
 
