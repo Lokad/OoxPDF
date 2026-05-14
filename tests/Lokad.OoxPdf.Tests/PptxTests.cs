@@ -338,7 +338,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 450.9 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 432.9 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsTabs()
@@ -591,7 +591,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 450.9 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 432.9 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesListStyleDefaults()
@@ -778,7 +778,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 450.9 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 432.9 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()
@@ -813,7 +813,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 7.2 465.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 7.2 463.5 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxClipsOverflow()

@@ -1034,7 +1034,7 @@ internal sealed class PptxRenderer
             return Math.Max(0.1d, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
         }
 
-        return 1.2d;
+        return 1d;
     }
 
     private static double ReadFirstLineBaselineOffset(XElement textBody)
