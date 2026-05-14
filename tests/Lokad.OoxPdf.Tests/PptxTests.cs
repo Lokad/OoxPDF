@@ -1539,7 +1539,13 @@ internal static class PptxTests
                             <a:tr h="914400">
                               <a:tc>
                                 <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>One</a:t></a:r></a:p></a:txBody>
-                                <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                                <a:tcPr>
+                                  <a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill>
+                                  <a:lnL><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnL>
+                                  <a:lnR><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnR>
+                                  <a:lnT><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnT>
+                                  <a:lnB><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:lnB>
+                                </a:tcPr>
                               </a:tc>
                               <a:tc>
                                 <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>Two</a:t></a:r></a:p></a:txBody>
@@ -1571,7 +1577,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
         TestAssert.Contains("72 396 144 72 re f", pdf);
-        TestAssert.Contains("72 396 144 72 re S", pdf);
+        TestAssert.Contains("72 396 m 72 468 l S", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("> Tj", pdf);
     }

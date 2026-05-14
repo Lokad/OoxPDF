@@ -379,9 +379,7 @@ internal sealed class PptxRenderer
                         graphics.FillRectangle(cellX, cellY, columnWidth, rowHeight);
                     }
 
-                    graphics.SetStrokeRgb(0, 0, 0);
-                    graphics.SetLineWidth(0.75d);
-                    graphics.StrokeRectangle(cellX, cellY, columnWidth, rowHeight);
+                    StrokeTableCellBorders(graphics, cellProperties, theme, cellX, cellY, columnWidth, rowHeight);
                     AddTableCellTextRuns(cell, cellX, cellY, columnWidth, rowHeight, theme, textRuns);
                     cellX += columnWidth;
                 }
@@ -391,6 +389,29 @@ internal sealed class PptxRenderer
         }
 
         return textRuns;
+    }
+
+    private static void StrokeTableCellBorders(PdfGraphicsBuilder graphics, XElement? cellProperties, PptxTheme theme, double x, double y, double width, double height)
+    {
+        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnL"), theme, x, y, x, y + height);
+        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnR"), theme, x + width, y, x + width, y + height);
+        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnT"), theme, x, y + height, x + width, y + height);
+        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnB"), theme, x, y, x + width, y);
+    }
+
+    private static void StrokeTableBorder(PdfGraphicsBuilder graphics, XElement? line, PptxTheme theme, double x1, double y1, double x2, double y2)
+    {
+        if (line is null || line.Element(DrawingNamespace + "noFill") is not null || !TryReadSolidColor(line, theme, out RgbColor color))
+        {
+            return;
+        }
+
+        double lineWidth = line.Attribute("w") is { } widthAttribute
+            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
+            : 0.75d;
+        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+        graphics.SetLineWidth(lineWidth);
+        graphics.StrokeLine(x1, y1, x2, y2);
     }
 
     private static ShapeBounds? ReadGraphicFrameBounds(XElement frame)
