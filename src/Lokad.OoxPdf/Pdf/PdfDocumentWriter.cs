@@ -20,6 +20,10 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Fonts.Select(f => f.Font))
             .DistinctBy(f => f.ResourceKey)
             .ToList();
+        List<PdfImageXObject> images = pages
+            .SelectMany(p => p.Images.Select(i => i.Image))
+            .DistinctBy(i => i.ResourceKey)
+            .ToList();
 
         int fontObjectBase = 3 + pages.Count * 2;
         var fontObjects = new Dictionary<string, FontObjectNumbers>(StringComparer.Ordinal);
@@ -34,7 +38,17 @@ internal sealed class PdfDocumentWriter
                 ToUnicode: baseObject + 4);
         }
 
-        int objectCount = 2 + pages.Count * 2 + fonts.Count * 5;
+        int imageObjectBase = fontObjectBase + fonts.Count * 5;
+        var imageObjects = new Dictionary<string, ImageObjectNumbers>(StringComparer.Ordinal);
+        int nextImageObject = imageObjectBase;
+        foreach (PdfImageXObject image in images)
+        {
+            int imageObject = nextImageObject++;
+            int? softMaskObject = image.Alpha is null ? null : nextImageObject++;
+            imageObjects[image.ResourceKey] = new ImageObjectNumbers(imageObject, softMaskObject);
+        }
+
+        int objectCount = nextImageObject - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject(pages));
 
@@ -45,7 +59,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects)} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects)} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -54,6 +68,11 @@ internal sealed class PdfDocumentWriter
         foreach (PdfEmbeddedFont font in fonts)
         {
             WriteFontObjects(writer, font, fontObjects[font.ResourceKey]);
+        }
+
+        foreach (PdfImageXObject image in images)
+        {
+            WriteImageObjects(writer, image, imageObjects[image.ResourceKey]);
         }
 
         long xrefOffset = writer.Position;
@@ -88,22 +107,41 @@ internal sealed class PdfDocumentWriter
         return builder.ToString();
     }
 
-    private static string BuildResources(PdfPage page, IReadOnlyDictionary<string, FontObjectNumbers> fontObjects)
+    private static string BuildResources(PdfPage page, IReadOnlyDictionary<string, FontObjectNumbers> fontObjects, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
-        if (page.Fonts.Count == 0)
+        if (page.Fonts.Count == 0 && page.Images.Count == 0)
         {
             return "<< >>";
         }
 
-        var builder = new StringBuilder("<< /Font <<");
-        foreach (PdfFontResource font in page.Fonts)
+        var builder = new StringBuilder("<<");
+        if (page.Fonts.Count != 0)
         {
-            FontObjectNumbers objects = fontObjects[font.Font.ResourceKey];
-            builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
-            builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
+            builder.Append(" /Font <<");
+            foreach (PdfFontResource font in page.Fonts)
+            {
+                FontObjectNumbers objects = fontObjects[font.Font.ResourceKey];
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(font.ResourceName)).Append(' ');
+                builder.Append(CultureInfo.InvariantCulture, $"{objects.Type0} 0 R");
+            }
+
+            builder.Append(" >>");
         }
 
-        builder.Append(" >> >>");
+        if (page.Images.Count != 0)
+        {
+            builder.Append(" /XObject <<");
+            foreach (PdfImageResource image in page.Images)
+            {
+                ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
+                builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
+            }
+
+            builder.Append(" >>");
+        }
+
+        builder.Append(" >>");
         return builder.ToString();
     }
 
@@ -124,6 +162,18 @@ internal sealed class PdfDocumentWriter
         writer.WriteStreamObject(objects.ToUnicode, string.Empty, Encoding.ASCII.GetBytes(font.BuildToUnicodeCMap()));
     }
 
+    private static void WriteImageObjects(PdfObjectWriter writer, PdfImageXObject image, ImageObjectNumbers objects)
+    {
+        string smask = objects.SoftMask is null ? string.Empty : FormattableString.Invariant($" /SMask {objects.SoftMask.Value} 0 R");
+        writer.WriteStreamObject(objects.Image, FormattableString.Invariant(
+            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter {image.Filter}{smask}"), image.Bytes);
+        if (image.Alpha is not null && objects.SoftMask is not null)
+        {
+            writer.WriteStreamObject(objects.SoftMask.Value, FormattableString.Invariant(
+                $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode"), image.Alpha);
+        }
+    }
+
     private static byte[] Compress(ReadOnlySpan<byte> bytes)
     {
         using var output = new MemoryStream();
@@ -141,6 +191,8 @@ internal sealed class PdfDocumentWriter
     }
 
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);
+
+    private readonly record struct ImageObjectNumbers(int Image, int? SoftMask);
 
     private readonly record struct OpenTypeFontMetrics(
         int XMin,

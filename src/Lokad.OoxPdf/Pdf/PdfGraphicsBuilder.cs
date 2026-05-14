@@ -78,6 +78,14 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("ET");
     }
 
+    public void DrawImage(string imageResourceName, double x, double y, double width, double height)
+    {
+        builder.AppendLine("q");
+        builder.Append(N(width)).Append(" 0 0 ").Append(N(height)).Append(' ').Append(N(x)).Append(' ').Append(N(y)).AppendLine(" cm");
+        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(imageResourceName)).AppendLine(" Do");
+        builder.AppendLine("Q");
+    }
+
     public override string ToString()
     {
         return builder.ToString();

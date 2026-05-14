@@ -19,6 +19,8 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticStyledTextProducesStyleOperators,
     PptxTests.PptxSyntheticThemeColorsAndFontsResolve,
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
+    PptxTests.PptxSyntheticPngPictureRendersImageXObject,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
+    ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);

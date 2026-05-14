@@ -1,6 +1,7 @@
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Imaging;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -13,6 +14,7 @@ internal sealed class PptxRenderer
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
+    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document)
     {
@@ -47,12 +49,13 @@ internal sealed class PptxRenderer
 
             RenderBackground(slideXml, document, graphics, theme);
             RenderShapes(slideXml, document, graphics, theme);
+            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics);
             IReadOnlyList<TextRun> textRuns = inheritedXml
                 .Append(slideXml)
                 .SelectMany(xml => ReadTextRuns(xml, document, theme))
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
-            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts));
+            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts, images));
         }
 
         return pages;
@@ -313,6 +316,70 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static IReadOnlyList<PdfImageResource> RenderPictures(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics)
+    {
+        var relationships = package.GetRelationships(slidePartName)
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        var images = new List<PdfImageResource>();
+        int index = 1;
+        foreach (XElement picture in slideXml.Descendants(PresentationNamespace + "pic"))
+        {
+            string? relationshipId = (string?)picture
+                .Element(PresentationNamespace + "blipFill")
+                ?.Element(DrawingNamespace + "blip")
+                ?.Attribute(RelationshipsNamespace + "embed");
+            XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
+            ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
+            if (relationshipId is null || bounds is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+            if (imagePart is null)
+            {
+                continue;
+            }
+
+            PdfImageXObject? image = CreateImage(imagePart);
+            if (image is null)
+            {
+                continue;
+            }
+
+            string name = "Im" + index++;
+            double x = OoxUnits.EmuToPoints(bounds.Value.X);
+            double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
+            double width = OoxUnits.EmuToPoints(bounds.Value.Width);
+            double height = OoxUnits.EmuToPoints(bounds.Value.Height);
+            double y = document.SlideHeightPoints - yTop - height;
+            graphics.DrawImage(name, x, y, width, height);
+            images.Add(new PdfImageResource(name, image));
+        }
+
+        return images;
+    }
+
+    private static PdfImageXObject? CreateImage(OoxPart imagePart)
+    {
+        byte[] bytes = imagePart.Bytes;
+        if (imagePart.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+            imagePart.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+        {
+            JpegInfo info = JpegInfo.Read(bytes);
+            return PdfImageXObject.Jpeg(info.Width, info.Height, bytes);
+        }
+
+        if (imagePart.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+        {
+            PngImage png = PngImage.Read(bytes);
+            return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
+        }
+
+        return null;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics)
