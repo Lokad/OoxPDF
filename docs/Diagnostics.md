@@ -17,3 +17,20 @@ Unsupported feature warnings:
 - `PPTX_UNSUPPORTED_VIDEO`: video content was detected and ignored.
 
 These warnings are slide-scoped when a slide index is available. Duplicate occurrences of the same unsupported feature on one slide are aggregated into one warning for that slide.
+
+## DOCX
+
+Unsupported feature warnings:
+
+- `DOCX_UNSUPPORTED_COMMENTS`: comment markup was detected and ignored.
+- `DOCX_UNSUPPORTED_COMPLEX_FIELD`: a non-page-number field was detected and ignored or approximated.
+- `DOCX_UNSUPPORTED_ENDNOTE`: endnote references were detected and ignored.
+- `DOCX_UNSUPPORTED_EQUATION`: Office Math content was detected and ignored.
+- `DOCX_UNSUPPORTED_FLOATING_DRAWING`: floating DrawingML content was detected and ignored.
+- `DOCX_UNSUPPORTED_FOOTNOTE`: footnote references were detected and ignored.
+- `DOCX_UNSUPPORTED_MACRO`: a VBA project was detected and ignored.
+- `DOCX_UNSUPPORTED_MULTI_COLUMN`: a multi-column section was detected and rendered as a single column.
+- `DOCX_UNSUPPORTED_OLE_OBJECT`: embedded OLE content was detected and ignored.
+- `DOCX_UNSUPPORTED_TRACKED_CHANGES`: tracked insertion or deletion markup was detected and approximated.
+
+These warnings are document-scoped. Duplicate occurrences of the same unsupported feature in one document are aggregated into one warning.

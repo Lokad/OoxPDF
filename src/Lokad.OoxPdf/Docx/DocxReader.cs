@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 
 namespace Lokad.OoxPdf.Docx;
@@ -9,6 +10,7 @@ internal sealed class DocxReader
     private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace MathNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/math";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
@@ -20,11 +22,12 @@ internal sealed class DocxReader
     private const string StylesContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml";
     private const string NumberingContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml";
 
-    public DocxDocument Read(OoxPackage package)
+    public DocxDocument Read(OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         OoxPart documentPart = FindDocumentPart(package);
         using Stream stream = documentPart.OpenRead();
         XDocument document = SafeXml.Load(stream);
+        EmitUnsupportedFeatureDiagnostics(package, document, documentPart.Name, diagnosticSink);
 
         XElement? pageSize = document
             .Descendants(WordprocessingNamespace + "sectPr")
@@ -63,6 +66,89 @@ internal sealed class DocxReader
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
         return new DocxDocument(width, height, left, right, top, bottom, headers, footers, paragraphs, tables);
+    }
+
+    private static void EmitUnsupportedFeatureDiagnostics(OoxPackage package, XDocument document, string partName, Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        if (diagnosticSink is null)
+        {
+            return;
+        }
+
+        var emitted = new HashSet<string>(StringComparer.Ordinal);
+        void Emit(string id, string feature)
+        {
+            if (!emitted.Add(id))
+            {
+                return;
+            }
+
+            diagnosticSink(new OoxPdfDiagnostic(
+                id,
+                OoxPdfSeverity.Warning,
+                $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
+                partName,
+                Feature: feature,
+                Fallback: "Ignored"));
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
+            document.Descendants(WordprocessingNamespace + "commentReference").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_COMMENTS", "comments");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "ins").Any() ||
+            document.Descendants(WordprocessingNamespace + "del").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_TRACKED_CHANGES", "tracked changes");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "fldChar").Any() ||
+            document.Descendants(WordprocessingNamespace + "instrText").Any(instruction => !(((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)))
+        {
+            Emit("DOCX_UNSUPPORTED_COMPLEX_FIELD", "complex field");
+        }
+
+        if (document.Descendants(MathNamespace + "oMath").Any() ||
+            document.Descendants(MathNamespace + "oMathPara").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_EQUATION", "equation");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "object").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_OLE_OBJECT", "OLE object");
+        }
+
+        if (document.Descendants(WordprocessingDrawingNamespace + "anchor").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_FLOATING_DRAWING", "floating drawing");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "footnoteReference").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_FOOTNOTE", "footnote");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "endnoteReference").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_ENDNOTE", "endnote");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "cols").Any(cols =>
+            cols.Attribute(WordprocessingNamespace + "num") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int columns) &&
+            columns > 1))
+        {
+            Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column section");
+        }
+
+        if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
+            p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
+        {
+            Emit("DOCX_UNSUPPORTED_MACRO", "macro");
+        }
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphs(

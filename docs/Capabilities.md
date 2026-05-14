@@ -56,7 +56,6 @@ Partial or approximated:
 - Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
 - Table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
 - Header/footer distance, odd/even variants, first-page variants, and complex fields are approximate or unsupported.
+- Comments, tracked changes, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning diagnostics when detected.
 
 Unsupported or ignored:
-
-- Unsupported DOCX features are not yet surfaced through stable diagnostics.

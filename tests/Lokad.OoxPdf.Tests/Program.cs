@@ -34,6 +34,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticTableRendersCellsAndText,
     DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
+    DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);
