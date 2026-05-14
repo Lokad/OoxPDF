@@ -535,7 +535,7 @@ internal sealed class PptxRenderer
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, bold, italic, underline, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, null, bold, italic, underline, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
@@ -763,15 +763,18 @@ internal sealed class PptxRenderer
                         (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
                     bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+                    RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
+                        ? highlightColor
+                        : null;
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
                         bulletPending = false;
                     }
 
                     double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
-                    runs.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
+                    runs.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.42d;
                 }
 
@@ -892,6 +895,13 @@ internal sealed class PptxRenderer
         return theme.ResolveTypeface((string?)paragraphProperties?
             .Element(DrawingNamespace + "buFont")
             ?.Attribute("typeface"));
+    }
+
+    private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
+    {
+        XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight");
+        string? hex = (string?)highlight?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        return RgbColor.TryParse(hex, out color);
     }
 
     private static TextVerticalAnchor ReadVerticalAnchor(XElement textBody)
@@ -1180,6 +1190,12 @@ internal sealed class PptxRenderer
                     _ => run.X
                 };
 
+                if (run.HighlightColor is { } highlight)
+                {
+                    graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+                    graphics.FillRectangle(x, cursorY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
+                }
+
                 graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
                 if (run.Bold)
                 {
@@ -1316,6 +1332,7 @@ internal sealed class PptxRenderer
         double ClipHeight,
         double FontSize,
         RgbColor Color,
+        RgbColor? HighlightColor,
         bool Bold,
         bool Italic,
         bool Underline,
