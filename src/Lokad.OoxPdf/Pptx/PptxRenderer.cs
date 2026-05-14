@@ -57,7 +57,7 @@ internal sealed class PptxRenderer
                 .Append(slideXml)
                 .SelectMany(xml => RenderTables(xml, document, graphics, theme))
                 .ToArray();
-            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics);
+            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             IReadOnlyList<TextRun> textRuns = inheritedXml
                 .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false))
                 .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true))
@@ -584,7 +584,7 @@ internal sealed class PptxRenderer
             ?.Element(PresentationNamespace + "ph") is not null;
     }
 
-    private static IReadOnlyList<PdfImageResource> RenderPictures(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PdfImageResource> RenderPictures(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
     {
         var relationships = package.GetRelationships(slidePartName)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
@@ -610,7 +610,7 @@ internal sealed class PptxRenderer
                 continue;
             }
 
-            PdfImageXObject? image = CreateImage(imagePart);
+            PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
             if (image is null)
             {
                 continue;
@@ -638,20 +638,34 @@ internal sealed class PptxRenderer
         return images;
     }
 
-    private static PdfImageXObject? CreateImage(OoxPart imagePart)
+    private static PdfImageXObject? CreateImage(OoxPart imagePart, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
     {
         byte[] bytes = imagePart.Bytes;
-        if (imagePart.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-            imagePart.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            JpegInfo info = JpegInfo.Read(bytes);
-            return PdfImageXObject.Jpeg(info.Width, info.Height, bytes);
-        }
+            if (imagePart.ContentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                imagePart.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                JpegInfo info = JpegInfo.Read(bytes);
+                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes);
+            }
 
-        if (imagePart.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+            if (imagePart.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+            {
+                PngImage png = PngImage.Read(bytes);
+                return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {
-            PngImage png = PngImage.Read(bytes);
-            return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_UNSUPPORTED_FORMAT",
+                OoxPdfSeverity.Warning,
+                $"Image '{imagePart.ContentType}' could not be rendered and was ignored: {ex.Message}",
+                imagePart.Name,
+                SlideIndex: slideIndex,
+                Feature: imagePart.ContentType,
+                Fallback: "Ignored"));
         }
 
         return null;

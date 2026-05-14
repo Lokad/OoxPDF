@@ -63,24 +63,96 @@ internal static class TestFixtures
 
     public static byte[] CreateRgbPng(int width, int height, byte[] rgb)
     {
+        return CreatePng(width, height, 2, null, null, rgb, 3);
+    }
+
+    public static byte[] CreateIndexedPng(int width, int height, byte[] palette, byte[] indices)
+    {
+        return CreatePng(width, height, 3, palette, null, indices, 1);
+    }
+
+    public static byte[] CreatePackedIndexedPng(int width, int height, byte bitDepth, byte[] palette, byte[] indices)
+    {
+        int samplesPerByte = 8 / bitDepth;
+        int rowBytes = (width * bitDepth + 7) / 8;
+        var packed = new byte[height * rowBytes];
+        int source = 0;
+        int target = 0;
+        for (int y = 0; y < height; y++)
+        {
+            for (int byteIndex = 0; byteIndex < rowBytes; byteIndex++)
+            {
+                int value = 0;
+                for (int sample = 0; sample < samplesPerByte; sample++)
+                {
+                    int x = byteIndex * samplesPerByte + sample;
+                    if (x < width)
+                    {
+                        value |= indices[source++] << ((samplesPerByte - 1 - sample) * bitDepth);
+                    }
+                }
+
+                packed[target++] = (byte)value;
+            }
+        }
+
+        return CreatePng(width, height, 3, bitDepth, palette, null, packed, rowBytes);
+    }
+
+    public static byte[] CreateGrayscalePng(int width, int height, byte[] samples)
+    {
+        return CreatePng(width, height, 0, null, null, samples, 1);
+    }
+
+    public static byte[] CreateUnsupportedInterlacedPng()
+    {
+        using var stream = new MemoryStream();
+        stream.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+        Span<byte> ihdr = stackalloc byte[13];
+        WriteInt32(ihdr[..4], 1);
+        WriteInt32(ihdr.Slice(4, 4), 1);
+        ihdr[8] = 8;
+        ihdr[9] = 6;
+        ihdr[12] = 1;
+        WritePngChunk(stream, "IHDR", ihdr);
+        WritePngChunk(stream, "IEND", []);
+        return stream.ToArray();
+    }
+
+    private static byte[] CreatePng(int width, int height, byte colorType, byte[]? palette, byte[]? transparency, byte[] samples, int bytesPerPixel)
+    {
+        return CreatePng(width, height, colorType, 8, palette, transparency, samples, width * bytesPerPixel);
+    }
+
+    private static byte[] CreatePng(int width, int height, byte colorType, byte bitDepth, byte[]? palette, byte[]? transparency, byte[] samples, int rowBytes)
+    {
         using var stream = new MemoryStream();
         stream.Write([137, 80, 78, 71, 13, 10, 26, 10]);
         Span<byte> ihdr = stackalloc byte[13];
         WriteInt32(ihdr[..4], width);
         WriteInt32(ihdr.Slice(4, 4), height);
-        ihdr[8] = 8;
-        ihdr[9] = 2;
+        ihdr[8] = bitDepth;
+        ihdr[9] = colorType;
         WritePngChunk(stream, "IHDR", ihdr);
+        if (palette is not null)
+        {
+            WritePngChunk(stream, "PLTE", palette);
+        }
 
-        byte[] raw = new byte[height * (1 + width * 3)];
+        if (transparency is not null)
+        {
+            WritePngChunk(stream, "tRNS", transparency);
+        }
+
+        byte[] raw = new byte[height * (1 + rowBytes)];
         int source = 0;
         int target = 0;
         for (int y = 0; y < height; y++)
         {
             raw[target++] = 0;
-            for (int x = 0; x < width * 3; x++)
+            for (int x = 0; x < rowBytes; x++)
             {
-                raw[target++] = rgb[source++];
+                raw[target++] = samples[source++];
             }
         }
 

@@ -26,6 +26,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
     PptxTests.PptxSyntheticInheritedPlaceholderTextIsSkipped,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
+    PptxTests.PptxUnsupportedPngImageEmitsDiagnostic,
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     PptxTests.PptxSyntheticTableRendersGridAndText,
@@ -41,5 +42,8 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
     DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,
     ImagingTests.JpegInfoReadsDimensions,
+    ImagingTests.PngImageReadsIndexedPalettePixels,
+    ImagingTests.PngImageReadsPackedIndexedPalettePixels,
+    ImagingTests.PngImageReadsGrayscalePixels,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);
