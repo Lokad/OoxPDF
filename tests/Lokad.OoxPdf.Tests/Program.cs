@@ -30,6 +30,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     PptxTests.PptxSyntheticTableRendersGridAndText,
+    PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     DocxTests.DocxSyntheticParagraphRendersText,

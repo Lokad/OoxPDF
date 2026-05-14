@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
 - [x] PNG support covers Adam7 interlaced RGBA images.
@@ -59,6 +59,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Conversion completed.
   - Interlaced PNG image diagnostics dropped to zero after Adam7 decoding support.
   - Remaining diagnostics: 9 unsupported charts.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-171646`:
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Unsupported chart diagnostics dropped to zero after static bar-chart fallback.
+  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Mean absolute error: `17.430568`; max mean absolute error: `76.618729`; mean changed-pixel ratio at threshold 16: `0.187419`.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -76,7 +81,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 - [x] Implement Adam7 interlaced PNG decoding so embedded interlaced images render instead of being skipped.
 - [ ] Make omitted embedded image content release-blocking: either render it, use a safe fallback, or emit an explicit high-severity diagnostic.
-- [ ] Improve PPTX chart fallback rendering, starting with cached chart images where present, then static bar/line chart drawing for common chart XML.
+- [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static grouped-bar fallback.
+- [ ] Extend PPTX chart rendering beyond basic bar fallbacks: cached image fallbacks when present, labels, legends, axes, line charts, pie charts, stacked/grouped variants, and style fidelity.
 - [ ] Fix DOCX page geometry and pagination fidelity: page height rounding, section page size/margins, line heights, paragraph spacing, table row heights, and page-break decisions.
 - [ ] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout, unsupported page break variants, unsupported paragraph keep rules, or unsupported line-height semantics.
 
@@ -121,9 +127,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 ## Next Implementation Targets
 
 1. Continue DOCX page geometry/pagination work: resolve page-height rounding, replace fixed table row height with row-height semantics, and add diagnostics for unsupported pagination controls.
-2. PPTX chart fallback detection: locate cached chart images or alternate content before attempting chart XML drawing.
-3. PPTX text spacing and text-frame layout fixes, validated against public cases and the private PPTX metrics.
-4. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
+2. PPTX text spacing and text-frame layout fixes, validated against public cases and the private PPTX metrics.
+3. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
+4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
 5. Improve diagnostics severity so visible-content omissions are release-blocking.
 
 ## Decisions
@@ -148,7 +154,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-48 passed, 0 failed
+49 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.
