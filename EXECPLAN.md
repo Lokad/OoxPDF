@@ -207,6 +207,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Bullet-specific color and point-size formatting (`a:buClr`, `a:buSzPts`) is now locked by a public visual gate.
   - `pptx-ladder-04-tab-stop` at `artifacts/visual/pptx-ladder-04-tab-stop/20260515-000911`: page count and dimensions matched, diagnostics were empty, MAE `0.331281`, changed-pixel ratio threshold 16 `0.002668`.
   - Explicit PPTX tab stops (`a:tabLst/a:tab @pos`) now place following text at the next declared tab position before falling back to the existing heuristic advance.
+  - `pptx-ladder-04-strikethrough-single` at `artifacts/visual/pptx-ladder-04-strikethrough-single/20260515-001236`: page count and dimensions matched, diagnostics were empty, MAE `0.268133`, changed-pixel ratio threshold 16 `0.002249`.
+  - Single-run strikethrough (`a:rPr @strike`) now renders and is locked by a public visual gate.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

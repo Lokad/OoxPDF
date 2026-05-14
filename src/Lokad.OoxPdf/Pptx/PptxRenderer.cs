@@ -643,7 +643,8 @@ internal sealed class PptxRenderer
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, 0d, color, null, bold, italic, underline, alignment, typeface));
+                bool strike = IsStrikeEnabled(runProperties, null);
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
@@ -940,6 +941,7 @@ internal sealed class PptxRenderer
                         (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
                     bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+                    bool strike = IsStrikeEnabled(runProperties, defaultRunProperties);
                     double characterSpacing = ReadCharacterSpacing(runProperties, defaultRunProperties);
                     double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, fontSize);
                     RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
@@ -949,7 +951,7 @@ internal sealed class PptxRenderer
                     {
                         BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, null, bold, italic, underline, alignment, bulletStyle.Typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface));
                         paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
@@ -975,7 +977,7 @@ internal sealed class PptxRenderer
                             continue;
                         }
 
-                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, highlight, bold, italic, underline, alignment, typeface));
+                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, highlight, bold, italic, underline, strike, alignment, typeface));
                         cursorX += segmentWidth;
                         paragraphEndX = Math.Max(paragraphEndX, cursorX);
                     }
@@ -1152,6 +1154,12 @@ internal sealed class PptxRenderer
         return (runProperties?.Attribute("baseline") ?? defaultRunProperties?.Attribute("baseline")) is { } baseline
             ? fontSize * int.Parse(baseline.Value, CultureInfo.InvariantCulture) / 100000d
             : 0d;
+    }
+
+    private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        string? value = (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
+        return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
     }
 
     private static TextInsets ReadTextInsets(XElement textBody)
@@ -1658,6 +1666,13 @@ internal sealed class PptxRenderer
                     graphics.SetLineWidth(Math.Max(0.5d, run.FontSize / 18d));
                     graphics.StrokeLine(x, baselineY - run.FontSize * 0.12d, x + lineWidth, baselineY - run.FontSize * 0.12d);
                 }
+
+                if (run.Strike)
+                {
+                    graphics.SetStrokeRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    graphics.SetLineWidth(Math.Max(0.5d, run.FontSize / 18d));
+                    graphics.StrokeLine(x, baselineY + run.FontSize * 0.28d, x + lineWidth, baselineY + run.FontSize * 0.28d);
+                }
             }
 
             cursorY -= lineHeight;
@@ -1801,6 +1816,7 @@ internal sealed class PptxRenderer
         bool Bold,
         bool Italic,
         bool Underline,
+        bool Strike,
         TextAlignment Alignment,
         string? FontFamily);
 

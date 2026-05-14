@@ -48,6 +48,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxUsesListStyleDefaults,
     PptxTests.PptxSyntheticTextBoxUsesShapeFontRefColor,
     PptxTests.PptxSyntheticTextBoxRendersTextHighlight,
+    PptxTests.PptxSyntheticTextBoxRendersStrikethrough,
     PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
     PptxTests.PptxSyntheticTextBoxSkipsEmptyParagraphs,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,
