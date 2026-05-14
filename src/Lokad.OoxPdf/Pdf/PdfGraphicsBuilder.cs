@@ -67,6 +67,16 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("S");
     }
 
+    public void DrawGlyphText(string fontResourceName, double fontSize, double x, double y, byte red, byte green, byte blue, string glyphHex)
+    {
+        builder.AppendLine("BT");
+        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(N(fontSize)).AppendLine(" Tf");
+        builder.Append("1 0 0 1 ").Append(N(x)).Append(' ').Append(N(y)).AppendLine(" Tm");
+        builder.Append('<').Append(glyphHex).AppendLine("> Tj");
+        builder.AppendLine("ET");
+    }
+
     public override string ToString()
     {
         return builder.ToString();

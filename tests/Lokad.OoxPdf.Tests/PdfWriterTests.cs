@@ -1,4 +1,5 @@
 using System.Text;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
@@ -47,6 +48,32 @@ internal static class PdfWriterTests
         TestAssert.Contains("2 w", pdf);
         TestAssert.Contains("0 0 m 100 100 l S", pdf);
         TestAssert.Contains(" c", pdf);
+    }
+
+    public static void WritesEmbeddedTrueTypeFontObjects()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "Az".Select(c => (int)c));
+        var page = new PdfPage(200, 200, string.Empty, [new PdfFontResource("F1", embedded)]);
+
+        string pdf = WritePdfText(new[] { page });
+
+        TestAssert.Contains("/Subtype /Type0", pdf);
+        TestAssert.Contains("/Encoding /Identity-H", pdf);
+        TestAssert.Contains("/Subtype /CIDFontType2", pdf);
+        TestAssert.Contains("/CIDToGIDMap /Identity", pdf);
+        TestAssert.Contains("/Type /FontDescriptor", pdf);
+        TestAssert.Contains("/FontFile2", pdf);
+        TestAssert.Contains("/ToUnicode", pdf);
+        TestAssert.Contains("beginbfchar", pdf);
+        TestAssert.Contains("<0041>", pdf);
+        TestAssert.Contains("/F1 ", pdf);
     }
 
     private static string WritePdfText(IReadOnlyList<PdfPage> pages)

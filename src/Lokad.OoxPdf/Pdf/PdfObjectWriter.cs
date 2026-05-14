@@ -34,6 +34,15 @@ internal sealed class PdfObjectWriter
         WriteAscii("endobj\n");
     }
 
+    public void WriteStreamObject(int objectNumber, string dictionaryEntries, ReadOnlySpan<byte> streamBytes)
+    {
+        offsets.Add(stream.Position);
+        WriteAscii(FormattableString.Invariant($"{objectNumber} 0 obj\n"));
+        WriteAscii(FormattableString.Invariant($"<< {dictionaryEntries} /Length {streamBytes.Length} >>\nstream\n"));
+        stream.Write(streamBytes);
+        WriteAscii("\nendstream\nendobj\n");
+    }
+
     public void WriteAscii(string text)
     {
         byte[] bytes = Encoding.ASCII.GetBytes(text);

@@ -15,6 +15,7 @@ internal sealed class OpenTypeFont
         Dictionary<string, TableRecord> tables,
         string familyName,
         ushort unitsPerEm,
+        FontBounds bounds,
         ushort glyphCount,
         Os2Metrics os2,
         PostMetrics post,
@@ -25,6 +26,7 @@ internal sealed class OpenTypeFont
         this.tables = tables;
         FamilyName = familyName;
         UnitsPerEm = unitsPerEm;
+        Bounds = bounds;
         GlyphCount = glyphCount;
         Os2 = os2;
         Post = post;
@@ -35,6 +37,10 @@ internal sealed class OpenTypeFont
     public string FamilyName { get; }
 
     public ushort UnitsPerEm { get; }
+
+    public FontBounds Bounds { get; }
+
+    public ReadOnlyMemory<byte> Bytes => bytes;
 
     public ushort GlyphCount { get; }
 
@@ -74,13 +80,14 @@ internal sealed class OpenTypeFont
         }
 
         ushort unitsPerEm = ReadUnitsPerEm(bytes, tables);
+        FontBounds bounds = ReadBounds(bytes, tables);
         ushort glyphCount = ReadGlyphCount(bytes, tables);
         string familyName = ReadFamilyName(bytes, tables);
         Os2Metrics os2 = ReadOs2(bytes, tables);
         PostMetrics post = ReadPost(bytes, tables);
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, glyphCount, os2, post, cmap, advances);
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances);
     }
 
     public ushort MapCodePoint(int codePoint)
@@ -102,6 +109,16 @@ internal sealed class OpenTypeFont
     {
         TableRecord head = Required(tables, "head");
         return U16(bytes, head.Offset + 18);
+    }
+
+    private static FontBounds ReadBounds(byte[] bytes, Dictionary<string, TableRecord> tables)
+    {
+        TableRecord head = Required(tables, "head");
+        return new FontBounds(
+            I16(bytes, head.Offset + 36),
+            I16(bytes, head.Offset + 38),
+            I16(bytes, head.Offset + 40),
+            I16(bytes, head.Offset + 42));
     }
 
     private static ushort ReadGlyphCount(byte[] bytes, Dictionary<string, TableRecord> tables)
@@ -268,6 +285,8 @@ internal sealed class OpenTypeFont
         short TypographicLineGap,
         ushort WindowsAscender,
         ushort WindowsDescender);
+
+    internal readonly record struct FontBounds(short XMin, short YMin, short XMax, short YMax);
 
     internal readonly record struct PostMetrics(
         double ItalicAngle,
