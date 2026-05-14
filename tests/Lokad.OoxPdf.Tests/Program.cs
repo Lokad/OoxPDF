@@ -21,6 +21,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
+    PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,

@@ -104,92 +104,108 @@ internal sealed class PptxRenderer
 
     private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
     {
-        IEnumerable<XElement> shapes = slideXml
-            .Descendants(PresentationNamespace + "spTree")
-            .Elements(PresentationNamespace + "sp");
-
-        foreach (XElement shape in shapes)
+        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-            if (shapeProperties is null)
-            {
-                continue;
-            }
+            RenderShapeContainer(shapeTree, document, graphics, theme, GroupTransform.Identity);
+        }
+    }
 
-            ShapeBounds? bounds = ReadBounds(shapeProperties);
-            if (bounds is null)
-            {
-                continue;
-            }
+    private static void RenderShapeContainer(XElement container, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform transform)
+    {
+        foreach (XElement shape in container.Elements(PresentationNamespace + "sp"))
+        {
+            RenderShape(shape, document, graphics, theme, transform);
+        }
 
-            string preset = (string?)shapeProperties
-                .Element(DrawingNamespace + "prstGeom")
-                ?.Attribute("prst") ?? "rect";
+        foreach (XElement group in container.Elements(PresentationNamespace + "grpSp"))
+        {
+            GroupTransform childTransform = transform.Combine(ReadGroupTransform(group));
+            RenderShapeContainer(group, document, graphics, theme, childTransform);
+        }
+    }
 
-            double x = OoxUnits.EmuToPoints(bounds.Value.X);
-            double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
-            double width = OoxUnits.EmuToPoints(bounds.Value.Width);
-            double height = OoxUnits.EmuToPoints(bounds.Value.Height);
-            double y = document.SlideHeightPoints - yTop - height;
-            bool transformed = bounds.Value.RotationDegrees != 0d || bounds.Value.FlipHorizontal || bounds.Value.FlipVertical;
+    private static void RenderShape(XElement shape, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform groupTransform)
+    {
+        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        if (shapeProperties is null)
+        {
+            return;
+        }
 
-            bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
-            bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
+        ShapeBounds? rawBounds = ReadBounds(shapeProperties);
+        if (rawBounds is null)
+        {
+            return;
+        }
 
-            if (transformed)
-            {
-                graphics.SaveState();
-                ApplyShapeTransform(graphics, x, y, width, height, bounds.Value);
-            }
+        ShapeBounds bounds = groupTransform.Apply(rawBounds.Value);
+        string preset = (string?)shapeProperties
+            .Element(DrawingNamespace + "prstGeom")
+            ?.Attribute("prst") ?? "rect";
 
-            if (preset == "line")
-            {
-                if (hasStroke)
-                {
-                    graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    graphics.SetLineWidth(lineWidth);
-                    graphics.StrokeLine(x, document.SlideHeightPoints - yTop, x + width, document.SlideHeightPoints - yTop - height);
-                }
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
-                if (transformed)
-                {
-                    graphics.RestoreState();
-                }
+        bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
+        bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
 
-                continue;
-            }
+        if (transformed)
+        {
+            graphics.SaveState();
+            ApplyShapeTransform(graphics, x, y, width, height, bounds);
+        }
 
-            if (hasFill)
-            {
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                if (preset == "ellipse")
-                {
-                    graphics.FillEllipse(x, y, width, height);
-                }
-                else
-                {
-                    graphics.FillRectangle(x, y, width, height);
-                }
-            }
-
+        if (preset == "line")
+        {
             if (hasStroke)
             {
                 graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
                 graphics.SetLineWidth(lineWidth);
-                if (preset == "ellipse")
-                {
-                    graphics.StrokeEllipse(x, y, width, height);
-                }
-                else
-                {
-                    graphics.StrokeRectangle(x, y, width, height);
-                }
+                graphics.StrokeLine(x, document.SlideHeightPoints - yTop, x + width, document.SlideHeightPoints - yTop - height);
             }
 
             if (transformed)
             {
                 graphics.RestoreState();
             }
+
+            return;
+        }
+
+        if (hasFill)
+        {
+            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            if (preset == "ellipse")
+            {
+                graphics.FillEllipse(x, y, width, height);
+            }
+            else
+            {
+                graphics.FillRectangle(x, y, width, height);
+            }
+        }
+
+        if (hasStroke)
+        {
+            graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+            graphics.SetLineWidth(lineWidth);
+            if (preset == "ellipse")
+            {
+                graphics.StrokeEllipse(x, y, width, height);
+            }
+            else
+            {
+                graphics.StrokeRectangle(x, y, width, height);
+            }
+        }
+
+        if (transformed)
+        {
+            graphics.RestoreState();
         }
     }
 
@@ -217,6 +233,31 @@ internal sealed class PptxRenderer
             rotationDegrees,
             flipHorizontal,
             flipVertical);
+    }
+
+    private static GroupTransform ReadGroupTransform(XElement group)
+    {
+        XElement? transform = group
+            .Element(PresentationNamespace + "grpSpPr")
+            ?.Element(DrawingNamespace + "xfrm");
+        XElement? offset = transform?.Element(DrawingNamespace + "off");
+        XElement? extents = transform?.Element(DrawingNamespace + "ext");
+        XElement? childOffset = transform?.Element(DrawingNamespace + "chOff");
+        XElement? childExtents = transform?.Element(DrawingNamespace + "chExt");
+        if (offset is null || extents is null || childOffset is null || childExtents is null)
+        {
+            return GroupTransform.Identity;
+        }
+
+        long chWidth = Math.Max(1, ParseLongAttribute(childExtents, "cx"));
+        long chHeight = Math.Max(1, ParseLongAttribute(childExtents, "cy"));
+        return new GroupTransform(
+            ParseLongAttribute(offset, "x"),
+            ParseLongAttribute(offset, "y"),
+            ParseLongAttribute(childOffset, "x"),
+            ParseLongAttribute(childOffset, "y"),
+            ParseLongAttribute(extents, "cx") / (double)chWidth,
+            ParseLongAttribute(extents, "cy") / (double)chHeight);
     }
 
     private static void ApplyShapeTransform(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ShapeBounds bounds)
@@ -549,6 +590,34 @@ internal sealed class PptxRenderer
         double RotationDegrees,
         bool FlipHorizontal,
         bool FlipVertical);
+
+    private readonly record struct GroupTransform(long OffsetX, long OffsetY, long ChildOffsetX, long ChildOffsetY, double ScaleX, double ScaleY)
+    {
+        public static GroupTransform Identity { get; } = new(0, 0, 0, 0, 1d, 1d);
+
+        public ShapeBounds Apply(ShapeBounds bounds)
+        {
+            return new ShapeBounds(
+                OffsetX + (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX),
+                OffsetY + (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY),
+                (long)Math.Round(bounds.Width * ScaleX),
+                (long)Math.Round(bounds.Height * ScaleY),
+                bounds.RotationDegrees,
+                bounds.FlipHorizontal,
+                bounds.FlipVertical);
+        }
+
+        public GroupTransform Combine(GroupTransform child)
+        {
+            return new GroupTransform(
+                OffsetX + (long)Math.Round((child.OffsetX - ChildOffsetX) * ScaleX),
+                OffsetY + (long)Math.Round((child.OffsetY - ChildOffsetY) * ScaleY),
+                child.ChildOffsetX,
+                child.ChildOffsetY,
+                ScaleX * child.ScaleX,
+                ScaleY * child.ScaleY);
+        }
+    }
 
     private readonly record struct TextRun(
         string Text,
