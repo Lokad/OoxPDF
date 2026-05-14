@@ -535,7 +535,7 @@ internal sealed class PptxRenderer
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, bold, italic, underline, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, bold, italic, underline, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
@@ -666,6 +666,7 @@ internal sealed class PptxRenderer
             double textX = x + insets.Left;
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
+            double textClipY = document.SlideHeightPoints - yTop - insets.Top - textHeight;
             double verticalOffset = ReadVerticalAnchor(textBody) switch
             {
                 TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody)) / 2d),
@@ -727,7 +728,7 @@ internal sealed class PptxRenderer
                     bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                     bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                    runs.Add(new TextRun(text, cursorX, cursorY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
+                    runs.Add(new TextRun(text, cursorX, cursorY, textWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
@@ -1007,6 +1008,8 @@ internal sealed class PptxRenderer
 
     private static void DrawWrappedRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
     {
+        graphics.SaveState();
+        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         double cursorY = run.Y;
         double lineHeight = run.FontSize * 1.2d;
         foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, embedded))
@@ -1043,6 +1046,8 @@ internal sealed class PptxRenderer
 
             cursorY -= lineHeight;
         }
+
+        graphics.RestoreState();
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
@@ -1155,6 +1160,10 @@ internal sealed class PptxRenderer
         double Y,
         double Width,
         double Height,
+        double ClipX,
+        double ClipY,
+        double ClipWidth,
+        double ClipHeight,
         double FontSize,
         RgbColor Color,
         bool Bold,

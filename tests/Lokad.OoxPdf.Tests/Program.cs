@@ -35,6 +35,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
     PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,
+    PptxTests.PptxSyntheticTextBoxClipsOverflow,
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,

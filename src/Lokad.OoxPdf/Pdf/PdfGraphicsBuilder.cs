@@ -49,6 +49,11 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re S");
     }
 
+    public void ClipRectangle(double x, double y, double width, double height)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
+    }
+
     public void StrokeLine(double x1, double y1, double x2, double y2)
     {
         builder.Append(N(x1)).Append(' ').Append(N(y1)).Append(" m ");
