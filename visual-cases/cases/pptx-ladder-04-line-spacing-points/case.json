@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-line-spacing-points",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-line-spacing-points.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "line-spacing"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.5,
+    "maxChangedPixelRatioAtThreshold16": 0.0043
+  },
+  "allowedUnsupportedFeatures": []
+}
