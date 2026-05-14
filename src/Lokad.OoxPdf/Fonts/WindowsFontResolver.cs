@@ -18,28 +18,31 @@ public sealed class WindowsFontResolver : IFontResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
 
-        FontResolution? exact = cache.Value.FirstOrDefault(f =>
-            f.FamilyName.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase));
-        if (exact is not null)
+        FontResolution[] exact = cache.Value
+            .Where(f => f.FamilyName.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (exact.Length != 0)
         {
-            return exact;
+            return SelectBest(exact, request);
         }
 
         foreach (string alias in ResolveAliases(request.FamilyName))
         {
-            FontResolution? aliasMatch = cache.Value.FirstOrDefault(f =>
-                f.FamilyName.Equals(alias, StringComparison.OrdinalIgnoreCase));
-            if (aliasMatch is not null)
+            FontResolution[] aliasMatches = cache.Value
+                .Where(f => f.FamilyName.Equals(alias, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (aliasMatches.Length != 0)
             {
-                return aliasMatch with { IsFallback = true };
+                return SelectBest(aliasMatches, request) with { IsFallback = true };
             }
         }
 
-        FontResolution? arial = cache.Value.FirstOrDefault(f =>
-            f.FamilyName.Equals("Arial", StringComparison.OrdinalIgnoreCase));
-        if (arial is not null)
+        FontResolution[] arial = cache.Value
+            .Where(f => f.FamilyName.Equals("Arial", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (arial.Length != 0)
         {
-            return arial with { IsFallback = true };
+            return SelectBest(arial, request) with { IsFallback = true };
         }
 
         return cache.Value.FirstOrDefault() is { } first
@@ -71,7 +74,13 @@ public sealed class WindowsFontResolver : IFontResolver
                 OpenTypeFont font = OpenTypeFont.Load(path);
                 if (!string.IsNullOrWhiteSpace(font.FamilyName))
                 {
-                    fonts.Add(new FontResolution(font.FamilyName, path, IsFallback: false));
+                    fonts.Add(new FontResolution(
+                        font.FamilyName,
+                        path,
+                        IsFallback: false,
+                        Bold: font.Os2.WeightClass >= 600,
+                        Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
+                        WeightClass: font.Os2.WeightClass));
                 }
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
@@ -81,10 +90,18 @@ public sealed class WindowsFontResolver : IFontResolver
         }
 
         return fonts
-            .GroupBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
             .OrderBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static FontResolution SelectBest(IReadOnlyList<FontResolution> candidates, FontRequest request)
+    {
+        int targetWeight = request.Bold ? 700 : 400;
+        return candidates
+            .OrderBy(f => f.Italic == request.Italic ? 0 : 1000)
+            .ThenBy(f => Math.Abs(f.WeightClass - targetWeight))
+            .ThenBy(f => f.FontFilePath, StringComparer.OrdinalIgnoreCase)
+            .First();
     }
 
     private static IReadOnlyList<string> ResolveAliases(string familyName)

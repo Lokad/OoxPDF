@@ -189,6 +189,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Consecutive paragraph advance now uses an Office-like default without changing intra-paragraph line breaks/wraps or explicit `lnSpc`; the new fixture is gated, and `pptx-ladder-04-bullet-wrap` was tightened after improving to MAE `0.740986`, changed-pixel ratio threshold 16 `0.006748`.
   - `pptx-ladder-04-empty-paragraph-gap` at `artifacts/visual/pptx-ladder-04-empty-paragraph-gap/20260514-231355`: page count and dimensions matched, diagnostics were empty, MAE `2.109550`, changed-pixel ratio threshold 16 `0.017209`.
   - Formatting-only empty paragraphs now consume vertical advance using their own paragraph/run formatting or the paragraph default, without borrowing a preceding large-title font.
+  - `pptx-ladder-04-bold-italic-face` at `artifacts/visual/pptx-ladder-04-bold-italic-face/20260514-233419`: page count and dimensions matched, diagnostics were empty, MAE `2.512482`, changed-pixel ratio threshold 16 `0.018524`.
+  - Font resolution now selects bold/italic faces when available, and synthetic bold/italic is applied only when the requested face cannot be resolved.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

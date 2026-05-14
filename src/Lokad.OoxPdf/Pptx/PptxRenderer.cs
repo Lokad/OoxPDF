@@ -948,14 +948,14 @@ internal sealed class PptxRenderer
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
                         paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
-                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface));
+                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface, bold, italic));
                         bulletPending = false;
                     }
 
                     foreach (string segment in SplitFlowSegments(text))
                     {
                         string currentSegment = segment;
-                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface);
+                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic);
                         if (cursorX > paragraphTextX && cursorX + segmentWidth > textX + textWidth)
                         {
                             AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
@@ -965,7 +965,7 @@ internal sealed class PptxRenderer
                             paragraphEndX = paragraphTextX;
                             maxFontSize = fontSize;
                             currentSegment = currentSegment.TrimStart();
-                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface);
+                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic);
                         }
 
                         if (currentSegment.Length == 0)
@@ -1519,9 +1519,11 @@ internal sealed class PptxRenderer
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
-        foreach (IGrouping<string, TextRun> group in textRuns.GroupBy(r => string.IsNullOrWhiteSpace(r.FontFamily) ? "Arial" : r.FontFamily!, StringComparer.OrdinalIgnoreCase))
+        foreach (IGrouping<string, TextRun> group in textRuns.GroupBy(r => FontKey(r), StringComparer.OrdinalIgnoreCase))
         {
-            FontResolution resolution = resolver.Resolve(new FontRequest(group.Key));
+            TextRun first = group.First();
+            string familyName = string.IsNullOrWhiteSpace(first.FontFamily) ? "Arial" : first.FontFamily!;
+            FontResolution resolution = resolver.Resolve(new FontRequest(familyName, first.Bold, first.Italic));
             if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
             {
                 continue;
@@ -1530,23 +1532,28 @@ internal sealed class PptxRenderer
             OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
             string resourceName = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
-            fonts[group.Key] = new RenderedFont(resourceName, embedded);
+            fonts[group.Key] = new RenderedFont(resourceName, embedded, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
         }
 
         foreach (TextRun run in textRuns)
         {
-            string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
-            if (fonts.TryGetValue(familyName, out RenderedFont rendered))
+            if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
             {
-                DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run);
+                DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
             }
         }
 
         return resources;
     }
 
-    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run)
+    private static string FontKey(TextRun run)
+    {
+        string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
+        return familyName + "\u001f" + run.Bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + run.Italic.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         graphics.SaveState();
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
@@ -1577,10 +1584,10 @@ internal sealed class PptxRenderer
                     graphics.FillRectangle(x, cursorY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
                 }
 
-                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
-                if (run.Bold)
+                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic);
+                if (syntheticBold)
                 {
-                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
+                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic);
                 }
 
                 if (run.Underline)
@@ -1730,16 +1737,16 @@ internal sealed class PptxRenderer
 
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
-    private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font);
+    private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font, bool SyntheticBold, bool SyntheticItalic);
 
     private sealed class TextAdvanceEstimator
     {
         private readonly WindowsFontResolver resolver = new();
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
 
-        public double Measure(string text, double fontSize, string? familyName)
+        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false)
         {
-            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName);
+            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
             if (font is null)
             {
                 return text.Length * fontSize * 0.42d;
@@ -1755,16 +1762,17 @@ internal sealed class PptxRenderer
             return units * fontSize / font.UnitsPerEm;
         }
 
-        private OpenTypeFont? ResolveFont(string familyName)
+        private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
         {
-            if (fonts.TryGetValue(familyName, out OpenTypeFont? cached))
+            string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
+            if (fonts.TryGetValue(key, out OpenTypeFont? cached))
             {
                 return cached;
             }
 
             try
             {
-                FontResolution resolution = resolver.Resolve(new FontRequest(familyName));
+                FontResolution resolution = resolver.Resolve(new FontRequest(familyName, bold, italic));
                 cached = resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath)
                     ? null
                     : OpenTypeFont.Load(resolution.FontFilePath);
@@ -1774,7 +1782,7 @@ internal sealed class PptxRenderer
                 cached = null;
             }
 
-            fonts[familyName] = cached;
+            fonts[key] = cached;
             return cached;
         }
     }

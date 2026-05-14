@@ -21,6 +21,10 @@ internal static class FontTests
 
         FontResolution resolved = resolver.Resolve(new FontRequest("Arial"));
         TestAssert.NotNull(resolved.FontFilePath);
+
+        FontResolution bold = resolver.Resolve(new FontRequest("Arial", Bold: true));
+        TestAssert.NotNull(bold.FontFilePath);
+        TestAssert.True(bold.WeightClass >= resolved.WeightClass, "Expected bold font resolution to prefer a heavier face when one is available.");
     }
 
     public static void OpenTypeParserMapsBasicLatinGlyphs()
