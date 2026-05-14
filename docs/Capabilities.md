@@ -45,6 +45,7 @@ Supported:
 - Simple paragraph page breaking.
 - Simple decimal and bullet list labels from `numbering.xml`.
 - Inline JPEG and PNG images.
+- Fixed-width tables with cell fills, black borders, and cell text.
 
 Partial or approximated:
 
@@ -52,9 +53,9 @@ Partial or approximated:
 - Bold and italic are PDF drawing approximations and do not yet select matching font faces.
 - List indentation, hanging indents, tab stops, and advanced numbering formats are approximate.
 - Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
+- Table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
 
 Unsupported or ignored:
 
-- Tables.
 - Headers and footers.
 - Unsupported DOCX features are not yet surfaced through stable diagnostics.

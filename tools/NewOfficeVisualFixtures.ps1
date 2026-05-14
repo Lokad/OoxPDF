@@ -284,6 +284,54 @@ try {
         $images.Close($false)
         Remove-Item -LiteralPath $docImagePath -Force -ErrorAction SilentlyContinue
     }
+
+    $tableDoc = $word.Documents.Add()
+    try {
+        $tableDoc.PageSetup.PageWidth = 612
+        $tableDoc.PageSetup.PageHeight = 792
+        $tableDoc.PageSetup.TopMargin = 72
+        $tableDoc.PageSetup.BottomMargin = 72
+        $tableDoc.PageSetup.LeftMargin = 72
+        $tableDoc.PageSetup.RightMargin = 72
+        $tableDoc.Content.Text = "Regional results`r`n"
+
+        $heading = $tableDoc.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $range = $tableDoc.Paragraphs.Item(2).Range
+        $tbl = $tableDoc.Tables.Add($range, 3, 3)
+        $values = @(
+            @("Region", "Q1", "Q2"),
+            @("North", "42", "48"),
+            @("South", "37", "41")
+        )
+        for ($row = 1; $row -le 3; $row++) {
+            for ($column = 1; $column -le 3; $column++) {
+                $cell = $tbl.Cell($row, $column)
+                $cell.Range.Text = $values[$row - 1][$column - 1]
+                $cell.Range.Font.Name = "Arial"
+                $cell.Range.Font.Size = 11
+                if ($row -eq 1) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 47 128 237
+                    $cell.Range.Font.Color = Rgb 255 255 255
+                    $cell.Range.Font.Bold = $true
+                }
+                elseif (($row + $column) % 2 -eq 0) {
+                    $cell.Shading.BackgroundPatternColor = Rgb 232 244 253
+                }
+            }
+        }
+        $tbl.Borders.Enable = $true
+
+        $tableDoc.SaveAs2((Join-Path $cases "docx-tables.docx"), 16)
+    }
+    finally {
+        $tableDoc.Close($false)
+    }
 }
 finally {
     if ($word -ne $null) {
