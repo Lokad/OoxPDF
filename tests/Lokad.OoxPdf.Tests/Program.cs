@@ -56,6 +56,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
     DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,
+    DocxTests.DocxStyleAndNumberingLayoutRisksEmitDiagnostics,
     ImagingTests.JpegInfoReadsDimensions,
     ImagingTests.PngImageReadsIndexedPalettePixels,
     ImagingTests.PngImageReadsPackedIndexedPalettePixels,

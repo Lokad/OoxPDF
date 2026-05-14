@@ -88,7 +88,7 @@ internal sealed class DocxReader
         }
 
         var emitted = new HashSet<string>(StringComparer.Ordinal);
-        void Emit(string id, string feature)
+        void Emit(string id, string feature, string diagnosticPartName = "", string fallback = "Ignored")
         {
             if (!emitted.Add(id))
             {
@@ -99,9 +99,9 @@ internal sealed class DocxReader
                 id,
                 OoxPdfSeverity.Warning,
                 $"Unsupported DOCX feature '{feature}' was detected and ignored or approximated.",
-                partName,
+                diagnosticPartName.Length == 0 ? partName : diagnosticPartName,
                 Feature: feature,
-                Fallback: "Ignored"));
+                Fallback: fallback));
         }
 
         if (document.Descendants(WordprocessingNamespace + "commentRangeStart").Any() ||
@@ -175,11 +175,85 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
         }
 
+        if (document.Descendants(WordprocessingNamespace + "tblHeader").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_TABLE_HEADER_ROW", "repeating table header row");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "tblStyle").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_TABLE_STYLE", "table style");
+        }
+
+        XDocument? styles = LoadRelatedXmlPart(package, partName, StylesRelationshipType, StylesContentType, out string? stylesPartName);
+        if (styles is not null)
+        {
+            if (styles.Descendants(WordprocessingNamespace + "style")
+                .Elements(WordprocessingNamespace + "pPr")
+                .Any(properties =>
+                    properties.Element(WordprocessingNamespace + "keepNext") is not null ||
+                    properties.Element(WordprocessingNamespace + "keepLines") is not null ||
+                    properties.Element(WordprocessingNamespace + "widowControl") is not null))
+            {
+                Emit("DOCX_STYLE_PARAGRAPH_KEEP_RULE", "style paragraph keep/widow-orphan rule", stylesPartName ?? partName, "Approximated");
+            }
+
+            if (styles.Descendants(WordprocessingNamespace + "style")
+                .Elements(WordprocessingNamespace + "pPr")
+                .Elements(WordprocessingNamespace + "spacing")
+                .Any(spacing =>
+                    spacing.Attribute(WordprocessingNamespace + "beforeAutospacing") is not null ||
+                    spacing.Attribute(WordprocessingNamespace + "afterAutospacing") is not null ||
+                    spacing.Attribute(WordprocessingNamespace + "beforeLines") is not null ||
+                    spacing.Attribute(WordprocessingNamespace + "afterLines") is not null ||
+                    spacing.Parent?.Element(WordprocessingNamespace + "contextualSpacing") is not null))
+            {
+                Emit("DOCX_STYLE_PARAGRAPH_SPACING", "style paragraph spacing variant", stylesPartName ?? partName, "Approximated");
+            }
+
+            if (styles.Descendants(WordprocessingNamespace + "style")
+                .Any(style => string.Equals((string?)style.Attribute(WordprocessingNamespace + "type"), "table", StringComparison.OrdinalIgnoreCase)))
+            {
+                Emit("DOCX_STYLE_TABLE_STYLE", "table style definition", stylesPartName ?? partName, "Ignored");
+            }
+        }
+
+        XDocument? numbering = LoadRelatedXmlPart(package, partName, NumberingRelationshipType, NumberingContentType, out string? numberingPartName);
+        if (numbering is not null &&
+            numbering.Descendants(WordprocessingNamespace + "lvl")
+                .Elements(WordprocessingNamespace + "pPr")
+                .Elements(WordprocessingNamespace + "ind")
+                .Any(ind =>
+                    ind.Attribute(WordprocessingNamespace + "left") is not null ||
+                    ind.Attribute(WordprocessingNamespace + "right") is not null ||
+                    ind.Attribute(WordprocessingNamespace + "firstLine") is not null ||
+                    ind.Attribute(WordprocessingNamespace + "hanging") is not null))
+        {
+            Emit("DOCX_NUMBERING_INDENT", "numbering level indent", numberingPartName ?? partName, "Ignored");
+        }
+
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
             Emit("DOCX_UNSUPPORTED_MACRO", "macro");
         }
+    }
+
+    private static XDocument? LoadRelatedXmlPart(OoxPackage package, string documentPartName, string relationshipType, string contentType, out string? relatedPartName)
+    {
+        OoxRelationship? relationship = package.GetRelationships(documentPartName)
+            .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
+        OoxPart? part = relationship?.ResolvedTarget is null
+            ? package.Parts.FirstOrDefault(p => p.ContentType == contentType)
+            : package.GetPart(relationship.ResolvedTarget);
+        relatedPartName = part?.Name;
+        if (part is null)
+        {
+            return null;
+        }
+
+        using Stream stream = part.OpenRead();
+        return SafeXml.Load(stream);
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphs(
