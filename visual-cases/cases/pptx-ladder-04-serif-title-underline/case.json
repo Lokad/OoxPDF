@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-serif-title-underline",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-serif-title-underline.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "serif", "underline"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.5,
+    "maxChangedPixelRatioAtThreshold16": 0.006
+  },
+  "allowedUnsupportedFeatures": []
+}

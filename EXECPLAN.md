@@ -181,6 +181,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Public PPTX ladder styled-text rerun:
   - `pptx-ladder-04-bullet-wrap` at `artifacts/visual/pptx-ladder-04-bullet-wrap/20260514-224326`: page count and dimensions matched, diagnostics were empty, MAE `1.253179`, changed-pixel ratio threshold 16 `0.009518`.
   - Bullet glyph placement, hanging indents, and continuation-line alignment are now covered by a public synthetic fixture before using private slide-1 evidence.
+  - `pptx-ladder-04-serif-title-underline` at `artifacts/visual/pptx-ladder-04-serif-title-underline/20260514-224715`: page count and dimensions matched, diagnostics were empty, MAE `0.481747`, changed-pixel ratio threshold 16 `0.005513`.
+  - Large centered serif text over a dark background and underlined mixed-run text are now covered by a public synthetic fixture before using private slide-1 evidence.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.

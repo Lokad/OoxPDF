@@ -1563,6 +1563,12 @@ internal sealed class PptxRenderer
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
     {
+        if (embedded.MeasureTextPoints(text, fontSize) <= maxWidth)
+        {
+            yield return text;
+            yield break;
+        }
+
         string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length == 0)
         {
