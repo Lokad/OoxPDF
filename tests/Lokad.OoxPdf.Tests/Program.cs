@@ -38,6 +38,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,
     PptxTests.PptxSyntheticTextBoxUsesPerRunFontResources,
+    PptxTests.PptxSyntheticTextBoxUsesListStyleDefaults,
     PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
     PptxTests.PptxSyntheticTextBoxSkipsEmptyParagraphs,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,

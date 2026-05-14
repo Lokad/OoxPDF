@@ -92,7 +92,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Bullet hanging indents from `marL`/`indent` now separate bullet glyphs from bullet text.
 - Private PPTX slide-1 rerun `artifacts/private-visual/lokad-value-based/20260514-190411`:
   - PPTX text now uses per-run font resources, including bullet font selection from `buFont`.
-  - Remaining slide-1 generic gap is exact line metrics/wrapping and spacing precision.
+- Private PPTX slide-1 rerun `artifacts/private-visual/lokad-value-based/20260514-191256`:
+  - Level-1 list-style defaults now supply missing run size/style/color/typeface and line spacing.
+  - Remaining slide-1 generic gaps are fine text metrics, exact run advance/underline placement, and spacing precision.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -244,7 +246,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-71 passed, 0 failed
+72 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

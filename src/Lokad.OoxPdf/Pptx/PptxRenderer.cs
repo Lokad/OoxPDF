@@ -667,10 +667,13 @@ internal sealed class PptxRenderer
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
             double textClipY = document.SlideHeightPoints - yTop - insets.Top - textHeight;
+            XElement? defaultParagraphProperties = textBody
+                .Element(DrawingNamespace + "lstStyle")
+                ?.Element(DrawingNamespace + "lvl1pPr");
             double verticalOffset = ReadVerticalAnchor(textBody) switch
             {
-                TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody)) / 2d),
-                TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody)),
+                TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)) / 2d),
+                TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)),
                 _ => 0d
             };
             double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody) - verticalOffset;
@@ -684,9 +687,11 @@ internal sealed class PptxRenderer
 
                 TextAlignment alignment = ReadAlignment(paragraph);
                 XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
-                double spacingBefore = ReadParagraphSpacing(paragraphProperties, "spcBef");
-                double spacingAfter = ReadParagraphSpacing(paragraphProperties, "spcAft");
-                double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
+                XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
+                    defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
+                double spacingBefore = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef");
+                double spacingAfter = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");
+                double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties, defaultParagraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties);
                 string? bulletTypeface = ReadBulletTypeface(paragraphProperties, theme);
                 bool bulletPending = bulletText is not null;
@@ -727,19 +732,24 @@ internal sealed class PptxRenderer
                     }
 
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                    double fontSize = runProperties?.Attribute("sz") is { } size
+                    double fontSize = (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size
                         ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                         : 18d;
                     maxFontSize = Math.Max(maxFontSize, fontSize);
                     RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
                         ? runColor
-                        : new RgbColor(0, 0, 0);
-                    string? typeface = theme.ResolveTypeface((string?)runProperties?
-                        .Element(DrawingNamespace + "latin")
+                        : TryReadSolidColor(defaultRunProperties, theme, out RgbColor defaultColor)
+                            ? defaultColor
+                            : new RgbColor(0, 0, 0);
+                    string? typeface = theme.ResolveTypeface((string?)(runProperties?
+                        .Element(DrawingNamespace + "latin") ??
+                        defaultRunProperties?.Element(DrawingNamespace + "latin"))
                         ?.Attribute("typeface"));
-                    bool bold = ParseOptionalBoolAttribute(runProperties, "b");
-                    bool italic = ParseOptionalBoolAttribute(runProperties, "i");
-                    bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
+                    bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+                        (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
+                    bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
+                        (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+                    bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                     if (bulletPending)
                     {
@@ -750,7 +760,7 @@ internal sealed class PptxRenderer
 
                     double runWidth = Math.Max(1d, textWidth - (cursorX - textX));
                     runs.Add(new TextRun(text, cursorX, cursorY, runWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
-                    cursorX += text.Length * fontSize * 0.55d;
+                    cursorX += text.Length * fontSize * 0.42d;
                 }
 
                 cursorY -= maxFontSize * lineSpacingFactor + spacingAfter;
@@ -786,9 +796,10 @@ internal sealed class PptxRenderer
         return OoxUnits.EmuToPoints(emu);
     }
 
-    private static double ReadParagraphSpacing(XElement? paragraphProperties, string elementName)
+    private static double ReadParagraphSpacing(XElement? paragraphProperties, XElement? defaultParagraphProperties, string elementName)
     {
-        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + elementName);
+        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + elementName) ??
+            defaultParagraphProperties?.Element(DrawingNamespace + elementName);
         if (spacing?.Element(DrawingNamespace + "spcPts")?.Attribute("val") is { } points)
         {
             return int.Parse(points.Value, CultureInfo.InvariantCulture) / 100d;
@@ -811,9 +822,10 @@ internal sealed class PptxRenderer
             : 0d;
     }
 
-    private static double ReadLineSpacingFactor(XElement? paragraphProperties)
+    private static double ReadLineSpacingFactor(XElement? paragraphProperties, XElement? defaultParagraphProperties)
     {
-        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + "lnSpc");
+        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + "lnSpc") ??
+            defaultParagraphProperties?.Element(DrawingNamespace + "lnSpc");
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
             return Math.Max(0.1d, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
@@ -883,7 +895,7 @@ internal sealed class PptxRenderer
         };
     }
 
-    private static double EstimateTextHeight(XElement textBody)
+    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties)
     {
         double height = 0d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
@@ -894,8 +906,10 @@ internal sealed class PptxRenderer
             }
 
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
-            double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
-            height += ReadParagraphSpacing(paragraphProperties, "spcBef");
+            XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
+                defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
+            double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties, defaultParagraphProperties);
+            height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef");
             double maxFontSize = 18d;
             bool hasLineContent = false;
             foreach (XElement child in paragraph.Elements())
@@ -914,7 +928,7 @@ internal sealed class PptxRenderer
                 }
 
                 XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-                double fontSize = runProperties?.Attribute("sz") is { } size
+                double fontSize = (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size
                     ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                     : 18d;
                 maxFontSize = Math.Max(maxFontSize, fontSize);
@@ -926,7 +940,7 @@ internal sealed class PptxRenderer
                 height += maxFontSize * lineSpacingFactor;
             }
 
-            height += ReadParagraphSpacing(paragraphProperties, "spcAft");
+            height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");
         }
 
         return height;
