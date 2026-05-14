@@ -199,6 +199,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Run-level `spc` character spacing now affects text advance, wrapping, PDF text state, underline/highlight extents, and fallback measurement.
   - `pptx-ladder-04-baseline-shift` at `artifacts/visual/pptx-ladder-04-baseline-shift/20260514-235445`: page count and dimensions matched, diagnostics were empty, MAE `0.269687`, changed-pixel ratio threshold 16 `0.002153`.
   - Run-level `baseline` now shifts superscript/subscript text, highlights, and underlines relative to the paragraph baseline.
+  - `pptx-ladder-04-highlight-single` at `artifacts/visual/pptx-ladder-04-highlight-single/20260514-235728`: page count and dimensions matched, diagnostics were empty, MAE `0.261774`, changed-pixel ratio threshold 16 `0.004202`.
+  - Run-level highlight rendering is now locked by a public visual gate for a single highlighted text run.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

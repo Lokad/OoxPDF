@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-highlight-single",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-highlight-single.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "highlight"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.27,
+    "maxChangedPixelRatioAtThreshold16": 0.0043
+  },
+  "allowedUnsupportedFeatures": []
+}
