@@ -30,7 +30,9 @@ if ($extension -eq ".pptx") {
         if ($powerPoint -ne $null) { $powerPoint.Quit() }
     }
 
-    $slides = Get-ChildItem -LiteralPath $outputFull -Filter "*.PNG" | Sort-Object Name
+    $slides = Get-ChildItem -LiteralPath $outputFull -Filter "*.PNG" | Sort-Object {
+        if ($_.BaseName -match '\d+$') { [int]$Matches[0] } else { [int]::MaxValue }
+    }, Name
     $index = 1
     foreach ($slide in $slides) {
         Move-Item -LiteralPath $slide.FullName -Destination (Join-Path $outputFull ("page-{0:000}.png" -f $index)) -Force
