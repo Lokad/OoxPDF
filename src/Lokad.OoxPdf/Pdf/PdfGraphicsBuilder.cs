@@ -49,6 +49,18 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re S");
     }
 
+    public void FillRoundedRectangle(double x, double y, double width, double height, double radius)
+    {
+        AppendRoundedRectanglePath(x, y, width, height, radius);
+        builder.AppendLine("f");
+    }
+
+    public void StrokeRoundedRectangle(double x, double y, double width, double height, double radius)
+    {
+        AppendRoundedRectanglePath(x, y, width, height, radius);
+        builder.AppendLine("S");
+    }
+
     public void ClipRectangle(double x, double y, double width, double height)
     {
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
@@ -139,6 +151,24 @@ internal sealed class PdfGraphicsBuilder
         Curve(cx - ox, cy + ry, cx - rx, cy + oy, cx - rx, cy);
         Curve(cx - rx, cy - oy, cx - ox, cy - ry, cx, cy - ry);
         Curve(cx + ox, cy - ry, cx + rx, cy - oy, cx + rx, cy);
+        builder.AppendLine("h");
+    }
+
+    private void AppendRoundedRectanglePath(double x, double y, double width, double height, double radius)
+    {
+        const double kappa = 0.5522847498307936d;
+        double r = Math.Clamp(radius, 0d, Math.Min(width, height) / 2d);
+        double ox = r * kappa;
+
+        builder.Append(N(x + r)).Append(' ').Append(N(y)).AppendLine(" m");
+        builder.Append(N(x + width - r)).Append(' ').Append(N(y)).AppendLine(" l");
+        Curve(x + width - r + ox, y, x + width, y + r - ox, x + width, y + r);
+        builder.Append(N(x + width)).Append(' ').Append(N(y + height - r)).AppendLine(" l");
+        Curve(x + width, y + height - r + ox, x + width - r + ox, y + height, x + width - r, y + height);
+        builder.Append(N(x + r)).Append(' ').Append(N(y + height)).AppendLine(" l");
+        Curve(x + r - ox, y + height, x, y + height - r + ox, x, y + height - r);
+        builder.Append(N(x)).Append(' ').Append(N(y + r)).AppendLine(" l");
+        Curve(x, y + r - ox, x + r - ox, y, x + r, y);
         builder.AppendLine("h");
     }
 

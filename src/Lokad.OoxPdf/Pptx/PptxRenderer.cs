@@ -287,6 +287,10 @@ internal sealed class PptxRenderer
             {
                 graphics.FillEllipse(x, y, width, height);
             }
+            else if (preset == "roundRect")
+            {
+                graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+            }
             else if (preset == "downArrow")
             {
                 graphics.FillPolygon(CreateDownArrowPoints(x, y, width, height));
@@ -304,6 +308,10 @@ internal sealed class PptxRenderer
             if (preset == "ellipse")
             {
                 graphics.StrokeEllipse(x, y, width, height);
+            }
+            else if (preset == "roundRect")
+            {
+                graphics.StrokeRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
             }
             else if (preset == "downArrow")
             {
