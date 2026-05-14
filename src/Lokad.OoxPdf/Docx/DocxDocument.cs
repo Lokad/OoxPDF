@@ -17,6 +17,7 @@ internal sealed record DocxDocument(
 
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,
+    IReadOnlyList<DocxInlineImage> Images,
     DocxTextAlignment Alignment,
     double SpacingBeforePoints,
     double SpacingAfterPoints,
@@ -31,6 +32,8 @@ internal sealed record DocxTextRun(
     bool Italic,
     bool Underline,
     string? FontFamily);
+
+internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes);
 
 internal enum DocxTextAlignment
 {

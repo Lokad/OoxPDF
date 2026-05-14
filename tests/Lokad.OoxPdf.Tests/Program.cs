@@ -30,6 +30,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticStylesApplyToParagraphText,
     DocxTests.DocxSyntheticParagraphsBreakAcrossPages,
     DocxTests.DocxSyntheticNumberingRendersListLabels,
+    DocxTests.DocxSyntheticInlinePngRendersImageXObject,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);

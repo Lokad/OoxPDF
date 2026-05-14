@@ -108,7 +108,7 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Parse DOCX numbering part for simple bullets and decimal numbering.
 - [x] (2026-05-14) Render DOCX bullets and decimal lists.
 - [x] (2026-05-14) Add DOCX numbering visual case.
-- [ ] Parse DOCX inline images and render JPEG/PNG images.
+- [x] (2026-05-14) Parse DOCX inline images and render JPEG/PNG images.
 - [ ] Add DOCX inline images visual case.
 - [ ] Parse DOCX fixed-width tables, rows, cells, merges, fills, borders, and cell margins.
 - [ ] Render DOCX fixed-width tables with text inside cells.
@@ -226,6 +226,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: The first Office-authored DOCX numbering visual case is readable but needs hanging-indent and level-text cleanup.
   Evidence: `docx-numbering` run `20260514-142632` has matching 1224 by 1584 reference/candidate images, mean absolute error `1.0996359376031557`, changed pixel ratio at threshold 16 of `0.012073863636363636`, and an assessment rating of 3. The assessment records labels like `1 .` and missing hanging indents as the main defects.
 
+- Observation: DOCX inline DrawingML images can reuse the same PNG/JPEG PDF image XObject path as PPTX.
+  Evidence: `DocxSyntheticInlinePngRendersImageXObject` builds a synthetic DOCX with `w:drawing/wp:inline`, resolves the image relationship, and verifies `/Subtype /Image`, `/XObject`, `/Im1 Do`, and image dimensions in the candidate PDF; the full test run now prints `33 passed, 0 failed`.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -261,9 +264,9 @@ Examples of discoveries that belong here include: Office COM automation requirin
 ## Outcomes & Retrospective
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
-  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `32 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-basic-paragraphs/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-numbering/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, basic run formatting, page breaking, and simple bullet/decimal list labels. DOCX images, tables, headers/footers, and unsupported DOCX diagnostics remain incomplete.
-  Next target: Implement DOCX inline image rendering.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `33 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-basic-paragraphs/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-numbering/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, basic run formatting, page breaking, simple bullet/decimal list labels, and inline JPEG/PNG images. DOCX image visual validation, tables, headers/footers, and unsupported DOCX diagnostics remain incomplete.
+  Next target: Add and assess a DOCX inline images visual case.
 
 ## Context and Orientation
 

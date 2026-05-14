@@ -7,6 +7,9 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed class DocxReader
 {
     private static readonly XNamespace WordprocessingNamespace = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+    private static readonly XNamespace WordprocessingDrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+    private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     private const string MainDocumentContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml";
     private const string OfficeDocumentRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
@@ -32,7 +35,10 @@ internal sealed class DocxReader
 
         DocxStyleSet styles = LoadStyles(package, documentPart.Name);
         DocxNumberingSet numbering = LoadNumbering(package, documentPart.Name);
-        IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering);
+        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering, package, relationships);
 
         if (pageSize is null)
         {
@@ -54,7 +60,12 @@ internal sealed class DocxReader
         return new DocxDocument(width, height, left, right, top, bottom, paragraphs);
     }
 
-    private static IReadOnlyList<DocxParagraph> ReadParagraphs(XDocument document, DocxStyleSet styles, DocxNumberingSet numbering)
+    private static IReadOnlyList<DocxParagraph> ReadParagraphs(
+        XDocument document,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var paragraphs = new List<DocxParagraph>();
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
@@ -66,33 +77,35 @@ internal sealed class DocxReader
                 ?.Attribute(WordprocessingNamespace + "val");
             DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles);
             var runs = new List<DocxTextRun>();
+            var images = new List<DocxInlineImage>();
             foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
             {
                 string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
-                if (text.Length == 0)
-                {
-                    continue;
-                }
-
                 XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
                 string? characterStyleId = (string?)runProperties?
                     .Element(WordprocessingNamespace + "rStyle")
                     ?.Attribute(WordprocessingNamespace + "val");
                 DocxResolvedRunProperties resolvedRun = ResolveRunProperties(runProperties, paragraphStyleId, characterStyleId, styles);
-                runs.Add(new DocxTextRun(
-                    text,
-                    resolvedRun.FontSize ?? 11d,
-                    resolvedRun.ColorHex,
-                    resolvedRun.Bold ?? false,
-                    resolvedRun.Italic ?? false,
-                    resolvedRun.Underline ?? false,
-                    resolvedRun.FontFamily));
+                if (text.Length != 0)
+                {
+                    runs.Add(new DocxTextRun(
+                        text,
+                        resolvedRun.FontSize ?? 11d,
+                        resolvedRun.ColorHex,
+                        resolvedRun.Bold ?? false,
+                        resolvedRun.Italic ?? false,
+                        resolvedRun.Underline ?? false,
+                        resolvedRun.FontFamily));
+                }
+
+                images.AddRange(ReadInlineImages(run, package, relationships));
             }
 
-            if (runs.Count > 0)
+            if (runs.Count > 0 || images.Count > 0)
             {
                 paragraphs.Add(new DocxParagraph(
                     runs,
+                    images,
                     resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
                     resolvedParagraph.SpacingBeforePoints ?? 0d,
                     resolvedParagraph.SpacingAfterPoints ?? 6d,
@@ -102,6 +115,37 @@ internal sealed class DocxReader
         }
 
         return paragraphs;
+    }
+
+    private static IReadOnlyList<DocxInlineImage> ReadInlineImages(XElement run, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        var images = new List<DocxInlineImage>();
+        foreach (XElement inline in run.Descendants(WordprocessingDrawingNamespace + "inline"))
+        {
+            XElement? extent = inline.Element(WordprocessingDrawingNamespace + "extent");
+            string? relationshipId = (string?)inline
+                .Descendants(DrawingNamespace + "blip")
+                .FirstOrDefault()
+                ?.Attribute(RelationshipsNamespace + "embed");
+            if (extent is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+            if (imagePart is null)
+            {
+                continue;
+            }
+
+            images.Add(new DocxInlineImage(
+                OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cx")),
+                OoxUnits.EmuToPoints(ParseLongAttribute(extent, "cy")),
+                imagePart.ContentType,
+                imagePart.Bytes));
+        }
+
+        return images;
     }
 
     private static string? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
