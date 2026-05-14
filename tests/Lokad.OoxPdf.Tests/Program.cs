@@ -27,6 +27,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticThemeCanLoadFromSlideMaster,
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
     PptxTests.PptxSyntheticInheritedPlaceholderTextIsSkipped,
+    PptxTests.PptxSyntheticSlidePlaceholderTextUsesInheritedBounds,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
     PptxTests.PptxSyntheticSlideShapesRenderAbovePictures,
     PptxTests.PptxUnsupportedPngImageEmitsDiagnostic,

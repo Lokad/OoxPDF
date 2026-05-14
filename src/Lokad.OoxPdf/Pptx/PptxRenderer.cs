@@ -60,8 +60,8 @@ internal sealed class PptxRenderer
                 .ToArray();
             RenderCharts(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             IReadOnlyList<TextRun> textRuns = inheritedXml
-                .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false))
-                .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true))
+                .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
+                .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true, inheritedXml))
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
@@ -733,7 +733,7 @@ internal sealed class PptxRenderer
         return TryReadSolidColor(fontRef, theme, out color);
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders)
+    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
     {
         var runs = new List<TextRun>();
         var advanceEstimator = new TextAdvanceEstimator();
@@ -747,6 +747,7 @@ internal sealed class PptxRenderer
             XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
             XElement? textBody = shape.Element(PresentationNamespace + "txBody");
             ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
+            bounds ??= FindInheritedPlaceholderBounds(shape, placeholderSources);
             if (bounds is null || textBody is null)
             {
                 continue;
@@ -772,14 +773,15 @@ internal sealed class PptxRenderer
                 : null;
             XElement? defaultParagraphProperties = textBody
                 .Element(DrawingNamespace + "lstStyle")
-                ?.Element(DrawingNamespace + "lvl1pPr");
+                ?.Element(DrawingNamespace + "lvl1pPr") ??
+                FindInheritedTextStyle(shape, placeholderSources);
             double verticalOffset = ReadVerticalAnchor(textBody) switch
             {
                 TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)) / 2d),
                 TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)),
                 _ => 0d
             };
-            double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody) - verticalOffset;
+            double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody, defaultParagraphProperties) - verticalOffset;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
@@ -903,6 +905,82 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static ShapeBounds? FindInheritedPlaceholderBounds(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    {
+        XElement? placeholder = shape
+            .Element(PresentationNamespace + "nvSpPr")
+            ?.Element(PresentationNamespace + "nvPr")
+            ?.Element(PresentationNamespace + "ph");
+        if (placeholder is null)
+        {
+            return null;
+        }
+
+        string? type = (string?)placeholder.Attribute("type");
+        string? index = (string?)placeholder.Attribute("idx");
+        foreach (XDocument source in placeholderSources.Reverse())
+        {
+            foreach (XElement candidate in source.Descendants(PresentationNamespace + "sp"))
+            {
+                XElement? candidatePlaceholder = candidate
+                    .Element(PresentationNamespace + "nvSpPr")
+                    ?.Element(PresentationNamespace + "nvPr")
+                    ?.Element(PresentationNamespace + "ph");
+                if (candidatePlaceholder is null)
+                {
+                    continue;
+                }
+
+                string? candidateType = (string?)candidatePlaceholder.Attribute("type");
+                string? candidateIndex = (string?)candidatePlaceholder.Attribute("idx");
+                bool indexMatches = index is not null && candidateIndex == index;
+                bool typeMatches = index is null && type is not null && candidateType == type;
+                if (!indexMatches && !typeMatches)
+                {
+                    continue;
+                }
+
+                XElement? candidateProperties = candidate.Element(PresentationNamespace + "spPr");
+                if (candidateProperties is not null && ReadBounds(candidateProperties) is { } bounds)
+                {
+                    return bounds;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    {
+        string? placeholderType = (string?)shape
+            .Element(PresentationNamespace + "nvSpPr")
+            ?.Element(PresentationNamespace + "nvPr")
+            ?.Element(PresentationNamespace + "ph")
+            ?.Attribute("type");
+        string styleName = placeholderType switch
+        {
+            "title" or "ctrTitle" => "titleStyle",
+            "body" or "subTitle" => "bodyStyle",
+            _ => "otherStyle"
+        };
+
+        foreach (XDocument source in placeholderSources)
+        {
+            XElement? style = source.Root?
+                .Element(PresentationNamespace + "txStyles")
+                ?.Element(PresentationNamespace + styleName);
+            XElement? level = style?.Element(DrawingNamespace + "lvl1pPr") ??
+                style?.Element(DrawingNamespace + "defPPr");
+            if (level is not null)
+            {
+                return level;
+            }
+        }
+
+        return null;
     }
 
     private static IEnumerable<string> SplitFlowSegments(string text)
@@ -1037,7 +1115,7 @@ internal sealed class PptxRenderer
         return 1d;
     }
 
-    private static double ReadFirstLineBaselineOffset(XElement textBody)
+    private static double ReadFirstLineBaselineOffset(XElement textBody, XElement? defaultParagraphProperties)
     {
         const double defaultFontSize = 18d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
@@ -1058,6 +1136,14 @@ internal sealed class PptxRenderer
                 if (runProperties?.Attribute("sz") is { } size)
                 {
                     double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
+                    return fontSize * 0.75d;
+                }
+
+                if (defaultParagraphProperties?
+                    .Element(DrawingNamespace + "defRPr")?
+                    .Attribute("sz") is { } defaultSize)
+                {
+                    double fontSize = int.Parse(defaultSize.Value, CultureInfo.InvariantCulture) / 100d;
                     return fontSize * 0.75d;
                 }
 
