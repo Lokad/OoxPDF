@@ -643,7 +643,7 @@ internal sealed class PptxRenderer
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, null, bold, italic, underline, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, color, null, bold, italic, underline, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
@@ -941,21 +941,22 @@ internal sealed class PptxRenderer
                         (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
                     bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+                    double characterSpacing = ReadCharacterSpacing(runProperties, defaultRunProperties);
                     RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
                         ? highlightColor
                         : null;
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
-                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface, bold, italic));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
+                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
 
                     foreach (string segment in SplitFlowSegments(text))
                     {
                         string currentSegment = segment;
-                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic);
+                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic, characterSpacing);
                         if (cursorX > paragraphTextX && cursorX + segmentWidth > textX + textWidth)
                         {
                             AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
@@ -965,7 +966,7 @@ internal sealed class PptxRenderer
                             paragraphEndX = paragraphTextX;
                             maxFontSize = fontSize;
                             currentSegment = currentSegment.TrimStart();
-                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic);
+                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic, characterSpacing);
                         }
 
                         if (currentSegment.Length == 0)
@@ -973,7 +974,7 @@ internal sealed class PptxRenderer
                             continue;
                         }
 
-                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, color, highlight, bold, italic, underline, alignment, typeface));
+                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, color, highlight, bold, italic, underline, alignment, typeface));
                         cursorX += segmentWidth;
                         paragraphEndX = Math.Max(paragraphEndX, cursorX);
                     }
@@ -1136,6 +1137,13 @@ internal sealed class PptxRenderer
         return (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size
             ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
             : 18d;
+    }
+
+    private static double ReadCharacterSpacing(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
+            ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
+            : 0d;
     }
 
     private static TextInsets ReadTextInsets(XElement textBody)
@@ -1559,7 +1567,7 @@ internal sealed class PptxRenderer
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         double cursorY = run.Y;
         double lineHeight = run.FontSize * 1.2d;
-        foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, embedded))
+        foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, run.CharacterSpacing, embedded))
         {
             if (cursorY < run.Y - run.Height ||
                 cursorY - lineHeight < run.ClipY)
@@ -1570,7 +1578,7 @@ internal sealed class PptxRenderer
             string glyphHex = embedded.EncodeGlyphHex(line);
             if (glyphHex.Length != 0)
             {
-                double lineWidth = embedded.MeasureTextPoints(line, run.FontSize);
+                double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing);
                 double x = run.Alignment switch
                 {
                     TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
@@ -1584,10 +1592,10 @@ internal sealed class PptxRenderer
                     graphics.FillRectangle(x, cursorY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
                 }
 
-                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic);
+                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
                 if (syntheticBold)
                 {
-                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic);
+                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
                 }
 
                 if (run.Underline)
@@ -1604,9 +1612,9 @@ internal sealed class PptxRenderer
         graphics.RestoreState();
     }
 
-    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
     {
-        if (embedded.MeasureTextPoints(text, fontSize) <= maxWidth)
+        if (MeasureRenderedText(embedded, text, fontSize, characterSpacing) <= maxWidth)
         {
             yield return text;
             yield break;
@@ -1622,7 +1630,7 @@ internal sealed class PptxRenderer
         foreach (string word in words)
         {
             string candidate = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+            if (line.Length > 0 && MeasureRenderedText(embedded, candidate, fontSize, characterSpacing) > maxWidth)
             {
                 yield return line.ToString();
                 line.Clear();
@@ -1639,6 +1647,13 @@ internal sealed class PptxRenderer
         {
             yield return line.ToString();
         }
+    }
+
+    private static double MeasureRenderedText(PdfEmbeddedFont embedded, string text, double fontSize, double characterSpacing)
+    {
+        double width = embedded.MeasureTextPoints(text, fontSize);
+        int runeCount = text.EnumerateRunes().Count();
+        return width + Math.Max(0, runeCount - 1) * characterSpacing;
     }
 
     private static long ParseLongAttribute(XElement element, string name)
@@ -1725,6 +1740,7 @@ internal sealed class PptxRenderer
         double ClipWidth,
         double ClipHeight,
         double FontSize,
+        double CharacterSpacing,
         RgbColor Color,
         RgbColor? HighlightColor,
         bool Bold,
@@ -1744,12 +1760,13 @@ internal sealed class PptxRenderer
         private readonly WindowsFontResolver resolver = new();
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
 
-        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false)
+        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d)
         {
             OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
             if (font is null)
             {
-                return text.Length * fontSize * 0.42d;
+                int fallbackRuneCount = text.EnumerateRunes().Count();
+                return text.Length * fontSize * 0.42d + Math.Max(0, fallbackRuneCount - 1) * characterSpacing;
             }
 
             double units = 0d;
@@ -1759,7 +1776,8 @@ internal sealed class PptxRenderer
                 units += font.GetAdvanceWidth(glyph);
             }
 
-            return units * fontSize / font.UnitsPerEm;
+            int runeCount = text.EnumerateRunes().Count();
+            return units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing;
         }
 
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
