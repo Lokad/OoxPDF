@@ -52,13 +52,13 @@ internal sealed class PptxRenderer
             }
 
             RenderBackground(slideXml, document, graphics, theme);
+            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             RenderShapes(slideXml, document, graphics, theme, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = inheritedXml
                 .Append(slideXml)
                 .SelectMany(xml => RenderTables(xml, document, graphics, theme))
                 .ToArray();
             RenderCharts(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
-            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             IReadOnlyList<TextRun> textRuns = inheritedXml
                 .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false))
                 .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true))
@@ -621,13 +621,14 @@ internal sealed class PptxRenderer
     private static bool TryReadSolidColor(XElement? element, PptxTheme theme, out RgbColor color)
     {
         XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
-        string? hex = (string?)solidFill?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        XElement? colorContainer = solidFill ?? element;
+        string? hex = (string?)colorContainer?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
         if (RgbColor.TryParse(hex, out color))
         {
             return true;
         }
 
-        string? schemeColor = (string?)solidFill?.Element(DrawingNamespace + "schemeClr")?.Attribute("val");
+        string? schemeColor = (string?)colorContainer?.Element(DrawingNamespace + "schemeClr")?.Attribute("val");
         return schemeColor is not null && theme.TryResolveColor(schemeColor, out color);
     }
 
@@ -638,6 +639,14 @@ internal sealed class PptxRenderer
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
         return TryReadSolidColor(line, theme, out color);
+    }
+
+    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
+    {
+        XElement? fontRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "fontRef");
+        return TryReadSolidColor(fontRef, theme, out color);
     }
 
     private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders)
@@ -667,6 +676,9 @@ internal sealed class PptxRenderer
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
             double textClipY = document.SlideHeightPoints - yTop - insets.Top - textHeight;
+            RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
+                ? fontColor
+                : null;
             XElement? defaultParagraphProperties = textBody
                 .Element(DrawingNamespace + "lstStyle")
                 ?.Element(DrawingNamespace + "lvl1pPr");
@@ -740,7 +752,7 @@ internal sealed class PptxRenderer
                         ? runColor
                         : TryReadSolidColor(defaultRunProperties, theme, out RgbColor defaultColor)
                             ? defaultColor
-                            : new RgbColor(0, 0, 0);
+                            : shapeFontColor ?? new RgbColor(0, 0, 0);
                     string? typeface = theme.ResolveTypeface((string?)(runProperties?
                         .Element(DrawingNamespace + "latin") ??
                         defaultRunProperties?.Element(DrawingNamespace + "latin"))
