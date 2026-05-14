@@ -11,6 +11,8 @@ internal sealed class PptxRenderer
 {
     private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
+    private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
     public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document)
     {
@@ -33,17 +35,55 @@ internal sealed class PptxRenderer
 
             using Stream stream = slidePart.OpenRead();
             XDocument slideXml = SafeXml.Load(stream);
+            IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
             var graphics = new PdfGraphicsBuilder();
             PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
 
+            foreach (XDocument inherited in inheritedXml)
+            {
+                RenderBackground(inherited, document, graphics, theme);
+                RenderShapes(inherited, document, graphics, theme);
+            }
+
             RenderBackground(slideXml, document, graphics, theme);
             RenderShapes(slideXml, document, graphics, theme);
-            IReadOnlyList<TextRun> textRuns = ReadTextRuns(slideXml, document, theme);
+            IReadOnlyList<TextRun> textRuns = inheritedXml
+                .Append(slideXml)
+                .SelectMany(xml => ReadTextRuns(xml, document, theme))
+                .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
             pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts));
         }
 
         return pages;
+    }
+
+    private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
+    {
+        var documents = new List<XDocument>();
+        OoxPart? layoutPart = GetRelatedPart(package, slidePartName, SlideLayoutRelationshipType);
+        OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
+
+        if (masterPart is not null)
+        {
+            using Stream masterStream = masterPart.OpenRead();
+            documents.Add(SafeXml.Load(masterStream));
+        }
+
+        if (layoutPart is not null)
+        {
+            using Stream layoutStream = layoutPart.OpenRead();
+            documents.Add(SafeXml.Load(layoutStream));
+        }
+
+        return documents;
+    }
+
+    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType)
+    {
+        OoxRelationship? relationship = package.GetRelationships(sourcePartName)
+            .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
+        return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
     private static void RenderBackground(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)

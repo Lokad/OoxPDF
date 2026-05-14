@@ -329,6 +329,50 @@ internal static class PptxTests
         TestAssert.Contains("0.067 0.067 0.067 rg", pdf);
     }
 
+    public static void PptxSyntheticLayoutAndMasterShapesRender()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideMasters/slideMaster1.xml"] = InheritedShapePart("FF0000", 914400, 914400),
+            ["ppt/slideLayouts/slideLayout1.xml"] = InheritedShapePart("00FF00", 1828800, 1828800),
+            ["ppt/slides/slide1.xml"] = InheritedShapePart("0000FF", 2743200, 2743200)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("0 1 0 rg", pdf);
+        TestAssert.Contains("0 0 1 rg", pdf);
+    }
+
     private static string BasicContentTypes()
     {
         return """
@@ -370,6 +414,22 @@ internal static class PptxTests
               <p:sldSz cx="9144000" cy="6858000"/>
               <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
             </p:presentation>
+            """;
+    }
+
+    private static string InheritedShapePart(string color, int x, int y)
+    {
+        return $$"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp>
+                <p:spPr>
+                  <a:xfrm><a:off x="{{x}}" y="{{y}}"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                  <a:prstGeom prst="rect"/>
+                  <a:solidFill><a:srgbClr val="{{color}}"/></a:solidFill>
+                </p:spPr>
+              </p:sp></p:spTree></p:cSld>
+            </p:sld>
             """;
     }
 
