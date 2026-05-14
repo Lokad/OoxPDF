@@ -33,11 +33,13 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
+- `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.
 - `tools/Lokad.OoxPdf.VisualDiff`: compare reference and candidate PNGs.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: dependency-free PDFium P/Invoke rasterizer.
+- `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspector.
 
 ## Private Mode
 

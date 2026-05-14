@@ -7,6 +7,7 @@
     <Project Path="tests/Lokad.OoxPdf.Tests/Lokad.OoxPdf.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/Lokad.OoxPdf.PdfInspect/Lokad.OoxPdf.PdfInspect.csproj" />
     <Project Path="tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj" />
     <Project Path="tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj" />
   </Folder>

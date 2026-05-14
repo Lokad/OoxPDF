@@ -9,3 +9,7 @@ Run a case from the repository root:
 The script writes timestamped outputs under `artifacts/visual/<case-id>/<run-id>/`, including the Office `reference.pdf`, reference PNGs rasterized from that PDF, the candidate PDF, candidate PNGs, `comparison/metrics.json`, `comparison/index.html`, and `assessment.md`.
 
 PowerPoint and Word reference rendering require Microsoft Office COM automation on Windows. Candidate PDF rasterization requires `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.
+
+Inspect an Office or candidate PDF content stream:
+
+    pwsh tools/InspectPdf.ps1 -InputPdf artifacts/visual/<case-id>/<run-id>/reference/reference.pdf -OutputDirectory artifacts/visual/<case-id>/<run-id>/reference/inspect

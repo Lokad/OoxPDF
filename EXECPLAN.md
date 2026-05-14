@@ -17,8 +17,10 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - `tools/CheckPrivateCase.ps1`: private local-only visual validation harness.
 - `tools/RenderReference.ps1`: Office COM reference renderer.
 - `tools/RasterizePdf.ps1`: PDFium rasterization wrapper.
+- `tools/InspectPdf.ps1`: Office/candidate PDF object and stream inspection wrapper.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
+- `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
 - `visual-cases/`: public visual case manifests.
 - `private-cases/`: ignored private manifests and inputs.
 - `artifacts/`: ignored validation output.
@@ -381,6 +383,7 @@ Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, syn
 
 ### PDF/Infrastructure
 
+- [x] Add a PDF inspection tool for Office/candidate PDFs that lists objects and extracts decodable streams for content-operator inspection.
 - [ ] Audit current PDF generation patterns against Office reference PDFs: text grouping, text matrices, clipping regions, image masks, transparency state, path construction, stroke/fill order, resource naming/reuse, and page content stream organization.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
