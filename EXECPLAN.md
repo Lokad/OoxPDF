@@ -64,10 +64,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
   - Diagnostics were empty.
   - This identifies DOCX pagination/page geometry fidelity as a high-priority gap, especially because no diagnostic currently explains the mismatch.
-- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-171008`:
-  - Reference output had 16 pages; candidate output had 17 pages after preserving DOCX table body order and reducing default table row height.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-171244`:
+  - Reference output had 16 pages; candidate output had 16 pages after preserving DOCX table body order and reducing default table row height.
   - Candidate page height still differs by 1 raster pixel at 144 DPI.
-  - Overlap metrics are now available despite the dimension mismatch; paired-page mean absolute error was `20.675931`, and mean changed-pixel ratio at threshold 16 was `0.169288`.
+  - Overlap metrics are now available despite the dimension mismatch; paired-page mean absolute error was `19.89926`, and mean changed-pixel ratio at threshold 16 was `0.16322`.
   - Diagnostics were empty, so remaining pagination gaps still need explicit diagnostics or rendering fixes.
 
 ## Backlog
@@ -120,7 +120,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Continue DOCX page geometry/pagination work: resolve the remaining 17-vs-16 private page count, page-height rounding, row-height semantics, and diagnostics for unsupported pagination controls.
+1. Continue DOCX page geometry/pagination work: resolve page-height rounding, replace fixed table row height with row-height semantics, and add diagnostics for unsupported pagination controls.
 2. PPTX chart fallback detection: locate cached chart images or alternate content before attempting chart XML drawing.
 3. PPTX text spacing and text-frame layout fixes, validated against public cases and the private PPTX metrics.
 4. Dense PPTX image/group placement fidelity, especially for image-heavy slides.

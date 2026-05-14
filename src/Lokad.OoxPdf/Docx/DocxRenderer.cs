@@ -214,7 +214,7 @@ internal sealed class DocxRenderer
         double availableWidth,
         Action finishPage)
     {
-        const double rowHeight = 18d;
+        const double rowHeight = 16d;
         double rawTableWidth = table.ColumnWidthsPoints.Sum();
         double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
         double tableHeight = table.Rows.Count * rowHeight;
