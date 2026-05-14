@@ -662,12 +662,16 @@ internal sealed class PptxRenderer
             double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
             double width = OoxUnits.EmuToPoints(bounds.Value.Width);
             double height = OoxUnits.EmuToPoints(bounds.Value.Height);
-            double cursorY = document.SlideHeightPoints - yTop - 18d;
+            TextInsets insets = ReadTextInsets(textBody);
+            double textX = x + insets.Left;
+            double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
+            double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
+            double cursorY = document.SlideHeightPoints - yTop - insets.Top - 14d;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
                 TextAlignment alignment = ReadAlignment(paragraph);
-                double cursorX = x + 4d;
+                double cursorX = textX;
                 double maxFontSize = 18d;
                 foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
                 {
@@ -692,7 +696,7 @@ internal sealed class PptxRenderer
                     bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                     bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color, bold, italic, underline, alignment, typeface));
+                    runs.Add(new TextRun(text, cursorX, cursorY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
@@ -701,6 +705,24 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static TextInsets ReadTextInsets(XElement textBody)
+    {
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        return new TextInsets(
+            ReadInset(bodyProperties, "lIns", 91440),
+            ReadInset(bodyProperties, "rIns", 91440),
+            ReadInset(bodyProperties, "tIns", 45720),
+            ReadInset(bodyProperties, "bIns", 45720));
+    }
+
+    private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
+    {
+        long emu = element?.Attribute(attributeName) is { } attribute
+            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
+            : defaultEmu;
+        return OoxUnits.EmuToPoints(emu);
     }
 
     private static bool IsPlaceholder(XElement shape)
@@ -1005,6 +1027,8 @@ internal sealed class PptxRenderer
         bool Underline,
         TextAlignment Alignment,
         string? FontFamily);
+
+    private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 
     private enum TextAlignment
     {
