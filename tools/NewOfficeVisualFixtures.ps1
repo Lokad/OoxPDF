@@ -104,6 +104,51 @@ try {
         $images.Close()
         Remove-Item -LiteralPath $imagePath -Force -ErrorAction SilentlyContinue
     }
+
+    $tables = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $tables.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+        $title = $slide.Shapes.AddTextbox(1, 72, 36, 576, 48)
+        $title.TextFrame.TextRange.Text = "Quarterly summary"
+        $title.TextFrame.TextRange.Font.Name = "Arial"
+        $title.TextFrame.TextRange.Font.Size = 28
+        $title.TextFrame.TextRange.Font.Color.RGB = Rgb 35 35 35
+
+        $tableShape = $slide.Shapes.AddTable(3, 3, 72, 108, 576, 216)
+        $table = $tableShape.Table
+        $values = @(
+            @("Region", "Q1", "Q2"),
+            @("North", "42", "48"),
+            @("South", "37", "41")
+        )
+
+        for ($row = 1; $row -le 3; $row++) {
+            for ($column = 1; $column -le 3; $column++) {
+                $cell = $table.Cell($row, $column)
+                $cell.Shape.TextFrame.TextRange.Text = $values[$row - 1][$column - 1]
+                $cell.Shape.TextFrame.TextRange.Font.Name = "Arial"
+                $cell.Shape.TextFrame.TextRange.Font.Size = 18
+                $cell.Shape.TextFrame.TextRange.Font.Color.RGB = Rgb 30 30 30
+                if ($row -eq 1) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 47 128 237
+                    $cell.Shape.TextFrame.TextRange.Font.Color.RGB = Rgb 255 255 255
+                    $cell.Shape.TextFrame.TextRange.Font.Bold = $true
+                }
+                elseif (($row + $column) % 2 -eq 0) {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 232 244 253
+                }
+                else {
+                    $cell.Shape.Fill.ForeColor.RGB = Rgb 250 250 250
+                }
+            }
+        }
+
+        $tables.SaveAs((Join-Path $cases "pptx-table.pptx"), 24)
+    }
+    finally {
+        $tables.Close()
+    }
 }
 finally {
     if ($powerPoint -ne $null) {
