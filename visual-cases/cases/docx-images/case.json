@@ -1,0 +1,13 @@
+{
+  "id": "docx-images",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-images.docx",
+  "dpi": 144,
+  "tags": ["docx", "images", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

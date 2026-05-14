@@ -44,16 +44,17 @@ Supported:
 - Document defaults, paragraph styles, and character styles for common run and paragraph properties.
 - Simple paragraph page breaking.
 - Simple decimal and bullet list labels from `numbering.xml`.
+- Inline JPEG and PNG images.
 
 Partial or approximated:
 
 - Paragraph text supports font size, color, bold, italic, underline, left, center, and right alignment, spacing before/after, and simple Latin greedy wrapping.
 - Bold and italic are PDF drawing approximations and do not yet select matching font faces.
 - List indentation, hanging indents, tab stops, and advanced numbering formats are approximate.
+- Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
 
 Unsupported or ignored:
 
-- Inline images.
 - Tables.
 - Headers and footers.
 - Unsupported DOCX features are not yet surfaced through stable diagnostics.

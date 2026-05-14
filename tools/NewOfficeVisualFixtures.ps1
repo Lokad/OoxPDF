@@ -234,6 +234,56 @@ try {
     finally {
         $numbering.Close($false)
     }
+
+    Add-Type -AssemblyName System.Drawing
+    $docImagePath = Join-Path $env:TEMP ("ooxpdf-docx-image-" + [guid]::NewGuid() + ".png")
+    $docBitmap = [System.Drawing.Bitmap]::new(180, 90)
+    try {
+        $docGraphics = [System.Drawing.Graphics]::FromImage($docBitmap)
+        try {
+            $docGraphics.Clear([System.Drawing.Color]::FromArgb(47, 128, 237))
+            $docBrush = [System.Drawing.SolidBrush]::new([System.Drawing.Color]::FromArgb(39, 174, 96))
+            try {
+                $docGraphics.FillEllipse($docBrush, 55, 20, 70, 50)
+            }
+            finally {
+                $docBrush.Dispose()
+            }
+        }
+        finally {
+            $docGraphics.Dispose()
+        }
+        $docBitmap.Save($docImagePath, [System.Drawing.Imaging.ImageFormat]::Png)
+    }
+    finally {
+        $docBitmap.Dispose()
+    }
+
+    $images = $word.Documents.Add()
+    try {
+        $images.PageSetup.PageWidth = 612
+        $images.PageSetup.PageHeight = 792
+        $images.PageSetup.TopMargin = 72
+        $images.PageSetup.BottomMargin = 72
+        $images.PageSetup.LeftMargin = 72
+        $images.PageSetup.RightMargin = 72
+        $images.Content.Text = "Inline image`r`n"
+
+        $heading = $images.Paragraphs.Item(1).Range
+        $heading.Font.Name = "Arial"
+        $heading.Font.Size = 22
+        $heading.Font.Bold = $true
+        $heading.Font.Color = Rgb 47 128 237
+        $heading.ParagraphFormat.SpaceAfter = 12
+
+        $insertRange = $images.Paragraphs.Item(2).Range
+        $insertRange.InlineShapes.AddPicture($docImagePath, $false, $true) | Out-Null
+        $images.SaveAs2((Join-Path $cases "docx-images.docx"), 16)
+    }
+    finally {
+        $images.Close($false)
+        Remove-Item -LiteralPath $docImagePath -Force -ErrorAction SilentlyContinue
+    }
 }
 finally {
     if ($word -ne $null) {
