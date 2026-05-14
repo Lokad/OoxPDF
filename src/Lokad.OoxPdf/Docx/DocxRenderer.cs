@@ -42,8 +42,9 @@ internal sealed class DocxRenderer
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
         foreach (DocxParagraph paragraph in document.Paragraphs)
         {
+            cursorY -= paragraph.SpacingBeforePoints;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
-            double lineHeight = paragraphFontSize * 1.25d;
+            double lineHeight = paragraphFontSize * paragraph.LineSpacingFactor;
             string text = string.Concat(paragraph.Runs.Select(r => r.Text));
             DocxTextRun firstRun = paragraph.Runs[0];
             RgbColor color = ReadColor(firstRun.ColorHex);
@@ -78,7 +79,7 @@ internal sealed class DocxRenderer
                 cursorY -= lineHeight;
             }
 
-            cursorY -= paragraphFontSize * 0.5d;
+            cursorY -= paragraph.SpacingAfterPoints;
         }
 
         return [resource];

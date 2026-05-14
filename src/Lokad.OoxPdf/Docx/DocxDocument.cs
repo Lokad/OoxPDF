@@ -15,7 +15,12 @@ internal sealed record DocxDocument(
     }
 }
 
-internal sealed record DocxParagraph(IReadOnlyList<DocxTextRun> Runs, DocxTextAlignment Alignment);
+internal sealed record DocxParagraph(
+    IReadOnlyList<DocxTextRun> Runs,
+    DocxTextAlignment Alignment,
+    double SpacingBeforePoints,
+    double SpacingAfterPoints,
+    double LineSpacingFactor);
 
 internal sealed record DocxTextRun(
     string Text,
