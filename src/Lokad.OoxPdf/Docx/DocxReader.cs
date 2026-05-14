@@ -145,6 +145,37 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_MULTI_COLUMN", "multi-column section");
         }
 
+        if (document.Descendants(WordprocessingNamespace + "br").Any(br =>
+            string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "page", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals((string?)br.Attribute(WordprocessingNamespace + "type"), "column", StringComparison.OrdinalIgnoreCase)))
+        {
+            Emit("DOCX_UNSUPPORTED_MANUAL_BREAK", "manual page or column break");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "pageBreakBefore").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_PAGE_BREAK_BEFORE", "paragraph page-break-before");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "keepNext").Any() ||
+            document.Descendants(WordprocessingNamespace + "keepLines").Any() ||
+            document.Descendants(WordprocessingNamespace + "widowControl").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", "paragraph keep/widow-orphan rule");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "pPr").Elements(WordprocessingNamespace + "sectPr").Any())
+        {
+            Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
+        }
+
+        if (document.Descendants(WordprocessingNamespace + "spacing").Any(spacing =>
+            spacing.Attribute(WordprocessingNamespace + "lineRule") is { } rule &&
+            !string.Equals(rule.Value, "auto", StringComparison.OrdinalIgnoreCase)))
+        {
+            Emit("DOCX_UNSUPPORTED_LINE_HEIGHT_RULE", "exact or at-least line-height rule");
+        }
+
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {

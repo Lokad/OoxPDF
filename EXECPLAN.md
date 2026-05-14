@@ -36,6 +36,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
 - [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, and paragraph spacing, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights, default headers/footers, page number approximation, and unsupported-feature diagnostics.
+- [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, page-break-before, keep/widow rules, paragraph section breaks, and exact/at-least line-height rules.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
 - [x] PNG support covers Adam7 interlaced RGBA images.
 - [x] Unsupported PPTX image formats now emit `IMAGE_UNSUPPORTED_FORMAT` diagnostics instead of aborting the entire conversion.
@@ -89,7 +90,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static grouped-bar fallback.
 - [ ] Extend PPTX chart rendering beyond basic bar fallbacks: cached image fallbacks when present, labels, legends, axes, line charts, pie charts, stacked/grouped variants, and style fidelity.
 - [ ] Fix DOCX page geometry and pagination fidelity: page height rounding, section page size/margins, line heights, paragraph spacing, table pagination, and page-break decisions.
-- [ ] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout, unsupported page break variants, unsupported paragraph keep rules, or unsupported line-height semantics.
+- [x] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout, unsupported page break variants, unsupported paragraph keep rules, or unsupported line-height semantics.
 
 ### PPTX Feature Survey
 
@@ -131,7 +132,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Continue DOCX page geometry/pagination work: resolve page-height rounding, table pagination, and diagnostics for unsupported pagination controls.
+1. Continue DOCX page geometry/pagination work: resolve page-height rounding and table pagination.
 2. Continue PPTX text spacing and text-frame layout fixes: vertical anchoring, autofit, and clipping.
 3. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.

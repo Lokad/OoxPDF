@@ -651,6 +651,14 @@ internal static class DocxTests
                             xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
                   <w:body>
                     <w:p>
+                      <w:pPr>
+                        <w:keepNext/>
+                        <w:keepLines/>
+                        <w:widowControl/>
+                        <w:pageBreakBefore/>
+                        <w:spacing w:line="240" w:lineRule="exact"/>
+                        <w:sectPr/>
+                      </w:pPr>
                       <w:commentRangeStart w:id="1"/>
                       <w:ins><w:r><w:t>Inserted</w:t></w:r></w:ins>
                       <w:del><w:r><w:t>Deleted</w:t></w:r></w:del>
@@ -660,6 +668,7 @@ internal static class DocxTests
                       <w:r><w:drawing><wp:anchor/></w:drawing></w:r>
                       <w:r><w:footnoteReference w:id="2"/></w:r>
                       <w:r><w:endnoteReference w:id="3"/></w:r>
+                      <w:r><w:br w:type="page"/></w:r>
                     </w:p>
                     <m:oMath/>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:cols w:num="2"/></w:sectPr>
@@ -680,9 +689,14 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_EQUATION", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FLOATING_DRAWING", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_FOOTNOTE", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_LINE_HEIGHT_RULE", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MACRO", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_MANUAL_BREAK", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_MULTI_COLUMN", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_OLE_OBJECT", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_PAGE_BREAK_BEFORE", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_PARAGRAPH_KEEP_RULE", ids);
+        TestAssert.Contains("DOCX_UNSUPPORTED_SECTION_BREAK", ids);
         TestAssert.Contains("DOCX_UNSUPPORTED_TRACKED_CHANGES", ids);
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.PartName == "/word/document.xml"), "Unsupported DOCX diagnostics should be document-scoped warnings.");
     }
