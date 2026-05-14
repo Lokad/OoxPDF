@@ -252,10 +252,11 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 ### PPTX Private Deck Recovery Plan
 
 - [x] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
-- [ ] Select the first private slide and exhaust it before moving on: inspect reference vs candidate, list every visible failure, implement or diagnose each generic gap, rerender, and repeat until the slide is acceptable or every remaining issue is explicitly planned.
-- [ ] After the first slide is exhausted, continue one private slide at a time. Prefer the next simplest failing slide before typical and worst slides so foundational ordering/inheritance/text/image problems are isolated early.
+- [ ] Revisit `lokad-value-based` one slide at a time as an acceptance corpus. For each slide, inspect reference vs candidate, list only generic public-safe gaps, map each gap to existing ladder rungs, and rerender after every relevant gated public fixture change.
+- [ ] If a private-slide gap is not already covered by a passing public ladder fixture, create or tighten a minimal public synthetic fixture first. Do not implement private-slide-driven renderer changes until the corresponding public fixture is close to pixel-perfect and gated.
+- [ ] After a slide is close to pixel-perfect or every remaining gap is covered by explicit planned public fixtures, continue to the next slide. Private slides should test combinations and acceptance, not replace the bottom-up ladder.
 - [ ] Maintain a private per-slide checklist with only public-safe fields: slide number, private rating, missing content, wrong order, wrong placement, wrong sizing, wrong text layout, wrong styling, and unsupported features lacking diagnostics.
-- [ ] Establish private visual gates for those representative slides: page count and dimensions must match, diagnostics must explain omissions, and a private human/agent rating must improve before optimizing aggregate deck metrics.
+- [ ] Establish private visual gates for accepted slides: page count and dimensions must match, diagnostics must explain omissions, and private human/agent rating must be close to pixel-perfect before optimizing aggregate deck metrics.
 - [ ] Fix slide composition order first: master, layout, slide background, inherited placeholders, slide shapes, groups, pictures, tables, charts, and overlays must render in PowerPoint z-order.
 - [ ] Audit and fix master/layout/placeholder inheritance, including placeholder matching, hidden placeholders, text/body placeholders, footer/date/slide-number placeholders, theme variants, and background styles.
 - [ ] Build slide-level diagnostics for unsupported or approximated visible content: effects, transparent fills, complex shapes, chart fallbacks, SmartArt, media/OLE, unsupported images, and placeholder fallbacks.
@@ -315,9 +316,9 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 
 ## Next Implementation Targets
 
-1. Switch PPTX fidelity work to the synthetic ladder: create or tighten Ladder 0 and Ladder 1 first, then advance one rung at a time.
-2. Add or update public visual fixtures and gates for each ladder rung before using the private PPTX deck to drive more implementation.
-3. Use private PPTX slides 1-10 as acceptance evidence only after the relevant synthetic rungs pass; record only public-safe gaps and metrics.
+1. Rerun `lokad-value-based`, inspect slide 1 as the current acceptance target, and list public-safe gaps against the existing gated ladder.
+2. For every slide-1 gap not covered by a passing public fixture, create or tighten the smallest public synthetic fixture or feature-combination case first.
+3. Only after the relevant public fixture is close to pixel-perfect and gated, update the renderer and rerun the private slide as acceptance evidence.
 4. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
 5. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 
@@ -329,7 +330,8 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
-- PPTX fidelity work proceeds bottom-up through the public synthetic ladder. Private PPTX pages may regress during early ladder work; they are acceptance evidence, not the primary development driver.
+- PPTX fidelity uses a hybrid loop: private slides identify acceptance gaps and combinations; implementation proceeds through minimal public synthetic fixtures that are made close to pixel-perfect and gated before private reruns are used as evidence.
+- Private PPTX pages may regress while lower public rungs are rebuilt, but an accepted private slide should remain stable unless a deliberate lower-rung correction changes its expected outcome.
 - DOCX fidelity still proceeds one private page at a time until a comparable public DOCX ladder exists. Convert each generic private failure into a public synthetic test where feasible.
 
 ## Validation
