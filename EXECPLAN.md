@@ -150,6 +150,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Slide 7 mean absolute error: `9.230441`; changed-pixel ratio at threshold 16: `0.102554`.
   - Deck mean absolute error: `15.502189`; max mean absolute error: `75.834314`; mean changed-pixel ratio at threshold 16: `0.174386`.
   - Remaining slide-7 generic gaps include custom geometry/freeform curve paths, exact connector styling, large-title text metrics, and dense paragraph spacing.
+- Private PPTX slide-8 inspection from `artifacts/private-visual/lokad-value-based/20260514-211029`:
+  - The dominant generic gap is grouped table-like layout fidelity: row labels, icons, red separators, and text blocks are vertically compressed or overlapped.
+  - Left-side callout arrows/text are misplaced, and fine text wrapping/spacing remains weak.
+  - This should be handled after a focused audit of nested group transforms, placeholder-derived text styles, and table-like grouped shape ordering.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
