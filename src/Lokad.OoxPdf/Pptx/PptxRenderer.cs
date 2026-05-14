@@ -1518,7 +1518,8 @@ internal sealed class PptxRenderer
         double lineHeight = run.FontSize * 1.2d;
         foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, embedded))
         {
-            if (cursorY < run.Y - run.Height)
+            if (cursorY < run.Y - run.Height ||
+                cursorY - lineHeight < run.ClipY)
             {
                 break;
             }

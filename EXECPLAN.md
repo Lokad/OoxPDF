@@ -171,7 +171,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Public PPTX ladder text-flow rerun:
   - `pptx-ladder-03-text-flow` at `artifacts/visual/pptx-ladder-03-text-flow/20260514-214108`: page count and dimensions matched, diagnostics were empty, MAE `0.414685`, changed-pixel ratio threshold 16 `0.003763`.
   - Single-run centered paragraphs now receive the same alignment offset as mixed-run centered paragraphs.
-  - Ladder 3 remains open for separate vertical anchoring and overflow fixtures.
+  - `pptx-ladder-03-text-anchor-overflow` at `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260514-214416`: page count and dimensions matched, diagnostics were empty, MAE `0.413942`, changed-pixel ratio threshold 16 `0.003552`.
+  - Clipped PPTX text frames now suppress lines that cannot fit inside the clip box.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -235,7 +236,7 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - [x] Ladder 0: blank slide, page size, white/default background, deterministic PDF bytes, and no diagnostics.
 - [x] Ladder 1: solid slide backgrounds and master/layout background inheritance in isolation.
 - [x] Ladder 2: one plain text box with fixed bounds, one font size, one font family, no wrapping, and baseline locked against reference.
-- [ ] Ladder 3: text wrapping with preserved spaces, explicit line breaks, tabs, paragraph alignment, body insets, vertical anchor, and overflow behavior.
+- [x] Ladder 3: text wrapping with preserved spaces, explicit line breaks, tabs, paragraph alignment, body insets, vertical anchor, and overflow behavior.
 - [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs, bullet hanging indents, paragraph spacing, and line spacing.
 - [ ] Ladder 5: basic shapes: rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths, rotation, flips, and clipping-free z-order.
 - [ ] Ladder 6: preset and connector shapes: arrows, connector endpoints, arrowheads, dashes, line caps/joins, callouts, and common freeform/custom path fallbacks.
