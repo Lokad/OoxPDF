@@ -40,6 +40,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxOffsetsLargeTextByFontSize,
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,
+    PptxTests.PptxSyntheticTextBoxHonorsBulletColorAndSize,
     PptxTests.PptxSyntheticTextBoxUsesPerRunFontResources,
     PptxTests.PptxSyntheticTextBoxCentersMixedRunsTogether,
     PptxTests.PptxSyntheticTextBoxWrapsAcrossMixedRuns,

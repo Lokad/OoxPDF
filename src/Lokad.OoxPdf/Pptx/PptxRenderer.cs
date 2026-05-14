@@ -879,7 +879,6 @@ internal sealed class PptxRenderer
 
                 TextAlignment alignment = ReadAlignment(paragraph);
                 string? bulletText = ReadBulletText(paragraphProperties);
-                string? bulletTypeface = ReadBulletTypeface(paragraphProperties, theme);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
                 double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
@@ -947,9 +946,10 @@ internal sealed class PptxRenderer
                         : null;
                     if (bulletPending)
                     {
+                        BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, 0d, color, null, bold, italic, underline, alignment, bulletTypeface ?? typeface));
-                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, fontSize, bulletTypeface ?? typeface, bold, italic, characterSpacing));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, null, bold, italic, underline, alignment, bulletStyle.Typeface));
+                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
 
@@ -1279,11 +1279,26 @@ internal sealed class PptxRenderer
         return (string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char");
     }
 
-    private static string? ReadBulletTypeface(XElement? paragraphProperties, PptxTheme theme)
+    private static BulletStyle ReadBulletStyle(XElement? paragraphProperties, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
     {
-        return theme.ResolveTypeface((string?)paragraphProperties?
+        string? typeface = theme.ResolveTypeface((string?)paragraphProperties?
             .Element(DrawingNamespace + "buFont")
             ?.Attribute("typeface"));
+        RgbColor color = paragraphProperties?.Element(DrawingNamespace + "buClr") is { } bulletColor &&
+            TryReadSolidColor(bulletColor, theme, out RgbColor explicitColor)
+                ? explicitColor
+                : textColor;
+        double fontSize = textFontSize;
+        if (paragraphProperties?.Element(DrawingNamespace + "buSzPct")?.Attribute("val") is { } sizePercent)
+        {
+            fontSize = textFontSize * Math.Max(0.1d, int.Parse(sizePercent.Value, CultureInfo.InvariantCulture) / 100000d);
+        }
+        else if (paragraphProperties?.Element(DrawingNamespace + "buSzPts")?.Attribute("val") is { } sizePoints)
+        {
+            fontSize = Math.Max(0.1d, int.Parse(sizePoints.Value, CultureInfo.InvariantCulture) / 100d);
+        }
+
+        return new BulletStyle(fontSize, color, typeface ?? textTypeface);
     }
 
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
@@ -1762,6 +1777,8 @@ internal sealed class PptxRenderer
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
     private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font, bool SyntheticBold, bool SyntheticItalic);
+
+    private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
 
     private readonly record struct LineSpacing(double Value, bool IsAbsolute, bool IsExplicit)
     {

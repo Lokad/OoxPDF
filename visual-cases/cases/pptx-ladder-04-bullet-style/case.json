@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-bullet-style",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bullet-style.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "bullet"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.37,
+    "maxChangedPixelRatioAtThreshold16": 0.0031
+  },
+  "allowedUnsupportedFeatures": []
+}
