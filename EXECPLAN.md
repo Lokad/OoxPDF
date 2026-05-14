@@ -25,6 +25,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - `private-cases/`: ignored private manifests and inputs.
 - `artifacts/`: ignored validation output.
 - `docs/`: user-facing public docs.
+- `docs/unit-test-audit.md`: Office-PDF-first unit-test audit and rewrite candidates.
 
 ## Reference Workflow
 
@@ -51,6 +52,7 @@ Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. The
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can export Office reference PDFs for PPTX and DOCX, rasterize reference/candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Public visual validation uses Office-exported PDFs/renders as the reference oracle; fidelity work should inspect the Office PDF/raster output before treating a metric as meaningful.
+- [x] Initial unit-test audit started: `pptx-ladder-02-plain-text` proves the visual gate should own exact text fidelity while unit tests avoid freezing candidate-specific `Tm`/`Tj` structure.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
 - [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines/rounded rectangles, connector lines with triangle arrowheads, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
