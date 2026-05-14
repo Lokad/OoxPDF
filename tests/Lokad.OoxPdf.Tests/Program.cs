@@ -4,6 +4,7 @@ return TestRunner.Run(
     PublicApiTests.PublicApiRejectsMissingInput,
     PublicApiTests.AutoDetectsPptxExtension,
     PublicApiTests.AutoDetectsDocxExtension,
+    PublicApiTests.DeterministicConversionProducesStableBytes,
     OoxmlTests.ParsesContentTypesAndRelationships,
     OoxmlTests.RejectsPackagePartPathTraversal,
     OoxmlTests.ResolvesRelationshipTargets,
