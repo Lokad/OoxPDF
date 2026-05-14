@@ -20,7 +20,13 @@ $inputFull = (Resolve-Path -LiteralPath $InputPdf).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
-dotnet run --project (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer") -- $inputFull $outputFull $Dpi
+dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") --tl:off --nologo -v minimal
+if ($LASTEXITCODE -ne 0) {
+    throw "PDFium rasterizer build failed with exit code $LASTEXITCODE."
+}
+
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
+dotnet $rasterizerDll $inputFull $outputFull $Dpi
 if ($LASTEXITCODE -ne 0) {
     throw "PDFium rasterizer failed with exit code $LASTEXITCODE."
 }

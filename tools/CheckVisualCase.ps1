@@ -23,7 +23,13 @@ $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
 $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
 
-dotnet run --project (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli") -- convert $inputFull $candidatePdf --diagnostics $diagnostics
+dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") --tl:off --nologo -v minimal
+if ($LASTEXITCODE -ne 0) {
+    throw "CLI build failed with exit code $LASTEXITCODE."
+}
+
+$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
+dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."
 }
@@ -31,7 +37,13 @@ if ($LASTEXITCODE -ne 0) {
 & (Join-Path $PSScriptRoot "RenderReference.ps1") -InputPath $inputFull -OutputDirectory $referenceDir -Dpi $dpi
 & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $candidatePdf -OutputDirectory $candidateDir -Dpi $dpi
 
-dotnet run --project (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff") -- $referenceDir $candidateDir $comparisonDir
+dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/Lokad.OoxPdf.VisualDiff.csproj") --tl:off --nologo -v minimal
+if ($LASTEXITCODE -ne 0) {
+    throw "VisualDiff build failed with exit code $LASTEXITCODE."
+}
+
+$visualDiffDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.VisualDiff/bin/Debug/net10.0/Lokad.OoxPdf.VisualDiff.dll"
+dotnet $visualDiffDll $referenceDir $candidateDir $comparisonDir
 if ($LASTEXITCODE -ne 0) {
     throw "VisualDiff failed with exit code $LASTEXITCODE."
 }

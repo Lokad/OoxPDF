@@ -4,6 +4,8 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static class CliTests
 {
+    private static readonly Lazy<string> CliAssemblyPath = new(BuildCli);
+
     public static void CliConvertReturnsZeroOnSuccess()
     {
         string input = WriteBasicDocx();
@@ -53,10 +55,7 @@ internal static class CliTests
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        start.ArgumentList.Add("run");
-        start.ArgumentList.Add("--project");
-        start.ArgumentList.Add("src/Lokad.OoxPdf.Cli");
-        start.ArgumentList.Add("--");
+        start.ArgumentList.Add(CliAssemblyPath.Value);
         foreach (string arg in args)
         {
             start.ArgumentList.Add(arg);
@@ -67,6 +66,35 @@ internal static class CliTests
         string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
         return new CliResult(process.ExitCode, output, error);
+    }
+
+    private static string BuildCli()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        var start = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = repositoryRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        start.ArgumentList.Add("build");
+        start.ArgumentList.Add("src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj");
+        start.ArgumentList.Add("--tl:off");
+        start.ArgumentList.Add("--nologo");
+        start.ArgumentList.Add("-v");
+        start.ArgumentList.Add("minimal");
+
+        using Process process = Process.Start(start) ?? throw new InvalidOperationException("Failed to build CLI project.");
+        string output = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"CLI build failed with exit code {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");
+        }
+
+        return Path.Combine(repositoryRoot, "src", "Lokad.OoxPdf.Cli", "bin", "Debug", "net10.0", "Lokad.OoxPdf.Cli.dll");
     }
 
     private static string FindRepositoryRoot()
