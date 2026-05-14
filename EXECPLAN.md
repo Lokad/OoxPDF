@@ -189,6 +189,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Consecutive paragraph advance now uses an Office-like default without changing intra-paragraph line breaks/wraps or explicit `lnSpc`; the new fixture is gated, and `pptx-ladder-04-bullet-wrap` was tightened after improving to MAE `0.740986`, changed-pixel ratio threshold 16 `0.006748`.
   - `pptx-ladder-04-empty-paragraph-gap` at `artifacts/visual/pptx-ladder-04-empty-paragraph-gap/20260514-231355`: page count and dimensions matched, diagnostics were empty, MAE `2.109550`, changed-pixel ratio threshold 16 `0.017209`.
   - Formatting-only empty paragraphs now consume vertical advance using their own paragraph/run formatting or the paragraph default, without borrowing a preceding large-title font.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Slide 1 mean absolute error: `15.366243`; changed-pixel ratio at threshold 16: `0.130552`.
+  - The formatted-empty-paragraph fix materially improved slide-1 title/body separation. Remaining slide-1 generic gaps are fine font metrics, exact title/body baseline placement, underline bounds, and dense bullet/list wrapping precision.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
