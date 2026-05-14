@@ -1,0 +1,16 @@
+{
+  "id": "docx-ladder-01-plain-paragraph",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-ladder-01-plain-paragraph.docx",
+  "dpi": 144,
+  "tags": ["docx", "ladder", "paragraph"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.005,
+    "maxChangedPixelRatioAtThreshold16": 0.00013
+  },
+  "allowedUnsupportedFeatures": []
+}

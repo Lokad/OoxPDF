@@ -60,6 +60,7 @@ internal sealed class DocxRenderer
         double x = document.MarginLeftPoints;
         double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        const double baselineOffsetFactor = 0.94d;
         void FinishPage()
         {
             int pageNumber = pages.Count + 1;
@@ -125,17 +126,18 @@ internal sealed class DocxRenderer
                         _ => x
                     };
                     string glyphHex = embedded.EncodeGlyphHex(line);
-                    graphics.DrawGlyphText("F1", paragraphFontSize, lineX, cursorY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
+                    double baselineY = cursorY - paragraphFontSize * baselineOffsetFactor;
+                    graphics.DrawGlyphText("F1", paragraphFontSize, lineX, baselineY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
                     if (firstRun.Bold)
                     {
-                        graphics.DrawGlyphText("F1", paragraphFontSize, lineX + 0.35d, cursorY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
+                        graphics.DrawGlyphText("F1", paragraphFontSize, lineX + 0.35d, baselineY, color.Red, color.Green, color.Blue, glyphHex, firstRun.Italic);
                     }
 
                     if (firstRun.Underline)
                     {
                         graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
                         graphics.SetLineWidth(Math.Max(0.5d, paragraphFontSize / 18d));
-                        graphics.StrokeLine(lineX, cursorY - paragraphFontSize * 0.12d, lineX + lineWidth, cursorY - paragraphFontSize * 0.12d);
+                        graphics.StrokeLine(lineX, baselineY - paragraphFontSize * 0.12d, lineX + lineWidth, baselineY - paragraphFontSize * 0.12d);
                     }
 
                     cursorY -= lineHeight;

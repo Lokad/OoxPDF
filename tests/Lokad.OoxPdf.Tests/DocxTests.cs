@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 
@@ -343,7 +345,9 @@ internal static class DocxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 684 Tm", pdf);
+        double[] baselines = ExtractTextBaselines(pdf);
+        TestAssert.True(baselines.Length >= 2, "Expected at least two rendered text baselines.");
+        TestAssert.True(Math.Abs((baselines[0] - baselines[1]) - 36d) < 0.01d, "Exact DOCX line height should advance the next paragraph by 36 points.");
     }
 
     public static void DocxSyntheticNumberingRendersListLabels()
@@ -980,5 +984,12 @@ internal static class DocxTests
         TestAssert.Contains("DOCX_UNSUPPORTED_TABLE_STYLE", ids);
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_NUMBERING_INDENT" && d.PartName == "/word/numbering.xml"), "Numbering diagnostics should point to numbering.xml.");
         TestAssert.True(diagnostics.Any(d => d.Id == "DOCX_STYLE_PARAGRAPH_KEEP_RULE" && d.PartName == "/word/styles.xml"), "Style diagnostics should point to styles.xml.");
+    }
+
+    private static double[] ExtractTextBaselines(string pdf)
+    {
+        return Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ (?<y>[0-9.]+) Tm")
+            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
+            .ToArray();
     }
 }
