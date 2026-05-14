@@ -76,8 +76,9 @@ internal sealed class DocxRenderer
             cursorY = document.PageHeightPoints - document.MarginTopPoints;
         }
 
-        foreach (DocxBodyElement element in document.BodyElements)
+        for (int elementIndex = 0; elementIndex < document.BodyElements.Count; elementIndex++)
         {
+            DocxBodyElement element = document.BodyElements[elementIndex];
             if (element is DocxPageBreakElement)
             {
                 if (HasPageContent(graphics, pageImages))
@@ -100,6 +101,17 @@ internal sealed class DocxRenderer
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
+            if (paragraph.KeepWithNext &&
+                embedded is not null &&
+                FindNextParagraph(document.BodyElements, elementIndex + 1) is { } nextParagraph)
+            {
+                double requiredHeight = EstimateParagraphHeight(paragraph, width, embedded) + EstimateParagraphHeight(nextParagraph, width, embedded);
+                if (cursorY - requiredHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
+                {
+                    FinishPage();
+                }
+            }
+
             cursorY -= paragraph.SpacingBeforePoints;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
@@ -178,6 +190,47 @@ internal sealed class DocxRenderer
         }
 
         return pages;
+    }
+
+    private static DocxParagraph? FindNextParagraph(IReadOnlyList<DocxBodyElement> elements, int startIndex)
+    {
+        for (int index = startIndex; index < elements.Count; index++)
+        {
+            if (elements[index] is DocxPageBreakElement)
+            {
+                return null;
+            }
+
+            if (elements[index] is DocxParagraphElement paragraphElement)
+            {
+                return paragraphElement.Paragraph;
+            }
+        }
+
+        return null;
+    }
+
+    private static double EstimateParagraphHeight(DocxParagraph paragraph, double width, PdfEmbeddedFont embedded)
+    {
+        double height = paragraph.SpacingBeforePoints + paragraph.SpacingAfterPoints;
+        double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
+        double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
+        if (paragraph.Runs.Count > 0)
+        {
+            string text = paragraph.ListLabel is null
+                ? string.Concat(paragraph.Runs.Select(r => r.Text))
+                : paragraph.ListLabel + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
+            height += WrapWords(text, width, paragraphFontSize, embedded).Count() * lineHeight;
+        }
+
+        foreach (DocxInlineImage image in paragraph.Images)
+        {
+            double imageWidth = Math.Min(width, image.WidthPoints);
+            double imageHeight = image.HeightPoints * imageWidth / Math.Max(1d, image.WidthPoints);
+            height += imageHeight + 6d;
+        }
+
+        return height;
     }
 
     private static void RenderStaticParagraphs(

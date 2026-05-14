@@ -35,6 +35,7 @@ internal sealed record DocxParagraph(
     double SpacingAfterPoints,
     double LineSpacingFactor,
     double? LineSpacingPoints,
+    bool KeepWithNext,
     string? ListLabel);
 
 internal sealed record DocxTextRun(
