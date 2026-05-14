@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, paragraph spacing, and vertical anchoring, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, paragraph spacing, and vertical anchoring, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, keep/widow rules, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
@@ -104,7 +104,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Fonts: select bold/italic faces instead of drawing approximations; support fallback fonts, embedded fonts, complex scripts, and bidirectional text.
 - [ ] Shapes: more preset geometries, freeform paths, connectors, arrows, callouts, rounded rectangles, custom geometry, compound paths, and accurate line joins/caps/dashes.
 - [ ] Fills/effects: transparency, gradients, pattern fills, picture fills, shadows, glows, reflections, blur, soft edges, and 3D effects.
-- [ ] Images: grouped/placeholder-bound image placement, crop modes, rotation/flip interactions, recolor/duotone, transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
+- [ ] Images: placeholder-bound image placement, crop modes, rotation/flip interactions, recolor/duotone, transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text inside cells, and precise row/column sizing.
 - [ ] Charts: cached chart images, chart XML rendering, axes, labels, legends, series styling, stacked/grouped bars, line charts, combo charts, and embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
@@ -139,7 +139,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 1. Continue DOCX page geometry/pagination work: paragraph spacing, manual page/column breaks, and keep/widow page-break decisions.
 2. Continue PPTX text spacing and text-frame layout fixes: autofit and clipping.
-3. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
+3. Dense PPTX image placement fidelity, especially placeholder-bound images, crop modes, and rotation/flip interactions on image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
 5. Improve diagnostics severity so visible-content omissions are release-blocking.
 
@@ -165,7 +165,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-59 passed, 0 failed
+60 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

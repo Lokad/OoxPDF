@@ -850,7 +850,27 @@ internal sealed class PptxRenderer
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var images = new List<PdfImageResource>();
         int index = 1;
-        foreach (XElement picture in slideXml.Descendants(PresentationNamespace + "pic"))
+        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
+        {
+            RenderPictureContainer(shapeTree, relationships, package, document, graphics, diagnosticSink, slideIndex, GroupTransform.Identity, images, ref index);
+        }
+
+        return images;
+    }
+
+    private static void RenderPictureContainer(
+        XElement container,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPackage package,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        GroupTransform transform,
+        List<PdfImageResource> images,
+        ref int index)
+    {
+        foreach (XElement picture in container.Elements(PresentationNamespace + "pic"))
         {
             string? relationshipId = (string?)picture
                 .Element(PresentationNamespace + "blipFill")
@@ -875,11 +895,12 @@ internal sealed class PptxRenderer
                 continue;
             }
 
+            ShapeBounds transformedBounds = transform.Apply(bounds.Value);
             string name = "Im" + index++;
-            double x = OoxUnits.EmuToPoints(bounds.Value.X);
-            double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
-            double width = OoxUnits.EmuToPoints(bounds.Value.Width);
-            double height = OoxUnits.EmuToPoints(bounds.Value.Height);
+            double x = OoxUnits.EmuToPoints(transformedBounds.X);
+            double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
+            double width = OoxUnits.EmuToPoints(transformedBounds.Width);
+            double height = OoxUnits.EmuToPoints(transformedBounds.Height);
             double y = document.SlideHeightPoints - yTop - height;
             CropRect crop = ReadCrop(picture);
             if (crop.IsEmpty)
@@ -894,7 +915,11 @@ internal sealed class PptxRenderer
             images.Add(new PdfImageResource(name, image));
         }
 
-        return images;
+        foreach (XElement group in container.Elements(PresentationNamespace + "grpSp"))
+        {
+            GroupTransform childTransform = transform.Combine(ReadGroupTransform(group));
+            RenderPictureContainer(group, relationships, package, document, graphics, diagnosticSink, slideIndex, childTransform, images, ref index);
+        }
     }
 
     private static PdfImageXObject? CreateImage(OoxPart imagePart, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)

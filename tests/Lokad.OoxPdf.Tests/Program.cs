@@ -29,6 +29,7 @@ return TestRunner.Run(
     PptxTests.PptxUnsupportedPngImageEmitsDiagnostic,
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
+    PptxTests.PptxSyntheticGroupedPictureAppliesTransform,
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
