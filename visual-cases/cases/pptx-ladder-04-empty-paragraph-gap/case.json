@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-empty-paragraph-gap",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-empty-paragraph-gap.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "empty-paragraph"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.8,
+    "maxChangedPixelRatioAtThreshold16": 0.0155
+  },
+  "allowedUnsupportedFeatures": []
+}

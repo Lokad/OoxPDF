@@ -187,6 +187,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - This fixture is intentionally not gated yet. It exposes remaining Ladder 4 gaps in multi-paragraph vertical rhythm, mixed large/small text stacks, and exact serif text metrics; a broad default line-spacing change was rejected because it regressed existing text tests and worsened this fixture.
   - `pptx-ladder-04-paragraph-advance` at `artifacts/visual/pptx-ladder-04-paragraph-advance/20260514-230129`: page count and dimensions matched, diagnostics were empty, MAE `0.340723`, changed-pixel ratio threshold 16 `0.003961`.
   - Consecutive paragraph advance now uses an Office-like default without changing intra-paragraph line breaks/wraps or explicit `lnSpc`; the new fixture is gated, and `pptx-ladder-04-bullet-wrap` was tightened after improving to MAE `0.740986`, changed-pixel ratio threshold 16 `0.006748`.
+  - `pptx-ladder-04-empty-paragraph-gap` at `artifacts/visual/pptx-ladder-04-empty-paragraph-gap/20260514-231535`: page count and dimensions matched, diagnostics were empty, MAE `1.780884`, changed-pixel ratio threshold 16 `0.014986`.
+  - Formatting-only empty paragraphs now consume vertical advance using their paragraph/run formatting, with a previous-visible-font fallback when the empty paragraph has no explicit size.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
