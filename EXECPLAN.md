@@ -28,6 +28,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 
 - [x] Dependency-free `.slnx` solution, library, CLI, tests, visual tools, docs, public fixtures, and private validation lane exist.
 - [x] NuGet package version is set to `0.1.0` for the first package.
+- [x] NuGet package output is configured under ignored `artifacts/nuget/`.
 - [x] OOXML package layer handles ZIP parts, content types, relationships, safe part normalization, XML hardening, and package size limits.
 - [x] PDF writer emits deterministic static PDFs with pages, drawing operators, embedded TrueType/CID fonts, ToUnicode maps, JPEG passthrough, PNG image XObjects, and alpha soft masks.
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.

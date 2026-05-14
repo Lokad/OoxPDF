@@ -10,6 +10,8 @@ dotnet test    tests/Foo.Tests/Foo.Tests.csproj --tl:off --nologo -v minimal
 dotnet pack    src/Foo/Foo.csproj --tl:off --nologo -v minimal --no-restore
 ```
 
+NuGet packages are written to ignored `artifacts/nuget/`.
+
 ## Repo Map
 
 - `src/Lokad.OoxPdf`: dependency-free library and PDF/OOXML renderers.

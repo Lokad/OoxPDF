@@ -71,4 +71,6 @@ dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
 ```
 
+Packages are written to `artifacts/nuget/`.
+
 `src/Lokad.OoxPdf` is the NuGet library and must remain free of package references. Office automation and PDFium are isolated under `tools/` for validation only.
