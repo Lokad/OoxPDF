@@ -123,11 +123,11 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Add deterministic-output test that converts the same fixture twice and compares bytes.
 - [x] (2026-05-14) Implement strict mode behavior where warnings or errors produce CLI exit code 3.
 - [x] (2026-05-14) Add tests for CLI exit codes 0, 1, 2, and 3.
-- [ ] Add `docs/Capabilities.md` and update it with all implemented PPTX and DOCX capabilities.
-- [ ] Add `docs/RenderingModel.md` explaining package, layout, scene, and PDF layers.
-- [ ] Add `docs/Diagnostics.md` with diagnostic code conventions.
-- [ ] Add `docs/VisualValidation.md` explaining Office reference rendering, PDFium rasterization, and agent assessment.
-- [ ] Add README quick start with library, CLI, and visual validation examples.
+- [x] (2026-05-14) Add `docs/Capabilities.md` and update it with all implemented PPTX and DOCX capabilities.
+- [x] (2026-05-14) Add `docs/RenderingModel.md` explaining package, layout, scene, and PDF layers.
+- [x] (2026-05-14) Add `docs/Diagnostics.md` with diagnostic code conventions.
+- [x] (2026-05-14) Add `docs/VisualValidation.md` explaining Office reference rendering, PDFium rasterization, and agent assessment.
+- [x] (2026-05-14) Add README quick start with library, CLI, and visual validation examples.
 - [x] (2026-05-14) Add NuGet package metadata and verify `dotnet pack -c Release` creates a dependency-free package.
 - [ ] Run full build and tests from clean checkout.
 - [x] (2026-05-14) Run at least one PPTX visual case and record `assessment.md`.
@@ -256,6 +256,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: CLI exit codes are now covered through process-level tests instead of only through direct API calls.
   Evidence: `CliConvertReturnsZeroOnSuccess`, `CliReturnsOneForConversionFailure`, `CliReturnsTwoForInvalidArguments`, and `CliStrictReturnsThreeWhenWarningsAreEmitted` invoke `src/Lokad.OoxPdf.Cli` and verify exit codes `0`, `1`, `2`, and `3`; the full test run now prints `42 passed, 0 failed`.
 
+- Observation: Release-readiness docs now describe the implemented product instead of the initial skeleton.
+  Evidence: `README.md` includes library, CLI, and visual validation examples; `docs/RenderingModel.md`, `docs/VisualValidation.md`, `docs/Capabilities.md`, and `docs/Diagnostics.md` describe the current renderer pipeline, validation harness, supported features, limitations, and CLI diagnostic behavior.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -292,8 +295,8 @@ Examples of discoveries that belong here include: Office COM automation requirin
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
   Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off` prints `42 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-table/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-basic-paragraphs/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-numbering/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-images/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-tables/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-headers-footers/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, basic run formatting, page breaking, simple bullet/decimal list labels, inline JPEG/PNG images, fixed-width tables with simple fills, borders, and text, default header/footer text, page number field approximation, warning diagnostics for common unsupported DOCX features, deterministic output for stable inputs, and CLI exit-code behavior. Documentation remains incomplete.
-  Next target: Fill in release-readiness documentation, starting with rendering model, visual validation, and README examples.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, JPEG/PNG pictures with basic cropping, grouped shape coordinate transforms, fixed-grid tables with simple fills, black borders, and text, warning diagnostics for common unsupported PPTX slide features, and DOCX paragraphs with style defaults, paragraph/character styles, spacing, alignment, basic run formatting, page breaking, simple bullet/decimal list labels, inline JPEG/PNG images, fixed-width tables with simple fills, borders, and text, default header/footer text, page number field approximation, warning diagnostics for common unsupported DOCX features, deterministic output for stable inputs, CLI exit-code behavior, and release-readiness docs. The remaining release task is a final clean validation pass and retrospective wrap-up.
+  Next target: Run the final build, tests, pack, and representative visual validations; then complete the retrospective entry.
 
 ## Context and Orientation
 

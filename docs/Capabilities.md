@@ -31,7 +31,9 @@ Unsupported or ignored:
 
 - Charts, SmartArt, videos, audio, OLE objects, transitions, animations, macros, and ActiveX.
 - Complex effects such as shadows, gradients, transparency, 3D, and most custom geometry.
-- Charts, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides.
+- Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
+
+Charts, SmartArt, videos, audio, OLE objects, transitions, and animations produce stable warning diagnostics when detected on slides.
 
 ## DOCX
 
@@ -56,6 +58,30 @@ Partial or approximated:
 - Inline images are rendered as block-level content at the paragraph cursor; surrounding text flow is approximate.
 - Table merges, cell margins, table styles, and per-cell text formatting are not yet preserved.
 - Header/footer distance, odd/even variants, first-page variants, and complex fields are approximate or unsupported.
-- Comments, tracked changes, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning diagnostics when detected.
 
 Unsupported or ignored:
+
+- Tracked-change rendering as revision markup.
+- Floating image wrapping, anchored text boxes, charts, SmartArt, equations, live OLE content, comments, footnote/endnote bodies, multi-column layout, and macros.
+- Section variants beyond the simple page setup used by the current renderer.
+- Complex scripts, bidirectional text, text shaping, fallback font selection, and OpenType layout features.
+
+Comments, tracked changes, complex fields, equations, OLE objects, floating drawings, footnotes, endnotes, multi-column sections, and macros produce stable warning diagnostics when detected.
+
+## PDF Output
+
+Supported:
+
+- Deterministic object ordering and resource naming for stable inputs.
+- Embedded TrueType/CID fonts with ToUnicode maps for searchable copied text in supported runs.
+- JPEG passthrough and PNG RGB/RGBA embedding.
+- Basic path, fill, stroke, transform, clipping, and text operators.
+
+Partial or approximated:
+
+- PDF metadata is intentionally minimal in deterministic mode.
+- Font embedding currently favors whole-font simplicity over compact subsetting.
+
+Unsupported or ignored:
+
+- Interactive PDF features such as forms, annotations, outlines, links, tagged PDF structure, video, audio, and JavaScript.

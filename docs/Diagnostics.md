@@ -34,3 +34,36 @@ Unsupported feature warnings:
 - `DOCX_UNSUPPORTED_TRACKED_CHANGES`: tracked insertion or deletion markup was detected and approximated.
 
 These warnings are document-scoped. Duplicate occurrences of the same unsupported feature in one document are aggregated into one warning.
+
+## CLI Behavior
+
+The CLI writes diagnostics JSON when `--diagnostics <file>` is provided. The JSON is an array of diagnostic entries with these fields when available:
+
+- `Id`: stable diagnostic code.
+- `Severity`: `Info`, `Warning`, or `Error`.
+- `Message`: human-readable explanation.
+- `PartName`: OOXML package part where the issue was detected.
+- `SlideIndex`: one-based slide index for slide-scoped PPTX diagnostics.
+- `PageIndex`: one-based page index when available.
+- `Feature`: short unsupported or approximated feature name.
+- `Fallback`: short description of the fallback, such as `ignored` or `approximated`.
+
+Exit codes:
+
+- `0`: conversion succeeded.
+- `1`: conversion failed and an `OOXML_CONVERSION_FAILED` error diagnostic is emitted when a diagnostics path was supplied.
+- `2`: invalid arguments.
+- `3`: conversion succeeded, but `--strict` saw at least one warning or error diagnostic.
+
+## Code Conventions
+
+Use stable prefixes by subsystem:
+
+- `OOXML_`: package, ZIP, relationship, XML, or top-level conversion issues.
+- `PPTX_`: PowerPoint-specific parser or renderer issues.
+- `DOCX_`: Word-specific parser or renderer issues.
+- `PDF_`: PDF writer issues.
+- `FONT_`: font resolution, parsing, or embedding issues.
+- `IMAGE_`: image parsing or rendering issues.
+
+Prefer one durable code per observable behavior. Aggregate repeated unsupported features when the exact count is not useful to the caller.
