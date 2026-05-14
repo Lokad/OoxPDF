@@ -1,0 +1,13 @@
+{
+  "id": "docx-numbering",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-numbering.docx",
+  "dpi": 144,
+  "tags": ["docx", "numbering", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

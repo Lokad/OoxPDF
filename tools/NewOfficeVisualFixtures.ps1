@@ -205,6 +205,35 @@ try {
     finally {
         $basic.Close($false)
     }
+
+    $numbering = $word.Documents.Add()
+    try {
+        $numbering.PageSetup.PageWidth = 612
+        $numbering.PageSetup.PageHeight = 792
+        $numbering.PageSetup.TopMargin = 72
+        $numbering.PageSetup.BottomMargin = 72
+        $numbering.PageSetup.LeftMargin = 72
+        $numbering.PageSetup.RightMargin = 72
+        $numbering.Content.Text = "Numbered priorities`r`nImprove renderer fidelity`r`nExpand visual cases`r`nDocument diagnostics"
+
+        $title = $numbering.Paragraphs.Item(1).Range
+        $title.Font.Name = "Arial"
+        $title.Font.Size = 22
+        $title.Font.Bold = $true
+        $title.Font.Color = Rgb 47 128 237
+        $title.ParagraphFormat.SpaceAfter = 12
+
+        $listRange = $numbering.Range($numbering.Paragraphs.Item(2).Range.Start, $numbering.Paragraphs.Item(4).Range.End)
+        $listRange.Font.Name = "Arial"
+        $listRange.Font.Size = 12
+        $listRange.Font.Color = Rgb 30 30 30
+        $listRange.ListFormat.ApplyNumberDefault()
+
+        $numbering.SaveAs2((Join-Path $cases "docx-numbering.docx"), 16)
+    }
+    finally {
+        $numbering.Close($false)
+    }
 }
 finally {
     if ($word -ne $null) {
