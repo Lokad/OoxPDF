@@ -688,6 +688,7 @@ internal sealed class PptxRenderer
                 double spacingAfter = ReadParagraphSpacing(paragraphProperties, "spcAft");
                 double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties);
+                string? bulletTypeface = ReadBulletTypeface(paragraphProperties, theme);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
                 double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
@@ -743,7 +744,7 @@ internal sealed class PptxRenderer
                     if (bulletPending)
                     {
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, typeface));
+                        runs.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textHeight, fontSize, color, bold, italic, underline, alignment, bulletTypeface ?? typeface));
                         bulletPending = false;
                     }
 
@@ -860,6 +861,13 @@ internal sealed class PptxRenderer
         }
 
         return (string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char");
+    }
+
+    private static string? ReadBulletTypeface(XElement? paragraphProperties, PptxTheme theme)
+    {
+        return theme.ResolveTypeface((string?)paragraphProperties?
+            .Element(DrawingNamespace + "buFont")
+            ?.Attribute("typeface"));
     }
 
     private static TextVerticalAnchor ReadVerticalAnchor(XElement textBody)
@@ -1092,26 +1100,37 @@ internal sealed class PptxRenderer
             return [];
         }
 
-        string familyName = textRuns.Select(r => r.FontFamily).FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
-        FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
-        if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
+        var resolver = new WindowsFontResolver();
+        var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
+        var resources = new List<PdfFontResource>();
+        foreach (IGrouping<string, TextRun> group in textRuns.GroupBy(r => string.IsNullOrWhiteSpace(r.FontFamily) ? "Arial" : r.FontFamily!, StringComparer.OrdinalIgnoreCase))
         {
-            return [];
-        }
+            FontResolution resolution = resolver.Resolve(new FontRequest(group.Key));
+            if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
+            {
+                continue;
+            }
 
-        OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
-        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, textRuns.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
-        var resource = new PdfFontResource("F1", embedded);
+            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
+            string resourceName = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+            fonts[group.Key] = new RenderedFont(resourceName, embedded);
+            resources.Add(new PdfFontResource(resourceName, embedded));
+        }
 
         foreach (TextRun run in textRuns)
         {
-            DrawWrappedRun(graphics, embedded, run);
+            string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
+            if (fonts.TryGetValue(familyName, out RenderedFont rendered))
+            {
+                DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run);
+            }
         }
 
-        return [resource];
+        return resources;
     }
 
-    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
+    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run)
     {
         graphics.SaveState();
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
@@ -1135,10 +1154,10 @@ internal sealed class PptxRenderer
                     _ => run.X
                 };
 
-                graphics.DrawGlyphText("F1", run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
+                graphics.DrawGlyphText(resourceName, run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
                 if (run.Bold)
                 {
-                    graphics.DrawGlyphText("F1", run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
+                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
                 }
 
                 if (run.Underline)
@@ -1280,6 +1299,8 @@ internal sealed class PptxRenderer
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
+
+    private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font);
 
     private enum TextAlignment
     {
