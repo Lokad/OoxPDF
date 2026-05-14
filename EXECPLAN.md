@@ -75,6 +75,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Diagnostics: 9 chart static fallback informational diagnostics.
   - Grouped picture transforms and text clipping are now honored.
   - Mean absolute error: `16.223412`; max mean absolute error: `75.220066`; mean changed-pixel ratio at threshold 16: `0.176527`.
+  - Private visual inspection found the generated `output.pdf` is not acceptable on any slide. Aggregate pixel metrics are useful for regression tracking but are not evidence of visual correctness for this deck.
+  - Working hypothesis: broad PPTX failure is caused by interacting slide-level issues, especially z-order, master/layout/placeholder inheritance, theme resolution, text/image/table/chart placement, and missing effects rather than one isolated unsupported primitive.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -130,6 +132,17 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Media and dynamic features: videos, audio, animations, transitions, and OLE/ActiveX should remain static/diagnostic-only unless a reliable fallback is available.
 - [ ] Comments/notes: speaker notes and comments should be ignored with diagnostics or exposed through an optional mode, not silently dropped.
 
+### PPTX Private Deck Recovery Plan
+
+- [ ] Add a private-safe PPTX slide inventory tool that reports counts and feature flags per slide: shapes, grouped shapes, pictures, charts, tables, text boxes, placeholders, inherited master/layout content, theme references, fills/effects, transforms, clips, relationships, and diagnostics without exposing slide text or images.
+- [ ] Select three representative private slides for repeated inspection: one simplest failing slide, one typical content-heavy slide, and one worst slide. Record only slide numbers, ratings, and public-safe feature gaps in private artifacts and anonymized summaries.
+- [ ] Establish private visual gates for those representative slides: page count and dimensions must match, diagnostics must explain omissions, and a private human/agent rating must improve before optimizing aggregate deck metrics.
+- [ ] Fix slide composition order first: master, layout, slide background, inherited placeholders, slide shapes, groups, pictures, tables, charts, and overlays must render in PowerPoint z-order.
+- [ ] Audit and fix master/layout/placeholder inheritance, including placeholder matching, hidden placeholders, text/body placeholders, footer/date/slide-number placeholders, theme variants, and background styles.
+- [ ] Build slide-level diagnostics for unsupported or approximated visible content: effects, transparent fills, complex shapes, chart fallbacks, SmartArt, media/OLE, unsupported images, and placeholder fallbacks.
+- [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets, font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart cached-image fallbacks and labels.
+- [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX fix and summarize only counts, diagnostics, worst-page numbers, and private ratings.
+
 ### DOCX Feature Survey
 
 - [ ] Pagination: Word-compatible line height, paragraph spacing collapse, keep-with-next, keep-lines-together, widow/orphan control, manual page/column breaks, section breaks, and page size rounding.
@@ -167,10 +180,10 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
-2. Continue PPTX text spacing and text-frame layout fixes: autofit, shrink-to-fit, and overflow behavior beyond hard clipping.
-3. Dense PPTX image placement fidelity, especially placeholder-bound images, crop modes, and rotation/flip interactions on image-heavy slides.
-4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
+1. Start PPTX private deck recovery with a private-safe slide inventory tool and representative-slide gates before adding more isolated PPTX primitives.
+2. Fix PPTX slide composition order and master/layout/placeholder inheritance based on the private inventory.
+3. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
+4. Continue PPTX primitive fidelity only after slide-level ordering/inheritance is measurable: text autofit, image placeholder crop/fit, table styles, and chart fallbacks.
 5. Improve diagnostics coverage for other visible-content omissions that still lack feature-specific diagnostics.
 
 ## Decisions
