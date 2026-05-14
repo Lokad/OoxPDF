@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, paragraph spacing, vertical anchoring, clipping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, paragraph spacing, vertical anchoring, clipping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, direct and style-level keep/widow rules, style spacing variants, numbering indents, table styles/header rows, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
@@ -83,6 +83,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Feature counts: 72 slides with pictures, 61 with grouped content, 11 with tables, 9 with charts, 23 with effects, 10 with transparency, and 84 with inherited layout/master content.
   - Slide-level totals: 1846 shapes, 440 pictures, 12 table nodes, and 9 chart nodes.
   - Initial simplest-slide strategy should start with slide 1, which is structurally small but still exercises slide content plus inherited layout/master content.
+- Private PPTX slide-1 rerun `artifacts/private-visual/lokad-value-based/20260514-182802`:
+  - Theme colors now resolve for slide text after loading themes through slide-master relationships and handling scheme aliases.
+  - Remaining slide-1 generic gaps include text vertical placement/clipping, font selection, and bullet rendering.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -234,7 +237,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-63 passed, 0 failed
+64 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

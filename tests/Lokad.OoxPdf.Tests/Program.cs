@@ -23,6 +23,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs,
     PptxTests.PptxSyntheticStyledTextProducesStyleOperators,
     PptxTests.PptxSyntheticThemeColorsAndFontsResolve,
+    PptxTests.PptxSyntheticThemeCanLoadFromSlideMaster,
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
     PptxTests.PptxSyntheticInheritedPlaceholderTextIsSkipped,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,

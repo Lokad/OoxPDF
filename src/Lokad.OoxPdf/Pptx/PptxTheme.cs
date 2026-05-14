@@ -7,6 +7,7 @@ internal sealed class PptxTheme
 {
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
+    private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
     private PptxTheme(IReadOnlyDictionary<string, RgbColor> colors, string? majorLatinFont, string? minorLatinFont)
     {
@@ -27,12 +28,24 @@ internal sealed class PptxTheme
     {
         OoxRelationship? themeRelationship = package.GetRelationships(presentationPartName)
             .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null);
-        if (themeRelationship?.ResolvedTarget is null)
+        string? themePartName = themeRelationship?.ResolvedTarget;
+        if (themePartName is null)
+        {
+            OoxRelationship? masterRelationship = package.GetRelationships(presentationPartName)
+                .FirstOrDefault(r => !r.IsExternal && r.Type == SlideMasterRelationshipType && r.ResolvedTarget is not null);
+            themePartName = masterRelationship?.ResolvedTarget is null
+                ? null
+                : package.GetRelationships(masterRelationship.ResolvedTarget)
+                    .FirstOrDefault(r => !r.IsExternal && r.Type == ThemeRelationshipType && r.ResolvedTarget is not null)
+                    ?.ResolvedTarget;
+        }
+
+        if (themePartName is null)
         {
             return Empty;
         }
 
-        OoxPart? themePart = package.GetPart(themeRelationship.ResolvedTarget);
+        OoxPart? themePart = package.GetPart(themePartName);
         if (themePart is null)
         {
             return Empty;
@@ -68,7 +81,8 @@ internal sealed class PptxTheme
 
     public bool TryResolveColor(string schemeColor, out RgbColor color)
     {
-        return Colors.TryGetValue(schemeColor, out color);
+        return Colors.TryGetValue(schemeColor, out color) ||
+            Colors.TryGetValue(ResolveSchemeAlias(schemeColor), out color);
     }
 
     public string? ResolveTypeface(string? typeface)
@@ -92,5 +106,17 @@ internal sealed class PptxTheme
         }
 
         return RgbColor.TryParse(hex, out color);
+    }
+
+    private static string ResolveSchemeAlias(string schemeColor)
+    {
+        return schemeColor switch
+        {
+            "bg1" => "lt1",
+            "tx1" => "dk1",
+            "bg2" => "lt2",
+            "tx2" => "dk2",
+            _ => schemeColor
+        };
     }
 }

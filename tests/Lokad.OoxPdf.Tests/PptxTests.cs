@@ -544,6 +544,73 @@ internal static class PptxTests
         TestAssert.Contains("0.067 0.067 0.067 rg", pdf);
     }
 
+    public static void PptxSyntheticThemeCanLoadFromSlideMaster()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideMasters/_rels/slideMaster1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slideMasters/slideMaster1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>
+                """,
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Theme">
+                  <a:themeElements>
+                    <a:clrScheme name="Theme">
+                      <a:dk1><a:srgbClr val="111111"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                    </a:clrScheme>
+                    <a:fontScheme name="Theme">
+                      <a:majorFont><a:latin typeface="Arial"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="Arial"/></a:minorFont>
+                    </a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:rPr><a:t>Theme</a:t></a:r></a:p></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 1 1 rg", pdf);
+    }
+
     public static void PptxSyntheticLayoutAndMasterShapesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
