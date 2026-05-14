@@ -95,6 +95,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Candidate has one extra page; paired-page mean absolute error was `19.226760`, and mean changed-pixel ratio at threshold 16 was `0.158228`.
   - Diagnostics were empty.
   - This keeps DOCX pagination fidelity as the top active risk; attempted manual-break and keep-with-next heuristics were reverted because they did not resolve the private page-count mismatch.
+  - Anonymized structure survey found no direct manual page/column breaks, no direct paragraph keep rules, no direct paragraph spacing, no inline/anchored drawings, and one section.
+  - The same survey found 198 body paragraphs, 13 body tables, 129 table rows, 422 table cells, 45 numbered paragraphs, 24 style-level spacing definitions, 30 style-level keep-rule definitions, 36 numbering levels with indents, 13 table preferred widths, 422 cell widths, 18 cell vertical-alignment declarations, and 1 repeating table-header row.
+  - Working hypothesis: the 17th candidate page is driven by accumulated small layout errors, especially style-derived paragraph spacing/keep rules, numbering indents/hanging indents, and table sizing/header behavior rather than an explicit page-break feature.
 
 ## Backlog
 
@@ -136,6 +139,18 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
 - [ ] Multi-column layout, text boxes, sidebars, bookmarks, hyperlinks, outlines, and document properties.
 
+### DOCX 16-vs-17 Page Mismatch Plan
+
+- [ ] Add an internal DOCX layout trace mode that records public-safe per-page counts and consumed vertical space by block kind, so private runs can locate where candidate pagination drifts without exposing text.
+- [ ] Extend DOCX diagnostics to inspect styles and numbering parts, not just direct `word/document.xml` elements, so style-level spacing, keep rules, indents, table styles, and numbering layout risks are visible.
+- [ ] Implement style-derived paragraph spacing accurately, including before/after values, `contextualSpacing`, `beforeAutospacing`/`afterAutospacing`, and Word-like adjacent paragraph spacing collapse.
+- [ ] Implement paragraph and numbering indents: left/right/first-line/hanging indents from paragraph styles and numbering levels, with corresponding wrapping-width changes.
+- [ ] Improve numbering layout: render labels in their own hanging-indent area, support level text expansion beyond the current simple label prefix, and honor restart/start rules.
+- [ ] Improve table layout accumulation: preferred table widths, cell widths, row minimum height from content, cell vertical alignment, cell margins, and repeating header rows.
+- [ ] Revisit keep rules only after layout tracing exists: support style-derived `keepNext`, `keepLines`, and widow/orphan control with synthetic tests and private page-count checks.
+- [ ] Reattempt manual page/column break support with a parser change that does not alter paragraphs when no matching break exists; previous paragraph-splitting attempts changed the private page count and were reverted.
+- [ ] After each scoped fix, run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/user-requirements-spec.json` and record only page counts, aggregate metrics, diagnostics, and worst-page numbers.
+
 ### PDF/Infrastructure
 
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
@@ -147,7 +162,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Continue DOCX page geometry/pagination work: paragraph spacing, manual page/column breaks, and keep/widow page-break decisions.
+1. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
 2. Continue PPTX text spacing and text-frame layout fixes: autofit, shrink-to-fit, and overflow behavior beyond hard clipping.
 3. Dense PPTX image placement fidelity, especially placeholder-bound images, crop modes, and rotation/flip interactions on image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
