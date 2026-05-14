@@ -6,6 +6,6 @@ Run a case from the repository root:
 
     pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json
 
-The script writes timestamped outputs under `artifacts/visual/<case-id>/<run-id>/`, including Office reference PNGs, the candidate PDF, candidate PNGs, `comparison/metrics.json`, `comparison/index.html`, and `assessment.md`.
+The script writes timestamped outputs under `artifacts/visual/<case-id>/<run-id>/`, including the Office `reference.pdf`, reference PNGs rasterized from that PDF, the candidate PDF, candidate PNGs, `comparison/metrics.json`, `comparison/index.html`, and `assessment.md`.
 
 PowerPoint and Word reference rendering require Microsoft Office COM automation on Windows. Candidate PDF rasterization requires `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.

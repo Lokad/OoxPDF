@@ -18,26 +18,18 @@ $extension = [System.IO.Path]::GetExtension($inputFull).ToLowerInvariant()
 if ($extension -eq ".pptx") {
     $powerPoint = $null
     $presentation = $null
+    $referencePdf = Join-Path $outputFull "reference.pdf"
     try {
         $powerPoint = New-Object -ComObject PowerPoint.Application
         $presentation = $powerPoint.Presentations.Open($inputFull, $true, $true, $false)
-        $width = [int][Math]::Round($presentation.PageSetup.SlideWidth * $Dpi / 72.0)
-        $height = [int][Math]::Round($presentation.PageSetup.SlideHeight * $Dpi / 72.0)
-        $presentation.Export($outputFull, "PNG", $width, $height)
+        $presentation.SaveAs($referencePdf, 32)
     }
     finally {
         if ($presentation -ne $null) { $presentation.Close() }
         if ($powerPoint -ne $null) { $powerPoint.Quit() }
     }
 
-    $slides = Get-ChildItem -LiteralPath $outputFull -Filter "*.PNG" | Sort-Object {
-        if ($_.BaseName -match '\d+$') { [int]$Matches[0] } else { [int]::MaxValue }
-    }, Name
-    $index = 1
-    foreach ($slide in $slides) {
-        Move-Item -LiteralPath $slide.FullName -Destination (Join-Path $outputFull ("page-{0:000}.png" -f $index)) -Force
-        $index++
-    }
+    & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $outputFull -Dpi $Dpi
     return
 }
 
