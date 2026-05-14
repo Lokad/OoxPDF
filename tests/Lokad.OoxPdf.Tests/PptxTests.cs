@@ -787,7 +787,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 425.7 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()

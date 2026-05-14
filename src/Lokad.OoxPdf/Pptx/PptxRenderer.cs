@@ -872,6 +872,7 @@ internal sealed class PptxRenderer
                 double spacingBefore = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef");
                 double spacingAfter = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");
                 double lineSpacingFactor = ReadLineSpacingFactor(paragraphProperties, defaultParagraphProperties);
+                double paragraphAdvanceFactor = ReadParagraphAdvanceFactor(paragraphProperties, defaultParagraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties);
                 string? bulletTypeface = ReadBulletTypeface(paragraphProperties, theme);
                 bool bulletPending = bulletText is not null;
@@ -975,7 +976,7 @@ internal sealed class PptxRenderer
                 }
 
                 AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                cursorY -= maxFontSize * lineSpacingFactor + spacingAfter;
+                cursorY -= maxFontSize * paragraphAdvanceFactor + spacingAfter;
             }
         }
 
@@ -1182,6 +1183,18 @@ internal sealed class PptxRenderer
         }
 
         return 1d;
+    }
+
+    private static double ReadParagraphAdvanceFactor(XElement? paragraphProperties, XElement? defaultParagraphProperties)
+    {
+        XElement? spacing = paragraphProperties?.Element(DrawingNamespace + "lnSpc") ??
+            defaultParagraphProperties?.Element(DrawingNamespace + "lnSpc");
+        if (spacing is not null)
+        {
+            return ReadLineSpacingFactor(paragraphProperties, defaultParagraphProperties);
+        }
+
+        return 1.2d;
     }
 
     private static double ReadFirstLineBaselineOffset(XElement textBody, XElement? defaultParagraphProperties)
