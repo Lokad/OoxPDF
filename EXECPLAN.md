@@ -53,6 +53,7 @@ Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. The
 - [x] Visual validation can export Office reference PDFs for PPTX and DOCX, rasterize reference/candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Public visual validation uses Office-exported PDFs/renders as the reference oracle; fidelity work should inspect the Office PDF/raster output before treating a metric as meaningful.
 - [x] Initial unit-test audit started: `pptx-ladder-02-plain-text` proves the visual gate should own exact text fidelity while unit tests avoid freezing candidate-specific `Tm`/`Tj` structure.
+- [x] DOCX public ladder started with `docx-ladder-00-blank`: Office PDF reference and candidate dimensions match, diagnostics are empty, MAE `0`, changed-pixel ratio threshold 16 `0`.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
 - [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines/rounded rectangles, connector lines with triangle arrowheads, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
@@ -346,7 +347,7 @@ Build these as public, minimal, one-slide fixtures. Each rung must start with Of
 
 Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, synthetic, minimal, Office-PDF-inspected, visually gated when close, and free of private content.
 
-- [ ] Ladder 0: blank document, page size, margins, deterministic PDF structure, and no diagnostics.
+- [x] Ladder 0: blank document, page size, margins, deterministic PDF structure, and no diagnostics.
 - [ ] Ladder 1: plain paragraphs with Word reference baselines, line height, paragraph before/after spacing, and page margins.
 - [ ] Ladder 2: run styling: bold/italic face selection, underline, strikethrough, color, highlight, superscript/subscript, and font fallback.
 - [ ] Ladder 3: paragraph layout: tabs/tab stops, indents, hanging indents, alignment, spacing collapse, nonbreaking spaces, soft line breaks, and manual page breaks.
