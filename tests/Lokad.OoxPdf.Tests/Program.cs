@@ -31,6 +31,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
+    PptxTests.PptxSyntheticTextBoxHonorsTabs,
     PptxTests.PptxSyntheticTableRendersGridAndText,
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,

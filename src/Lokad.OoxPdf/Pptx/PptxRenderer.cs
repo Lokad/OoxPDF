@@ -683,6 +683,12 @@ internal sealed class PptxRenderer
                         continue;
                     }
 
+                    if (child.Name == DrawingNamespace + "tab")
+                    {
+                        cursorX += maxFontSize * 2.2d;
+                        continue;
+                    }
+
                     if (child.Name != DrawingNamespace + "r")
                     {
                         continue;
