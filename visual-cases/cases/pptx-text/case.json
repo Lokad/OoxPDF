@@ -1,0 +1,13 @@
+{
+  "id": "pptx-text",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-text.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "text", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}

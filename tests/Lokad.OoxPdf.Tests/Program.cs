@@ -11,9 +11,11 @@ return TestRunner.Run(
     PdfWriterTests.WritesSingleBlankPagePdfStructure,
     PdfWriterTests.WritesMultipleBlankPagesWithPageSizes,
     PdfWriterTests.WritesDrawingOperators,
+    PdfWriterTests.WritesEmbeddedTrueTypeFontObjects,
     PptxTests.PptxSyntheticTwoSlidesProducesTwoPdfPages,
     PptxTests.PptxSyntheticShapesProduceDrawingOperators,
     PptxTests.PptxSyntheticRotatedShapeProducesTransform,
+    PptxTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);

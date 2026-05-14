@@ -46,6 +46,28 @@ try {
     finally {
         $shapes.Close()
     }
+
+    $text = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $text.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+        $title = $slide.Shapes.AddTextbox(1, 72, 72, 576, 72)
+        $title.TextFrame.TextRange.Text = "Hello OOXML"
+        $title.TextFrame.TextRange.Font.Name = "Arial"
+        $title.TextFrame.TextRange.Font.Size = 36
+        $title.TextFrame.TextRange.Font.Color.RGB = Rgb 47 128 237
+
+        $body = $slide.Shapes.AddTextbox(1, 72, 180, 576, 144)
+        $body.TextFrame.TextRange.Text = "Basic Latin text rendering"
+        $body.TextFrame.TextRange.Font.Name = "Arial"
+        $body.TextFrame.TextRange.Font.Size = 24
+        $body.TextFrame.TextRange.Font.Color.RGB = Rgb 30 30 30
+
+        $text.SaveAs((Join-Path $cases "pptx-text.pptx"), 24)
+    }
+    finally {
+        $text.Close()
+    }
 }
 finally {
     if ($powerPoint -ne $null) {

@@ -1,6 +1,8 @@
 using Lokad.OoxPdf.Pdf;
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Fonts;
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -35,7 +37,9 @@ internal sealed class PptxRenderer
 
             RenderBackground(slideXml, document, graphics);
             RenderShapes(slideXml, document, graphics);
-            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString()));
+            IReadOnlyList<TextRun> textRuns = ReadTextRuns(slideXml, document);
+            IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
+            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts));
         }
 
         return pages;
@@ -218,6 +222,133 @@ internal sealed class PptxRenderer
         return TryReadSolidColor(line, out color);
     }
 
+    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document)
+    {
+        var runs = new List<TextRun>();
+        foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
+        {
+            XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+            XElement? textBody = shape.Element(PresentationNamespace + "txBody");
+            ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
+            if (bounds is null || textBody is null)
+            {
+                continue;
+            }
+
+            double x = OoxUnits.EmuToPoints(bounds.Value.X);
+            double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
+            double width = OoxUnits.EmuToPoints(bounds.Value.Width);
+            double height = OoxUnits.EmuToPoints(bounds.Value.Height);
+            double cursorY = document.SlideHeightPoints - yTop - 18d;
+
+            foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+            {
+                double cursorX = x + 4d;
+                double maxFontSize = 18d;
+                foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
+                {
+                    string text = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                    if (text.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+                    double fontSize = runProperties?.Attribute("sz") is { } size
+                        ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
+                        : 18d;
+                    maxFontSize = Math.Max(maxFontSize, fontSize);
+                    RgbColor color = TryReadSolidColor(runProperties, out RgbColor runColor)
+                        ? runColor
+                        : new RgbColor(0, 0, 0);
+                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color));
+                    cursorX += text.Length * fontSize * 0.55d;
+                }
+
+                cursorY -= maxFontSize * 1.2d;
+            }
+        }
+
+        return runs;
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics)
+    {
+        if (textRuns.Count == 0)
+        {
+            return [];
+        }
+
+        FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest("Arial"));
+        if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
+        {
+            return [];
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, textRuns.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
+        var resource = new PdfFontResource("F1", embedded);
+
+        foreach (TextRun run in textRuns)
+        {
+            DrawWrappedRun(graphics, embedded, run);
+        }
+
+        return [resource];
+    }
+
+    private static void DrawWrappedRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
+    {
+        double cursorY = run.Y;
+        double lineHeight = run.FontSize * 1.2d;
+        foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, embedded))
+        {
+            if (cursorY < run.Y - run.Height)
+            {
+                break;
+            }
+
+            string glyphHex = embedded.EncodeGlyphHex(line);
+            if (glyphHex.Length != 0)
+            {
+                graphics.DrawGlyphText("F1", run.FontSize, run.X, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex);
+            }
+
+            cursorY -= lineHeight;
+        }
+    }
+
+    private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, PdfEmbeddedFont embedded)
+    {
+        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
+        {
+            yield break;
+        }
+
+        var line = new StringBuilder();
+        foreach (string word in words)
+        {
+            string candidate = line.Length == 0 ? word : line + " " + word;
+            if (line.Length > 0 && embedded.MeasureTextPoints(candidate, fontSize) > maxWidth)
+            {
+                yield return line.ToString();
+                line.Clear();
+                line.Append(word);
+            }
+            else
+            {
+                line.Clear();
+                line.Append(candidate);
+            }
+        }
+
+        if (line.Length > 0)
+        {
+            yield return line.ToString();
+        }
+    }
+
     private static long ParseLongAttribute(XElement element, string name)
     {
         string value = (string?)element.Attribute(name)
@@ -241,4 +372,13 @@ internal sealed class PptxRenderer
         bool FlipVertical);
 
     private readonly record struct RgbColor(byte Red, byte Green, byte Blue);
+
+    private readonly record struct TextRun(
+        string Text,
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        double FontSize,
+        RgbColor Color);
 }
