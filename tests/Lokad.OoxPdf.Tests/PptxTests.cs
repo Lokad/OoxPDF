@@ -152,7 +152,7 @@ internal static class PptxTests
                         <p:spPr>
                           <a:xfrm><a:off x="914400" y="2743200"/><a:ext cx="1828800" cy="0"/></a:xfrm>
                           <a:prstGeom prst="line"/>
-                          <a:ln w="12700"><a:solidFill><a:srgbClr val="222222"/></a:solidFill></a:ln>
+                          <a:ln w="12700"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
                         </p:spPr>
                       </p:cxnSp>
                       <p:sp>
@@ -174,6 +174,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.133 0.133 0.133 RG", pdf);
         TestAssert.Contains("72 324 m 216 324 l S", pdf);
+        TestAssert.Contains("211 326.25 l", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);
         TestAssert.Contains("90 468 m", pdf);
         TestAssert.Contains("126 428.4 l", pdf);

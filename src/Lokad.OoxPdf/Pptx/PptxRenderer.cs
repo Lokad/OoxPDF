@@ -249,13 +249,27 @@ internal sealed class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        if (preset == "line")
+        if (preset is "line" or "straightConnector1")
         {
             if (hasStroke)
             {
+                double x1 = x;
+                double y1 = document.SlideHeightPoints - yTop;
+                double x2 = x + width;
+                double y2 = document.SlideHeightPoints - yTop - height;
                 graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
                 graphics.SetLineWidth(lineWidth);
-                graphics.StrokeLine(x, document.SlideHeightPoints - yTop, x + width, document.SlideHeightPoints - yTop - height);
+                graphics.StrokeLine(x1, y1, x2, y2);
+                graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                if (ReadLineEndType(shapeProperties, "headEnd") == "triangle")
+                {
+                    FillLineArrowhead(graphics, x1, y1, x1 - x2, y1 - y2, lineWidth);
+                }
+
+                if (ReadLineEndType(shapeProperties, "tailEnd") == "triangle")
+                {
+                    FillLineArrowhead(graphics, x2, y2, x2 - x1, y2 - y1, lineWidth);
+                }
             }
 
             if (transformed)
@@ -305,6 +319,38 @@ internal sealed class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    {
+        double length = Math.Sqrt(directionX * directionX + directionY * directionY);
+        if (length <= 0.001d)
+        {
+            return;
+        }
+
+        double ux = directionX / length;
+        double uy = directionY / length;
+        double nx = -uy;
+        double ny = ux;
+        double size = Math.Max(5d, lineWidth * 3.5d);
+        double baseX = tipX - ux * size;
+        double baseY = tipY - uy * size;
+        double halfWidth = size * 0.45d;
+        graphics.FillPolygon(
+        [
+            (tipX, tipY),
+            (baseX + nx * halfWidth, baseY + ny * halfWidth),
+            (baseX - nx * halfWidth, baseY - ny * halfWidth)
+        ]);
+    }
+
+    private static string? ReadLineEndType(XElement shapeProperties, string elementName)
+    {
+        return (string?)shapeProperties
+            .Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + elementName)
+            ?.Attribute("type");
     }
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)

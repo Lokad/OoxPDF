@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, connector lines, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, connector lines with triangle arrowheads, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, direct and style-level keep/widow rules, style spacing variants, numbering indents, table styles/header rows, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
@@ -144,6 +144,12 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Slide 6 mean absolute error: `12.067719`; changed-pixel ratio at threshold 16: `0.137847`.
   - Deck mean absolute error: `15.503991`; max mean absolute error: `75.834314`; mean changed-pixel ratio at threshold 16: `0.174401`.
   - Remaining slide-6 generic gaps include table text wrapping/positioning, text color/style inheritance, title font metrics, and image/text placement precision.
+- Private PPTX slide-7 rerun `artifacts/private-visual/lokad-value-based/20260514-211029`:
+  - Connector line triangle arrowheads now render on the expected endpoints.
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Slide 7 mean absolute error: `9.230441`; changed-pixel ratio at threshold 16: `0.102554`.
+  - Deck mean absolute error: `15.502189`; max mean absolute error: `75.834314`; mean changed-pixel ratio at threshold 16: `0.174386`.
+  - Remaining slide-7 generic gaps include custom geometry/freeform curve paths, exact connector styling, large-title text metrics, and dense paragraph spacing.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
