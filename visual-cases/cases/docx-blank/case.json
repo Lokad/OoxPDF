@@ -1,0 +1,13 @@
+{
+  "id": "docx-blank",
+  "kind": "docx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/docx-blank.docx",
+  "dpi": 144,
+  "tags": ["docx", "blank", "smoke"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true
+  },
+  "allowedUnsupportedFeatures": []
+}
