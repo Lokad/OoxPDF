@@ -19,6 +19,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticStyledTextProducesStyleOperators,
     PptxTests.PptxSyntheticThemeColorsAndFontsResolve,
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
+    PptxTests.PptxSyntheticInheritedPlaceholderTextIsSkipped,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
     PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,

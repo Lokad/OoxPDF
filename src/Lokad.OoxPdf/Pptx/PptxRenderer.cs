@@ -44,19 +44,19 @@ internal sealed class PptxRenderer
             foreach (XDocument inherited in inheritedXml)
             {
                 RenderBackground(inherited, document, graphics, theme);
-                RenderShapes(inherited, document, graphics, theme);
+                RenderShapes(inherited, document, graphics, theme, renderPlaceholders: false);
             }
 
             RenderBackground(slideXml, document, graphics, theme);
-            RenderShapes(slideXml, document, graphics, theme);
+            RenderShapes(slideXml, document, graphics, theme, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = inheritedXml
                 .Append(slideXml)
                 .SelectMany(xml => RenderTables(xml, document, graphics, theme))
                 .ToArray();
             IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics);
             IReadOnlyList<TextRun> textRuns = inheritedXml
-                .Append(slideXml)
-                .SelectMany(xml => ReadTextRuns(xml, document, theme))
+                .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false))
+                .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true))
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
@@ -107,25 +107,28 @@ internal sealed class PptxRenderer
         }
     }
 
-    private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
+    private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, bool renderPlaceholders)
     {
         foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            RenderShapeContainer(shapeTree, document, graphics, theme, GroupTransform.Identity);
+            RenderShapeContainer(shapeTree, document, graphics, theme, GroupTransform.Identity, renderPlaceholders);
         }
     }
 
-    private static void RenderShapeContainer(XElement container, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform transform)
+    private static void RenderShapeContainer(XElement container, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform transform, bool renderPlaceholders)
     {
         foreach (XElement shape in container.Elements(PresentationNamespace + "sp"))
         {
-            RenderShape(shape, document, graphics, theme, transform);
+            if (renderPlaceholders || !IsPlaceholder(shape))
+            {
+                RenderShape(shape, document, graphics, theme, transform);
+            }
         }
 
         foreach (XElement group in container.Elements(PresentationNamespace + "grpSp"))
         {
             GroupTransform childTransform = transform.Combine(ReadGroupTransform(group));
-            RenderShapeContainer(group, document, graphics, theme, childTransform);
+            RenderShapeContainer(group, document, graphics, theme, childTransform, renderPlaceholders);
         }
     }
 
@@ -434,11 +437,16 @@ internal sealed class PptxRenderer
         return TryReadSolidColor(line, theme, out color);
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme)
+    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders)
     {
         var runs = new List<TextRun>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
+            if (!includePlaceholders && IsPlaceholder(shape))
+            {
+                continue;
+            }
+
             XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
             XElement? textBody = shape.Element(PresentationNamespace + "txBody");
             ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
@@ -490,6 +498,14 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static bool IsPlaceholder(XElement shape)
+    {
+        return shape
+            .Element(PresentationNamespace + "nvSpPr")
+            ?.Element(PresentationNamespace + "nvPr")
+            ?.Element(PresentationNamespace + "ph") is not null;
     }
 
     private static IReadOnlyList<PdfImageResource> RenderPictures(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics)
