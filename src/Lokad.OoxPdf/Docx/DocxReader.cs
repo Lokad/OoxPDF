@@ -180,13 +180,6 @@ internal sealed class DocxReader
             Emit("DOCX_UNSUPPORTED_SECTION_BREAK", "paragraph section break");
         }
 
-        if (document.Descendants(WordprocessingNamespace + "spacing").Any(spacing =>
-            spacing.Attribute(WordprocessingNamespace + "lineRule") is { } rule &&
-            !string.Equals(rule.Value, "auto", StringComparison.OrdinalIgnoreCase)))
-        {
-            Emit("DOCX_UNSUPPORTED_LINE_HEIGHT_RULE", "exact or at-least line-height rule");
-        }
-
         if (package.Parts.Any(p => p.Name.EndsWith("vbaProject.bin", StringComparison.OrdinalIgnoreCase) ||
             p.ContentType.Contains("vbaProject", StringComparison.OrdinalIgnoreCase)))
         {
@@ -285,6 +278,7 @@ internal sealed class DocxReader
             resolvedParagraph.SpacingBeforePoints ?? 0d,
             resolvedParagraph.SpacingAfterPoints ?? 6d,
             resolvedParagraph.LineSpacingFactor ?? 1.25d,
+            resolvedParagraph.LineSpacingPoints,
             CreateListLabel(paragraphProperties, numbering, numberingCounters));
     }
 
@@ -629,10 +623,23 @@ internal sealed class DocxReader
         XElement? spacing = properties?.Element(WordprocessingNamespace + "spacing");
         double? before = ReadTwipsAttribute(spacing, WordprocessingNamespace + "before");
         double? after = ReadTwipsAttribute(spacing, WordprocessingNamespace + "after");
-        double? lineFactor = spacing?.Attribute(WordprocessingNamespace + "line") is { } line
-            ? int.Parse(line.Value, CultureInfo.InvariantCulture) / 240d
-            : null;
-        return new DocxResolvedParagraphProperties(alignment, before, after, lineFactor);
+        double? lineFactor = null;
+        double? linePoints = null;
+        if (spacing?.Attribute(WordprocessingNamespace + "line") is { } line)
+        {
+            string? lineRule = (string?)spacing.Attribute(WordprocessingNamespace + "lineRule");
+            if (string.Equals(lineRule, "exact", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(lineRule, "atLeast", StringComparison.OrdinalIgnoreCase))
+            {
+                linePoints = OoxUnits.TwipsToPoints(long.Parse(line.Value, CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                lineFactor = int.Parse(line.Value, CultureInfo.InvariantCulture) / 240d;
+            }
+        }
+
+        return new DocxResolvedParagraphProperties(alignment, before, after, lineFactor, linePoints);
     }
 
     private static DocxTextAlignment? ReadAlignment(XElement? properties)
@@ -728,7 +735,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>());
     }
@@ -750,7 +757,8 @@ internal sealed class DocxReader
         DocxTextAlignment? Alignment,
         double? SpacingBeforePoints,
         double? SpacingAfterPoints,
-        double? LineSpacingFactor)
+        double? LineSpacingFactor,
+        double? LineSpacingPoints)
     {
         public DocxResolvedParagraphProperties Merge(DocxResolvedParagraphProperties other)
         {
@@ -758,7 +766,8 @@ internal sealed class DocxReader
                 other.Alignment ?? Alignment,
                 other.SpacingBeforePoints ?? SpacingBeforePoints,
                 other.SpacingAfterPoints ?? SpacingAfterPoints,
-                other.LineSpacingFactor ?? LineSpacingFactor);
+                other.LineSpacingFactor ?? LineSpacingFactor,
+                other.LineSpacingPoints ?? LineSpacingPoints);
         }
     }
 

@@ -91,7 +91,7 @@ internal sealed class DocxRenderer
             DocxParagraph paragraph = paragraphElement.Paragraph;
             cursorY -= paragraph.SpacingBeforePoints;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
-            double lineHeight = paragraphFontSize * paragraph.LineSpacingFactor;
+            double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
             if (embedded is not null && paragraph.Runs.Count > 0)
             {
                 string text = paragraph.ListLabel is null

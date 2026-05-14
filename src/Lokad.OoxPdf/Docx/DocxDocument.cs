@@ -32,6 +32,7 @@ internal sealed record DocxParagraph(
     double SpacingBeforePoints,
     double SpacingAfterPoints,
     double LineSpacingFactor,
+    double? LineSpacingPoints,
     string? ListLabel);
 
 internal sealed record DocxTextRun(
