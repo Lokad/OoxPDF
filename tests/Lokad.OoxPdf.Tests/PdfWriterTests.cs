@@ -1,0 +1,75 @@
+using System.Text;
+using Lokad.OoxPdf.Pdf;
+
+namespace Lokad.OoxPdf.Tests;
+
+internal static class PdfWriterTests
+{
+    public static void WritesSingleBlankPagePdfStructure()
+    {
+        string pdf = WritePdfText(new[] { new PdfPage(612, 792) });
+
+        TestAssert.Contains("%PDF-1.7", pdf);
+        TestAssert.Contains("<< /Type /Catalog /Pages 2 0 R >>", pdf);
+        TestAssert.Contains("<< /Type /Pages /Count 1 /Kids [3 0 R] >>", pdf);
+        TestAssert.Contains("/MediaBox [0 0 612 792]", pdf);
+        TestAssert.Contains("xref", pdf);
+        TestAssert.Contains("trailer", pdf);
+        TestAssert.Contains("/Root 1 0 R", pdf);
+        TestAssert.Contains("%%EOF", pdf);
+    }
+
+    public static void WritesMultipleBlankPagesWithPageSizes()
+    {
+        string pdf = WritePdfText(new[] { new PdfPage(960, 540), new PdfPage(595.276, 841.89) });
+
+        TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
+        TestAssert.Contains("/MediaBox [0 0 960 540]", pdf);
+        TestAssert.Contains("/MediaBox [0 0 595.276 841.89]", pdf);
+        TestAssert.Equal(2, CountOccurrences(pdf, "/Type /Page /Parent"));
+    }
+
+    public static void WritesDrawingOperators()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.SetFillRgb(255, 0, 0);
+        graphics.FillRectangle(10, 20, 30, 40);
+        graphics.SetStrokeRgb(0, 0, 255);
+        graphics.SetLineWidth(2);
+        graphics.StrokeLine(0, 0, 100, 100);
+        graphics.FillEllipse(10, 10, 20, 20);
+
+        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
+
+        TestAssert.Contains("1 0 0 rg", pdf);
+        TestAssert.Contains("10 20 30 40 re f", pdf);
+        TestAssert.Contains("0 0 1 RG", pdf);
+        TestAssert.Contains("2 w", pdf);
+        TestAssert.Contains("0 0 m 100 100 l S", pdf);
+        TestAssert.Contains(" c", pdf);
+    }
+
+    private static string WritePdfText(IReadOnlyList<PdfPage> pages)
+    {
+        using var stream = new MemoryStream();
+        PdfDocumentWriter.WriteBlank(stream, pages);
+        return Encoding.ASCII.GetString(stream.ToArray());
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        int start = 0;
+        while (true)
+        {
+            int index = text.IndexOf(value, start, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return count;
+            }
+
+            count++;
+            start = index + value.Length;
+        }
+    }
+}
