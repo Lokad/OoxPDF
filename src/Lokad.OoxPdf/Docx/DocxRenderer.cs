@@ -60,6 +60,7 @@ internal sealed class DocxRenderer
         double x = document.MarginLeftPoints;
         double width = Math.Max(1d, document.PageWidthPoints - document.MarginLeftPoints - document.MarginRightPoints);
         double cursorY = document.PageHeightPoints - document.MarginTopPoints;
+        double pendingSpacingAfter = 0d;
         const double baselineOffsetFactor = 0.94d;
         void FinishPage()
         {
@@ -75,6 +76,7 @@ internal sealed class DocxRenderer
             graphics = new PdfGraphicsBuilder();
             pageImages.Clear();
             cursorY = document.PageHeightPoints - document.MarginTopPoints;
+            pendingSpacingAfter = 0d;
         }
 
         foreach (DocxBodyElement element in document.BodyElements)
@@ -85,12 +87,15 @@ internal sealed class DocxRenderer
                 {
                     FinishPage();
                 }
+                pendingSpacingAfter = 0d;
 
                 continue;
             }
 
             if (element is DocxTableElement tableElement)
             {
+                cursorY -= pendingSpacingAfter;
+                pendingSpacingAfter = 0d;
                 RenderTable(tableElement.Table, document, ref graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
                 continue;
             }
@@ -101,7 +106,8 @@ internal sealed class DocxRenderer
             }
 
             DocxParagraph paragraph = paragraphElement.Paragraph;
-            cursorY -= paragraph.SpacingBeforePoints;
+            cursorY -= Math.Max(pendingSpacingAfter, paragraph.SpacingBeforePoints);
+            pendingSpacingAfter = 0d;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraph.LineSpacingPoints ?? paragraphFontSize * paragraph.LineSpacingFactor;
             if (embedded is not null && paragraph.Runs.Count > 0)
@@ -174,7 +180,7 @@ internal sealed class DocxRenderer
                 cursorY -= imageHeight + 6d;
             }
 
-            cursorY -= paragraph.SpacingAfterPoints;
+            pendingSpacingAfter = paragraph.SpacingAfterPoints;
         }
 
         if (HasPageContent(graphics, pageImages) || pages.Count == 0)

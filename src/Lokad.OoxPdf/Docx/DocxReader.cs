@@ -712,7 +712,7 @@ internal sealed class DocxReader
             }
             else
             {
-                lineFactor = int.Parse(line.Value, CultureInfo.InvariantCulture) / 240d;
+                lineFactor = int.Parse(line.Value, CultureInfo.InvariantCulture) / 240d * 1.15d;
             }
         }
 
