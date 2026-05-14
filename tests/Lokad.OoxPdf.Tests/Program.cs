@@ -20,6 +20,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticThemeColorsAndFontsResolve,
     PptxTests.PptxSyntheticLayoutAndMasterShapesRender,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
+    PptxTests.PptxSyntheticCroppedPictureUsesClipping,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     ImagingTests.JpegInfoReadsDimensions,
     FontTests.WindowsFontResolverFindsInstalledFonts,

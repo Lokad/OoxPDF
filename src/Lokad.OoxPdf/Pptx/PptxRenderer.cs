@@ -356,7 +356,16 @@ internal sealed class PptxRenderer
             double width = OoxUnits.EmuToPoints(bounds.Value.Width);
             double height = OoxUnits.EmuToPoints(bounds.Value.Height);
             double y = document.SlideHeightPoints - yTop - height;
-            graphics.DrawImage(name, x, y, width, height);
+            CropRect crop = ReadCrop(picture);
+            if (crop.IsEmpty)
+            {
+                graphics.DrawImage(name, x, y, width, height);
+            }
+            else
+            {
+                graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            }
+
             images.Add(new PdfImageResource(name, image));
         }
 
@@ -380,6 +389,30 @@ internal sealed class PptxRenderer
         }
 
         return null;
+    }
+
+    private static CropRect ReadCrop(XElement picture)
+    {
+        XElement? sourceRectangle = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "srcRect");
+        if (sourceRectangle is null)
+        {
+            return default;
+        }
+
+        return new CropRect(
+            ParsePercentage(sourceRectangle, "l"),
+            ParsePercentage(sourceRectangle, "t"),
+            ParsePercentage(sourceRectangle, "r"),
+            ParsePercentage(sourceRectangle, "b"));
+    }
+
+    private static double ParsePercentage(XElement element, string attribute)
+    {
+        return element.Attribute(attribute) is { } value
+            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
+            : 0d;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics)
@@ -536,5 +569,10 @@ internal sealed class PptxRenderer
         Left,
         Center,
         Right
+    }
+
+    private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
+    {
+        public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
     }
 }

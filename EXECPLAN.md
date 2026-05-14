@@ -88,7 +88,7 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Implement JPEG dimension parsing and PDF JPEG passthrough as `/DCTDecode` image XObjects.
 - [x] (2026-05-14) Implement PNG parsing for color types 2 and 6, including alpha as PDF soft mask.
 - [x] (2026-05-14) Parse PPTX picture relationships and render JPEG/PNG images.
-- [ ] Implement PPTX image sizing, aspect ratio preservation, and basic cropping (completed: explicit picture extents; remaining: aspect-ratio preservation and crop rectangles).
+- [x] (2026-05-14) Implement PPTX image sizing, aspect ratio preservation, and basic cropping.
 - [x] (2026-05-14) Add PPTX images visual case.
 - [ ] Parse PPTX grouped shapes and apply nested transforms.
 - [ ] Add PPTX group transform unit and visual tests.
@@ -190,6 +190,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: The first Office-authored PPTX image visual case renders end to end with usable fidelity.
   Evidence: `pptx-images` run `20260514-135714` has matching 1920 by 1080 reference/candidate images, mean absolute error `1.1591259162808643`, changed pixel ratio at threshold 16 of `0.013763020833333334`, and an assessment rating of 4.
 
+- Observation: Basic PPTX image cropping can be represented with PDF clipping and an adjusted image transform.
+  Evidence: `PptxSyntheticCroppedPictureUsesClipping` verifies that a picture with `a:srcRect` emits clipping (`re W n`) and still draws the image XObject; the full test run now prints `24 passed, 0 failed`.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -225,9 +228,9 @@ Examples of discoveries that belong here include: Office COM automation requirin
 ## Outcomes & Retrospective
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
-  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` prints `23 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, and explicit JPEG/PNG pictures. PPTX image cropping/aspect rules, grouped shapes, tables, DOCX text layout, and unsupported-feature diagnostics remain incomplete.
-  Next target: Add a PPTX image visual case, then implement image crop/aspect handling.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` prints `24 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-images/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, common theme color/font references, common master/layout inheritance, and JPEG/PNG pictures with basic cropping. PPTX grouped shapes, tables, DOCX text layout, and unsupported-feature diagnostics remain incomplete.
+  Next target: Implement PPTX grouped shapes and nested transforms.
 
 ## Context and Orientation
 

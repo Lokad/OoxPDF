@@ -86,6 +86,22 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("Q");
     }
 
+    public void DrawImageCropped(string imageResourceName, double x, double y, double width, double height, double cropLeft, double cropTop, double cropRight, double cropBottom)
+    {
+        double visibleWidth = Math.Max(0.001d, 1d - cropLeft - cropRight);
+        double visibleHeight = Math.Max(0.001d, 1d - cropTop - cropBottom);
+        double scaledWidth = width / visibleWidth;
+        double scaledHeight = height / visibleHeight;
+        double imageX = x - cropLeft * scaledWidth;
+        double imageY = y - cropBottom * scaledHeight;
+
+        builder.AppendLine("q");
+        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
+        builder.Append(N(scaledWidth)).Append(" 0 0 ").Append(N(scaledHeight)).Append(' ').Append(N(imageX)).Append(' ').Append(N(imageY)).AppendLine(" cm");
+        builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(imageResourceName)).AppendLine(" Do");
+        builder.AppendLine("Q");
+    }
+
     public override string ToString()
     {
         return builder.ToString();
