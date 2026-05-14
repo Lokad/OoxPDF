@@ -49,10 +49,15 @@ internal sealed class PptxRenderer
 
             RenderBackground(slideXml, document, graphics, theme);
             RenderShapes(slideXml, document, graphics, theme);
+            IReadOnlyList<TextRun> tableTextRuns = inheritedXml
+                .Append(slideXml)
+                .SelectMany(xml => RenderTables(xml, document, graphics, theme))
+                .ToArray();
             IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics);
             IReadOnlyList<TextRun> textRuns = inheritedXml
                 .Append(slideXml)
                 .SelectMany(xml => ReadTextRuns(xml, document, theme))
+                .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
             pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts, images));
@@ -209,12 +214,140 @@ internal sealed class PptxRenderer
         }
     }
 
+    private static IReadOnlyList<TextRun> RenderTables(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
+    {
+        var textRuns = new List<TextRun>();
+        foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
+        {
+            ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
+            XElement? table = frame
+                .Element(DrawingNamespace + "graphic")
+                ?.Element(DrawingNamespace + "graphicData")
+                ?.Element(DrawingNamespace + "tbl");
+            if (bounds is null || table is null)
+            {
+                continue;
+            }
+
+            IReadOnlyList<double> rawColumnWidths = table
+                .Element(DrawingNamespace + "tblGrid")
+                ?.Elements(DrawingNamespace + "gridCol")
+                .Select(column => Math.Max(1d, ParseOptionalLongAttribute(column, "w", 1)))
+                .ToArray() ?? [];
+            IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
+            if (rawColumnWidths.Count == 0 || rows.Count == 0)
+            {
+                continue;
+            }
+
+            double frameX = OoxUnits.EmuToPoints(bounds.Value.X);
+            double frameYTop = OoxUnits.EmuToPoints(bounds.Value.Y);
+            double frameWidth = OoxUnits.EmuToPoints(bounds.Value.Width);
+            double frameHeight = OoxUnits.EmuToPoints(bounds.Value.Height);
+            double frameTop = document.SlideHeightPoints - frameYTop;
+            double columnScale = frameWidth / rawColumnWidths.Sum();
+
+            IReadOnlyList<double> rawRowHeights = rows
+                .Select(row => Math.Max(1d, ParseOptionalLongAttribute(row, "h", 1)))
+                .ToArray();
+            double rowScale = frameHeight / rawRowHeights.Sum();
+
+            double yTop = frameTop;
+            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                double rowHeight = rawRowHeights[rowIndex] * rowScale;
+                double cellX = frameX;
+                double cellY = yTop - rowHeight;
+                IReadOnlyList<XElement> cells = rows[rowIndex].Elements(DrawingNamespace + "tc").ToArray();
+
+                for (int columnIndex = 0; columnIndex < Math.Min(cells.Count, rawColumnWidths.Count); columnIndex++)
+                {
+                    double columnWidth = rawColumnWidths[columnIndex] * columnScale;
+                    XElement cell = cells[columnIndex];
+                    XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+
+                    if (TryReadSolidColor(cellProperties, theme, out RgbColor fill))
+                    {
+                        graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                        graphics.FillRectangle(cellX, cellY, columnWidth, rowHeight);
+                    }
+
+                    graphics.SetStrokeRgb(0, 0, 0);
+                    graphics.SetLineWidth(0.75d);
+                    graphics.StrokeRectangle(cellX, cellY, columnWidth, rowHeight);
+                    AddTableCellTextRuns(cell, cellX, cellY, columnWidth, rowHeight, theme, textRuns);
+                    cellX += columnWidth;
+                }
+
+                yTop -= rowHeight;
+            }
+        }
+
+        return textRuns;
+    }
+
+    private static ShapeBounds? ReadGraphicFrameBounds(XElement frame)
+    {
+        XElement? transform = frame.Element(PresentationNamespace + "xfrm");
+        return transform is null ? null : ReadBoundsFromTransform(transform);
+    }
+
+    private static void AddTableCellTextRuns(XElement cell, double x, double y, double width, double height, PptxTheme theme, List<TextRun> runs)
+    {
+        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
+        if (textBody is null)
+        {
+            return;
+        }
+
+        double cursorY = y + height - 14d;
+        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        {
+            TextAlignment alignment = ReadAlignment(paragraph);
+            double cursorX = x + 4d;
+            double maxFontSize = 12d;
+            foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
+            {
+                string text = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                if (text.Length == 0)
+                {
+                    continue;
+                }
+
+                XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+                double fontSize = runProperties?.Attribute("sz") is { } size
+                    ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
+                    : 12d;
+                maxFontSize = Math.Max(maxFontSize, fontSize);
+                RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
+                    ? runColor
+                    : new RgbColor(0, 0, 0);
+                string? typeface = theme.ResolveTypeface((string?)runProperties?
+                    .Element(DrawingNamespace + "latin")
+                    ?.Attribute("typeface"));
+                bool bold = ParseOptionalBoolAttribute(runProperties, "b");
+                bool italic = ParseOptionalBoolAttribute(runProperties, "i");
+                bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
+                    && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, color, bold, italic, underline, alignment, typeface));
+                cursorX += text.Length * fontSize * 0.55d;
+            }
+
+            cursorY -= maxFontSize * 1.2d;
+        }
+    }
+
     private static ShapeBounds? ReadBounds(XElement shapeProperties)
     {
         XElement? transform = shapeProperties.Element(DrawingNamespace + "xfrm");
-        XElement? offset = transform?.Element(DrawingNamespace + "off");
-        XElement? extents = transform?.Element(DrawingNamespace + "ext");
-        if (transform is null || offset is null || extents is null)
+        return transform is null ? null : ReadBoundsFromTransform(transform);
+    }
+
+    private static ShapeBounds? ReadBoundsFromTransform(XElement transform)
+    {
+        XElement? offset = transform.Element(DrawingNamespace + "off");
+        XElement? extents = transform.Element(DrawingNamespace + "ext");
+        if (offset is null || extents is null)
         {
             return null;
         }
@@ -558,6 +691,13 @@ internal sealed class PptxRenderer
         string value = (string?)element.Attribute(name)
             ?? throw new InvalidDataException($"Missing required PPTX shape attribute '{name}'.");
         return long.Parse(value, CultureInfo.InvariantCulture);
+    }
+
+    private static long ParseOptionalLongAttribute(XElement element, string name, long defaultValue)
+    {
+        return element.Attribute(name) is { } value
+            ? long.Parse(value.Value, CultureInfo.InvariantCulture)
+            : defaultValue;
     }
 
     private static bool ParseBoolAttribute(XElement element, string name)
