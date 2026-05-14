@@ -44,6 +44,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticInlinePngRendersImageXObject,
     DocxTests.DocxSyntheticTableRendersCellsAndText,
     DocxTests.DocxSyntheticTableKeepsBodyOrder,
+    DocxTests.DocxSyntheticTableUsesRowHeights,
     DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
     DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,

@@ -214,10 +214,10 @@ internal sealed class DocxRenderer
         double availableWidth,
         Action finishPage)
     {
-        const double rowHeight = 16d;
+        const double defaultRowHeight = 16d;
         double rawTableWidth = table.ColumnWidthsPoints.Sum();
         double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
-        double tableHeight = table.Rows.Count * rowHeight;
+        double tableHeight = table.Rows.Sum(row => row.HeightPoints ?? defaultRowHeight);
         if (cursorY - tableHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
         {
             finishPage();
@@ -225,6 +225,7 @@ internal sealed class DocxRenderer
 
         foreach (DocxTableRow row in table.Rows)
         {
+            double rowHeight = row.HeightPoints ?? defaultRowHeight;
             double cellX = x;
             double cellY = cursorY - rowHeight;
             for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)

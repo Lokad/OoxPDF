@@ -362,7 +362,7 @@ internal sealed class DocxReader
 
             if (cells.Count > 0)
             {
-                rows.Add(new DocxTableRow(cells));
+                rows.Add(new DocxTableRow(cells, ReadTableRowHeight(row)));
             }
         }
 
@@ -378,6 +378,19 @@ internal sealed class DocxReader
         }
 
         return new DocxTable(columns, rows);
+    }
+
+    private static double? ReadTableRowHeight(XElement row)
+    {
+        XElement? height = row
+            .Element(WordprocessingNamespace + "trPr")
+            ?.Element(WordprocessingNamespace + "trHeight");
+        if (height?.Attribute(WordprocessingNamespace + "val") is not { } value)
+        {
+            return null;
+        }
+
+        return OoxUnits.TwipsToPoints(long.Parse(value.Value, CultureInfo.InvariantCulture));
     }
 
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(XElement run, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)

@@ -47,7 +47,7 @@ internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, 
 
 internal sealed record DocxTable(IReadOnlyList<double> ColumnWidthsPoints, IReadOnlyList<DocxTableRow> Rows);
 
-internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells);
+internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? HeightPoints);
 
 internal sealed record DocxTableCell(string Text, string? FillHex);
 
