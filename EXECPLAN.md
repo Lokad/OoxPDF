@@ -80,6 +80,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Candidate page height still differs by 1 raster pixel at 144 DPI.
   - Overlap metrics are now available despite the dimension mismatch; paired-page mean absolute error was `19.89926`, and mean changed-pixel ratio at threshold 16 was `0.16322`.
   - Diagnostics were empty, so remaining pagination gaps still need explicit diagnostics or rendering fixes.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-173117`:
+  - Reference output had 16 pages; candidate output had 16 pages.
+  - All 16 rasterized page dimensions matched after A4 media-box normalization.
+  - Mean absolute error: `19.88376`; mean changed-pixel ratio at threshold 16: `0.163965`.
+  - Diagnostics were empty.
 
 ## Backlog
 
@@ -89,7 +94,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Make omitted embedded image content release-blocking: either render it, use a safe fallback, or emit an explicit high-severity diagnostic.
 - [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static grouped-bar fallback.
 - [ ] Extend PPTX chart rendering beyond basic bar fallbacks: cached image fallbacks when present, labels, legends, axes, line charts, pie charts, stacked/grouped variants, and style fidelity.
-- [ ] Fix DOCX page geometry and pagination fidelity: page height rounding, section page size/margins, line heights, paragraph spacing, table pagination, and page-break decisions.
+- [ ] Fix DOCX page geometry and pagination fidelity: section page size/margins, line heights, paragraph spacing, table pagination, and page-break decisions.
 - [x] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout, unsupported page break variants, unsupported paragraph keep rules, or unsupported line-height semantics.
 
 ### PPTX Feature Survey
@@ -132,7 +137,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ## Next Implementation Targets
 
-1. Continue DOCX page geometry/pagination work: resolve page-height rounding and table pagination.
+1. Continue DOCX page geometry/pagination work: table pagination, line heights, paragraph spacing, and page-break decisions.
 2. Continue PPTX text spacing and text-frame layout fixes: vertical anchoring, autofit, and clipping.
 3. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
 4. Extend PPTX chart fidelity beyond the static grouped-bar fallback.
@@ -160,7 +165,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-54 passed, 0 failed
+55 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

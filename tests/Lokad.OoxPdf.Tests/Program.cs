@@ -37,6 +37,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticBarChartUsesStaticFallback,
     PptxTests.PptxUnsupportedFeaturesEmitDiagnostics,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
+    DocxTests.DocxSyntheticA4PageSizeUsesWordPdfMediaBox,
     DocxTests.DocxSyntheticParagraphRendersText,
     DocxTests.DocxSyntheticStylesApplyToParagraphText,
     DocxTests.DocxSyntheticParagraphsBreakAcrossPages,

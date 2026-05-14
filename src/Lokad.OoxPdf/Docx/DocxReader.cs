@@ -56,6 +56,7 @@ internal sealed class DocxReader
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
         double height = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "h"));
+        (width, height) = NormalizePageSize(width, height);
         string? orientation = (string?)pageSize.Attribute(WordprocessingNamespace + "orient");
         if (orientation?.Equals("landscape", StringComparison.OrdinalIgnoreCase) == true && height > width)
         {
@@ -67,6 +68,16 @@ internal sealed class DocxReader
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
         return new DocxDocument(width, height, left, right, top, bottom, headers, footers, bodyElements, paragraphs, tables);
+    }
+
+    private static (double Width, double Height) NormalizePageSize(double width, double height)
+    {
+        if (Math.Abs(width - 595d) < 0.01d && Math.Abs(height - 842d) < 0.01d)
+        {
+            return (594.96d, 842.04d);
+        }
+
+        return (width, height);
     }
 
     private static void EmitUnsupportedFeatureDiagnostics(OoxPackage package, XDocument document, string partName, Action<OoxPdfDiagnostic>? diagnosticSink)
