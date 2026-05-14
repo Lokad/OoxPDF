@@ -96,8 +96,16 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
         && candidate is not null
         && reference.Width == candidate.Width
         && reference.Height == candidate.Height;
+    bool dimensionsNearMatch = reference is not null
+        && candidate is not null
+        && Math.Abs(reference.Width - candidate.Width) <= 2
+        && Math.Abs(reference.Height - candidate.Height) <= 2;
 
-    PixelMetric? pixelMetric = dimensionsMatch ? MeasurePixels(reference!, candidate!) : null;
+    PixelMetric? pixelMetric = null;
+    if ((dimensionsMatch || dimensionsNearMatch) && reference is not null && candidate is not null)
+    {
+        pixelMetric = MeasurePixels(reference, candidate, Math.Min(reference.Width, candidate.Width), Math.Min(reference.Height, candidate.Height));
+    }
 
     return new PageMetric(
         Page: page,
@@ -114,34 +122,38 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
         DimensionsMatch: dimensionsMatch);
 }
 
-static PixelMetric MeasurePixels(PngImage reference, PngImage candidate)
+static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int width, int height)
 {
     long absoluteError = 0;
     double squaredError = 0;
     int changed16 = 0;
     int changed32 = 0;
-    int pixelCount = reference.Width * reference.Height;
+    int pixelCount = width * height;
 
-    for (int pixel = 0; pixel < pixelCount; pixel++)
+    for (int y = 0; y < height; y++)
     {
-        int offset = pixel * 4;
-        int maxChannelDelta = 0;
-        for (int channel = 0; channel < 4; channel++)
+        for (int x = 0; x < width; x++)
         {
-            int delta = Math.Abs(reference.Rgba[offset + channel] - candidate.Rgba[offset + channel]);
-            absoluteError += delta;
-            squaredError += delta * delta;
-            maxChannelDelta = Math.Max(maxChannelDelta, delta);
-        }
+            int referenceOffset = (y * reference.Width + x) * 4;
+            int candidateOffset = (y * candidate.Width + x) * 4;
+            int maxChannelDelta = 0;
+            for (int channel = 0; channel < 4; channel++)
+            {
+                int delta = Math.Abs(reference.Rgba[referenceOffset + channel] - candidate.Rgba[candidateOffset + channel]);
+                absoluteError += delta;
+                squaredError += delta * delta;
+                maxChannelDelta = Math.Max(maxChannelDelta, delta);
+            }
 
-        if (maxChannelDelta >= 16)
-        {
-            changed16++;
-        }
+            if (maxChannelDelta >= 16)
+            {
+                changed16++;
+            }
 
-        if (maxChannelDelta >= 32)
-        {
-            changed32++;
+            if (maxChannelDelta >= 32)
+            {
+                changed32++;
+            }
         }
     }
 

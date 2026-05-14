@@ -38,6 +38,7 @@ return TestRunner.Run(
     DocxTests.DocxSyntheticNumberingRendersListLabels,
     DocxTests.DocxSyntheticInlinePngRendersImageXObject,
     DocxTests.DocxSyntheticTableRendersCellsAndText,
+    DocxTests.DocxSyntheticTableKeepsBodyOrder,
     DocxTests.DocxSyntheticHeaderAndFooterRenderOnPage,
     DocxTests.DocxSyntheticFooterPageFieldUsesGeneratedPageNumbers,
     DocxTests.DocxUnsupportedFeaturesEmitDiagnostics,

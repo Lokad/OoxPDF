@@ -35,13 +35,14 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
 - [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, common master/layout inheritance, text boxes, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape transforms, fixed-grid tables, and unsupported-feature diagnostics.
-- [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables, default headers/footers, page number approximation, and unsupported-feature diagnostics.
+- [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
 - [x] PNG support covers Adam7 interlaced RGBA images.
 - [x] Unsupported PPTX image formats now emit `IMAGE_UNSUPPORTED_FORMAT` diagnostics instead of aborting the entire conversion.
 - [x] PowerPoint reference export is sorted numerically so decks with more than 9 slides compare against the correct candidate pages.
 - [x] Private PPTX assessment completed on a large 84-slide deck without exposing private contents.
 - [x] Private DOCX assessment completed on an 18-candidate-page document without exposing private contents.
+- [x] VisualDiff computes overlap metrics even when reference/candidate raster dimensions differ by a small page-rounding mismatch.
 
 ## Private Evidence
 
@@ -63,6 +64,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
   - Diagnostics were empty.
   - This identifies DOCX pagination/page geometry fidelity as a high-priority gap, especially because no diagnostic currently explains the mismatch.
+- Private DOCX rerun `artifacts/private-visual/user-requirements-spec/20260514-171008`:
+  - Reference output had 16 pages; candidate output had 17 pages after preserving DOCX table body order and reducing default table row height.
+  - Candidate page height still differs by 1 raster pixel at 144 DPI.
+  - Overlap metrics are now available despite the dimension mismatch; paired-page mean absolute error was `20.675931`, and mean changed-pixel ratio at threshold 16 was `0.169288`.
+  - Diagnostics were empty, so remaining pagination gaps still need explicit diagnostics or rendering fixes.
 
 ## Backlog
 
@@ -71,7 +77,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [x] Implement Adam7 interlaced PNG decoding so embedded interlaced images render instead of being skipped.
 - [ ] Make omitted embedded image content release-blocking: either render it, use a safe fallback, or emit an explicit high-severity diagnostic.
 - [ ] Improve PPTX chart fallback rendering, starting with cached chart images where present, then static bar/line chart drawing for common chart XML.
-- [ ] Fix DOCX page geometry and pagination fidelity: page height rounding, section page size/margins, line heights, paragraph spacing, and page-break decisions.
+- [ ] Fix DOCX page geometry and pagination fidelity: page height rounding, section page size/margins, line heights, paragraph spacing, table row heights, and page-break decisions.
 - [ ] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout, unsupported page break variants, unsupported paragraph keep rules, or unsupported line-height semantics.
 
 ### PPTX Feature Survey
@@ -109,12 +115,12 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Add font subsetting to reduce output size while keeping deterministic output.
 - [ ] Add image deduplication and compression choices for large decks.
 - [ ] Improve diagnostics severity model so release-blocking omissions are distinguishable from harmless approximations.
-- [ ] Add visual comparison support for dimension-near-matches, so a 1-pixel raster rounding mismatch can still produce pixel metrics.
+- [x] Add visual comparison support for dimension-near-matches, so a 1-pixel raster rounding mismatch can still produce pixel metrics.
 - [ ] Add private-case summary tooling that reports page count, dimension mismatches, diagnostics grouped by feature, and worst visual pages without exposing content.
 
 ## Next Implementation Targets
 
-1. DOCX page geometry/pagination investigation using the private DOCX evidence, starting with page height rounding and section/page-size conversion.
+1. Continue DOCX page geometry/pagination work: resolve the remaining 17-vs-16 private page count, page-height rounding, row-height semantics, and diagnostics for unsupported pagination controls.
 2. PPTX chart fallback detection: locate cached chart images or alternate content before attempting chart XML drawing.
 3. PPTX text spacing and text-frame layout fixes, validated against public cases and the private PPTX metrics.
 4. Dense PPTX image/group placement fidelity, especially for image-heavy slides.
@@ -142,7 +148,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-47 passed, 0 failed
+48 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.

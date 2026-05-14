@@ -11,7 +11,7 @@ internal sealed class DocxRenderer
 {
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document)
     {
-        if (document.Paragraphs.Count == 0 && document.Tables.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
+        if (document.BodyElements.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
@@ -75,8 +75,20 @@ internal sealed class DocxRenderer
             cursorY = document.PageHeightPoints - document.MarginTopPoints;
         }
 
-        foreach (DocxParagraph paragraph in document.Paragraphs)
+        foreach (DocxBodyElement element in document.BodyElements)
         {
+            if (element is DocxTableElement tableElement)
+            {
+                RenderTable(tableElement.Table, document, graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
+                continue;
+            }
+
+            if (element is not DocxParagraphElement paragraphElement)
+            {
+                continue;
+            }
+
+            DocxParagraph paragraph = paragraphElement.Paragraph;
             cursorY -= paragraph.SpacingBeforePoints;
             double paragraphFontSize = paragraph.Runs.Count == 0 ? 11d : paragraph.Runs.Max(r => r.FontSize);
             double lineHeight = paragraphFontSize * paragraph.LineSpacingFactor;
@@ -149,11 +161,6 @@ internal sealed class DocxRenderer
             cursorY -= paragraph.SpacingAfterPoints;
         }
 
-        foreach (DocxTable table in document.Tables)
-        {
-            RenderTable(table, document, graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
-        }
-
         if (HasPageContent(graphics, pageImages) || pages.Count == 0)
         {
             FinishPage();
@@ -207,7 +214,7 @@ internal sealed class DocxRenderer
         double availableWidth,
         Action finishPage)
     {
-        const double rowHeight = 28d;
+        const double rowHeight = 18d;
         double rawTableWidth = table.ColumnWidthsPoints.Sum();
         double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
         double tableHeight = table.Rows.Count * rowHeight;

@@ -9,14 +9,21 @@ internal sealed record DocxDocument(
     double MarginBottomPoints,
     IReadOnlyList<DocxParagraph> HeaderParagraphs,
     IReadOnlyList<DocxParagraph> FooterParagraphs,
+    IReadOnlyList<DocxBodyElement> BodyElements,
     IReadOnlyList<DocxParagraph> Paragraphs,
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [], [], [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [], [], [], [])
     {
     }
 }
+
+internal abstract record DocxBodyElement;
+
+internal sealed record DocxParagraphElement(DocxParagraph Paragraph) : DocxBodyElement;
+
+internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,

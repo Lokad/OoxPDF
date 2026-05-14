@@ -43,14 +43,15 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(documentPart.Name)
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
-        IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering, package, relationships);
-        IReadOnlyList<DocxTable> tables = ReadTables(document);
+        IReadOnlyList<DocxBodyElement> bodyElements = ReadBodyElements(document, styles, numbering, package, relationships);
+        IReadOnlyList<DocxParagraph> paragraphs = bodyElements.OfType<DocxParagraphElement>().Select(e => e.Paragraph).ToArray();
+        IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
         IReadOnlyList<DocxParagraph> headers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference");
         IReadOnlyList<DocxParagraph> footers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, FooterRelationshipType, "footerReference");
 
         if (pageSize is null)
         {
-            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, headers, footers, paragraphs, tables);
+            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, headers, footers, bodyElements, paragraphs, tables);
         }
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
@@ -65,7 +66,7 @@ internal sealed class DocxReader
         double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
-        return new DocxDocument(width, height, left, right, top, bottom, headers, footers, paragraphs, tables);
+        return new DocxDocument(width, height, left, right, top, bottom, headers, footers, bodyElements, paragraphs, tables);
     }
 
     private static void EmitUnsupportedFeatureDiagnostics(OoxPackage package, XDocument document, string partName, Action<OoxPdfDiagnostic>? diagnosticSink)
@@ -162,70 +163,119 @@ internal sealed class DocxReader
         var numberingCounters = new Dictionary<(string NumId, int Level), int>();
         foreach (XElement paragraph in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "p"))
         {
-            XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
-            string? paragraphStyleId = (string?)paragraphProperties?
-                .Element(WordprocessingNamespace + "pStyle")
-                ?.Attribute(WordprocessingNamespace + "val");
-            DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles);
-            var runs = new List<DocxTextRun>();
-            var images = new List<DocxInlineImage>();
-            bool pageInstructionSeen = false;
-            foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+            DocxParagraph? parsed = ReadParagraph(paragraph, styles, numbering, numberingCounters, package, relationships);
+            if (parsed is not null)
             {
-                string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
-                if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
-                {
-                    text = "{PAGE}";
-                    pageInstructionSeen = true;
-                }
-                else if (pageInstructionSeen && text.Trim().All(char.IsDigit))
-                {
-                    text = string.Empty;
-                }
-
-                XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
-                string? characterStyleId = (string?)runProperties?
-                    .Element(WordprocessingNamespace + "rStyle")
-                    ?.Attribute(WordprocessingNamespace + "val");
-                DocxResolvedRunProperties resolvedRun = ResolveRunProperties(runProperties, paragraphStyleId, characterStyleId, styles);
-                if (text.Length != 0)
-                {
-                    runs.Add(new DocxTextRun(
-                        text,
-                        resolvedRun.FontSize ?? 11d,
-                        resolvedRun.ColorHex,
-                        resolvedRun.Bold ?? false,
-                        resolvedRun.Italic ?? false,
-                        resolvedRun.Underline ?? false,
-                        resolvedRun.FontFamily));
-                }
-
-                images.AddRange(ReadInlineImages(run, package, relationships));
-            }
-
-            foreach (XElement field in paragraph.Elements(WordprocessingNamespace + "fldSimple"))
-            {
-                string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
-                if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
-                {
-                    runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null));
-                }
-            }
-
-            if (runs.Count > 0 || images.Count > 0)
-            {
-                paragraphs.Add(new DocxParagraph(
-                    runs,
-                    images,
-                    resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
-                    resolvedParagraph.SpacingBeforePoints ?? 0d,
-                    resolvedParagraph.SpacingAfterPoints ?? 6d,
-                    resolvedParagraph.LineSpacingFactor ?? 1.25d,
-                    CreateListLabel(paragraphProperties, numbering, numberingCounters)));
+                paragraphs.Add(parsed);
             }
         }
 
         return paragraphs;
+    }
+
+    private static DocxParagraph? ReadParagraph(
+        XElement paragraph,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        Dictionary<(string NumId, int Level), int> numberingCounters,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        XElement? paragraphProperties = paragraph.Element(WordprocessingNamespace + "pPr");
+        string? paragraphStyleId = (string?)paragraphProperties?
+            .Element(WordprocessingNamespace + "pStyle")
+            ?.Attribute(WordprocessingNamespace + "val");
+        DocxResolvedParagraphProperties resolvedParagraph = ResolveParagraphProperties(paragraphProperties, paragraphStyleId, styles);
+        var runs = new List<DocxTextRun>();
+        var images = new List<DocxInlineImage>();
+        bool pageInstructionSeen = false;
+        foreach (XElement run in paragraph.Elements(WordprocessingNamespace + "r"))
+        {
+            string text = string.Concat(run.Elements(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty));
+            if (run.Elements(WordprocessingNamespace + "instrText").Any(instruction => ((string?)instruction)?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true))
+            {
+                text = "{PAGE}";
+                pageInstructionSeen = true;
+            }
+            else if (pageInstructionSeen && text.Trim().All(char.IsDigit))
+            {
+                text = string.Empty;
+            }
+
+            XElement? runProperties = run.Element(WordprocessingNamespace + "rPr");
+            string? characterStyleId = (string?)runProperties?
+                .Element(WordprocessingNamespace + "rStyle")
+                ?.Attribute(WordprocessingNamespace + "val");
+            DocxResolvedRunProperties resolvedRun = ResolveRunProperties(runProperties, paragraphStyleId, characterStyleId, styles);
+            if (text.Length != 0)
+            {
+                runs.Add(new DocxTextRun(
+                    text,
+                    resolvedRun.FontSize ?? 11d,
+                    resolvedRun.ColorHex,
+                    resolvedRun.Bold ?? false,
+                    resolvedRun.Italic ?? false,
+                    resolvedRun.Underline ?? false,
+                    resolvedRun.FontFamily));
+            }
+
+            images.AddRange(ReadInlineImages(run, package, relationships));
+        }
+
+        foreach (XElement field in paragraph.Elements(WordprocessingNamespace + "fldSimple"))
+        {
+            string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
+            if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null));
+            }
+        }
+
+        if (runs.Count == 0 && images.Count == 0)
+        {
+            return null;
+        }
+
+        return new DocxParagraph(
+            runs,
+            images,
+            resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
+            resolvedParagraph.SpacingBeforePoints ?? 0d,
+            resolvedParagraph.SpacingAfterPoints ?? 6d,
+            resolvedParagraph.LineSpacingFactor ?? 1.25d,
+            CreateListLabel(paragraphProperties, numbering, numberingCounters));
+    }
+
+    private static IReadOnlyList<DocxBodyElement> ReadBodyElements(
+        XDocument document,
+        DocxStyleSet styles,
+        DocxNumberingSet numbering,
+        OoxPackage package,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        var elements = new List<DocxBodyElement>();
+        var numberingCounters = new Dictionary<(string NumId, int Level), int>();
+        foreach (XElement element in document.Descendants(WordprocessingNamespace + "body").Elements())
+        {
+            if (element.Name == WordprocessingNamespace + "p")
+            {
+                DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);
+                if (paragraph is not null)
+                {
+                    elements.Add(new DocxParagraphElement(paragraph));
+                }
+            }
+            else if (element.Name == WordprocessingNamespace + "tbl")
+            {
+                DocxTable? table = ReadTable(element);
+                if (table is not null)
+                {
+                    elements.Add(new DocxTableElement(table));
+                }
+            }
+        }
+
+        return elements;
     }
 
     private static IReadOnlyList<DocxParagraph> ReadReferencedHeaderFooterParagraphs(
@@ -276,47 +326,58 @@ internal sealed class DocxReader
         var tables = new List<DocxTable>();
         foreach (XElement table in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "tbl"))
         {
-            IReadOnlyList<double> columns = table
-                .Element(WordprocessingNamespace + "tblGrid")
-                ?.Elements(WordprocessingNamespace + "gridCol")
-                .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
-                .ToArray() ?? [];
-            var rows = new List<DocxTableRow>();
-            foreach (XElement row in table.Elements(WordprocessingNamespace + "tr"))
+            DocxTable? parsed = ReadTable(table);
+            if (parsed is not null)
             {
-                var cells = new List<DocxTableCell>();
-                foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
-                {
-                    string text = string.Join(" ", cell
-                        .Descendants(WordprocessingNamespace + "p")
-                        .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
-                        .Where(t => t.Length != 0));
-                    string? fill = (string?)cell
-                        .Element(WordprocessingNamespace + "tcPr")
-                        ?.Element(WordprocessingNamespace + "shd")
-                        ?.Attribute(WordprocessingNamespace + "fill");
-                    cells.Add(new DocxTableCell(text, fill));
-                }
-
-                if (cells.Count > 0)
-                {
-                    rows.Add(new DocxTableRow(cells));
-                }
-            }
-
-            if (rows.Count > 0)
-            {
-                if (columns.Count == 0)
-                {
-                    int maxCells = rows.Max(r => r.Cells.Count);
-                    columns = Enumerable.Repeat(72d, maxCells).ToArray();
-                }
-
-                tables.Add(new DocxTable(columns, rows));
+                tables.Add(parsed);
             }
         }
 
         return tables;
+    }
+
+    private static DocxTable? ReadTable(XElement table)
+    {
+        IReadOnlyList<double> columns = table
+            .Element(WordprocessingNamespace + "tblGrid")
+            ?.Elements(WordprocessingNamespace + "gridCol")
+            .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
+            .ToArray() ?? [];
+        var rows = new List<DocxTableRow>();
+        foreach (XElement row in table.Elements(WordprocessingNamespace + "tr"))
+        {
+            var cells = new List<DocxTableCell>();
+            foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
+            {
+                string text = string.Join(" ", cell
+                    .Descendants(WordprocessingNamespace + "p")
+                    .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
+                    .Where(t => t.Length != 0));
+                string? fill = (string?)cell
+                    .Element(WordprocessingNamespace + "tcPr")
+                    ?.Element(WordprocessingNamespace + "shd")
+                    ?.Attribute(WordprocessingNamespace + "fill");
+                cells.Add(new DocxTableCell(text, fill));
+            }
+
+            if (cells.Count > 0)
+            {
+                rows.Add(new DocxTableRow(cells));
+            }
+        }
+
+        if (rows.Count == 0)
+        {
+            return null;
+        }
+
+        if (columns.Count == 0)
+        {
+            int maxCells = rows.Max(r => r.Cells.Count);
+            columns = Enumerable.Repeat(72d, maxCells).ToArray();
+        }
+
+        return new DocxTable(columns, rows);
     }
 
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(XElement run, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)
