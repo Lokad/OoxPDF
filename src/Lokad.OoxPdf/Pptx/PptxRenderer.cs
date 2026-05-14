@@ -34,10 +34,11 @@ internal sealed class PptxRenderer
             using Stream stream = slidePart.OpenRead();
             XDocument slideXml = SafeXml.Load(stream);
             var graphics = new PdfGraphicsBuilder();
+            PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
 
-            RenderBackground(slideXml, document, graphics);
-            RenderShapes(slideXml, document, graphics);
-            IReadOnlyList<TextRun> textRuns = ReadTextRuns(slideXml, document);
+            RenderBackground(slideXml, document, graphics, theme);
+            RenderShapes(slideXml, document, graphics, theme);
+            IReadOnlyList<TextRun> textRuns = ReadTextRuns(slideXml, document, theme);
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
             pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts));
         }
@@ -45,20 +46,20 @@ internal sealed class PptxRenderer
         return pages;
     }
 
-    private static void RenderBackground(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics)
+    private static void RenderBackground(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
     {
         XElement? background = slideXml.Root?
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?
             .Element(PresentationNamespace + "bgPr");
-        if (TryReadSolidColor(background, out RgbColor color))
+        if (TryReadSolidColor(background, theme, out RgbColor color))
         {
             graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             graphics.FillRectangle(0, 0, document.SlideWidthPoints, document.SlideHeightPoints);
         }
     }
 
-    private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics)
+    private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
     {
         IEnumerable<XElement> shapes = slideXml
             .Descendants(PresentationNamespace + "spTree")
@@ -89,8 +90,8 @@ internal sealed class PptxRenderer
             double y = document.SlideHeightPoints - yTop - height;
             bool transformed = bounds.Value.RotationDegrees != 0d || bounds.Value.FlipHorizontal || bounds.Value.FlipVertical;
 
-            bool hasFill = TryReadSolidColor(shapeProperties, out RgbColor fill);
-            bool hasStroke = TryReadLine(shapeProperties, out RgbColor stroke, out double lineWidth);
+            bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
+            bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
 
             if (transformed)
             {
@@ -194,35 +195,29 @@ internal sealed class PptxRenderer
         graphics.Transform(a, b, c, d, e, f);
     }
 
-    private static bool TryReadSolidColor(XElement? element, out RgbColor color)
+    private static bool TryReadSolidColor(XElement? element, PptxTheme theme, out RgbColor color)
     {
-        string? hex = (string?)element?
-            .Element(DrawingNamespace + "solidFill")
-            ?.Element(DrawingNamespace + "srgbClr")
-            ?.Attribute("val");
-        if (hex is null || hex.Length != 6)
+        XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
+        string? hex = (string?)solidFill?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        if (RgbColor.TryParse(hex, out color))
         {
-            color = default;
-            return false;
+            return true;
         }
 
-        color = new RgbColor(
-            byte.Parse(hex.AsSpan(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-            byte.Parse(hex.AsSpan(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
-        return true;
+        string? schemeColor = (string?)solidFill?.Element(DrawingNamespace + "schemeClr")?.Attribute("val");
+        return schemeColor is not null && theme.TryResolveColor(schemeColor, out color);
     }
 
-    private static bool TryReadLine(XElement shapeProperties, out RgbColor color, out double lineWidth)
+    private static bool TryReadLine(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth)
     {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
-        return TryReadSolidColor(line, out color);
+        return TryReadSolidColor(line, theme, out color);
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document)
+    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme)
     {
         var runs = new List<TextRun>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
@@ -259,14 +254,17 @@ internal sealed class PptxRenderer
                         ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                         : 18d;
                     maxFontSize = Math.Max(maxFontSize, fontSize);
-                    RgbColor color = TryReadSolidColor(runProperties, out RgbColor runColor)
+                    RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
                         ? runColor
                         : new RgbColor(0, 0, 0);
+                    string? typeface = theme.ResolveTypeface((string?)runProperties?
+                        .Element(DrawingNamespace + "latin")
+                        ?.Attribute("typeface"));
                     bool bold = ParseOptionalBoolAttribute(runProperties, "b");
                     bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                     bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color, bold, italic, underline, alignment));
+                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color, bold, italic, underline, alignment, typeface));
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
@@ -284,7 +282,8 @@ internal sealed class PptxRenderer
             return [];
         }
 
-        FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest("Arial"));
+        string familyName = textRuns.Select(r => r.FontFamily).FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
+        FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
         if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
         {
             return [];
@@ -411,8 +410,6 @@ internal sealed class PptxRenderer
         bool FlipHorizontal,
         bool FlipVertical);
 
-    private readonly record struct RgbColor(byte Red, byte Green, byte Blue);
-
     private readonly record struct TextRun(
         string Text,
         double X,
@@ -424,7 +421,8 @@ internal sealed class PptxRenderer
         bool Bold,
         bool Italic,
         bool Underline,
-        TextAlignment Alignment);
+        TextAlignment Alignment,
+        string? FontFamily);
 
     private enum TextAlignment
     {

@@ -46,7 +46,7 @@ internal sealed class PptxReader
             slides.AddRange(relationships.Values.Select(r => new PptxSlide(r.ResolvedTarget!, slides.Count)));
         }
 
-        return new PptxDocument(slides, width, height);
+        return new PptxDocument(presentationPart.Name, slides, width, height);
     }
 
     private static OoxPart FindPresentationPart(OoxPackage package)

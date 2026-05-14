@@ -80,8 +80,8 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - [x] (2026-05-14) Implement simple Latin line breaking and text placement inside PPTX text boxes.
 - [x] (2026-05-14) Render PPTX text boxes into PDF using embedded fonts.
 - [x] (2026-05-14) Add PPTX text visual case and compare against PowerPoint.
-- [ ] Parse PPTX theme colors and resolve common scheme colors to RGB.
-- [ ] Parse PPTX theme fonts and use them when a text run asks for theme fonts.
+- [x] (2026-05-14) Parse PPTX theme colors and resolve common scheme colors to RGB.
+- [x] (2026-05-14) Parse PPTX theme fonts and use them when a text run asks for theme fonts.
 - [ ] Parse PPTX slide master and slide layout background and shape inheritance for common cases.
 - [ ] Render PPTX layout/master placeholders where visible and not overridden.
 - [ ] Add PPTX corporate-theme visual case.
@@ -178,6 +178,9 @@ This plan intentionally starts with a minimal vertical slice that produces valid
 - Observation: PPTX bold, italic, underline, and paragraph alignment can be represented with simple PDF approximations before full font-face selection exists.
   Evidence: `PptxSyntheticStyledTextProducesStyleOperators` verifies italic text matrices, underline line drawing, run color, and the bold double-draw approximation; the full test run now prints `19 passed, 0 failed`.
 
+- Observation: Common PPTX theme colors and theme Latin font references can be resolved without implementing full master/layout inheritance.
+  Evidence: `PptxSyntheticThemeColorsAndFontsResolve` adds a synthetic theme relationship, resolves `schemeClr` values such as `accent1` and `dk1`, resolves `+mn-lt` through the theme font scheme, and the full test run now prints `20 passed, 0 failed`.
+
 Examples of discoveries that belong here include: Office COM automation requiring a visible desktop session, PDFium output naming differing from expectations, a Microsoft font using an unexpected `cmap` format, a PPTX fixture storing shape colors through a theme rather than direct RGB, or Word producing an extra blank page due to section breaks.
 
 ## Decision Log
@@ -213,9 +216,9 @@ Examples of discoveries that belong here include: Office COM automation requirin
 ## Outcomes & Retrospective
 
 - Outcome: Phase 0, blank-page conversion, visual comparison scaffolding, and first simple PPTX shape rendering are implemented. The repository builds with `Lokad.OoxPdf.slnx`, the library has the planned public API shell, the CLI can produce PDFs for recognized PPTX and DOCX inputs, and the visual harness creates Office reference PNGs, candidate PDFs, PDFium candidate PNGs, comparison metrics, HTML indexes, and assessment files. VisualDiff writes `metrics.json` and `index.html`, reads common grayscale, indexed, RGB, and RGBA PNGs, and computes dimensions plus simple pixel metrics.
-  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` prints `19 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json` all complete successfully on this machine.
-  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, and simple Latin text runs with basic style approximations. PPTX theme colors/fonts, masters, images, DOCX text layout, and unsupported-feature diagnostics remain incomplete.
-  Next target: Implement PPTX theme color/font resolution, then expand toward image rendering.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` succeeds with 0 warnings and 0 errors. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --no-build` prints `20 passed, 0 failed`. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeds. `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/docx-blank/case.json`, `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-shapes/case.json`, and `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-text/case.json` all complete successfully on this machine.
+  Remaining gaps: Rendering covers simple PPTX solid backgrounds, rectangles, lines, ellipses, basic rotation/flip transforms, simple Latin text runs with basic style approximations, and common theme color/font references. PPTX masters, images, DOCX text layout, and unsupported-feature diagnostics remain incomplete.
+  Next target: Implement PPTX slide master/layout inheritance, then expand toward image rendering.
 
 ## Context and Orientation
 
