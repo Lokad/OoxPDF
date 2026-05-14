@@ -39,10 +39,11 @@ internal sealed class DocxReader
             .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
             .ToDictionary(r => r.Id, StringComparer.Ordinal);
         IReadOnlyList<DocxParagraph> paragraphs = ReadParagraphs(document, styles, numbering, package, relationships);
+        IReadOnlyList<DocxTable> tables = ReadTables(document);
 
         if (pageSize is null)
         {
-            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, paragraphs);
+            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, paragraphs, tables);
         }
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
@@ -57,7 +58,7 @@ internal sealed class DocxReader
         double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
-        return new DocxDocument(width, height, left, right, top, bottom, paragraphs);
+        return new DocxDocument(width, height, left, right, top, bottom, paragraphs, tables);
     }
 
     private static IReadOnlyList<DocxParagraph> ReadParagraphs(
@@ -115,6 +116,54 @@ internal sealed class DocxReader
         }
 
         return paragraphs;
+    }
+
+    private static IReadOnlyList<DocxTable> ReadTables(XDocument document)
+    {
+        var tables = new List<DocxTable>();
+        foreach (XElement table in document.Descendants(WordprocessingNamespace + "body").Elements(WordprocessingNamespace + "tbl"))
+        {
+            IReadOnlyList<double> columns = table
+                .Element(WordprocessingNamespace + "tblGrid")
+                ?.Elements(WordprocessingNamespace + "gridCol")
+                .Select(column => ReadTwipsAttribute(column, WordprocessingNamespace + "w") ?? 72d)
+                .ToArray() ?? [];
+            var rows = new List<DocxTableRow>();
+            foreach (XElement row in table.Elements(WordprocessingNamespace + "tr"))
+            {
+                var cells = new List<DocxTableCell>();
+                foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
+                {
+                    string text = string.Join(" ", cell
+                        .Descendants(WordprocessingNamespace + "p")
+                        .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
+                        .Where(t => t.Length != 0));
+                    string? fill = (string?)cell
+                        .Element(WordprocessingNamespace + "tcPr")
+                        ?.Element(WordprocessingNamespace + "shd")
+                        ?.Attribute(WordprocessingNamespace + "fill");
+                    cells.Add(new DocxTableCell(text, fill));
+                }
+
+                if (cells.Count > 0)
+                {
+                    rows.Add(new DocxTableRow(cells));
+                }
+            }
+
+            if (rows.Count > 0)
+            {
+                if (columns.Count == 0)
+                {
+                    int maxCells = rows.Max(r => r.Cells.Count);
+                    columns = Enumerable.Repeat(72d, maxCells).ToArray();
+                }
+
+                tables.Add(new DocxTable(columns, rows));
+            }
+        }
+
+        return tables;
     }
 
     private static IReadOnlyList<DocxInlineImage> ReadInlineImages(XElement run, OoxPackage package, IReadOnlyDictionary<string, OoxRelationship> relationships)

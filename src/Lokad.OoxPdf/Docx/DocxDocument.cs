@@ -7,10 +7,11 @@ internal sealed record DocxDocument(
     double MarginRightPoints,
     double MarginTopPoints,
     double MarginBottomPoints,
-    IReadOnlyList<DocxParagraph> Paragraphs)
+    IReadOnlyList<DocxParagraph> Paragraphs,
+    IReadOnlyList<DocxTable> Tables)
 {
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [])
     {
     }
 }
@@ -34,6 +35,12 @@ internal sealed record DocxTextRun(
     string? FontFamily);
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes);
+
+internal sealed record DocxTable(IReadOnlyList<double> ColumnWidthsPoints, IReadOnlyList<DocxTableRow> Rows);
+
+internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells);
+
+internal sealed record DocxTableCell(string Text, string? FillHex);
 
 internal enum DocxTextAlignment
 {

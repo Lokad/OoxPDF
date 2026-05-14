@@ -11,7 +11,7 @@ internal sealed class DocxRenderer
 {
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document)
     {
-        if (document.Paragraphs.Count == 0)
+        if (document.Paragraphs.Count == 0 && document.Tables.Count == 0)
         {
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
@@ -27,12 +27,20 @@ internal sealed class DocxRenderer
             .FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
         FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
         IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs.SelectMany(p => p.Runs).ToArray();
+        IEnumerable<int> tableRunes = document.Tables
+            .SelectMany(t => t.Rows)
+            .SelectMany(r => r.Cells)
+            .SelectMany(c => c.Text.EnumerateRunes().Select(rune => rune.Value));
         PdfEmbeddedFont? embedded = null;
         PdfFontResource? resource = null;
-        if (allRuns.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
+        IReadOnlyList<int> glyphs = allRuns
+            .SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value))
+            .Concat(tableRunes)
+            .ToArray();
+        if (glyphs.Count > 0 && resolution.FontFilePath is not null && File.Exists(resolution.FontFilePath))
         {
             OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
-            embedded = PdfEmbeddedFont.Create(font, allRuns.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
+            embedded = PdfEmbeddedFont.Create(font, glyphs);
             resource = new PdfFontResource("F1", embedded);
         }
 
@@ -127,12 +135,70 @@ internal sealed class DocxRenderer
             cursorY -= paragraph.SpacingAfterPoints;
         }
 
+        foreach (DocxTable table in document.Tables)
+        {
+            RenderTable(table, document, graphics, pageImages, resource, embedded, ref cursorY, x, width, FinishPage);
+        }
+
         if (HasPageContent(graphics, pageImages) || pages.Count == 0)
         {
             FinishPage();
         }
 
         return pages;
+    }
+
+    private static void RenderTable(
+        DocxTable table,
+        DocxDocument document,
+        PdfGraphicsBuilder graphics,
+        List<PdfImageResource> pageImages,
+        PdfFontResource? fontResource,
+        PdfEmbeddedFont? embedded,
+        ref double cursorY,
+        double x,
+        double availableWidth,
+        Action finishPage)
+    {
+        const double rowHeight = 28d;
+        double rawTableWidth = table.ColumnWidthsPoints.Sum();
+        double scale = rawTableWidth <= 0d ? 1d : Math.Min(1d, availableWidth / rawTableWidth);
+        double tableHeight = table.Rows.Count * rowHeight;
+        if (cursorY - tableHeight < document.MarginBottomPoints && HasPageContent(graphics, pageImages))
+        {
+            finishPage();
+        }
+
+        foreach (DocxTableRow row in table.Rows)
+        {
+            double cellX = x;
+            double cellY = cursorY - rowHeight;
+            for (int columnIndex = 0; columnIndex < row.Cells.Count; columnIndex++)
+            {
+                double cellWidth = table.ColumnWidthsPoints[Math.Min(columnIndex, table.ColumnWidthsPoints.Count - 1)] * scale;
+                DocxTableCell cell = row.Cells[columnIndex];
+                if (RgbColor.TryParse(cell.FillHex, out RgbColor fill))
+                {
+                    graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                    graphics.FillRectangle(cellX, cellY, cellWidth, rowHeight);
+                }
+
+                graphics.SetStrokeRgb(0, 0, 0);
+                graphics.SetLineWidth(0.75d);
+                graphics.StrokeRectangle(cellX, cellY, cellWidth, rowHeight);
+                if (embedded is not null && fontResource is not null && cell.Text.Length != 0)
+                {
+                    string glyphHex = embedded.EncodeGlyphHex(cell.Text);
+                    graphics.DrawGlyphText(fontResource.ResourceName, 11d, cellX + 4d, cursorY - 17d, 0, 0, 0, glyphHex);
+                }
+
+                cellX += cellWidth;
+            }
+
+            cursorY -= rowHeight;
+        }
+
+        cursorY -= 6d;
     }
 
     private static RgbColor ReadColor(string? hex)
