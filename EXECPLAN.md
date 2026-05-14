@@ -6,7 +6,7 @@ This ExecPlan is the current working plan for `Lokad.OoxPdf`. It intentionally o
 
 `Lokad.OoxPdf` is a dependency-free .NET library that converts `.pptx` and `.docx` OOXML documents to static PDF. The library must not call Office, PDFium, PowerShell, external executables, or third-party packages. Office and PDFium are allowed only in `tools/` for validation.
 
-The project is now past the initial vertical slice. The next phase is fidelity: use public visual cases as the implementation ladder, use private local-only documents only to discover missing Office features, and keep diagnostics honest when a feature is still missing.
+The project is now past the initial vertical slice. The next phase is fidelity: use Office-exported PDFs from public synthetic OOXML as the implementation oracle, inspect those PDFs and their raster output before changing renderer behavior, use private local-only documents only to discover missing Office features, and keep diagnostics honest when a feature is still missing.
 
 ## Repository Map
 
@@ -24,6 +24,19 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - `artifacts/`: ignored validation output.
 - `docs/`: user-facing public docs.
 
+## Reference Workflow
+
+Every PPTX and DOCX fidelity task should start from what Office actually emits, not from OOXML interpretation alone.
+
+1. Create or select the smallest public synthetic `.pptx` or `.docx` that isolates one feature.
+2. Export that file with Office to the reference PDF and inspect the PDF/raster output: page boxes, draw order, text positions, fills/strokes, images, and pagination.
+3. Render the same OOXML with `ooxpdf`, inspect the candidate PDF/raster output, and identify the smallest visible or structural difference.
+4. Implement the smallest renderer change that closes that difference without using private document content.
+5. Lock the case with a public visual manifest once it is pixel-perfect or as close as realistically possible.
+6. Revisit unit tests touched by the feature: keep tests that protect public API, diagnostics, parsing, safety, and deterministic PDF structure; rewrite brittle operator-position tests when Office-PDF inspection shows a better behavioral assertion.
+
+Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. Their Office PDFs may be inspected locally to identify generic gaps, but renderer changes should be driven by public synthetic fixtures unless a safety or diagnostics issue is involved.
+
 ## Progress
 
 - [x] Dependency-free `.slnx` solution, library, CLI, tests, visual tools, docs, public fixtures, and private validation lane exist.
@@ -33,6 +46,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] PDF writer emits deterministic static PDFs with pages, drawing operators, embedded TrueType/CID fonts, ToUnicode maps, JPEG passthrough, PNG image XObjects, and alpha soft masks.
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
+- [x] Public visual validation uses Office-exported PDFs/renders as the reference oracle; fidelity work should inspect the Office PDF/raster output before treating a metric as meaningful.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
 - [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines/rounded rectangles, connector lines with triangle arrowheads, down-arrow preset shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
@@ -274,7 +288,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 
 ### PPTX Synthetic Fidelity Ladder
 
-Build these as public, minimal, one-slide fixtures. Each rung must have an Office-rendered reference, candidate raster output, strict page/dimension checks, expected diagnostics, and a visual gate once the primitive is close. It is acceptable for private deck pages to regress while early rungs are rebuilt; the goal is a strict bottom-up progression.
+Build these as public, minimal, one-slide fixtures. Each rung must start with Office PDF/raster inspection, then compare the candidate PDF/raster output, then receive strict page/dimension checks, expected diagnostics, and a visual gate once the primitive is close. It is acceptable for private deck pages to regress while early rungs are rebuilt; the goal is a strict bottom-up progression.
 
 - [x] Ladder 0: blank slide, page size, white/default background, deterministic PDF bytes, and no diagnostics.
 - [x] Ladder 1: solid slide backgrounds and master/layout background inheritance in isolation.
@@ -291,6 +305,7 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - [ ] Ladder 12: effects and advanced fills: transparency, gradients, pattern fills, shadows, glows, soft edges, picture fills, and explicit diagnostics for unsupported effects.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive fixture text, images, layout, or styling from private documents.
 - [ ] Run the relevant public visual case after each rung change; run private PPTX only as feature-discovery smoke evidence until the public ladder is much more complete.
+- [ ] Revisit PPTX unit tests under the Office-PDF-first workflow: keep parser/safety/API tests, keep deterministic low-level PDF writer tests, but replace brittle renderer operator-position assertions with public visual gates or assertions derived from inspected Office reference geometry.
 
 ### PPTX Private Deck Recovery Plan
 
@@ -320,6 +335,20 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - [ ] Footnotes/endnotes/comments: render bodies or emit precise diagnostics with usable fallback behavior.
 - [ ] Tracked changes: choose final, original, or marked-up view explicitly and document the behavior.
 - [ ] Multi-column layout, text boxes, sidebars, bookmarks, hyperlinks, outlines, and document properties.
+
+### DOCX Synthetic Fidelity Ladder
+
+Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, synthetic, minimal, Office-PDF-inspected, visually gated when close, and free of private content.
+
+- [ ] Ladder 0: blank document, page size, margins, deterministic PDF structure, and no diagnostics.
+- [ ] Ladder 1: plain paragraphs with Word reference baselines, line height, paragraph before/after spacing, and page margins.
+- [ ] Ladder 2: run styling: bold/italic face selection, underline, strikethrough, color, highlight, superscript/subscript, and font fallback.
+- [ ] Ladder 3: paragraph layout: tabs/tab stops, indents, hanging indents, alignment, spacing collapse, nonbreaking spaces, soft line breaks, and manual page breaks.
+- [ ] Ladder 4: numbering and bullets: label area, hanging indents, level text expansion, restart/start rules, symbol bullets, and multi-level lists.
+- [ ] Ladder 5: tables: grid widths, preferred widths, cell margins, row height from content, borders, shading, vertical alignment, merged cells, and page breaks.
+- [ ] Ladder 6: images and drawings: inline images, anchored/floating drawings, wrap modes, cropping, rotation, shapes, and unsupported drawing diagnostics.
+- [ ] Ladder 7: headers/footers and fields: first/odd/even variants, section variants, PAGE/NUMPAGES/date/property fields, and distance from edge.
+- [ ] Revisit DOCX unit tests under the Office-PDF-first workflow: prefer assertions about parsed model, diagnostics, page counts, public API, and visual gates over fragile text-coordinate/operator expectations where Word PDF inspection gives the real behavior.
 
 ### DOCX 16-vs-17 Page Mismatch Plan
 
@@ -359,11 +388,11 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 
 ## Next Implementation Targets
 
-1. Continue PPTX Ladder 4 bottom-up: split combined styled-text cases into smaller public fixtures, tighten each fixture toward near pixel-perfect output, and only then revisit larger combinations.
-2. Use `lokad-value-based` only to discover public-safe feature gaps. Do not optimize for private-deck MAE or changed-pixel ratios while the public ladder is incomplete.
-3. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest public synthetic fixture first.
-4. Start DOCX table recovery for `user-requirements-spec`: table inventory/trace first, then width resolution, row-height/content wrapping, and styling.
-5. Continue DOCX page geometry/pagination work using the 16-vs-17 page mismatch plan: trace drift first, then address style spacing, numbering indents, table sizing, and keep rules piecewise.
+1. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list renderer tests that should be replaced or complemented by public visual fixtures.
+2. Continue PPTX Ladder 4 bottom-up: inspect the Office reference PDF/raster for each minimal styled-text fixture, tighten each fixture toward near pixel-perfect output, and only then revisit larger combinations.
+3. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for blank/plain paragraph/table primitives, then add visual gates.
+4. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not optimize for private MAE or changed-pixel ratios while public ladders are incomplete.
+5. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest public synthetic fixture first.
 
 ## Decisions
 
@@ -373,9 +402,10 @@ Build these as public, minimal, one-slide fixtures. Each rung must have an Offic
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated as acceptable final behavior.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
+- Office-exported PDFs are the primary fidelity reference. Raster metrics are useful gates after manual/agent inspection confirms the candidate is targeting the same Office behavior.
 - PPTX fidelity is bottom-up: minimal public synthetic fixtures are made close to pixel-perfect and gated before larger public combinations or private documents matter.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation targets.
-- DOCX fidelity still proceeds one private page at a time until a comparable public DOCX ladder exists. Convert each generic private failure into a public synthetic test where feasible.
+- DOCX fidelity should move to the same Office-PDF-first public ladder as PPTX. Private pages remain acceptance evidence and gap discovery, not the main implementation driver.
 
 ## Validation
 
@@ -390,7 +420,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-80 passed, 0 failed
+83 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and DOCX blank/basic paragraphs/numbering/images/tables/headers-footers.
