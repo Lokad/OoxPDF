@@ -60,6 +60,18 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x2)).Append(' ').Append(N(y2)).AppendLine(" l S");
     }
 
+    public void FillPolygon((double X, double Y)[] points)
+    {
+        AppendPolygonPath(points);
+        builder.AppendLine("f");
+    }
+
+    public void StrokePolygon((double X, double Y)[] points)
+    {
+        AppendPolygonPath(points);
+        builder.AppendLine("S");
+    }
+
     public void FillEllipse(double x, double y, double width, double height)
     {
         AppendEllipsePath(x, y, width, height);
@@ -127,6 +139,22 @@ internal sealed class PdfGraphicsBuilder
         Curve(cx - ox, cy + ry, cx - rx, cy + oy, cx - rx, cy);
         Curve(cx - rx, cy - oy, cx - ox, cy - ry, cx, cy - ry);
         Curve(cx + ox, cy - ry, cx + rx, cy - oy, cx + rx, cy);
+        builder.AppendLine("h");
+    }
+
+    private void AppendPolygonPath((double X, double Y)[] points)
+    {
+        if (points.Length == 0)
+        {
+            return;
+        }
+
+        builder.Append(N(points[0].X)).Append(' ').Append(N(points[0].Y)).AppendLine(" m");
+        for (int i = 1; i < points.Length; i++)
+        {
+            builder.Append(N(points[i].X)).Append(' ').Append(N(points[i].Y)).AppendLine(" l");
+        }
+
         builder.AppendLine("h");
     }
 

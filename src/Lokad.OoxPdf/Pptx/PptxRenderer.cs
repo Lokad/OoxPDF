@@ -188,18 +188,29 @@ internal sealed class PptxRenderer
 
     private static void RenderShapeContainer(XElement container, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform transform, bool renderPlaceholders)
     {
-        foreach (XElement shape in container.Elements(PresentationNamespace + "sp"))
+        foreach (XElement child in container.Elements())
         {
-            if (renderPlaceholders || !IsPlaceholder(shape))
+            if (child.Name == PresentationNamespace + "sp")
             {
-                RenderShape(shape, document, graphics, theme, transform);
-            }
-        }
+                if (renderPlaceholders || !IsPlaceholder(child))
+                {
+                    RenderShape(child, document, graphics, theme, transform);
+                }
 
-        foreach (XElement group in container.Elements(PresentationNamespace + "grpSp"))
-        {
-            GroupTransform childTransform = transform.Combine(ReadGroupTransform(group));
-            RenderShapeContainer(group, document, graphics, theme, childTransform, renderPlaceholders);
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "cxnSp")
+            {
+                RenderShape(child, document, graphics, theme, transform);
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "grpSp")
+            {
+                GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
+                RenderShapeContainer(child, document, graphics, theme, childTransform, renderPlaceholders);
+            }
         }
     }
 
@@ -262,6 +273,10 @@ internal sealed class PptxRenderer
             {
                 graphics.FillEllipse(x, y, width, height);
             }
+            else if (preset == "downArrow")
+            {
+                graphics.FillPolygon(CreateDownArrowPoints(x, y, width, height));
+            }
             else
             {
                 graphics.FillRectangle(x, y, width, height);
@@ -276,6 +291,10 @@ internal sealed class PptxRenderer
             {
                 graphics.StrokeEllipse(x, y, width, height);
             }
+            else if (preset == "downArrow")
+            {
+                graphics.StrokePolygon(CreateDownArrowPoints(x, y, width, height));
+            }
             else
             {
                 graphics.StrokeRectangle(x, y, width, height);
@@ -286,6 +305,20 @@ internal sealed class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)
+    {
+        return
+        [
+            (x + width * 0.25d, y + height),
+            (x + width * 0.75d, y + height),
+            (x + width * 0.75d, y + height * 0.45d),
+            (x + width, y + height * 0.45d),
+            (x + width * 0.5d, y),
+            (x, y + height * 0.45d),
+            (x + width * 0.25d, y + height * 0.45d)
+        ];
     }
 
     private static IReadOnlyList<TextRun> RenderTables(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)

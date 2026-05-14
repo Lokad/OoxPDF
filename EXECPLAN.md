@@ -34,7 +34,7 @@ The project is now past the initial vertical slice. The next phase is fidelity: 
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can render Office references, rasterize candidate PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, rotation/flip, common theme colors/fonts, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, vertical anchoring, clipping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic rectangles/ellipses/lines, connector lines, down-arrow preset shapes, rotation/flip, common theme colors/fonts, theme discovery through presentation or slide master relationships, common scheme color aliases, common master/layout inheritance, text boxes with body insets, line breaks, basic tab advances, direct bullet characters, paragraph spacing, vertical anchoring, clipping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms, fixed-grid tables, static bar-chart fallback, and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before, exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body order with explicit row heights and row-level page breaks, default headers/footers, page number approximation, and unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual page/column breaks, direct and style-level keep/widow rules, style spacing variants, numbering indents, table styles/header rows, and paragraph section breaks.
 - [x] PNG support covers non-interlaced RGB/RGBA, 8-bit grayscale, 8-bit indexed color, and packed low-bit-depth indexed color.
@@ -110,6 +110,11 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - Private PPTX slide-2 rerun `artifacts/private-visual/lokad-value-based/20260514-195905`:
   - Mixed-run cursor advance now uses resolved font metrics instead of character-count heuristics.
   - Remaining slide-2 gaps are mostly font availability/substitution, exact text fit, and highlight/underline bounds.
+- Private PPTX slide-3 rerun `artifacts/private-visual/lokad-value-based/20260514-200756`:
+  - Connector line shapes and the down-arrow preset now render instead of being omitted or approximated as a rectangle.
+  - 84 candidate pages, all dimensions matched reference pages.
+  - Mean absolute error: `15.755963`; max mean absolute error: `75.403370`; mean changed-pixel ratio at threshold 16: `0.174249`.
+  - Remaining slide-3 generic gaps include inherited banner fidelity, text-frame wrapping/overlap, fine text metrics, line/fill color transforms, and icon/image placement precision.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -156,7 +161,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
 - [ ] Text layout: preserve spaces, tabs, line breaks, soft line breaks, kerning-like advances, font fallback, mixed run spacing, character spacing, superscript/subscript, and baseline offsets.
 - [ ] Text frames: overflow behavior beyond hard clipping, autofit, shrink-to-fit, multi-column text, text rotation, and text inside arbitrary shapes.
 - [ ] Fonts: select bold/italic faces instead of drawing approximations; support fallback fonts, embedded fonts, complex scripts, and bidirectional text.
-- [ ] Shapes: more preset geometries, freeform paths, connectors, arrows, callouts, rounded rectangles, custom geometry, compound paths, and accurate line joins/caps/dashes.
+- [ ] Shapes: more preset geometries, freeform paths, callouts, rounded rectangles, custom geometry, compound paths, and accurate line joins/caps/dashes.
 - [ ] Fills/effects: transparency, gradients, pattern fills, picture fills, shadows, glows, reflections, blur, soft edges, and 3D effects.
 - [ ] Images: placeholder-bound image placement, crop modes, rotation/flip interactions, recolor/duotone, transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text inside cells, and precise row/column sizing.
