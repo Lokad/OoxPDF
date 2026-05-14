@@ -45,5 +45,6 @@ return TestRunner.Run(
     ImagingTests.PngImageReadsIndexedPalettePixels,
     ImagingTests.PngImageReadsPackedIndexedPalettePixels,
     ImagingTests.PngImageReadsGrayscalePixels,
+    ImagingTests.PngImageReadsAdam7TruecolorAlphaPixels,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);

@@ -104,16 +104,46 @@ internal static class TestFixtures
         return CreatePng(width, height, 0, null, null, samples, 1);
     }
 
-    public static byte[] CreateUnsupportedInterlacedPng()
+    public static byte[] CreateInterlacedRgbaPng(int width, int height, byte[] rgba)
+    {
+        using var raw = new MemoryStream();
+        int[] startX = [0, 4, 0, 2, 0, 1, 0];
+        int[] startY = [0, 0, 4, 0, 2, 0, 1];
+        int[] stepX = [8, 8, 4, 4, 2, 2, 1];
+        int[] stepY = [8, 8, 8, 4, 4, 2, 2];
+        for (int pass = 0; pass < 7; pass++)
+        {
+            int passWidth = Adam7Size(width, startX[pass], stepX[pass]);
+            int passHeight = Adam7Size(height, startY[pass], stepY[pass]);
+            if (passWidth == 0 || passHeight == 0)
+            {
+                continue;
+            }
+
+            for (int row = 0; row < passHeight; row++)
+            {
+                raw.WriteByte(0);
+                int y = startY[pass] + row * stepY[pass];
+                for (int x = 0; x < passWidth; x++)
+                {
+                    int finalX = startX[pass] + x * stepX[pass];
+                    raw.Write(rgba.AsSpan((y * width + finalX) * 4, 4));
+                }
+            }
+        }
+
+        return CreatePngFromRaw(width, height, 6, 8, interlace: 1, null, null, raw.ToArray());
+    }
+
+    public static byte[] CreateUnsupportedHighBitDepthPng()
     {
         using var stream = new MemoryStream();
         stream.Write([137, 80, 78, 71, 13, 10, 26, 10]);
         Span<byte> ihdr = stackalloc byte[13];
         WriteInt32(ihdr[..4], 1);
         WriteInt32(ihdr.Slice(4, 4), 1);
-        ihdr[8] = 8;
+        ihdr[8] = 16;
         ihdr[9] = 6;
-        ihdr[12] = 1;
         WritePngChunk(stream, "IHDR", ihdr);
         WritePngChunk(stream, "IEND", []);
         return stream.ToArray();
@@ -126,24 +156,6 @@ internal static class TestFixtures
 
     private static byte[] CreatePng(int width, int height, byte colorType, byte bitDepth, byte[]? palette, byte[]? transparency, byte[] samples, int rowBytes)
     {
-        using var stream = new MemoryStream();
-        stream.Write([137, 80, 78, 71, 13, 10, 26, 10]);
-        Span<byte> ihdr = stackalloc byte[13];
-        WriteInt32(ihdr[..4], width);
-        WriteInt32(ihdr.Slice(4, 4), height);
-        ihdr[8] = bitDepth;
-        ihdr[9] = colorType;
-        WritePngChunk(stream, "IHDR", ihdr);
-        if (palette is not null)
-        {
-            WritePngChunk(stream, "PLTE", palette);
-        }
-
-        if (transparency is not null)
-        {
-            WritePngChunk(stream, "tRNS", transparency);
-        }
-
         byte[] raw = new byte[height * (1 + rowBytes)];
         int source = 0;
         int target = 0;
@@ -156,6 +168,30 @@ internal static class TestFixtures
             }
         }
 
+        return CreatePngFromRaw(width, height, colorType, bitDepth, interlace: 0, palette, transparency, raw);
+    }
+
+    private static byte[] CreatePngFromRaw(int width, int height, byte colorType, byte bitDepth, byte interlace, byte[]? palette, byte[]? transparency, byte[] raw)
+    {
+        using var stream = new MemoryStream();
+        stream.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+        Span<byte> ihdr = stackalloc byte[13];
+        WriteInt32(ihdr[..4], width);
+        WriteInt32(ihdr.Slice(4, 4), height);
+        ihdr[8] = bitDepth;
+        ihdr[9] = colorType;
+        ihdr[12] = interlace;
+        WritePngChunk(stream, "IHDR", ihdr);
+        if (palette is not null)
+        {
+            WritePngChunk(stream, "PLTE", palette);
+        }
+
+        if (transparency is not null)
+        {
+            WritePngChunk(stream, "tRNS", transparency);
+        }
+
         using var compressed = new MemoryStream();
         using (var zlib = new ZLibStream(compressed, CompressionLevel.Fastest, leaveOpen: true))
         {
@@ -165,6 +201,11 @@ internal static class TestFixtures
         WritePngChunk(stream, "IDAT", compressed.ToArray());
         WritePngChunk(stream, "IEND", []);
         return stream.ToArray();
+    }
+
+    private static int Adam7Size(int size, int start, int step)
+    {
+        return size <= start ? 0 : (size - start + step - 1) / step;
     }
 
     private static void WritePngChunk(Stream stream, string type, ReadOnlySpan<byte> data)

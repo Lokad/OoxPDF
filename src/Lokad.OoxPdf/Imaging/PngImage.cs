@@ -5,6 +5,10 @@ namespace Lokad.OoxPdf.Imaging;
 internal sealed class PngImage
 {
     private static readonly byte[] Signature = [137, 80, 78, 71, 13, 10, 26, 10];
+    private static readonly int[] Adam7StartX = [0, 4, 0, 2, 0, 1, 0];
+    private static readonly int[] Adam7StartY = [0, 0, 4, 0, 2, 0, 1];
+    private static readonly int[] Adam7StepX = [8, 8, 4, 4, 2, 2, 1];
+    private static readonly int[] Adam7StepY = [8, 8, 8, 4, 4, 2, 2];
 
     private PngImage(int width, int height, byte[] rgb, byte[]? alpha)
     {
@@ -33,6 +37,7 @@ internal sealed class PngImage
         int height = 0;
         int bitDepth = 0;
         int colorType = 0;
+        int interlace = 0;
         byte[]? palette = null;
         byte[]? transparency = null;
         using var idat = new MemoryStream();
@@ -51,8 +56,8 @@ internal sealed class PngImage
                 height = ReadInt32(data[4..]);
                 bitDepth = data[8];
                 colorType = data[9];
-                byte interlace = data[12];
-                if (!IsSupportedFormat(bitDepth, colorType) || interlace != 0)
+                interlace = data[12];
+                if (!IsSupportedFormat(bitDepth, colorType) || interlace is not (0 or 1))
                 {
                     throw new NotSupportedException($"Unsupported PNG format: bitDepth={bitDepth}, colorType={colorType}, interlace={interlace}.");
                 }
@@ -80,7 +85,7 @@ internal sealed class PngImage
         using var output = new MemoryStream();
         zlib.CopyTo(output);
 
-        return Decode(output.ToArray(), width, height, bitDepth, colorType, palette, transparency);
+        return Decode(output.ToArray(), width, height, bitDepth, colorType, interlace, palette, transparency);
     }
 
     private static bool IsSupportedFormat(int bitDepth, int colorType)
@@ -96,7 +101,7 @@ internal sealed class PngImage
         };
     }
 
-    private static PngImage Decode(byte[] decompressed, int width, int height, int bitDepth, int colorType, byte[]? palette, byte[]? transparency)
+    private static PngImage Decode(byte[] decompressed, int width, int height, int bitDepth, int colorType, int interlace, byte[]? palette, byte[]? transparency)
     {
         if (colorType == 3 && (palette is null || palette.Length % 3 != 0))
         {
@@ -112,14 +117,18 @@ internal sealed class PngImage
             _ => throw new NotSupportedException($"Unsupported PNG color type {colorType}.")
         };
         int filterBytesPerPixel = Math.Max(1, (bitsPerPixel + 7) / 8);
+        var rgb = new byte[width * height * 3];
+        byte[]? alpha = colorType is 3 or 4 or 6 || HasGrayscaleTransparency(colorType, transparency) ? new byte[width * height] : null;
+        if (interlace == 1)
+        {
+            DecodeAdam7(decompressed, width, height, bitDepth, colorType, bitsPerPixel, filterBytesPerPixel, palette, transparency, rgb, alpha);
+            return new PngImage(width, height, rgb, alpha);
+        }
+
         int stride = (width * bitsPerPixel + 7) / 8;
         var previous = new byte[stride];
         var current = new byte[stride];
-        var rgb = new byte[width * height * 3];
-        byte[]? alpha = colorType is 3 or 4 or 6 || HasGrayscaleTransparency(colorType, transparency) ? new byte[width * height] : null;
         int source = 0;
-        int rgbTarget = 0;
-        int alphaTarget = 0;
         for (int y = 0; y < height; y++)
         {
             byte filter = decompressed[source++];
@@ -128,7 +137,7 @@ internal sealed class PngImage
             Unfilter(filter, current, previous, filterBytesPerPixel);
             for (int x = 0; x < width; x++)
             {
-                DecodePixel(bitDepth, colorType, current, x, palette, transparency, rgb, ref rgbTarget, alpha, ref alphaTarget);
+                WritePixel(bitDepth, colorType, current, x, y * width + x, palette, transparency, rgb, alpha);
             }
 
             (previous, current) = (current, previous);
@@ -138,8 +147,50 @@ internal sealed class PngImage
         return new PngImage(width, height, rgb, alpha);
     }
 
-    private static void DecodePixel(int bitDepth, int colorType, byte[] current, int x, byte[]? palette, byte[]? transparency, byte[] rgb, ref int rgbTarget, byte[]? alpha, ref int alphaTarget)
+    private static void DecodeAdam7(byte[] decompressed, int width, int height, int bitDepth, int colorType, int bitsPerPixel, int filterBytesPerPixel, byte[]? palette, byte[]? transparency, byte[] rgb, byte[]? alpha)
     {
+        int source = 0;
+        for (int pass = 0; pass < 7; pass++)
+        {
+            int passWidth = Adam7Size(width, Adam7StartX[pass], Adam7StepX[pass]);
+            int passHeight = Adam7Size(height, Adam7StartY[pass], Adam7StepY[pass]);
+            if (passWidth == 0 || passHeight == 0)
+            {
+                continue;
+            }
+
+            int stride = (passWidth * bitsPerPixel + 7) / 8;
+            var previous = new byte[stride];
+            var current = new byte[stride];
+            for (int row = 0; row < passHeight; row++)
+            {
+                byte filter = decompressed[source++];
+                decompressed.AsSpan(source, stride).CopyTo(current);
+                source += stride;
+                Unfilter(filter, current, previous, filterBytesPerPixel);
+
+                int y = Adam7StartY[pass] + row * Adam7StepY[pass];
+                for (int x = 0; x < passWidth; x++)
+                {
+                    int finalX = Adam7StartX[pass] + x * Adam7StepX[pass];
+                    WritePixel(bitDepth, colorType, current, x, y * width + finalX, palette, transparency, rgb, alpha);
+                }
+
+                (previous, current) = (current, previous);
+                Array.Clear(current);
+            }
+        }
+    }
+
+    private static int Adam7Size(int size, int start, int step)
+    {
+        return size <= start ? 0 : (size - start + step - 1) / step;
+    }
+
+    private static void WritePixel(int bitDepth, int colorType, byte[] current, int x, int pixelIndex, byte[]? palette, byte[]? transparency, byte[] rgb, byte[]? alpha)
+    {
+        int rgbTarget = pixelIndex * 3;
+        int alphaTarget = pixelIndex;
         switch (colorType)
         {
             case 0:

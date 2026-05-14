@@ -514,7 +514,7 @@ internal static class PptxTests
                   </p:pic></p:spTree></p:cSld>
                 </p:sld>
                 """),
-            ["ppt/media/image1.png"] = TestFixtures.CreateUnsupportedInterlacedPng()
+            ["ppt/media/image1.png"] = TestFixtures.CreateUnsupportedHighBitDepthPng()
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
         var collector = new DiagnosticCollector();
