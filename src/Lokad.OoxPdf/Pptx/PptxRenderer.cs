@@ -243,6 +243,7 @@ internal sealed class PptxRenderer
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
+                TextAlignment alignment = ReadAlignment(paragraph);
                 double cursorX = x + 4d;
                 double maxFontSize = 18d;
                 foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
@@ -261,7 +262,11 @@ internal sealed class PptxRenderer
                     RgbColor color = TryReadSolidColor(runProperties, out RgbColor runColor)
                         ? runColor
                         : new RgbColor(0, 0, 0);
-                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color));
+                    bool bold = ParseOptionalBoolAttribute(runProperties, "b");
+                    bool italic = ParseOptionalBoolAttribute(runProperties, "i");
+                    bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
+                        && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+                    runs.Add(new TextRun(text, cursorX, cursorY, width, height, fontSize, color, bold, italic, underline, alignment));
                     cursorX += text.Length * fontSize * 0.55d;
                 }
 
@@ -311,7 +316,26 @@ internal sealed class PptxRenderer
             string glyphHex = embedded.EncodeGlyphHex(line);
             if (glyphHex.Length != 0)
             {
-                graphics.DrawGlyphText("F1", run.FontSize, run.X, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex);
+                double lineWidth = embedded.MeasureTextPoints(line, run.FontSize);
+                double x = run.Alignment switch
+                {
+                    TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
+                    TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
+                    _ => run.X
+                };
+
+                graphics.DrawGlyphText("F1", run.FontSize, x, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
+                if (run.Bold)
+                {
+                    graphics.DrawGlyphText("F1", run.FontSize, x + 0.35d, cursorY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, run.Italic);
+                }
+
+                if (run.Underline)
+                {
+                    graphics.SetStrokeRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    graphics.SetLineWidth(Math.Max(0.5d, run.FontSize / 18d));
+                    graphics.StrokeLine(x, cursorY - run.FontSize * 0.12d, x + lineWidth, cursorY - run.FontSize * 0.12d);
+                }
             }
 
             cursorY -= lineHeight;
@@ -362,6 +386,22 @@ internal sealed class PptxRenderer
         return value is not null && (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool ParseOptionalBoolAttribute(XElement? element, string name)
+    {
+        return element is not null && ParseBoolAttribute(element, name);
+    }
+
+    private static TextAlignment ReadAlignment(XElement paragraph)
+    {
+        string? value = (string?)paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn");
+        return value switch
+        {
+            "ctr" => TextAlignment.Center,
+            "r" => TextAlignment.Right,
+            _ => TextAlignment.Left
+        };
+    }
+
     private readonly record struct ShapeBounds(
         long X,
         long Y,
@@ -380,5 +420,16 @@ internal sealed class PptxRenderer
         double Width,
         double Height,
         double FontSize,
-        RgbColor Color);
+        RgbColor Color,
+        bool Bold,
+        bool Italic,
+        bool Underline,
+        TextAlignment Alignment);
+
+    private enum TextAlignment
+    {
+        Left,
+        Center,
+        Right
+    }
 }

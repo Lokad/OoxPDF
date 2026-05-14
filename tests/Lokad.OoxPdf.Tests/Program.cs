@@ -16,6 +16,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticShapesProduceDrawingOperators,
     PptxTests.PptxSyntheticRotatedShapeProducesTransform,
     PptxTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs,
+    PptxTests.PptxSyntheticStyledTextProducesStyleOperators,
     DocxTests.DocxSyntheticDocumentProducesOnePdfPage,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs);
