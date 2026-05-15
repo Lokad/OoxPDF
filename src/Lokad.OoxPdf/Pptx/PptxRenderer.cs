@@ -1712,16 +1712,9 @@ internal sealed class PptxRenderer
             foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
             {
                 XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                string text = ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, null);
-                if (text.Length == 0)
-                {
-                    continue;
-                }
-
                 double fontSize = runProperties?.Attribute("sz") is { } size
                     ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                     : 12d;
-                maxFontSize = Math.Max(maxFontSize, fontSize);
                 double alpha = 1d;
                 RgbColor color;
                 if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
@@ -1741,9 +1734,19 @@ internal sealed class PptxRenderer
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
-                double advance = advanceEstimator.Measure(text, fontSize, typeface, bold, italic, characterSpacing: 0d);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface));
-                cursorX += advance;
+                foreach (TextCapsFragment fragment in ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, null))
+                {
+                    if (fragment.Text.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    double fragmentFontSize = fontSize * fragment.FontScale;
+                    maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
+                    double advance = advanceEstimator.Measure(fragment.Text, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
+                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface));
+                    cursorX += advance;
+                }
             }
 
             cursorY -= maxFontSize * 1.2d;
@@ -2078,12 +2081,6 @@ internal sealed class PptxRenderer
 
                     XElement run = child;
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                    string text = ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, defaultRunProperties);
-                    if (text.Length == 0)
-                    {
-                        continue;
-                    }
-
                     double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
                     maxFontSize = Math.Max(maxFontSize, nominalFontSize);
                     double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
@@ -2135,34 +2132,43 @@ internal sealed class PptxRenderer
                         bulletPending = false;
                     }
 
-                    foreach (string segment in SplitFlowSegments(text))
+                    foreach (TextCapsFragment fragment in ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, defaultRunProperties))
                     {
-                        string currentSegment = segment;
-                        double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic, characterSpacing);
-                        bool overflowsLine = cursorX > paragraphTextX &&
-                            (cursorX + segmentWidth > textX + textWidth ||
-                                (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fontSize));
-                        if (overflowsLine)
-                        {
-                            AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                            paragraphRuns.Clear();
-                            cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
-                            cursorY = cursorLineTop - LineBaselineOffset(fontSize, lineSpacing);
-                            cursorX = paragraphTextX;
-                            paragraphEndX = paragraphTextX;
-                            maxFontSize = fontSize;
-                            currentSegment = currentSegment.TrimStart();
-                            segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic, characterSpacing);
-                        }
-
-                        if (currentSegment.Length == 0)
+                        if (fragment.Text.Length == 0)
                         {
                             continue;
                         }
 
-                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
-                        cursorX += segmentWidth;
-                        paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                        double fragmentFontSize = fontSize * fragment.FontScale;
+                        foreach (string segment in SplitFlowSegments(fragment.Text))
+                        {
+                            string currentSegment = segment;
+                            double segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                            bool overflowsLine = cursorX > paragraphTextX &&
+                                (cursorX + segmentWidth > textX + textWidth ||
+                                    (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
+                            if (overflowsLine)
+                            {
+                                AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
+                                paragraphRuns.Clear();
+                                cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
+                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, lineSpacing);
+                                cursorX = paragraphTextX;
+                                paragraphEndX = paragraphTextX;
+                                maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
+                                currentSegment = currentSegment.TrimStart();
+                                segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                            }
+
+                            if (currentSegment.Length == 0)
+                            {
+                                continue;
+                            }
+
+                            paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
+                            cursorX += segmentWidth;
+                            paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                        }
                     }
                 }
 
@@ -2443,12 +2449,46 @@ internal sealed class PptxRenderer
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)
+    private static IReadOnlyList<TextCapsFragment> ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)
     {
         string? value = (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
-        return value is "all"
-            ? text.ToUpperInvariant()
-            : text;
+        if (text.Length == 0)
+        {
+            return [];
+        }
+
+        if (value is "all")
+        {
+            return [new TextCapsFragment(text.ToUpperInvariant(), 1d)];
+        }
+
+        if (value is not "small")
+        {
+            return [new TextCapsFragment(text, 1d)];
+        }
+
+        var fragments = new List<TextCapsFragment>();
+        var builder = new StringBuilder();
+        bool? currentSmall = null;
+        foreach (char character in text)
+        {
+            bool isSmall = char.IsLetter(character) && char.IsLower(character);
+            if (currentSmall is not null && currentSmall != isSmall)
+            {
+                fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? 0.8d : 1d));
+                builder.Clear();
+            }
+
+            currentSmall = isSmall;
+            builder.Append(char.ToUpperInvariant(character));
+        }
+
+        if (builder.Length > 0 && currentSmall is not null)
+        {
+            fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? 0.8d : 1d));
+        }
+
+        return fragments;
     }
 
     private static TextInsets ReadTextInsets(XElement textBody)
@@ -3384,6 +3424,8 @@ internal sealed class PptxRenderer
         bool Strike,
         TextAlignment Alignment,
         string? FontFamily);
+
+    private readonly record struct TextCapsFragment(string Text, double FontScale);
 
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 

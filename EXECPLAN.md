@@ -629,6 +629,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs,
   bullet hanging indents, paragraph spacing, and line spacing.
 - [x] Ladder 4 subcase `pptx-ladder-04-all-caps` is near-exact at MAE `0.003613`, changed16 `0.000113`.
+- [x] Ladder 4 small-caps runs split lowercase text into scaled uppercase fragments on the same baseline.
+- [x] Ladder 4 gate `pptx-ladder-04-small-caps` is at MAE `0.177228`, changed16 `0.001463`.
 - [x] Ladder 4 subcase `pptx-ladder-04-character-spacing` performs expanded-spacing line breaking during
   layout and emits Office-like `TJ` per-glyph tracking arrays instead of draw-time `Tc`.
 - [x] Ladder 4 gate `pptx-ladder-04-character-spacing` is at MAE `0.165546`, changed16 `0.001458`.
@@ -1010,7 +1012,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-91 passed, 0 failed
+92 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
