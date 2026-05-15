@@ -1046,6 +1046,7 @@ internal sealed class PptxRenderer
                 continue;
             }
 
+            bounds = ReadAncestorGroupTransform(shape).Apply(bounds.Value);
             double x = OoxUnits.EmuToPoints(bounds.Value.X);
             double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
             double width = OoxUnits.EmuToPoints(bounds.Value.Width);
@@ -1209,6 +1210,17 @@ internal sealed class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static GroupTransform ReadAncestorGroupTransform(XElement shape)
+    {
+        GroupTransform transform = GroupTransform.Identity;
+        foreach (XElement group in shape.Ancestors(PresentationNamespace + "grpSp").Reverse())
+        {
+            transform = transform.Combine(ReadGroupTransform(group));
+        }
+
+        return transform;
     }
 
     private static ShapeBounds? FindInheritedPlaceholderBounds(XElement shape, IReadOnlyList<XDocument> placeholderSources)
