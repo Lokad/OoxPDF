@@ -1920,8 +1920,13 @@ internal sealed class PptxRenderer
 
     private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing)
     {
-        return lineSpacing.IsAbsolute
-            ? Math.Max(BaselineOffset(fontSize), lineSpacing.Value - fontSize * 0.374d)
+        if (lineSpacing.IsAbsolute)
+        {
+            return Math.Max(BaselineOffset(fontSize), lineSpacing.Value - fontSize * 0.374d);
+        }
+
+        return lineSpacing.IsExplicit
+            ? lineSpacing.Resolve(fontSize) - fontSize * 0.234d
             : BaselineOffset(fontSize);
     }
 
@@ -2639,7 +2644,7 @@ internal sealed class PptxRenderer
 
         public double Resolve(double fontSize)
         {
-            return IsAbsolute ? Value : fontSize * Value;
+            return IsAbsolute ? Value : fontSize * Value * 1.2d;
         }
     }
 

@@ -822,8 +822,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 36 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.336 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 393.336 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 429.624 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 386.424 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesShapeFontRefColor()
@@ -970,7 +970,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 434.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 435.012 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxSkipsEmptyParagraphs()
