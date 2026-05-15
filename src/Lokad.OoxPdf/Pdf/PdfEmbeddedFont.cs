@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
 
@@ -33,7 +34,8 @@ internal sealed class PdfEmbeddedFont
             }
         }
 
-        return new PdfEmbeddedFont(font, "LOKAD+" + SanitizeName(font.FamilyName), unicodeByCid);
+        string fontHash = Convert.ToHexString(SHA256.HashData(font.Bytes.Span)).Substring(0, 8);
+        return new PdfEmbeddedFont(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByCid);
     }
 
     public string BuildToUnicodeCMap()
