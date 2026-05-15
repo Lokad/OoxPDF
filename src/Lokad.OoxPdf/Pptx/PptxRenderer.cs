@@ -52,8 +52,13 @@ internal sealed class PptxRenderer
             }
 
             RenderBackground(slideXml, document, graphics, theme);
-            if (CanRenderSimpleSlideInOrder(slideXml))
+            if (CanRenderSlideInOrder(slideXml))
             {
+                var relationships = package.GetRelationships(slide.PartName)
+                    .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                    .ToDictionary(r => r.Id, StringComparer.Ordinal);
+                var orderedImages = new List<PdfImageResource>();
+                int imageIndex = 1;
                 IReadOnlyList<TextRun> inheritedTextRuns = inheritedXml
                     .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
                     .ToArray();
@@ -62,10 +67,10 @@ internal sealed class PptxRenderer
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
                 {
-                    RenderOrderedShapeTextContainer(shapeTree, document, graphics, theme, renderedFonts.Fonts, GroupTransform.Identity, renderPlaceholders: true, inheritedXml);
+                    RenderOrderedShapeTextContainer(shapeTree, relationships, package, document, graphics, diagnosticSink, slideIndex + 1, theme, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, inheritedXml);
                 }
 
-                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, []));
+                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages));
                 continue;
             }
 
@@ -244,18 +249,23 @@ internal sealed class PptxRenderer
         }
     }
 
-    private static bool CanRenderSimpleSlideInOrder(XDocument slideXml)
+    private static bool CanRenderSlideInOrder(XDocument slideXml)
     {
-        return !slideXml.Descendants(PresentationNamespace + "pic").Any() &&
-            !slideXml.Descendants(PresentationNamespace + "graphicFrame").Any();
+        return !slideXml.Descendants(PresentationNamespace + "graphicFrame").Any();
     }
 
     private static void RenderOrderedShapeTextContainer(
         XElement container,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPackage package,
         PptxDocument document,
         PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
         PptxTheme theme,
         IReadOnlyDictionary<string, RenderedFont> fonts,
+        List<PdfImageResource> images,
+        ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
@@ -279,9 +289,15 @@ internal sealed class PptxRenderer
                 continue;
             }
 
+            if (child.Name == PresentationNamespace + "pic")
+            {
+                RenderPicture(child, relationships, package, document, graphics, diagnosticSink, slideIndex, transform, images, ref imageIndex);
+                continue;
+            }
+
             if (child.Name == PresentationNamespace + "grpSp")
             {
-                RenderOrderedShapeTextContainer(child, document, graphics, theme, fonts, transform.Combine(ReadGroupTransform(child)), renderPlaceholders, placeholderSources);
+                RenderOrderedShapeTextContainer(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, fonts, images, ref imageIndex, transform.Combine(ReadGroupTransform(child)), renderPlaceholders, placeholderSources);
             }
         }
     }
@@ -1792,76 +1808,96 @@ internal sealed class PptxRenderer
         List<PdfImageResource> images,
         ref int index)
     {
-        foreach (XElement picture in container.Elements(PresentationNamespace + "pic"))
+        foreach (XElement child in container.Elements())
         {
-            string? relationshipId = (string?)picture
-                .Element(PresentationNamespace + "blipFill")
-                ?.Element(DrawingNamespace + "blip")
-                ?.Attribute(RelationshipsNamespace + "embed");
-            XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
-            ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-            if (relationshipId is null || bounds is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+            if (child.Name == PresentationNamespace + "pic")
             {
+                RenderPicture(child, relationships, package, document, graphics, diagnosticSink, slideIndex, transform, images, ref index);
                 continue;
             }
 
-            OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
-            if (imagePart is null)
+            if (child.Name == PresentationNamespace + "grpSp")
             {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                    "IMAGE_MISSING_PART",
-                    OoxPdfSeverity.Error,
-                    "Referenced image part was missing and the image was ignored.",
-                    relationship.ResolvedTarget,
-                    SlideIndex: slideIndex,
-                    Feature: "image",
-                    Fallback: "Ignored"));
+                GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
+                RenderPictureContainer(child, relationships, package, document, graphics, diagnosticSink, slideIndex, childTransform, images, ref index);
                 continue;
             }
+        }
+    }
 
-            PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
-            if (image is null)
-            {
-                continue;
-            }
-
-            ShapeBounds transformedBounds = transform.Apply(bounds.Value);
-            string name = "Im" + index++;
-            double x = OoxUnits.EmuToPoints(transformedBounds.X);
-            double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
-            double width = OoxUnits.EmuToPoints(transformedBounds.Width);
-            double height = OoxUnits.EmuToPoints(transformedBounds.Height);
-            double y = document.SlideHeightPoints - yTop - height;
-            CropRect crop = ReadCrop(picture);
-            bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
-            if (hasTransform)
-            {
-                graphics.SaveState();
-                ApplyShapeTransform(graphics, x, y, width, height, transformedBounds);
-            }
-
-            if (crop.IsEmpty)
-            {
-                graphics.DrawImage(name, x, y, width, height);
-            }
-            else
-            {
-                graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
-            }
-
-            if (hasTransform)
-            {
-                graphics.RestoreState();
-            }
-
-            images.Add(new PdfImageResource(name, image));
+    private static void RenderPicture(
+        XElement picture,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPackage package,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        GroupTransform transform,
+        List<PdfImageResource> images,
+        ref int index)
+    {
+        string? relationshipId = (string?)picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip")
+            ?.Attribute(RelationshipsNamespace + "embed");
+        XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
+        ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
+        if (relationshipId is null || bounds is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        {
+            return;
         }
 
-        foreach (XElement group in container.Elements(PresentationNamespace + "grpSp"))
+        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        if (imagePart is null)
         {
-            GroupTransform childTransform = transform.Combine(ReadGroupTransform(group));
-            RenderPictureContainer(group, relationships, package, document, graphics, diagnosticSink, slideIndex, childTransform, images, ref index);
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_MISSING_PART",
+                OoxPdfSeverity.Error,
+                "Referenced image part was missing and the image was ignored.",
+                relationship.ResolvedTarget,
+                SlideIndex: slideIndex,
+                Feature: "image",
+                Fallback: "Ignored"));
+            return;
         }
+
+        PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
+        if (image is null)
+        {
+            return;
+        }
+
+        ShapeBounds transformedBounds = transform.Apply(bounds.Value);
+        string name = "Im" + index++;
+        double x = OoxUnits.EmuToPoints(transformedBounds.X);
+        double yTop = OoxUnits.EmuToPoints(transformedBounds.Y);
+        double width = OoxUnits.EmuToPoints(transformedBounds.Width);
+        double height = OoxUnits.EmuToPoints(transformedBounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        CropRect crop = ReadCrop(picture);
+        bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
+        if (hasTransform)
+        {
+            graphics.SaveState();
+            ApplyShapeTransform(graphics, x, y, width, height, transformedBounds);
+        }
+
+        if (crop.IsEmpty)
+        {
+            graphics.DrawImage(name, x, y, width, height);
+        }
+        else
+        {
+            graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+        }
+
+        if (hasTransform)
+        {
+            graphics.RestoreState();
+        }
+
+        images.Add(new PdfImageResource(name, image));
     }
 
     private static PdfImageXObject? CreateImage(OoxPart imagePart, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
