@@ -1045,7 +1045,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
-        TestAssert.Contains(" l S", pdf);
+        TestAssert.Contains(" re f", pdf);
         TestAssert.True(CountOccurrences(pdf, "> Tj") >= 1, "Expected styled text to be emitted.");
     }
 

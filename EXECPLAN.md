@@ -237,6 +237,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Run-level all-caps text (`a:rPr @cap="all"`) now transforms text before measurement and drawing in the public ladder.
   - `pptx-ladder-03-preserved-spaces` at `artifacts/visual/pptx-ladder-03-preserved-spaces/20260515-075831`: page count and dimensions matched, diagnostics were empty, MAE `0.139198`, changed-pixel ratio threshold 16 `0.001193`.
   - Preserved spaces in PPTX runs are visually locked by a public Office-PDF-backed gate. Office emits this case as one `TJ` text object, while the candidate still emits multiple `Tj` objects split around space groups; track this as a PDF-structure improvement, not a blocker for the visual rung.
+  - `pptx-ladder-04-underline-single` at `artifacts/visual/pptx-ladder-04-underline-single/20260515-080227`: page count and dimensions matched, diagnostics were empty, MAE `0.151413`, changed-pixel ratio threshold 16 `0.001580`.
+  - PPTX underlines now use an Office-like filled rectangle instead of a stroked line; the older broad serif-title underline gate also improved to MAE `0.429467`, changed-pixel ratio threshold 16 `0.005498`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

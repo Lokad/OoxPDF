@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-underline-single",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-underline-single.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "underline"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.16,
+    "maxChangedPixelRatioAtThreshold16": 0.0016
+  },
+  "allowedUnsupportedFeatures": []
+}
