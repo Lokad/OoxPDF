@@ -2458,12 +2458,10 @@ internal sealed class PptxRenderer
 
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing)
     {
-        string? positioningArray = Math.Abs(characterSpacing) <= 0.001d
-            ? embedded.EncodeGlyphPositioningArray(text)
-            : null;
+        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize);
         if (positioningArray is null)
         {
-            graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, characterSpacing);
+            graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic);
         }
         else
         {

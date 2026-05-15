@@ -118,6 +118,11 @@ internal sealed class PdfEmbeddedFont
 
     public string? EncodeGlyphPositioningArray(string text)
     {
+        return EncodeGlyphPositioningArray(text, 0d, 1d);
+    }
+
+    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize)
+    {
         var glyphs = new List<ushort>();
         foreach (Rune rune in text.EnumerateRunes())
         {
@@ -133,21 +138,26 @@ internal sealed class PdfEmbeddedFont
             return null;
         }
 
-        bool hasKerning = false;
+        double trackingAdjustment = Math.Abs(characterSpacingPoints) <= 0.001d || fontSize <= 0d
+            ? 0d
+            : -characterSpacingPoints * 1000d / fontSize;
+        bool hasPositioning = false;
         var builder = new StringBuilder("[");
         for (int i = 0; i < glyphs.Count; i++)
         {
             if (i > 0)
             {
+                double adjustment = trackingAdjustment;
                 short kerning = Font.GetKerning(glyphs[i - 1], glyphs[i]);
                 if (kerning != 0)
                 {
-                    double adjustment = -kerning * 1000d / Font.UnitsPerEm;
-                    if (Math.Abs(adjustment) > 0.001d)
-                    {
-                        builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
-                        hasKerning = true;
-                    }
+                    adjustment += -kerning * 1000d / Font.UnitsPerEm;
+                }
+
+                if (Math.Abs(adjustment) > 0.001d)
+                {
+                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+                    hasPositioning = true;
                 }
             }
 
@@ -155,7 +165,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         builder.Append(']');
-        return hasKerning ? builder.ToString() : null;
+        return hasPositioning ? builder.ToString() : null;
     }
 
     public double MeasureTextPoints(string text, double fontSize)
