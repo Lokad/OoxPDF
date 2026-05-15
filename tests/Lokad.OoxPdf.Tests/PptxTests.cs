@@ -550,7 +550,7 @@ internal static class PptxTests
                     <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
                       <a:bodyPr/><a:lstStyle/>
-                      <a:p><a:pPr><a:buChar char="&#x2022;"/><a:buClr><a:srgbClr val="FF0000"/></a:buClr><a:buSzPts val="3000"/></a:pPr><a:r><a:rPr sz="2400"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Styled bullet</a:t></a:r></a:p>
+                      <a:p><a:pPr><a:buClr><a:srgbClr val="FF0000"/></a:buClr><a:buSzPts val="3000"/><a:buChar char="&#x2022;"/></a:pPr><a:r><a:rPr sz="2400"><a:solidFill><a:srgbClr val="000000"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Styled bullet</a:t></a:r></a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>

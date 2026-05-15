@@ -1948,24 +1948,46 @@ internal sealed class PptxRenderer
 
     private static BulletStyle ReadBulletStyle(XElement? paragraphProperties, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
     {
-        string? typeface = theme.ResolveTypeface((string?)paragraphProperties?
-            .Element(DrawingNamespace + "buFont")
-            ?.Attribute("typeface"));
-        RgbColor color = paragraphProperties?.Element(DrawingNamespace + "buClr") is { } bulletColor &&
+        XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
+        XElement? bulletColor = FindBulletProperty(paragraphProperties, "buClr");
+        XElement? bulletSizePercent = FindBulletProperty(paragraphProperties, "buSzPct");
+        XElement? bulletSizePoints = FindBulletProperty(paragraphProperties, "buSzPts");
+
+        string? typeface = theme.ResolveTypeface((string?)bulletFont?.Attribute("typeface"));
+        RgbColor color = bulletColor is not null &&
             TryReadSolidColor(bulletColor, theme, out RgbColor explicitColor)
                 ? explicitColor
                 : textColor;
         double fontSize = textFontSize;
-        if (paragraphProperties?.Element(DrawingNamespace + "buSzPct")?.Attribute("val") is { } sizePercent)
+        if (bulletSizePercent?.Attribute("val") is { } sizePercent)
         {
             fontSize = textFontSize * Math.Max(0.1d, int.Parse(sizePercent.Value, CultureInfo.InvariantCulture) / 100000d);
         }
-        else if (paragraphProperties?.Element(DrawingNamespace + "buSzPts")?.Attribute("val") is { } sizePoints)
+        else if (bulletSizePoints?.Attribute("val") is { } sizePoints)
         {
             fontSize = Math.Max(0.1d, int.Parse(sizePoints.Value, CultureInfo.InvariantCulture) / 100d);
         }
 
         return new BulletStyle(fontSize, color, typeface ?? textTypeface);
+    }
+
+    private static XElement? FindBulletProperty(XElement? paragraphProperties, string localName)
+    {
+        if (paragraphProperties is null)
+        {
+            return null;
+        }
+
+        XName propertyName = DrawingNamespace + localName;
+        XElement? marker = paragraphProperties
+            .Elements()
+            .FirstOrDefault(element => element.Name == DrawingNamespace + "buChar" ||
+                element.Name == DrawingNamespace + "buAutoNum" ||
+                element.Name == DrawingNamespace + "buBlip");
+        IEnumerable<XElement> candidates = marker is null
+            ? paragraphProperties.Elements()
+            : paragraphProperties.Elements().TakeWhile(element => element != marker);
+        return candidates.FirstOrDefault(element => element.Name == propertyName);
     }
 
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
