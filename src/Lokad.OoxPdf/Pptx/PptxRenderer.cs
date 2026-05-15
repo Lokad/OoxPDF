@@ -1074,8 +1074,8 @@ internal sealed class PptxRenderer
             return;
         }
 
-        const double defaultInset = 7.2d;
-        double textAreaHeight = Math.Max(0d, height - defaultInset * 4d);
+        TextInsets insets = ReadTextInsets(textBody);
+        double textAreaHeight = Math.Max(0d, height - insets.Top - insets.Bottom);
         double verticalOffset = ReadTableCellVerticalAnchor(cell) switch
         {
             TextVerticalAnchor.Middle => textAreaHeight / 2d,
@@ -1083,12 +1083,12 @@ internal sealed class PptxRenderer
             _ => 0d
         };
         double firstFontSize = ReadFirstTableCellFontSize(textBody);
-        double cursorY = y + height - firstFontSize - 3.06d - verticalOffset;
+        double cursorY = y + height - insets.Top - firstFontSize + 0.54d - verticalOffset;
         var advanceEstimator = new TextAdvanceEstimator();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             TextAlignment alignment = ReadAlignment(paragraph, null);
-            double cursorX = x + defaultInset;
+            double cursorX = x + insets.Left;
             double maxFontSize = 12d;
             foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
             {
@@ -1115,7 +1115,7 @@ internal sealed class PptxRenderer
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
                 double advance = advanceEstimator.Measure(text, fontSize, typeface, bold, italic, characterSpacing: 0d);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), Math.Max(1d, height - defaultInset * 2d), x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
                 cursorX += advance;
             }
 
