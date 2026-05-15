@@ -729,6 +729,7 @@ internal sealed class PptxRenderer
             "pentagon" => CreatePentagonPoints(x, y, width, height),
             "hexagon" => CreateHexagonPoints(x, y, width, height),
             "octagon" => CreateOctagonPoints(x, y, width, height),
+            "plus" => CreatePlusPoints(x, y, width, height),
             "parallelogram" => CreateParallelogramPoints(x, y, width, height),
             "trapezoid" => CreateTrapezoidPoints(x, y, width, height),
             "downArrow" => CreateDownArrowPoints(x, y, width, height),
@@ -821,6 +822,28 @@ internal sealed class PptxRenderer
     private static double RoundOfficeShapeCoordinate(double value)
     {
         return Math.Round(value, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static (double X, double Y)[] CreatePlusPoints(double x, double y, double width, double height)
+    {
+        double armWidth = Math.Min(width, height) / 4d;
+        double rightArmX = x + width - armWidth;
+        double topArmY = y + height - armWidth;
+        return
+        [
+            (x, topArmY),
+            (x + armWidth, topArmY),
+            (x + armWidth, y + height),
+            (rightArmX, y + height),
+            (rightArmX, topArmY),
+            (x + width, topArmY),
+            (x + width, y + armWidth),
+            (rightArmX, y + armWidth),
+            (rightArmX, y),
+            (x + armWidth, y),
+            (x + armWidth, y + armWidth),
+            (x, y + armWidth)
+        ];
     }
 
     private static (double X, double Y)[] CreateParallelogramPoints(double x, double y, double width, double height)
