@@ -822,6 +822,8 @@ internal sealed class PptxRenderer
             "hexagon" => CreateHexagonPoints(x, y, width, height),
             "octagon" => CreateOctagonPoints(x, y, width, height),
             "plus" => CreatePlusPoints(x, y, width, height),
+            "chevron" => CreateChevronPoints(x, y, width, height),
+            "homePlate" => CreateHomePlatePoints(x, y, width, height),
             "parallelogram" => CreateParallelogramPoints(x, y, width, height),
             "trapezoid" => CreateTrapezoidPoints(x, y, width, height),
             "downArrow" => CreateDownArrowPoints(x, y, width, height),
@@ -936,6 +938,33 @@ internal sealed class PptxRenderer
             (x + armWidth, y),
             (x + armWidth, y + armWidth),
             (x, y + armWidth)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateChevronPoints(double x, double y, double width, double height)
+    {
+        double inset = Math.Min(width / 2d, height / 2d);
+        return
+        [
+            (x, y + height),
+            (x + width - inset, y + height),
+            (x + width, y + height / 2d),
+            (x + width - inset, y),
+            (x, y),
+            (x + inset, y + height / 2d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateHomePlatePoints(double x, double y, double width, double height)
+    {
+        double inset = Math.Min(width, height / 2d);
+        return
+        [
+            (x, y + height),
+            (x + width - inset, y + height),
+            (x + width, y + height / 2d),
+            (x + width - inset, y),
+            (x, y)
         ];
     }
 
