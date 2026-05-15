@@ -2642,6 +2642,11 @@ internal sealed class PptxRenderer
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
         CropRect crop = ReadCrop(picture);
+        FillRect fillRect = ReadFillRect(picture);
+        double imageX = x + fillRect.Left * width;
+        double imageY = y + fillRect.Bottom * height;
+        double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
+        double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
         double alpha = ReadPictureAlpha(picture);
         bool transparent = alpha < 0.999d;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
@@ -2659,11 +2664,11 @@ internal sealed class PptxRenderer
 
         if (crop.IsEmpty)
         {
-            graphics.DrawImage(name, x, y, width, height);
+            graphics.DrawImage(name, imageX, imageY, imageWidth, imageHeight);
         }
         else
         {
-            graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            graphics.DrawImageCropped(name, imageX, imageY, imageWidth, imageHeight, crop.Left, crop.Top, crop.Right, crop.Bottom);
         }
 
         if (transparent)
@@ -2736,6 +2741,24 @@ internal sealed class PptxRenderer
             ParsePercentage(sourceRectangle, "t"),
             ParsePercentage(sourceRectangle, "r"),
             ParsePercentage(sourceRectangle, "b"));
+    }
+
+    private static FillRect ReadFillRect(XElement picture)
+    {
+        XElement? fillRectangle = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "stretch")
+            ?.Element(DrawingNamespace + "fillRect");
+        if (fillRectangle is null)
+        {
+            return default;
+        }
+
+        return new FillRect(
+            ParsePercentage(fillRectangle, "l"),
+            ParsePercentage(fillRectangle, "t"),
+            ParsePercentage(fillRectangle, "r"),
+            ParsePercentage(fillRectangle, "b"));
     }
 
     private static double ReadPictureAlpha(XElement picture)
@@ -3260,4 +3283,6 @@ internal sealed class PptxRenderer
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
     }
+
+    private readonly record struct FillRect(double Left, double Top, double Right, double Bottom);
 }
