@@ -495,9 +495,9 @@ internal sealed class PptxRenderer
             {
                 graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
             }
-            else if (TryCreateBlockArrowPoints(preset, x, y, width, height, out (double X, double Y)[] arrowPoints))
+            else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
             {
-                graphics.FillPolygon(arrowPoints);
+                graphics.FillPolygon(polygonPoints);
             }
             else
             {
@@ -545,9 +545,9 @@ internal sealed class PptxRenderer
             {
                 graphics.StrokeRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
             }
-            else if (TryCreateBlockArrowPoints(preset, x, y, width, height, out (double X, double Y)[] arrowPoints))
+            else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
             {
-                graphics.StrokePolygon(arrowPoints);
+                graphics.StrokePolygon(polygonPoints);
             }
             else
             {
@@ -719,10 +719,12 @@ internal sealed class PptxRenderer
         return null;
     }
 
-    private static bool TryCreateBlockArrowPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
+    private static bool TryCreatePresetPolygonPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
     {
         points = preset switch
         {
+            "triangle" => CreateTrianglePoints(x, y, width, height),
+            "diamond" => CreateDiamondPoints(x, y, width, height),
             "downArrow" => CreateDownArrowPoints(x, y, width, height),
             "upArrow" => CreateUpArrowPoints(x, y, width, height),
             "leftArrow" => CreateLeftArrowPoints(x, y, width, height),
@@ -730,6 +732,27 @@ internal sealed class PptxRenderer
             _ => []
         };
         return points.Length != 0;
+    }
+
+    private static (double X, double Y)[] CreateTrianglePoints(double x, double y, double width, double height)
+    {
+        return
+        [
+            (x + width / 2d, y + height),
+            (x + width, y),
+            (x, y)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateDiamondPoints(double x, double y, double width, double height)
+    {
+        return
+        [
+            (x + width / 2d, y + height),
+            (x + width, y + height / 2d),
+            (x + width / 2d, y),
+            (x, y + height / 2d)
+        ];
     }
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)
