@@ -724,7 +724,11 @@ internal sealed class PptxRenderer
         points = preset switch
         {
             "triangle" => CreateTrianglePoints(x, y, width, height),
+            "rtTriangle" => CreateRightTrianglePoints(x, y, width, height),
             "diamond" => CreateDiamondPoints(x, y, width, height),
+            "pentagon" => CreatePentagonPoints(x, y, width, height),
+            "hexagon" => CreateHexagonPoints(x, y, width, height),
+            "octagon" => CreateOctagonPoints(x, y, width, height),
             "parallelogram" => CreateParallelogramPoints(x, y, width, height),
             "trapezoid" => CreateTrapezoidPoints(x, y, width, height),
             "downArrow" => CreateDownArrowPoints(x, y, width, height),
@@ -746,6 +750,16 @@ internal sealed class PptxRenderer
         ];
     }
 
+    private static (double X, double Y)[] CreateRightTrianglePoints(double x, double y, double width, double height)
+    {
+        return
+        [
+            (x, y),
+            (x, y + height),
+            (x + width, y)
+        ];
+    }
+
     private static (double X, double Y)[] CreateDiamondPoints(double x, double y, double width, double height)
     {
         return
@@ -755,6 +769,56 @@ internal sealed class PptxRenderer
             (x + width / 2d, y),
             (x, y + height / 2d)
         ];
+    }
+
+    private static (double X, double Y)[] CreatePentagonPoints(double x, double y, double width, double height)
+    {
+        double golden = (Math.Sqrt(5d) - 1d) / 2d;
+        double bottomInset = RoundOfficeShapeCoordinate(width * (1d - golden) / 2d);
+        double shoulderY = RoundOfficeShapeCoordinate(y + height * golden);
+        return
+        [
+            (x, shoulderY),
+            (x + width / 2d, y + height),
+            (x + width, shoulderY),
+            (x + width - bottomInset, y),
+            (x + bottomInset, y)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateHexagonPoints(double x, double y, double width, double height)
+    {
+        double inset = Math.Min(width / 2d, height / 4d);
+        return
+        [
+            (x, y + height / 2d),
+            (x + inset, y + height),
+            (x + width - inset, y + height),
+            (x + width, y + height / 2d),
+            (x + width - inset, y),
+            (x + inset, y)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateOctagonPoints(double x, double y, double width, double height)
+    {
+        double inset = RoundOfficeShapeCoordinate(Math.Min(width, height) * (1d - Math.Sqrt(0.5d)));
+        return
+        [
+            (x, y + height - inset),
+            (x + inset, y + height),
+            (x + width - inset, y + height),
+            (x + width, y + height - inset),
+            (x + width, y + inset),
+            (x + width - inset, y),
+            (x + inset, y),
+            (x, y + inset)
+        ];
+    }
+
+    private static double RoundOfficeShapeCoordinate(double value)
+    {
+        return Math.Round(value, 2, MidpointRounding.AwayFromZero);
     }
 
     private static (double X, double Y)[] CreateParallelogramPoints(double x, double y, double width, double height)
