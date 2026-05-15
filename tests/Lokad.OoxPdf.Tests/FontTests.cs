@@ -66,6 +66,25 @@ internal static class FontTests
         TestAssert.NotNull(resolved.FontFilePath);
     }
 
+    public static void WindowsFontResolverMapsAptosThemeFontsToCalibri()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory) ||
+            !Directory.EnumerateFiles(fontsDirectory, "calibri*.ttf", SearchOption.TopDirectoryOnly).Any())
+        {
+            return;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        FontResolution display = resolver.Resolve(new FontRequest("Aptos Display"));
+        FontResolution body = resolver.Resolve(new FontRequest("Aptos"));
+
+        TestAssert.Equal("Calibri Light", display.FamilyName);
+        TestAssert.Equal("Calibri", body.FamilyName);
+        TestAssert.NotNull(display.FontFilePath);
+        TestAssert.NotNull(body.FontFilePath);
+    }
+
     public static void OpenTypeParserLoadsTrueTypeCollections()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

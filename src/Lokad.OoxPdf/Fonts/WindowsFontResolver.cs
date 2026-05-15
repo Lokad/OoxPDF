@@ -106,8 +106,18 @@ public sealed class WindowsFontResolver : IFontResolver
 
     private static IReadOnlyList<string> ResolveAliases(string familyName)
     {
-        return familyName.Equals("Cambria Math", StringComparison.OrdinalIgnoreCase)
-            ? ["Cambria"]
+        if (familyName.Equals("Cambria Math", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Cambria"];
+        }
+
+        if (familyName.Equals("Aptos Display", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Calibri Light", "Calibri"];
+        }
+
+        return familyName.Equals("Aptos", StringComparison.OrdinalIgnoreCase)
+            ? ["Calibri"]
             : [];
     }
 }

@@ -87,4 +87,5 @@ return TestRunner.Run(
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs,
     FontTests.WindowsFontResolverMapsCambriaMathToCambria,
+    FontTests.WindowsFontResolverMapsAptosThemeFontsToCalibri,
     FontTests.OpenTypeParserLoadsTrueTypeCollections);
