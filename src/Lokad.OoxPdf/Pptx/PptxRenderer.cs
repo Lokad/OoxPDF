@@ -821,8 +821,10 @@ internal sealed class PptxRenderer
             "pentagon" => CreatePentagonPoints(x, y, width, height),
             "hexagon" => CreateHexagonPoints(x, y, width, height),
             "octagon" => CreateOctagonPoints(x, y, width, height),
+            "star4" => CreateStar4Points(x, y, width, height),
             "star5" => CreateStar5Points(x, y, width, height),
             "star6" => CreateStar6Points(x, y, width, height),
+            "star8" => CreateStar8Points(x, y, width, height),
             "plus" => CreatePlusPoints(x, y, width, height),
             "chevron" => CreateChevronPoints(x, y, width, height),
             "homePlate" => CreateHomePlatePoints(x, y, width, height),
@@ -871,6 +873,25 @@ internal sealed class PptxRenderer
         ];
     }
 
+    private static (double X, double Y)[] CreateStar4Points(double x, double y, double width, double height)
+    {
+        double innerLeftX = RoundOfficeShapeCoordinate(width * 0.41161d);
+        double innerRightX = RoundOfficeShapeCoordinate(width * 0.58839d);
+        double innerBottomY = RoundOfficeShapeCoordinate(height * 0.41159d);
+        double innerTopY = RoundOfficeShapeCoordinate(height * 0.58841d);
+        return
+        [
+            (x, y + height / 2d),
+            (x + innerLeftX, y + innerTopY),
+            (x + width / 2d, y + height),
+            (x + innerRightX, y + innerTopY),
+            (x + width, y + height / 2d),
+            (x + innerRightX, y + innerBottomY),
+            (x + width / 2d, y),
+            (x + innerLeftX, y + innerBottomY)
+        ];
+    }
+
     private static (double X, double Y)[] CreateStar5Points(double x, double y, double width, double height)
     {
         double topShoulderY = RoundOfficeShapeCoordinate(height * 0.61803d);
@@ -915,6 +936,29 @@ internal sealed class PptxRenderer
             (x + width / 3d, y + height * 0.25d),
             (x, y + height * 0.25d),
             (x + quarterWidth, y + height / 2d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateStar8Points(double x, double y, double width, double height)
+    {
+        return
+        [
+            (x, y + height / 2d),
+            (x + RoundOfficeShapeCoordinate(width * 0.15356d), y + RoundOfficeShapeCoordinate(height * 0.64348d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.14644d), y + RoundOfficeShapeCoordinate(height * 0.85356d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.3565d), y + RoundOfficeShapeCoordinate(height * 0.84644d)),
+            (x + width / 2d, y + height),
+            (x + RoundOfficeShapeCoordinate(width * 0.6435d), y + RoundOfficeShapeCoordinate(height * 0.84644d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.85356d), y + RoundOfficeShapeCoordinate(height * 0.85356d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.84644d), y + RoundOfficeShapeCoordinate(height * 0.64348d)),
+            (x + width, y + height / 2d),
+            (x + RoundOfficeShapeCoordinate(width * 0.84644d), y + RoundOfficeShapeCoordinate(height * 0.35652d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.85356d), y + RoundOfficeShapeCoordinate(height * 0.14644d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.6435d), y + RoundOfficeShapeCoordinate(height * 0.15356d)),
+            (x + width / 2d, y),
+            (x + RoundOfficeShapeCoordinate(width * 0.3565d), y + RoundOfficeShapeCoordinate(height * 0.15356d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.14644d), y + RoundOfficeShapeCoordinate(height * 0.14644d)),
+            (x + RoundOfficeShapeCoordinate(width * 0.15356d), y + RoundOfficeShapeCoordinate(height * 0.35652d))
         ];
     }
 
