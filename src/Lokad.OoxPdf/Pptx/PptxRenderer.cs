@@ -210,8 +210,13 @@ internal sealed class PptxRenderer
         XElement? color = alpha.Parent;
         XElement? fill = color?.Parent;
         XElement? owner = fill?.Parent;
-        return fill?.Name != DrawingNamespace + "solidFill" ||
-            owner?.Name != PresentationNamespace + "spPr";
+        XElement? lineOwner = owner?.Parent;
+        bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == PresentationNamespace + "spPr";
+        bool supportedShapeLine = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "ln" &&
+            lineOwner?.Name == PresentationNamespace + "spPr";
+        return !supportedShapeFill && !supportedShapeLine;
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
@@ -380,7 +385,7 @@ internal sealed class PptxRenderer
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
         bool hasFill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fill, out double fillAlpha);
-        bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
+        bool hasStroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
         {
@@ -399,6 +404,13 @@ internal sealed class PptxRenderer
         {
             if (hasStroke)
             {
+                bool transparentStroke = strokeAlpha < 0.999d;
+                if (transparentStroke)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(1d, strokeAlpha);
+                }
+
                 double x1 = x;
                 double y1 = document.SlideHeightPoints - yTop;
                 double x2 = x + width;
@@ -436,6 +448,11 @@ internal sealed class PptxRenderer
                         graphics.SetLineCap(0);
                         graphics.SetLineJoin(0);
                     }
+                }
+
+                if (transparentStroke)
+                {
+                    graphics.RestoreState();
                 }
             }
 
@@ -482,6 +499,13 @@ internal sealed class PptxRenderer
 
         if (hasStroke)
         {
+            bool transparentStroke = strokeAlpha < 0.999d;
+            if (transparentStroke)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, strokeAlpha);
+            }
+
             graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
             graphics.SetLineWidth(lineWidth);
             if (hasDash)
@@ -521,6 +545,11 @@ internal sealed class PptxRenderer
             {
                 graphics.SetLineCap(0);
                 graphics.SetLineJoin(0);
+            }
+
+            if (transparentStroke)
+            {
+                graphics.RestoreState();
             }
         }
 
@@ -1367,11 +1396,16 @@ internal sealed class PptxRenderer
 
     private static bool TryReadLine(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth)
     {
+        return TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out _);
+    }
+
+    private static bool TryReadLineWithAlpha(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
-        return TryReadSolidColor(line, theme, out color);
+        return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
     }
 
     private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
