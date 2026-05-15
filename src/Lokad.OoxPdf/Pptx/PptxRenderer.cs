@@ -495,9 +495,9 @@ internal sealed class PptxRenderer
             {
                 graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
             }
-            else if (preset == "downArrow")
+            else if (TryCreateBlockArrowPoints(preset, x, y, width, height, out (double X, double Y)[] arrowPoints))
             {
-                graphics.FillPolygon(CreateDownArrowPoints(x, y, width, height));
+                graphics.FillPolygon(arrowPoints);
             }
             else
             {
@@ -545,9 +545,9 @@ internal sealed class PptxRenderer
             {
                 graphics.StrokeRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
             }
-            else if (preset == "downArrow")
+            else if (TryCreateBlockArrowPoints(preset, x, y, width, height, out (double X, double Y)[] arrowPoints))
             {
-                graphics.StrokePolygon(CreateDownArrowPoints(x, y, width, height));
+                graphics.StrokePolygon(arrowPoints);
             }
             else
             {
@@ -719,9 +719,22 @@ internal sealed class PptxRenderer
         return null;
     }
 
+    private static bool TryCreateBlockArrowPoints(string preset, double x, double y, double width, double height, out (double X, double Y)[] points)
+    {
+        points = preset switch
+        {
+            "downArrow" => CreateDownArrowPoints(x, y, width, height),
+            "upArrow" => CreateUpArrowPoints(x, y, width, height),
+            "leftArrow" => CreateLeftArrowPoints(x, y, width, height),
+            "rightArrow" => CreateRightArrowPoints(x, y, width, height),
+            _ => []
+        };
+        return points.Length != 0;
+    }
+
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)
     {
-        double arrowShoulderY = y + height * 0.375d;
+        double arrowShoulderY = y + Math.Min(height, width / 2d);
         return
         [
             (x + width * 0.25d, y + height),
@@ -731,6 +744,51 @@ internal sealed class PptxRenderer
             (x + width * 0.5d, y),
             (x, arrowShoulderY),
             (x + width * 0.25d, arrowShoulderY)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateUpArrowPoints(double x, double y, double width, double height)
+    {
+        double arrowShoulderY = y + Math.Max(0d, height - width / 2d);
+        return
+        [
+            (x + width * 0.25d, y),
+            (x + width * 0.75d, y),
+            (x + width * 0.75d, arrowShoulderY),
+            (x + width, arrowShoulderY),
+            (x + width * 0.5d, y + height),
+            (x, arrowShoulderY),
+            (x + width * 0.25d, arrowShoulderY)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateRightArrowPoints(double x, double y, double width, double height)
+    {
+        double arrowShoulderX = x + Math.Max(0d, width - height / 2d);
+        return
+        [
+            (x, y + height * 0.25d),
+            (arrowShoulderX, y + height * 0.25d),
+            (arrowShoulderX, y),
+            (x + width, y + height * 0.5d),
+            (arrowShoulderX, y + height),
+            (arrowShoulderX, y + height * 0.75d),
+            (x, y + height * 0.75d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateLeftArrowPoints(double x, double y, double width, double height)
+    {
+        double arrowShoulderX = x + Math.Min(width, height / 2d);
+        return
+        [
+            (x + width, y + height * 0.25d),
+            (arrowShoulderX, y + height * 0.25d),
+            (arrowShoulderX, y),
+            (x, y + height * 0.5d),
+            (arrowShoulderX, y + height),
+            (arrowShoulderX, y + height * 0.75d),
+            (x + width, y + height * 0.75d)
         ];
     }
 

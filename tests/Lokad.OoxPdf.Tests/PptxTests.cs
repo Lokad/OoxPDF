@@ -186,7 +186,7 @@ internal static class PptxTests
         TestAssert.Contains("216 324 m", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);
         TestAssert.Contains("90 468 m", pdf);
-        TestAssert.Contains("126 423 l", pdf);
+        TestAssert.Contains("126 432 l", pdf);
         TestAssert.Contains("108 396 l", pdf);
         TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
     }
