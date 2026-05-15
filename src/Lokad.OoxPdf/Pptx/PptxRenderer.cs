@@ -138,6 +138,12 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
 
+        if (slideXml.Descendants(PresentationNamespace + "spPr").Any(shapeProperties =>
+                shapeProperties.Element(DrawingNamespace + "blipFill") is not null))
+        {
+            Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
+        }
+
         if (slideXml.Descendants(DrawingNamespace + "alpha").Any(alpha =>
                 alpha.Attribute("val") is { } value &&
                 int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
