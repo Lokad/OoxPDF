@@ -2300,11 +2300,19 @@ internal sealed class PptxRenderer
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
         CropRect crop = ReadCrop(picture);
+        double alpha = ReadPictureAlpha(picture);
+        bool transparent = alpha < 0.999d;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
         if (hasTransform)
         {
             graphics.SaveState();
             ApplyShapeTransform(graphics, x, y, width, height, transformedBounds);
+        }
+
+        if (transparent)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(alpha, 1d);
         }
 
         if (crop.IsEmpty)
@@ -2314,6 +2322,11 @@ internal sealed class PptxRenderer
         else
         {
             graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+        }
+
+        if (transparent)
+        {
+            graphics.RestoreState();
         }
 
         if (hasTransform)
@@ -2381,6 +2394,21 @@ internal sealed class PptxRenderer
             ParsePercentage(sourceRectangle, "t"),
             ParsePercentage(sourceRectangle, "r"),
             ParsePercentage(sourceRectangle, "b"));
+    }
+
+    private static double ReadPictureAlpha(XElement picture)
+    {
+        XElement? blip = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
+        if (alphaModFix?.Attribute("amt") is { } amount &&
+            int.TryParse(amount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedAmount))
+        {
+            return Math.Clamp(parsedAmount / 100000d, 0d, 1d);
+        }
+
+        return 1d;
     }
 
     private static double ParsePercentage(XElement element, string attribute)
