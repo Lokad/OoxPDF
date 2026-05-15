@@ -88,6 +88,7 @@ return TestRunner.Run(
     ImagingTests.PngImageReadsAdam7TruecolorAlphaPixels,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs,
+    FontTests.OpenTypeParserReadsGposPairAdjustments,
     FontTests.WindowsFontResolverMapsCambriaMathToCambria,
     FontTests.WindowsFontResolverMapsAptosThemeFontsToCalibri,
     FontTests.OpenTypeParserLoadsTrueTypeCollections);

@@ -50,6 +50,26 @@ internal static class FontTests
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
     }
 
+    public static void OpenTypeParserReadsGposPairAdjustments()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        if (!font.TableTags.Contains("GPOS"))
+        {
+            return;
+        }
+
+        ushort left = font.MapCodePoint('T');
+        ushort right = font.MapCodePoint('o');
+        TestAssert.True(font.GetKerning(left, right) != 0, "Expected Arial GPOS pair adjustment for 'To'.");
+    }
+
     public static void WindowsFontResolverMapsCambriaMathToCambria()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

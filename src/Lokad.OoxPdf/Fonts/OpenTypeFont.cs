@@ -259,14 +259,21 @@ internal sealed class OpenTypeFont
 
     private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
+        var pairs = new Dictionary<uint, short>();
+        ReadLegacyKerningPairs(bytes, tables, pairs);
+        ReadGposPairAdjustments(bytes, tables, pairs);
+        return pairs;
+    }
+
+    private static void ReadLegacyKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables, Dictionary<uint, short> pairs)
+    {
         if (!tables.TryGetValue("kern", out TableRecord kern) || kern.Length < 4)
         {
-            return new Dictionary<uint, short>();
+            return;
         }
 
         ushort tableCount = U16(bytes, kern.Offset + 2);
         int subtableOffset = kern.Offset + 4;
-        var pairs = new Dictionary<uint, short>();
         for (int table = 0; table < tableCount && subtableOffset + 6 <= kern.Offset + kern.Length; table++)
         {
             ushort length = U16(bytes, subtableOffset + 2);
@@ -299,8 +306,327 @@ internal sealed class OpenTypeFont
 
             subtableOffset += length;
         }
+    }
 
-        return pairs;
+    private static void ReadGposPairAdjustments(byte[] bytes, Dictionary<string, TableRecord> tables, Dictionary<uint, short> pairs)
+    {
+        if (!tables.TryGetValue("GPOS", out TableRecord gpos) || gpos.Length < 10)
+        {
+            return;
+        }
+
+        int tableEnd = gpos.Offset + gpos.Length;
+        int lookupList = gpos.Offset + U16(bytes, gpos.Offset + 8);
+        if (lookupList + 2 > tableEnd)
+        {
+            return;
+        }
+
+        ushort lookupCount = U16(bytes, lookupList);
+        for (int i = 0; i < lookupCount && lookupList + 2 + i * 2 + 2 <= tableEnd; i++)
+        {
+            int lookup = lookupList + U16(bytes, lookupList + 2 + i * 2);
+            if (lookup + 6 > tableEnd || U16(bytes, lookup) != 2)
+            {
+                continue;
+            }
+
+            ushort subtableCount = U16(bytes, lookup + 4);
+            for (int j = 0; j < subtableCount && lookup + 6 + j * 2 + 2 <= tableEnd; j++)
+            {
+                int subtable = lookup + U16(bytes, lookup + 6 + j * 2);
+                ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
+            }
+        }
+    }
+
+    private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, Dictionary<uint, short> pairs)
+    {
+        if (subtable + 10 > tableEnd)
+        {
+            return;
+        }
+
+        ushort positionFormat = U16(bytes, subtable);
+        int coverage = subtable + U16(bytes, subtable + 2);
+        ushort valueFormat1 = U16(bytes, subtable + 4);
+        ushort valueFormat2 = U16(bytes, subtable + 6);
+        int valueRecordSize1 = ValueRecordSize(valueFormat1);
+        int valueRecordSize2 = ValueRecordSize(valueFormat2);
+        if (!TryReadCoverage(bytes, coverage, tableEnd, out ushort[] coverageGlyphs))
+        {
+            return;
+        }
+
+        if (positionFormat == 1)
+        {
+            ushort pairSetCount = U16(bytes, subtable + 8);
+            for (int i = 0; i < pairSetCount && i < coverageGlyphs.Length && subtable + 10 + i * 2 + 2 <= tableEnd; i++)
+            {
+                int pairSet = subtable + U16(bytes, subtable + 10 + i * 2);
+                if (pairSet + 2 > tableEnd)
+                {
+                    continue;
+                }
+
+                ushort pairValueCount = U16(bytes, pairSet);
+                int pairValue = pairSet + 2;
+                for (int j = 0; j < pairValueCount && pairValue + 2 + valueRecordSize1 + valueRecordSize2 <= tableEnd; j++)
+                {
+                    ushort rightGlyph = U16(bytes, pairValue);
+                    short xAdvance = ReadXAdvance(bytes, pairValue + 2, valueFormat1);
+                    if (xAdvance != 0)
+                    {
+                        pairs[((uint)coverageGlyphs[i] << 16) | rightGlyph] = xAdvance;
+                    }
+
+                    pairValue += 2 + valueRecordSize1 + valueRecordSize2;
+                }
+            }
+        }
+        else if (positionFormat == 2 && subtable + 16 <= tableEnd)
+        {
+            ushort class1Count = U16(bytes, subtable + 12);
+            ushort class2Count = U16(bytes, subtable + 14);
+            int classDef1 = subtable + U16(bytes, subtable + 8);
+            int classDef2 = subtable + U16(bytes, subtable + 10);
+            int classRecord = subtable + 16;
+            int classRecordSize = valueRecordSize1 + valueRecordSize2;
+            if (classRecordSize == 0)
+            {
+                return;
+            }
+
+            Dictionary<ushort, ushort[]> rightGlyphsByClass = ReadClassGlyphs(bytes, classDef2, tableEnd);
+            foreach (ushort leftGlyph in coverageGlyphs)
+            {
+                ushort leftClass = ReadGlyphClass(bytes, classDef1, tableEnd, leftGlyph);
+                if (leftClass >= class1Count)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<ushort, ushort[]> rightClassGlyphs in rightGlyphsByClass)
+                {
+                    if (rightClassGlyphs.Key == 0 || rightClassGlyphs.Key >= class2Count)
+                    {
+                        continue;
+                    }
+
+                    int record = classRecord + ((leftClass * class2Count + rightClassGlyphs.Key) * classRecordSize);
+                    if (record + classRecordSize > tableEnd)
+                    {
+                        return;
+                    }
+
+                    short xAdvance = ReadXAdvance(bytes, record, valueFormat1);
+                    if (xAdvance != 0)
+                    {
+                        foreach (ushort rightGlyph in rightClassGlyphs.Value)
+                        {
+                            pairs[((uint)leftGlyph << 16) | rightGlyph] = xAdvance;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static int ValueRecordSize(ushort valueFormat)
+    {
+        int size = 0;
+        for (int bit = 0; bit < 8; bit++)
+        {
+            if ((valueFormat & (1 << bit)) != 0)
+            {
+                size += 2;
+            }
+        }
+
+        return size;
+    }
+
+    private static short ReadXAdvance(byte[] bytes, int offset, ushort valueFormat)
+    {
+        for (int bit = 0; bit < 4; bit++)
+        {
+            if ((valueFormat & (1 << bit)) == 0)
+            {
+                continue;
+            }
+
+            if (bit == 2)
+            {
+                return I16(bytes, offset);
+            }
+
+            offset += 2;
+        }
+
+        return 0;
+    }
+
+    private static bool TryReadCoverage(byte[] bytes, int offset, int tableEnd, out ushort[] glyphs)
+    {
+        glyphs = [];
+        if (offset + 4 > tableEnd)
+        {
+            return false;
+        }
+
+        ushort format = U16(bytes, offset);
+        ushort count = U16(bytes, offset + 2);
+        if (format == 1)
+        {
+            if (offset + 4 + count * 2 > tableEnd)
+            {
+                return false;
+            }
+
+            glyphs = new ushort[count];
+            for (int i = 0; i < glyphs.Length; i++)
+            {
+                glyphs[i] = U16(bytes, offset + 4 + i * 2);
+            }
+
+            return true;
+        }
+
+        if (format != 2 || offset + 4 + count * 6 > tableEnd)
+        {
+            return false;
+        }
+
+        var list = new List<ushort>();
+        for (int i = 0; i < count; i++)
+        {
+            int range = offset + 4 + i * 6;
+            ushort start = U16(bytes, range);
+            ushort end = U16(bytes, range + 2);
+            for (int glyph = start; glyph <= end; glyph++)
+            {
+                list.Add((ushort)glyph);
+            }
+        }
+
+        glyphs = list.ToArray();
+        return true;
+    }
+
+    private static ushort ReadGlyphClass(byte[] bytes, int offset, int tableEnd, ushort glyphId)
+    {
+        if (offset + 4 > tableEnd)
+        {
+            return 0;
+        }
+
+        ushort format = U16(bytes, offset);
+        if (format == 1)
+        {
+            ushort start = U16(bytes, offset + 2);
+            ushort count = U16(bytes, offset + 4);
+            int classOffset = offset + 6;
+            if (glyphId < start || glyphId >= start + count || classOffset + count * 2 > tableEnd)
+            {
+                return 0;
+            }
+
+            return U16(bytes, classOffset + (glyphId - start) * 2);
+        }
+
+        if (format != 2)
+        {
+            return 0;
+        }
+
+        ushort rangeCount = U16(bytes, offset + 2);
+        if (offset + 4 + rangeCount * 6 > tableEnd)
+        {
+            return 0;
+        }
+
+        for (int i = 0; i < rangeCount; i++)
+        {
+            int range = offset + 4 + i * 6;
+            ushort start = U16(bytes, range);
+            ushort end = U16(bytes, range + 2);
+            if (glyphId >= start && glyphId <= end)
+            {
+                return U16(bytes, range + 4);
+            }
+        }
+
+        return 0;
+    }
+
+    private static Dictionary<ushort, ushort[]> ReadClassGlyphs(byte[] bytes, int offset, int tableEnd)
+    {
+        var classes = new Dictionary<ushort, List<ushort>>();
+        if (offset + 4 > tableEnd)
+        {
+            return [];
+        }
+
+        ushort format = U16(bytes, offset);
+        if (format == 1)
+        {
+            ushort start = U16(bytes, offset + 2);
+            ushort count = U16(bytes, offset + 4);
+            int classOffset = offset + 6;
+            if (classOffset + count * 2 > tableEnd)
+            {
+                return [];
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                ushort classValue = U16(bytes, classOffset + i * 2);
+                if (classValue == 0)
+                {
+                    continue;
+                }
+
+                AddClassGlyph(classes, classValue, (ushort)(start + i));
+            }
+        }
+        else if (format == 2)
+        {
+            ushort rangeCount = U16(bytes, offset + 2);
+            if (offset + 4 + rangeCount * 6 > tableEnd)
+            {
+                return [];
+            }
+
+            for (int i = 0; i < rangeCount; i++)
+            {
+                int range = offset + 4 + i * 6;
+                ushort start = U16(bytes, range);
+                ushort end = U16(bytes, range + 2);
+                ushort classValue = U16(bytes, range + 4);
+                if (classValue == 0)
+                {
+                    continue;
+                }
+
+                for (int glyph = start; glyph <= end; glyph++)
+                {
+                    AddClassGlyph(classes, classValue, (ushort)glyph);
+                }
+            }
+        }
+
+        return classes.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
+    }
+
+    private static void AddClassGlyph(Dictionary<ushort, List<ushort>> classes, ushort classValue, ushort glyphId)
+    {
+        if (!classes.TryGetValue(classValue, out List<ushort>? glyphs))
+        {
+            glyphs = [];
+            classes[classValue] = glyphs;
+        }
+
+        glyphs.Add(glyphId);
     }
 
     private static TableRecord Required(Dictionary<string, TableRecord> tables, string tag)
