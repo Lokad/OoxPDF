@@ -63,7 +63,8 @@ internal sealed class PptxRenderer
                     .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
                     .ToArray();
                 IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(slideXml, document, theme, includePlaceholders: true, inheritedXml);
-                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).ToArray());
+                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(slideXml, document, new PdfGraphicsBuilder(), theme);
+                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
                 {
@@ -251,7 +252,9 @@ internal sealed class PptxRenderer
 
     private static bool CanRenderSlideInOrder(XDocument slideXml)
     {
-        return !slideXml.Descendants(PresentationNamespace + "graphicFrame").Any();
+        return !slideXml
+            .Descendants(PresentationNamespace + "graphicFrame")
+            .Any(frame => !IsTableGraphicFrame(frame));
     }
 
     private static void RenderOrderedShapeTextContainer(
@@ -292,6 +295,13 @@ internal sealed class PptxRenderer
             if (child.Name == PresentationNamespace + "pic")
             {
                 RenderPicture(child, relationships, package, document, graphics, diagnosticSink, slideIndex, transform, images, ref imageIndex);
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "graphicFrame")
+            {
+                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(child, document, graphics, theme);
+                DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
                 continue;
             }
 
@@ -627,118 +637,134 @@ internal sealed class PptxRenderer
         var textRuns = new List<TextRun>();
         foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
         {
-            ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
-            XElement? table = frame
-                .Element(DrawingNamespace + "graphic")
-                ?.Element(DrawingNamespace + "graphicData")
-                ?.Element(DrawingNamespace + "tbl");
-            if (bounds is null || table is null)
-            {
-                continue;
-            }
+            textRuns.AddRange(RenderTableFrame(frame, document, graphics, theme));
+        }
 
-            IReadOnlyList<double> rawColumnWidths = table
+        return textRuns;
+    }
+
+    private static bool IsTableGraphicFrame(XElement frame)
+    {
+        return frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData")
+            ?.Element(DrawingNamespace + "tbl") is not null;
+    }
+
+    private static IReadOnlyList<TextRun> RenderTableFrame(XElement frame, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
+    {
+        var textRuns = new List<TextRun>();
+        ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
+        XElement? table = frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData")
+            ?.Element(DrawingNamespace + "tbl");
+        if (bounds is null || table is null)
+        {
+            return textRuns;
+        }
+
+        IReadOnlyList<double> rawColumnWidths = table
                 .Element(DrawingNamespace + "tblGrid")
                 ?.Elements(DrawingNamespace + "gridCol")
                 .Select(column => Math.Max(1d, ParseOptionalLongAttribute(column, "w", 1)))
                 .ToArray() ?? [];
-            IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
-            if (rawColumnWidths.Count == 0 || rows.Count == 0)
-            {
-                continue;
-            }
+        IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
+        if (rawColumnWidths.Count == 0 || rows.Count == 0)
+        {
+            return textRuns;
+        }
 
-            double frameX = OoxUnits.EmuToPoints(bounds.Value.X);
-            double frameYTop = OoxUnits.EmuToPoints(bounds.Value.Y);
-            double frameWidth = OoxUnits.EmuToPoints(bounds.Value.Width);
-            double frameHeight = OoxUnits.EmuToPoints(bounds.Value.Height);
-            double frameTop = document.SlideHeightPoints - frameYTop;
-            double columnScale = frameWidth / rawColumnWidths.Sum();
+        double frameX = OoxUnits.EmuToPoints(bounds.Value.X);
+        double frameYTop = OoxUnits.EmuToPoints(bounds.Value.Y);
+        double frameWidth = OoxUnits.EmuToPoints(bounds.Value.Width);
+        double frameHeight = OoxUnits.EmuToPoints(bounds.Value.Height);
+        double frameTop = document.SlideHeightPoints - frameYTop;
+        double columnScale = frameWidth / rawColumnWidths.Sum();
 
-            IReadOnlyList<double> rawRowHeights = rows
+        IReadOnlyList<double> rawRowHeights = rows
                 .Select(row => Math.Max(1d, ParseOptionalLongAttribute(row, "h", 1)))
                 .ToArray();
-            double rowScale = frameHeight / rawRowHeights.Sum();
+        double rowScale = frameHeight / rawRowHeights.Sum();
 
-            double yTop = frameTop;
-            var rowTops = new double[rows.Count + 1];
-            var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
-            var skippedHorizontalGridSegments = new bool[rows.Count + 1, rawColumnWidths.Count];
-            var explicitBorders = new List<TableBorderLine>();
-            rowTops[0] = yTop;
-            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        double yTop = frameTop;
+        var rowTops = new double[rows.Count + 1];
+        var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
+        var skippedHorizontalGridSegments = new bool[rows.Count + 1, rawColumnWidths.Count];
+        var explicitBorders = new List<TableBorderLine>();
+        rowTops[0] = yTop;
+        for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+        {
+            double rowHeight = rawRowHeights[rowIndex] * rowScale;
+            double cellY = yTop - rowHeight;
+            IReadOnlyList<XElement> cells = rows[rowIndex].Elements(DrawingNamespace + "tc").ToArray();
+
+            double cellX = frameX;
+            int columnIndex = 0;
+            foreach (XElement cell in cells)
             {
-                double rowHeight = rawRowHeights[rowIndex] * rowScale;
-                double cellY = yTop - rowHeight;
-                IReadOnlyList<XElement> cells = rows[rowIndex].Elements(DrawingNamespace + "tc").ToArray();
-
-                double cellX = frameX;
-                int columnIndex = 0;
-                foreach (XElement cell in cells)
+                if (columnIndex >= rawColumnWidths.Count)
                 {
-                    if (columnIndex >= rawColumnWidths.Count)
-                    {
-                        break;
-                    }
+                    break;
+                }
 
-                    if (IsMergedTableCellContinuation(cell))
-                    {
-                        cellX += rawColumnWidths[columnIndex] * columnScale;
-                        columnIndex++;
-                        continue;
-                    }
+                if (IsMergedTableCellContinuation(cell))
+                {
+                    cellX += rawColumnWidths[columnIndex] * columnScale;
+                    columnIndex++;
+                    continue;
+                }
 
-                    int columnSpan = Math.Min(ReadTableCellColumnSpan(cell), rawColumnWidths.Count - columnIndex);
-                    int rowSpan = Math.Min(ReadTableCellRowSpan(cell), rows.Count - rowIndex);
-                    for (int boundary = columnIndex + 1; boundary < columnIndex + columnSpan; boundary++)
-                    {
-                        skippedVerticalGridSegments[boundary, rowIndex] = true;
-                    }
+                int columnSpan = Math.Min(ReadTableCellColumnSpan(cell), rawColumnWidths.Count - columnIndex);
+                int rowSpan = Math.Min(ReadTableCellRowSpan(cell), rows.Count - rowIndex);
+                for (int boundary = columnIndex + 1; boundary < columnIndex + columnSpan; boundary++)
+                {
+                    skippedVerticalGridSegments[boundary, rowIndex] = true;
+                }
 
-                    for (int boundary = rowIndex + 1; boundary < rowIndex + rowSpan; boundary++)
+                for (int boundary = rowIndex + 1; boundary < rowIndex + rowSpan; boundary++)
+                {
+                    for (int skippedColumn = columnIndex; skippedColumn < columnIndex + columnSpan; skippedColumn++)
                     {
-                        for (int skippedColumn = columnIndex; skippedColumn < columnIndex + columnSpan; skippedColumn++)
-                        {
-                            skippedHorizontalGridSegments[boundary, skippedColumn] = true;
-                        }
+                        skippedHorizontalGridSegments[boundary, skippedColumn] = true;
                     }
+                }
 
-                    double columnWidth = rawColumnWidths
+                double columnWidth = rawColumnWidths
                         .Skip(columnIndex)
                         .Take(columnSpan)
                         .Sum() * columnScale;
-                    double cellHeight = rawRowHeights
+                double cellHeight = rawRowHeights
                         .Skip(rowIndex)
                         .Take(rowSpan)
                         .Sum() * rowScale;
-                    double cellTop = yTop;
-                    double cellBottom = cellTop - cellHeight;
-                    XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+                double cellTop = yTop;
+                double cellBottom = cellTop - cellHeight;
+                XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
-                    if (TryReadSolidColor(cellProperties, theme, out RgbColor fill))
-                    {
-                        graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                        graphics.FillRectangle(cellX, cellBottom, columnWidth, cellHeight);
-                    }
-
-                    AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellBottom, columnWidth, cellHeight);
-                    AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, theme, textRuns);
-                    cellX += columnWidth;
-                    columnIndex += columnSpan;
+                if (TryReadSolidColor(cellProperties, theme, out RgbColor fill))
+                {
+                    graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                    graphics.FillRectangle(cellX, cellBottom, columnWidth, cellHeight);
                 }
 
-                yTop -= rowHeight;
-                rowTops[rowIndex + 1] = yTop;
+                AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellBottom, columnWidth, cellHeight);
+                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, theme, textRuns);
+                cellX += columnWidth;
+                columnIndex += columnSpan;
             }
 
-            if (!TableHasExplicitBorders(table))
-            {
-                StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments, skippedHorizontalGridSegments);
-            }
-            else
-            {
-                StrokeTableBorders(graphics, explicitBorders);
-            }
+            yTop -= rowHeight;
+            rowTops[rowIndex + 1] = yTop;
+        }
+
+        if (!TableHasExplicitBorders(table))
+        {
+            StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments, skippedHorizontalGridSegments);
+        }
+        else
+        {
+            StrokeTableBorders(graphics, explicitBorders);
         }
 
         return textRuns;
