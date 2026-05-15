@@ -402,6 +402,7 @@ internal sealed class PptxRenderer
             "sq" => 2,
             _ => null
         };
+        int? lineJoin = ReadLineJoin(shapeProperties);
 
         if (transformed)
         {
@@ -525,10 +526,15 @@ internal sealed class PptxRenderer
                 graphics.SetLineDash(dashPattern);
             }
 
+            int? appliedLineJoin = lineJoin ?? (lineCap is null ? null : 1);
             if (lineCap is { } cap)
             {
                 graphics.SetLineCap(cap);
-                graphics.SetLineJoin(1);
+            }
+
+            if (appliedLineJoin is { } join)
+            {
+                graphics.SetLineJoin(join);
             }
 
             if (preset == "ellipse")
@@ -556,6 +562,10 @@ internal sealed class PptxRenderer
             if (lineCap is not null)
             {
                 graphics.SetLineCap(0);
+            }
+
+            if (appliedLineJoin is not null)
+            {
                 graphics.SetLineJoin(0);
             }
 
@@ -686,6 +696,27 @@ internal sealed class PptxRenderer
         return (string?)shapeProperties
             .Element(DrawingNamespace + "ln")
             ?.Attribute("cap");
+    }
+
+    private static int? ReadLineJoin(XElement shapeProperties)
+    {
+        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "round") is not null)
+        {
+            return 1;
+        }
+
+        if (line?.Element(DrawingNamespace + "bevel") is not null)
+        {
+            return 2;
+        }
+
+        if (line?.Element(DrawingNamespace + "miter") is not null)
+        {
+            return 0;
+        }
+
+        return null;
     }
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)
