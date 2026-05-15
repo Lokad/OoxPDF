@@ -359,7 +359,12 @@ internal sealed class PptxRenderer
         bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
         bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out double dashLength, out double gapLength);
-        bool hasRoundCap = ReadLineCap(shapeProperties) == "rnd";
+        int? lineCap = ReadLineCap(shapeProperties) switch
+        {
+            "rnd" => 1,
+            "sq" => 2,
+            _ => null
+        };
 
         if (transformed)
         {
@@ -382,9 +387,9 @@ internal sealed class PptxRenderer
                     graphics.SetLineDash(dashLength, gapLength);
                 }
 
-                if (hasRoundCap)
+                if (lineCap is { } cap)
                 {
-                    graphics.SetLineCap(1);
+                    graphics.SetLineCap(cap);
                     graphics.SetLineJoin(1);
                 }
 
@@ -394,7 +399,7 @@ internal sealed class PptxRenderer
                     graphics.ClearLineDash();
                 }
 
-                if (hasRoundCap)
+                if (lineCap is not null)
                 {
                     graphics.SetLineCap(0);
                     graphics.SetLineJoin(0);
@@ -450,9 +455,9 @@ internal sealed class PptxRenderer
                 graphics.SetLineDash(dashLength, gapLength);
             }
 
-            if (hasRoundCap)
+            if (lineCap is { } cap)
             {
-                graphics.SetLineCap(1);
+                graphics.SetLineCap(cap);
                 graphics.SetLineJoin(1);
             }
 
@@ -478,7 +483,7 @@ internal sealed class PptxRenderer
                 graphics.ClearLineDash();
             }
 
-            if (hasRoundCap)
+            if (lineCap is not null)
             {
                 graphics.SetLineCap(0);
                 graphics.SetLineJoin(0);
