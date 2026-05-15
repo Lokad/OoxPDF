@@ -663,6 +663,7 @@ internal sealed class PptxRenderer
             double yTop = frameTop;
             var rowTops = new double[rows.Count + 1];
             var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
+            var skippedHorizontalGridSegments = new bool[rows.Count + 1, rawColumnWidths.Count];
             var explicitBorders = new List<TableBorderLine>();
             rowTops[0] = yTop;
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
@@ -688,25 +689,40 @@ internal sealed class PptxRenderer
                     }
 
                     int columnSpan = Math.Min(ReadTableCellColumnSpan(cell), rawColumnWidths.Count - columnIndex);
+                    int rowSpan = Math.Min(ReadTableCellRowSpan(cell), rows.Count - rowIndex);
                     for (int boundary = columnIndex + 1; boundary < columnIndex + columnSpan; boundary++)
                     {
                         skippedVerticalGridSegments[boundary, rowIndex] = true;
+                    }
+
+                    for (int boundary = rowIndex + 1; boundary < rowIndex + rowSpan; boundary++)
+                    {
+                        for (int skippedColumn = columnIndex; skippedColumn < columnIndex + columnSpan; skippedColumn++)
+                        {
+                            skippedHorizontalGridSegments[boundary, skippedColumn] = true;
+                        }
                     }
 
                     double columnWidth = rawColumnWidths
                         .Skip(columnIndex)
                         .Take(columnSpan)
                         .Sum() * columnScale;
+                    double cellHeight = rawRowHeights
+                        .Skip(rowIndex)
+                        .Take(rowSpan)
+                        .Sum() * rowScale;
+                    double cellTop = yTop;
+                    double cellBottom = cellTop - cellHeight;
                     XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
                     if (TryReadSolidColor(cellProperties, theme, out RgbColor fill))
                     {
                         graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                        graphics.FillRectangle(cellX, cellY, columnWidth, rowHeight);
+                        graphics.FillRectangle(cellX, cellBottom, columnWidth, cellHeight);
                     }
 
-                    AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellY, columnWidth, rowHeight);
-                    AddTableCellTextRuns(cell, cellX, cellY, columnWidth, rowHeight, theme, textRuns);
+                    AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellBottom, columnWidth, cellHeight);
+                    AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, theme, textRuns);
                     cellX += columnWidth;
                     columnIndex += columnSpan;
                 }
@@ -717,7 +733,7 @@ internal sealed class PptxRenderer
 
             if (!TableHasExplicitBorders(table))
             {
-                StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments);
+                StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments, skippedHorizontalGridSegments);
             }
             else
             {
@@ -742,6 +758,14 @@ internal sealed class PptxRenderer
             : 1;
     }
 
+    private static int ReadTableCellRowSpan(XElement cell)
+    {
+        return cell.Attribute("rowSpan") is { } spanAttribute &&
+            int.TryParse(spanAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span)
+            ? Math.Max(1, span)
+            : 1;
+    }
+
     private static bool TableHasExplicitBorders(XElement table)
     {
         return table
@@ -753,7 +777,7 @@ internal sealed class PptxRenderer
                 cellProperties.Element(DrawingNamespace + "lnB") is not null);
     }
 
-    private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, XElement table, bool[,] skippedVerticalGridSegments)
+    private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, XElement table, bool[,] skippedVerticalGridSegments, bool[,] skippedHorizontalGridSegments)
     {
         bool hasTableStyle = table
             .Element(DrawingNamespace + "tblPr")
@@ -786,7 +810,7 @@ internal sealed class PptxRenderer
             double y = hasTableStyle
                 ? (i == 0 ? rowTops[i] + 0.5d : rowTops[i] - 0.5d)
                 : rowTops[i];
-            graphics.StrokeLine(x - 0.5d, y, x + width + 0.5d, y);
+            StrokeDefaultHorizontalGridLine(graphics, x, width, y, columnWidths, skippedHorizontalGridSegments, i);
         }
     }
 
@@ -819,6 +843,45 @@ internal sealed class PptxRenderer
             }
 
             graphics.StrokeLine(x, rowTops[startRow] + 0.5d, x, rowTops[rowIndex] - 0.5d);
+        }
+    }
+
+    private static void StrokeDefaultHorizontalGridLine(PdfGraphicsBuilder graphics, double x, double width, double y, IReadOnlyList<double> columnWidths, bool[,] skippedSegments, int boundaryIndex)
+    {
+        if (boundaryIndex == 0 || boundaryIndex == skippedSegments.GetLength(0) - 1)
+        {
+            graphics.StrokeLine(x - 0.5d, y, x + width + 0.5d, y);
+            return;
+        }
+
+        int columnCount = skippedSegments.GetLength(1);
+        var columnLefts = new double[columnCount + 1];
+        columnLefts[0] = x;
+        for (int i = 0; i < columnCount; i++)
+        {
+            columnLefts[i + 1] = columnLefts[i] + columnWidths[i];
+        }
+
+        int columnIndex = 0;
+        while (columnIndex < columnCount)
+        {
+            while (columnIndex < columnCount && skippedSegments[boundaryIndex, columnIndex])
+            {
+                columnIndex++;
+            }
+
+            if (columnIndex >= columnCount)
+            {
+                break;
+            }
+
+            int startColumn = columnIndex;
+            while (columnIndex < columnCount && !skippedSegments[boundaryIndex, columnIndex])
+            {
+                columnIndex++;
+            }
+
+            graphics.StrokeLine(columnLefts[startColumn] - 0.5d, y, columnLefts[columnIndex] + 0.5d, y);
         }
     }
 
