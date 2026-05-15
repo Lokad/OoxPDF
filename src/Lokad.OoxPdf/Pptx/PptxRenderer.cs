@@ -735,6 +735,8 @@ internal sealed class PptxRenderer
             "upArrow" => CreateUpArrowPoints(x, y, width, height),
             "leftArrow" => CreateLeftArrowPoints(x, y, width, height),
             "rightArrow" => CreateRightArrowPoints(x, y, width, height),
+            "leftRightArrow" => CreateLeftRightArrowPoints(x, y, width, height),
+            "upDownArrow" => CreateUpDownArrowPoints(x, y, width, height),
             _ => []
         };
         return points.Length != 0;
@@ -902,6 +904,46 @@ internal sealed class PptxRenderer
             (arrowShoulderX, y + height),
             (arrowShoulderX, y + height * 0.75d),
             (x + width, y + height * 0.75d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateLeftRightArrowPoints(double x, double y, double width, double height)
+    {
+        double headDepth = Math.Min(width / 2d, height / 2d);
+        double shaftBottom = y + height * 0.25d;
+        double shaftTop = y + height * 0.75d;
+        return
+        [
+            (x, y + height / 2d),
+            (x + headDepth, y + height),
+            (x + headDepth, shaftTop),
+            (x + width - headDepth, shaftTop),
+            (x + width - headDepth, y + height),
+            (x + width, y + height / 2d),
+            (x + width - headDepth, y),
+            (x + width - headDepth, shaftBottom),
+            (x + headDepth, shaftBottom),
+            (x + headDepth, y)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateUpDownArrowPoints(double x, double y, double width, double height)
+    {
+        double headDepth = Math.Min(height / 2d, width / 2d);
+        double shaftLeft = x + width * 0.25d;
+        double shaftRight = x + width * 0.75d;
+        return
+        [
+            (x, y + height - headDepth),
+            (x + width / 2d, y + height),
+            (x + width, y + height - headDepth),
+            (shaftRight, y + height - headDepth),
+            (shaftRight, y + headDepth),
+            (x + width, y + headDepth),
+            (x + width / 2d, y),
+            (x, y + headDepth),
+            (shaftLeft, y + headDepth),
+            (shaftLeft, y + height - headDepth)
         ];
     }
 
