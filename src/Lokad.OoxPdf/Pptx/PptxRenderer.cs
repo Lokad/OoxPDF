@@ -2050,6 +2050,7 @@ internal sealed class PptxRenderer
                 string? bulletText = ReadBulletText(paragraphProperties);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
+                IReadOnlyList<double> tabStops = ReadTabStops(paragraphProperties);
                 double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
                 double paragraphTextX = bulletText is null
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
@@ -2132,42 +2133,53 @@ internal sealed class PptxRenderer
                         bulletPending = false;
                     }
 
-                    foreach (TextCapsFragment fragment in ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, defaultRunProperties))
+                    string rawText = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                    string[] tabParts = rawText.Split('\t');
+                    for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
                     {
-                        if (fragment.Text.Length == 0)
+                        if (tabPartIndex > 0)
                         {
-                            continue;
+                            cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, fontSize);
+                            paragraphEndX = Math.Max(paragraphEndX, cursorX);
                         }
 
-                        double fragmentFontSize = fontSize * fragment.FontScale;
-                        foreach (string segment in SplitFlowSegments(fragment.Text))
+                        foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], runProperties, defaultRunProperties))
                         {
-                            string currentSegment = segment;
-                            double segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
-                            bool overflowsLine = cursorX > paragraphTextX &&
-                                (cursorX + segmentWidth > textX + textWidth ||
-                                    (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
-                            if (overflowsLine)
-                            {
-                                AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                                paragraphRuns.Clear();
-                                cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
-                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, lineSpacing);
-                                cursorX = paragraphTextX;
-                                paragraphEndX = paragraphTextX;
-                                maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
-                                currentSegment = currentSegment.TrimStart();
-                                segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
-                            }
-
-                            if (currentSegment.Length == 0)
+                            if (fragment.Text.Length == 0)
                             {
                                 continue;
                             }
 
-                            paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
-                            cursorX += segmentWidth;
-                            paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                            double fragmentFontSize = fontSize * fragment.FontScale;
+                            foreach (string segment in SplitFlowSegments(fragment.Text))
+                            {
+                                string currentSegment = segment;
+                                double segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                bool overflowsLine = cursorX > paragraphTextX &&
+                                    (cursorX + segmentWidth > textX + textWidth ||
+                                        (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
+                                if (overflowsLine)
+                                {
+                                    AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
+                                    paragraphRuns.Clear();
+                                    cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
+                                    cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, lineSpacing);
+                                    cursorX = paragraphTextX;
+                                    paragraphEndX = paragraphTextX;
+                                    maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
+                                    currentSegment = currentSegment.TrimStart();
+                                    segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                }
+
+                                if (currentSegment.Length == 0)
+                                {
+                                    continue;
+                                }
+
+                                paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
+                                cursorX += segmentWidth;
+                                paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                            }
                         }
                     }
                 }

@@ -41,6 +41,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxIgnoresStandaloneTabElements,
     PptxTests.PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops,
+    PptxTests.PptxSyntheticTextBoxHonorsTabCharacters,
     PptxTests.PptxSyntheticTextBoxOffsetsLargeTextByFontSize,
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,
