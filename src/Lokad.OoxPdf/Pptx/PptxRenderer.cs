@@ -2449,9 +2449,8 @@ internal sealed class PptxRenderer
 
                 if (run.Strike)
                 {
-                    graphics.SetStrokeRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    graphics.SetLineWidth(Math.Max(0.5d, run.FontSize / 18d));
-                    graphics.StrokeLine(x, baselineY + run.FontSize * 0.28d, x + lineWidth, baselineY + run.FontSize * 0.28d);
+                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                    graphics.FillRectangle(x, baselineY + run.FontSize * 0.211d, lineWidth, Math.Max(0.5d, run.FontSize * 0.05d));
                 }
             }
 

@@ -931,9 +931,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 1 RG", pdf);
-        TestAssert.Contains("1.333 w", pdf);
-        TestAssert.Contains(" l S", pdf);
+        TestAssert.Contains("0 0 1 rg", pdf);
+        TestAssert.Contains(" re f", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsParagraphSpacing()
