@@ -807,10 +807,7 @@ internal sealed class PptxRenderer
                 table.Element(DrawingNamespace + "tblPr")?.Attribute("firstRow")?.Value == "1" &&
                 rows.Count > 1;
             graphics.SetLineWidth(firstRowBoundary ? 3d : 1d);
-            double y = hasTableStyle
-                ? (i == 0 ? rowTops[i] + 0.5d : rowTops[i] - 0.5d)
-                : rowTops[i];
-            StrokeDefaultHorizontalGridLine(graphics, x, width, y, columnWidths, skippedHorizontalGridSegments, i);
+            StrokeDefaultHorizontalGridLine(graphics, x, width, rowTops[i], columnWidths, skippedHorizontalGridSegments, i);
         }
     }
 
