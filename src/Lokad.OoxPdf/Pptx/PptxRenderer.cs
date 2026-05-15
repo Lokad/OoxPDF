@@ -2436,7 +2436,7 @@ internal sealed class PptxRenderer
                 if (run.Underline)
                 {
                     graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.203d, lineWidth, Math.Max(0.5d, run.FontSize * 0.073d));
+                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.16d, lineWidth, Math.Max(0.5d, run.FontSize * 0.051d));
                 }
 
                 if (run.Strike)

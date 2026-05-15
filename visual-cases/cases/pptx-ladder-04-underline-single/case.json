@@ -9,8 +9,8 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.12,
-    "maxChangedPixelRatioAtThreshold16": 0.0013
+    "maxMeanAbsoluteError": 0.066,
+    "maxChangedPixelRatioAtThreshold16": 0.00094
   },
   "allowedUnsupportedFeatures": []
 }
