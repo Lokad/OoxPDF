@@ -1814,6 +1814,10 @@ internal static class PptxTests
                     <p:pic><p:nvPicPr><p:cNvPr id="2" name="Video"/><p:cNvPicPr/><p:nvPr><p:video/></p:nvPr></p:nvPicPr><p:blipFill><a:blip><a:videoFile/></a:blip></p:blipFill></p:pic>
                     <p:pic><p:nvPicPr><p:cNvPr id="3" name="Audio"/><p:cNvPicPr/><p:nvPr><p:audio/></p:nvPr></p:nvPicPr><p:blipFill><a:blip><a:audioFile/></a:blip></p:blipFill></p:pic>
                     <p:oleObj/>
+                    <p:sp><p:spPr><a:gradFill/></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:pattFill/></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:effectLst><a:outerShdw/></a:effectLst></p:spPr></p:sp>
                   </p:spTree></p:cSld>
                   <p:transition/>
                   <p:timing/>
@@ -1826,13 +1830,17 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(7, ids.Length);
+        TestAssert.Equal(11, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CHART", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_EFFECT", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_GRADIENT_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_OLE_OBJECT", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_PATTERN_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", string.Join("|", ids));
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
     }

@@ -127,6 +127,30 @@ internal sealed class PptxRenderer
         {
             Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
         }
+
+        if (slideXml.Descendants(DrawingNamespace + "gradFill").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "pattFill").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "alpha").Any(alpha =>
+                alpha.Attribute("val") is { } value &&
+                int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
+                parsed < 100000))
+        {
+            Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "effectLst").Any(effectList => effectList.Elements().Any()) ||
+            slideXml.Descendants(DrawingNamespace + "effectDag").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_EFFECT", "effect");
+        }
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)
