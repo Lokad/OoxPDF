@@ -577,7 +577,18 @@ internal sealed class PptxRenderer
 
     private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, XElement table)
     {
-        graphics.SetStrokeRgb(255, 255, 255);
+        bool hasTableStyle = table
+            .Element(DrawingNamespace + "tblPr")
+            ?.Element(DrawingNamespace + "tableStyleId") is not null;
+        if (hasTableStyle)
+        {
+            graphics.SetStrokeRgb(255, 255, 255);
+        }
+        else
+        {
+            graphics.SetStrokeRgb(0, 0, 0);
+        }
+
         double cursorX = x;
         graphics.SetLineWidth(1d);
         graphics.StrokeLine(cursorX, yTop + 0.5d, cursorX, yTop - height - 0.5d);
@@ -594,7 +605,9 @@ internal sealed class PptxRenderer
                 table.Element(DrawingNamespace + "tblPr")?.Attribute("firstRow")?.Value == "1" &&
                 rows.Count > 1;
             graphics.SetLineWidth(firstRowBoundary ? 3d : 1d);
-            double y = i == 0 ? rowTops[i] + 0.5d : rowTops[i] - 0.5d;
+            double y = hasTableStyle
+                ? (i == 0 ? rowTops[i] + 0.5d : rowTops[i] - 0.5d)
+                : rowTops[i];
             graphics.StrokeLine(x - 0.5d, y, x + width + 0.5d, y);
         }
     }
