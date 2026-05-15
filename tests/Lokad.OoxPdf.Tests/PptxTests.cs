@@ -351,7 +351,7 @@ internal static class PptxTests
         TestAssert.Contains("1 0 0 1 79.2 425.268 Tm", pdf);
     }
 
-    public static void PptxSyntheticTextBoxHonorsTabs()
+    public static void PptxSyntheticTextBoxIgnoresStandaloneTabElements()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -383,10 +383,11 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 130.806 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
+        TestAssert.True(!pdf.Contains("1 0 0 1 130.806 446.868 Tm", StringComparison.Ordinal), "Standalone a:tab elements should not move following text.");
     }
 
-    public static void PptxSyntheticTextBoxHonorsExplicitTabStops()
+    public static void PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -419,7 +420,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 216 450.468 Tm", pdf);
+        TestAssert.True(!pdf.Contains("1 0 0 1 216 450.468 Tm", StringComparison.Ordinal), "Standalone a:tab elements should not move following text.");
     }
 
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()

@@ -1377,7 +1377,6 @@ internal sealed class PptxRenderer
                 string? bulletText = ReadBulletText(paragraphProperties);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
-                IReadOnlyList<double> tabStops = ReadTabStops(paragraphProperties);
                 double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
                 double paragraphTextX = bulletText is null
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
@@ -1399,12 +1398,6 @@ internal sealed class PptxRenderer
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
                         maxFontSize = 18d;
-                        continue;
-                    }
-
-                    if (child.Name == DrawingNamespace + "tab")
-                    {
-                        cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, maxFontSize);
                         continue;
                     }
 
@@ -1725,8 +1718,7 @@ internal sealed class PptxRenderer
     {
         return paragraph.Elements().Any(child =>
             child.Name == DrawingNamespace + "r" ||
-            child.Name == DrawingNamespace + "br" ||
-            child.Name == DrawingNamespace + "tab");
+            child.Name == DrawingNamespace + "br");
     }
 
     private static bool ParagraphHasLayoutContent(XElement paragraph)
