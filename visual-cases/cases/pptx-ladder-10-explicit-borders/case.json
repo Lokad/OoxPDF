@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-10-explicit-borders",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-10-explicit-borders.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "tables", "borders"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0,
+    "maxChangedPixelRatioAtThreshold16": 0
+  },
+  "allowedUnsupportedFeatures": []
+}

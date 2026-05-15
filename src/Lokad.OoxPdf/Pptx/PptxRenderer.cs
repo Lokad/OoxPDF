@@ -510,6 +510,7 @@ internal sealed class PptxRenderer
 
             double yTop = frameTop;
             var rowTops = new double[rows.Count + 1];
+            var explicitBorders = new List<TableBorderLine>();
             rowTops[0] = yTop;
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
@@ -530,7 +531,7 @@ internal sealed class PptxRenderer
                         graphics.FillRectangle(cellX, cellY, columnWidth, rowHeight);
                     }
 
-                    StrokeTableCellBorders(graphics, cellProperties, theme, cellX, cellY, columnWidth, rowHeight);
+                    AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellY, columnWidth, rowHeight);
                     AddTableCellTextRuns(cell, cellX, cellY, columnWidth, rowHeight, theme, textRuns);
                     cellX += columnWidth;
                 }
@@ -542,6 +543,10 @@ internal sealed class PptxRenderer
             if (!TableHasExplicitBorders(table))
             {
                 StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table);
+            }
+            else
+            {
+                StrokeTableBorders(graphics, explicitBorders);
             }
         }
 
@@ -583,15 +588,15 @@ internal sealed class PptxRenderer
         }
     }
 
-    private static void StrokeTableCellBorders(PdfGraphicsBuilder graphics, XElement? cellProperties, PptxTheme theme, double x, double y, double width, double height)
+    private static void AddTableCellBorders(List<TableBorderLine> borders, XElement? cellProperties, PptxTheme theme, double x, double y, double width, double height)
     {
-        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnL"), theme, x, y, x, y + height);
-        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnR"), theme, x + width, y, x + width, y + height);
-        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnT"), theme, x, y + height, x + width, y + height);
-        StrokeTableBorder(graphics, cellProperties?.Element(DrawingNamespace + "lnB"), theme, x, y, x + width, y);
+        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnL"), theme, x, y, x, y + height);
+        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnR"), theme, x + width, y, x + width, y + height);
+        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnT"), theme, x, y + height, x + width, y + height);
+        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnB"), theme, x, y, x + width, y);
     }
 
-    private static void StrokeTableBorder(PdfGraphicsBuilder graphics, XElement? line, PptxTheme theme, double x1, double y1, double x2, double y2)
+    private static void AddTableBorder(List<TableBorderLine> borders, XElement? line, PptxTheme theme, double x1, double y1, double x2, double y2)
     {
         if (line is null || line.Element(DrawingNamespace + "noFill") is not null || !TryReadSolidColor(line, theme, out RgbColor color))
         {
@@ -599,11 +604,34 @@ internal sealed class PptxRenderer
         }
 
         double lineWidth = line.Attribute("w") is { } widthAttribute
-            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
+            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d
             : 0.75d;
-        graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-        graphics.SetLineWidth(lineWidth);
-        graphics.StrokeLine(x1, y1, x2, y2);
+        borders.Add(new TableBorderLine(x1, y1, x2, y2, lineWidth, color));
+    }
+
+    private static void StrokeTableBorders(PdfGraphicsBuilder graphics, List<TableBorderLine> borders)
+    {
+        foreach (IGrouping<TableBorderKey, TableBorderLine> group in borders.GroupBy(TableBorderKey.From))
+        {
+            IReadOnlyList<TableBorderLine> ordered = group
+                .OrderBy(border => group.Key.Vertical ? Math.Min(border.Y1, border.Y2) : Math.Min(border.X1, border.X2))
+                .ToArray();
+            double start = group.Key.Vertical
+                ? ordered.Min(border => Math.Min(border.Y1, border.Y2))
+                : ordered.Min(border => Math.Min(border.X1, border.X2));
+            double end = group.Key.Vertical
+                ? ordered.Max(border => Math.Max(border.Y1, border.Y2))
+                : ordered.Max(border => Math.Max(border.X1, border.X2));
+            double halfWidth = group.Key.LineWidth / 2d;
+            double x1 = group.Key.Vertical ? group.Key.FixedCoordinate : start - halfWidth;
+            double y1 = group.Key.Vertical ? start - halfWidth : group.Key.FixedCoordinate;
+            double x2 = group.Key.Vertical ? group.Key.FixedCoordinate : end + halfWidth;
+            double y2 = group.Key.Vertical ? end + halfWidth : group.Key.FixedCoordinate;
+
+            graphics.SetStrokeRgb(group.Key.Color.Red, group.Key.Color.Green, group.Key.Color.Blue);
+            graphics.SetLineWidth(group.Key.LineWidth);
+            graphics.StrokeLine(x1, y1, x2, y2);
+        }
     }
 
     private static ShapeBounds? ReadGraphicFrameBounds(XElement frame)
@@ -2069,6 +2097,18 @@ internal sealed class PptxRenderer
     private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font, bool SyntheticBold, bool SyntheticItalic);
 
     private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
+
+    private readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color);
+
+    private readonly record struct TableBorderKey(bool Vertical, double FixedCoordinate, double LineWidth, RgbColor Color)
+    {
+        public static TableBorderKey From(TableBorderLine border)
+        {
+            bool vertical = Math.Abs(border.X1 - border.X2) < 0.001d;
+            double fixedCoordinate = vertical ? border.X1 : border.Y1;
+            return new TableBorderKey(vertical, Math.Round(fixedCoordinate, 3), Math.Round(border.LineWidth, 3), border.Color);
+        }
+    }
 
     private readonly record struct LineSpacing(double Value, bool IsAbsolute, bool IsExplicit)
     {

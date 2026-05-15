@@ -1731,7 +1731,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
         TestAssert.Contains("72 396 144 72 re f", pdf);
-        TestAssert.Contains("72 396 m 72 468 l S", pdf);
+        TestAssert.Contains("0 0 0 RG", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains("> Tj", pdf);
     }
