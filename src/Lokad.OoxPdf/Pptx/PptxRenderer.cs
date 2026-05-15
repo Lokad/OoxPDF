@@ -1586,6 +1586,13 @@ internal sealed class PptxRenderer
             double height = OoxUnits.EmuToPoints(transformedBounds.Height);
             double y = document.SlideHeightPoints - yTop - height;
             CropRect crop = ReadCrop(picture);
+            bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
+            if (hasTransform)
+            {
+                graphics.SaveState();
+                ApplyShapeTransform(graphics, x, y, width, height, transformedBounds);
+            }
+
             if (crop.IsEmpty)
             {
                 graphics.DrawImage(name, x, y, width, height);
@@ -1593,6 +1600,11 @@ internal sealed class PptxRenderer
             else
             {
                 graphics.DrawImageCropped(name, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            }
+
+            if (hasTransform)
+            {
+                graphics.RestoreState();
             }
 
             images.Add(new PdfImageResource(name, image));
