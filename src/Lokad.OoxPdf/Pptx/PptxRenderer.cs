@@ -2008,7 +2008,7 @@ internal sealed class PptxRenderer
             {
                 if (child.Name == DrawingNamespace + "br")
                 {
-                    height += lineSpacing.Resolve(maxFontSize);
+                    height += ReadLineAdvance(lineSpacing, maxFontSize);
                     maxFontSize = 18d;
                     hasLineContent = false;
                     continue;
@@ -2027,7 +2027,7 @@ internal sealed class PptxRenderer
 
             if (hasLineContent || maxFontSize > 0d)
             {
-                height += lineSpacing.Resolve(maxFontSize);
+                height += ReadLineAdvance(lineSpacing, maxFontSize);
             }
 
             height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft");

@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-09-title-placeholder-arial-theme",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-09-title-placeholder-arial-theme.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "inheritance", "placeholders", "theme-fonts"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.22,
+    "maxChangedPixelRatioAtThreshold16": 0.0025
+  },
+  "allowedUnsupportedFeatures": []
+}

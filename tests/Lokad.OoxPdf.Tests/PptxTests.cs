@@ -968,7 +968,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 7.2 459.468 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 7.2 461.268 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxClipsOverflow()
