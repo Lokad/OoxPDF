@@ -10,7 +10,7 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.138,
-    "maxChangedPixelRatioAtThreshold16": 0.0031
+    "maxChangedPixelRatioAtThreshold16": 0.00306
   },
   "allowedUnsupportedFeatures": []
 }
