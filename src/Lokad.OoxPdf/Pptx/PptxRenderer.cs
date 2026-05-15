@@ -857,7 +857,7 @@ internal sealed class PptxRenderer
                 TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)),
                 _ => 0d
             };
-            double cursorY = document.SlideHeightPoints - yTop - insets.Top - ReadFirstLineBaselineOffset(textBody, defaultParagraphProperties) - verticalOffset;
+            double cursorLineTop = document.SlideHeightPoints - yTop - insets.Top - verticalOffset;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
@@ -872,7 +872,7 @@ internal sealed class PptxRenderer
                     if (ParagraphHasLayoutContent(paragraph))
                     {
                         XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                        cursorY -= spacingBefore + ReadParagraphAdvance(lineSpacing, ReadFontSize(endRunProperties, defaultRunProperties)) + spacingAfter;
+                        cursorLineTop -= spacingBefore + ReadParagraphAdvance(lineSpacing, ReadFontSize(endRunProperties, defaultRunProperties)) + spacingAfter;
                     }
 
                     continue;
@@ -887,7 +887,8 @@ internal sealed class PptxRenderer
                 double paragraphTextX = bulletText is null
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
                     : textX + Math.Max(0d, indent.MarginLeft);
-                cursorY -= spacingBefore;
+                cursorLineTop -= spacingBefore;
+                double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties);
                 double cursorX = paragraphTextX;
                 double maxFontSize = 18d;
                 var paragraphRuns = new List<TextRun>();
@@ -898,7 +899,8 @@ internal sealed class PptxRenderer
                     {
                         AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                         paragraphRuns.Clear();
-                        cursorY -= lineSpacing.Resolve(maxFontSize);
+                        cursorLineTop -= lineSpacing.Resolve(maxFontSize);
+                        cursorY = cursorLineTop - BaselineOffset(18d);
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
                         maxFontSize = 18d;
@@ -964,7 +966,8 @@ internal sealed class PptxRenderer
                         {
                             AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                             paragraphRuns.Clear();
-                            cursorY -= lineSpacing.Resolve(maxFontSize);
+                            cursorLineTop -= lineSpacing.Resolve(maxFontSize);
+                            cursorY = cursorLineTop - BaselineOffset(fontSize);
                             cursorX = paragraphTextX;
                             paragraphEndX = paragraphTextX;
                             maxFontSize = fontSize;
@@ -984,7 +987,7 @@ internal sealed class PptxRenderer
                 }
 
                 AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                cursorY -= ReadParagraphAdvance(lineSpacing, maxFontSize) + spacingAfter;
+                cursorLineTop -= ReadParagraphAdvance(lineSpacing, maxFontSize) + spacingAfter;
             }
         }
 
@@ -1277,44 +1280,44 @@ internal sealed class PptxRenderer
             : fontSize * 1.2d;
     }
 
-    private static double ReadFirstLineBaselineOffset(XElement textBody, XElement? defaultParagraphProperties)
+    private static double ReadFirstLineBaselineOffset(XElement paragraph, XElement? defaultRunProperties)
     {
         const double defaultFontSize = 18d;
-        const double baselineOffsetFactor = 0.95d;
-        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        foreach (XElement child in paragraph.Elements())
         {
-            foreach (XElement child in paragraph.Elements())
+            if (child.Name == DrawingNamespace + "br")
             {
-                if (child.Name == DrawingNamespace + "br")
-                {
-                    return defaultFontSize * baselineOffsetFactor;
-                }
-
-                if (child.Name != DrawingNamespace + "r")
-                {
-                    continue;
-                }
-
-                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-                if (runProperties?.Attribute("sz") is { } size)
-                {
-                    double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
-                    return fontSize * baselineOffsetFactor;
-                }
-
-                if (defaultParagraphProperties?
-                    .Element(DrawingNamespace + "defRPr")?
-                    .Attribute("sz") is { } defaultSize)
-                {
-                    double fontSize = int.Parse(defaultSize.Value, CultureInfo.InvariantCulture) / 100d;
-                    return fontSize * baselineOffsetFactor;
-                }
-
-                return defaultFontSize * baselineOffsetFactor;
+                return BaselineOffset(defaultFontSize);
             }
+
+            if (child.Name != DrawingNamespace + "r")
+            {
+                continue;
+            }
+
+            XElement? runProperties = child.Element(DrawingNamespace + "rPr");
+            if (runProperties?.Attribute("sz") is { } size)
+            {
+                double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
+                return BaselineOffset(fontSize);
+            }
+
+            if (defaultRunProperties?.Attribute("sz") is { } defaultSize)
+            {
+                double fontSize = int.Parse(defaultSize.Value, CultureInfo.InvariantCulture) / 100d;
+                return BaselineOffset(fontSize);
+            }
+
+            return BaselineOffset(defaultFontSize);
         }
 
-        return defaultFontSize * baselineOffsetFactor;
+        return BaselineOffset(defaultFontSize);
+    }
+
+    private static double BaselineOffset(double fontSize)
+    {
+        const double baselineOffsetFactor = 0.974d;
+        return fontSize * baselineOffsetFactor;
     }
 
     private static string? ReadBulletText(XElement? paragraphProperties)

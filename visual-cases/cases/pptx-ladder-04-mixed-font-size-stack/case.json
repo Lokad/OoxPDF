@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-mixed-font-size-stack",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-mixed-font-size-stack.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "mixed-font-size", "paragraph-stack"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.07,
+    "maxChangedPixelRatioAtThreshold16": 0.0018
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -311,7 +311,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 450.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsLineBreaks()
@@ -346,8 +346,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 428.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsTabs()
@@ -382,7 +382,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 130.806 447.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 130.806 446.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsExplicitTabStops()
@@ -417,8 +417,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 450.9 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 216 450.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 216 450.468 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
@@ -453,7 +453,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 401.7 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 400.116 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxRendersBulletCharacters()
@@ -523,8 +523,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 151.2 447.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 151.2 446.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsBulletColorAndSize()
@@ -637,8 +637,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 177.478 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 212.502 447.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 177.478 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 212.502 446.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxWrapsAcrossMixedRuns()
@@ -673,8 +673,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 429.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 428.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesListStyleDefaults()
@@ -712,8 +712,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 36 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 430.2 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 394.2 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 429.336 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 393.336 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesShapeFontRefColor()
@@ -860,7 +860,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 435.3 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 434.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxSkipsEmptyParagraphs()
@@ -897,8 +897,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 447.3 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 404.1 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 403.668 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()
@@ -933,7 +933,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 7.2 459.9 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 7.2 459.468 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxClipsOverflow()
@@ -1360,7 +1360,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 40 Tf", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 426.4 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 425.44 Tm", pdf);
     }
 
     public static void PptxSyntheticPngPictureRendersImageXObject()

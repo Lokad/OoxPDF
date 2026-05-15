@@ -241,6 +241,9 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - PPTX underlines now use an Office-like filled rectangle instead of a stroked line; the older broad serif-title underline gate also improved to MAE `0.429467`, changed-pixel ratio threshold 16 `0.005498`.
   - `pptx-ladder-04-mixed-font-size-line` at `artifacts/visual/pptx-ladder-04-mixed-font-size-line/20260515-080529`: page count and dimensions matched, diagnostics were empty, MAE `0.195173`, changed-pixel ratio threshold 16 `0.001995`.
   - Same-line mixed font sizes now have their own public Office-PDF-backed gate. Office and candidate both place 36pt and 18pt runs on a shared baseline with closely matching x advances.
+  - `pptx-ladder-04-mixed-font-size-stack` now isolates large/small/large paragraph vertical rhythm. Office advances line tops and recomputes each paragraph baseline from the current paragraph font size; the renderer now follows that model. The isolated fixture is gated at MAE `0.065659`, changed-pixel ratio threshold 16 `0.001726`.
+  - The line-top text layout change tightened `pptx-ladder-04-mixed-font-size-line` to MAE `0.007254`, changed-pixel ratio threshold 16 `0.000173`, and `pptx-ladder-04-paragraph-advance` to MAE `0.216017`, changed-pixel ratio threshold 16 `0.003088`.
+  - The same change improved the broader ungated `pptx-ladder-04-mixed-paragraph-stack` from MAE `3.041919` to MAE `0.873692`, changed-pixel ratio threshold 16 `0.011333`. Remaining gaps are now concentrated in serif font metrics, underline bounds in combined text, and wrapped bullet continuation rather than gross paragraph vertical drift.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.
