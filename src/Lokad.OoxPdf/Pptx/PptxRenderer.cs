@@ -380,40 +380,39 @@ internal sealed class PptxRenderer
                 double y1 = document.SlideHeightPoints - yTop;
                 double x2 = x + width;
                 double y2 = document.SlideHeightPoints - yTop - height;
-                graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
-                graphics.SetLineWidth(lineWidth);
-                if (hasDash)
+                bool hasHeadArrow = ReadLineEndType(shapeProperties, "headEnd") == "triangle";
+                bool hasTailArrow = ReadLineEndType(shapeProperties, "tailEnd") == "triangle";
+                if ((hasHeadArrow || hasTailArrow) && !hasDash && lineCap is null)
                 {
-                    graphics.SetLineDash(dashPattern);
+                    graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                    FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
                 }
-
-                if (lineCap is { } cap)
+                else
                 {
-                    graphics.SetLineCap(cap);
-                    graphics.SetLineJoin(1);
-                }
+                    graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+                    graphics.SetLineWidth(lineWidth);
+                    if (hasDash)
+                    {
+                        graphics.SetLineDash(dashPattern);
+                    }
 
-                graphics.StrokeLine(x1, y1, x2, y2);
-                if (hasDash)
-                {
-                    graphics.ClearLineDash();
-                }
+                    if (lineCap is { } cap)
+                    {
+                        graphics.SetLineCap(cap);
+                        graphics.SetLineJoin(1);
+                    }
 
-                if (lineCap is not null)
-                {
-                    graphics.SetLineCap(0);
-                    graphics.SetLineJoin(0);
-                }
+                    graphics.StrokeLine(x1, y1, x2, y2);
+                    if (hasDash)
+                    {
+                        graphics.ClearLineDash();
+                    }
 
-                graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                if (ReadLineEndType(shapeProperties, "headEnd") == "triangle")
-                {
-                    FillLineArrowhead(graphics, x1, y1, x1 - x2, y1 - y2, lineWidth);
-                }
-
-                if (ReadLineEndType(shapeProperties, "tailEnd") == "triangle")
-                {
-                    FillLineArrowhead(graphics, x2, y2, x2 - x1, y2 - y1, lineWidth);
+                    if (lineCap is not null)
+                    {
+                        graphics.SetLineCap(0);
+                        graphics.SetLineJoin(0);
+                    }
                 }
             }
 
@@ -520,6 +519,57 @@ internal sealed class PptxRenderer
         ]);
     }
 
+    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        if (length <= 0.001d)
+        {
+            return;
+        }
+
+        double ux = dx / length;
+        double uy = dy / length;
+        double nx = -uy;
+        double ny = ux;
+        double half = lineWidth / 2d;
+        double arrowLength = lineWidth * 3d;
+        double arrowHalfWidth = lineWidth * 1.5d;
+        double startX = headArrow ? x1 + ux * (arrowLength - half) : x1;
+        double startY = headArrow ? y1 + uy * (arrowLength - half) : y1;
+        double endX = tailArrow ? x2 - ux * (arrowLength - half) : x2;
+        double endY = tailArrow ? y2 - uy * (arrowLength - half) : y2;
+
+        graphics.FillPolygon(
+        [
+            (startX + nx * half, startY + ny * half),
+            (endX + nx * half, endY + ny * half),
+            (endX - nx * half, endY - ny * half),
+            (startX - nx * half, startY - ny * half)
+        ]);
+
+        if (headArrow)
+        {
+            FillTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
+        }
+
+        if (tailArrow)
+        {
+            FillTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
+        }
+    }
+
+    private static void FillTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)
+    {
+        graphics.FillPolygon(
+        [
+            (tipX, tipY),
+            (baseX + nx * halfWidth, baseY + ny * halfWidth),
+            (baseX - nx * halfWidth, baseY - ny * halfWidth)
+        ]);
+    }
+
     private static string? ReadLineEndType(XElement shapeProperties, string elementName)
     {
         return (string?)shapeProperties
@@ -559,15 +609,16 @@ internal sealed class PptxRenderer
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)
     {
+        double arrowShoulderY = y + height * 0.375d;
         return
         [
             (x + width * 0.25d, y + height),
             (x + width * 0.75d, y + height),
-            (x + width * 0.75d, y + height * 0.45d),
-            (x + width, y + height * 0.45d),
+            (x + width * 0.75d, arrowShoulderY),
+            (x + width, arrowShoulderY),
             (x + width * 0.5d, y),
-            (x, y + height * 0.45d),
-            (x + width * 0.25d, y + height * 0.45d)
+            (x, arrowShoulderY),
+            (x + width * 0.25d, arrowShoulderY)
         ];
     }
 

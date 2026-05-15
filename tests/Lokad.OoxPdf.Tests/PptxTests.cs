@@ -180,12 +180,13 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.133 0.133 0.133 RG", pdf);
-        TestAssert.Contains("72 324 m 216 324 l S", pdf);
-        TestAssert.Contains("211 326.25 l", pdf);
+        TestAssert.Contains("0.133 0.133 0.133 rg", pdf);
+        TestAssert.Contains("72 324.5 m", pdf);
+        TestAssert.Contains("213.5 323.5 l", pdf);
+        TestAssert.Contains("216 324 m", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);
         TestAssert.Contains("90 468 m", pdf);
-        TestAssert.Contains("126 428.4 l", pdf);
+        TestAssert.Contains("126 423 l", pdf);
         TestAssert.Contains("108 396 l", pdf);
         TestAssert.Contains("h" + Environment.NewLine + "f", pdf);
     }
