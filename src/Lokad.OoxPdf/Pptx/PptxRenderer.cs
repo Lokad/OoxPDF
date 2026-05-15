@@ -151,6 +151,17 @@ internal sealed class PptxRenderer
         {
             Emit("PPTX_UNSUPPORTED_EFFECT", "effect");
         }
+
+        if (slideXml.Descendants(DrawingNamespace + "custGeom").Any())
+        {
+            Emit("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", "custom geometry");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "prstGeom").Any(geometry =>
+                ((string?)geometry.Attribute("prst"))?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true))
+        {
+            Emit("PPTX_UNSUPPORTED_CALLOUT", "callout shape");
+        }
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)

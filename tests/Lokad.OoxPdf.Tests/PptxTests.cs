@@ -1818,6 +1818,8 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:pattFill/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill></p:spPr></p:sp>
                     <p:sp><p:spPr><a:effectLst><a:outerShdw/></a:effectLst></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:custGeom/></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:prstGeom prst="wedgeRectCallout"/></p:spPr></p:sp>
                   </p:spTree></p:cSld>
                   <p:transition/>
                   <p:timing/>
@@ -1830,10 +1832,12 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(11, ids.Length);
+        TestAssert.Equal(13, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CHART", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_EFFECT", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_GRADIENT_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_OLE_OBJECT", string.Join("|", ids));
