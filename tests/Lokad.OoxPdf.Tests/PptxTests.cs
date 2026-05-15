@@ -2039,7 +2039,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(14, ids.Length);
+        TestAssert.Equal(13, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
@@ -2052,7 +2052,6 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_PICTURE_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));
-        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", string.Join("|", ids));
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
     }

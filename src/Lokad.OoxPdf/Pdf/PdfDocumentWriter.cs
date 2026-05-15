@@ -109,7 +109,7 @@ internal sealed class PdfDocumentWriter
 
     private static string BuildResources(PdfPage page, IReadOnlyDictionary<string, FontObjectNumbers> fontObjects, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
     {
-        if (page.Fonts.Count == 0 && page.Images.Count == 0)
+        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0)
         {
             return "<< >>";
         }
@@ -136,6 +136,18 @@ internal sealed class PdfDocumentWriter
                 ImageObjectNumbers objects = imageObjects[image.Image.ResourceKey];
                 builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(image.ResourceName)).Append(' ');
                 builder.Append(CultureInfo.InvariantCulture, $"{objects.Image} 0 R");
+            }
+
+            builder.Append(" >>");
+        }
+
+        if (page.ExtGStates.Count != 0)
+        {
+            builder.Append(" /ExtGState <<");
+            foreach (PdfExtGStateResource state in page.ExtGStates)
+            {
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(state.ResourceName));
+                builder.Append(CultureInfo.InvariantCulture, $" << /ca {FormatNumber(state.FillAlpha)} /CA {FormatNumber(state.StrokeAlpha)} >>");
             }
 
             builder.Append(" >>");

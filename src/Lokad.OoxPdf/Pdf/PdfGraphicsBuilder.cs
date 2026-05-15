@@ -6,6 +6,9 @@ namespace Lokad.OoxPdf.Pdf;
 internal sealed class PdfGraphicsBuilder
 {
     private readonly StringBuilder builder = new();
+    private readonly List<PdfExtGStateResource> extGStates = [];
+
+    public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
 
     public void SetFillRgb(byte red, byte green, byte blue)
     {
@@ -61,6 +64,23 @@ internal sealed class PdfGraphicsBuilder
     public void RestoreState()
     {
         builder.AppendLine("Q");
+    }
+
+    public void SetAlpha(double fillAlpha, double strokeAlpha)
+    {
+        fillAlpha = Math.Clamp(fillAlpha, 0d, 1d);
+        strokeAlpha = Math.Clamp(strokeAlpha, 0d, 1d);
+        string resourceName = "GS" +
+            ((int)Math.Round(fillAlpha * 100000d, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) +
+            "F" +
+            ((int)Math.Round(strokeAlpha * 100000d, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) +
+            "S";
+        if (!extGStates.Any(state => state.ResourceName.Equals(resourceName, StringComparison.Ordinal)))
+        {
+            extGStates.Add(new PdfExtGStateResource(resourceName, fillAlpha, strokeAlpha));
+        }
+
+        builder.Append('/').Append(resourceName).AppendLine(" gs");
     }
 
     public void Transform(double a, double b, double c, double d, double e, double f)

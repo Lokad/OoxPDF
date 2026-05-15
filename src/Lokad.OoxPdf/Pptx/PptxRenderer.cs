@@ -71,7 +71,7 @@ internal sealed class PptxRenderer
                     RenderOrderedShapeTextContainer(shapeTree, relationships, package, document, graphics, diagnosticSink, slideIndex + 1, theme, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, inheritedXml);
                 }
 
-                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages));
+                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages, graphics.ExtGStates.ToArray()));
                 continue;
             }
 
@@ -88,7 +88,7 @@ internal sealed class PptxRenderer
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
-            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts, images));
+            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts, images, graphics.ExtGStates.ToArray()));
         }
 
         return pages;
@@ -167,10 +167,7 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "alpha").Any(alpha =>
-                alpha.Attribute("val") is { } value &&
-                int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
-                parsed < 100000))
+        if (slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha))
         {
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
         }
@@ -199,6 +196,22 @@ internal sealed class PptxRenderer
             .Descendants(DrawingNamespace + "graphicData")
             .Select(element => (string?)element.Attribute("uri"))
             .Any(uri => uri?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static bool IsUnsupportedAlpha(XElement alpha)
+    {
+        if (alpha.Attribute("val") is not { } value ||
+            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
+            parsed >= 100000)
+        {
+            return false;
+        }
+
+        XElement? color = alpha.Parent;
+        XElement? fill = color?.Parent;
+        XElement? owner = fill?.Parent;
+        return fill?.Name != DrawingNamespace + "solidFill" ||
+            owner?.Name != PresentationNamespace + "spPr";
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
@@ -366,7 +379,7 @@ internal sealed class PptxRenderer
         double y = document.SlideHeightPoints - yTop - height;
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
-        bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
+        bool hasFill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fill, out double fillAlpha);
         bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
@@ -436,6 +449,13 @@ internal sealed class PptxRenderer
 
         if (hasFill)
         {
+            bool transparentFill = fillAlpha < 0.999d;
+            if (transparentFill)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fillAlpha, 1d);
+            }
+
             graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
             if (preset == "ellipse")
             {
@@ -452,6 +472,11 @@ internal sealed class PptxRenderer
             else
             {
                 graphics.FillRectangle(x, y, width, height);
+            }
+
+            if (transparentFill)
+            {
+                graphics.RestoreState();
             }
         }
 
@@ -1256,8 +1281,14 @@ internal sealed class PptxRenderer
 
     private static bool TryReadSolidColor(XElement? element, PptxTheme theme, out RgbColor color)
     {
+        return TryReadSolidColorWithAlpha(element, theme, out color, out _);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
+    {
         XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
         XElement? colorContainer = solidFill ?? element;
+        alpha = ReadAlpha(colorContainer);
         XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
         string? hex = (string?)srgbColor?.Attribute("val");
         if (RgbColor.TryParse(hex, out color))
@@ -1275,6 +1306,21 @@ internal sealed class PptxRenderer
         }
 
         return false;
+    }
+
+    private static double ReadAlpha(XElement? colorContainer)
+    {
+        XElement? alpha = colorContainer?
+            .Elements()
+            .FirstOrDefault(element => element.Name.LocalName is "srgbClr" or "schemeClr")
+            ?.Element(DrawingNamespace + "alpha");
+        if (alpha?.Attribute("val") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        {
+            return Math.Clamp(parsed / 100000d, 0d, 1d);
+        }
+
+        return 1d;
     }
 
     private static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
