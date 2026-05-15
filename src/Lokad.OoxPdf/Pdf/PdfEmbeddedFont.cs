@@ -123,7 +123,7 @@ internal sealed class PdfEmbeddedFont
         return EncodeGlyphPositioningArray(text, 0d, 1d);
     }
 
-    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize)
+    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray = false)
     {
         var glyphs = new List<ushort>();
         foreach (Rune rune in text.EnumerateRunes())
@@ -167,7 +167,7 @@ internal sealed class PdfEmbeddedFont
         }
 
         builder.Append(']');
-        return hasPositioning ? builder.ToString() : null;
+        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
     }
 
     public double MeasureTextPoints(string text, double fontSize)

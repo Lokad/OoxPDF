@@ -431,7 +431,7 @@ Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, syn
 
 - [x] Add a PDF inspection tool for Office/candidate PDFs that lists objects and extracts decodable streams for content-operator inspection.
 - [ ] Audit current PDF generation patterns against Office reference PDFs: text grouping, text matrices, clipping regions, image masks, transparency state, path construction, stroke/fill order, resource naming/reuse, and page content stream organization.
-- [ ] Improve PPTX text-line emission toward Office-like text objects: preserve visual behavior while avoiding unnecessary run splitting around spaces when the line can be emitted as one positioned text object.
+- [ ] Improve PPTX text-line emission toward Office-like text objects: PPTX now emits positioned `TJ` arrays even when a line has no explicit kerning/tracking adjustment, matching Office's common text-object pattern without changing raster output. Continue by reducing unnecessary run splitting around spaces when a line can be emitted as one positioned text object.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
 - [ ] Add font subsetting to reduce output size while keeping deterministic output.

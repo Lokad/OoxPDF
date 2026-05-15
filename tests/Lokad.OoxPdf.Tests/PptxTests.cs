@@ -277,7 +277,7 @@ internal static class PptxTests
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains("/F1 24 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.Contains(" TJ", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsBodyInsets()
@@ -1156,7 +1156,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
         TestAssert.Contains(" re f", pdf);
-        TestAssert.True(CountOccurrences(pdf, "> Tj") >= 1, "Expected styled text to be emitted.");
+        TestAssert.True(CountOccurrences(pdf, " TJ") >= 1, "Expected styled text to be emitted.");
     }
 
     public static void PptxSyntheticThemeColorsAndFontsResolve()
@@ -1867,7 +1867,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        int textIndex = pdf.IndexOf("> Tj", StringComparison.Ordinal);
+        int textIndex = pdf.IndexOf(" TJ", StringComparison.Ordinal);
         int coverIndex = pdf.IndexOf("72 396 288 72 re f", StringComparison.Ordinal);
         TestAssert.True(textIndex >= 0 && coverIndex > textIndex, "Expected the covering shape to be emitted after the text box.");
     }
@@ -1939,7 +1939,7 @@ internal static class PptxTests
         TestAssert.Contains("72 396 144 72 re f", pdf);
         TestAssert.Contains("0 0 0 RG", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
-        TestAssert.Contains("> Tj", pdf);
+        TestAssert.Contains(" TJ", pdf);
     }
 
     public static void PptxSyntheticBarChartUsesStaticFallback()

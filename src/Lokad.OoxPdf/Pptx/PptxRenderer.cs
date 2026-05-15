@@ -3233,7 +3233,7 @@ internal sealed class PptxRenderer
 
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing)
     {
-        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize);
+        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize, forcePositioningArray: true);
         if (positioningArray is null)
         {
             graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic);
