@@ -414,6 +414,8 @@ internal sealed class PptxRenderer
             double rowScale = frameHeight / rawRowHeights.Sum();
 
             double yTop = frameTop;
+            var rowTops = new double[rows.Count + 1];
+            rowTops[0] = yTop;
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
                 double rowHeight = rawRowHeights[rowIndex] * rowScale;
@@ -439,10 +441,51 @@ internal sealed class PptxRenderer
                 }
 
                 yTop -= rowHeight;
+                rowTops[rowIndex + 1] = yTop;
+            }
+
+            if (!TableHasExplicitBorders(table))
+            {
+                StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table);
             }
         }
 
         return textRuns;
+    }
+
+    private static bool TableHasExplicitBorders(XElement table)
+    {
+        return table
+            .Descendants(DrawingNamespace + "tcPr")
+            .Any(cellProperties =>
+                cellProperties.Element(DrawingNamespace + "lnL") is not null ||
+                cellProperties.Element(DrawingNamespace + "lnR") is not null ||
+                cellProperties.Element(DrawingNamespace + "lnT") is not null ||
+                cellProperties.Element(DrawingNamespace + "lnB") is not null);
+    }
+
+    private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, XElement table)
+    {
+        graphics.SetStrokeRgb(255, 255, 255);
+        double cursorX = x;
+        graphics.SetLineWidth(1d);
+        graphics.StrokeLine(cursorX, yTop + 0.5d, cursorX, yTop - height - 0.5d);
+        foreach (double columnWidth in columnWidths)
+        {
+            cursorX += columnWidth;
+            graphics.StrokeLine(cursorX, yTop + 0.5d, cursorX, yTop - height - 0.5d);
+        }
+
+        IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
+        for (int i = 0; i < rowTops.Count; i++)
+        {
+            bool firstRowBoundary = i == 1 &&
+                table.Element(DrawingNamespace + "tblPr")?.Attribute("firstRow")?.Value == "1" &&
+                rows.Count > 1;
+            graphics.SetLineWidth(firstRowBoundary ? 3d : 1d);
+            double y = i == 0 ? rowTops[i] + 0.5d : rowTops[i] - 0.5d;
+            graphics.StrokeLine(x - 0.5d, y, x + width + 0.5d, y);
+        }
     }
 
     private static void StrokeTableCellBorders(PdfGraphicsBuilder graphics, XElement? cellProperties, PptxTheme theme, double x, double y, double width, double height)
@@ -614,11 +657,12 @@ internal sealed class PptxRenderer
             return;
         }
 
-        double cursorY = y + height - 14d;
+        const double defaultInset = 7.2d;
+        double cursorY = y + height - 18d * 1.174d;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             TextAlignment alignment = ReadAlignment(paragraph);
-            double cursorX = x + 4d;
+            double cursorX = x + defaultInset;
             double maxFontSize = 12d;
             foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
             {
@@ -644,7 +688,7 @@ internal sealed class PptxRenderer
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), x + 4d, y + 4d, Math.Max(1d, width - 8d), Math.Max(1d, height - 8d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - defaultInset * 2d), Math.Max(1d, height - defaultInset * 2d), x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
                 cursorX += text.Length * fontSize * 0.55d;
             }
 
