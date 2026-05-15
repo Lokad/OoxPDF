@@ -52,6 +52,23 @@ internal sealed class PptxRenderer
             }
 
             RenderBackground(slideXml, document, graphics, theme);
+            if (CanRenderSimpleSlideInOrder(slideXml))
+            {
+                IReadOnlyList<TextRun> inheritedTextRuns = inheritedXml
+                    .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
+                    .ToArray();
+                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(slideXml, document, theme, includePlaceholders: true, inheritedXml);
+                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).ToArray());
+                DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
+                foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
+                {
+                    RenderOrderedShapeTextContainer(shapeTree, document, graphics, theme, renderedFonts.Fonts, GroupTransform.Identity, renderPlaceholders: true, inheritedXml);
+                }
+
+                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, []));
+                continue;
+            }
+
             IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             RenderShapes(slideXml, document, graphics, theme, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = inheritedXml
@@ -224,6 +241,48 @@ internal sealed class PptxRenderer
         foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
         {
             RenderShapeContainer(shapeTree, document, graphics, theme, GroupTransform.Identity, renderPlaceholders);
+        }
+    }
+
+    private static bool CanRenderSimpleSlideInOrder(XDocument slideXml)
+    {
+        return !slideXml.Descendants(PresentationNamespace + "pic").Any() &&
+            !slideXml.Descendants(PresentationNamespace + "graphicFrame").Any();
+    }
+
+    private static void RenderOrderedShapeTextContainer(
+        XElement container,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        PptxTheme theme,
+        IReadOnlyDictionary<string, RenderedFont> fonts,
+        GroupTransform transform,
+        bool renderPlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        foreach (XElement child in container.Elements())
+        {
+            if (child.Name == PresentationNamespace + "sp")
+            {
+                if (renderPlaceholders || !IsPlaceholder(child))
+                {
+                    RenderShape(child, document, graphics, theme, transform);
+                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, document, theme, renderPlaceholders, placeholderSources), graphics, fonts);
+                }
+
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "cxnSp")
+            {
+                RenderShape(child, document, graphics, theme, transform);
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "grpSp")
+            {
+                RenderOrderedShapeTextContainer(child, document, graphics, theme, fonts, transform.Combine(ReadGroupTransform(child)), renderPlaceholders, placeholderSources);
+            }
         }
     }
 
@@ -1223,6 +1282,33 @@ internal sealed class PptxRenderer
         return transform;
     }
 
+    private static IReadOnlyList<TextRun> ReadTextRunsForShape(
+        XElement shape,
+        PptxDocument document,
+        PptxTheme theme,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        XElement current = new(shape);
+        foreach (XElement group in shape.Ancestors(PresentationNamespace + "grpSp"))
+        {
+            var groupCopy = new XElement(PresentationNamespace + "grpSp");
+            if (group.Element(PresentationNamespace + "grpSpPr") is { } properties)
+            {
+                groupCopy.Add(new XElement(properties));
+            }
+
+            groupCopy.Add(current);
+            current = groupCopy;
+        }
+
+        var slide = new XDocument(
+            new XElement(PresentationNamespace + "sld",
+                new XElement(PresentationNamespace + "cSld",
+                    new XElement(PresentationNamespace + "spTree", current))));
+        return ReadTextRuns(slide, document, theme, includePlaceholders, placeholderSources);
+    }
+
     private static ShapeBounds? FindInheritedPlaceholderBounds(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {
         XElement? placeholder = shape
@@ -1853,6 +1939,20 @@ internal sealed class PptxRenderer
 
         textRuns = CoalesceAdjacentTextRuns(textRuns);
         textRuns = CoalesceUnderlineRuns(textRuns);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
+        DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
+        return renderedFonts.Resources;
+    }
+
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns)
+    {
+        if (textRuns.Count == 0)
+        {
+            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+        }
+
+        textRuns = CoalesceAdjacentTextRuns(textRuns);
+        textRuns = CoalesceUnderlineRuns(textRuns);
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
@@ -1873,6 +1973,13 @@ internal sealed class PptxRenderer
             resources.Add(new PdfFontResource(resourceName, embedded));
         }
 
+        return new RenderedFonts(fonts, resources);
+    }
+
+    private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    {
+        textRuns = CoalesceAdjacentTextRuns(textRuns);
+        textRuns = CoalesceUnderlineRuns(textRuns);
         foreach (TextRun run in textRuns)
         {
             if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
@@ -1880,8 +1987,6 @@ internal sealed class PptxRenderer
                 DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
             }
         }
-
-        return resources;
     }
 
     private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns)
@@ -2208,6 +2313,8 @@ internal sealed class PptxRenderer
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
     private readonly record struct RenderedFont(string ResourceName, PdfEmbeddedFont Font, bool SyntheticBold, bool SyntheticItalic);
+
+    private readonly record struct RenderedFonts(IReadOnlyDictionary<string, RenderedFont> Fonts, IReadOnlyList<PdfFontResource> Resources);
 
     private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
 

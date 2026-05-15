@@ -35,6 +35,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticGroupedShapeAppliesTransform,
     PptxTests.PptxSyntheticGroupedPictureAppliesTransform,
     PptxTests.PptxSyntheticGroupedTextAppliesTransform,
+    PptxTests.PptxSyntheticTextAndShapesUseSiblingOrder,
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
     PptxTests.PptxSyntheticTextBoxHonorsTabs,
