@@ -2025,7 +2025,7 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill></p:spPr></p:sp>
                     <p:sp><p:spPr><a:effectLst><a:outerShdw/></a:effectLst></p:spPr></p:sp>
                     <p:sp><p:spPr><a:custGeom/></p:spPr></p:sp>
-                    <p:sp><p:spPr><a:prstGeom prst="wedgeRectCallout"/></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
                   </p:spTree></p:cSld>
                   <p:transition/>
