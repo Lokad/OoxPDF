@@ -1457,7 +1457,10 @@ internal sealed class PptxRenderer
                     {
                         string currentSegment = segment;
                         double segmentWidth = advanceEstimator.Measure(currentSegment, fontSize, typeface, bold, italic, characterSpacing);
-                        if (cursorX > paragraphTextX && cursorX + segmentWidth > textX + textWidth)
+                        bool overflowsLine = cursorX > paragraphTextX &&
+                            (cursorX + segmentWidth > textX + textWidth ||
+                                (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fontSize));
+                        if (overflowsLine)
                         {
                             AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                             paragraphRuns.Clear();
