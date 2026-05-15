@@ -239,6 +239,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Preserved spaces in PPTX runs are visually locked by a public Office-PDF-backed gate. Office emits this case as one `TJ` text object, while the candidate still emits multiple `Tj` objects split around space groups; track this as a PDF-structure improvement, not a blocker for the visual rung.
   - `pptx-ladder-04-underline-single` at `artifacts/visual/pptx-ladder-04-underline-single/20260515-080227`: page count and dimensions matched, diagnostics were empty, MAE `0.151413`, changed-pixel ratio threshold 16 `0.001580`.
   - PPTX underlines now use an Office-like filled rectangle instead of a stroked line; the older broad serif-title underline gate also improved to MAE `0.429467`, changed-pixel ratio threshold 16 `0.005498`.
+  - `pptx-ladder-04-mixed-font-size-line` at `artifacts/visual/pptx-ladder-04-mixed-font-size-line/20260515-080529`: page count and dimensions matched, diagnostics were empty, MAE `0.195173`, changed-pixel ratio threshold 16 `0.001995`.
+  - Same-line mixed font sizes now have their own public Office-PDF-backed gate. Office and candidate both place 36pt and 18pt runs on a shared baseline with closely matching x advances.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

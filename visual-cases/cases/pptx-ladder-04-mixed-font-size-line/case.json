@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-mixed-font-size-line",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-mixed-font-size-line.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "mixed-font-size"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.2,
+    "maxChangedPixelRatioAtThreshold16": 0.002
+  },
+  "allowedUnsupportedFeatures": []
+}
