@@ -267,6 +267,7 @@ internal sealed class PptxRenderer
         bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
         bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out double dashLength, out double gapLength);
+        bool hasRoundCap = ReadLineCap(shapeProperties) == "rnd";
 
         if (transformed)
         {
@@ -289,10 +290,22 @@ internal sealed class PptxRenderer
                     graphics.SetLineDash(dashLength, gapLength);
                 }
 
+                if (hasRoundCap)
+                {
+                    graphics.SetLineCap(1);
+                    graphics.SetLineJoin(1);
+                }
+
                 graphics.StrokeLine(x1, y1, x2, y2);
                 if (hasDash)
                 {
                     graphics.ClearLineDash();
+                }
+
+                if (hasRoundCap)
+                {
+                    graphics.SetLineCap(0);
+                    graphics.SetLineJoin(0);
                 }
 
                 graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
@@ -345,6 +358,12 @@ internal sealed class PptxRenderer
                 graphics.SetLineDash(dashLength, gapLength);
             }
 
+            if (hasRoundCap)
+            {
+                graphics.SetLineCap(1);
+                graphics.SetLineJoin(1);
+            }
+
             if (preset == "ellipse")
             {
                 graphics.StrokeEllipse(x, y, width, height);
@@ -365,6 +384,12 @@ internal sealed class PptxRenderer
             if (hasDash)
             {
                 graphics.ClearLineDash();
+            }
+
+            if (hasRoundCap)
+            {
+                graphics.SetLineCap(0);
+                graphics.SetLineJoin(0);
             }
         }
 
@@ -422,6 +447,13 @@ internal sealed class PptxRenderer
         dashLength = 0d;
         gapLength = 0d;
         return false;
+    }
+
+    private static string? ReadLineCap(XElement shapeProperties)
+    {
+        return (string?)shapeProperties
+            .Element(DrawingNamespace + "ln")
+            ?.Attribute("cap");
     }
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)

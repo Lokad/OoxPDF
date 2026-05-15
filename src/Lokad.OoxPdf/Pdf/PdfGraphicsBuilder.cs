@@ -32,6 +32,16 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("[] 0 d");
     }
 
+    public void SetLineCap(int lineCap)
+    {
+        builder.Append(lineCap.ToString(CultureInfo.InvariantCulture)).AppendLine(" J");
+    }
+
+    public void SetLineJoin(int lineJoin)
+    {
+        builder.Append(lineJoin.ToString(CultureInfo.InvariantCulture)).AppendLine(" j");
+    }
+
     public void SaveState()
     {
         builder.AppendLine("q");
