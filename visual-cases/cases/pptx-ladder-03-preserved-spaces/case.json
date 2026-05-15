@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-03-preserved-spaces",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-03-preserved-spaces.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text-flow", "spaces"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.14,
+    "maxChangedPixelRatioAtThreshold16": 0.0012
+  },
+  "allowedUnsupportedFeatures": []
+}

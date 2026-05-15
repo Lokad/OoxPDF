@@ -235,6 +235,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Single-run strikethrough (`a:rPr @strike`) now renders and is locked by a public visual gate.
   - `pptx-ladder-04-all-caps` at `artifacts/visual/pptx-ladder-04-all-caps/20260515-001508`: page count and dimensions matched, diagnostics were empty, MAE `0.182496`, changed-pixel ratio threshold 16 `0.001935`.
   - Run-level all-caps text (`a:rPr @cap="all"`) now transforms text before measurement and drawing in the public ladder.
+  - `pptx-ladder-03-preserved-spaces` at `artifacts/visual/pptx-ladder-03-preserved-spaces/20260515-075831`: page count and dimensions matched, diagnostics were empty, MAE `0.139198`, changed-pixel ratio threshold 16 `0.001193`.
+  - Preserved spaces in PPTX runs are visually locked by a public Office-PDF-backed gate. Office emits this case as one `TJ` text object, while the candidate still emits multiple `Tj` objects split around space groups; track this as a PDF-structure improvement, not a blocker for the visual rung.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.
@@ -391,6 +393,7 @@ Build a DOCX ladder comparable to the PPTX ladder. Each rung must be public, syn
 
 - [x] Add a PDF inspection tool for Office/candidate PDFs that lists objects and extracts decodable streams for content-operator inspection.
 - [ ] Audit current PDF generation patterns against Office reference PDFs: text grouping, text matrices, clipping regions, image masks, transparency state, path construction, stroke/fill order, resource naming/reuse, and page content stream organization.
+- [ ] Improve PPTX text-line emission toward Office-like text objects: preserve visual behavior while avoiding unnecessary run splitting around spaces when the line can be emitted as one positioned text object.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by consumers.
 - [ ] Add font subsetting to reduce output size while keeping deterministic output.
