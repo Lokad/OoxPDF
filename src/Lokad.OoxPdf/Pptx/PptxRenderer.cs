@@ -3207,7 +3207,10 @@ internal sealed class PptxRenderer
                 if (run.Underline)
                 {
                     graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.16d, lineWidth, Math.Max(0.5d, run.FontSize * 0.051d));
+                    double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
+                    double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+                    double underlineY = baselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+                    graphics.FillRectangle(x, underlineY, lineWidth, underlineThickness);
                 }
 
                 if (run.Strike)
