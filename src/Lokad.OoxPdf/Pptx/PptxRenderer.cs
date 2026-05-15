@@ -3188,7 +3188,7 @@ internal sealed class PptxRenderer
                 if (run.HighlightColor is { } highlight)
                 {
                     graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
-                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
+                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.2275d, lineWidth, run.FontSize * 1.119d);
                 }
 
                 bool transparentText = run.Alpha < 0.999d;
@@ -3282,7 +3282,7 @@ internal sealed class PptxRenderer
     {
         double width = embedded.MeasureTextPoints(text, fontSize);
         int runeCount = text.EnumerateRunes().Count();
-        return width + Math.Max(0, runeCount - 1) * characterSpacing;
+        return Math.Max(0d, width + Math.Max(0, runeCount - 1) * characterSpacing);
     }
 
     private static long ParseLongAttribute(XElement element, string name)
@@ -3427,7 +3427,7 @@ internal sealed class PptxRenderer
             if (font is null)
             {
                 int fallbackRuneCount = text.EnumerateRunes().Count();
-                return text.Length * fontSize * 0.42d + Math.Max(0, fallbackRuneCount - 1) * characterSpacing;
+                return Math.Max(0d, text.Length * fontSize * 0.42d + Math.Max(0, fallbackRuneCount - 1) * characterSpacing);
             }
 
             double units = 0d;
@@ -3445,7 +3445,7 @@ internal sealed class PptxRenderer
             }
 
             int runeCount = text.EnumerateRunes().Count();
-            return units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing;
+            return Math.Max(0d, units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing);
         }
 
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
