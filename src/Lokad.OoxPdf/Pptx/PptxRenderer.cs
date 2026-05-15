@@ -1839,6 +1839,7 @@ internal sealed class PptxRenderer
             return [];
         }
 
+        textRuns = CoalesceAdjacentTextRuns(textRuns);
         textRuns = CoalesceUnderlineRuns(textRuns);
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
@@ -1869,6 +1870,56 @@ internal sealed class PptxRenderer
         }
 
         return resources;
+    }
+
+    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns)
+    {
+        var coalesced = new List<TextRun>(textRuns.Count);
+        foreach (TextRun run in textRuns)
+        {
+            if (run.Text.Length == 0)
+            {
+                continue;
+            }
+
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run))
+            {
+                TextRun previous = coalesced[^1];
+                coalesced[^1] = previous with
+                {
+                    Text = previous.Text + run.Text,
+                    Width = run.X + run.Width - previous.X
+                };
+            }
+            else
+            {
+                coalesced.Add(run);
+            }
+        }
+
+        return coalesced;
+    }
+
+    private static bool CanCoalesceTextRun(TextRun left, TextRun right)
+    {
+        return Math.Abs(left.Y - right.Y) < 0.01d &&
+            Math.Abs(left.FontSize - right.FontSize) < 0.01d &&
+            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < 0.01d &&
+            Math.Abs(left.BaselineOffset - right.BaselineOffset) < 0.01d &&
+            Math.Abs(left.ClipX - right.ClipX) < 0.01d &&
+            Math.Abs(left.ClipY - right.ClipY) < 0.01d &&
+            Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
+            Math.Abs(left.ClipHeight - right.ClipHeight) < 0.01d &&
+            left.Color.Equals(right.Color) &&
+            left.HighlightColor.Equals(right.HighlightColor) &&
+            left.Bold == right.Bold &&
+            left.Italic == right.Italic &&
+            left.Underline == right.Underline &&
+            left.Strike == right.Strike &&
+            left.Alignment == right.Alignment &&
+            string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
+            right.X >= left.X &&
+            Math.Abs(right.X - (left.X + left.Width)) < Math.Max(1d, left.FontSize * 0.2d);
     }
 
     private static IReadOnlyList<TextRun> CoalesceUnderlineRuns(IReadOnlyList<TextRun> textRuns)
