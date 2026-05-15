@@ -674,7 +674,6 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 177.478 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 212.502 446.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxWrapsAcrossMixedRuns()

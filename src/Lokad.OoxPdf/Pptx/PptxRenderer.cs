@@ -1088,7 +1088,7 @@ internal sealed class PptxRenderer
         double cursorY = y + height - 18d * 1.174d - verticalOffset;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
-            TextAlignment alignment = ReadAlignment(paragraph);
+            TextAlignment alignment = ReadAlignment(paragraph, null);
             double cursorX = x + defaultInset;
             double maxFontSize = 12d;
             foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
@@ -1306,8 +1306,12 @@ internal sealed class PptxRenderer
 
             XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
             XElement? textBody = shape.Element(PresentationNamespace + "txBody");
+            XElement? inheritedPlaceholder = FindInheritedPlaceholderShape(shape, placeholderSources);
+            XElement? inheritedTextBody = inheritedPlaceholder?.Element(PresentationNamespace + "txBody");
             ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-            bounds ??= FindInheritedPlaceholderBounds(shape, placeholderSources);
+            bounds ??= inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties
+                ? ReadBounds(inheritedProperties)
+                : null;
             if (bounds is null || textBody is null)
             {
                 continue;
@@ -1332,12 +1336,18 @@ internal sealed class PptxRenderer
             RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
                 ? fontColor
                 : null;
-            XElement? defaultParagraphProperties = textBody
-                .Element(DrawingNamespace + "lstStyle")
-                ?.Element(DrawingNamespace + "lvl1pPr") ??
-                FindInheritedTextStyle(shape, placeholderSources);
+            XElement? defaultParagraphProperties = MergeParagraphProperties(
+                textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
+                inheritedTextBody?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
+                FindInheritedTextStyle(shape, placeholderSources));
             double verticalOffset = ReadVerticalAnchor(textBody) switch
             {
+                TextVerticalAnchor.Top when inheritedTextBody is not null => ReadVerticalAnchor(inheritedTextBody) switch
+                {
+                    TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)) / 2d),
+                    TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)),
+                    _ => 0d
+                },
                 TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)) / 2d),
                 TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties)),
                 _ => 0d
@@ -1363,7 +1373,7 @@ internal sealed class PptxRenderer
                     continue;
                 }
 
-                TextAlignment alignment = ReadAlignment(paragraph);
+                TextAlignment alignment = ReadAlignment(paragraph, defaultParagraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
@@ -1517,7 +1527,7 @@ internal sealed class PptxRenderer
         return ReadTextRuns(slide, document, theme, includePlaceholders, placeholderSources);
     }
 
-    private static ShapeBounds? FindInheritedPlaceholderBounds(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    private static XElement? FindInheritedPlaceholderShape(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {
         XElement? placeholder = shape
             .Element(PresentationNamespace + "nvSpPr")
@@ -1552,11 +1562,7 @@ internal sealed class PptxRenderer
                     continue;
                 }
 
-                XElement? candidateProperties = candidate.Element(PresentationNamespace + "spPr");
-                if (candidateProperties is not null && ReadBounds(candidateProperties) is { } bounds)
-                {
-                    return bounds;
-                }
+                return candidate;
             }
         }
 
@@ -1641,9 +1647,74 @@ internal sealed class PptxRenderer
             runs.Add(run with
             {
                 X = run.X + offset,
-                Width = Math.Max(1d, run.Width - offset),
+                Width = run.Width,
                 Alignment = TextAlignment.Left
             });
+        }
+    }
+
+    private static XElement? MergeParagraphProperties(params XElement?[] sources)
+    {
+        XElement? merged = null;
+        foreach (XElement? source in sources.Reverse())
+        {
+            if (source is null)
+            {
+                continue;
+            }
+
+            merged = merged is null
+                ? new XElement(source)
+                : OverlayParagraphProperties(source, merged);
+        }
+
+        return merged;
+    }
+
+    private static XElement OverlayParagraphProperties(XElement primary, XElement fallback)
+    {
+        XElement merged = new(primary);
+        foreach (XAttribute attribute in fallback.Attributes())
+        {
+            if (merged.Attribute(attribute.Name) is null)
+            {
+                merged.Add(new XAttribute(attribute));
+            }
+        }
+
+        MergeChildElement(merged, fallback, DrawingNamespace + "defRPr");
+        return merged;
+    }
+
+    private static void MergeChildElement(XElement primaryParent, XElement fallbackParent, XName childName)
+    {
+        XElement? primary = primaryParent.Element(childName);
+        XElement? fallback = fallbackParent.Element(childName);
+        if (fallback is null)
+        {
+            return;
+        }
+
+        if (primary is null)
+        {
+            primaryParent.Add(new XElement(fallback));
+            return;
+        }
+
+        foreach (XAttribute attribute in fallback.Attributes())
+        {
+            if (primary.Attribute(attribute.Name) is null)
+            {
+                primary.Add(new XAttribute(attribute));
+            }
+        }
+
+        foreach (XElement child in fallback.Elements())
+        {
+            if (primary.Element(child.Name) is null)
+            {
+                primary.Add(new XElement(child));
+            }
         }
     }
 
@@ -2466,9 +2537,10 @@ internal sealed class PptxRenderer
         return element is not null && ParseBoolAttribute(element, name);
     }
 
-    private static TextAlignment ReadAlignment(XElement paragraph)
+    private static TextAlignment ReadAlignment(XElement paragraph, XElement? defaultParagraphProperties)
     {
-        string? value = (string?)paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn");
+        string? value = (string?)(paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn") ??
+            defaultParagraphProperties?.Attribute("algn"));
         return value switch
         {
             "ctr" => TextAlignment.Center,
