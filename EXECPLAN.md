@@ -60,17 +60,19 @@ fixtures unless a safety or diagnostics issue is involved.
 
 ## Progress
 
-- [x] Dependency-free `.slnx` solution, library, CLI, tests, visual tools, docs, public fixtures, and private
-  validation lane exist.
+- [x] Dependency-free `.slnx` solution, library, and CLI exist.
+- [x] Dependency-free tests, visual tools, docs, public fixtures, and private validation lane exist.
 - [x] NuGet package version is set to `0.1.0` for the first package.
 - [x] NuGet package output is configured under ignored `artifacts/nuget/`.
 - [x] OOXML package layer handles ZIP parts, content types, relationships, safe part normalization, XML
   hardening, and package size limits.
-- [x] PDF writer emits deterministic static PDFs with pages, drawing operators, embedded TrueType/CID fonts,
-  ToUnicode maps, JPEG passthrough, PNG image XObjects, and alpha soft masks.
+- [x] PDF writer emits deterministic static PDFs with pages and drawing operators.
+- [x] PDF writer embeds TrueType/CID fonts and ToUnicode maps.
+- [x] PDF writer supports JPEG passthrough, PNG image XObjects, and alpha soft masks.
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
-- [x] Visual validation can export Office reference PDFs for PPTX and DOCX, rasterize reference/candidate
-  PDFs with PDFium, compute PNG metrics, and write comparison artifacts.
+- [x] Visual validation can export Office reference PDFs for PPTX and DOCX.
+- [x] Visual validation can rasterize reference/candidate PDFs with PDFium.
+- [x] Visual validation can compute PNG metrics and write comparison artifacts.
 - [x] Public visual validation uses Office-exported PDFs/renders as the reference oracle; fidelity work
   should inspect the Office PDF/raster output before treating a metric as meaningful.
 - [x] Initial unit-test audit started: `pptx-ladder-02-plain-text` proves the visual gate should own exact
@@ -87,20 +89,29 @@ fixtures unless a safety or diagnostics issue is involved.
   threshold 16 `0.000394`.
 - [x] Private validation keeps inputs/manifests under ignored `private-cases/`, rejects
   tracked/private-unsafe paths, and writes ignored artifacts under `artifacts/private-visual/`.
-- [x] PPTX parser/renderer supports slide order/size, solid backgrounds, basic
-  rectangles/ellipses/lines/rounded rectangles, connector lines with triangle arrowheads, down-arrow preset
-  shapes, rotation/flip, common theme colors/fonts, basic scheme luminance transforms, theme discovery
-  through presentation or slide master relationships, common scheme color aliases, common master/layout
-  inheritance, placeholder text bounds/styles, text boxes with body insets, line breaks, direct bullet
-  characters, paragraph spacing, 100% default line spacing, vertical anchoring, clipping, mixed-run paragraph
-  wrapping, basic styled text, JPEG/PNG pictures, basic crop clipping, grouped shape and picture transforms,
-  fixed-grid tables with fills and explicit borders, static bar-chart fallback, and unsupported-feature
-  diagnostics.
-- [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, character
-  styles, paragraphs/runs, basic styled text, greedy wrapping, simple page breaking, page-break-before,
-  exact/at-least line heights, bullets/decimal numbering, inline JPEG/PNG images, fixed-width tables in body
-  order with explicit row heights and row-level page breaks, default headers/footers, page number
-  approximation, and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports slide order/size and solid backgrounds.
+- [x] PPTX parser/renderer supports common theme colors/fonts, scheme aliases, basic scheme luminance
+  transforms, and theme discovery through presentation or slide master relationships.
+- [x] PPTX parser/renderer supports common master/layout inheritance and placeholder text bounds/styles.
+- [x] PPTX parser/renderer supports basic rectangles, ellipses, lines, rounded rectangles, connector lines
+  with triangle arrowheads, down-arrow preset shapes, and rotation/flip.
+- [x] PPTX parser/renderer supports text boxes with body insets, line breaks, direct bullet characters,
+  paragraph spacing, 100% default line spacing, vertical anchoring, and clipping.
+- [x] PPTX parser/renderer supports mixed-run paragraph wrapping and basic styled text.
+- [x] PPTX parser/renderer supports JPEG/PNG pictures and basic crop clipping.
+- [x] PPTX parser/renderer supports grouped shape and picture transforms.
+- [x] PPTX parser/renderer supports fixed-grid tables with fills and explicit borders.
+- [x] PPTX parser/renderer supports static bar-chart fallback and unsupported-feature diagnostics.
+- [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, and character
+  styles.
+- [x] DOCX parser/renderer supports paragraphs/runs, basic styled text, greedy wrapping, simple page
+  breaking, page-break-before, and exact/at-least line heights.
+- [x] DOCX parser/renderer supports bullets/decimal numbering.
+- [x] DOCX parser/renderer supports inline JPEG/PNG images.
+- [x] DOCX parser/renderer supports fixed-width tables in body order with explicit row heights and row-level
+  page breaks.
+- [x] DOCX parser/renderer supports default headers/footers and page number approximation.
+- [x] DOCX parser/renderer supports unsupported-feature diagnostics.
 - [x] DOCX diagnostics flag pagination-risk features that are still approximated or ignored: manual
   page/column breaks, direct and style-level keep/widow rules, style spacing variants, numbering indents,
   table styles/header rows, and paragraph section breaks.
@@ -611,130 +622,169 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 2: one plain text box with fixed bounds, one font size, one font family, no wrapping, and
   baseline locked against reference.
 - [x] Ladder 3: text wrapping with preserved spaces, explicit line breaks, tabs, paragraph alignment, body
-  insets, vertical anchor, and overflow behavior. Current public gates: `pptx-ladder-03-preserved-spaces` at
-  exact raster parity, `pptx-ladder-03-text-flow` at MAE `0.065508` and changed16 `0.001155`, and
-  `pptx-ladder-03-text-anchor-overflow` at MAE `0.141281` and changed16 `0.001517`.
+  insets, vertical anchor, and overflow behavior.
+- [x] Ladder 3 gate `pptx-ladder-03-preserved-spaces` is at exact raster parity.
+- [x] Ladder 3 gate `pptx-ladder-03-text-flow` is at MAE `0.065508` and changed16 `0.001155`.
+- [x] Ladder 3 gate `pptx-ladder-03-text-anchor-overflow` is at MAE `0.141281` and changed16 `0.001517`.
 - [ ] Ladder 4: styled text runs: bold, italic, underline, color, highlight, mixed fonts, bullet glyphs,
-  bullet hanging indents, paragraph spacing, and line spacing. Subcase `pptx-ladder-04-all-caps` is now
-  near-exact at MAE `0.003613`, changed16 `0.000113`. Subcase `pptx-ladder-04-character-spacing` now performs
-  expanded-spacing line breaking during layout and emits Office-like `TJ` per-glyph tracking arrays instead
-  of draw-time `Tc`; it is gated at MAE `0.165546`, changed-pixel ratio threshold 16 `0.001458`. Font-style
-  subcases now keep regular, bold, italic, and bold-italic face resources distinct:
-  `pptx-ladder-04-bold-face-single` is gated at MAE `0.017018`, changed16 `0.000461`;
-  `pptx-ladder-04-italic-face-single` at MAE `0.010782`, changed16 `0.000346`;
-  `pptx-ladder-04-bold-italic-face-single` at MAE `0.022819`, changed16 `0.000641`; and the combined
-  `pptx-ladder-04-bold-italic-face` at MAE `0.111322`, changed16 `0.003214`. Baseline-shifted runs now render
-  at Office's two-thirds glyph size while keeping the declared-size baseline offset, locking
-  `pptx-ladder-04-baseline-shift` at MAE `0.017311`, changed16 `0.000467`. Explicit-break baselines now use
-  the next line's run size instead of a fixed default, tightening `pptx-ladder-04-line-spacing-points` to MAE
-  `0.014381`, changed16 `0.000410`. Mixed-size runs on one line are locked at MAE `0.007254`, changed16
-  `0.000173`. Percentage line spacing now follows Office's percent-of-normal-line-advance behavior:
-  `pptx-ladder-04-empty-paragraph-gap` is gated at MAE `0.306072`, changed16 `0.005082`, and
-  `pptx-ladder-04-paragraph-advance` at MAE `0.163712`, changed16 `0.002857`. `pptx-ladder-04-tab-stop` now
-  matches Office's continuous-text handling for the standalone synthetic `<a:tab/>` fixture at MAE
-  `0.011007`, changed16 `0.000341`; real Office-authored tab character semantics remain to be isolated. Run
-  highlight rectangles now follow Office's taller marker bounds, tightening `pptx-ladder-04-highlight-single`
-  to MAE `0.032134`, changed16 `0.001214`. Bullet styling and hanging wrap are now order-aware and
-  Office-positioned: `pptx-ladder-04-bullet-style` is gated at MAE `0.029019`, changed16 `0.000670`, and
-  `pptx-ladder-04-bullet-wrap` at MAE `0.137307`, changed16 `0.003059`; valid `buClr`/`buSzPts` before the
-  marker remain unit-tested. Underline geometry now uses scaled OpenType underline metrics:
-  `pptx-ladder-04-underline-single` is gated at MAE `0.052158`, changed16 `0.000768`, while
-  `pptx-ladder-04-serif-title-underline` remains stable at MAE `0.255534`, changed16 `0.004376`.
-  Strikethrough now uses an Office-like filled rectangle at the strike baseline, locking
-  `pptx-ladder-04-strikethrough-single` at MAE `0.008026`, changed16 `0.000115`. OpenType GPOS
-  pair-positioning x-advance records now feed the existing kerning/TJ path for fonts that do not expose
-  legacy `kern` pairs; this is unit-tested with Arial `To` and is typography infrastructure for later visual
-  tightening. Subcase `pptx-ladder-04-mixed-font-size-stack` is locked at MAE `0.071192`, changed-pixel ratio
-  threshold 16 `0.001852`, and `pptx-ladder-04-mixed-paragraph-stack` is now gated at MAE `0.452275`,
-  changed-pixel ratio threshold 16 `0.008806`; remaining combined-stack gaps are glyph/font details,
-  especially bullet glyph font selection.
-- [x] Ladder 5: basic shapes: rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths,
-  rotation, flips, and clipping-free z-order. `pptx-ladder-05-basic-shapes` reuses the public `pptx-shapes`
-  fixture and is gated at MAE `0.009024`, changed-pixel ratio threshold 16 `0.000356`, with no diagnostics.
-- [ ] Ladder 6: preset and connector shapes: arrows, connector endpoints, arrowheads, dashes, line
-  caps/joins, callouts, and common freeform/custom path fallbacks. Subcase `pptx-ladder-06-connector-arrow`
-  locks a straight connector with triangle tail arrowhead and a down-arrow preset with exact raster parity;
-  subcase `pptx-ladder-06-line-arrowheads` locks Office `type="arrow"` head and both-end connector arrowheads
-  at near-exact raster parity (MAE <= `0.002`, changed-pixel ratio threshold 16 <= `0.00003`); subcase
-  `pptx-ladder-06-block-arrows` locks up/left/right block-arrow preset geometry with exact raster parity;
-  subcase `pptx-ladder-06-double-arrows` locks left-right and up-down block arrow presets with exact raster
-  parity; subcase `pptx-ladder-06-basic-polygons` locks triangle and diamond preset geometry with exact
-  raster parity; subcase `pptx-ladder-06-quadrilateral-presets` locks parallelogram and trapezoid preset
-  geometry with exact raster parity; subcase `pptx-ladder-06-more-polygons` locks right triangle, pentagon,
-  hexagon, and octagon preset geometry with exact raster parity; subcase `pptx-ladder-06-chevron-home-plate`
-  locks chevron and home-plate preset geometry with exact raster parity; subcase `pptx-ladder-06-star-seal`
-  locks five-point and six-point star preset geometry with exact raster parity; subcase
-  `pptx-ladder-06-more-stars` locks four-point and eight-point star preset geometry with exact raster parity;
-  subcase `pptx-ladder-06-symbol-polygons` locks the plus/cross preset polygon with exact raster parity;
-  subcase `pptx-ladder-06-rect-callout` locks the `wedgeRectCallout` preset with exact raster parity;
-  subcases `pptx-ladder-06-dashed-connector` and `pptx-ladder-06-dash-dot-connector` lock Office dash presets
-  with exact raster parity; subcases `pptx-ladder-06-round-cap-connector` and
-  `pptx-ladder-06-square-cap-connector` lock round and square caps/joins with exact raster parity; subcases
-  `pptx-ladder-06-bevel-join-rect` and `pptx-ladder-06-round-join-rect` lock explicit bevel/round line joins
-  on stroked rectangles with exact raster parity; custom geometry and unsupported callout shapes emit
-  explicit unsupported diagnostics; remaining subcases should isolate additional visual callout rendering and
-  other preset geometries.
-- [ ] Ladder 7: images: JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior,
-  rotation/flip interactions, and unsupported image diagnostics. Subcase `pptx-ladder-07-basic-image` locks
-  the existing public stretched-image fixture with exact raster parity (MAE `0`, changed-pixel ratio
-  threshold 16 `0`), `pptx-ladder-07-image-crop` locks a minimal left/right cropped PNG picture with exact
-  raster parity, `pptx-ladder-07-image-fill-rect` locks destination `a:fillRect` placement with exact raster
-  parity, `pptx-ladder-07-image-crop-fill-rect` locks source crop combined with destination fill-rect
-  placement with exact raster parity, `pptx-ladder-07-image-alpha` locks a transparent PNG soft-mask case
-  with exact raster parity, `pptx-ladder-07-jpeg-image` locks minimal JPEG placement at MAE `0.134097`,
-  changed-pixel ratio threshold 16 `0.005486`, `pptx-ladder-07-image-rotation` locks rotated picture
-  transforms with exact raster parity, `pptx-ladder-07-image-flip` locks horizontal picture flips with exact
-  raster parity, and `pptx-ladder-07-image-rotate-flip` locks combined rotation/flip with exact raster
-  parity; remaining subcases should isolate aspect-fit/fill variants and unsupported image diagnostics.
-- [ ] Ladder 8: grouped content: nested group transforms, grouped pictures, grouped text, grouped shapes,
-  child coordinate scaling, z-order, and clips. Subcase `pptx-ladder-08-grouped-shape` locks grouped shape
-  child coordinate scaling at MAE `0.000142`, changed-pixel ratio threshold 16 `0`; subcase
-  `pptx-ladder-08-grouped-picture` locks grouped picture scaling with exact raster parity; subcase
-  `pptx-ladder-08-grouped-text` locks text boxes inside grouped content at MAE `0.002687`, changed-pixel
-  ratio threshold 16 `0.000079`; subcase `pptx-ladder-08-nested-grouped-text` locks nested group transform
-  composition for text boxes at the same thresholds; subcases `pptx-ladder-08-text-shape-zorder` and
-  `pptx-ladder-08-shape-picture-zorder` lock simple sibling order with exact raster parity; subcase
-  `pptx-ladder-08-table-shape-zorder` locks table graphic frames participating in slide sibling order at MAE
-  `0.062251`, changed-pixel ratio threshold 16 `0.000748`; remaining subcases should isolate z-order with
-  charts and clipping.
-- [ ] Ladder 9: slide inheritance: placeholders, master/layout text styles, hidden placeholders,
-  footer/date/slide number placeholders, theme fonts, and theme color transforms. Subcase
-  `pptx-ladder-09-title-placeholder` isolates a slide title placeholder inheriting layout bounds, 60pt
-  centered style, bottom anchor, and master title run defaults at MAE `1.001682`, changed-pixel ratio
-  threshold 16 `0.006872`, using Calibri-family fallback when Aptos theme fonts are unavailable; subcase
-  `pptx-ladder-09-title-placeholder-arial-theme` removes that font variable and locks the same inherited
-  placeholder geometry at MAE `0.215164`, changed-pixel ratio threshold 16 `0.002463`.
-- [ ] Ladder 10: tables: fixed grid, per-edge borders, fills, cell margins, vertical alignment, merged cells,
-  rich text inside cells, and table styles. Subcase `pptx-ladder-10-basic-table` now locks a fixed-grid table
-  with explicit cell fills, default Office grid lines, and Office-like cell text insets/baselines at MAE
-  `0.049042`, changed-pixel ratio threshold 16 `0.000916`; subcase `pptx-ladder-10-explicit-borders` locks
-  per-edge borders with exact raster parity; subcase `pptx-ladder-10-vertical-align` locks top/center/bottom
-  table-cell anchors at MAE `0.013784`, changed-pixel ratio threshold 16 `0.000302`; subcase
-  `pptx-ladder-10-unstyled-grid` locks unstyled default grid lines with exact raster parity; subcases
-  `pptx-ladder-10-horizontal-merge` and `pptx-ladder-10-vertical-merge` lock merged cells with exact raster
-  parity; subcase `pptx-ladder-10-rich-text-cell` locks styled table-cell run sequencing and
-  whitespace-preserving run gaps at MAE `0.092446`, changed-pixel ratio threshold 16 `0.001351`; subcase
-  `pptx-ladder-10-cell-margins` locks table-cell body insets at MAE `0.259091`, changed-pixel ratio threshold
-  16 `0.002151`; subcase `pptx-ladder-10-cell-fill-alpha` locks table-cell fill transparency at MAE
-  `0.035698`, changed-pixel ratio threshold 16 `0.000926`; subcase `pptx-ladder-10-border-alpha` locks
-  explicit table-border transparency at MAE `0.223404`, changed-pixel ratio threshold 16 `0.002494`;
-  remaining subcases should isolate broader table style variants.
+  bullet hanging indents, paragraph spacing, and line spacing.
+- [x] Ladder 4 subcase `pptx-ladder-04-all-caps` is near-exact at MAE `0.003613`, changed16 `0.000113`.
+- [x] Ladder 4 subcase `pptx-ladder-04-character-spacing` performs expanded-spacing line breaking during
+  layout and emits Office-like `TJ` per-glyph tracking arrays instead of draw-time `Tc`.
+- [x] Ladder 4 gate `pptx-ladder-04-character-spacing` is at MAE `0.165546`, changed16 `0.001458`.
+- [x] Ladder 4 font-style subcases keep regular, bold, italic, and bold-italic face resources distinct.
+- [x] Ladder 4 gate `pptx-ladder-04-bold-face-single` is at MAE `0.017018`, changed16 `0.000461`.
+- [x] Ladder 4 gate `pptx-ladder-04-italic-face-single` is at MAE `0.010782`, changed16 `0.000346`.
+- [x] Ladder 4 gate `pptx-ladder-04-bold-italic-face-single` is at MAE `0.022819`, changed16 `0.000641`.
+- [x] Ladder 4 gate `pptx-ladder-04-bold-italic-face` is at MAE `0.111322`, changed16 `0.003214`.
+- [x] Ladder 4 baseline-shifted runs render at Office's two-thirds glyph size while keeping the declared-size
+  baseline offset.
+- [x] Ladder 4 gate `pptx-ladder-04-baseline-shift` is at MAE `0.017311`, changed16 `0.000467`.
+- [x] Ladder 4 explicit-break baselines use the next line's run size instead of a fixed default.
+- [x] Ladder 4 gate `pptx-ladder-04-line-spacing-points` is at MAE `0.014381`, changed16 `0.000410`.
+- [x] Ladder 4 mixed-size runs on one line are locked at MAE `0.007254`, changed16 `0.000173`.
+- [x] Ladder 4 percentage line spacing follows Office's percent-of-normal-line-advance behavior.
+- [x] Ladder 4 gate `pptx-ladder-04-empty-paragraph-gap` is at MAE `0.306072`, changed16 `0.005082`.
+- [x] Ladder 4 gate `pptx-ladder-04-paragraph-advance` is at MAE `0.163712`, changed16 `0.002857`.
+- [x] Ladder 4 subcase `pptx-ladder-04-tab-stop` matches Office's continuous-text handling for the standalone
+  synthetic `<a:tab/>` fixture.
+- [x] Ladder 4 gate `pptx-ladder-04-tab-stop` is at MAE `0.011007`, changed16 `0.000341`.
+- [ ] Ladder 4 still needs a public isolation of real Office-authored tab character semantics.
+- [x] Ladder 4 run highlight rectangles follow Office's taller marker bounds.
+- [x] Ladder 4 gate `pptx-ladder-04-highlight-single` is at MAE `0.032134`, changed16 `0.001214`.
+- [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
+- [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
+- [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.
+- [x] Ladder 4 valid `buClr`/`buSzPts` before the marker remain unit-tested.
+- [x] Ladder 4 underline geometry uses scaled OpenType underline metrics.
+- [x] Ladder 4 gate `pptx-ladder-04-underline-single` is at MAE `0.052158`, changed16 `0.000768`.
+- [x] Ladder 4 gate `pptx-ladder-04-serif-title-underline` is stable at MAE `0.255534`, changed16 `0.004376`.
+- [x] Ladder 4 strikethrough uses an Office-like filled rectangle at the strike baseline.
+- [x] Ladder 4 gate `pptx-ladder-04-strikethrough-single` is at MAE `0.008026`, changed16 `0.000115`.
+- [x] OpenType GPOS pair-positioning x-advance records feed the existing kerning/TJ path for fonts that do
+  not expose legacy `kern` pairs.
+- [x] OpenType GPOS pair positioning is unit-tested with Arial `To` as typography infrastructure for later
+  visual tightening.
+- [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
+- [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
+- [ ] Ladder 4 remaining combined-stack gaps are glyph/font details, especially bullet glyph font selection.
+- [x] Ladder 5: basic shapes cover rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths,
+  rotation, flips, and clipping-free z-order.
+- [x] Ladder 5 gate `pptx-ladder-05-basic-shapes` reuses the public `pptx-shapes` fixture and is at MAE
+  `0.009024`, changed16 `0.000356`, with no diagnostics.
+- [ ] Ladder 6: preset and connector shapes cover arrows, connector endpoints, arrowheads, dashes,
+  line caps/joins, callouts, and common freeform/custom path fallbacks.
+- [x] Ladder 6 gate `pptx-ladder-06-connector-arrow` locks a straight connector with triangle tail arrowhead
+  and a down-arrow preset with exact raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-line-arrowheads` locks Office `type="arrow"` head and both-end connector
+  arrowheads at near-exact raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-block-arrows` locks up/left/right block-arrow preset geometry with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-double-arrows` locks left-right and up-down block arrow presets with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-basic-polygons` locks triangle and diamond preset geometry with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-quadrilateral-presets` locks parallelogram and trapezoid preset geometry
+  with exact raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-more-polygons` locks right triangle, pentagon, hexagon, and octagon preset
+  geometry with exact raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-chevron-home-plate` locks chevron and home-plate preset geometry with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-star-seal` locks five-point and six-point star preset geometry with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-more-stars` locks four-point and eight-point star preset geometry with exact
+  raster parity.
+- [x] Ladder 6 gate `pptx-ladder-06-symbol-polygons` locks the plus/cross preset polygon with exact raster
+  parity.
+- [x] Ladder 6 gate `pptx-ladder-06-rect-callout` locks the `wedgeRectCallout` preset with exact raster parity.
+- [x] Ladder 6 gates `pptx-ladder-06-dashed-connector` and `pptx-ladder-06-dash-dot-connector` lock Office dash
+  presets with exact raster parity.
+- [x] Ladder 6 gates `pptx-ladder-06-round-cap-connector` and `pptx-ladder-06-square-cap-connector` lock round
+  and square caps/joins with exact raster parity.
+- [x] Ladder 6 gates `pptx-ladder-06-bevel-join-rect` and `pptx-ladder-06-round-join-rect` lock explicit
+  bevel/round line joins on stroked rectangles with exact raster parity.
+- [x] Ladder 6 custom geometry and unsupported callout shapes emit explicit unsupported diagnostics.
+- [ ] Ladder 6 remaining subcases should isolate additional visual callout rendering and other preset
+  geometries.
+- [ ] Ladder 7: images cover JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior,
+  rotation/flip interactions, and unsupported image diagnostics.
+- [x] Ladder 7 gate `pptx-ladder-07-basic-image` locks the existing public stretched-image fixture with exact
+  raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-crop` locks a minimal left/right cropped PNG picture with exact raster
+  parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-fill-rect` locks destination `a:fillRect` placement with exact raster
+  parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-crop-fill-rect` locks source crop combined with destination fill-rect
+  placement with exact raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-alpha` locks a transparent PNG soft-mask case with exact raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-jpeg-image` locks minimal JPEG placement at MAE `0.134097`, changed16
+  `0.005486`.
+- [x] Ladder 7 gate `pptx-ladder-07-image-rotation` locks rotated picture transforms with exact raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-flip` locks horizontal picture flips with exact raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-image-rotate-flip` locks combined rotation/flip with exact raster parity.
+- [ ] Ladder 7 remaining subcases should isolate aspect-fit/fill variants and unsupported image diagnostics.
+- [ ] Ladder 8: grouped content covers nested group transforms, grouped pictures, grouped text, grouped shapes,
+  child coordinate scaling, z-order, and clips.
+- [x] Ladder 8 gate `pptx-ladder-08-grouped-shape` locks grouped shape child coordinate scaling at MAE
+  `0.000142`, changed16 `0`.
+- [x] Ladder 8 gate `pptx-ladder-08-grouped-picture` locks grouped picture scaling with exact raster parity.
+- [x] Ladder 8 gate `pptx-ladder-08-grouped-text` locks text boxes inside grouped content at MAE `0.002687`,
+  changed16 `0.000079`.
+- [x] Ladder 8 gate `pptx-ladder-08-nested-grouped-text` locks nested group transform composition for text
+  boxes at the same thresholds.
+- [x] Ladder 8 gates `pptx-ladder-08-text-shape-zorder` and `pptx-ladder-08-shape-picture-zorder` lock simple
+  sibling order with exact raster parity.
+- [x] Ladder 8 gate `pptx-ladder-08-table-shape-zorder` locks table graphic frames participating in slide
+  sibling order at MAE `0.062251`, changed16 `0.000748`.
+- [ ] Ladder 8 remaining subcases should isolate z-order with charts and clipping.
+- [ ] Ladder 9: slide inheritance covers placeholders, master/layout text styles, hidden placeholders,
+  footer/date/slide number placeholders, theme fonts, and theme color transforms.
+- [x] Ladder 9 gate `pptx-ladder-09-title-placeholder` isolates a slide title placeholder inheriting layout
+  bounds, 60pt centered style, bottom anchor, and master title run defaults.
+- [x] Ladder 9 gate `pptx-ladder-09-title-placeholder` is at MAE `1.001682`, changed16 `0.006872`, using
+  Calibri-family fallback when Aptos theme fonts are unavailable.
+- [x] Ladder 9 gate `pptx-ladder-09-title-placeholder-arial-theme` removes that font variable and locks the
+  same inherited placeholder geometry at MAE `0.215164`, changed16 `0.002463`.
+- [ ] Ladder 10: tables cover fixed grid, per-edge borders, fills, cell margins, vertical alignment, merged
+  cells, rich text inside cells, and table styles.
+- [x] Ladder 10 gate `pptx-ladder-10-basic-table` locks a fixed-grid table with explicit cell fills, default
+  Office grid lines, and Office-like cell text insets/baselines.
+- [x] Ladder 10 gate `pptx-ladder-10-basic-table` is at MAE `0.049042`, changed16 `0.000916`.
+- [x] Ladder 10 gate `pptx-ladder-10-explicit-borders` locks per-edge borders with exact raster parity.
+- [x] Ladder 10 gate `pptx-ladder-10-vertical-align` locks top/center/bottom table-cell anchors at MAE
+  `0.013784`, changed16 `0.000302`.
+- [x] Ladder 10 gate `pptx-ladder-10-unstyled-grid` locks unstyled default grid lines with exact raster parity.
+- [x] Ladder 10 gates `pptx-ladder-10-horizontal-merge` and `pptx-ladder-10-vertical-merge` lock merged cells
+  with exact raster parity.
+- [x] Ladder 10 gate `pptx-ladder-10-rich-text-cell` locks styled table-cell run sequencing and
+  whitespace-preserving run gaps at MAE `0.092446`, changed16 `0.001351`.
+- [x] Ladder 10 gate `pptx-ladder-10-cell-margins` locks table-cell body insets at MAE `0.259091`, changed16
+  `0.002151`.
+- [x] Ladder 10 gate `pptx-ladder-10-cell-fill-alpha` locks table-cell fill transparency at MAE `0.035698`,
+  changed16 `0.000926`.
+- [x] Ladder 10 gate `pptx-ladder-10-border-alpha` locks explicit table-border transparency at MAE `0.223404`,
+  changed16 `0.002494`.
+- [ ] Ladder 10 remaining subcases should isolate broader table style variants.
 - [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series
   styles, stacked/grouped variants, and chart diagnostics.
-- [ ] Ladder 12: effects and advanced fills: transparency, gradients, pattern fills, shadows, glows, soft
-  edges, picture fills, and explicit diagnostics for unsupported effects. Unsupported gradient fills, pattern
-  fills, shape picture fills, and effect lists now emit slide-scoped diagnostics instead of being silently
-  dropped; subcases `pptx-ladder-12-solid-alpha` and `pptx-ladder-12-line-alpha` lock solid shape fill
-  transparency and line transparency with exact raster parity; subcase `pptx-ladder-12-arrow-alpha` locks
-  transparent Office `type="arrow"` connector arrowheads at MAE `0.006754`, changed-pixel ratio threshold 16
-  `0.000174` after Office-style endpoint geometry; subcase `pptx-ladder-12-picture-alpha` locks whole-picture
-  `alphaModFix` transparency at MAE `0.109499` with no pixels changed above threshold 16; subcase
-  `pptx-ladder-12-text-alpha` locks run text transparency at MAE `0.006230`, changed-pixel ratio threshold 16
-  `0.000170`; subcase `pptx-ladder-12-shadow-diagnostic` locks explicit shadow/effect diagnostics while
-  allowing the expected omitted-shadow visual delta at MAE `0.408920`, changed-pixel ratio threshold 16
-  `0.006530`; subcases `pptx-ladder-12-gradient-diagnostic`, `pptx-ladder-12-pattern-diagnostic`, and
-  `pptx-ladder-12-picture-fill-diagnostic` lock explicit advanced-fill diagnostics while allowing their
-  expected omitted-fill visual deltas; remaining work is visual rendering for each effect/fill family.
+- [ ] Ladder 12: effects and advanced fills cover transparency, gradients, pattern fills, shadows, glows, soft
+  edges, picture fills, and explicit diagnostics for unsupported effects.
+- [x] Ladder 12 unsupported gradient fills, pattern fills, shape picture fills, and effect lists emit
+  slide-scoped diagnostics instead of being silently dropped.
+- [x] Ladder 12 gates `pptx-ladder-12-solid-alpha` and `pptx-ladder-12-line-alpha` lock solid shape fill
+  transparency and line transparency with exact raster parity.
+- [x] Ladder 12 gate `pptx-ladder-12-arrow-alpha` locks transparent Office `type="arrow"` connector arrowheads
+  at MAE `0.006754`, changed16 `0.000174` after Office-style endpoint geometry.
+- [x] Ladder 12 gate `pptx-ladder-12-picture-alpha` locks whole-picture `alphaModFix` transparency at MAE
+  `0.109499` with no pixels changed above threshold 16.
+- [x] Ladder 12 gate `pptx-ladder-12-text-alpha` locks run text transparency at MAE `0.006230`, changed16
+  `0.000170`.
+- [x] Ladder 12 gate `pptx-ladder-12-shadow-diagnostic` locks explicit shadow/effect diagnostics while
+  allowing the expected omitted-shadow visual delta at MAE `0.408920`, changed16 `0.006530`.
+- [x] Ladder 12 gates `pptx-ladder-12-gradient-diagnostic`, `pptx-ladder-12-pattern-diagnostic`, and
+  `pptx-ladder-12-picture-fill-diagnostic` lock explicit advanced-fill diagnostics while allowing expected
+  omitted-fill visual deltas.
+- [ ] Ladder 12 remaining work is visual rendering for each effect/fill family.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive
   fixture text, images, layout, or styling from private documents.
 - [ ] Run the relevant public visual case after each rung change; run private PPTX only as feature-discovery
