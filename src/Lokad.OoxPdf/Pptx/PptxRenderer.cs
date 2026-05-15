@@ -266,6 +266,7 @@ internal sealed class PptxRenderer
 
         bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
         bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
+        bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out double dashLength, out double gapLength);
 
         if (transformed)
         {
@@ -283,7 +284,17 @@ internal sealed class PptxRenderer
                 double y2 = document.SlideHeightPoints - yTop - height;
                 graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
                 graphics.SetLineWidth(lineWidth);
+                if (hasDash)
+                {
+                    graphics.SetLineDash(dashLength, gapLength);
+                }
+
                 graphics.StrokeLine(x1, y1, x2, y2);
+                if (hasDash)
+                {
+                    graphics.ClearLineDash();
+                }
+
                 graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                 if (ReadLineEndType(shapeProperties, "headEnd") == "triangle")
                 {
@@ -329,6 +340,11 @@ internal sealed class PptxRenderer
         {
             graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
             graphics.SetLineWidth(lineWidth);
+            if (hasDash)
+            {
+                graphics.SetLineDash(dashLength, gapLength);
+            }
+
             if (preset == "ellipse")
             {
                 graphics.StrokeEllipse(x, y, width, height);
@@ -344,6 +360,11 @@ internal sealed class PptxRenderer
             else
             {
                 graphics.StrokeRectangle(x, y, width, height);
+            }
+
+            if (hasDash)
+            {
+                graphics.ClearLineDash();
             }
         }
 
@@ -383,6 +404,24 @@ internal sealed class PptxRenderer
             .Element(DrawingNamespace + "ln")
             ?.Element(DrawingNamespace + elementName)
             ?.Attribute("type");
+    }
+
+    private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out double dashLength, out double gapLength)
+    {
+        string? presetDash = (string?)shapeProperties
+            .Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + "prstDash")
+            ?.Attribute("val");
+        if (presetDash == "dash")
+        {
+            dashLength = lineWidth * 4d;
+            gapLength = lineWidth * 3d;
+            return true;
+        }
+
+        dashLength = 0d;
+        gapLength = 0d;
+        return false;
     }
 
     private static (double X, double Y)[] CreateDownArrowPoints(double x, double y, double width, double height)

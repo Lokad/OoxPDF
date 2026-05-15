@@ -22,6 +22,16 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(width)).AppendLine(" w");
     }
 
+    public void SetLineDash(double dashLength, double gapLength)
+    {
+        builder.Append('[').Append(N(dashLength)).Append(' ').Append(N(gapLength)).AppendLine("] 0 d");
+    }
+
+    public void ClearLineDash()
+    {
+        builder.AppendLine("[] 0 d");
+    }
+
     public void SaveState()
     {
         builder.AppendLine("q");
