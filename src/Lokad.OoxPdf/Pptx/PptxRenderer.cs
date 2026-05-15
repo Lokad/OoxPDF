@@ -408,19 +408,22 @@ internal sealed class PptxRenderer
                 if (transparentStroke)
                 {
                     graphics.SaveState();
-                    graphics.SetAlpha(1d, strokeAlpha);
+                    graphics.SetAlpha(strokeAlpha, strokeAlpha);
                 }
 
                 double x1 = x;
                 double y1 = document.SlideHeightPoints - yTop;
                 double x2 = x + width;
                 double y2 = document.SlideHeightPoints - yTop - height;
-                bool hasHeadArrow = ReadLineEndType(shapeProperties, "headEnd") == "triangle";
-                bool hasTailArrow = ReadLineEndType(shapeProperties, "tailEnd") == "triangle";
+                string? headArrowType = ReadLineEndType(shapeProperties, "headEnd");
+                string? tailArrowType = ReadLineEndType(shapeProperties, "tailEnd");
+                bool hasHeadArrow = IsFilledTriangleArrow(headArrowType);
+                bool hasTailArrow = IsFilledTriangleArrow(tailArrowType);
                 if ((hasHeadArrow || hasTailArrow) && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
+                    bool usesOfficeArrowType = headArrowType == "arrow" || tailArrowType == "arrow";
+                    FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow, usesOfficeArrowType);
                 }
                 else
                 {
@@ -583,7 +586,7 @@ internal sealed class PptxRenderer
         ]);
     }
 
-    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
+    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow, bool usesOfficeArrowType = false)
     {
         double dx = x2 - x1;
         double dy = y2 - y1;
@@ -599,7 +602,7 @@ internal sealed class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double arrowLength = lineWidth * 3d;
-        double arrowHalfWidth = lineWidth * 1.5d;
+        double arrowHalfWidth = lineWidth * (usesOfficeArrowType ? 2d : 1.5d);
         double startX = headArrow ? x1 + ux * (arrowLength - half) : x1;
         double startY = headArrow ? y1 + uy * (arrowLength - half) : y1;
         double endX = tailArrow ? x2 - ux * (arrowLength - half) : x2;
@@ -640,6 +643,11 @@ internal sealed class PptxRenderer
             .Element(DrawingNamespace + "ln")
             ?.Element(DrawingNamespace + elementName)
             ?.Attribute("type");
+    }
+
+    private static bool IsFilledTriangleArrow(string? type)
+    {
+        return type is "arrow" or "triangle";
     }
 
     private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
