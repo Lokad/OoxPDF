@@ -604,7 +604,7 @@ internal sealed class PptxRenderer
         }
 
         double lineWidth = line.Attribute("w") is { } widthAttribute
-            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d
+            ? Math.Max(1d, OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d)
             : 0.75d;
         borders.Add(new TableBorderLine(x1, y1, x2, y2, lineWidth, color));
     }
@@ -781,7 +781,14 @@ internal sealed class PptxRenderer
         }
 
         const double defaultInset = 7.2d;
-        double cursorY = y + height - 18d * 1.174d;
+        double textAreaHeight = Math.Max(0d, height - defaultInset * 4d);
+        double verticalOffset = ReadTableCellVerticalAnchor(cell) switch
+        {
+            TextVerticalAnchor.Middle => textAreaHeight / 2d,
+            TextVerticalAnchor.Bottom => textAreaHeight,
+            _ => 0d
+        };
+        double cursorY = y + height - 18d * 1.174d - verticalOffset;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             TextAlignment alignment = ReadAlignment(paragraph);
@@ -817,6 +824,19 @@ internal sealed class PptxRenderer
 
             cursorY -= maxFontSize * 1.2d;
         }
+    }
+
+    private static TextVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
+    {
+        string? anchor = (string?)cell
+            .Element(DrawingNamespace + "tcPr")
+            ?.Attribute("anchor");
+        return anchor switch
+        {
+            "ctr" => TextVerticalAnchor.Middle,
+            "b" => TextVerticalAnchor.Bottom,
+            _ => TextVerticalAnchor.Top
+        };
     }
 
     private static ShapeBounds? ReadBounds(XElement shapeProperties)
