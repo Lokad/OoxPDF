@@ -1610,6 +1610,7 @@ internal sealed class PptxRenderer
             return [];
         }
 
+        textRuns = CoalesceUnderlineRuns(textRuns);
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
@@ -1639,6 +1640,57 @@ internal sealed class PptxRenderer
         }
 
         return resources;
+    }
+
+    private static IReadOnlyList<TextRun> CoalesceUnderlineRuns(IReadOnlyList<TextRun> textRuns)
+    {
+        var coalesced = new List<TextRun>(textRuns.Count);
+        foreach (TextRun run in textRuns)
+        {
+            if (coalesced.Count > 0 && CanCoalesceUnderlineRun(coalesced[^1], run))
+            {
+                TextRun previous = coalesced[^1];
+                coalesced[^1] = previous with
+                {
+                    Text = previous.Text + run.Text,
+                    Width = Math.Max(previous.Width, run.X + run.Width - previous.X)
+                };
+                continue;
+            }
+
+            coalesced.Add(run);
+        }
+
+        return coalesced;
+    }
+
+    private static bool CanCoalesceUnderlineRun(TextRun left, TextRun right)
+    {
+        return left.Underline &&
+            right.Underline &&
+            !left.Strike &&
+            !right.Strike &&
+            left.Bold == right.Bold &&
+            left.Italic == right.Italic &&
+            left.Alignment == right.Alignment &&
+            string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
+            left.Color.Equals(right.Color) &&
+            left.HighlightColor.Equals(right.HighlightColor) &&
+            NearlyEqual(left.Y, right.Y) &&
+            NearlyEqual(left.Height, right.Height) &&
+            NearlyEqual(left.ClipX, right.ClipX) &&
+            NearlyEqual(left.ClipY, right.ClipY) &&
+            NearlyEqual(left.ClipWidth, right.ClipWidth) &&
+            NearlyEqual(left.ClipHeight, right.ClipHeight) &&
+            NearlyEqual(left.FontSize, right.FontSize) &&
+            NearlyEqual(left.CharacterSpacing, right.CharacterSpacing) &&
+            NearlyEqual(left.BaselineOffset, right.BaselineOffset) &&
+            Math.Abs((left.X + left.Width) - right.X) <= Math.Max(1d, left.FontSize * 0.08d);
+    }
+
+    private static bool NearlyEqual(double left, double right)
+    {
+        return Math.Abs(left - right) <= 0.001d;
     }
 
     private static string FontKey(TextRun run)
