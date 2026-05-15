@@ -1082,7 +1082,9 @@ internal sealed class PptxRenderer
             TextVerticalAnchor.Bottom => textAreaHeight,
             _ => 0d
         };
-        double cursorY = y + height - 18d * 1.174d - verticalOffset;
+        double firstFontSize = ReadFirstTableCellFontSize(textBody);
+        double cursorY = y + height - firstFontSize - 3.06d - verticalOffset;
+        var advanceEstimator = new TextAdvanceEstimator();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             TextAlignment alignment = ReadAlignment(paragraph, null);
@@ -1112,12 +1114,30 @@ internal sealed class PptxRenderer
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, width - defaultInset * 2d), Math.Max(1d, height - defaultInset * 2d), x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
-                cursorX += text.Length * fontSize * 0.55d;
+                double advance = advanceEstimator.Measure(text, fontSize, typeface, bold, italic, characterSpacing: 0d);
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), Math.Max(1d, height - defaultInset * 2d), x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
+                cursorX += advance;
             }
 
             cursorY -= maxFontSize * 1.2d;
         }
+    }
+
+    private static double ReadFirstTableCellFontSize(XElement textBody)
+    {
+        foreach (XElement runProperties in textBody
+            .Elements(DrawingNamespace + "p")
+            .Elements(DrawingNamespace + "r")
+            .Elements(DrawingNamespace + "rPr"))
+        {
+            if (runProperties.Attribute("sz") is { } size &&
+                int.TryParse(size.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int centipoints))
+            {
+                return Math.Max(1d, centipoints / 100d);
+            }
+        }
+
+        return 12d;
     }
 
     private static TextVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)

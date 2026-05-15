@@ -12,7 +12,7 @@ internal static class SafeXml
             DtdProcessing = DtdProcessing.Prohibit,
             XmlResolver = null,
             IgnoreComments = true,
-            IgnoreWhitespace = true
+            IgnoreWhitespace = false
         };
     }
 
