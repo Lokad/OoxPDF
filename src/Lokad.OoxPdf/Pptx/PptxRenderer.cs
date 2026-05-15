@@ -439,7 +439,14 @@ internal sealed class PptxRenderer
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     bool usesOfficeArrowType = headArrowType == "arrow" || tailArrowType == "arrow";
-                    FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow, usesOfficeArrowType);
+                    if (usesOfficeArrowType)
+                    {
+                        FillOfficeArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
+                    }
+                    else
+                    {
+                        FillArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
+                    }
                 }
                 else
                 {
@@ -611,7 +618,7 @@ internal sealed class PptxRenderer
         ]);
     }
 
-    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow, bool usesOfficeArrowType = false)
+    private static void FillArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
     {
         double dx = x2 - x1;
         double dy = y2 - y1;
@@ -627,7 +634,7 @@ internal sealed class PptxRenderer
         double ny = ux;
         double half = lineWidth / 2d;
         double arrowLength = lineWidth * 3d;
-        double arrowHalfWidth = lineWidth * (usesOfficeArrowType ? 2d : 1.5d);
+        double arrowHalfWidth = lineWidth * 1.5d;
         double startX = headArrow ? x1 + ux * (arrowLength - half) : x1;
         double startY = headArrow ? y1 + uy * (arrowLength - half) : y1;
         double endX = tailArrow ? x2 - ux * (arrowLength - half) : x2;
@@ -660,6 +667,85 @@ internal sealed class PptxRenderer
             (baseX + nx * halfWidth, baseY + ny * halfWidth),
             (baseX - nx * halfWidth, baseY - ny * halfWidth)
         ]);
+    }
+
+    private static void FillOfficeArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double length = Math.Sqrt(dx * dx + dy * dy);
+        if (length <= 0.001d)
+        {
+            return;
+        }
+
+        double ux = dx / length;
+        double uy = dy / length;
+        double nx = -uy;
+        double ny = ux;
+        double half = lineWidth / 2d;
+        double shaftInset = lineWidth * 0.99d;
+        double startX = headArrow ? x1 + ux * shaftInset : x1;
+        double startY = headArrow ? y1 + uy * shaftInset : y1;
+        double endX = tailArrow ? x2 - ux * shaftInset : x2;
+        double endY = tailArrow ? y2 - uy * shaftInset : y2;
+
+        graphics.MoveTo(startX + nx * half, startY + ny * half);
+        graphics.LineTo(endX + nx * half, endY + ny * half);
+        graphics.LineTo(endX - nx * half, endY - ny * half);
+        graphics.LineTo(startX - nx * half, startY - ny * half);
+        graphics.ClosePath();
+
+        if (headArrow)
+        {
+            AppendOfficeArrowHeadPath(graphics, x1, y1, ux, uy, nx, ny, lineWidth);
+        }
+
+        if (tailArrow)
+        {
+            AppendOfficeArrowHeadPath(graphics, x2, y2, -ux, -uy, -nx, -ny, lineWidth);
+        }
+
+        graphics.FillCurrentPath();
+    }
+
+    private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth)
+    {
+        tipX -= ux * 0.01d;
+        tipY -= uy * 0.01d;
+
+        (double X, double Y) Point(double along, double normal)
+        {
+            return (tipX + ux * along + nx * normal, tipY + uy * along + ny * normal);
+        }
+
+        (double X, double Y) p = Point(lineWidth * 3.74d, -lineWidth * 2.181667d);
+        graphics.MoveTo(p.X, p.Y);
+        p = Point(0d, 0d);
+        graphics.LineTo(p.X, p.Y);
+        p = Point(lineWidth * 3.74d, lineWidth * 2.181667d);
+        graphics.LineTo(p.X, p.Y);
+        (double X, double Y) c1 = Point(lineWidth * 3.978333d, lineWidth * 2.321667d);
+        (double X, double Y) c2 = Point(lineWidth * 4.285d, lineWidth * 2.24d);
+        (double X, double Y) c3 = Point(lineWidth * 4.423333d, lineWidth * 2.001667d);
+        graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
+        p = Point(lineWidth * 4.243333d, lineWidth * 1.318333d);
+        graphics.LineTo(p.X, p.Y);
+        p = Point(lineWidth * 1.243333d, -lineWidth * 0.431667d);
+        graphics.LineTo(p.X, p.Y);
+        p = Point(lineWidth * 1.243333d, lineWidth * 0.431667d);
+        graphics.LineTo(p.X, p.Y);
+        p = Point(lineWidth * 4.243333d, -lineWidth * 1.318333d);
+        graphics.LineTo(p.X, p.Y);
+        c1 = Point(lineWidth * 4.481667d, -lineWidth * 1.456667d);
+        c2 = Point(lineWidth * 4.563333d, -lineWidth * 1.763333d);
+        c3 = Point(lineWidth * 4.423333d, -lineWidth * 2.001667d);
+        graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
+        c1 = Point(lineWidth * 4.285d, -lineWidth * 2.24d);
+        c2 = Point(lineWidth * 3.978333d, -lineWidth * 2.321667d);
+        c3 = Point(lineWidth * 3.74d, -lineWidth * 2.181667d);
+        graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
+        graphics.ClosePath();
     }
 
     private static string? ReadLineEndType(XElement shapeProperties, string elementName)

@@ -129,6 +129,31 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("f");
     }
 
+    public void MoveTo(double x, double y)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" m");
+    }
+
+    public void LineTo(double x, double y)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" l");
+    }
+
+    public void CurveTo(double x1, double y1, double x2, double y2, double x3, double y3)
+    {
+        Curve(x1, y1, x2, y2, x3, y3);
+    }
+
+    public void ClosePath()
+    {
+        builder.AppendLine("h");
+    }
+
+    public void FillCurrentPath()
+    {
+        builder.AppendLine("f");
+    }
+
     public void StrokePolygon((double X, double Y)[] points)
     {
         AppendPolygonPath(points);
