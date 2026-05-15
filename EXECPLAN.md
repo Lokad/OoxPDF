@@ -244,6 +244,8 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - `pptx-ladder-04-mixed-font-size-stack` now isolates large/small/large paragraph vertical rhythm. Office advances line tops and recomputes each paragraph baseline from the current paragraph font size; the renderer now follows that model. The isolated fixture is gated at MAE `0.065659`, changed-pixel ratio threshold 16 `0.001726`.
   - The line-top text layout change tightened `pptx-ladder-04-mixed-font-size-line` to MAE `0.007254`, changed-pixel ratio threshold 16 `0.000173`, and `pptx-ladder-04-paragraph-advance` to MAE `0.216017`, changed-pixel ratio threshold 16 `0.003088`.
   - The same change improved the broader ungated `pptx-ladder-04-mixed-paragraph-stack` from MAE `3.041919` to MAE `0.873692`, changed-pixel ratio threshold 16 `0.011333`. Remaining gaps are now concentrated in serif font metrics, underline bounds in combined text, and wrapped bullet continuation rather than gross paragraph vertical drift.
+  - Default intra-paragraph wrap/line-break advance now uses the same Office-like `1.2 * fontSize` line-top advance as paragraph advance, while explicit line spacing remains explicit. This tightened `pptx-ladder-04-bullet-wrap` to MAE `0.149908`, changed-pixel ratio threshold 16 `0.003331`.
+  - Absolute PPTX line-spacing baselines now place text lower inside the fixed line box, matching the Office PDF stream for `a:spcPts`. This tightened `pptx-ladder-04-line-spacing-points` to MAE `0.305809`, changed-pixel ratio threshold 16 `0.002707`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

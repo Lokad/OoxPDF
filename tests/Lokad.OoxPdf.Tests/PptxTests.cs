@@ -347,7 +347,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 428.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 425.268 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsTabs()
@@ -674,7 +674,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 428.868 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 425.268 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesListStyleDefaults()

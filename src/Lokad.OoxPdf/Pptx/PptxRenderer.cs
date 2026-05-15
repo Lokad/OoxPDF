@@ -888,7 +888,7 @@ internal sealed class PptxRenderer
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
                     : textX + Math.Max(0d, indent.MarginLeft);
                 cursorLineTop -= spacingBefore;
-                double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties);
+                double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties, lineSpacing);
                 double cursorX = paragraphTextX;
                 double maxFontSize = 18d;
                 var paragraphRuns = new List<TextRun>();
@@ -899,8 +899,8 @@ internal sealed class PptxRenderer
                     {
                         AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                         paragraphRuns.Clear();
-                        cursorLineTop -= lineSpacing.Resolve(maxFontSize);
-                        cursorY = cursorLineTop - BaselineOffset(18d);
+                        cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
+                        cursorY = cursorLineTop - LineBaselineOffset(18d, lineSpacing);
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
                         maxFontSize = 18d;
@@ -966,8 +966,8 @@ internal sealed class PptxRenderer
                         {
                             AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                             paragraphRuns.Clear();
-                            cursorLineTop -= lineSpacing.Resolve(maxFontSize);
-                            cursorY = cursorLineTop - BaselineOffset(fontSize);
+                            cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
+                            cursorY = cursorLineTop - LineBaselineOffset(fontSize, lineSpacing);
                             cursorX = paragraphTextX;
                             paragraphEndX = paragraphTextX;
                             maxFontSize = fontSize;
@@ -1280,14 +1280,21 @@ internal sealed class PptxRenderer
             : fontSize * 1.2d;
     }
 
-    private static double ReadFirstLineBaselineOffset(XElement paragraph, XElement? defaultRunProperties)
+    private static double ReadLineAdvance(LineSpacing lineSpacing, double fontSize)
+    {
+        return lineSpacing.IsExplicit
+            ? lineSpacing.Resolve(fontSize)
+            : fontSize * 1.2d;
+    }
+
+    private static double ReadFirstLineBaselineOffset(XElement paragraph, XElement? defaultRunProperties, LineSpacing lineSpacing)
     {
         const double defaultFontSize = 18d;
         foreach (XElement child in paragraph.Elements())
         {
             if (child.Name == DrawingNamespace + "br")
             {
-                return BaselineOffset(defaultFontSize);
+                return LineBaselineOffset(defaultFontSize, lineSpacing);
             }
 
             if (child.Name != DrawingNamespace + "r")
@@ -1299,19 +1306,26 @@ internal sealed class PptxRenderer
             if (runProperties?.Attribute("sz") is { } size)
             {
                 double fontSize = int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d;
-                return BaselineOffset(fontSize);
+                return LineBaselineOffset(fontSize, lineSpacing);
             }
 
             if (defaultRunProperties?.Attribute("sz") is { } defaultSize)
             {
                 double fontSize = int.Parse(defaultSize.Value, CultureInfo.InvariantCulture) / 100d;
-                return BaselineOffset(fontSize);
+                return LineBaselineOffset(fontSize, lineSpacing);
             }
 
-            return BaselineOffset(defaultFontSize);
+            return LineBaselineOffset(defaultFontSize, lineSpacing);
         }
 
-        return BaselineOffset(defaultFontSize);
+        return LineBaselineOffset(defaultFontSize, lineSpacing);
+    }
+
+    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing)
+    {
+        return lineSpacing.IsAbsolute
+            ? Math.Max(BaselineOffset(fontSize), lineSpacing.Value - fontSize * 0.374d)
+            : BaselineOffset(fontSize);
     }
 
     private static double BaselineOffset(double fontSize)
