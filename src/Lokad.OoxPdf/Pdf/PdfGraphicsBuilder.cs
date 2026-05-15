@@ -27,6 +27,17 @@ internal sealed class PdfGraphicsBuilder
         builder.Append('[').Append(N(dashLength)).Append(' ').Append(N(gapLength)).AppendLine("] 0 d");
     }
 
+    public void SetLineDash(IReadOnlyList<double> lengths)
+    {
+        builder.Append('[');
+        foreach (double length in lengths)
+        {
+            builder.Append(N(length)).Append(' ');
+        }
+
+        builder.AppendLine("] 0 d");
+    }
+
     public void ClearLineDash()
     {
         builder.AppendLine("[] 0 d");

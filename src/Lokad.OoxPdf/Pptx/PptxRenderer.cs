@@ -358,7 +358,7 @@ internal sealed class PptxRenderer
 
         bool hasFill = TryReadSolidColor(shapeProperties, theme, out RgbColor fill);
         bool hasStroke = TryReadLine(shapeProperties, theme, out RgbColor stroke, out double lineWidth);
-        bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out double dashLength, out double gapLength);
+        bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
         {
             "rnd" => 1,
@@ -384,7 +384,7 @@ internal sealed class PptxRenderer
                 graphics.SetLineWidth(lineWidth);
                 if (hasDash)
                 {
-                    graphics.SetLineDash(dashLength, gapLength);
+                    graphics.SetLineDash(dashPattern);
                 }
 
                 if (lineCap is { } cap)
@@ -452,7 +452,7 @@ internal sealed class PptxRenderer
             graphics.SetLineWidth(lineWidth);
             if (hasDash)
             {
-                graphics.SetLineDash(dashLength, gapLength);
+                graphics.SetLineDash(dashPattern);
             }
 
             if (lineCap is { } cap)
@@ -528,7 +528,7 @@ internal sealed class PptxRenderer
             ?.Attribute("type");
     }
 
-    private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out double dashLength, out double gapLength)
+    private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
     {
         string? presetDash = (string?)shapeProperties
             .Element(DrawingNamespace + "ln")
@@ -536,13 +536,17 @@ internal sealed class PptxRenderer
             ?.Attribute("val");
         if (presetDash == "dash")
         {
-            dashLength = lineWidth * 4d;
-            gapLength = lineWidth * 3d;
+            dashPattern = [lineWidth * 4d, lineWidth * 3d];
             return true;
         }
 
-        dashLength = 0d;
-        gapLength = 0d;
+        if (presetDash == "dashDot")
+        {
+            dashPattern = [lineWidth * 4d, lineWidth * 3d, lineWidth, lineWidth * 3d];
+            return true;
+        }
+
+        dashPattern = [];
         return false;
     }
 
