@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-08-grouped-picture",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-08-grouped-picture.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "groups", "images"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0,
+    "maxChangedPixelRatioAtThreshold16": 0
+  },
+  "allowedUnsupportedFeatures": []
+}
