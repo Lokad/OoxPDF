@@ -725,6 +725,8 @@ internal sealed class PptxRenderer
         {
             "triangle" => CreateTrianglePoints(x, y, width, height),
             "diamond" => CreateDiamondPoints(x, y, width, height),
+            "parallelogram" => CreateParallelogramPoints(x, y, width, height),
+            "trapezoid" => CreateTrapezoidPoints(x, y, width, height),
             "downArrow" => CreateDownArrowPoints(x, y, width, height),
             "upArrow" => CreateUpArrowPoints(x, y, width, height),
             "leftArrow" => CreateLeftArrowPoints(x, y, width, height),
@@ -752,6 +754,30 @@ internal sealed class PptxRenderer
             (x + width, y + height / 2d),
             (x + width / 2d, y),
             (x, y + height / 2d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateParallelogramPoints(double x, double y, double width, double height)
+    {
+        double inset = Math.Min(width, height / 4d);
+        return
+        [
+            (x + inset, y + height),
+            (x + width, y + height),
+            (x + width - inset, y),
+            (x, y)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateTrapezoidPoints(double x, double y, double width, double height)
+    {
+        double inset = Math.Min(width / 2d, height / 4d);
+        return
+        [
+            (x + inset, y + height),
+            (x + width - inset, y + height),
+            (x + width, y),
+            (x, y)
         ];
     }
 
