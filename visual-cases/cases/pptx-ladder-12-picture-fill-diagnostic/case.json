@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-12-picture-fill-diagnostic",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-picture-fill-diagnostic.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "effects", "picture-fill", "diagnostic"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 8.85,
+    "maxChangedPixelRatioAtThreshold16": 0.101
+  },
+  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_PICTURE_FILL"]
+}
