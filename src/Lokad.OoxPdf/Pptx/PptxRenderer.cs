@@ -220,7 +220,12 @@ internal sealed class PptxRenderer
             owner?.Name == DrawingNamespace + "rPr";
         bool supportedTableCellFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == DrawingNamespace + "tcPr";
-        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill;
+        bool supportedTableBorder = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner is not null &&
+            owner.Name.Namespace == DrawingNamespace &&
+            owner.Name.LocalName is "lnL" or "lnR" or "lnT" or "lnB" &&
+            lineOwner?.Name == DrawingNamespace + "tcPr";
+        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder;
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
@@ -995,7 +1000,7 @@ internal sealed class PptxRenderer
 
     private static void AddTableBorder(List<TableBorderLine> borders, XElement? line, PptxTheme theme, double x1, double y1, double x2, double y2)
     {
-        if (line is null || line.Element(DrawingNamespace + "noFill") is not null || !TryReadSolidColor(line, theme, out RgbColor color))
+        if (line is null || line.Element(DrawingNamespace + "noFill") is not null || !TryReadSolidColorWithAlpha(line, theme, out RgbColor color, out double alpha))
         {
             return;
         }
@@ -1003,7 +1008,7 @@ internal sealed class PptxRenderer
         double lineWidth = line.Attribute("w") is { } widthAttribute
             ? Math.Max(1d, OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d)
             : 0.75d;
-        borders.Add(new TableBorderLine(x1, y1, x2, y2, lineWidth, color));
+        borders.Add(new TableBorderLine(x1, y1, x2, y2, lineWidth, color, alpha));
     }
 
     private static void StrokeTableBorders(PdfGraphicsBuilder graphics, List<TableBorderLine> borders)
@@ -1025,9 +1030,20 @@ internal sealed class PptxRenderer
             double x2 = group.Key.Vertical ? group.Key.FixedCoordinate : end + halfWidth;
             double y2 = group.Key.Vertical ? end + halfWidth : group.Key.FixedCoordinate;
 
+            bool transparentStroke = group.Key.Alpha < 0.999d;
+            if (transparentStroke)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, group.Key.Alpha);
+            }
+
             graphics.SetStrokeRgb(group.Key.Color.Red, group.Key.Color.Green, group.Key.Color.Blue);
             graphics.SetLineWidth(group.Key.LineWidth);
             graphics.StrokeLine(x1, y1, x2, y2);
+            if (transparentStroke)
+            {
+                graphics.RestoreState();
+            }
         }
     }
 
@@ -2853,15 +2869,15 @@ internal sealed class PptxRenderer
 
     private readonly record struct BulletStyle(double FontSize, RgbColor Color, string? Typeface);
 
-    private readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color);
+    private readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color, double Alpha);
 
-    private readonly record struct TableBorderKey(bool Vertical, double FixedCoordinate, double LineWidth, RgbColor Color)
+    private readonly record struct TableBorderKey(bool Vertical, double FixedCoordinate, double LineWidth, RgbColor Color, double Alpha)
     {
         public static TableBorderKey From(TableBorderLine border)
         {
             bool vertical = Math.Abs(border.X1 - border.X2) < 0.001d;
             double fixedCoordinate = vertical ? border.X1 : border.Y1;
-            return new TableBorderKey(vertical, Math.Round(fixedCoordinate, 3), Math.Round(border.LineWidth, 3), border.Color);
+            return new TableBorderKey(vertical, Math.Round(fixedCoordinate, 3), Math.Round(border.LineWidth, 3), border.Color, Math.Round(border.Alpha, 5));
         }
     }
 
