@@ -1414,8 +1414,12 @@ internal sealed class PptxRenderer
                         continue;
                     }
 
-                    double fontSize = ReadFontSize(runProperties, defaultRunProperties);
-                    maxFontSize = Math.Max(maxFontSize, fontSize);
+                    double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
+                    maxFontSize = Math.Max(maxFontSize, nominalFontSize);
+                    double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
+                    double fontSize = Math.Abs(baselineOffset) > 0.001d
+                        ? nominalFontSize * 2d / 3d
+                        : nominalFontSize;
                     RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
                         ? runColor
                         : TryReadSolidColor(defaultRunProperties, theme, out RgbColor defaultColor)
@@ -1433,7 +1437,6 @@ internal sealed class PptxRenderer
                         && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                     bool strike = IsStrikeEnabled(runProperties, defaultRunProperties);
                     double characterSpacing = ReadCharacterSpacing(runProperties, defaultRunProperties);
-                    double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, fontSize);
                     RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
                         ? highlightColor
                         : null;
