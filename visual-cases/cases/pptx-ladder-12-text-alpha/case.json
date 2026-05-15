@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-12-text-alpha",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-12-text-alpha.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "effects", "alpha", "text"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.0063,
+    "maxChangedPixelRatioAtThreshold16": 0.00017
+  },
+  "allowedUnsupportedFeatures": []
+}

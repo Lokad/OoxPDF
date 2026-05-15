@@ -216,7 +216,9 @@ internal sealed class PptxRenderer
         bool supportedShapeLine = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == DrawingNamespace + "ln" &&
             lineOwner?.Name == PresentationNamespace + "spPr";
-        return !supportedShapeFill && !supportedShapeLine;
+        bool supportedTextFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "rPr";
+        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill;
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
@@ -1191,9 +1193,17 @@ internal sealed class PptxRenderer
                     ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
                     : 12d;
                 maxFontSize = Math.Max(maxFontSize, fontSize);
-                RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
-                    ? runColor
-                    : new RgbColor(0, 0, 0);
+                double alpha = 1d;
+                RgbColor color;
+                if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+                {
+                    color = runColor;
+                    alpha = runAlpha;
+                }
+                else
+                {
+                    color = new RgbColor(0, 0, 0);
+                }
                 string? typeface = theme.ResolveTypeface((string?)runProperties?
                     .Element(DrawingNamespace + "latin")
                     ?.Attribute("typeface"));
@@ -1203,7 +1213,7 @@ internal sealed class PptxRenderer
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
                 double advance = advanceEstimator.Measure(text, fontSize, typeface, bold, italic, characterSpacing: 0d);
-                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, null, bold, italic, underline, strike, alignment, typeface));
+                runs.Add(new TextRun(text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface));
                 cursorX += advance;
             }
 
@@ -1556,11 +1566,22 @@ internal sealed class PptxRenderer
                     double fontSize = Math.Abs(baselineOffset) > 0.001d
                         ? nominalFontSize * 2d / 3d
                         : nominalFontSize;
-                    RgbColor color = TryReadSolidColor(runProperties, theme, out RgbColor runColor)
-                        ? runColor
-                        : TryReadSolidColor(defaultRunProperties, theme, out RgbColor defaultColor)
-                            ? defaultColor
-                            : shapeFontColor ?? new RgbColor(0, 0, 0);
+                    double alpha = 1d;
+                    RgbColor color;
+                    if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+                    {
+                        color = runColor;
+                        alpha = runAlpha;
+                    }
+                    else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
+                    {
+                        color = defaultColor;
+                        alpha = defaultAlpha;
+                    }
+                    else
+                    {
+                        color = shapeFontColor ?? new RgbColor(0, 0, 0);
+                    }
                     string? typeface = theme.ResolveTypeface((string?)(runProperties?
                         .Element(DrawingNamespace + "latin") ??
                         defaultRunProperties?.Element(DrawingNamespace + "latin"))
@@ -1580,7 +1601,7 @@ internal sealed class PptxRenderer
                     {
                         BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface));
                         paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
@@ -1610,7 +1631,7 @@ internal sealed class PptxRenderer
                             continue;
                         }
 
-                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, highlight, bold, italic, underline, strike, alignment, typeface));
+                        paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
                         cursorX += segmentWidth;
                         paragraphEndX = Math.Max(paragraphEndX, cursorX);
                     }
@@ -2516,6 +2537,7 @@ internal sealed class PptxRenderer
             Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
             Math.Abs(left.ClipHeight - right.ClipHeight) < 0.01d &&
             left.Color.Equals(right.Color) &&
+            Math.Abs(left.Alpha - right.Alpha) < 0.001d &&
             left.HighlightColor.Equals(right.HighlightColor) &&
             left.Bold == right.Bold &&
             left.Italic == right.Italic &&
@@ -2560,6 +2582,7 @@ internal sealed class PptxRenderer
             left.Alignment == right.Alignment &&
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             left.Color.Equals(right.Color) &&
+            NearlyEqual(left.Alpha, right.Alpha) &&
             left.HighlightColor.Equals(right.HighlightColor) &&
             NearlyEqual(left.Y, right.Y) &&
             NearlyEqual(left.Height, right.Height) &&
@@ -2616,6 +2639,13 @@ internal sealed class PptxRenderer
                     graphics.FillRectangle(x, baselineY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
                 }
 
+                bool transparentText = run.Alpha < 0.999d;
+                if (transparentText)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(run.Alpha, 1d);
+                }
+
                 DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
                 if (syntheticBold)
                 {
@@ -2632,6 +2662,11 @@ internal sealed class PptxRenderer
                 {
                     graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                     graphics.FillRectangle(x, baselineY + run.FontSize * 0.211d, lineWidth, Math.Max(0.5d, run.FontSize * 0.05d));
+                }
+
+                if (transparentText)
+                {
+                    graphics.RestoreState();
                 }
             }
 
@@ -2786,6 +2821,7 @@ internal sealed class PptxRenderer
         double CharacterSpacing,
         double BaselineOffset,
         RgbColor Color,
+        double Alpha,
         RgbColor? HighlightColor,
         bool Bold,
         bool Italic,
