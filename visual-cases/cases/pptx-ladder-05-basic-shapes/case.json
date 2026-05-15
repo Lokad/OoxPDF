@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-05-basic-shapes",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-shapes.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shapes", "basic-shapes"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.01,
+    "maxChangedPixelRatioAtThreshold16": 0.0004
+  },
+  "allowedUnsupportedFeatures": []
+}
