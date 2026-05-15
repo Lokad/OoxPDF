@@ -218,7 +218,9 @@ internal sealed class PptxRenderer
             lineOwner?.Name == PresentationNamespace + "spPr";
         bool supportedTextFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == DrawingNamespace + "rPr";
-        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill;
+        bool supportedTableCellFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "tcPr";
+        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill;
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
@@ -806,10 +808,21 @@ internal sealed class PptxRenderer
                 double cellBottom = cellTop - cellHeight;
                 XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
-                if (TryReadSolidColor(cellProperties, theme, out RgbColor fill))
+                if (TryReadSolidColorWithAlpha(cellProperties, theme, out RgbColor fill, out double fillAlpha))
                 {
+                    bool transparentFill = fillAlpha < 0.999d;
+                    if (transparentFill)
+                    {
+                        graphics.SaveState();
+                        graphics.SetAlpha(fillAlpha, 1d);
+                    }
+
                     graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
                     graphics.FillRectangle(cellX, cellBottom, columnWidth, cellHeight);
+                    if (transparentFill)
+                    {
+                        graphics.RestoreState();
+                    }
                 }
 
                 AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellBottom, columnWidth, cellHeight);
