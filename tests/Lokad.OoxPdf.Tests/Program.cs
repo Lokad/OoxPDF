@@ -43,6 +43,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,
     PptxTests.PptxSyntheticTextBoxHonorsBulletColorAndSize,
     PptxTests.PptxSyntheticTextBoxUsesPerRunFontResources,
+    PptxTests.PptxSyntheticTextBoxUsesKerningWhenAvailable,
     PptxTests.PptxSyntheticTextBoxCentersMixedRunsTogether,
     PptxTests.PptxSyntheticTextBoxWrapsAcrossMixedRuns,
     PptxTests.PptxSyntheticTextBoxUsesListStyleDefaults,

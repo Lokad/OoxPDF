@@ -247,6 +247,7 @@ Private evidence is intentionally anonymized. Do not copy private text, screensh
   - Default intra-paragraph wrap/line-break advance now uses the same Office-like `1.2 * fontSize` line-top advance as paragraph advance, while explicit line spacing remains explicit. This tightened `pptx-ladder-04-bullet-wrap` to MAE `0.149908`, changed-pixel ratio threshold 16 `0.003331`.
   - Absolute PPTX line-spacing baselines now place text lower inside the fixed line box, matching the Office PDF stream for `a:spcPts`. This tightened `pptx-ladder-04-line-spacing-points` to MAE `0.305809`, changed-pixel ratio threshold 16 `0.002707`.
   - Adjacent underlined PPTX flow segments now coalesce before PDF emission so multi-word underlined runs draw one continuous underline rectangle, matching Office's continuous underline shape. `pptx-ladder-04-underline-single` tightened to MAE `0.118922`, changed-pixel ratio threshold 16 `0.001273`; `pptx-ladder-04-serif-title-underline` is now gated at MAE `0.353182`, changed-pixel ratio threshold 16 `0.004945`.
+  - Classic OpenType `kern` pairs now affect PPTX text measurement and PDF emission through `TJ` arrays when available, moving the renderer closer to Office's pair-adjusted text streams. This improved `pptx-ladder-04-mixed-paragraph-stack` to MAE `0.520333`, changed-pixel ratio threshold 16 `0.009028`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Diagnostics: 9 chart static fallback informational diagnostics.

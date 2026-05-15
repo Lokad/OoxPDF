@@ -116,13 +116,62 @@ internal sealed class PdfEmbeddedFont
         return builder.ToString();
     }
 
-    public double MeasureTextPoints(string text, double fontSize)
+    public string? EncodeGlyphPositioningArray(string text)
     {
-        double units = 0;
+        var glyphs = new List<ushort>();
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
+            if (glyph != 0)
+            {
+                glyphs.Add(glyph);
+            }
+        }
+
+        if (glyphs.Count == 0)
+        {
+            return null;
+        }
+
+        bool hasKerning = false;
+        var builder = new StringBuilder("[");
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            if (i > 0)
+            {
+                short kerning = Font.GetKerning(glyphs[i - 1], glyphs[i]);
+                if (kerning != 0)
+                {
+                    double adjustment = -kerning * 1000d / Font.UnitsPerEm;
+                    if (Math.Abs(adjustment) > 0.001d)
+                    {
+                        builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+                        hasKerning = true;
+                    }
+                }
+            }
+
+            builder.Append('<').Append(glyphs[i].ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+        }
+
+        builder.Append(']');
+        return hasKerning ? builder.ToString() : null;
+    }
+
+    public double MeasureTextPoints(string text, double fontSize)
+    {
+        double units = 0;
+        ushort previousGlyph = 0;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            ushort glyph = Font.MapCodePoint(rune.Value);
+            if (previousGlyph != 0 && glyph != 0)
+            {
+                units += Font.GetKerning(previousGlyph, glyph);
+            }
+
             units += Font.GetAdvanceWidth(glyph);
+            previousGlyph = glyph;
         }
 
         return units * fontSize / Font.UnitsPerEm;

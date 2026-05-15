@@ -9,6 +9,7 @@ internal sealed class OpenTypeFont
     private readonly Dictionary<string, TableRecord> tables;
     private readonly CmapFormat? cmap;
     private readonly ushort[] advances;
+    private readonly IReadOnlyDictionary<uint, short> kerningPairs;
 
     private OpenTypeFont(
         byte[] bytes,
@@ -20,7 +21,8 @@ internal sealed class OpenTypeFont
         Os2Metrics os2,
         PostMetrics post,
         CmapFormat? cmap,
-        ushort[] advances)
+        ushort[] advances,
+        IReadOnlyDictionary<uint, short> kerningPairs)
     {
         this.bytes = bytes;
         this.tables = tables;
@@ -32,6 +34,7 @@ internal sealed class OpenTypeFont
         Post = post;
         this.cmap = cmap;
         this.advances = advances;
+        this.kerningPairs = kerningPairs;
     }
 
     public string FamilyName { get; }
@@ -92,7 +95,8 @@ internal sealed class OpenTypeFont
         PostMetrics post = ReadPost(bytes, tables);
         CmapFormat? cmap = ReadCmap(bytes, tables);
         ushort[] advances = ReadAdvances(bytes, tables);
-        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances);
+        IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables);
+        return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs);
     }
 
     public ushort MapCodePoint(int codePoint)
@@ -108,6 +112,12 @@ internal sealed class OpenTypeFont
         }
 
         return glyphId < advances.Length ? advances[glyphId] : advances[^1];
+    }
+
+    public short GetKerning(ushort leftGlyphId, ushort rightGlyphId)
+    {
+        uint key = ((uint)leftGlyphId << 16) | rightGlyphId;
+        return kerningPairs.TryGetValue(key, out short value) ? value : (short)0;
     }
 
     private static ushort ReadUnitsPerEm(byte[] bytes, Dictionary<string, TableRecord> tables)
@@ -245,6 +255,52 @@ internal sealed class OpenTypeFont
         }
 
         return advances;
+    }
+
+    private static IReadOnlyDictionary<uint, short> ReadKerningPairs(byte[] bytes, Dictionary<string, TableRecord> tables)
+    {
+        if (!tables.TryGetValue("kern", out TableRecord kern) || kern.Length < 4)
+        {
+            return new Dictionary<uint, short>();
+        }
+
+        ushort tableCount = U16(bytes, kern.Offset + 2);
+        int subtableOffset = kern.Offset + 4;
+        var pairs = new Dictionary<uint, short>();
+        for (int table = 0; table < tableCount && subtableOffset + 6 <= kern.Offset + kern.Length; table++)
+        {
+            ushort length = U16(bytes, subtableOffset + 2);
+            ushort coverage = U16(bytes, subtableOffset + 4);
+            int format = coverage >> 8;
+            bool horizontal = (coverage & 0x0001) != 0;
+            if (length >= 14 && format == 0 && horizontal)
+            {
+                ushort pairCount = U16(bytes, subtableOffset + 6);
+                int pairOffset = subtableOffset + 14;
+                int pairEnd = Math.Min(subtableOffset + length, kern.Offset + kern.Length);
+                for (int i = 0; i < pairCount && pairOffset + 6 <= pairEnd; i++)
+                {
+                    ushort left = U16(bytes, pairOffset);
+                    ushort right = U16(bytes, pairOffset + 2);
+                    short value = I16(bytes, pairOffset + 4);
+                    if (value != 0)
+                    {
+                        pairs[((uint)left << 16) | right] = value;
+                    }
+
+                    pairOffset += 6;
+                }
+            }
+
+            if (length == 0)
+            {
+                break;
+            }
+
+            subtableOffset += length;
+        }
+
+        return pairs;
     }
 
     private static TableRecord Required(Dictionary<string, TableRecord> tables, string tag)

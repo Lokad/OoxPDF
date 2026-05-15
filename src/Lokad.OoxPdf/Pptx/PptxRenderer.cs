@@ -1731,10 +1731,10 @@ internal sealed class PptxRenderer
                     graphics.FillRectangle(x, baselineY - run.FontSize * 0.22d, lineWidth, run.FontSize * 1.05d);
                 }
 
-                graphics.DrawGlyphText(resourceName, run.FontSize, x, baselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
+                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
                 if (syntheticBold)
                 {
-                    graphics.DrawGlyphText(resourceName, run.FontSize, x + 0.35d, baselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphHex, syntheticItalic, run.CharacterSpacing);
+                    DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
                 }
 
                 if (run.Underline)
@@ -1755,6 +1755,21 @@ internal sealed class PptxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing)
+    {
+        string? positioningArray = Math.Abs(characterSpacing) <= 0.001d
+            ? embedded.EncodeGlyphPositioningArray(text)
+            : null;
+        if (positioningArray is null)
+        {
+            graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic, characterSpacing);
+        }
+        else
+        {
+            graphics.DrawGlyphPositionedText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
+        }
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
@@ -1931,10 +1946,17 @@ internal sealed class PptxRenderer
             }
 
             double units = 0d;
+            ushort previousGlyph = 0;
             foreach (Rune rune in text.EnumerateRunes())
             {
                 ushort glyph = font.MapCodePoint(rune.Value);
+                if (previousGlyph != 0 && glyph != 0)
+                {
+                    units += font.GetKerning(previousGlyph, glyph);
+                }
+
                 units += font.GetAdvanceWidth(glyph);
+                previousGlyph = glyph;
             }
 
             int runeCount = text.EnumerateRunes().Count();
