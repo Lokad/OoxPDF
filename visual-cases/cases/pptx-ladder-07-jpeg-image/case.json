@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-07-jpeg-image",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-jpeg-image.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "images"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.14,
+    "maxChangedPixelRatioAtThreshold16": 0.0056
+  },
+  "allowedUnsupportedFeatures": []
+}
