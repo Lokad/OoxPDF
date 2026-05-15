@@ -89,6 +89,18 @@ if ($manifest.expected.diagnosticsMustBeEmpty -eq $true -and $diagnosticItems.Co
     throw "Expected no diagnostics, but found: $ids."
 }
 
+$allowedUnsupportedFeatures = @($manifest.allowedUnsupportedFeatures)
+if ($allowedUnsupportedFeatures.Count -ne 0 -and $diagnosticItems.Count -ne 0) {
+    $unexpectedDiagnostics = @($diagnosticItems | Where-Object {
+        $allowedUnsupportedFeatures -notcontains $_.Id -and
+            $allowedUnsupportedFeatures -notcontains $_.Feature
+    })
+    if ($unexpectedDiagnostics.Count -ne 0) {
+        $ids = ($unexpectedDiagnostics | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ", "
+        throw "Unexpected diagnostics: $ids."
+    }
+}
+
 $assessment = @"
 # Visual assessment: $($manifest.id)
 
