@@ -1394,7 +1394,7 @@ internal sealed class PptxRenderer
                         AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                         paragraphRuns.Clear();
                         cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
-                        cursorY = cursorLineTop - LineBaselineOffset(18d, lineSpacing);
+                        cursorY = double.NaN;
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
                         maxFontSize = 18d;
@@ -1417,6 +1417,11 @@ internal sealed class PptxRenderer
                     double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
                     maxFontSize = Math.Max(maxFontSize, nominalFontSize);
                     double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
+                    if (double.IsNaN(cursorY))
+                    {
+                        cursorY = cursorLineTop - LineBaselineOffset(nominalFontSize, lineSpacing);
+                    }
+
                     double fontSize = Math.Abs(baselineOffset) > 0.001d
                         ? nominalFontSize * 2d / 3d
                         : nominalFontSize;
