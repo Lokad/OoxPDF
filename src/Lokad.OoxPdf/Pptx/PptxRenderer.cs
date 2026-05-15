@@ -821,6 +821,8 @@ internal sealed class PptxRenderer
             "pentagon" => CreatePentagonPoints(x, y, width, height),
             "hexagon" => CreateHexagonPoints(x, y, width, height),
             "octagon" => CreateOctagonPoints(x, y, width, height),
+            "star5" => CreateStar5Points(x, y, width, height),
+            "star6" => CreateStar6Points(x, y, width, height),
             "plus" => CreatePlusPoints(x, y, width, height),
             "chevron" => CreateChevronPoints(x, y, width, height),
             "homePlate" => CreateHomePlatePoints(x, y, width, height),
@@ -866,6 +868,53 @@ internal sealed class PptxRenderer
             (x + width, y + height / 2d),
             (x + width / 2d, y),
             (x, y + height / 2d)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateStar5Points(double x, double y, double width, double height)
+    {
+        double topShoulderY = RoundOfficeShapeCoordinate(height * 0.61803d);
+        double lowerShoulderY = RoundOfficeShapeCoordinate(height * 0.38197d);
+        double innerBottomY = RoundOfficeShapeCoordinate(height * 0.23607d);
+        double innerTopLeftX = RoundOfficeShapeCoordinate(width * 0.38194d);
+        double innerTopRightX = RoundOfficeShapeCoordinate(width * 0.61806d);
+        double innerLeftX = RoundOfficeShapeCoordinate(width * 0.30902d);
+        double innerRightX = RoundOfficeShapeCoordinate(width * 0.69098d);
+        double lowerLeftX = RoundOfficeShapeCoordinate(width * 0.19098d);
+        double lowerRightX = RoundOfficeShapeCoordinate(width * 0.80902d);
+        return
+        [
+            (x, y + topShoulderY),
+            (x + innerTopLeftX, y + topShoulderY),
+            (x + width / 2d, y + height),
+            (x + innerTopRightX, y + topShoulderY),
+            (x + width, y + topShoulderY),
+            (x + innerRightX, y + lowerShoulderY),
+            (x + lowerRightX, y),
+            (x + width / 2d, y + innerBottomY),
+            (x + lowerLeftX, y),
+            (x + innerLeftX, y + lowerShoulderY)
+        ];
+    }
+
+    private static (double X, double Y)[] CreateStar6Points(double x, double y, double width, double height)
+    {
+        double quarterWidth = width / 6d;
+        double quarterHeight = height / 4d;
+        return
+        [
+            (x, y + height * 0.75d),
+            (x + width / 3d, y + height * 0.75d),
+            (x + width / 2d, y + height),
+            (x + width * 2d / 3d, y + height * 0.75d),
+            (x + width, y + height * 0.75d),
+            (x + width - quarterWidth, y + height / 2d),
+            (x + width, y + height * 0.25d),
+            (x + width * 2d / 3d, y + height * 0.25d),
+            (x + width / 2d, y),
+            (x + width / 3d, y + height * 0.25d),
+            (x, y + height * 0.25d),
+            (x + quarterWidth, y + height / 2d)
         ];
     }
 
