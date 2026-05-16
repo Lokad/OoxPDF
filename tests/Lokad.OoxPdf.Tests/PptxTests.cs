@@ -1491,7 +1491,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 438.612 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 450.612 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsPercentParagraphSpacing()

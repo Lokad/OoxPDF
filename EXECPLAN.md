@@ -236,6 +236,11 @@ High-priority actions:
   were updated to lock the new text baselines, `pptx-ladder-04-line-spacing-points` remains locked at MAE
   `0.014381`, and `pptx-ladder-04-line-spacing-port` still passes its approximate gate with line-to-line
   deltas matching Office while retaining the known generic baseline offset.
+- [x] Match Office's first-paragraph spacing behavior for PPTX text frames:
+  the first laid-out paragraph no longer applies `spcBef`, while later paragraphs still include
+  `spcAft + spcBef`. This improved `pptx-ladder-04-line-spacing-port` from MAE `4.347075` to `1.443223`
+  and brought all inspected text baselines within about `0.32 pt` of Office, so the case now has a PDF
+  text-operation position gate.
 - [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
   ascender, internal leading, or another generic font metric for top-to-baseline placement.

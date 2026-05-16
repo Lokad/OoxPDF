@@ -254,6 +254,7 @@ internal sealed partial class PptxRenderer
         double yTop = OoxUnits.EmuToPoints(frame.Bounds.Y);
         double cursorLineTop = document.SlideHeightPoints - yTop - frame.Insets.Top - frame.VerticalOffset;
         int autoNumberValue = 1;
+        bool hasPlacedParagraph = false;
         var paragraphLayouts = new List<PptxTextParagraphLayout>();
 
         foreach (PptxTextParagraphModel paragraph in frame.Paragraphs)
@@ -268,7 +269,8 @@ internal sealed partial class PptxRenderer
                     double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties) * frame.FontScale;
                     double emptySpacingBefore = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     double emptySpacingAfter = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
-                    cursorLineTop -= emptySpacingBefore + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
+                    cursorLineTop -= (hasPlacedParagraph ? emptySpacingBefore : 0d) + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
+                    hasPlacedParagraph = true;
                 }
 
                 paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
@@ -281,7 +283,11 @@ internal sealed partial class PptxRenderer
             double paragraphTextX = bulletText is null
                 ? frame.TextX + Math.Max(0d, paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                 : frame.TextX + Math.Max(0d, paragraphStyle.Indent.MarginLeft);
-            cursorLineTop -= paragraphStyle.SpacingBefore;
+            if (hasPlacedParagraph)
+            {
+                cursorLineTop -= paragraphStyle.SpacingBefore;
+            }
+
             bool afterManualLineBreak = false;
             double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator);
             double cursorX = paragraphTextX;
@@ -382,6 +388,7 @@ internal sealed partial class PptxRenderer
 
             AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
+            hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
 
