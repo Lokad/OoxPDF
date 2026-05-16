@@ -190,10 +190,11 @@ Shape adjustment oracle family map:
   corner radius.
 - Chevron and arrow `0003..0006`: ported in `pptx-ladder-06-shape-adjust-port-a` for shallow/deep chevron
   and thin/wide-head right arrow.
-- Star, donut, cross, trapezoid, block arc, folded corner, bevel, triangle, pentagon, can, heart, moon, and
-  left brace `0007..0031`: partially covered by broad preset-shape rungs, but missing source-aligned
-  adjustment variants. Clean ports should preserve one feature per case or compact paired variants where
-  Office output remains easy to inspect.
+- Star, donut, cross, trapezoid, and triangle `0007..0014` plus `0021..0022`: ported in
+  `pptx-ladder-06-shape-adjust-port-b`.
+- Block arc, folded corner, bevel, pentagon, can, heart, moon, and left brace `0015..0020` plus
+  `0023..0031`: still need source-aligned adjustment variants. Clean ports should preserve one feature per
+  case or compact paired variants where Office output remains easy to inspect.
 
 ## Test Suite Performance
 
