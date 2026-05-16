@@ -2662,7 +2662,14 @@ internal sealed class PptxRenderer
             return slideNumber.ToString(CultureInfo.InvariantCulture);
         }
 
-        return (string?)element.Element(DrawingNamespace + "t") ?? string.Empty;
+        return NormalizeText((string?)element.Element(DrawingNamespace + "t") ?? string.Empty);
+    }
+
+    private static string NormalizeText(string text)
+    {
+        return text.Contains('\u00AD', StringComparison.Ordinal)
+            ? text.Replace("\u00AD", string.Empty, StringComparison.Ordinal)
+            : text;
     }
 
     private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
