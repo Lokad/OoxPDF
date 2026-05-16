@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-typography-run-boundaries",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-run-boundaries.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "run-boundaries", "kerning", "accent"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.445,
+    "maxChangedPixelRatioAtThreshold16": 0.0076
+  },
+  "allowedUnsupportedFeatures": []
+}

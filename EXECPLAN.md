@@ -806,6 +806,13 @@ paths, and ExecPlan references together.
   height multiplier, keeping Arial highlight parity while tightening Cambria/Cambria Math marker height.
 - [ ] Add normalized typography rungs for Office-authored kerning words by font family: Arial, Aptos/Calibri,
   Cambria/Cambria Math, and Segoe UI.
+- [x] Add normalized typography rung `pptx-ladder-04-typography-run-boundaries` for Office-authored
+  Cambria/Cambria Math words, accented Latin, headline words, and highlighted run boundaries. Latest gated
+  run: `artifacts/visual/pptx-ladder-04-typography-run-boundaries/20260516-130239`, MAE `0.444912`,
+  changed16 `0.007555`.
+- [ ] Tighten `pptx-ladder-04-typography-run-boundaries` by reproducing Office's small intra-word pair
+  adjustments for Cambria/Cambria Math without reintroducing inactive GPOS lookups that caused large
+  parasite gaps.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
   apostrophes, non-breaking spaces, narrow spaces, currency symbols, and hyphen/dash variants.
 - [ ] Add normalized typography rungs for run-boundary invariance: same text as one run, per-word runs,
