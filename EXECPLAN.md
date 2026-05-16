@@ -1109,6 +1109,9 @@ paths, and ExecPlan references together.
 - [x] Tighten the early manual-break/overflow visual gates after the same line-metric fix:
   `pptx-ladder-03-text-anchor-overflow` is now at MAE `0.027775`, changed16 `0.000711`,
   SSIM `0.993028`.
+- [x] Typography shaping note: expanding GPOS class-pair parsing to include class-0 right glyphs did not
+  change `pptx-ladder-03-text-flow` text operations or metrics, so the remaining Arial micro-`TJ`
+  differences are not explained by that parser gap.
 - [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
   out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
   `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,
