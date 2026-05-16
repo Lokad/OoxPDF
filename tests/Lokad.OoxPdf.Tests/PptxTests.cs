@@ -1773,17 +1773,17 @@ internal static class PptxTests
         TestAssert.True(!string.IsNullOrWhiteSpace(justifiedLine.BaselineMetric.Source), "Expected line boxes to expose baseline metric provenance.");
         TestAssert.True(justifiedLine.BaselineMetric.UnitsPerEm > 0, "Expected resolved-font line boxes to expose OpenType units-per-em diagnostics.");
         TestAssert.True(justifiedLine.BaselineMetric.WindowsAscender > 0, "Expected resolved-font line boxes to expose OS/2 Windows ascender diagnostics.");
-        TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Space"), "Expected layout atoms to preserve explicit word spaces for justification.");
+        TestAssert.True(justifiedLine.Spans.All(span => span.Text.IndexOf(' ') < 0), "Expected justified emission spans to split drawable words from stretchable spaces.");
         TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Word"), "Expected layout atoms to preserve word fragments separately from spaces.");
         double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
         TestAssert.Equal(4, wordStarts.Length);
         TestAssert.True(wordStarts.Zip(wordStarts.Skip(1), (left, right) => right - left).All(delta => delta > 0d), "Expected justified layout to expose monotonic word starts for Office text-op comparison.");
-        TestAssert.True(justifiedLine.Spans.Any(span => span.GlyphSpan.LayoutWidth > span.GlyphSpan.NaturalWidth), "Expected justified layout to expose which spans absorb distributed spacing.");
+        TestAssert.True(justifiedLine.EndX - justifiedLine.Spans.Last().X > justifiedLine.Spans.Last().Width, "Expected justified layout to expose distributed spacing through positioned word starts.");
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphSpan.GlyphSpan.GlyphCount > 0, "Expected layout spans to own glyph ids before PDF emission.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected layout glyph spans to expose mapped glyph ids.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.Advance > 0d), "Expected layout glyph spans to expose positive glyph advances.");
-        TestAssert.True(paragraphSpan.GlyphSpan.LayoutWidth >= paragraphSpan.GlyphSpan.NaturalWidth, "Expected layout glyph spans to preserve justified width separately from natural glyph advance.");
+        TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.LayoutWidth - paragraphSpan.GlyphSpan.NaturalWidth) < 0.01d, "Expected justified word glyph spans to keep natural width while line positioning owns distributed spacing.");
 
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
         PptxTextGlyphRunSnapshot paragraphGlyphRun = glyphRuns.First(run => run.Text.StartsWith("Paragraph", StringComparison.Ordinal));

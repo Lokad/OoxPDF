@@ -211,6 +211,12 @@ High-priority actions:
   justified layout spans are protected from text-run coalescing so the expanded positions reach PDF emission.
 - [ ] Tighten justified paragraph parity against Office: current public probe still has large raster drift,
   so inspect Office text operations and refine baseline, line advance, and per-word spacing strategy.
+- [x] Move justified PPTX spacing ownership from glyph width to positioned word starts:
+  justified lines now split drawable word spans from stretchable spaces before PDF emission, so individual
+  word glyph spans keep natural widths while line layout owns distributed x positions. The public
+  `justify-port` raster metric stayed at MAE `4.210743`; Office's inspected text-operation count is still
+  higher because Office chunks words inside `TJ` arrays, so the remaining work is word-position formula and
+  PDF text-array parity rather than layout ownership.
 - [x] Inspect Office vs candidate text operations for `pptx-ladder-04-typography-justify-port`: word-level
   positions now reach candidate PDF emission, but baselines remain about 0.7 pt low and raster drift remains
   high, so the next pass should target baseline/line-advance parity before private-deck tuning.
