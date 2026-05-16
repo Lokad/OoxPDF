@@ -121,7 +121,7 @@ High-priority actions:
   runner from roughly 180 seconds to roughly 13 seconds on the local machine, with `108 passed, 0 failed`.
 - [x] Cache immutable Office reference PDFs and rasterized oracle pages for public/private visual cases under
   ignored `artifacts/reference-cache/`, keyed by input hash, DPI, and reference/raster tool hashes.
-- [ ] Cache additional expensive test fixtures where useful, especially parsed fonts and repeated synthetic
+- [x] Cache additional expensive test fixtures where useful, especially parsed fonts and repeated synthetic
   packages.
 - [x] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
   reference inputs as part of caching.

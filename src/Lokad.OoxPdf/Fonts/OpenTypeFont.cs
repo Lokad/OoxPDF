@@ -1,10 +1,14 @@
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 
 namespace Lokad.OoxPdf.Fonts;
 
 internal sealed class OpenTypeFont
 {
+    private static readonly ConcurrentDictionary<string, OpenTypeFont> FileCache = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly byte[] bytes;
     private readonly Dictionary<string, TableRecord> tables;
     private readonly CmapFormat? cmap;
@@ -55,12 +59,16 @@ internal sealed class OpenTypeFont
 
     public static OpenTypeFont Load(string path)
     {
-        return Load(File.ReadAllBytes(path));
+        return Load(path, 0);
     }
 
     public static OpenTypeFont Load(string path, int fontIndex)
     {
-        return Load(File.ReadAllBytes(path), fontIndex);
+        FileInfo file = new(path);
+        string key = string.Create(
+            CultureInfo.InvariantCulture,
+            $"{file.FullName}|{fontIndex}|{file.Length}|{file.LastWriteTimeUtc.Ticks}");
+        return FileCache.GetOrAdd(key, _ => Load(File.ReadAllBytes(file.FullName), fontIndex));
     }
 
     public static OpenTypeFont Load(byte[] bytes)
