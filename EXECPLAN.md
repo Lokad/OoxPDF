@@ -118,6 +118,8 @@ High-priority actions:
   dedicated renderer partial, keeping the shape drawing primitive behavior-neutral for later typed-node work.
 - [x] Move picture traversal, image decoding, crop/fill, and alpha handling into a dedicated renderer partial
   that consumes slide relationships from the PPTX render context.
+- [x] Route table frame rendering through the PPTX render context so table layout/fill/border/text code no
+  longer takes document/theme as separate ad hoc dependencies.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in

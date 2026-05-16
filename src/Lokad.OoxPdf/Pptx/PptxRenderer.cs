@@ -64,7 +64,7 @@ internal sealed partial class PptxRenderer
                     .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
                     .ToArray();
                 IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml);
-                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context.SlideXml, context.Document, new PdfGraphicsBuilder(), context.Theme);
+                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
                 RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
             RenderShapes(context, context.SlideXml, graphics, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = context.InheritedXml
                 .Append(context.SlideXml)
-                .SelectMany(xml => RenderTables(xml, context.Document, graphics, context.Theme))
+                .SelectMany(xml => RenderTables(context, xml, graphics))
                 .ToArray();
             RenderCharts(context, graphics);
             IReadOnlyList<TextRun> textRuns = context.InheritedXml
@@ -352,7 +352,7 @@ internal sealed partial class PptxRenderer
 
             if (child.Name == PresentationNamespace + "graphicFrame")
             {
-                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(child, context.Document, graphics, context.Theme);
+                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(context, child, graphics);
                 DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
                 continue;
             }
@@ -1345,12 +1345,12 @@ internal sealed partial class PptxRenderer
         ];
     }
 
-    private static IReadOnlyList<TextRun> RenderTables(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
+    private static IReadOnlyList<TextRun> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
     {
         var textRuns = new List<TextRun>();
         foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
         {
-            textRuns.AddRange(RenderTableFrame(frame, document, graphics, theme));
+            textRuns.AddRange(RenderTableFrame(context, frame, graphics));
         }
 
         return textRuns;
@@ -1364,7 +1364,7 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "tbl") is not null;
     }
 
-    private static IReadOnlyList<TextRun> RenderTableFrame(XElement frame, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
+    private static IReadOnlyList<TextRun> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
     {
         var textRuns = new List<TextRun>();
         ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
@@ -1392,7 +1392,7 @@ internal sealed partial class PptxRenderer
         double frameYTop = OoxUnits.EmuToPoints(bounds.Value.Y);
         double frameWidth = OoxUnits.EmuToPoints(bounds.Value.Width);
         double frameHeight = OoxUnits.EmuToPoints(bounds.Value.Height);
-        double frameTop = document.SlideHeightPoints - frameYTop;
+        double frameTop = context.Document.SlideHeightPoints - frameYTop;
         double columnScale = frameWidth / rawColumnWidths.Sum();
 
         IReadOnlyList<double> rawRowHeights = rows
@@ -1455,8 +1455,8 @@ internal sealed partial class PptxRenderer
                 double cellBottom = cellTop - cellHeight;
                 XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
-                bool hasCellFill = TryReadSolidColorWithAlpha(cellProperties, theme, out RgbColor fill, out double fillAlpha) ||
-                    TryReadBuiltInTableStyleCellFill(table, rowIndex, theme, out fill, out fillAlpha);
+                bool hasCellFill = TryReadSolidColorWithAlpha(cellProperties, context.Theme, out RgbColor fill, out double fillAlpha) ||
+                    TryReadBuiltInTableStyleCellFill(table, rowIndex, context.Theme, out fill, out fillAlpha);
                 if (hasCellFill)
                 {
                     bool transparentFill = fillAlpha < 0.999d;
@@ -1474,11 +1474,11 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                AddTableCellBorders(explicitBorders, cellProperties, theme, cellX, cellBottom, columnWidth, cellHeight);
-                RgbColor? tableStyleTextColor = TryReadBuiltInTableStyleTextColor(table, rowIndex, theme, out RgbColor textColor)
+                AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
+                RgbColor? tableStyleTextColor = TryReadBuiltInTableStyleTextColor(table, rowIndex, context.Theme, out RgbColor textColor)
                     ? textColor
                     : null;
-                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, theme, textRuns, tableStyleTextColor);
+                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, context.Theme, textRuns, tableStyleTextColor);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
