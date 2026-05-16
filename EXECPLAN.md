@@ -58,6 +58,39 @@ Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. The
 inspected locally to identify generic gaps, but renderer changes should be driven by public synthetic
 fixtures unless a safety or diagnostics issue is involved.
 
+## External Renderer Survey
+
+`C:\Users\JoannesVermorel\code\pptx-renderer` is a local TypeScript PPTX renderer that is reportedly much
+closer to Office output on `lokad-value-based`. Treat it as high-priority prior art for architecture and
+feature behavior, not as code to copy mechanically.
+
+Initial survey findings:
+
+- It uses a three-stage pipeline: parse ZIP/XML/relationships, build a normalized presentation model, then
+  render slides from that model.
+- Its model layer has typed slide nodes for shapes, pictures, tables, groups, and charts, with raw XML kept
+  as opaque source when needed.
+- Its render context resolves slide -> layout -> master -> theme once, then passes that context through
+  dedicated background, shape, text, table, image, group, and chart renderers.
+- Text rendering is driven by a merged inheritance cascade: master defaults, master text style, master
+  placeholder, layout placeholder, shape list style, paragraph properties, and run properties.
+- Its visual loop is explicitly Office-oracle based, with generated public cases, PowerPoint PDF ground
+  truth, SSIM/color-histogram pass gates, and MAE kept diagnostic.
+
+High-priority actions:
+
+- [ ] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
+  text layout, group transforms, shape geometry, fills/strokes, images, tables, charts, SmartArt, and oracle
+  tooling.
+- [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
+  generation before more large changes to `PptxRenderer`.
+- [ ] Prototype the smallest `ooxpdf` PPTX intermediate model slice for text boxes: resolved slide context,
+  typed shape node, resolved text body, paragraph style cascade, and run style cascade.
+- [ ] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
+  before replacing behavior.
+- [ ] Consider porting the testing strategy, especially generated Office-oracle case families and SSIM plus
+  color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
+
 ## Progress
 
 - [x] Dependency-free `.slnx` solution, library, and CLI exist.
@@ -806,6 +839,12 @@ paths, and ExecPlan references together.
   height multiplier, keeping Arial highlight parity while tightening Cambria/Cambria Math marker height.
 - [ ] Add normalized typography rungs for Office-authored kerning words by font family: Arial, Aptos/Calibri,
   Cambria/Cambria Math, and Segoe UI.
+- [x] Add normalized typography rung `pptx-ladder-04-typography-font-families` for Office-authored
+  Cambria/Cambria Math, Arial, and Calibri word-spacing probes. Initial gated run:
+  `artifacts/visual/pptx-ladder-04-typography-font-families/20260516-132813`, MAE `0.715017`,
+  changed16 `0.011127`.
+  Office emits distinct font resources and positive/negative `TJ` adjustments per family; the candidate is
+  structurally close for Cambria but still has larger Calibri/Arial drift and small baseline deltas.
 - [x] Add normalized typography rung `pptx-ladder-04-typography-run-boundaries` for Office-authored
   Cambria/Cambria Math words, accented Latin, headline words, and highlighted run boundaries. Latest gated
   run: `artifacts/visual/pptx-ladder-04-typography-run-boundaries/20260516-130900`, MAE `0.203680`,
@@ -813,6 +852,10 @@ paths, and ExecPlan references together.
 - [x] OpenType GPOS extension lookups are parsed for active `kern` feature pair positioning, recovering
   Office-like small Cambria/Cambria Math intra-word adjustments without reintroducing inactive feature
   lookups that caused large parasite gaps.
+- [x] Typography experiment: resolving `Cambria Math` to its exact TTC face made the Office-authored
+  `pptx-ladder-04-typography-run-boundaries` visual error much worse, so PowerPoint appears to use regular
+  Cambria metrics for this Latin text despite the OOXML typeface attribute. Keep the Cambria Math -> Cambria
+  fallback for now, while retaining TTC face-index support for future fonts that genuinely need it.
 - [ ] Continue tightening `pptx-ladder-04-typography-run-boundaries` toward near-pixel parity by comparing
   Office and candidate `TJ` arrays, baseline `Tm` values, and highlight geometry line by line.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
@@ -1155,17 +1198,20 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Next Implementation Targets
 
-1. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list
+1. Complete the `pptx-renderer` survey and decide the intermediate-model direction before further broad
+   PPTX renderer patching. Prioritize what explains its higher-quality output on real decks: resolved model
+   structure, style inheritance, text handling, grouped content, and oracle tooling.
+2. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list
    renderer tests that should be replaced or complemented by public visual fixtures.
-2. Continue PPTX Ladder 4 bottom-up, with typography as the first priority: inspect the Office reference
+3. Continue PPTX Ladder 4 bottom-up, with typography as the first priority: inspect the Office reference
    PDF/raster for each minimal styled-text fixture, tighten baselines, advances, tracking, highlights,
    underlines, bullets, and paragraph flow toward near pixel-perfect output, and only then revisit larger
    combinations.
-3. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for
+4. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for
    blank/plain paragraph/table primitives, then add visual gates.
-4. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not
+5. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not
    optimize for private MAE or changed-pixel ratios while public ladders are incomplete.
-5. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest
+6. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest
    public synthetic fixture first.
 
 ## Decisions
