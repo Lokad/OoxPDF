@@ -619,6 +619,19 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            if (IsOfficeTextOperationBoundaryPunctuation(c))
+            {
+                if (builder.Length > 0)
+                {
+                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    builder.Clear();
+                }
+
+                yield return new TextFlowSegment(c.ToString(), c.ToString(), Draw: true, PreventCoalesce: true);
+                nextPreventsCoalesce = true;
+                continue;
+            }
+
             builder.Append(c);
         }
 
@@ -626,6 +639,11 @@ internal sealed partial class PptxRenderer
         {
             yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
         }
+    }
+
+    private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
+    {
+        return value is '-' or '\u2010' or '\u2011' or '\u2012' or '\u2013';
     }
 
     private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, TextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)

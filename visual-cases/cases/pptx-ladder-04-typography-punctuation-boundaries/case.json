@@ -3,14 +3,16 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-punctuation-boundaries.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "punctuation", "boundaries", "probe"],
+  "tags": ["pptx", "ladder", "typography", "punctuation", "boundaries", "locked-text-ops"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.25,
-    "maxChangedPixelRatioAtThreshold16": 0.0028
+    "maxChangedPixelRatioAtThreshold16": 0.0028,
+    "maxTextLineStartDelta": 0.25,
+    "matchTextLineStartsByPosition": true
   },
   "allowedUnsupportedFeatures": []
 }

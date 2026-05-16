@@ -1831,6 +1831,34 @@ internal static class PptxTests
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");
     }
 
+    public static void PptxTypographyTextHyphenBoundariesRemainSeparateSpans()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-punctuation-boundaries.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        string[] firstLineTexts = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .First()
+            .Spans
+            .Select(span => span.Text)
+            .Take(3)
+            .ToArray();
+
+        TestAssert.Equal("SKU", firstLineTexts[0]);
+        TestAssert.Equal("-", firstLineTexts[1]);
+        TestAssert.True(firstLineTexts[2].StartsWith("123", StringComparison.Ordinal), "Expected text after the hyphen to remain a separate positioned span for Office-style PDF text operations.");
+    }
+
     public static void PptxSyntheticStyledTextProducesStyleOperators()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

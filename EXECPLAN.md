@@ -228,6 +228,9 @@ High-priority actions:
   still emits more granular punctuation/accent text operations than the candidate.
 - [ ] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
   spacing-control cases, using Office PDF text operations to separate fallback-font splits from positioning.
+  Punctuation-adjacent hyphen boundaries are now represented as separate layout spans and locked by
+  `pptx-ladder-04-typography-punctuation-boundaries` with line-start parity within `0.25pt`. Accented
+  Latin remains open because Office still splits accent-heavy text into additional PDF operations.
 - [ ] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run
   sizing, superscript/subscript baseline, no-fill/outline text, hyperlink color, and table text overrides.
 - [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
