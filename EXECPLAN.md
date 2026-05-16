@@ -704,6 +704,18 @@ then compare the candidate PDF/raster output, then receive strict page/dimension
 diagnostics, and a visual gate once the primitive is close. It is acceptable for private deck pages to
 regress while early rungs are rebuilt; the goal is a strict bottom-up progression.
 
+Private deck runs are intentionally expensive and should not be routine. Use `lokad-value-based` only for
+feature discovery or occasional acceptance checks after several public rungs have been locked. Typography
+work must be driven by public synthetic fixtures and Office PDF inspection because small advance, kerning,
+baseline, and highlight errors cascade into unreadable text on larger decks.
+
+Visual-case names should converge to `pptx-ladder-NN-topic-capability[-variant]` and
+`docx-ladder-NN-topic-capability[-variant]`, where `NN` is the ladder number, `topic` is a stable domain
+bucket such as `typography`, `text-flow`, `shape`, `image`, `group`, or `table`, and `capability` is the
+isolated Office behavior. Existing names may remain while active work is in flight, but new cases should use
+the normalized scheme and old cases should be renamed in mechanical commits that update manifests, fixture
+paths, and ExecPlan references together.
+
 - [x] Ladder 0: blank slide, page size, white/default background, deterministic PDF bytes, and no diagnostics.
 - [x] Ladder 1: solid slide backgrounds and master/layout background inheritance in isolation.
 - [x] Ladder 2: one plain text box with fixed bounds, one font size, one font family, no wrapping, and
@@ -792,6 +804,15 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   changed16 `0.005984`.
 - [x] PPTX highlighted-run rectangles use font Windows ascender/descender metrics instead of a fixed
   height multiplier, keeping Arial highlight parity while tightening Cambria/Cambria Math marker height.
+- [ ] Add normalized typography rungs for Office-authored kerning words by font family: Arial, Aptos/Calibri,
+  Cambria/Cambria Math, and Segoe UI.
+- [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
+  apostrophes, non-breaking spaces, narrow spaces, currency symbols, and hyphen/dash variants.
+- [ ] Add normalized typography rungs for run-boundary invariance: same text as one run, per-word runs,
+  per-style runs, highlighted spans, and mixed fill spans must keep the same visible advances when styles
+  do not change metrics.
+- [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
+  and text matrices against Office for simple lines before accepting near-pixel raster gates.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
 - [ ] Ladder 4 remaining combined-stack gaps are finer glyph/font details after basic bullet font selection.
@@ -1105,6 +1126,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   even when a line has no explicit kerning/tracking adjustment, matching Office's common text-object pattern
   without changing raster output. Continue by reducing unnecessary run splitting around spaces when a line
   can be emitted as one positioned text object.
+- [x] Split PPTX text layout and text drawing into `PptxRenderer` partial files so typography work no longer
+  lands in the monolithic renderer body.
+- [ ] Continue splitting `PptxRenderer` by responsibility: shapes/presets, pictures, tables, charts,
+  diagnostics, and shared geometry/types. Keep splits mechanical and behavior-neutral unless a scoped
+  fidelity fix is part of the same area.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while
   preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by
