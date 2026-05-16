@@ -170,9 +170,9 @@ Typography oracle family map:
   `10/14/18/24/36/48/72 pt` Office-generated text, plus older mixed-size and large-text rungs.
 - Styles `0016..0021`: mostly covered by bold/italic/underline/combined public rungs; still needs a
   clean-port manifest tying each source case to the corresponding public fixture and Office metrics.
-- Alignment `0022..0025`: left/center/right are partially covered; justify needs a dedicated public gate.
-- Colors `0026..0030`: direct RGB text colors need dedicated public gates by color; current coverage is
-  mostly theme/fontRef/highlight.
+- Alignment `0022..0025`: covered by `pptx-ladder-04-color-align-port` for left, center, right, and justify.
+- Colors `0026..0030`: covered by `pptx-ladder-04-color-align-port` for direct red, green, blue, orange,
+  and purple RGB text.
 - Mixed formatting `0031`: partially covered by mixed-run rungs; still needs a clean Office-generated
   mixed paragraph fixture matching the source case shape.
 - Bullet list `0032`: partially covered by bullet rungs; still missing the multi-level python-pptx-style

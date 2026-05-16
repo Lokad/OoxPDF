@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-color-align-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-color-align-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "color", "alignment", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.83,
+    "maxChangedPixelRatioAtThreshold16": 0.0254
+  },
+  "allowedUnsupportedFeatures": []
+}
