@@ -1,0 +1,14 @@
+{
+  "id": "pptx-ladder-04-typography-inventory-opti-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-inventory-opti-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spacing", "run-boundaries", "highlight", "probe"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

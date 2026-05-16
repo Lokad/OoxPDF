@@ -23,6 +23,49 @@ internal sealed record PptxTextRunSnapshot(
     string Alignment,
     string? FontFamily);
 
+internal sealed record PptxTextFrameModelSnapshot(
+    double TextX,
+    double TextWidth,
+    double FontScale,
+    IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
+
+internal sealed record PptxTextParagraphModelSnapshot(
+    int Level,
+    string Alignment,
+    double FontSize,
+    IReadOnlyList<PptxTextRunModelSnapshot> Runs);
+
+internal sealed record PptxTextRunModelSnapshot(
+    string Kind,
+    string Text,
+    double FontSize,
+    double CharacterSpacing,
+    string? Typeface,
+    bool Underline,
+    RgbColor? Highlight);
+
+internal sealed record PptxTextLayoutSnapshot(IReadOnlyList<PptxTextFrameLayoutSnapshot> Frames);
+
+internal sealed record PptxTextFrameLayoutSnapshot(IReadOnlyList<PptxTextParagraphLayoutSnapshot> Paragraphs);
+
+internal sealed record PptxTextParagraphLayoutSnapshot(
+    int Level,
+    IReadOnlyList<PptxTextLineLayoutSnapshot> Lines);
+
+internal sealed record PptxTextLineLayoutSnapshot(
+    double StartX,
+    double EndX,
+    string Alignment,
+    IReadOnlyList<PptxTextSpanLayoutSnapshot> Spans);
+
+internal sealed record PptxTextSpanLayoutSnapshot(
+    string? SourceText,
+    string Text,
+    double X,
+    double Y,
+    double Width,
+    double FontSize);
+
 internal sealed record PptxSceneSlide(
     int Index,
     string PartName,

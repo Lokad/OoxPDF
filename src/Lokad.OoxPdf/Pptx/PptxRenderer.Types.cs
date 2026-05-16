@@ -103,15 +103,77 @@ internal sealed partial class PptxRenderer
         bool KerningEnabled,
         string? Typeface);
 
+    private sealed record PptxTextFrameModel(
+        XElement Shape,
+        XElement TextBody,
+        XElement? InheritedTextBody,
+        PptxTheme Theme,
+        ShapeBounds Bounds,
+        TextInsets Insets,
+        double FontScale,
+        double TextX,
+        double TextWidth,
+        double TextHeight,
+        double TextClipY,
+        double TextClipHeight,
+        double RotationCenterX,
+        double RotationCenterY,
+        double VerticalOffset,
+        RgbColor? ShapeFontColor,
+        IReadOnlyList<PptxTextParagraphModel> Paragraphs);
+
+    private sealed record PptxTextParagraphModel(
+        XElement Source,
+        XElement? Properties,
+        XElement? DefaultProperties,
+        int Level,
+        ResolvedParagraphTextStyle Style,
+        IReadOnlyList<PptxTextRunModel> Runs);
+
+    private sealed record PptxTextRunModel(
+        PptxTextRunKind Kind,
+        XElement Source,
+        XElement? Properties,
+        string Text,
+        ResolvedRunTextStyle Style);
+
+    private sealed record PptxTextLayoutModel(IReadOnlyList<PptxTextFrameLayout> Frames);
+
+    private sealed record PptxTextFrameLayout(
+        PptxTextFrameModel Model,
+        IReadOnlyList<PptxTextParagraphLayout> Paragraphs);
+
+    private sealed record PptxTextParagraphLayout(
+        PptxTextParagraphModel Model,
+        IReadOnlyList<PptxTextLineLayout> Lines);
+
+    private sealed record PptxTextLineLayout(
+        double StartX,
+        double EndX,
+        TextAlignment Alignment,
+        IReadOnlyList<PptxTextSpanLayout> Spans);
+
+    private sealed record PptxTextSpanLayout(
+        PptxTextRunModel? SourceRun,
+        TextRun Run,
+        double EndX);
+
+    private enum PptxTextRunKind
+    {
+        Text,
+        Break,
+        Field
+    }
+
     private sealed class TextLayoutLine(double startX)
     {
-        public List<TextRun> Runs { get; } = [];
+        public List<PptxTextSpanLayout> Spans { get; } = [];
 
         public double EndX { get; private set; } = startX;
 
-        public void Add(TextRun run, double endX)
+        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX)
         {
-            Runs.Add(run);
+            Spans.Add(new PptxTextSpanLayout(sourceRun, run, endX));
             AdvanceTo(endX);
         }
 
@@ -122,7 +184,7 @@ internal sealed partial class PptxRenderer
 
         public void Reset(double startX)
         {
-            Runs.Clear();
+            Spans.Clear();
             EndX = startX;
         }
     }

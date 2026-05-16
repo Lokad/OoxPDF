@@ -136,8 +136,17 @@ High-priority actions:
 - [x] Extend the intermediate typography model from line ownership to explicit paragraph/run style records
   in the direct PPTX renderer. `ResolvedParagraphTextStyle` and `ResolvedRunTextStyle` now gather cascade
   decisions before line layout and PDF emission.
+- [x] Promote PPTX direct-renderer text input to a first-class text-frame model:
+  `PptxTextFrameModel`, `PptxTextParagraphModel`, and `PptxTextRunModel` now preserve raw OOXML while
+  carrying resolved style, inherited frame geometry, clipping, and autofit inputs into layout.
+- [x] Promote PPTX direct-renderer text layout to a first-class layout model:
+  `PptxTextLayoutModel`, frame layouts, paragraph layouts, line layouts, and span layouts now exist before
+  flattening to PDF text runs. Inspection tests lock model and layout ownership separately from emission.
 - [ ] Continue the intermediate typography model from resolved style records to explicit text body,
   paragraph, line, positioned run, glyph span, and hidden-control advance records.
+- [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
+  font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
+  `TJ` array construction.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
@@ -157,6 +166,10 @@ High-priority actions:
   The first probes are `pptx-ladder-04-typography-capital-spacing-probe`,
   `pptx-ladder-04-typography-accent-spacing-probe`, and
   `pptx-ladder-04-typography-boundary-invariance-probe`.
+- [x] Add public probes for the private slide 2/3 typography symptoms:
+  `pptx-ladder-04-typography-inventory-opti-probe` targets the `Inventory Optimization` phantom-spacing
+  failure, and `pptx-ladder-04-typography-dense-column-probe` targets small dense-column legibility with
+  accented letters and capital-letter pairs.
 - [x] Split highlighted-run decoration from text emission for PPTX text drawing. This matches Office's
   pattern where highlight rectangles are painted separately while unchanged font metrics can still emit
   a single continuous text operation across run boundaries.

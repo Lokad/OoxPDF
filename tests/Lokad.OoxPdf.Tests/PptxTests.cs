@@ -200,6 +200,29 @@ internal static class PptxTests
         TestAssert.Equal(26d, directHello.FontSize);
         TestAssert.True(directHello.Underline, "Expected direct renderer inspection to expose run underline.");
         TestAssert.Equal(new RgbColor(255, 255, 0), directHello.Highlight ?? default);
+
+        IReadOnlyList<PptxTextFrameModelSnapshot> textFrames = PptxRenderer.InspectTextFrameModels(document, package, 0);
+        PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
+        TestAssert.Equal(1, textFrame.Paragraphs.Count);
+        TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
+        TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
+        TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
+        TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);
+        TestAssert.Equal("Break", textFrame.Paragraphs[0].Runs[1].Kind);
+        TestAssert.Equal("Field", textFrame.Paragraphs[0].Runs[2].Kind);
+        TestAssert.Equal("Hello", textFrame.Paragraphs[0].Runs[0].Text);
+        TestAssert.Equal(26d, textFrame.Paragraphs[0].Runs[0].FontSize);
+        TestAssert.True(textFrame.Paragraphs[0].Runs[0].Underline, "Expected text model to preserve resolved run underline before layout.");
+        TestAssert.Equal(new RgbColor(255, 255, 0), textFrame.Paragraphs[0].Runs[0].Highlight ?? default);
+
+        PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextFrameLayoutSnapshot layoutFrame = textLayout.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Lines.Any(line => line.Spans.Any(span => span.Text == "Hello"))));
+        TestAssert.Equal(1, layoutFrame.Paragraphs.Count);
+        TestAssert.Equal(2, layoutFrame.Paragraphs[0].Lines.Count);
+        TestAssert.Equal("Hello", layoutFrame.Paragraphs[0].Lines[0].Spans[0].Text);
+        TestAssert.Equal("Hello", layoutFrame.Paragraphs[0].Lines[0].Spans[0].SourceText);
+        TestAssert.Equal("1", layoutFrame.Paragraphs[0].Lines[1].Spans[0].Text);
+        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].EndX > layoutFrame.Paragraphs[0].Lines[0].StartX, "Expected layout line to own measured advance before PDF emission.");
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()

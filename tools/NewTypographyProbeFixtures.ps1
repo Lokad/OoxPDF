@@ -190,4 +190,17 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-boundary-invariance-probe" -T
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>élevée</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe -Id "pptx-ladder-04-typography-inventory-opti-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory Optimization</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory </a:t></a:r><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>Optimization</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2200" kern="1200"><a:latin typeface="Calibri"/></a:rPr><a:t>In v e n t o r y Op t i should never appear from run splitting</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-dense-column-probe" -TextBody @'
+          <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1500"><a:latin typeface="Calibri"/></a:rPr><a:t>Lokad en quelques mots</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Demand forecasting, replenishment and pricing depend on typography remaining legible in dense left-side columns.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Dépendance, qualité, coût, délai, écart: accented letters must not introduce phantom spacing.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Large Global Supply and The scale and growth exercise capital-letter pairs.</a:t></a:r></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"
