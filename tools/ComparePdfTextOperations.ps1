@@ -9,7 +9,9 @@ param(
 
     [double] $FontSizeTolerance = 0.01,
 
-    [double] $CharacterSpacingTolerance = 0.001
+    [double] $CharacterSpacingTolerance = 0.001,
+
+    [switch] $MatchByPosition
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,13 +35,57 @@ function Delta([double] $left, [double] $right) {
 
 $referenceOps = Read-JsonArray $Reference
 $candidateOps = Read-JsonArray $Candidate
-$count = [Math]::Max($referenceOps.Count, $candidateOps.Count)
 $rows = New-Object System.Collections.Generic.List[object]
 $failures = 0
 
-for ($i = 0; $i -lt $count; $i++) {
-    $ref = if ($i -lt $referenceOps.Count) { $referenceOps[$i] } else { $null }
-    $cand = if ($i -lt $candidateOps.Count) { $candidateOps[$i] } else { $null }
+if ($MatchByPosition) {
+    $unmatched = New-Object System.Collections.Generic.List[object]
+    foreach ($op in $referenceOps) {
+        $unmatched.Add($op)
+    }
+
+    $pairs = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $candidateOps.Count; $i++) {
+        $cand = $candidateOps[$i]
+        $bestIndex = -1
+        $bestScore = [double]::PositiveInfinity
+        for ($j = 0; $j -lt $unmatched.Count; $j++) {
+            $candidateRef = $unmatched[$j]
+            $score = [Math]::Abs([double]$cand.Y - [double]$candidateRef.Y) * 1000d +
+                [Math]::Abs([double]$cand.X - [double]$candidateRef.X)
+            if ($score -lt $bestScore) {
+                $bestScore = $score
+                $bestIndex = $j
+            }
+        }
+
+        $ref = if ($bestIndex -ge 0) { $unmatched[$bestIndex] } else { $null }
+        if ($bestIndex -ge 0) {
+            $unmatched.RemoveAt($bestIndex)
+        }
+
+        $pairs.Add([pscustomobject]@{ Index = $i; Reference = $ref; Candidate = $cand })
+    }
+
+    foreach ($ref in $unmatched) {
+        $pairs.Add([pscustomobject]@{ Index = $pairs.Count; Reference = $ref; Candidate = $null })
+    }
+}
+else {
+    $count = [Math]::Max($referenceOps.Count, $candidateOps.Count)
+    $pairs = for ($i = 0; $i -lt $count; $i++) {
+        [pscustomobject]@{
+            Index = $i
+            Reference = if ($i -lt $referenceOps.Count) { $referenceOps[$i] } else { $null }
+            Candidate = if ($i -lt $candidateOps.Count) { $candidateOps[$i] } else { $null }
+        }
+    }
+}
+
+foreach ($pair in $pairs) {
+    $i = $pair.Index
+    $ref = $pair.Reference
+    $cand = $pair.Candidate
     if ($null -eq $ref -or $null -eq $cand) {
         $failures++
         $refX = if ($null -eq $ref) { $null } else { $ref.X }
@@ -99,6 +145,9 @@ for ($i = 0; $i -lt $count; $i++) {
 
 $rows | Format-Table -AutoSize
 Write-Host "Text operation count: reference=$($referenceOps.Count), candidate=$($candidateOps.Count), deltas=$failures"
+if ($MatchByPosition) {
+    Write-Host "Matching: nearest text position"
+}
 
 if ($failures -ne 0) {
     exit 1

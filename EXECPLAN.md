@@ -109,6 +109,17 @@ High-priority actions:
   diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
+- [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
+  paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
+- [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF
+  emission. Each stage needs synthetic Office-PDF-backed cases before private-deck tuning.
+- [ ] Port `pptx-renderer` text renderer unit coverage as clean `ooxpdf` tests for line spacing, paragraph
+  spacing, character spacing, kerning thresholds, font fallback, EA/CS font fallback, bullets, baseline
+  shifts, tabs, highlights, and no-fill/outline text where PDF support exists.
+- [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
+  baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
+- [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
+  should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
