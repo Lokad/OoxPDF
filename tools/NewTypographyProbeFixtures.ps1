@@ -190,6 +190,14 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-boundary-invariance-probe" -T
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>élevée</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe -Id "pptx-ladder-04-typography-whitespace-controls-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha  beta   gamma</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha&#xA0;beta&#x202F;gamma</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>SKU-123 / A+B, C.D</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:tabLst><a:tab pos="1828800"/></a:tabLst></a:pPr><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Left</a:t></a:r><a:tab/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Tab</a:t></a:r><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>  Spaces</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Dépendance&#xA0;élevée - coût&#x202F;unitaire</a:t></a:r></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-inventory-opti-probe" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory Optimization</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/></a:rPr><a:t>Inventory </a:t></a:r><a:r><a:rPr sz="3000" kern="1200"><a:latin typeface="Calibri Light"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>Optimization</a:t></a:r></a:p>

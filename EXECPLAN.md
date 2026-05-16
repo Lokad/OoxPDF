@@ -210,6 +210,12 @@ High-priority actions:
   layout-owned line boxes and glyph spans, keeping `highlight-single` locked throughout the migration.
 - [ ] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
   narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
+- [x] Add the first whitespace-control interaction probe:
+  `pptx-ladder-04-typography-whitespace-controls-probe` covers repeated spaces, NBSP, narrow NBSP,
+  punctuation-adjacent words, tab plus spaces, and accented Latin with spacing controls. `U+202F` narrow
+  NBSP is now modeled as a hidden advance instead of a visible glyph, with a unit test locking the split
+  word spans. The probe currently passes approximate gates at MAE `0.800141`, changed16 `0.008822`; Office
+  still emits more granular punctuation/accent text operations than the candidate.
 - [ ] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
   spacing-control cases, using Office PDF text operations to separate fallback-font splits from positioning.
 - [ ] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run

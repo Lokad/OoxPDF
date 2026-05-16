@@ -593,7 +593,7 @@ internal sealed partial class PptxRenderer
         bool nextPreventsCoalesce = false;
         foreach (char c in text)
         {
-            if (c == '\u00A0')
+            if (c == '\u00A0' || c == '\u202F')
             {
                 if (builder.Length > 0)
                 {
@@ -601,7 +601,8 @@ internal sealed partial class PptxRenderer
                     builder.Clear();
                 }
 
-                yield return new TextFlowSegment(string.Empty, string.Empty, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: 0.22d);
+                double advanceFactor = c == '\u202F' ? 0.27d : 0.22d;
+                yield return new TextFlowSegment(string.Empty, string.Empty, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
                 nextPreventsCoalesce = true;
                 continue;
             }
