@@ -1733,6 +1733,10 @@ internal static class PptxTests
         TestAssert.True(justifiedLine.EndX - justifiedLine.StartX > 500d, "Expected justified line to stretch to the text frame width.");
         TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Space"), "Expected layout atoms to preserve explicit word spaces for justification.");
         TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Word"), "Expected layout atoms to preserve word fragments separately from spaces.");
+        double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
+        TestAssert.Equal(4, wordStarts.Length);
+        TestAssert.True(wordStarts.Zip(wordStarts.Skip(1), (left, right) => right - left).All(delta => delta > 0d), "Expected justified layout to expose monotonic word starts for Office text-op comparison.");
+        TestAssert.True(justifiedLine.Spans.Any(span => span.GlyphSpan.LayoutWidth > span.GlyphSpan.NaturalWidth), "Expected justified layout to expose which spans absorb distributed spacing.");
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphSpan.GlyphSpan.GlyphCount > 0, "Expected layout spans to own glyph ids before PDF emission.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected layout glyph spans to expose mapped glyph ids.");

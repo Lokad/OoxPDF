@@ -176,6 +176,18 @@ High-priority actions:
 - [x] Re-run the justified typography probe after glyph-span emission:
   `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
   Office word-position and line-box parity, not a glyph-span bridge regression.
+- [x] Add a model-level justified-word diagnostic:
+  the justified text layout test now asserts monotonic word starts and exposes which spans absorb distributed
+  spacing through `GlyphSpan.LayoutWidth > NaturalWidth`, so Office text-op x drift can be compared against
+  layout data rather than inferred from raster output.
+- [x] Survey the current typography visual ladder after positioned glyph-span emission:
+  `justify-port` MAE `4.210743`, `highlight-single` MAE `0.574984` and still failing its locked gate,
+  `boundary-invariance` MAE `2.835927` with a text-op gate failure, `inventory-opti` MAE `1.148489`, and
+  `accent-spacing` MAE `2.149007`. The failures point to baseline/line-box parity and Office word-position
+  strategy before broader private-deck tuning.
+- [ ] Keep highlighted PPTX text on the legacy emission path until highlight geometry is ported cleanly:
+  an attempted line-box/glyph-span highlight migration regressed the locked `highlight-single` visual gate,
+  so highlight needs an Office-PDF text and rectangle geometry pass before switching.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
