@@ -85,6 +85,16 @@ Initial survey findings:
   mixed formatting, bullets, vertical text, anchoring, and line spacing.
 - Its visual loop is explicitly Office-oracle based, with generated public cases, PowerPoint PDF ground
   truth, SSIM/color-histogram pass gates, and MAE kept diagnostic.
+- Its architecture keeps ownership clear: package parsing owns safe files and relationship targets; the model
+  owns typed nodes and inheritance resolution; the render layer owns dispatch, draw order, lifecycle, and
+  per-node error handling.
+- Its render context is the key dependency boundary. It resolves slide, layout, master, and theme once, then
+  exposes relationship sets, media/cache state, color cache, group-fill context, and navigation hooks to
+  specialized renderers.
+- Its slide renderer treats master/layout non-placeholder shapes as template content rendered behind slide
+  nodes, while placeholders are inheritance templates rather than directly rendered content.
+- Its model parsers keep raw XML attached to typed nodes. This is a useful compromise for `ooxpdf`: parse
+  stable fields into records while keeping source XML available until every OOXML edge case has a typed home.
 
 High-priority actions:
 
@@ -96,6 +106,14 @@ High-priority actions:
   diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
+- [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
+  model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
+- [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
+  group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
+- [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
+  Office order, placeholders provide inherited geometry/body/style only, and show/hide flags are explicit.
+- [ ] Keep raw XML on scene nodes until typed coverage is complete, but make new renderer code prefer typed
+  fields and resolver outputs instead of repeated ad hoc descendant queries.
 - [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
   generation before more large changes to `PptxRenderer`.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
