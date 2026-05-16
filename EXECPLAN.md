@@ -576,6 +576,10 @@ document-specific business content into public notes.
     `0.873985`, changed-pixel ratio threshold 16 `0.009113`. Hyphen-aware flow segmentation now matches
     Office's break after the hyphenated prefix, but the third-line baseline still sits too low and remains
     open before this case can be locked.
+  - `pptx-ladder-04-highlighted-headline-runs` locks a headline-sized mixed-run line with two highlighted
+    spans and a wrapped continuation line. Latest gated run:
+    `artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260516-115932`, MAE `0.292685`,
+    changed-pixel ratio threshold 16 `0.006998`.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -936,7 +940,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   including mixed regular, bold, and italic runs.
 - [x] Slide 3 public ladder: lock grouped picture-plus-caption cells, including group transform precision,
   picture positioning, centered italic caption text, and z-order.
-- [ ] Slide 3 public ladder: lock highlighted headline text with multiple runs and Office-matched highlight
+- [x] Slide 3 public ladder: lock highlighted headline text with multiple runs and Office-matched highlight
   bounds.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
   derive public fixtures from private slide content.
