@@ -545,6 +545,15 @@ document-specific business content into public notes.
     centered/italic label metrics, highlighted headline geometry, and dense wrapped text layout.
   - Bottom-up response: add or tighten public fixtures for these capabilities before attempting private
     slide-specific tuning.
+- Public PPTX slide-2 bottom-up rungs:
+  - `pptx-ladder-04-fontref-centered-text` locks a no-fill text shape with visible line, centered
+    Cambria/Cambria Math text, and `fontRef`/theme color inheritance when the run has no direct fill.
+    Latest gated run: `artifacts/visual/pptx-ladder-04-fontref-centered-text/20260516-113529`, MAE
+    `0.085627`, changed-pixel ratio threshold 16 `0.001779`.
+  - `pptx-ladder-04-cambria-highlight-center` locks centered mixed-run Cambria/Cambria Math text with
+    a highlighted middle run and Office-authored highlight geometry. Latest gated run:
+    `artifacts/visual/pptx-ladder-04-cambria-highlight-center/20260516-113529`, MAE `0.291465`,
+    changed-pixel ratio threshold 16 `0.004212`.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -891,10 +900,12 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets,
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
-- [ ] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
+- [x] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
   text runs have no direct fill, including a no-fill shape with a visible line and centered text.
-- [ ] Slide 2 public ladder: lock highlighted centered mixed-run text using Cambria/Cambria Math without
-  explicit character spacing, including title-sized text and small footer-sized text.
+- [x] Slide 2 public ladder: lock highlighted centered mixed-run title-sized text using Cambria/Cambria Math
+  without explicit character spacing.
+- [ ] Slide 2 public ladder: lock highlighted centered mixed-run footer-sized text using Cambria/Cambria Math
+  without explicit character spacing.
 - [ ] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
   rectangles for small centered text boxes.
 - [ ] Slide 3 public ladder: lock `spAutoFit` shrink-to-fit text boxes with Office-authored PDFs before

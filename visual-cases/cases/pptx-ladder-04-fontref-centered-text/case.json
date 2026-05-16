@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-fontref-centered-text",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-fontref-centered-text.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "theme", "fontref", "anchor"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.086,
+    "maxChangedPixelRatioAtThreshold16": 0.0018
+  },
+  "allowedUnsupportedFeatures": []
+}
