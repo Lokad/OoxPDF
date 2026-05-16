@@ -204,6 +204,16 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
   `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
+- [ ] Next PPTX typography sequence: add diagnostics for Office-vs-candidate word starts per visual line,
+  then use those diagnostics to tighten justified text spacing without relying on late-game MAE.
+- [ ] Next PPTX typography sequence: move highlight rectangles from the legacy `TextRun` drawing path to
+  layout-owned line boxes and glyph spans, keeping `highlight-single` locked throughout the migration.
+- [ ] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
+  narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
+- [ ] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
+  spacing-control cases, using Office PDF text operations to separate fallback-font splits from positioning.
+- [ ] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run
+  sizing, superscript/subscript baseline, no-fill/outline text, hyperlink color, and table text overrides.
 - [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
   `pptx-ladder-04-typography-justify-port` now exposes the missing PowerPoint word-spacing behavior for
   wrapped justified paragraphs.
@@ -321,6 +331,51 @@ High-priority actions:
   fields and resolver outputs instead of repeated ad hoc descendant queries.
 - [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
   generation before more large changes to `PptxRenderer`.
+- [ ] Port `pptx-renderer` package/model boundary patterns: relationship target resolution, media lookup,
+  slide/layout/master/theme ownership, and raw XML retention on typed nodes.
+- [ ] Port `pptx-renderer` render-context ownership: one context object should expose slide identity,
+  inheritance, relationships, media caches, theme/color resolvers, diagnostics, and group-fill state.
+- [ ] Port `pptx-renderer` specialized renderer split: background, shape, text, table, image, group, chart,
+  and fallback renderers should consume the same context instead of ad hoc XML/document parameters.
+- [ ] Port `pptx-renderer` slide inheritance behavior: render master/layout non-placeholder template content
+  behind slide content, and treat placeholders as inheritance templates for geometry/body/text styles.
+- [ ] Port `pptx-renderer` placeholder matching rules: match by `idx` before type, handle default/body/title
+  fallback consistently, and keep placeholder geometry separate from text-body inheritance.
+- [ ] Port `pptx-renderer` text cascade layers as explicit records:
+  `defaultTextStyle`, master text styles, master placeholder, layout placeholder, shape list style,
+  paragraph properties, default run properties, and run properties.
+- [ ] Port `pptx-renderer` theme font resolution: major/minor Latin, East Asian, complex script, and symbol
+  font fallback must be explicit diagnostics-bearing stages before glyph mapping.
+- [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
+  preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
+- [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
+  replacement, and default shape style resolution should be model-visible.
+- [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
+  text direction, vertical text, multi-column text, and unsupported diagnostics where rendering is absent.
+- [ ] Port `pptx-renderer` line-height behavior completely: `spcPct`, `spcPts`, paragraph before/after
+  spacing, `lnSpcReduction`, manual-break line wrappers, and trailing `endParaRPr` line-height effects.
+- [ ] Port `pptx-renderer` run style behavior: font family, size, bold/italic, underline, strike, color,
+  highlight, character spacing, kerning thresholds, caps, superscript/subscript, and hyperlink style.
+- [ ] Port `pptx-renderer` whitespace behavior: regular spaces, repeated spaces, non-breaking spaces,
+  tabs, soft hyphens, explicit line breaks, fields, and end-paragraph runs must remain observable.
+- [ ] Port `pptx-renderer` bullet and numbering behavior: bullet suppression for metadata placeholders,
+  `buChar`, `buAutoNum`, `buFont`, `buClr`, `buSz`, hanging indents, and inherited bullet defaults.
+- [ ] Port `pptx-renderer` table text behavior: cell text style inheritance, table style overrides,
+  vertical alignment, margins, merged cells, and per-cell text diagnostics.
+- [ ] Port `pptx-renderer` shape geometry coverage: preset geometries, custom geometry, rotations, flips,
+  group transforms, connectors, arrows, dash/cap/join, and picture-fill clipping.
+- [ ] Port `pptx-renderer` image behavior: relationship resolution, crop/fill/stretch, alpha/soft masks,
+  SVG or unsupported-image diagnostics, media caching, and reuse across slides.
+- [ ] Port `pptx-renderer` chart/SmartArt behavior as diagnostics-first features: prefer cached images when
+  present, report missing static fallbacks, and only add native chart drawing case by case.
+- [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
+  slide/node context instead of aborting the whole render pass when recovery is possible.
+- [ ] Port `pptx-renderer` generated public visual-suite organization: normalized case names, grouped
+  fixtures, Office reference caching, and separate approximate, needs-review, and locked thresholds.
+- [ ] Port `pptx-renderer` oracle tooling ideas that fit `.NET`: compact text-op diffs, visual metrics,
+  cached Office references, deterministic artifact paths, and fast focused case selection.
+- [ ] Port `pptx-renderer` performance lessons: avoid repeated ZIP/XML/theme/font parsing, cache immutable
+  resources per render pass, and measure large-deck hot spots before private-deck tuning.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
   node kind classification, placeholder metadata, and bounds extraction.
 - [x] Extend the `ooxpdf` scene slice to text bodies: body properties, list style, paragraphs, levels,
