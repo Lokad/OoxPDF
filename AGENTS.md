@@ -36,6 +36,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
 - `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
+- `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.

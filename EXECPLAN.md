@@ -1096,6 +1096,9 @@ paths, and ExecPlan references together.
   and candidate font size, `Tc`, `Tm`, and raw `TJ/Tj` structure before raster tuning. The first
   `pptx-ladder-03-text-flow` inspection shows sub-point baseline drift plus missing Office micro-`TJ`
   adjustments rather than a gross layout miss.
+- [x] Add `tools/ComparePdfTextOperations.ps1` for compact Office-vs-candidate `text-operations.json`
+  deltas. On `pptx-ladder-03-text-flow`, it reports equal text operation counts, first-line Y delta
+  `-0.712pt`, missing Office `Tc=-0.006`, and small X/Y deltas on centered/wrapped lines.
 - [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
   out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
   `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,
