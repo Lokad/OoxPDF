@@ -4,4 +4,6 @@ internal sealed record PixelMetric(
     double MeanAbsoluteError,
     double RootMeanSquaredError,
     double ChangedPixelRatioAtThreshold16,
-    double ChangedPixelRatioAtThreshold32);
+    double ChangedPixelRatioAtThreshold32,
+    double StructuralSimilarity,
+    double ForegroundColorHistogramCorrelation);

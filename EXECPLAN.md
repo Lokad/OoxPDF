@@ -106,6 +106,8 @@ High-priority actions:
   text-run snapshots for future scene-vs-renderer checks.
 - [ ] Consider porting the testing strategy, especially generated Office-oracle case families and SSIM plus
   color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
+- [x] Add dependency-free VisualDiff metrics for global luminance SSIM and foreground RGB histogram
+  correlation, so MAE remains diagnostic rather than the only quality signal.
 
 ## Test Suite Performance
 

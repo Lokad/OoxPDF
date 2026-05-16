@@ -12,4 +12,6 @@ internal sealed record PageMetric(
     double? RootMeanSquaredError,
     double? ChangedPixelRatioAtThreshold16,
     double? ChangedPixelRatioAtThreshold32,
+    double? StructuralSimilarity,
+    double? ForegroundColorHistogramCorrelation,
     bool DimensionsMatch);

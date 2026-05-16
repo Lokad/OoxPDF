@@ -119,6 +119,8 @@ static PageMetric MeasurePage(int page, string? referenceFile, string? candidate
         RootMeanSquaredError: pixelMetric?.RootMeanSquaredError,
         ChangedPixelRatioAtThreshold16: pixelMetric?.ChangedPixelRatioAtThreshold16,
         ChangedPixelRatioAtThreshold32: pixelMetric?.ChangedPixelRatioAtThreshold32,
+        StructuralSimilarity: pixelMetric?.StructuralSimilarity,
+        ForegroundColorHistogramCorrelation: pixelMetric?.ForegroundColorHistogramCorrelation,
         DimensionsMatch: dimensionsMatch);
 }
 
@@ -129,6 +131,15 @@ static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int wid
     int changed16 = 0;
     int changed32 = 0;
     int pixelCount = width * height;
+    double referenceLumaSum = 0d;
+    double candidateLumaSum = 0d;
+    double referenceLumaSquaredSum = 0d;
+    double candidateLumaSquaredSum = 0d;
+    double lumaProductSum = 0d;
+    int[] referenceHistogram = new int[96];
+    int[] candidateHistogram = new int[96];
+    int referenceForeground = 0;
+    int candidateForeground = 0;
 
     for (int y = 0; y < height; y++)
     {
@@ -137,6 +148,31 @@ static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int wid
             int referenceOffset = (y * reference.Width + x) * 4;
             int candidateOffset = (y * candidate.Width + x) * 4;
             int maxChannelDelta = 0;
+            int referenceRed = reference.Rgba[referenceOffset];
+            int referenceGreen = reference.Rgba[referenceOffset + 1];
+            int referenceBlue = reference.Rgba[referenceOffset + 2];
+            int candidateRed = candidate.Rgba[candidateOffset];
+            int candidateGreen = candidate.Rgba[candidateOffset + 1];
+            int candidateBlue = candidate.Rgba[candidateOffset + 2];
+            double referenceLuma = Luma(referenceRed, referenceGreen, referenceBlue);
+            double candidateLuma = Luma(candidateRed, candidateGreen, candidateBlue);
+            referenceLumaSum += referenceLuma;
+            candidateLumaSum += candidateLuma;
+            referenceLumaSquaredSum += referenceLuma * referenceLuma;
+            candidateLumaSquaredSum += candidateLuma * candidateLuma;
+            lumaProductSum += referenceLuma * candidateLuma;
+            if (referenceLuma < 245d)
+            {
+                AddHistogram(referenceHistogram, referenceRed, referenceGreen, referenceBlue);
+                referenceForeground++;
+            }
+
+            if (candidateLuma < 245d)
+            {
+                AddHistogram(candidateHistogram, candidateRed, candidateGreen, candidateBlue);
+                candidateForeground++;
+            }
+
             for (int channel = 0; channel < 4; channel++)
             {
                 int delta = Math.Abs(reference.Rgba[referenceOffset + channel] - candidate.Rgba[candidateOffset + channel]);
@@ -162,5 +198,79 @@ static PixelMetric MeasurePixels(PngImage reference, PngImage candidate, int wid
         absoluteError / sampleCount,
         Math.Sqrt(squaredError / sampleCount),
         changed16 / (double)pixelCount,
-        changed32 / (double)pixelCount);
+        changed32 / (double)pixelCount,
+        ComputeStructuralSimilarity(pixelCount, referenceLumaSum, candidateLumaSum, referenceLumaSquaredSum, candidateLumaSquaredSum, lumaProductSum),
+        ComputeHistogramCorrelation(referenceHistogram, candidateHistogram, referenceForeground, candidateForeground, pixelCount));
+}
+
+static double Luma(int red, int green, int blue)
+{
+    return 0.2126d * red + 0.7152d * green + 0.0722d * blue;
+}
+
+static void AddHistogram(int[] histogram, int red, int green, int blue)
+{
+    histogram[red * 32 / 256]++;
+    histogram[32 + green * 32 / 256]++;
+    histogram[64 + blue * 32 / 256]++;
+}
+
+static double ComputeStructuralSimilarity(
+    int sampleCount,
+    double referenceSum,
+    double candidateSum,
+    double referenceSquaredSum,
+    double candidateSquaredSum,
+    double productSum)
+{
+    if (sampleCount <= 1)
+    {
+        return 1d;
+    }
+
+    double referenceMean = referenceSum / sampleCount;
+    double candidateMean = candidateSum / sampleCount;
+    double referenceVariance = referenceSquaredSum / sampleCount - referenceMean * referenceMean;
+    double candidateVariance = candidateSquaredSum / sampleCount - candidateMean * candidateMean;
+    double covariance = productSum / sampleCount - referenceMean * candidateMean;
+    const double c1 = 6.5025d;
+    const double c2 = 58.5225d;
+    double numerator = (2d * referenceMean * candidateMean + c1) * (2d * covariance + c2);
+    double denominator = (referenceMean * referenceMean + candidateMean * candidateMean + c1) * (referenceVariance + candidateVariance + c2);
+    return denominator <= 0d ? 1d : Math.Clamp(numerator / denominator, -1d, 1d);
+}
+
+static double ComputeHistogramCorrelation(int[] reference, int[] candidate, int referenceForeground, int candidateForeground, int pixelCount)
+{
+    if (referenceForeground == 0 && candidateForeground == 0)
+    {
+        return 1d;
+    }
+
+    if (referenceForeground == 0 || candidateForeground == 0)
+    {
+        return 0d;
+    }
+
+    if (Math.Min(referenceForeground, candidateForeground) < pixelCount * 0.015d)
+    {
+        return 1d;
+    }
+
+    double referenceMean = reference.Average();
+    double candidateMean = candidate.Average();
+    double numerator = 0d;
+    double referenceDenominator = 0d;
+    double candidateDenominator = 0d;
+    for (int i = 0; i < reference.Length; i++)
+    {
+        double rd = reference[i] - referenceMean;
+        double cd = candidate[i] - candidateMean;
+        numerator += rd * cd;
+        referenceDenominator += rd * rd;
+        candidateDenominator += cd * cd;
+    }
+
+    double denominator = Math.Sqrt(referenceDenominator * candidateDenominator);
+    return denominator <= 0d ? 1d : Math.Clamp(numerator / denominator, -1d, 1d);
 }
