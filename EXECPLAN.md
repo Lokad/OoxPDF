@@ -195,8 +195,9 @@ Composite oracle family map:
 - Default shape styling/theme formatting in `pptx-ladder-08-composite-port-a` is now resolved for solid
   `fillRef` and `lnRef` references. Gradient/pattern/effect format-scheme styles remain future work.
 - Table composite `0005` is ported in `pptx-ladder-10-composite-table-port` as a baseline.
-  It remains visually poor because default Office table styles are not resolved from the table style id,
-  theme accents, banding flags, and cell text/border style layers.
+  It now recognizes the common Medium Style 2 Accent 1 built-in style for first-row/accent/banded fills
+  and header text color, but remains visually poor because full Office table styles are not resolved from
+  all table style ids, banding flags, border layers, and cell text layout details.
 - Chart composites `0006`, `0008`, and `0010` should wait for chart fallback renderer separation.
 
 PPTX table style targets from the table composite port:
