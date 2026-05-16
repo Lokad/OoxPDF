@@ -163,6 +163,11 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
   `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
+- [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
+  `pptx-ladder-04-typography-justify-port` now exposes the missing PowerPoint word-spacing behavior for
+  wrapped justified paragraphs.
+- [ ] Implement PowerPoint-like justified paragraph layout: only fully wrapped lines distribute extra width
+  across word spaces; final visual lines and manual-break lines remain left aligned.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:

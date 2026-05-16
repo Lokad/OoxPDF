@@ -203,4 +203,10 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-dense-column-probe" -TextBody
           <a:p><a:pPr algn="l"><a:lnSpc><a:spcPct val="90000"/></a:lnSpc></a:pPr><a:r><a:rPr sz="1300"><a:latin typeface="Calibri"/></a:rPr><a:t>Large Global Supply and The scale and growth exercise capital-letter pairs.</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe -Id "pptx-ladder-04-typography-justify-port" -TextBody @'
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph one aligned justify. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph two aligned justify. Demand planning text should distribute word spacing across wrapped lines.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph three aligned justify. The last visual line should remain left aligned like PowerPoint.</a:t></a:r></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"
