@@ -180,6 +180,8 @@ High-priority actions:
   orchestration and leaving node dispatch in one context-driven place.
 - [x] Cache the presentation theme once per PPTX render pass instead of reloading it per slide, matching the
   context-lifetime model and reducing repeated parsing for large decks.
+- [x] Move PPTX shape/preset rendering, arrowheads, dash/cap/join handling, picture-fill clipping, group
+  transforms, and shape theme fill/line lookup into the shape renderer partial.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
@@ -226,6 +228,8 @@ Porting priorities:
   and adding PDF/raster inspection notes for every accepted gate.
 - [ ] Port layout-composition cases: master/layout placeholders, grouped transforms, z-order, image crop,
   table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
+- [x] Add focused unit locks for PPTX shape stroke dash/cap/join, RGBA PNG soft masks, merged-table interior
+  grid suppression, and area/scatter/radar/doughnut chart static fallback recognition.
 - [x] Port the first test organization pattern: visual cases now have capability-family manifests and a
   family runner, matching the `pptx-renderer` idea of generated/oracle cases grouped by feature area.
 - [x] Port the first unit-runner organization pattern: unit tests now come from a capability catalog and can
@@ -1546,10 +1550,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   can be emitted as one positioned text object.
 - [x] Split PPTX text layout and text drawing into `PptxRenderer` partial files so typography work no longer
   lands in the monolithic renderer body.
-- [ ] Continue splitting `PptxRenderer` by responsibility: shapes/presets, pictures, table layout,
-  diagnostics, and shared geometry/types. Table-style and chart-fallback helpers now live in dedicated
-  partials. Keep splits mechanical and behavior-neutral unless a scoped fidelity fix is part of the same
-  area.
+- [ ] Continue splitting `PptxRenderer` by responsibility: table layout, diagnostics, shared geometry/types,
+  and color/style resolvers. Text, shapes/presets, pictures, table-style helpers, chart-fallback helpers,
+  and z-order dispatch now live in dedicated partials. Keep splits mechanical and behavior-neutral unless a
+  scoped fidelity fix is part of the same area.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while
   preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by
