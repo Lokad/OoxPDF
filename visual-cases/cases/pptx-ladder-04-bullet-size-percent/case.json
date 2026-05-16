@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-bullet-size-percent",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bullet-size-percent.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "bullet"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.041,
+    "maxChangedPixelRatioAtThreshold16": 0.00077
+  },
+  "allowedUnsupportedFeatures": []
+}

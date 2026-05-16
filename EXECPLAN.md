@@ -670,6 +670,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.
+- [x] Ladder 4 gate `pptx-ladder-04-bullet-size-percent` locks `buSzPct` marker sizing at MAE
+  `0.040695`, changed16 `0.000765`.
 - [x] Windows Symbol cmap subtables are parsed so common private-use PPTX bullet glyphs map through
   `buFont typeface="Symbol"`.
 - [x] Ladder 4 gate `pptx-ladder-04-symbol-bullet` is at MAE `0.001766`, changed16 `0.000043`.
