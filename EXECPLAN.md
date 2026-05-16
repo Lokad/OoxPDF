@@ -811,7 +811,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   styles, stacked/grouped variants, and chart diagnostics.
 - [ ] Ladder 12: effects and advanced fills cover transparency, gradients, pattern fills, shadows, glows, soft
   edges, picture fills, and explicit diagnostics for unsupported effects.
-- [x] Ladder 12 unsupported gradient fills, pattern fills, shape picture fills, and effect lists emit
+- [x] Ladder 12 unsupported gradient fills, pattern fills, advanced picture fills, and effect lists emit
   slide-scoped diagnostics instead of being silently dropped.
 - [x] Ladder 12 gates `pptx-ladder-12-solid-alpha` and `pptx-ladder-12-line-alpha` lock solid shape fill
   transparency and line transparency with exact raster parity.
@@ -825,7 +825,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   allowing the expected omitted-shadow visual delta at MAE `0.408920`, changed16 `0.006530`.
 - [x] Ladder 12 gates `pptx-ladder-12-gradient-diagnostic`, `pptx-ladder-12-pattern-diagnostic`, and
   `pptx-ladder-12-picture-fill-diagnostic` lock explicit advanced-fill diagnostics while allowing expected
-  omitted-fill visual deltas.
+  omitted-fill visual deltas; the picture-fill fixture now covers an unsupported Office-authored heart fill at
+  MAE `3.368542`, changed16 `0.038278`.
 - [ ] Ladder 12 remaining work is visual rendering for each effect/fill family.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive
   fixture text, images, layout, or styling from private documents.
