@@ -28,6 +28,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 ## Tools
 
 - `tools/CheckVisualCase.ps1`: run a public visual case.
+- `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
 - `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
 - `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.
@@ -40,6 +41,9 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/Lokad.OoxPdf.VisualDiff`: compare reference and candidate PNGs.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: dependency-free PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspector.
+
+Unit tests can be filtered by capability group with `--group`, for example:
+`dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`.
 
 ## Private Mode
 

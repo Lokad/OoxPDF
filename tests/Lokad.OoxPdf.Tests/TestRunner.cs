@@ -20,19 +20,31 @@ internal static class TestRunner
 
     public static int Run(string[] args, params Action[] tests)
     {
+        return Run(args, tests.Select(test => new TestCase("default", test)));
+    }
+
+    public static int Run(string[] args, IEnumerable<TestCase> tests)
+    {
         int passed = 0;
         int failed = 0;
         int skipped = 0;
         bool skipSlow = args.Contains("--skip-slow", StringComparer.Ordinal);
         bool onlySlow = args.Contains("--only-slow", StringComparer.Ordinal);
         bool list = args.Contains("--list", StringComparer.Ordinal);
+        string? group = ReadOption(args, "--group");
 
-        foreach (Action test in tests)
+        foreach (TestCase testCase in tests)
         {
+            Action test = testCase.Action;
             bool isSlow = SlowTests.Contains(test.Method.Name);
+            if (group is not null && !string.Equals(testCase.Group, group, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             if (list)
             {
-                Console.WriteLine($"{(isSlow ? "SLOW" : "FAST")} {test.Method.Name}");
+                Console.WriteLine($"{(isSlow ? "SLOW" : "FAST")} {testCase.Group} {test.Method.Name}");
                 continue;
             }
 
@@ -64,5 +76,18 @@ internal static class TestRunner
 
         Console.WriteLine($"{passed} passed, {failed} failed, {skipped} skipped");
         return failed == 0 ? 0 : 1;
+    }
+
+    private static string? ReadOption(string[] args, string option)
+    {
+        for (int i = 0; i < args.Length - 1; i++)
+        {
+            if (string.Equals(args[i], option, StringComparison.Ordinal))
+            {
+                return args[i + 1];
+            }
+        }
+
+        return null;
     }
 }

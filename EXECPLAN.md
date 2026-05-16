@@ -162,8 +162,10 @@ Porting priorities:
   table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
 - [x] Port the first test organization pattern: visual cases now have capability-family manifests and a
   family runner, matching the `pptx-renderer` idea of generated/oracle cases grouped by feature area.
+- [x] Port the first unit-runner organization pattern: unit tests now come from a capability catalog and can
+  be listed or filtered by group, so PPTX typography/shapes/images/composition checks can run independently.
 - [ ] Continue porting test organization patterns: generated-case manifests, richer per-case reports,
-  and explicit fast/slow/oracle lanes.
+  explicit fast/slow/oracle lanes, and tighter parity reporting.
 - [ ] Add parity tracking in `EXECPLAN.md`: each ported family must state source coverage, `ooxpdf` fixture
   names, current pass/fail status, and whether it is a unit, structural, or visual gate.
 - [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate
