@@ -44,6 +44,14 @@ internal static class TestAssert
         }
     }
 
+    public static void DoesNotContain(string unexpectedSubstring, string text)
+    {
+        if (text.Contains(unexpectedSubstring, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Expected text not to contain '{unexpectedSubstring}'.");
+        }
+    }
+
     public static void True(bool condition, string message)
     {
         if (!condition)

@@ -66,6 +66,11 @@ internal static class TestFixtures
         return CreatePng(width, height, 2, null, null, rgb, 3);
     }
 
+    public static byte[] CreateRgbaPng(int width, int height, byte[] rgba)
+    {
+        return CreatePng(width, height, 6, null, null, rgba, 4);
+    }
+
     public static byte[] CreateIndexedPng(int width, int height, byte[] palette, byte[] indices)
     {
         return CreatePng(width, height, 3, palette, null, indices, 1);
