@@ -1092,6 +1092,10 @@ paths, and ExecPlan references together.
   do not change metrics.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
   and text matrices against Office for simple lines before accepting near-pixel raster gates.
+- [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
+  out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
+  `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,
+  changed16 `0.001259`, SSIM `0.958285`; it remains `needs-review` under the strict support gate.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
 - [ ] Ladder 4 remaining combined-stack gaps are finer glyph/font details after basic bullet font selection.

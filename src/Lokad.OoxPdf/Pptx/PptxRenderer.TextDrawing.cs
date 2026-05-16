@@ -194,66 +194,67 @@ internal sealed partial class PptxRenderer
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         string line = run.Text;
-        if (run.Y >= run.Y - run.Height &&
-            run.Y - run.FontSize * 1.2d >= run.ClipY)
+        string glyphHex = embedded.EncodeGlyphHex(line);
+        double baselineY = run.Y + run.BaselineOffset;
+        if (glyphHex.Length != 0 && BaselineIntersectsClip(run, baselineY))
         {
-            string glyphHex = embedded.EncodeGlyphHex(line);
-            if (glyphHex.Length != 0)
+            double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing);
+            double x = run.Alignment switch
             {
-                double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing);
-                double x = run.Alignment switch
-                {
-                    TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
-                    TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
-                    _ => run.X
-                };
+                TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
+                TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
+                _ => run.X
+            };
 
-                double baselineY = run.Y + run.BaselineOffset;
-                if (run.HighlightColor is { } highlight)
-                {
-                    graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
-                    double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
-                    double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
-                    double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
-                    graphics.FillRectangle(x, highlightY, lineWidth, highlightHeight);
-                }
+            if (run.HighlightColor is { } highlight)
+            {
+                graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+                double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
+                double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
+                double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+                graphics.FillRectangle(x, highlightY, lineWidth, highlightHeight);
+            }
 
-                bool transparentText = run.Alpha < 0.999d;
-                if (transparentText)
-                {
-                    graphics.SaveState();
-                    graphics.SetAlpha(run.Alpha, 1d);
-                }
+            bool transparentText = run.Alpha < 0.999d;
+            if (transparentText)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(run.Alpha, 1d);
+            }
 
-                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
-                if (syntheticBold)
-                {
-                    DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
-                }
+            DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
+            if (syntheticBold)
+            {
+                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
+            }
 
-                if (run.Underline)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-                    double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
-                    double underlineY = baselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
-                    graphics.FillRectangle(x, underlineY, lineWidth, underlineThickness);
-                }
+            if (run.Underline)
+            {
+                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
+                double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+                double underlineY = baselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+                graphics.FillRectangle(x, underlineY, lineWidth, underlineThickness);
+            }
 
-                if (run.Strike)
-                {
-                    graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                    graphics.FillRectangle(x, baselineY + run.FontSize * 0.211d, lineWidth, Math.Max(0.5d, run.FontSize * 0.05d));
-                }
+            if (run.Strike)
+            {
+                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                graphics.FillRectangle(x, baselineY + run.FontSize * 0.211d, lineWidth, Math.Max(0.5d, run.FontSize * 0.05d));
+            }
 
-                if (transparentText)
-                {
-                    graphics.RestoreState();
-                }
+            if (transparentText)
+            {
+                graphics.RestoreState();
             }
         }
 
         graphics.RestoreState();
+    }
+
+    private static bool BaselineIntersectsClip(TextRun run, double baselineY)
+    {
+        return baselineY >= run.ClipY && baselineY <= run.ClipY + run.ClipHeight + run.FontSize;
     }
 
     private static void ApplyTextRotation(PdfGraphicsBuilder graphics, double rotationDegrees, double centerX, double centerY)
