@@ -586,6 +586,18 @@ document-specific business content into public notes.
     spans and a wrapped continuation line. Latest gated run:
     `artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260516-115932`, MAE `0.292685`,
     changed-pixel ratio threshold 16 `0.006998`.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260516-121040` after the slide-2/3
+  public ladder work:
+  - 84 visual comparison entries were produced; all paired page dimensions matched.
+  - Deck mean absolute error average: `12.734628`; max mean absolute error: `31.067204`.
+  - Deck mean changed-pixel ratio at threshold 16: `0.151359`; max changed-pixel ratio: `0.467519`.
+  - Slide 2 metrics improved to MAE `6.560317`, RMSE `20.121548`, changed16 `0.106846`,
+    changed32 `0.031196`.
+  - Slide 3 metrics improved to MAE `10.224075`, RMSE `40.503589`, changed16 `0.121273`,
+    changed32 `0.104931`.
+  - The previous slide-3 text-autofit diagnostic is gone. Remaining diagnostics are public-safe categories:
+    chart static fallbacks plus unsupported effects, custom geometry, vertical text, transparency,
+    multi-column text, and image recolor.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
