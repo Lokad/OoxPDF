@@ -206,8 +206,11 @@ High-priority actions:
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
 - [ ] Next PPTX typography sequence: add diagnostics for Office-vs-candidate word starts per visual line,
   then use those diagnostics to tighten justified text spacing without relying on late-game MAE.
-- [ ] Next PPTX typography sequence: move highlight rectangles from the legacy `TextRun` drawing path to
+- [x] Next PPTX typography sequence: move highlight rectangles from the legacy `TextRun` drawing path to
   layout-owned line boxes and glyph spans, keeping `highlight-single` locked throughout the migration.
+  Shape-text highlights now consume positioned spans and line-box baselines while highlighted text emission
+  remains on the legacy text path. `highlight-single` stays locked at MAE `0.032134`, and the boundary
+  invariance probe passes its text-operation gate with MAE `0.921847`.
 - [ ] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
   narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
 - [x] Add the first whitespace-control interaction probe:

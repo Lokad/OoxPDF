@@ -119,7 +119,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
     {
-        DrawHighlightRunsWithFonts(textSpans.Select(span => span.Run).ToArray(), graphics, fonts);
+        DrawHighlightSpansWithFonts(textSpans, graphics, fonts);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: false);
         textSpans = CoalesceUnderlineSpans(textSpans);
         foreach (PptxPositionedTextSpan span in textSpans)
@@ -136,6 +136,20 @@ internal sealed partial class PptxRenderer
                     DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
                 }
             }
+        }
+    }
+
+    private static void DrawHighlightSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    {
+        foreach (PptxPositionedTextSpan span in CoalesceHighlightSpans(textSpans))
+        {
+            TextRun run = span.Run;
+            if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            {
+                continue;
+            }
+
+            DrawHighlightSpan(graphics, rendered.Font, span);
         }
     }
 
@@ -267,6 +281,42 @@ internal sealed partial class PptxRenderer
             else
             {
                 coalesced.Add(run);
+            }
+        }
+
+        return coalesced;
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceHighlightSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    {
+        var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+        foreach (PptxPositionedTextSpan span in textSpans)
+        {
+            TextRun run = span.Run;
+            if (run.Text.Length == 0 || run.HighlightColor is null)
+            {
+                continue;
+            }
+
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run))
+            {
+                PptxPositionedTextSpan previous = coalesced[^1];
+                TextRun mergedRun = previous.Run with
+                {
+                    Text = previous.Run.Text + run.Text,
+                    Width = run.X + run.Width - previous.Run.X
+                };
+                coalesced[^1] = previous with
+                {
+                    Run = mergedRun,
+                    EndX = span.EndX,
+                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                };
+            }
+            else
+            {
+                coalesced.Add(span);
             }
         }
 
@@ -597,12 +647,29 @@ internal sealed partial class PptxRenderer
         }
 
         double baselineY = run.Y + run.BaselineOffset;
+        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
+        DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, lineWidth);
+    }
+
+    private static void DrawHighlightSpan(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, PptxPositionedTextSpan span)
+    {
+        TextRun run = span.Run;
+        if (run.HighlightColor is not { } highlight)
+        {
+            return;
+        }
+
+        double baselineY = span.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
+        DrawHighlightRectangle(graphics, embedded, run, highlight, baselineY, span.GlyphSpan.NaturalWidth);
+    }
+
+    private static void DrawHighlightRectangle(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
+    {
         if (!BaselineIntersectsClip(run, baselineY))
         {
             return;
         }
 
-        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
         graphics.SaveState();
         if (Math.Abs(run.RotationDegrees) > 0.001d)
         {
