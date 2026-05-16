@@ -1271,23 +1271,22 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Next Implementation Targets
 
-1. Complete the `pptx-renderer` survey and decide the intermediate-model direction before further broad
-   PPTX renderer patching. Prioritize what explains its higher-quality output on real decks: resolved model
-   structure, style inheritance, text handling, grouped content, and oracle tooling.
-2. Improve test-loop performance: add per-test timing, identify the slowest tests, and introduce ignored
-   caches for immutable oracle artifacts and expensive parsed resources where safe.
-3. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list
-   renderer tests that should be replaced or complemented by public visual fixtures.
-4. Continue PPTX Ladder 4 bottom-up, with typography as the first priority: inspect the Office reference
-   PDF/raster for each minimal styled-text fixture, tighten baselines, advances, tracking, highlights,
-   underlines, bullets, and paragraph flow toward near pixel-perfect output, and only then revisit larger
-   combinations.
-5. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for
-   blank/plain paragraph/table primitives, then add visual gates.
-6. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not
-   optimize for private MAE or changed-pixel ratios while public ladders are incomplete.
-7. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest
-   public synthetic fixture first.
+1. Prioritize the `pptx-renderer` track above all other fidelity work. Complete the architectural survey,
+   identify the abstractions that explain its higher quality, and port those lessons into `ooxpdf` before
+   making more broad renderer patches.
+2. Clean-port `pptx-renderer` tests into `ooxpdf`, starting with its typography Office-oracle family, then
+   shape/preset, layout/composition, images, tables, charts, and SmartArt. Do not vendor code or private
+   assets; recreate minimal public fixtures and keep Office PDF references as validation artifacts.
+3. Decide the intermediate-model direction from the `pptx-renderer` survey: what belongs in the PPTX
+   scene/model, what remains direct PDF rendering, and how render context, style/color resolvers, diagnostics,
+   and assets should be owned.
+4. Continue PPTX Ladder 4 only through the `pptx-renderer`-driven path: inspect Office references, add or
+   port minimal public typography cases, tighten baselines, advances, tracking, highlights, underlines,
+   bullets, and paragraph flow toward near pixel-perfect output.
+5. Keep test-loop performance work in service of the `pptx-renderer` test-port track: cached oracles,
+   fast/slow/oracle lanes, and richer visual metrics should make hundreds of public cases practical.
+6. Defer DOCX and private-deck optimization while the PPTX public ladder and `pptx-renderer`-derived tests
+   are still incomplete. Private files remain gap discovery and acceptance evidence only.
 
 ## Decisions
 
