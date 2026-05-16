@@ -122,10 +122,8 @@ High-priority actions:
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
   `pptx-ladder-04-all-caps`, `pptx-ladder-04-field-text`,
-  `pptx-ladder-04-soft-hyphen`, and `pptx-ladder-04-tab-character`.
-- [ ] Investigate Office text-operation splits for preserved whitespace controls before locking:
-  `pptx-ladder-04-nonbreaking-space` renders visually close but preserving Office's split without
-  shifting the following glyph needs context-aware hidden advance handling.
+  `pptx-ladder-04-nonbreaking-space`, `pptx-ladder-04-soft-hyphen`, and
+  `pptx-ladder-04-tab-character`.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,

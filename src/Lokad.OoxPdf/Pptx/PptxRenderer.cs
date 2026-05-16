@@ -2123,7 +2123,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
-    private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce);
+    private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce, double? AdvanceFontSizeFactor = null);
 
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 

@@ -3,14 +3,17 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-nonbreaking-space.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text", "spacing"],
+  "tags": ["pptx", "ladder", "text", "spacing", "locked"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.004,
-    "maxChangedPixelRatioAtThreshold16": 0.0001
+    "maxChangedPixelRatioAtThreshold16": 0.0001,
+    "maxTextOperationPositionDelta": 0.05,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true
   },
   "allowedUnsupportedFeatures": []
 }

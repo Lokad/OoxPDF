@@ -295,7 +295,7 @@ internal sealed partial class PptxRenderer
                             {
                                 string currentSegment = flowSegment.Text;
                                 string currentAdvanceText = flowSegment.AdvanceText;
-                                double segmentWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
                                 bool overflowsLine = cursorX > paragraphTextX &&
                                     (cursorX + segmentWidth > textX + textWidth ||
                                         (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
@@ -310,10 +310,10 @@ internal sealed partial class PptxRenderer
                                     maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
                                     currentSegment = currentSegment.TrimStart();
                                     currentAdvanceText = currentAdvanceText.TrimStart();
-                                    segmentWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                    segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
                                 }
 
-                                if (currentAdvanceText.Length == 0)
+                                if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
                                 {
                                     continue;
                                 }
@@ -516,6 +516,19 @@ internal sealed partial class PptxRenderer
         bool nextPreventsCoalesce = false;
         foreach (char c in text)
         {
+            if (c == '\u00A0')
+            {
+                if (builder.Length > 0)
+                {
+                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    builder.Clear();
+                }
+
+                yield return new TextFlowSegment(string.Empty, string.Empty, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: 0.22d);
+                nextPreventsCoalesce = true;
+                continue;
+            }
+
             if (c == '\u00AD')
             {
                 if (builder.Length > 0)
@@ -535,6 +548,13 @@ internal sealed partial class PptxRenderer
         {
             yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
         }
+    }
+
+    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, TextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing)
+    {
+        return segment.AdvanceFontSizeFactor is { } factor
+            ? Math.Max(0d, fontSize * factor)
+            : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing);
     }
 
     private static void AddAlignedParagraphRuns(List<TextRun> runs, List<TextRun> paragraphRuns, TextAlignment alignment, double textX, double textWidth, double paragraphEndX)
