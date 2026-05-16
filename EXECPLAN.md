@@ -231,6 +231,11 @@ High-priority actions:
   keep point line spacing as absolute line box height, model manual-break line boxes explicitly, and compare
   line top, baseline, and highlight rectangle geometry against Office PDF text operations before changing
   broader deck rendering.
+- [x] Port the `pptx-renderer`/CSS rule for explicit percent line spacing:
+  `spcPct=100000` now resolves to one font size, not `1.2x` font size. Existing paragraph/list-style tests
+  were updated to lock the new text baselines, `pptx-ladder-04-line-spacing-points` remains locked at MAE
+  `0.014381`, and `pptx-ladder-04-line-spacing-port` still passes its approximate gate with line-to-line
+  deltas matching Office while retaining the known generic baseline offset.
 - [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
   ascender, internal leading, or another generic font metric for top-to-baseline placement.

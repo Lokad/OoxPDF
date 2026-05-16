@@ -326,7 +326,7 @@ internal sealed partial class PptxRenderer
 
         public double Resolve(double fontSize)
         {
-            return IsAbsolute ? Value : fontSize * Value * 1.2d;
+            return IsAbsolute ? Value : fontSize * Value;
         }
     }
 
