@@ -58,6 +58,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxRendersTextHighlight,
     PptxTests.PptxSyntheticTextBoxRendersStrikethrough,
     PptxTests.PptxSyntheticTextBoxHonorsParagraphSpacing,
+    PptxTests.PptxSyntheticTextBoxHonorsPercentParagraphSpacing,
     PptxTests.PptxSyntheticTextBoxRendersSmallCapsAsScaledUppercaseRuns,
     PptxTests.PptxSyntheticTextBoxSkipsEmptyParagraphs,
     PptxTests.PptxSyntheticTextBoxHonorsVerticalAnchor,

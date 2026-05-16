@@ -646,6 +646,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 gate `pptx-ladder-04-line-spacing-points` is at MAE `0.014381`, changed16 `0.000410`.
 - [x] Ladder 4 mixed-size runs on one line are locked at MAE `0.007254`, changed16 `0.000173`.
 - [x] Ladder 4 percentage line spacing follows Office's percent-of-normal-line-advance behavior.
+- [x] Ladder 4 percent paragraph before/after spacing is resolved from the paragraph font size.
+- [x] Ladder 4 gate `pptx-ladder-04-paragraph-spacing-percent` is at MAE `0.415738`, changed16 `0.004076`.
 - [x] Ladder 4 gate `pptx-ladder-04-empty-paragraph-gap` is at MAE `0.306072`, changed16 `0.005082`.
 - [x] Ladder 4 gate `pptx-ladder-04-paragraph-advance` is at MAE `0.163712`, changed16 `0.002857`.
 - [x] Ladder 4 subcase `pptx-ladder-04-tab-stop` matches Office's continuous-text handling for the standalone
@@ -1018,7 +1020,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-95 passed, 0 failed
+96 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
