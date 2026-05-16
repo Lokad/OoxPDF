@@ -146,7 +146,7 @@ Porting priorities:
   `ooxpdf` public visual ladder naming scheme.
 - [x] Inventory `pptx-renderer` generated typography oracle family and map it to current `ooxpdf` Ladder 4
   coverage.
-- [ ] Port the typography oracle family first: font families, sizes, bold/italic/underline, colors,
+- [x] Port the typography oracle family first: font families, sizes, bold/italic/underline, colors,
   mixed formatting, bullets, vertical text, anchoring, and line spacing.
 - [ ] Port shape/preset oracle families next, preserving Office-authored/generated public fixtures and
   adding PDF/raster inspection notes for every accepted gate.
