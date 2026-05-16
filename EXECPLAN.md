@@ -122,6 +122,8 @@ High-priority actions:
   longer takes document/theme as separate ad hoc dependencies.
 - [x] Add context-based text-run readers for inherited, slide, and ordered-shape text so typography rendering
   no longer spreads document/theme/slide-number arguments through top-level PPTX dispatch.
+- [x] Move ordered slide z-order dispatch into a dedicated partial, keeping top-level `RenderPages` focused on
+  orchestration and leaving node dispatch in one context-driven place.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
