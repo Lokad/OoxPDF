@@ -233,6 +233,10 @@ High-priority actions:
   master and layout XML are now carried as a `PptxSlideInheritance` object while preserving the legacy
   ordered inherited-source list. This is a bridge toward `pptx-renderer`-style typed slide/layout/master
   context without forcing a full renderer rewrite.
+- [x] Route PPTX text inspection/model construction through the render-context loader:
+  `InspectTextRuns`, `InspectTextLayout`, and `InspectTextFrameModels` now share slide/theme/inheritance
+  context setup with production rendering instead of rebuilding loose XML/document/theme tuples. This keeps
+  model-stage tests aligned with the renderer boundary.
 - [x] Route background and shape traversal through the PPTX render context and move that dispatch into a
   dedicated renderer partial, keeping the shape drawing primitive behavior-neutral for later typed-node work.
 - [x] Move picture traversal, image decoding, crop/fill, and alpha handling into a dedicated renderer partial

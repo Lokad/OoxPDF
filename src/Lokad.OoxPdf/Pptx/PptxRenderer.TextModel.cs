@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Xml.Linq;
 
 using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -9,25 +10,16 @@ internal sealed partial class PptxRenderer
 {
     internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        if (slideIndex < 0 || slideIndex >= document.Slides.Count)
-        {
-            return [];
-        }
-
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxSlide slide = document.Slides[slideIndex];
-        OoxPart? slidePart = package.GetPart(slide.PartName);
-        if (slidePart is null)
+        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        if (context is null)
         {
             return [];
         }
 
-        using Stream stream = slidePart.OpenRead();
-        XDocument slideXml = SafeXml.Load(stream);
-        IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
-        return inheritedXml
-            .SelectMany(xml => BuildTextFrameModels(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
-            .Concat(BuildTextFrameModels(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
+        return context.InheritedXml
+            .SelectMany(xml => BuildTextFrameModels(context, xml, includePlaceholders: false, placeholderSources: []))
+            .Concat(BuildTextFrameModels(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -63,6 +55,15 @@ internal sealed partial class PptxRenderer
             run.Style.Typeface,
             run.Style.Underline,
             run.Style.Highlight);
+    }
+
+    private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
+        PptxRenderContext context,
+        XDocument slideXml,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return BuildTextFrameModels(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
     }
 
     private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(

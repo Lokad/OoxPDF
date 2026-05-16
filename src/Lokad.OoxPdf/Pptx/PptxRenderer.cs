@@ -43,13 +43,8 @@ internal sealed partial class PptxRenderer
             using Stream stream = slidePart.OpenRead();
             XDocument slideXml = SafeXml.Load(stream);
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
-            PptxSlideInheritance inheritance = LoadSlideInheritance(package, slide.PartName);
-            IReadOnlyList<XDocument> inheritedXml = inheritance.Sources;
             var graphics = new PdfGraphicsBuilder();
-            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
-                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritance, inheritedXml, slideRelationships, imageCache, diagnosticSink);
+            PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, imageCache, diagnosticSink);
 
             foreach (XDocument inherited in context.InheritedXml)
             {
@@ -92,6 +87,47 @@ internal sealed partial class PptxRenderer
         }
 
         return pages;
+    }
+
+    private static PptxRenderContext? TryLoadRenderContext(
+        PptxDocument document,
+        OoxPackage package,
+        PptxTheme theme,
+        int slideIndex,
+        Dictionary<string, PdfImageXObject?> imageCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        if (slideIndex < 0 || slideIndex >= document.Slides.Count)
+        {
+            return null;
+        }
+
+        PptxSlide slide = document.Slides[slideIndex];
+        OoxPart? slidePart = package.GetPart(slide.PartName);
+        if (slidePart is null)
+        {
+            return null;
+        }
+
+        using Stream stream = slidePart.OpenRead();
+        XDocument slideXml = SafeXml.Load(stream);
+        return CreateRenderContext(package, document, theme, slide, slideXml, imageCache, diagnosticSink);
+    }
+
+    private static PptxRenderContext CreateRenderContext(
+        OoxPackage package,
+        PptxDocument document,
+        PptxTheme theme,
+        PptxSlide slide,
+        XDocument slideXml,
+        Dictionary<string, PdfImageXObject?> imageCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink)
+    {
+        PptxSlideInheritance inheritance = LoadSlideInheritance(package, slide.PartName);
+        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        return new PptxRenderContext(package, document, theme, slide, slideXml, inheritance, inheritance.Sources, slideRelationships, imageCache, diagnosticSink);
     }
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)

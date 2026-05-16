@@ -19,61 +19,41 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> ReadSlideTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        if (slideIndex < 0 || slideIndex >= document.Slides.Count)
-        {
-            return [];
-        }
-
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxSlide slide = document.Slides[slideIndex];
-        OoxPart? slidePart = package.GetPart(slide.PartName);
-        if (slidePart is null)
+        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        if (context is null)
         {
             return [];
         }
 
-        using Stream stream = slidePart.OpenRead();
-        XDocument slideXml = SafeXml.Load(stream);
-        IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
-        return inheritedXml
-            .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
-            .Concat(ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
+        return context.InheritedXml
+            .SelectMany(xml => ReadTextRuns(context, xml, includePlaceholders: false, placeholderSources: []))
+            .Concat(ReadTextRuns(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
             .ToArray();
     }
 
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        if (slideIndex < 0 || slideIndex >= document.Slides.Count)
-        {
-            return new PptxTextLayoutSnapshot([]);
-        }
-
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxSlide slide = document.Slides[slideIndex];
-        OoxPart? slidePart = package.GetPart(slide.PartName);
-        if (slidePart is null)
+        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
         }
 
-        using Stream stream = slidePart.OpenRead();
-        XDocument slideXml = SafeXml.Load(stream);
-        IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
-        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(inheritedXml, document, theme, slideIndex + 1);
-        PptxTextLayoutModel slideLayout = BuildTextLayoutModel(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml);
+        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedXml, context);
+        PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModelForSources(
         IReadOnlyList<XDocument> sources,
-        PptxDocument document,
-        PptxTheme theme,
-        int slideNumber)
+        PptxRenderContext context)
     {
         var frames = new List<PptxTextFrameLayout>();
         foreach (XDocument source in sources)
         {
-            frames.AddRange(BuildTextLayoutModel(source, document, theme, slideNumber, includePlaceholders: false, placeholderSources: []).Frames);
+            frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
         }
 
         return new PptxTextLayoutModel(frames);
@@ -164,13 +144,16 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return ReadTextRuns(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+        return FlattenTextLayout(BuildTextLayoutModel(context, slideXml, includePlaceholders, placeholderSources));
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, int slideNumber, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
+    private static PptxTextLayoutModel BuildTextLayoutModel(
+        PptxRenderContext context,
+        XDocument slideXml,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
     {
-        PptxTextLayoutModel layout = BuildTextLayoutModel(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
-        return FlattenTextLayout(layout);
+        return BuildTextLayoutModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
@@ -382,7 +365,7 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return ReadTextRuns(slide, document, theme, slideNumber, includePlaceholders, placeholderSources);
+        return FlattenTextLayout(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources));
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
