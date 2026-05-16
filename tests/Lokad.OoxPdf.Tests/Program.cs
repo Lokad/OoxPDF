@@ -43,6 +43,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextAndShapesUseSiblingOrder,
     PptxTests.PptxSyntheticTextBoxHonorsBodyInsets,
     PptxTests.PptxSyntheticTextBoxHonorsLineBreaks,
+    PptxTests.PptxSyntheticTextBoxRendersFieldText,
     PptxTests.PptxSyntheticTextBoxIgnoresStandaloneTabElements,
     PptxTests.PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops,
     PptxTests.PptxSyntheticTextBoxHonorsTabCharacters,

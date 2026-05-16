@@ -667,6 +667,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 gate `pptx-ladder-04-highlight-single` is at MAE `0.032134`, changed16 `0.001214`.
 - [x] Ladder 4 gate `pptx-ladder-04-transparent-text` locks supported run-level alpha text at MAE
   `0.008701`, changed16 `0.000261`.
+- [x] Ladder 4 gate `pptx-ladder-04-field-text` locks cached field text and Office-style slide-number field
+  resolution with exact raster parity.
 - [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.
@@ -1054,7 +1056,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-103 passed, 0 failed
+104 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

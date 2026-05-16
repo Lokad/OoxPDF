@@ -60,9 +60,9 @@ internal sealed class PptxRenderer
                 var orderedImages = new List<PdfImageResource>();
                 int imageIndex = 1;
                 IReadOnlyList<TextRun> inheritedTextRuns = inheritedXml
-                    .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
+                    .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
                     .ToArray();
-                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(slideXml, document, theme, includePlaceholders: true, inheritedXml);
+                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml);
                 IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(slideXml, document, new PdfGraphicsBuilder(), theme);
                 RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
@@ -83,8 +83,8 @@ internal sealed class PptxRenderer
                 .ToArray();
             RenderCharts(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
             IReadOnlyList<TextRun> textRuns = inheritedXml
-                .SelectMany(xml => ReadTextRuns(xml, document, theme, includePlaceholders: false, placeholderSources: []))
-                .Concat(ReadTextRuns(slideXml, document, theme, includePlaceholders: true, inheritedXml))
+                .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
+                .Concat(ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
@@ -359,7 +359,7 @@ internal sealed class PptxRenderer
                 if (renderPlaceholders || !IsPlaceholder(child))
                 {
                     RenderShape(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, transform, images, ref imageIndex);
-                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, document, theme, renderPlaceholders, placeholderSources), graphics, fonts);
+                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, document, theme, slideIndex, renderPlaceholders, placeholderSources), graphics, fonts);
                 }
 
                 continue;
@@ -1912,7 +1912,7 @@ internal sealed class PptxRenderer
             TextAlignment alignment = ReadAlignment(paragraph, null);
             double cursorX = x + insets.Left;
             double maxFontSize = 12d;
-            foreach (XElement run in paragraph.Elements(DrawingNamespace + "r"))
+            foreach (XElement run in paragraph.Elements().Where(IsTextRunElement))
             {
                 XElement? runProperties = run.Element(DrawingNamespace + "rPr");
                 double fontSize = runProperties?.Attribute("sz") is { } size
@@ -1937,7 +1937,7 @@ internal sealed class PptxRenderer
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
                 bool strike = IsStrikeEnabled(runProperties, null);
-                foreach (TextCapsFragment fragment in ApplyTextCaps((string?)run.Element(DrawingNamespace + "t") ?? string.Empty, runProperties, null))
+                foreach (TextCapsFragment fragment in ApplyTextCaps(ReadTextElementText(run, slideNumber: 0), runProperties, null))
                 {
                     if (fragment.Text.Length == 0)
                     {
@@ -1960,7 +1960,8 @@ internal sealed class PptxRenderer
     {
         foreach (XElement runProperties in textBody
             .Elements(DrawingNamespace + "p")
-            .Elements(DrawingNamespace + "r")
+            .Elements()
+            .Where(IsTextRunElement)
             .Elements(DrawingNamespace + "rPr"))
         {
             if (runProperties.Attribute("sz") is { } size &&
@@ -2169,7 +2170,7 @@ internal sealed class PptxRenderer
         return TryReadSolidColor(fontRef, theme, out color);
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
+    private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, int slideNumber, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
     {
         var runs = new List<TextRun>();
         var advanceEstimator = new TextAdvanceEstimator();
@@ -2285,7 +2286,7 @@ internal sealed class PptxRenderer
                         continue;
                     }
 
-                    if (child.Name != DrawingNamespace + "r")
+                    if (!IsTextRunElement(child))
                     {
                         continue;
                     }
@@ -2343,7 +2344,7 @@ internal sealed class PptxRenderer
                         bulletPending = false;
                     }
 
-                    string rawText = (string?)run.Element(DrawingNamespace + "t") ?? string.Empty;
+                    string rawText = ReadTextElementText(run, slideNumber);
                     string[] tabParts = rawText.Split('\t');
                     for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
                     {
@@ -2417,6 +2418,7 @@ internal sealed class PptxRenderer
         XElement shape,
         PptxDocument document,
         PptxTheme theme,
+        int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
@@ -2437,7 +2439,7 @@ internal sealed class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return ReadTextRuns(slide, document, theme, includePlaceholders, placeholderSources);
+        return ReadTextRuns(slide, document, theme, slideNumber, includePlaceholders, placeholderSources);
     }
 
     private static XElement? FindInheritedPlaceholderShape(XElement shape, IReadOnlyList<XDocument> placeholderSources)
@@ -2635,6 +2637,7 @@ internal sealed class PptxRenderer
     {
         return paragraph.Elements().Any(child =>
             child.Name == DrawingNamespace + "r" ||
+            child.Name == DrawingNamespace + "fld" ||
             child.Name == DrawingNamespace + "br");
     }
 
@@ -2642,6 +2645,24 @@ internal sealed class PptxRenderer
     {
         return paragraph.Element(DrawingNamespace + "pPr") is not null ||
             paragraph.Element(DrawingNamespace + "endParaRPr") is not null;
+    }
+
+    private static bool IsTextRunElement(XElement element)
+    {
+        return element.Name == DrawingNamespace + "r" ||
+            element.Name == DrawingNamespace + "fld";
+    }
+
+    private static string ReadTextElementText(XElement element, int slideNumber)
+    {
+        if (slideNumber > 0 &&
+            element.Name == DrawingNamespace + "fld" &&
+            string.Equals((string?)element.Attribute("type"), "slidenum", StringComparison.OrdinalIgnoreCase))
+        {
+            return slideNumber.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return (string?)element.Element(DrawingNamespace + "t") ?? string.Empty;
     }
 
     private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
@@ -2851,7 +2872,7 @@ internal sealed class PptxRenderer
                 return defaultFontSize;
             }
 
-            if (child.Name != DrawingNamespace + "r")
+            if (!IsTextRunElement(child))
             {
                 continue;
             }
@@ -3098,7 +3119,7 @@ internal sealed class PptxRenderer
                     continue;
                 }
 
-                if (child.Name != DrawingNamespace + "r")
+                if (!IsTextRunElement(child))
                 {
                     continue;
                 }
