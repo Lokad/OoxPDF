@@ -117,4 +117,16 @@ internal static class ImagingTests
         TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "BMP BGR pixels should expand to RGB pixels.");
         TestAssert.True(image.Alpha is null, "24-bit BMP should not produce an alpha channel.");
     }
+
+    public static void BmpImageIgnoresRgb32AlphaByte()
+    {
+        byte[] bmp = TestFixtures.CreateRgbaBmp(1, 2, [255, 0, 0, 128, 0, 0, 255, 64]);
+
+        BmpImage image = BmpImage.Read(bmp);
+
+        TestAssert.Equal(1, image.Width);
+        TestAssert.Equal(2, image.Height);
+        TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "32-bit BMP BGRA pixels should expand to RGB pixels.");
+        TestAssert.True(image.Alpha is null, "Office treats 32-bit BI_RGB BMP alpha bytes as unused.");
+    }
 }

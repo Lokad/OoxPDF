@@ -52,28 +52,21 @@ internal sealed class BmpImage
         }
 
         var rgb = new byte[width * height * 3];
-        byte[]? alpha = bitsPerPixel == 32 ? new byte[width * height] : null;
         for (int y = 0; y < height; y++)
         {
             int sourceY = topDown ? y : height - 1 - y;
             int source = pixelOffset + sourceY * stride;
             int target = y * width * 3;
-            int alphaTarget = y * width;
             for (int x = 0; x < width; x++)
             {
                 rgb[target++] = bytes[source + 2];
                 rgb[target++] = bytes[source + 1];
                 rgb[target++] = bytes[source];
-                if (alpha is not null)
-                {
-                    alpha[alphaTarget++] = bytes[source + 3];
-                }
-
                 source += bytesPerPixel;
             }
         }
 
-        return new BmpImage(width, height, rgb, alpha);
+        return new BmpImage(width, height, rgb, alpha: null);
     }
 
     private static ushort U16(byte[] bytes, int offset)

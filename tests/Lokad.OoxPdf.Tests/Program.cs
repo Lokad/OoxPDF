@@ -94,6 +94,7 @@ return TestRunner.Run(
     ImagingTests.PngImageReadsGrayscalePixels,
     ImagingTests.PngImageReadsAdam7TruecolorAlphaPixels,
     ImagingTests.BmpImageReadsBottomUpRgbPixels,
+    ImagingTests.BmpImageIgnoresRgb32AlphaByte,
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs,
     FontTests.OpenTypeParserReadsGposPairAdjustments,

@@ -753,6 +753,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   `0.005486`.
 - [x] Ladder 7 gate `pptx-ladder-07-bmp-image` locks uncompressed 24-bit BMP placement with exact raster
   parity.
+- [x] Ladder 7 gate `pptx-ladder-07-bmp-alpha` locks Office-compatible 32-bit BI_RGB BMP alpha-byte handling
+  with exact raster parity; Office treats the byte as unused in this case.
 - [x] Ladder 7 gate `pptx-ladder-07-image-rotation` locks rotated picture transforms with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-flip` locks horizontal picture flips with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-rotate-flip` locks combined rotation/flip with exact raster parity.
@@ -1046,7 +1048,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-100 passed, 0 failed
+101 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

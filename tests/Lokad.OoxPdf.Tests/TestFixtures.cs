@@ -169,6 +169,41 @@ internal static class TestFixtures
         return bytes;
     }
 
+    public static byte[] CreateRgbaBmp(int width, int height, byte[] rgba)
+    {
+        int rowBytes = width * 4;
+        int stride = ((rowBytes + 3) / 4) * 4;
+        int pixelOffset = 54;
+        int fileSize = pixelOffset + stride * height;
+        byte[] bytes = new byte[fileSize];
+        bytes[0] = (byte)'B';
+        bytes[1] = (byte)'M';
+        WriteInt32LittleEndian(bytes.AsSpan(2, 4), fileSize);
+        WriteInt32LittleEndian(bytes.AsSpan(10, 4), pixelOffset);
+        WriteInt32LittleEndian(bytes.AsSpan(14, 4), 40);
+        WriteInt32LittleEndian(bytes.AsSpan(18, 4), width);
+        WriteInt32LittleEndian(bytes.AsSpan(22, 4), height);
+        bytes[26] = 1;
+        bytes[28] = 32;
+
+        for (int y = 0; y < height; y++)
+        {
+            int sourceY = height - 1 - y;
+            int source = sourceY * width * 4;
+            int target = pixelOffset + y * stride;
+            for (int x = 0; x < width; x++)
+            {
+                bytes[target++] = rgba[source + 2];
+                bytes[target++] = rgba[source + 1];
+                bytes[target++] = rgba[source];
+                bytes[target++] = rgba[source + 3];
+                source += 4;
+            }
+        }
+
+        return bytes;
+    }
+
     public static byte[] CreateUnsupportedHighBitDepthPng()
     {
         using var stream = new MemoryStream();
