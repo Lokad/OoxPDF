@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-alpha-number-bullets",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-alpha-number-bullets.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "numbering", "bullet"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.581,
+    "maxChangedPixelRatioAtThreshold16": 0.0057
+  },
+  "allowedUnsupportedFeatures": []
+}

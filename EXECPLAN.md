@@ -675,6 +675,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 gate `pptx-ladder-04-symbol-bullet` is at MAE `0.001766`, changed16 `0.000043`.
 - [x] Ladder 4 auto-numbered PPTX paragraphs render basic sequential `buAutoNum` labels.
 - [x] Ladder 4 gate `pptx-ladder-04-auto-number-bullets` is at MAE `0.968827`, changed16 `0.008053`.
+- [x] Ladder 4 gate `pptx-ladder-04-alpha-number-bullets` locks alphabetic `buAutoNum` expansion at MAE
+  `0.580815`, changed16 `0.005619`.
 - [x] Ladder 4 Roman `buAutoNum` labels expand through the same numbered-list path.
 - [x] Ladder 4 gate `pptx-ladder-04-roman-number-bullets` is at MAE `0.494357`, changed16 `0.004535`.
 - [x] Ladder 4 rotated text boxes apply the shape rotation around the Office-like text-frame center.
