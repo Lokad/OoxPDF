@@ -2118,9 +2118,12 @@ internal sealed partial class PptxRenderer
         string? FontFamily,
         double RotationDegrees,
         double RotationCenterX,
-        double RotationCenterY);
+        double RotationCenterY,
+        bool PreventCoalesce = false);
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
+
+    private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce);
 
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 

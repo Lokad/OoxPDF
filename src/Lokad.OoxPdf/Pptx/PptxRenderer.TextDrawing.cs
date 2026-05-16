@@ -113,6 +113,8 @@ internal sealed partial class PptxRenderer
             left.Color.Equals(right.Color) &&
             Math.Abs(left.Alpha - right.Alpha) < 0.001d &&
             left.HighlightColor.Equals(right.HighlightColor) &&
+            !left.PreventCoalesce &&
+            !right.PreventCoalesce &&
             left.Bold == right.Bold &&
             left.Italic == right.Italic &&
             left.Underline == right.Underline &&
@@ -158,6 +160,8 @@ internal sealed partial class PptxRenderer
             left.Color.Equals(right.Color) &&
             NearlyEqual(left.Alpha, right.Alpha) &&
             left.HighlightColor.Equals(right.HighlightColor) &&
+            !left.PreventCoalesce &&
+            !right.PreventCoalesce &&
             NearlyEqual(left.Y, right.Y) &&
             NearlyEqual(left.Height, right.Height) &&
             NearlyEqual(left.ClipX, right.ClipX) &&

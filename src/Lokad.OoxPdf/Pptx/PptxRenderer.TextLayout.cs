@@ -277,6 +277,8 @@ internal sealed partial class PptxRenderer
                     {
                         if (tabPartIndex > 0)
                         {
+                            double tabSpaceWidth = advanceEstimator.Measure(" ", fontSize, typeface, bold, italic, characterSpacing);
+                            paragraphRuns.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true));
                             cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, fontSize);
                             paragraphEndX = Math.Max(paragraphEndX, cursorX);
                         }
@@ -289,10 +291,11 @@ internal sealed partial class PptxRenderer
                             }
 
                             double fragmentFontSize = fontSize * fragment.FontScale;
-                            foreach (string segment in SplitFlowSegments(fragment.Text))
+                            foreach (TextFlowSegment flowSegment in SplitFlowSegments(fragment.Text))
                             {
-                                string currentSegment = segment;
-                                double segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                string currentSegment = flowSegment.Text;
+                                string currentAdvanceText = flowSegment.AdvanceText;
+                                double segmentWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
                                 bool overflowsLine = cursorX > paragraphTextX &&
                                     (cursorX + segmentWidth > textX + textWidth ||
                                         (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
@@ -306,15 +309,20 @@ internal sealed partial class PptxRenderer
                                     paragraphEndX = paragraphTextX;
                                     maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
                                     currentSegment = currentSegment.TrimStart();
-                                    segmentWidth = advanceEstimator.Measure(currentSegment, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                    currentAdvanceText = currentAdvanceText.TrimStart();
+                                    segmentWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
                                 }
 
-                                if (currentSegment.Length == 0)
+                                if (currentAdvanceText.Length == 0)
                                 {
                                     continue;
                                 }
 
-                                paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY));
+                                if (flowSegment.Draw && currentSegment.Length != 0)
+                                {
+                                    paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce));
+                                }
+
                                 cursorX += segmentWidth;
                                 paragraphEndX = Math.Max(paragraphEndX, cursorX);
                             }
@@ -467,7 +475,7 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static IEnumerable<string> SplitFlowSegments(string text)
+    private static IEnumerable<TextFlowSegment> SplitFlowSegments(string text)
     {
         int index = 0;
         while (index < text.Length)
@@ -494,8 +502,38 @@ internal sealed partial class PptxRenderer
 
             if (index > start)
             {
-                yield return text[start..index];
+                foreach (TextFlowSegment segment in SplitControlSegments(text[start..index]))
+                {
+                    yield return segment;
+                }
             }
+        }
+    }
+
+    private static IEnumerable<TextFlowSegment> SplitControlSegments(string text)
+    {
+        var builder = new StringBuilder();
+        bool nextPreventsCoalesce = false;
+        foreach (char c in text)
+        {
+            if (c == '\u00AD')
+            {
+                if (builder.Length > 0)
+                {
+                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    builder.Clear();
+                }
+
+                nextPreventsCoalesce = true;
+                continue;
+            }
+
+            builder.Append(c);
+        }
+
+        if (builder.Length > 0)
+        {
+            yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
         }
     }
 
@@ -624,9 +662,7 @@ internal sealed partial class PptxRenderer
 
     private static string NormalizeText(string text)
     {
-        return text.Contains('\u00AD', StringComparison.Ordinal)
-            ? text.Replace("\u00AD", string.Empty, StringComparison.Ordinal)
-            : text;
+        return text;
     }
 
     private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
