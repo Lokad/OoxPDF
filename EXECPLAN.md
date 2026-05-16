@@ -214,12 +214,13 @@ High-priority actions:
   Shape-text highlights now consume positioned spans and line-box baselines while highlighted text emission
   remains on the legacy text path. `highlight-single` stays locked at MAE `0.032134`, and the boundary
   invariance probe passes its text-operation gate with MAE `0.921847`.
-- [ ] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
+- [x] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
   narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
   Split public cases now exist for repeated spaces, NBSP/narrow spaces, punctuation boundaries, and
-  tab-plus-space handling. Repeated spaces and tab-plus-space are locked on raster metrics plus line-start
-  parity; NBSP/narrow-space remains a probe because Office start positions still differ by up to `1.722pt`,
-  and punctuation remains a probe because Office emits separate punctuation-boundary text operations.
+  tab-plus-space handling. Repeated spaces, tab-plus-space, NBSP/narrow-space, and punctuation boundaries
+  are locked on raster metrics; all except the broad mixed probe also use text line-start gates. NBSP now
+  advances as a hidden regular space, narrow NBSP as a narrow hidden advance, and the broad whitespace probe
+  improved to MAE `0.583445`, changed16 `0.007705`.
 - [x] Add the first whitespace-control interaction probe:
   `pptx-ladder-04-typography-whitespace-controls-probe` covers repeated spaces, NBSP, narrow NBSP,
   punctuation-adjacent words, tab plus spaces, and accented Latin with spacing controls. `U+202F` narrow

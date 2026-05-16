@@ -837,6 +837,46 @@ internal static class PptxTests
         TestAssert.True(line.Spans.Zip(line.Spans.Skip(1), (left, right) => right.X - (left.X + left.Width)).Any(gap => gap > 0d), "Expected narrow no-break space to contribute hidden advance between words.");
     }
 
+    public static void PptxSyntheticTextBoxTreatsNoBreakSpaceAsHiddenRegularSpaceAdvance()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha&#xA0;beta</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single();
+
+        PptxTextSpanLayoutSnapshot alpha = line.Spans.Single(span => span.Text == "Alpha");
+        PptxTextSpanLayoutSnapshot beta = line.Spans.Single(span => span.Text == "beta");
+        double hiddenAdvance = beta.X - (alpha.X + alpha.Width);
+
+        TestAssert.True(line.Spans.All(span => !span.Text.Contains('\u00A0', StringComparison.Ordinal)), "Expected no-break space to stay out of emitted text spans.");
+        TestAssert.True(hiddenAdvance > 5d, "Expected no-break space to advance like a regular hidden space, not a narrow spacer.");
+    }
+
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

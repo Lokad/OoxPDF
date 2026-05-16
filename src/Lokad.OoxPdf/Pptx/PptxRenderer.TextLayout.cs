@@ -601,8 +601,9 @@ internal sealed partial class PptxRenderer
                     builder.Clear();
                 }
 
-                double advanceFactor = c == '\u202F' ? 0.27d : 0.22d;
-                yield return new TextFlowSegment(string.Empty, string.Empty, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
+                string advanceText = c == '\u00A0' ? " " : string.Empty;
+                double? advanceFactor = c == '\u202F' ? 0.21d : null;
+                yield return new TextFlowSegment(string.Empty, advanceText, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
                 nextPreventsCoalesce = true;
                 continue;
             }
