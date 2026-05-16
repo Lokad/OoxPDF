@@ -239,7 +239,9 @@ Current `pptx-renderer` parity tracking:
     `pptx-ladder-11-chart-column-negative-port`, `pptx-ladder-11-chart-column-stacked-port`,
     `pptx-ladder-11-chart-column-100-stacked-port`, `pptx-ladder-11-chart-bar-stacked-port`,
     `pptx-ladder-11-chart-line-markers-port`, `pptx-ladder-11-chart-line-stacked-port`,
-    `pptx-ladder-11-chart-pie-exploded-port`, and `pptx-ladder-11-chart-doughnut-port`.
+    `pptx-ladder-11-chart-pie-exploded-port`, `pptx-ladder-11-chart-doughnut-port`,
+    `pptx-ladder-11-chart-doughnut-exploded-port`, `pptx-ladder-11-chart-area-2series-port`,
+    `pptx-ladder-11-chart-area-stacked-port`, and `pptx-ladder-11-chart-line-trend-port`.
   - Gate type: public visual family `pptx-charts`.
   - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
     should be ported incrementally while chart rendering is separated from fallback behavior.
@@ -281,6 +283,11 @@ Composite oracle family map:
   `0.165800`; and doughnut MAE `12.345606`, changed16 `0.139337`. Doughnut charts now get a simple
   static fallback instead of an unsupported-chart diagnostic. Remaining gaps are marker shapes, stacked-line
   scaling semantics, exploded-slice offsets, doughnut hole size, labels, and legends.
+- Area/long-line chart ports are now gated: exploded doughnut MAE `10.484783`, changed16 `0.123386`;
+  2-series area MAE `14.977591`, changed16 `0.304524`; stacked area MAE `17.576610`, changed16
+  `0.341778`; and 24-month line trend MAE `3.299024`, changed16 `0.028131`. Area charts now render from
+  cached numeric values with translucent filled polygons, but still need Office series draw order, alpha,
+  smoothing, labels, axes, legends, and exact plot-area bounds.
 
 PPTX table style targets from the table composite port:
 

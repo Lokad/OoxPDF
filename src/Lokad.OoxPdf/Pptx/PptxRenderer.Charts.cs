@@ -72,6 +72,20 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        XElement? areaChart = chartXml.Descendants(ChartNamespace + "areaChart").FirstOrDefault();
+        if (areaChart is not null)
+        {
+            IReadOnlyList<IReadOnlyList<double>> areaSeries = ReadChartSeries(areaChart);
+            if (areaSeries.Count != 0)
+            {
+                string grouping = (string?)areaChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "standard";
+                bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
+                    string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+                RenderAreaChartFallback(graphics, document, bounds, areaSeries, stacked);
+                return true;
+            }
+        }
+
         IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(chartXml, "pieChart");
         if (pieSeries.Count != 0)
         {
@@ -407,6 +421,95 @@ internal sealed partial class PptxRenderer
                 previousY = pointY;
             }
         }
+    }
+
+    private static void RenderAreaChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool stacked)
+    {
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double plotX = x + width * 0.12d;
+        double plotY = y + height * 0.16d;
+        double plotWidth = width * 0.76d;
+        double plotHeight = height * 0.68d;
+        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        double maxValue = stacked ? GetMaxStackedLineValue(series, pointCount) : Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
+        double valueRange = Math.Max(1d, maxValue - minValue);
+        double zeroY = plotY + (-minValue) / valueRange * plotHeight;
+
+        graphics.SetStrokeRgb(90, 90, 90);
+        graphics.SetLineWidth(0.75d);
+        graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
+        graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+
+        double[] lower = new double[pointCount];
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            IReadOnlyList<double> values = series[seriesIndex];
+            if (values.Count == 0)
+            {
+                continue;
+            }
+
+            var upperPoints = new (double X, double Y)[pointCount];
+            var lowerPoints = new (double X, double Y)[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
+                double value = i < values.Count ? values[i] : 0d;
+                double lowerValue = stacked ? lower[i] : 0d;
+                double upperValue = stacked ? lower[i] + value : value;
+                upperPoints[i] = (pointX, plotY + (upperValue - minValue) / valueRange * plotHeight);
+                lowerPoints[i] = (pointX, plotY + (lowerValue - minValue) / valueRange * plotHeight);
+                if (stacked)
+                {
+                    lower[i] = upperValue;
+                }
+            }
+
+            var polygon = new (double X, double Y)[pointCount * 2];
+            for (int i = 0; i < pointCount; i++)
+            {
+                polygon[i] = upperPoints[i];
+                polygon[polygon.Length - i - 1] = lowerPoints[i];
+            }
+
+            RgbColor fill = ChartPalette(seriesIndex);
+            graphics.SaveState();
+            graphics.SetAlpha(0.62d, 1d);
+            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.FillPolygon(polygon);
+            graphics.RestoreState();
+            graphics.SetStrokeRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.SetLineWidth(1.2d);
+            for (int i = 1; i < upperPoints.Length; i++)
+            {
+                graphics.StrokeLine(upperPoints[i - 1].X, upperPoints[i - 1].Y, upperPoints[i].X, upperPoints[i].Y);
+            }
+        }
+    }
+
+    private static double GetMaxStackedLineValue(IReadOnlyList<IReadOnlyList<double>> series, int pointCount)
+    {
+        double maxValue = 1d;
+        for (int i = 0; i < pointCount; i++)
+        {
+            double sum = 0d;
+            foreach (IReadOnlyList<double> values in series)
+            {
+                if (i < values.Count)
+                {
+                    sum += Math.Max(0d, values[i]);
+                }
+            }
+
+            maxValue = Math.Max(maxValue, sum);
+        }
+
+        return maxValue;
     }
 
     private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
