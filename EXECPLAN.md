@@ -74,6 +74,15 @@ Initial survey findings:
   dedicated background, shape, text, table, image, group, and chart renderers.
 - Text rendering is driven by a merged inheritance cascade: master defaults, master text style, master
   placeholder, layout placeholder, shape list style, paragraph properties, and run properties.
+- Its text style cascade keeps master `defaultTextStyle`, master `txStyles`, master placeholder `lstStyle`,
+  layout placeholder `lstStyle`, shape `lstStyle`, paragraph `pPr`, and run `rPr` as explicit layers.
+- Its placeholder resolver separately inherits geometry and text `bodyPr` from layout/master placeholders,
+  with matching by `idx` before type and special handling for default/body placeholders.
+- Its color resolver applies master/layout color-map remapping before theme color lookup and supports more
+  color forms/modifiers than `ooxpdf` currently does, including `phClr`, preset/HSL/scrgb colors, gradients,
+  and broader modifier handling.
+- Its generated typography oracle ladder includes public cases for fonts, sizes, styles, alignments, colors,
+  mixed formatting, bullets, vertical text, anchoring, and line spacing.
 - Its visual loop is explicitly Office-oracle based, with generated public cases, PowerPoint PDF ground
   truth, SSIM/color-histogram pass gates, and MAE kept diagnostic.
 

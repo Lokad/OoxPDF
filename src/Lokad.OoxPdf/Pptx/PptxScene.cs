@@ -268,18 +268,22 @@ internal sealed class PptxSceneBuilder
             return null;
         }
 
-        XElement? inheritedTextBody = FindInheritedPlaceholderShape(element, placeholderSources)?.Element(PresentationNamespace + "txBody");
+        IReadOnlyList<XElement> inheritedTextBodies = FindInheritedPlaceholderShapes(element, placeholderSources)
+            .Select(shape => shape.Element(PresentationNamespace + "txBody"))
+            .Where(textBody => textBody is not null)
+            .Cast<XElement>()
+            .ToArray();
         return new PptxSceneTextBody(
             textBody.Element(DrawingNamespace + "bodyPr"),
             textBody.Element(DrawingNamespace + "lstStyle"),
-            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBody, placeholderSources, theme)).ToArray());
+            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, placeholderSources, theme)).ToArray());
     }
 
     private static PptxSceneTextParagraph ReadParagraph(
         XElement paragraph,
         XElement shape,
         XElement textBody,
-        XElement? inheritedTextBody,
+        IReadOnlyList<XElement> inheritedTextBodies,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme)
     {
@@ -291,7 +295,7 @@ internal sealed class PptxSceneBuilder
             level,
             shape,
             textBody,
-            inheritedTextBody,
+            inheritedTextBodies,
             placeholderSources);
         XElement? defaultRunProperties = properties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
@@ -341,14 +345,18 @@ internal sealed class PptxSceneBuilder
         int level,
         XElement shape,
         XElement textBody,
-        XElement? inheritedTextBody,
+        IReadOnlyList<XElement> inheritedTextBodies,
         IReadOnlyList<XDocument> placeholderSources)
     {
         string levelName = $"lvl{Math.Clamp(level + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
-        return MergeParagraphProperties(
-            textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName),
-            inheritedTextBody?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName),
-            FindInheritedTextStyle(shape, placeholderSources, levelName));
+        var sources = new List<XElement?>();
+        sources.Add(textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName));
+        sources.AddRange(inheritedTextBodies
+            .Reverse()
+            .Select(inheritedTextBody => inheritedTextBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)));
+        sources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
+        sources.Add(FindDefaultTextStyle(placeholderSources, levelName));
+        return MergeParagraphProperties(sources.ToArray());
     }
 
     private static XElement? MergeParagraphProperties(params XElement?[] sources)
@@ -423,7 +431,23 @@ internal sealed class PptxSceneBuilder
         return null;
     }
 
-    private static XElement? FindInheritedPlaceholderShape(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    private static XElement? FindDefaultTextStyle(IReadOnlyList<XDocument> placeholderSources, string levelName)
+    {
+        foreach (XDocument source in placeholderSources)
+        {
+            XElement? defaultTextStyle = source.Root?.Element(PresentationNamespace + "defaultTextStyle");
+            XElement? level = defaultTextStyle?.Element(DrawingNamespace + levelName) ??
+                defaultTextStyle?.Element(DrawingNamespace + "defPPr");
+            if (level is not null)
+            {
+                return level;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {
         XElement? placeholder = shape
             .Element(PresentationNamespace + "nvSpPr")
@@ -431,12 +455,13 @@ internal sealed class PptxSceneBuilder
             ?.Element(PresentationNamespace + "ph");
         if (placeholder is null)
         {
-            return null;
+            return [];
         }
 
+        var matches = new List<XElement>();
         string? type = (string?)placeholder.Attribute("type");
         string? index = (string?)placeholder.Attribute("idx");
-        foreach (XDocument source in placeholderSources.Reverse())
+        foreach (XDocument source in placeholderSources)
         {
             foreach (XElement candidate in source.Descendants(PresentationNamespace + "sp"))
             {
@@ -455,12 +480,13 @@ internal sealed class PptxSceneBuilder
                 bool typeMatches = index is null && type is not null && candidateType == type;
                 if (indexMatches || typeMatches)
                 {
-                    return candidate;
+                    matches.Add(candidate);
+                    break;
                 }
             }
         }
 
-        return null;
+        return matches;
     }
 
     private static PptxSceneParagraphStyle ResolveParagraphStyle(
