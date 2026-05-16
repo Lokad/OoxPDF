@@ -1102,6 +1102,13 @@ paths, and ExecPlan references together.
 - [x] Wire optional PDF text-operation gates into `CheckVisualCase.ps1` and lock the supported
   `pptx-ladder-02-plain-text` rung at `0.05pt` position tolerance. This creates a stricter bottom-up
   typography gate before broader raster metrics are meaningful.
+- [x] Refine explicit `<a:br/>` line metrics separately from wrapped line metrics. The public
+  `pptx-ladder-03-text-flow` rung improved from MAE `0.065508`, changed16 `0.001155`,
+  SSIM `0.969415` to MAE `0.030416`, changed16 `0.000838`, SSIM `0.994694`, and now has
+  a PDF text-operation gate at `0.12pt` position tolerance.
+- [x] Tighten the early manual-break/overflow visual gates after the same line-metric fix:
+  `pptx-ladder-03-text-anchor-overflow` is now at MAE `0.027775`, changed16 `0.000711`,
+  SSIM `0.993028`.
 - [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
   out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
   `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,

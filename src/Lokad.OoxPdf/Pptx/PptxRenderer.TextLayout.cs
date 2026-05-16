@@ -189,6 +189,7 @@ internal sealed partial class PptxRenderer
                     ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
                     : textX + Math.Max(0d, indent.MarginLeft);
                 cursorLineTop -= spacingBefore;
+                bool afterManualLineBreak = false;
                 double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties, lineSpacing);
                 double cursorX = paragraphTextX;
                 double maxFontSize = paragraphFontSize;
@@ -200,8 +201,9 @@ internal sealed partial class PptxRenderer
                     {
                         AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
                         paragraphRuns.Clear();
-                        cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
+                        cursorLineTop -= ReadManualBreakLineAdvance(lineSpacing, maxFontSize);
                         cursorY = double.NaN;
+                        afterManualLineBreak = true;
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
                         maxFontSize = paragraphFontSize;
@@ -220,7 +222,10 @@ internal sealed partial class PptxRenderer
                     double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
                     if (double.IsNaN(cursorY))
                     {
-                        cursorY = cursorLineTop - LineBaselineOffset(nominalFontSize, lineSpacing);
+                        cursorY = cursorLineTop - (afterManualLineBreak
+                            ? ManualBreakBaselineOffset(nominalFontSize, lineSpacing)
+                            : LineBaselineOffset(nominalFontSize, lineSpacing));
+                        afterManualLineBreak = false;
                     }
 
                     double fontSize = Math.Abs(baselineOffset) > 0.001d
@@ -818,7 +823,20 @@ internal sealed partial class PptxRenderer
 
     private static double ReadFirstLineBaselineOffset(XElement paragraph, XElement? defaultRunProperties, LineSpacing lineSpacing)
     {
-        return LineBaselineOffset(ReadFirstParagraphFontSize(paragraph, defaultRunProperties), lineSpacing);
+        double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
+        return ParagraphHasManualLineBreak(paragraph)
+            ? ManualBreakBaselineOffset(fontSize, lineSpacing)
+            : LineBaselineOffset(fontSize, lineSpacing);
+    }
+
+    private static bool ParagraphHasManualLineBreak(XElement paragraph)
+    {
+        return paragraph.Elements(DrawingNamespace + "br").Any();
+    }
+
+    private static double ReadManualBreakLineAdvance(LineSpacing lineSpacing, double fontSize)
+    {
+        return lineSpacing.IsExplicit ? ReadLineAdvance(lineSpacing, fontSize) : fontSize * 1.24d;
     }
 
     private static double ReadFirstParagraphFontSize(XElement paragraph, XElement? defaultRunProperties)
@@ -863,6 +881,11 @@ internal sealed partial class PptxRenderer
         return lineSpacing.IsExplicit
             ? lineSpacing.Resolve(fontSize) - fontSize * 0.234d
             : BaselineOffset(fontSize);
+    }
+
+    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing)
+    {
+        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing) : fontSize * 0.9344d;
     }
 
     private static double BaselineOffset(double fontSize)

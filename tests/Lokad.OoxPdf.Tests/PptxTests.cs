@@ -530,8 +530,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 425.268 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 447.581 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 425.261 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxRendersFieldText()
