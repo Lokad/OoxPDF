@@ -1405,7 +1405,13 @@ internal sealed partial class PptxRenderer
             return BaselineOffset(fontSize);
         }
 
-        return fontSize * Math.Clamp(ascenderRatio, 0.75d, 1.05d);
+        double metricRatio = Math.Clamp(ascenderRatio, 0.75d, 1.05d);
+        if (fontSize >= 24d)
+        {
+            metricRatio = Math.Max(0.974d, metricRatio);
+        }
+
+        return fontSize * metricRatio;
     }
 
     private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
@@ -1427,6 +1433,10 @@ internal sealed partial class PptxRenderer
         double ratio = ascenderRatio > 0d
             ? Math.Clamp(ascenderRatio, 0.75d, 1.05d)
             : fallbackRatio;
+        if (fontSize >= 24d)
+        {
+            ratio = Math.Max(fallbackRatio, ratio);
+        }
         string source = ascenderRatio > 0d ? "OS/2 usWinAscent" : "Fallback";
         return new PptxTextBaselineMetricLayout(
             source,

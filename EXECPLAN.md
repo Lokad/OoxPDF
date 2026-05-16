@@ -253,6 +253,11 @@ High-priority actions:
 - [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
   ascender, internal leading, or another generic font metric for top-to-baseline placement.
+- [x] Refine the generic baseline metric rule without font-family exceptions:
+  small/body text keeps the resolved font ascender ratio, while display-size text uses a `0.974` lower
+  bound before applying larger font ascenders. This restores the locked Arial all-caps baseline
+  (`pptx-ladder-04-all-caps` MAE `0.003613`) and brings `pptx-ladder-04-highlight-single` under its tight
+  gate (MAE `0.032134`) while preserving the Calibri line-spacing text-operation gate.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
