@@ -10,6 +10,38 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
+    {
+        IReadOnlyList<TextRun> textRuns = ReadSlideTextRunsForInspection(document, package, slideIndex);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
+        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
+        textRuns = CoalesceUnderlineRuns(textRuns);
+        var glyphRuns = new List<PptxTextGlyphRunSnapshot>();
+        foreach (TextRun run in textRuns)
+        {
+            if (!renderedFonts.Fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            {
+                continue;
+            }
+
+            TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+            if (glyphRun is null)
+            {
+                continue;
+            }
+
+            glyphRuns.Add(new PptxTextGlyphRunSnapshot(
+                run.Text,
+                glyphRun.X,
+                glyphRun.BaselineY,
+                glyphRun.Width,
+                glyphRun.Glyphs.Count,
+                glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d));
+        }
+
+        return glyphRuns;
+    }
+
     private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics)
     {
         if (textRuns.Count == 0)
@@ -296,7 +328,37 @@ internal sealed partial class PptxRenderer
             _ => run.X
         };
         string? positioningArray = embedded.EncodeGlyphPositioningArray(run.Text, run.CharacterSpacing, run.FontSize, forcePositioningArray: true, run.KerningEnabled);
-        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, BuildTextGlyphAtoms(embedded, run), x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+    }
+
+    private static IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms(PdfEmbeddedFont embedded, TextRun run)
+    {
+        var atoms = new List<TextGlyphAtom>();
+        ushort previousGlyph = 0;
+        foreach (Rune rune in run.Text.EnumerateRunes())
+        {
+            ushort glyph = embedded.Font.MapCodePoint(rune.Value);
+            if (glyph == 0)
+            {
+                continue;
+            }
+
+            double adjustmentBefore = 0d;
+            if (atoms.Count > 0)
+            {
+                adjustmentBefore += run.CharacterSpacing;
+                if (run.KerningEnabled && previousGlyph != 0)
+                {
+                    adjustmentBefore += embedded.Font.GetKerning(previousGlyph, glyph) * run.FontSize / embedded.Font.UnitsPerEm;
+                }
+            }
+
+            double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
+            atoms.Add(new TextGlyphAtom(rune.Value, glyph, advance, adjustmentBefore));
+            previousGlyph = glyph;
+        }
+
+        return atoms;
     }
 
     private static void DrawHighlightRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)

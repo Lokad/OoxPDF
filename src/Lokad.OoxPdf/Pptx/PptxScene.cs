@@ -66,7 +66,23 @@ internal sealed record PptxTextSpanLayoutSnapshot(
     double X,
     double Y,
     double Width,
-    double FontSize);
+    double FontSize,
+    IReadOnlyList<PptxTextAtomLayoutSnapshot> Atoms);
+
+internal sealed record PptxTextAtomLayoutSnapshot(
+    string Kind,
+    string Text,
+    double X,
+    double Width,
+    bool Draw);
+
+internal sealed record PptxTextGlyphRunSnapshot(
+    string Text,
+    double X,
+    double BaselineY,
+    double Width,
+    int GlyphCount,
+    double FirstAdjustmentAfterOrigin);
 
 internal sealed record PptxSceneSlide(
     int Index,

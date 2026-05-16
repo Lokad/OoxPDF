@@ -142,6 +142,9 @@ High-priority actions:
 - [x] Promote PPTX direct-renderer text layout to a first-class layout model:
   `PptxTextLayoutModel`, frame layouts, paragraph layouts, line layouts, and span layouts now exist before
   flattening to PDF text runs. Inspection tests lock model and layout ownership separately from emission.
+- [x] Add first-class text layout atoms under positioned spans:
+  each span now exposes word, space, tab, and hidden-advance atom kinds through the layout inspector, so
+  wrapping and justification can reason about structured text instead of opaque strings.
 - [ ] Continue the intermediate typography model from resolved style records to explicit text body,
   paragraph, line, positioned run, glyph span, and hidden-control advance records.
 - [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
@@ -150,6 +153,8 @@ High-priority actions:
 - [x] Introduce the first explicit glyph-run emission object:
   `TextGlyphRun` now owns glyph hex, `TJ` positioning array, baseline, line width, and synthetic style
   flags before PDF text operators are written. This is behavior-neutral but separates emission from layout.
+- [x] Extend `TextGlyphRun` with glyph atoms: decoded code point, glyph id, glyph advance, and adjustment
+  before each glyph are now observable before PDF text operators are written.
 - [ ] Move glyph-run construction upstream so layout spans own glyph ids and advances before coalescing,
   highlighting, underline/strike decoration, and PDF emission.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
@@ -171,6 +176,9 @@ High-priority actions:
   justified layout spans are protected from text-run coalescing so the expanded positions reach PDF emission.
 - [ ] Tighten justified paragraph parity against Office: current public probe still has large raster drift,
   so inspect Office text operations and refine baseline, line advance, and per-word spacing strategy.
+- [x] Inspect Office vs candidate text operations for `pptx-ladder-04-typography-justify-port`: word-level
+  positions now reach candidate PDF emission, but baselines remain about 0.7 pt low and raster drift remains
+  high, so the next pass should target baseline/line-advance parity before private-deck tuning.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
@@ -194,6 +202,10 @@ High-priority actions:
 - [ ] Tighten `pptx-ladder-04-typography-accent-spacing-probe`: Office splits accented Latin into several
   font/text operations for missing glyph fallback and combining marks, while the candidate currently emits
   fewer operations and has large x/y mismatches on Calibri and Arial accent rows.
+- [x] Re-run public spacing probes after the atom/glyph architecture slice:
+  `inventory-opti`, `accent-spacing`, and `boundary-invariance` still render without diagnostics; boundary
+  invariance remains structurally close while inventory/accent remain acceptance probes for later glyph
+  parity work.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,

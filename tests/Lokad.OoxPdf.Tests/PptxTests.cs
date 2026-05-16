@@ -1723,6 +1723,13 @@ internal static class PptxTests
 
         TestAssert.True(justifiedLine.Spans.Count > 1, "Expected justified lines to keep word spans separate before PDF emission.");
         TestAssert.True(justifiedLine.EndX - justifiedLine.StartX > 500d, "Expected justified line to stretch to the text frame width.");
+        TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Space"), "Expected layout atoms to preserve explicit word spaces for justification.");
+        TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Word"), "Expected layout atoms to preserve word fragments separately from spaces.");
+
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        PptxTextGlyphRunSnapshot paragraphGlyphRun = glyphRuns.First(run => run.Text.StartsWith("Paragraph", StringComparison.Ordinal));
+        TestAssert.True(paragraphGlyphRun.GlyphCount > 0, "Expected glyph-run inspection to expose glyph ids before PDF text emission.");
+        TestAssert.True(paragraphGlyphRun.Width > 0d, "Expected glyph-run inspection to expose measured glyph advance.");
     }
 
     public static void PptxSyntheticStyledTextProducesStyleOperators()

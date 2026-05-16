@@ -79,11 +79,18 @@ internal sealed partial class PptxRenderer
         PdfEmbeddedFont Font,
         string GlyphHex,
         string? PositioningArray,
+        IReadOnlyList<TextGlyphAtom> Glyphs,
         double X,
         double BaselineY,
         double Width,
         bool SyntheticBold,
         bool SyntheticItalic);
+
+    private sealed record TextGlyphAtom(
+        int CodePoint,
+        ushort GlyphId,
+        double Advance,
+        double AdjustmentBefore);
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
@@ -173,7 +180,23 @@ internal sealed partial class PptxRenderer
     private sealed record PptxTextSpanLayout(
         PptxTextRunModel? SourceRun,
         TextRun Run,
-        double EndX);
+        double EndX,
+        IReadOnlyList<PptxTextAtomLayout> Atoms);
+
+    private sealed record PptxTextAtomLayout(
+        PptxTextAtomKind Kind,
+        string Text,
+        double X,
+        double Width,
+        bool Draw);
+
+    private enum PptxTextAtomKind
+    {
+        Word,
+        Space,
+        Tab,
+        HiddenAdvance
+    }
 
     private enum PptxTextRunKind
     {
@@ -188,9 +211,9 @@ internal sealed partial class PptxRenderer
 
         public double EndX { get; private set; } = startX;
 
-        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX)
+        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX, IReadOnlyList<PptxTextAtomLayout>? atoms = null)
         {
-            Spans.Add(new PptxTextSpanLayout(sourceRun, run, endX));
+            Spans.Add(new PptxTextSpanLayout(sourceRun, run, endX, atoms ?? [new PptxTextAtomLayout(PptxTextAtomKind.Word, run.Text, run.X, run.Width, Draw: true)]));
             AdvanceTo(endX);
         }
 

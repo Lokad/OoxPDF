@@ -12,6 +12,13 @@ internal sealed partial class PptxRenderer
 {
     internal static IReadOnlyList<PptxTextRunSnapshot> InspectTextRuns(PptxDocument document, OoxPackage package, int slideIndex)
     {
+        return ReadSlideTextRunsForInspection(document, package, slideIndex)
+            .Select(ToSnapshot)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<TextRun> ReadSlideTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex)
+    {
         if (slideIndex < 0 || slideIndex >= document.Slides.Count)
         {
             return [];
@@ -31,7 +38,6 @@ internal sealed partial class PptxRenderer
         return inheritedXml
             .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
             .Concat(ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
-            .Select(ToSnapshot)
             .ToArray();
     }
 
@@ -121,7 +127,13 @@ internal sealed partial class PptxRenderer
             span.Run.X,
             span.Run.Y,
             span.Run.Width,
-            span.Run.FontSize);
+            span.Run.FontSize,
+            span.Atoms.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextAtomLayoutSnapshot ToSnapshot(PptxTextAtomLayout atom)
+    {
+        return new PptxTextAtomLayoutSnapshot(atom.Kind.ToString(), atom.Text, atom.X, atom.Width, atom.Draw);
     }
 
     private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
@@ -245,7 +257,8 @@ internal sealed partial class PptxRenderer
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     double bulletWidth = Math.Max(1d, frame.TextWidth - (bulletX - frame.TextX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
-                    line.Add(modelRun, new TextRun(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY), bulletEndX);
+                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY);
+                    line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word));
                     bulletPending = false;
                 }
 
@@ -255,7 +268,8 @@ internal sealed partial class PptxRenderer
                     if (tabPartIndex > 0)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                        line.Add(modelRun, new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
+                        TextRun tabRun = new(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
+                        line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
                         line.AdvanceTo(cursorX);
                     }
@@ -296,7 +310,8 @@ internal sealed partial class PptxRenderer
 
                             if (flowSegment.Draw && currentSegment.Length != 0)
                             {
-                                line.Add(modelRun, new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
+                                TextRun textRun = new(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
+                                line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator));
                             }
 
                             cursorX += segmentWidth;
@@ -532,6 +547,49 @@ internal sealed partial class PptxRenderer
             : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
     }
 
+    private static IReadOnlyList<PptxTextAtomLayout> BuildTextAtoms(TextRun run, TextAdvanceEstimator advanceEstimator, PptxTextAtomKind? forcedKind = null)
+    {
+        if (run.Text.Length == 0)
+        {
+            return [];
+        }
+
+        if (forcedKind is { } kind)
+        {
+            return [new PptxTextAtomLayout(kind, run.Text, run.X, run.Width, Draw: kind != PptxTextAtomKind.HiddenAdvance)];
+        }
+
+        var atoms = new List<PptxTextAtomLayout>();
+        double cursorX = run.X;
+        int index = 0;
+        while (index < run.Text.Length)
+        {
+            int start = index;
+            bool isSpace = run.Text[index] == ' ';
+            while (index < run.Text.Length && (run.Text[index] == ' ') == isSpace)
+            {
+                index++;
+            }
+
+            string text = run.Text[start..index];
+            double width = advanceEstimator.Measure(text, run.FontSize, run.FontFamily, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+            atoms.Add(new PptxTextAtomLayout(isSpace ? PptxTextAtomKind.Space : PptxTextAtomKind.Word, text, cursorX, width, Draw: true));
+            cursorX += width;
+        }
+
+        if (atoms.Count > 0)
+        {
+            PptxTextAtomLayout last = atoms[^1];
+            double delta = run.X + run.Width - (last.X + last.Width);
+            if (Math.Abs(delta) > 0.001d)
+            {
+                atoms[^1] = last with { Width = Math.Max(0d, last.Width + delta) };
+            }
+        }
+
+        return atoms;
+    }
+
     private static void AddAlignedParagraphLine(List<PptxTextLineLayout> lines, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth, bool justify)
     {
         if (line.Spans.Count == 0)
@@ -567,10 +625,21 @@ internal sealed partial class PptxRenderer
                     Width = span.Run.Width,
                     Alignment = TextAlignment.Left
                 },
-                EndX = span.EndX + offset
+                EndX = span.EndX + offset,
+                Atoms = OffsetAtoms(span.Atoms, offset)
             })
             .ToArray();
         lines.Add(new PptxTextLineLayout(textX + offset, line.EndX + offset, alignment, spans));
+    }
+
+    private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)
+    {
+        if (Math.Abs(offset) <= 0.001d)
+        {
+            return atoms;
+        }
+
+        return atoms.Select(atom => atom with { X = atom.X + offset }).ToArray();
     }
 
     private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, double textX, double textWidth)
@@ -603,12 +672,34 @@ internal sealed partial class PptxRenderer
                     Alignment = TextAlignment.Left,
                     PreventCoalesce = true
                 },
-                EndX = span.EndX + shift + spanExtra
+                EndX = span.EndX + shift + spanExtra,
+                Atoms = JustifyAtoms(span.Atoms, shift, extraPerSpace)
             });
             shift += spanExtra;
         }
 
         return new PptxTextLineLayout(textX, textX + textWidth, TextAlignment.Justify, spans);
+    }
+
+    private static IReadOnlyList<PptxTextAtomLayout> JustifyAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double initialShift, double extraPerSpace)
+    {
+        double shift = initialShift;
+        var justified = new PptxTextAtomLayout[atoms.Count];
+        for (int i = 0; i < atoms.Count; i++)
+        {
+            PptxTextAtomLayout atom = atoms[i];
+            double extra = atom.Kind == PptxTextAtomKind.Space
+                ? atom.Text.Count(static c => c == ' ') * extraPerSpace
+                : 0d;
+            justified[i] = atom with
+            {
+                X = atom.X + shift,
+                Width = atom.Width + extra
+            };
+            shift += extra;
+        }
+
+        return justified;
     }
 
     private static XElement? MergeParagraphProperties(params XElement?[] sources)
