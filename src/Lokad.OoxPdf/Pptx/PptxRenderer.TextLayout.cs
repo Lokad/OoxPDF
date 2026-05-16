@@ -55,6 +55,27 @@ internal sealed partial class PptxRenderer
             run.FontFamily);
     }
 
+    private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
+    {
+        return context.InheritedXml
+            .SelectMany(xml => ReadTextRuns(context, xml, includePlaceholders: false, placeholderSources: []))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<TextRun> ReadSlideTextRuns(PptxRenderContext context)
+    {
+        return ReadTextRuns(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
+    }
+
+    private static IReadOnlyList<TextRun> ReadTextRuns(
+        PptxRenderContext context,
+        XDocument slideXml,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return ReadTextRuns(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+    }
+
     private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, int slideNumber, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
     {
         var runs = new List<TextRun>();
@@ -313,6 +334,14 @@ internal sealed partial class PptxRenderer
         }
 
         return transform;
+    }
+
+    private static IReadOnlyList<TextRun> ReadTextRunsForShape(
+        XElement shape,
+        PptxRenderContext context,
+        bool includePlaceholders)
+    {
+        return ReadTextRunsForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
     }
 
     private static IReadOnlyList<TextRun> ReadTextRunsForShape(

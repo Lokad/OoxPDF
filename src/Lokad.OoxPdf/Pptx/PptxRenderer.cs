@@ -60,10 +60,8 @@ internal sealed partial class PptxRenderer
             {
                 var orderedImages = new List<PdfImageResource>();
                 int imageIndex = 1;
-                IReadOnlyList<TextRun> inheritedTextRuns = context.InheritedXml
-                    .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
-                    .ToArray();
-                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml);
+                IReadOnlyList<TextRun> inheritedTextRuns = ReadInheritedTextRuns(context);
+                IReadOnlyList<TextRun> slideTextRuns = ReadSlideTextRuns(context);
                 IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
                 RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
@@ -83,9 +81,8 @@ internal sealed partial class PptxRenderer
                 .SelectMany(xml => RenderTables(context, xml, graphics))
                 .ToArray();
             RenderCharts(context, graphics);
-            IReadOnlyList<TextRun> textRuns = context.InheritedXml
-                .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
-                .Concat(ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml))
+            IReadOnlyList<TextRun> textRuns = ReadInheritedTextRuns(context)
+                .Concat(ReadSlideTextRuns(context))
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
@@ -332,7 +329,7 @@ internal sealed partial class PptxRenderer
                 if (renderPlaceholders || !IsPlaceholder(child))
                 {
                     RenderShape(child, context.SlideRelationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, context.Theme, transform, images, ref imageIndex);
-                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, context.Document, context.Theme, context.SlideNumber, renderPlaceholders, context.InheritedXml), graphics, fonts);
+                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, context, renderPlaceholders), graphics, fonts);
                 }
 
                 continue;
