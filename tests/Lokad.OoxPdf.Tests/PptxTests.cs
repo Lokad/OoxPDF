@@ -2249,6 +2249,8 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
                     <p:sp><p:txBody><a:bodyPr><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody></p:sp>
+                    <p:sp><p:txBody><a:bodyPr numCol="2"/><a:lstStyle/><a:p/></p:txBody></p:sp>
+                    <p:sp><p:txBody><a:bodyPr vert="vert270"/><a:lstStyle/><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
                   <p:transition/>
                   <p:timing/>
@@ -2261,7 +2263,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(14, ids.Length);
+        TestAssert.Equal(16, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
@@ -2274,6 +2276,8 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_PICTURE_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_AUTOFIT", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_COLUMNS", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_ORIENTATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", string.Join("|", ids));
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");

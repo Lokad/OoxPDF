@@ -168,6 +168,16 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_AUTOFIT", "text autofit");
         }
 
+        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextColumns))
+        {
+            Emit("PPTX_UNSUPPORTED_TEXT_COLUMNS", "multi-column text");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextOrientation))
+        {
+            Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
+        }
+
         if (slideXml.Descendants(PresentationNamespace + "spPr").Any(shapeProperties =>
                 shapeProperties.Element(DrawingNamespace + "blipFill") is not null))
         {
@@ -201,6 +211,20 @@ internal sealed class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
+    }
+
+    private static bool HasUnsupportedTextColumns(XElement bodyProperties)
+    {
+        return bodyProperties.Attribute("numCol") is { } columns &&
+            int.TryParse(columns.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) &&
+            count > 1;
+    }
+
+    private static bool HasUnsupportedTextOrientation(XElement bodyProperties)
+    {
+        string? orientation = (string?)bodyProperties.Attribute("vert");
+        return !string.IsNullOrEmpty(orientation) &&
+            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)

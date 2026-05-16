@@ -679,6 +679,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 gate `pptx-ladder-04-rotated-text-box` is at MAE `0.032549`, changed16 `0.000842`.
 - [x] PPTX `normAutofit` and `spAutoFit` text frames emit `PPTX_UNSUPPORTED_TEXT_AUTOFIT` until shrink/grow
   fitting is implemented.
+- [x] PPTX multi-column and vertical text frames emit explicit unsupported diagnostics instead of silently
+  flattening to horizontal single-column text.
 - [x] Ladder 4 valid `buClr`/`buSzPts` before the marker remain unit-tested.
 - [x] Ladder 4 underline geometry uses scaled OpenType underline metrics.
 - [x] Ladder 4 gate `pptx-ladder-04-underline-single` is at MAE `0.052158`, changed16 `0.000768`.
