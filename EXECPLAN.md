@@ -184,6 +184,17 @@ Typography oracle family map:
 - Line spacing `0038`: ported as `pptx-ladder-04-line-spacing-port`. It is gated as a baseline but still
   has poor structural similarity, so paragraph spacing and baseline placement remain implementation targets.
 
+Shape adjustment oracle family map:
+
+- Round rect `shape-adj-0001..0002`: partially covered by generic rounded-rectangle rungs; still needs
+  explicit adjustment gates for small and large corner radius.
+- Chevron and arrow `0003..0006`: partially covered by block-arrow rungs; still needs explicit adjustment
+  gates for shallow/deep chevron and thin/wide-head right arrow.
+- Star, donut, cross, trapezoid, block arc, folded corner, bevel, triangle, pentagon, can, heart, moon, and
+  left brace `0007..0031`: partially covered by broad preset-shape rungs, but missing source-aligned
+  adjustment variants. Clean ports should preserve one feature per case or compact paired variants where
+  Office output remains easy to inspect.
+
 ## Test Suite Performance
 
 The public test loop is now slow enough to reduce iteration speed. The full custom console runner can take
