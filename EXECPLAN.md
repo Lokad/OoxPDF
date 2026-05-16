@@ -173,10 +173,9 @@ Typography oracle family map:
 - Alignment `0022..0025`: covered by `pptx-ladder-04-color-align-port` for left, center, right, and justify.
 - Colors `0026..0030`: covered by `pptx-ladder-04-color-align-port` for direct red, green, blue, orange,
   and purple RGB text.
-- Mixed formatting `0031`: partially covered by mixed-run rungs; still needs a clean Office-generated
-  mixed paragraph fixture matching the source case shape.
-- Bullet list `0032`: partially covered by bullet rungs; still missing the multi-level python-pptx-style
-  list as one visual gate.
+- Mixed formatting `0031`: covered by `pptx-ladder-04-mixed-bullet-port`, alongside older mixed-run rungs.
+- Bullet list `0032`: covered by `pptx-ladder-04-mixed-bullet-port` for a multi-level PowerPoint-authored
+  bullet list.
 - Vertical text `0033..0034`: `vert270` exists; East Asian vertical and wordArt vertical stacked remain
   missing and should become explicit gates before private vertical text is revisited.
 - Anchor `0035..0037`: covered by `pptx-ladder-04-anchor-port` for top, middle, and bottom shape text
