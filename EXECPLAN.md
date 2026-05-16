@@ -1092,6 +1092,10 @@ paths, and ExecPlan references together.
   do not change metrics.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
   and text matrices against Office for simple lines before accepting near-pixel raster gates.
+- [x] Extend `PdfInspect` with `text-operations.json` output so public typography cases can compare Office
+  and candidate font size, `Tc`, `Tm`, and raw `TJ/Tj` structure before raster tuning. The first
+  `pptx-ladder-03-text-flow` inspection shows sub-point baseline drift plus missing Office micro-`TJ`
+  adjustments rather than a gross layout miss.
 - [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
   out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
   `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,

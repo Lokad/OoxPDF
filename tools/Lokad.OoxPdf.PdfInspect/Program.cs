@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 if (args.Length is < 1 or > 2)
@@ -19,6 +21,7 @@ if (outputDirectory is not null)
 byte[] bytes = File.ReadAllBytes(inputPath);
 string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes);
+var textOperations = new List<PdfTextOperation>();
 
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Objects: {objects.Count}"));
@@ -39,12 +42,25 @@ foreach (PdfObject item in objects)
     File.WriteAllText(prefix + ".dict.txt", item.Dictionary, Encoding.UTF8);
     if (LooksTextual(item.Stream.Decoded))
     {
-        File.WriteAllText(prefix + ".stream.txt", Encoding.Latin1.GetString(item.Stream.Decoded), Encoding.UTF8);
+        string text = Encoding.Latin1.GetString(item.Stream.Decoded);
+        File.WriteAllText(prefix + ".stream.txt", text, Encoding.UTF8);
+        textOperations.AddRange(PdfTextOperation.Extract(item.Number, item.Generation, text));
     }
     else
     {
         File.WriteAllBytes(prefix + ".stream.bin", item.Stream.Decoded);
     }
+}
+
+if (outputDirectory is not null && textOperations.Count != 0)
+{
+    string textOperationsPath = Path.Combine(outputDirectory, "text-operations.json");
+    var jsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+    File.WriteAllText(textOperationsPath, JsonSerializer.Serialize(textOperations, jsonOptions), Encoding.UTF8);
 }
 
 return 0;
@@ -204,3 +220,95 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
 internal sealed record DecodeResult(byte[] Bytes, string Status);
 
 internal sealed record PdfStream(int RawLength, int DecodedLength, string Filters, string DecodeStatus, byte[] Decoded);
+
+internal sealed record PdfTextOperation(
+    int ObjectNumber,
+    int Generation,
+    string Font,
+    double FontSize,
+    double CharacterSpacing,
+    double A,
+    double B,
+    double C,
+    double D,
+    double X,
+    double Y,
+    string Operator,
+    string Payload)
+{
+    private static readonly Regex FontRegex = new(
+        @"/(?<font>[A-Za-z0-9._+-]+)\s+(?<size>-?(?:\d+\.?\d*|\.\d+))\s+Tf",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex CharacterSpacingRegex = new(
+        @"(?<spacing>-?(?:\d+\.?\d*|\.\d+))\s+Tc",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex MatrixRegex = new(
+        @"(?<a>-?(?:\d+\.?\d*|\.\d+))\s+(?<b>-?(?:\d+\.?\d*|\.\d+))\s+(?<c>-?(?:\d+\.?\d*|\.\d+))\s+(?<d>-?(?:\d+\.?\d*|\.\d+))\s+(?<x>-?(?:\d+\.?\d*|\.\d+))\s+(?<y>-?(?:\d+\.?\d*|\.\d+))\s+Tm",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ShowRegex = new(
+        @"(?<payload>\[(?:[^\[\]]|\([^)]*\)|<[^>]*>)*\]|\([^)]*\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public static IReadOnlyList<PdfTextOperation> Extract(int objectNumber, int generation, string stream)
+    {
+        var operations = new List<PdfTextOperation>();
+        string font = string.Empty;
+        double fontSize = 0d;
+        double characterSpacing = 0d;
+        double a = 1d;
+        double b = 0d;
+        double c = 0d;
+        double d = 1d;
+        double x = 0d;
+        double y = 0d;
+
+        foreach (string line in stream.Split('\n'))
+        {
+            foreach (Match match in FontRegex.Matches(line))
+            {
+                font = match.Groups["font"].Value;
+                fontSize = ReadDouble(match.Groups["size"].Value);
+            }
+
+            foreach (Match match in CharacterSpacingRegex.Matches(line))
+            {
+                characterSpacing = ReadDouble(match.Groups["spacing"].Value);
+            }
+
+            foreach (Match match in MatrixRegex.Matches(line))
+            {
+                a = ReadDouble(match.Groups["a"].Value);
+                b = ReadDouble(match.Groups["b"].Value);
+                c = ReadDouble(match.Groups["c"].Value);
+                d = ReadDouble(match.Groups["d"].Value);
+                x = ReadDouble(match.Groups["x"].Value);
+                y = ReadDouble(match.Groups["y"].Value);
+            }
+
+            foreach (Match match in ShowRegex.Matches(line))
+            {
+                operations.Add(new PdfTextOperation(
+                    objectNumber,
+                    generation,
+                    font,
+                    fontSize,
+                    characterSpacing,
+                    a,
+                    b,
+                    c,
+                    d,
+                    x,
+                    y,
+                    match.Groups["operator"].Value,
+                    match.Groups["payload"].Value));
+            }
+        }
+
+        return operations;
+    }
+
+    private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
+}
