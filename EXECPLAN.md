@@ -147,6 +147,11 @@ High-priority actions:
 - [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
   font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
   `TJ` array construction.
+- [x] Introduce the first explicit glyph-run emission object:
+  `TextGlyphRun` now owns glyph hex, `TJ` positioning array, baseline, line width, and synthetic style
+  flags before PDF text operators are written. This is behavior-neutral but separates emission from layout.
+- [ ] Move glyph-run construction upstream so layout spans own glyph ids and advances before coalescing,
+  highlighting, underline/strike decoration, and PDF emission.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.

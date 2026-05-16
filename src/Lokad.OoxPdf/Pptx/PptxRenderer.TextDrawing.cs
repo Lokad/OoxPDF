@@ -239,19 +239,9 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-        string line = run.Text;
-        string glyphHex = embedded.EncodeGlyphHex(line);
-        double baselineY = run.Y + run.BaselineOffset;
-        if (glyphHex.Length != 0 && BaselineIntersectsClip(run, baselineY))
+        TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
+        if (glyphRun is not null)
         {
-            double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
-            double x = run.Alignment switch
-            {
-                TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
-                TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
-                _ => run.X
-            };
-
             bool transparentText = run.Alpha < 0.999d;
             if (transparentText)
             {
@@ -259,10 +249,10 @@ internal sealed partial class PptxRenderer
                 graphics.SetAlpha(run.Alpha, 1d);
             }
 
-            DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing, run.KerningEnabled);
+            DrawGlyphText(graphics, glyphRun);
             if (syntheticBold)
             {
-                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing, run.KerningEnabled);
+                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + 0.35d });
             }
 
             if (run.Underline)
@@ -270,14 +260,14 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
                 double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
-                double underlineY = baselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
-                graphics.FillRectangle(x, underlineY, lineWidth, underlineThickness);
+                double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+                graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
             }
 
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                graphics.FillRectangle(x, baselineY + run.FontSize * 0.211d, lineWidth, Math.Max(0.5d, run.FontSize * 0.05d));
+                graphics.FillRectangle(glyphRun.X, glyphRun.BaselineY + run.FontSize * 0.211d, glyphRun.Width, Math.Max(0.5d, run.FontSize * 0.05d));
             }
 
             if (transparentText)
@@ -287,6 +277,26 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
+    {
+        string glyphHex = embedded.EncodeGlyphHex(run.Text);
+        double baselineY = run.Y + run.BaselineOffset;
+        if (glyphHex.Length == 0 || !BaselineIntersectsClip(run, baselineY))
+        {
+            return null;
+        }
+
+        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
+        double x = run.Alignment switch
+        {
+            TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
+            TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
+            _ => run.X
+        };
+        string? positioningArray = embedded.EncodeGlyphPositioningArray(run.Text, run.CharacterSpacing, run.FontSize, forcePositioningArray: true, run.KerningEnabled);
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
     }
 
     private static void DrawHighlightRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
@@ -333,16 +343,16 @@ internal sealed partial class PptxRenderer
         graphics.Transform(cos, sin, -sin, cos, e, f);
     }
 
-    private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing, bool kerningEnabled)
+    private static void DrawGlyphText(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
     {
-        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize, forcePositioningArray: true, kerningEnabled);
-        if (positioningArray is null)
+        TextRun run = glyphRun.Source;
+        if (glyphRun.PositioningArray is null)
         {
-            graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic);
+            graphics.DrawGlyphText(glyphRun.ResourceName, run.FontSize, glyphRun.X, glyphRun.BaselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphRun.GlyphHex, glyphRun.SyntheticItalic);
         }
         else
         {
-            graphics.DrawGlyphPositionedText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic);
+            graphics.DrawGlyphPositionedText(glyphRun.ResourceName, run.FontSize, glyphRun.X, glyphRun.BaselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphRun.PositioningArray, glyphRun.SyntheticItalic);
         }
     }
 

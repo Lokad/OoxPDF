@@ -73,6 +73,18 @@ internal sealed partial class PptxRenderer
         double RotationCenterY,
         bool PreventCoalesce = false);
 
+    private sealed record TextGlyphRun(
+        TextRun Source,
+        string ResourceName,
+        PdfEmbeddedFont Font,
+        string GlyphHex,
+        string? PositioningArray,
+        double X,
+        double BaselineY,
+        double Width,
+        bool SyntheticBold,
+        bool SyntheticItalic);
+
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
     private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce, double? AdvanceFontSizeFactor = null);
