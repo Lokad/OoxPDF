@@ -125,8 +125,9 @@ High-priority actions:
   packages.
 - [x] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
   reference inputs as part of caching.
-- [ ] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
+- [x] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
   tests/Lokad.OoxPdf.Tests` stays fast and visual gates can be run explicitly.
+  The custom runner now supports `--skip-slow`, `--only-slow`, and `--list`.
 - [ ] Review `pptx-renderer`'s generated oracle and report reuse strategy for ideas that fit the .NET
   dependency-free constraint.
 

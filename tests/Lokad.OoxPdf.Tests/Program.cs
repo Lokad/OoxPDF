@@ -1,6 +1,6 @@
 using Lokad.OoxPdf.Tests;
 
-return TestRunner.Run(
+return TestRunner.Run(args,
     PublicApiTests.PublicApiRejectsMissingInput,
     PublicApiTests.AutoDetectsPptxExtension,
     PublicApiTests.AutoDetectsDocxExtension,
