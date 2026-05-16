@@ -179,8 +179,8 @@ Typography oracle family map:
   list as one visual gate.
 - Vertical text `0033..0034`: `vert270` exists; East Asian vertical and wordArt vertical stacked remain
   missing and should become explicit gates before private vertical text is revisited.
-- Anchor `0035..0037`: partially covered by centered anchor; top/middle/bottom shape text anchors should
-  be clean-ported as a grouped case.
+- Anchor `0035..0037`: covered by `pptx-ladder-04-anchor-port` for top, middle, and bottom shape text
+  anchors.
 - Line spacing `0038`: partially covered by points/percent/paragraph spacing; needs the generated
   multi-paragraph spacing fixture.
 
