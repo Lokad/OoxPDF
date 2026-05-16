@@ -114,6 +114,8 @@ High-priority actions:
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
   slide XML, inherited XML, slide identity, and diagnostics; extend it toward relationships/media/cache
   ownership in later rendering splits.
+- [x] Route background and shape traversal through the PPTX render context and move that dispatch into a
+  dedicated renderer partial, keeping the shape drawing primitive behavior-neutral for later typed-node work.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in

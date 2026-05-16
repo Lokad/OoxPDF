@@ -51,11 +51,11 @@ internal sealed partial class PptxRenderer
 
             foreach (XDocument inherited in context.InheritedXml)
             {
-                RenderBackground(inherited, context.Document, graphics, context.Theme);
-                RenderShapes(inherited, context.Document, graphics, context.Theme, renderPlaceholders: false);
+                RenderBackground(context, inherited, graphics);
+                RenderShapes(context, inherited, graphics, renderPlaceholders: false);
             }
 
-            RenderBackground(context.SlideXml, context.Document, graphics, context.Theme);
+            RenderBackground(context, context.SlideXml, graphics);
             if (CanRenderSlideInOrder(context.SlideXml))
             {
                 var orderedImages = new List<PdfImageResource>();
@@ -77,7 +77,7 @@ internal sealed partial class PptxRenderer
             }
 
             IReadOnlyList<PdfImageResource> images = RenderPictures(context, graphics);
-            RenderShapes(context.SlideXml, context.Document, graphics, context.Theme, renderPlaceholders: true);
+            RenderShapes(context, context.SlideXml, graphics, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = context.InheritedXml
                 .Append(context.SlideXml)
                 .SelectMany(xml => RenderTables(xml, context.Document, graphics, context.Theme))
@@ -308,27 +308,6 @@ internal sealed partial class PptxRenderer
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static void RenderBackground(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme)
-    {
-        XElement? background = slideXml.Root?
-            .Element(PresentationNamespace + "cSld")?
-            .Element(PresentationNamespace + "bg")?
-            .Element(PresentationNamespace + "bgPr");
-        if (TryReadSolidColor(background, theme, out RgbColor color))
-        {
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            graphics.FillRectangle(0, 0, document.SlideWidthPoints, document.SlideHeightPoints);
-        }
-    }
-
-    private static void RenderShapes(XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, bool renderPlaceholders)
-    {
-        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
-        {
-            RenderShapeContainer(shapeTree, document, graphics, theme, GroupTransform.Identity, renderPlaceholders);
-        }
-    }
-
     private static bool CanRenderSlideInOrder(XDocument slideXml)
     {
         return !slideXml
@@ -383,40 +362,6 @@ internal sealed partial class PptxRenderer
                 RenderOrderedShapeTextContainer(child, context, graphics, fonts, images, ref imageIndex, transform.Combine(ReadGroupTransform(child)), renderPlaceholders);
             }
         }
-    }
-
-    private static void RenderShapeContainer(XElement container, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform transform, bool renderPlaceholders)
-    {
-        foreach (XElement child in container.Elements())
-        {
-            if (child.Name == PresentationNamespace + "sp")
-            {
-                if (renderPlaceholders || !IsPlaceholder(child))
-                {
-                    RenderShape(child, document, graphics, theme, transform);
-                }
-
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "cxnSp")
-            {
-                RenderShape(child, document, graphics, theme, transform);
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "grpSp")
-            {
-                GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
-                RenderShapeContainer(child, document, graphics, theme, childTransform, renderPlaceholders);
-            }
-        }
-    }
-
-    private static void RenderShape(XElement shape, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform groupTransform)
-    {
-        int imageIndex = 1;
-        RenderShape(shape, relationships: null, package: null, document, graphics, diagnosticSink: null, slideIndex: 0, theme, groupTransform, images: null, ref imageIndex);
     }
 
     private static void RenderShape(
