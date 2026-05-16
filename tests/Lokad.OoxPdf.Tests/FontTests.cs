@@ -70,6 +70,21 @@ internal static class FontTests
         TestAssert.True(font.GetKerning(left, right) != 0, "Expected Arial GPOS pair adjustment for 'To'.");
     }
 
+    public static void OpenTypeParserMapsWindowsSymbolCmap()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string symbol = Path.Combine(fontsDirectory, "symbol.ttf");
+        if (!File.Exists(symbol))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(symbol);
+        ushort glyph = font.MapCodePoint(0xF0B7);
+
+        TestAssert.True(glyph > 0, "Expected a glyph mapping for the common Symbol bullet code point.");
+    }
+
     public static void WindowsFontResolverMapsCambriaMathToCambria()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

@@ -209,6 +209,7 @@ internal sealed class OpenTypeFont
 
         ushort count = U16(bytes, cmapTable.Offset + 2);
         int? bestOffset = null;
+        int? symbolOffset = null;
         for (int i = 0; i < count; i++)
         {
             int record = cmapTable.Offset + 4 + i * 8;
@@ -225,17 +226,22 @@ internal sealed class OpenTypeFont
                     break;
                 }
             }
+            else if (platform == 3 && encoding == 0 && format is 4 or 12)
+            {
+                symbolOffset ??= absolute;
+            }
         }
 
-        if (bestOffset is null)
+        int? selectedOffset = bestOffset ?? symbolOffset;
+        if (selectedOffset is null)
         {
             return null;
         }
 
-        return U16(bytes, bestOffset.Value) switch
+        return U16(bytes, selectedOffset.Value) switch
         {
-            4 => CmapFormat4.Read(bytes, bestOffset.Value),
-            12 => CmapFormat12.Read(bytes, bestOffset.Value),
+            4 => CmapFormat4.Read(bytes, selectedOffset.Value),
+            12 => CmapFormat12.Read(bytes, selectedOffset.Value),
             _ => null
         };
     }

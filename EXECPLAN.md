@@ -658,6 +658,9 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.
+- [x] Windows Symbol cmap subtables are parsed so common private-use PPTX bullet glyphs map through
+  `buFont typeface="Symbol"`.
+- [x] Ladder 4 gate `pptx-ladder-04-symbol-bullet` is at MAE `0.001766`, changed16 `0.000043`.
 - [x] Ladder 4 valid `buClr`/`buSzPts` before the marker remain unit-tested.
 - [x] Ladder 4 underline geometry uses scaled OpenType underline metrics.
 - [x] Ladder 4 gate `pptx-ladder-04-underline-single` is at MAE `0.052158`, changed16 `0.000768`.
@@ -670,7 +673,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   visual tightening.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
-- [ ] Ladder 4 remaining combined-stack gaps are glyph/font details, especially bullet glyph font selection.
+- [ ] Ladder 4 remaining combined-stack gaps are finer glyph/font details after basic bullet font selection.
 - [x] Ladder 5: basic shapes cover rectangle, rounded rectangle, ellipse, line, fills, strokes, stroke widths,
   rotation, flips, and clipping-free z-order.
 - [x] Ladder 5 gate `pptx-ladder-05-basic-shapes` reuses the public `pptx-shapes` fixture and is at MAE
@@ -1013,7 +1016,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-93 passed, 0 failed
+94 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
