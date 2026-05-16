@@ -671,6 +671,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   resolution with exact raster parity.
 - [x] Ladder 4 gate `pptx-ladder-04-soft-hyphen` locks non-breaking soft hyphen suppression with exact raster
   parity.
+- [x] Ladder 4 gate `pptx-ladder-04-nonbreaking-space` locks NBSP text spacing at MAE `0.003519`, changed16
+  `0.000095`.
 - [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.
