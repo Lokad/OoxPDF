@@ -28,6 +28,7 @@ internal sealed partial class PptxRenderer
     public IReadOnlyList<PdfPage> RenderPages(PptxDocument document, OoxPackage package, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         var pages = new List<PdfPage>(document.Slides.Count);
+        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
             PptxSlide slide = document.Slides[slideIndex];
@@ -43,7 +44,6 @@ internal sealed partial class PptxRenderer
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
             var graphics = new PdfGraphicsBuilder();
-            PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
             IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);

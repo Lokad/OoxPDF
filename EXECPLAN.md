@@ -124,6 +124,8 @@ High-priority actions:
   no longer spreads document/theme/slide-number arguments through top-level PPTX dispatch.
 - [x] Move ordered slide z-order dispatch into a dedicated partial, keeping top-level `RenderPages` focused on
   orchestration and leaving node dispatch in one context-driven place.
+- [x] Cache the presentation theme once per PPTX render pass instead of reloading it per slide, matching the
+  context-lifetime model and reducing repeated parsing for large decks.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
