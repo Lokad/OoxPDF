@@ -149,6 +149,9 @@ High-priority actions:
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
   kerning is disabled when the run font size is below the OOXML threshold, and a unit test locks the
   no-adjustment `TJ` array for Times New Roman `To`.
+- [x] Port `pptx-renderer`'s basic `normAutofit fontScale` handling into PPTX text-frame layout:
+  run and paragraph font sizes are scaled before layout/PDF emission, the unsupported autofit diagnostic
+  was removed for this supported subset, and a unit test locks `30pt * 80% = 24pt`.
 - [x] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
   accented-letter pairs, Cambria/Calibri/Arial differences, highlighted runs, and mixed run boundaries.
   The first probes are `pptx-ladder-04-typography-capital-spacing-probe`,

@@ -160,12 +160,6 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(bodyProperties =>
-                bodyProperties.Element(DrawingNamespace + "normAutofit") is not null))
-        {
-            Emit("PPTX_UNSUPPORTED_TEXT_AUTOFIT", "text autofit");
-        }
-
         if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextColumns))
         {
             Emit("PPTX_UNSUPPORTED_TEXT_COLUMNS", "multi-column text");

@@ -1521,6 +1521,43 @@ internal static class PptxTests
         TestAssert.Contains("1 0 0 1 7.2 461.268 Tm", pdf);
     }
 
+    public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="3000"><a:latin typeface="Arial"/></a:rPr><a:t>Scaled</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/F1 24 Tf", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_AUTOFIT"), "normAutofit fontScale should be handled.");
+    }
+
     public static void PptxSyntheticTextBoxClipsOverflow()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -2711,7 +2748,6 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:prstGeom prst="heart"/><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
                     <p:pic><p:blipFill><a:blip><a:grayscl/></a:blip><a:tile/></p:blipFill></p:pic>
-                    <p:sp><p:txBody><a:bodyPr><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody></p:sp>
                     <p:sp><p:txBody><a:bodyPr numCol="2"/><a:lstStyle/><a:p/></p:txBody></p:sp>
                     <p:sp><p:txBody><a:bodyPr vert="vert270"/><a:lstStyle/><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
@@ -2726,7 +2762,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(18, ids.Length);
+        TestAssert.Equal(17, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
@@ -2740,7 +2776,6 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_PATTERN_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_PICTURE_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
-        TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_AUTOFIT", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_COLUMNS", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_ORIENTATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));

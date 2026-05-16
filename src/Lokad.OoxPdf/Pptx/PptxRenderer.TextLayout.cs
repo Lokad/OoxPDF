@@ -107,6 +107,7 @@ internal sealed partial class PptxRenderer
             double width = OoxUnits.EmuToPoints(bounds.Value.Width);
             double height = OoxUnits.EmuToPoints(bounds.Value.Height);
             TextInsets insets = ReadTextInsets(textBody);
+            double fontScale = ReadNormAutofitFontScale(textBody);
             double textX = x + insets.Left;
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
@@ -159,13 +160,13 @@ internal sealed partial class PptxRenderer
                 paragraphPropertySources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
                 paragraphPropertySources.Add(FindDefaultTextStyle(placeholderSources, levelName));
                 defaultParagraphProperties = MergeParagraphProperties(paragraphPropertySources.ToArray());
-                ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties);
+                ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale);
                 if (!ParagraphHasVisibleContent(paragraph))
                 {
                     if (ParagraphHasLayoutContent(paragraph))
                     {
                         XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                        double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties);
+                        double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties) * fontScale;
                         double emptySpacingBefore = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", emptyFontSize);
                         double emptySpacingAfter = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", emptyFontSize);
                         cursorLineTop -= emptySpacingBefore + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
@@ -207,7 +208,7 @@ internal sealed partial class PptxRenderer
 
                     XElement run = child;
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                    ResolvedRunTextStyle runStyle = ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme);
+                    ResolvedRunTextStyle runStyle = ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale);
                     maxFontSize = Math.Max(maxFontSize, runStyle.NominalFontSize);
                     if (double.IsNaN(cursorY))
                     {
@@ -619,11 +620,12 @@ internal sealed partial class PptxRenderer
     private static ResolvedParagraphTextStyle ResolveParagraphTextStyle(
         XElement paragraph,
         XElement? paragraphProperties,
-        XElement? defaultParagraphProperties)
+        XElement? defaultParagraphProperties,
+        double fontScale)
     {
         XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
-        double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
+        double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties) * fontScale;
         return new ResolvedParagraphTextStyle(
             ReadAlignment(paragraph, defaultParagraphProperties),
             paragraphProperties,
@@ -640,9 +642,10 @@ internal sealed partial class PptxRenderer
         XElement? runProperties,
         XElement? defaultRunProperties,
         RgbColor? shapeFontColor,
-        PptxTheme theme)
+        PptxTheme theme,
+        double fontScale)
     {
-        double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
+        double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
         double fontSize = Math.Abs(baselineOffset) > 0.001d
             ? nominalFontSize * 2d / 3d
@@ -803,6 +806,19 @@ internal sealed partial class PptxRenderer
             ReadInset(bodyProperties, "rIns", 91440),
             ReadInset(bodyProperties, "tIns", 45720),
             ReadInset(bodyProperties, "bIns", 45720));
+    }
+
+    private static double ReadNormAutofitFontScale(XElement textBody)
+    {
+        XElement? normAutofit = textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Element(DrawingNamespace + "normAutofit");
+        if (normAutofit?.Attribute("fontScale") is not { } fontScale)
+        {
+            return 1d;
+        }
+
+        return Math.Clamp(int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d, 0.01d, 10d);
     }
 
     private static bool ClipsVerticalOverflow(XElement textBody)
