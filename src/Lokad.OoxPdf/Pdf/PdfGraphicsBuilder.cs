@@ -117,6 +117,24 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
     }
 
+    public void ClipEllipse(double x, double y, double width, double height)
+    {
+        AppendEllipsePath(x, y, width, height);
+        builder.AppendLine("W n");
+    }
+
+    public void ClipRoundedRectangle(double x, double y, double width, double height, double radius)
+    {
+        AppendRoundedRectanglePath(x, y, width, height, radius);
+        builder.AppendLine("W n");
+    }
+
+    public void ClipPolygon((double X, double Y)[] points)
+    {
+        AppendPolygonPath(points);
+        builder.AppendLine("W n");
+    }
+
     public void StrokeLine(double x1, double y1, double x2, double y2)
     {
         builder.Append(N(x1)).Append(' ').Append(N(y1)).Append(" m ");

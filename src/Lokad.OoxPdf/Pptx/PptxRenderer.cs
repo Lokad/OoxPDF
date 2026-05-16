@@ -569,13 +569,18 @@ internal sealed class PptxRenderer
             double imageY = y + fillRect.Bottom * height;
             double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
             double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
-            if (crop.IsEmpty)
+            bool clippedToShape = preset != "rect";
+            if (clippedToShape)
             {
-                graphics.DrawImage(pictureFillName, imageX, imageY, imageWidth, imageHeight);
+                graphics.SaveState();
+                ClipToPresetShape(graphics, preset, x, y, width, height);
             }
-            else
+
+            DrawImageFill(graphics, pictureFillName, imageX, imageY, imageWidth, imageHeight, crop);
+
+            if (clippedToShape)
             {
-                graphics.DrawImageCropped(pictureFillName, imageX, imageY, imageWidth, imageHeight, crop.Left, crop.Top, crop.Right, crop.Bottom);
+                graphics.RestoreState();
             }
 
             images?.Add(new PdfImageResource(pictureFillName, pictureFillImage));
@@ -691,7 +696,7 @@ internal sealed class PptxRenderer
             return false;
         }
 
-        return ReadPreset(shapeProperties) != "rect";
+        return !CanRenderPictureFillPreset(ReadPreset(shapeProperties));
     }
 
     private static string ReadPreset(XElement shapeProperties)
@@ -714,7 +719,7 @@ internal sealed class PptxRenderer
     {
         name = null;
         image = null;
-        if (relationships is null || package is null || images is null || ReadPreset(shapeProperties) != "rect")
+        if (relationships is null || package is null || images is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
         {
             return false;
         }
@@ -752,6 +757,44 @@ internal sealed class PptxRenderer
 
         name = "Im" + imageIndex++;
         return true;
+    }
+
+    private static bool CanRenderPictureFillPreset(string preset)
+    {
+        return preset is "rect" or "ellipse" or "roundRect" ||
+            TryCreatePresetPolygonPoints(preset, 0d, 0d, 1d, 1d, out _);
+    }
+
+    private static void ClipToPresetShape(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height)
+    {
+        if (preset == "ellipse")
+        {
+            graphics.ClipEllipse(x, y, width, height);
+        }
+        else if (preset == "roundRect")
+        {
+            graphics.ClipRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+        }
+        else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
+        {
+            graphics.ClipPolygon(polygonPoints);
+        }
+        else
+        {
+            graphics.ClipRectangle(x, y, width, height);
+        }
+    }
+
+    private static void DrawImageFill(PdfGraphicsBuilder graphics, string imageName, double x, double y, double width, double height, CropRect crop)
+    {
+        if (crop.IsEmpty)
+        {
+            graphics.DrawImage(imageName, x, y, width, height);
+        }
+        else
+        {
+            graphics.DrawImageCropped(imageName, x, y, width, height, crop.Left, crop.Top, crop.Right, crop.Bottom);
+        }
     }
 
     private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, double directionX, double directionY, double lineWidth)
