@@ -1099,6 +1099,9 @@ paths, and ExecPlan references together.
 - [x] Add `tools/ComparePdfTextOperations.ps1` for compact Office-vs-candidate `text-operations.json`
   deltas. On `pptx-ladder-03-text-flow`, it reports equal text operation counts, first-line Y delta
   `-0.712pt`, missing Office `Tc=-0.006`, and small X/Y deltas on centered/wrapped lines.
+- [x] Wire optional PDF text-operation gates into `CheckVisualCase.ps1` and lock the supported
+  `pptx-ladder-02-plain-text` rung at `0.05pt` position tolerance. This creates a stricter bottom-up
+  typography gate before broader raster metrics are meaningful.
 - [x] Fix the Ladder 3 clipped-overflow text path so visible clipped lines are still rendered while fully
   out-of-clip following lines are suppressed by a baseline-aware precheck. Latest gated run:
   `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260516-160344`, MAE `0.080874`,

@@ -101,6 +101,50 @@ if ($manifest.expected.minForegroundColorHistogramCorrelation -ne $null) {
     }
 }
 
+if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
+
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        -InputPdf (Join-Path $referenceDir "reference.pdf") `
+        -OutputDirectory $referenceTextInspect
+    & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+        -InputPdf $candidatePdf `
+        -OutputDirectory $candidateTextInspect
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF text operation gate failed because one inspected PDF had no text operations."
+    }
+
+    $positionTolerance = [double]$manifest.expected.maxTextOperationPositionDelta
+    $fontSizeTolerance = if ($manifest.expected.maxTextOperationFontSizeDelta -ne $null) {
+        [double]$manifest.expected.maxTextOperationFontSizeDelta
+    }
+    else {
+        0.01
+    }
+    $characterSpacingTolerance = if ($manifest.expected.maxTextOperationCharacterSpacingDelta -ne $null) {
+        [double]$manifest.expected.maxTextOperationCharacterSpacingDelta
+    }
+    else {
+        0.001
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") `
+        -Reference $referenceTextOperations `
+        -Candidate $candidateTextOperations `
+        -PositionTolerance $positionTolerance `
+        -FontSizeTolerance $fontSizeTolerance `
+        -CharacterSpacingTolerance $characterSpacingTolerance
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF text operation gate failed."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()
