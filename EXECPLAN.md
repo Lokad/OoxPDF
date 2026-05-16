@@ -185,6 +185,16 @@ Generated Office-oracle family inventory from `pptx-renderer`:
 - Charts `oracle-pypptx-chart-0001..0021`: later visual-port target, after chart fallback architecture is
   separated from the main PPTX renderer.
 
+Composite oracle family map:
+
+- Non-chart composite cases `0001..0004`, `0007`, and `0009` are ported in
+  `pptx-ladder-08-composite-port-a`.
+- The first two slides in `pptx-ladder-08-composite-port-a` show a large Office gap for default shape
+  styling/theme formatting. Explicit fill/text overlays are much closer. Resolve theme style-matrix defaults
+  bottom-up before using this family as a tight visual gate.
+- Table composite `0005` still needs a public port after table style handling is revisited.
+- Chart composites `0006`, `0008`, and `0010` should wait for chart fallback renderer separation.
+
 Typography oracle family map:
 
 - Fonts `oracle-pypptx-text-0001..0008`: partially covered by
