@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
                         images,
                         context.ImageCache,
                         ref imageIndex);
-                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, context, renderPlaceholders), graphics, fonts);
+                    DrawTextSpansWithFonts(ReadTextSpansForShape(child, context, renderPlaceholders), graphics, fonts);
                 }
 
                 continue;

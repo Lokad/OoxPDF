@@ -57,11 +57,11 @@ internal sealed partial class PptxRenderer
             {
                 var orderedImages = new List<PdfImageResource>();
                 int imageIndex = 1;
-                IReadOnlyList<TextRun> inheritedTextRuns = ReadInheritedTextRuns(context);
-                IReadOnlyList<TextRun> slideTextRuns = ReadSlideTextRuns(context);
+                IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
+                IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
                 IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
-                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
-                DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
+                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Select(span => span.Run).Concat(slideTableTextRuns).ToArray());
+                DrawTextSpansWithFonts(inheritedTextSpans, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
                 {
                     RenderOrderedShapeTextContainer(shapeTree, context, graphics, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
@@ -78,11 +78,10 @@ internal sealed partial class PptxRenderer
                 .SelectMany(xml => RenderTables(context, xml, graphics))
                 .ToArray();
             RenderCharts(context, graphics);
-            IReadOnlyList<TextRun> textRuns = ReadInheritedTextRuns(context)
-                .Concat(ReadSlideTextRuns(context))
-                .Concat(tableTextRuns)
+            IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadInheritedTextSpans(context)
+                .Concat(ReadSlideTextSpans(context))
                 .ToArray();
-            IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
+            IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, tableTextRuns, graphics);
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), fonts, images, graphics.ExtGStates.ToArray()));
         }
 

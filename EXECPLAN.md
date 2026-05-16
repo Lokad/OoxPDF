@@ -163,9 +163,19 @@ High-priority actions:
   `PptxTextSpanLayout` now owns a `PptxTextGlyphSpanLayout` with code points, glyph ids, advances,
   kerning/tracking adjustments, natural width, and layout width before PDF emission. The justified text
   model test locks parity between the layout-owned glyph span and downstream glyph-run inspection.
-- [ ] Make PDF emission consume layout-owned glyph spans directly:
-  `TextRun` remains the compatibility bridge today, so the next slice should carry glyph-span identity
-  through coalescing, highlighting, underline/strike decoration, and `TJ` array construction.
+- [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
+  `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
+  flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
+  instead of remapping glyphs from `TextRun`; table text remains on the legacy bridge for a later slice.
+- [x] Preserve glyph metadata through the first coalescing bridge:
+  positioned-span coalescing now keeps atoms and line-box identity, and rebuilds merged glyph spans when
+  same-style spans are coalesced so `TJ` construction still has pre-emission glyph data.
+- [ ] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
+  highlight drawing still receives legacy `TextRun`s today, while underline/strike now use glyph-run width
+  from positioned spans for PPTX shape text.
+- [x] Re-run the justified typography probe after glyph-span emission:
+  `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
+  Office word-position and line-box parity, not a glyph-span bridge regression.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.

@@ -12,19 +12,20 @@ internal sealed partial class PptxRenderer
 {
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        IReadOnlyList<TextRun> textRuns = ReadSlideTextRunsForInspection(document, package, slideIndex);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
-        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
-        textRuns = CoalesceUnderlineRuns(textRuns);
+        IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans.Select(span => span.Run).ToArray());
+        textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: false);
+        textSpans = CoalesceUnderlineSpans(textSpans);
         var glyphRuns = new List<PptxTextGlyphRunSnapshot>();
-        foreach (TextRun run in textRuns)
+        foreach (PptxPositionedTextSpan span in textSpans)
         {
+            TextRun run = span.Run;
             if (!renderedFonts.Fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
             {
                 continue;
             }
 
-            TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
+            TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
             if (glyphRun is null)
             {
                 continue;
@@ -51,6 +52,22 @@ internal sealed partial class PptxRenderer
 
         RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
+        return renderedFonts.Resources;
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderPositionedTextSpans(
+        IReadOnlyList<PptxPositionedTextSpan> textSpans,
+        IReadOnlyList<TextRun> legacyTextRuns,
+        PdfGraphicsBuilder graphics)
+    {
+        if (textSpans.Count == 0 && legacyTextRuns.Count == 0)
+        {
+            return [];
+        }
+
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans.Select(span => span.Run).Concat(legacyTextRuns).ToArray());
+        DrawTextSpansWithFonts(textSpans, graphics, renderedFonts.Fonts);
+        DrawTextRunsWithFonts(legacyTextRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }
 
@@ -100,6 +117,21 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static void DrawTextSpansWithFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    {
+        DrawHighlightRunsWithFonts(textSpans.Select(span => span.Run).ToArray(), graphics, fonts);
+        textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: false);
+        textSpans = CoalesceUnderlineSpans(textSpans);
+        foreach (PptxPositionedTextSpan span in textSpans)
+        {
+            TextRun run = span.Run;
+            if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            {
+                DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
+            }
+        }
+    }
+
     private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool compareHighlight = true)
     {
         var coalesced = new List<TextRun>(textRuns.Count);
@@ -122,6 +154,42 @@ internal sealed partial class PptxRenderer
             else
             {
                 coalesced.Add(run);
+            }
+        }
+
+        return coalesced;
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceAdjacentTextSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans, bool compareHighlight = true)
+    {
+        var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+        foreach (PptxPositionedTextSpan span in textSpans)
+        {
+            TextRun run = span.Run;
+            if (run.Text.Length == 0)
+            {
+                continue;
+            }
+
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, compareHighlight))
+            {
+                PptxPositionedTextSpan previous = coalesced[^1];
+                TextRun mergedRun = previous.Run with
+                {
+                    Text = previous.Run.Text + run.Text,
+                    Width = run.X + run.Width - previous.Run.X
+                };
+                coalesced[^1] = previous with
+                {
+                    Run = mergedRun,
+                    EndX = span.EndX,
+                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                };
+            }
+            else
+            {
+                coalesced.Add(span);
             }
         }
 
@@ -220,6 +288,45 @@ internal sealed partial class PptxRenderer
         return coalesced;
     }
 
+    private static IReadOnlyList<PptxPositionedTextSpan> CoalesceUnderlineSpans(IReadOnlyList<PptxPositionedTextSpan> textSpans)
+    {
+        var coalesced = new List<PptxPositionedTextSpan>(textSpans.Count);
+        foreach (PptxPositionedTextSpan span in textSpans)
+        {
+            if (coalesced.Count > 0 && CanCoalesceUnderlineRun(coalesced[^1].Run, span.Run))
+            {
+                PptxPositionedTextSpan previous = coalesced[^1];
+                TextRun mergedRun = previous.Run with
+                {
+                    Text = previous.Run.Text + span.Run.Text,
+                    Width = Math.Max(previous.Run.Width, span.Run.X + span.Run.Width - previous.Run.X)
+                };
+                coalesced[^1] = previous with
+                {
+                    Run = mergedRun,
+                    EndX = span.EndX,
+                    Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                };
+                continue;
+            }
+
+            coalesced.Add(span);
+        }
+
+        return coalesced;
+    }
+
+    private static PptxTextGlyphSpanLayout MergeGlyphSpans(TextRun mergedRun, PptxTextGlyphSpanLayout left, PptxTextGlyphSpanLayout right)
+    {
+        if (left.Glyphs.Count == 0 && right.Glyphs.Count == 0)
+        {
+            return PptxTextGlyphSpanLayout.Empty(mergedRun);
+        }
+
+        return BuildGlyphSpan(mergedRun, new TextAdvanceEstimator());
+    }
+
     private static bool CanCoalesceUnderlineRun(TextRun left, TextRun right)
     {
         return left.Underline &&
@@ -311,6 +418,56 @@ internal sealed partial class PptxRenderer
         graphics.RestoreState();
     }
 
+    private static void DrawWrappedSpan(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
+    {
+        TextRun run = span.Run;
+        graphics.SaveState();
+        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        {
+            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+        }
+
+        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
+        if (glyphRun is not null)
+        {
+            bool transparentText = run.Alpha < 0.999d;
+            if (transparentText)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(run.Alpha, 1d);
+            }
+
+            DrawGlyphText(graphics, glyphRun);
+            if (syntheticBold)
+            {
+                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + 0.35d });
+            }
+
+            if (run.Underline)
+            {
+                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
+                double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+                double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+                graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
+            }
+
+            if (run.Strike)
+            {
+                graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+                graphics.FillRectangle(glyphRun.X, glyphRun.BaselineY + run.FontSize * 0.211d, glyphRun.Width, Math.Max(0.5d, run.FontSize * 0.05d));
+            }
+
+            if (transparentText)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        graphics.RestoreState();
+    }
+
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         string glyphHex = embedded.EncodeGlyphHex(run.Text);
@@ -329,6 +486,70 @@ internal sealed partial class PptxRenderer
         };
         string? positioningArray = embedded.EncodeGlyphPositioningArray(run.Text, run.CharacterSpacing, run.FontSize, forcePositioningArray: true, run.KerningEnabled);
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, BuildTextGlyphAtoms(embedded, run), x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+    }
+
+    private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
+    {
+        TextRun run = span.Run;
+        string glyphHex = EncodeGlyphHex(span.GlyphSpan);
+        double baselineY = run.Y + run.BaselineOffset;
+        if (glyphHex.Length == 0 || !BaselineIntersectsClip(run, baselineY))
+        {
+            return null;
+        }
+
+        double lineWidth = span.GlyphSpan.NaturalWidth;
+        double x = run.Alignment switch
+        {
+            TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
+            TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
+            _ => run.X
+        };
+        string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, forcePositioningArray: true);
+        IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
+            .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
+            .ToArray();
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+    }
+
+    private static string EncodeGlyphHex(PptxTextGlyphSpanLayout span)
+    {
+        var builder = new StringBuilder(span.Glyphs.Count * 4);
+        foreach (PptxTextGlyphLayout glyph in span.Glyphs)
+        {
+            builder.Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string? EncodeGlyphPositioningArray(PptxTextGlyphSpanLayout span, bool forcePositioningArray)
+    {
+        if (span.Glyphs.Count == 0)
+        {
+            return null;
+        }
+
+        bool hasPositioning = false;
+        var builder = new StringBuilder("[");
+        for (int i = 0; i < span.Glyphs.Count; i++)
+        {
+            PptxTextGlyphLayout glyph = span.Glyphs[i];
+            if (i > 0)
+            {
+                double adjustment = span.FontSize <= 0d ? 0d : -glyph.AdjustmentBefore * 1000d / span.FontSize;
+                if (Math.Abs(adjustment) > 0.001d)
+                {
+                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+                    hasPositioning = true;
+                }
+            }
+
+            builder.Append('<').Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+        }
+
+        builder.Append(']');
+        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
     }
 
     private static IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms(PdfEmbeddedFont embedded, TextRun run)

@@ -19,6 +19,11 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> ReadSlideTextRunsForInspection(PptxDocument document, OoxPackage package, int slideIndex)
     {
+        return ReadSlideTextSpansForInspection(document, package, slideIndex).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex)
+    {
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
         PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
         if (context is null)
@@ -27,8 +32,8 @@ internal sealed partial class PptxRenderer
         }
 
         return context.InheritedXml
-            .SelectMany(xml => ReadTextRuns(context, xml, includePlaceholders: false, placeholderSources: []))
-            .Concat(ReadTextRuns(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
+            .SelectMany(xml => ReadTextSpans(context, xml, includePlaceholders: false, placeholderSources: []))
+            .Concat(ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
             .ToArray();
     }
 
@@ -147,14 +152,24 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
     {
+        return ReadInheritedTextSpans(context).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadInheritedTextSpans(PptxRenderContext context)
+    {
         return context.InheritedXml
-            .SelectMany(xml => ReadTextRuns(context, xml, includePlaceholders: false, placeholderSources: []))
+            .SelectMany(xml => ReadTextSpans(context, xml, includePlaceholders: false, placeholderSources: []))
             .ToArray();
     }
 
     private static IReadOnlyList<TextRun> ReadSlideTextRuns(PptxRenderContext context)
     {
-        return ReadTextRuns(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
+        return ReadSlideTextSpans(context).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpans(PptxRenderContext context)
+    {
+        return ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
     }
 
     private static IReadOnlyList<TextRun> ReadTextRuns(
@@ -163,7 +178,16 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return FlattenTextLayout(BuildTextLayoutModel(context, slideXml, includePlaceholders, placeholderSources));
+        return ReadTextSpans(context, slideXml, includePlaceholders, placeholderSources).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpans(
+        PptxRenderContext context,
+        XDocument slideXml,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, slideXml, includePlaceholders, placeholderSources));
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
@@ -195,10 +219,15 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<TextRun> FlattenTextLayout(PptxTextLayoutModel layout)
     {
+        return FlattenTextLayoutToSpans(layout).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout)
+    {
         return layout.Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
-            .SelectMany(line => line.Spans.Select(span => span.Run))
+            .SelectMany(line => line.Spans.Select(span => new PptxPositionedTextSpan(span.SourceRun, line.Box, span.Run, span.EndX, span.Atoms, span.GlyphSpan)))
             .ToArray();
     }
 
@@ -356,10 +385,31 @@ internal sealed partial class PptxRenderer
         PptxRenderContext context,
         bool includePlaceholders)
     {
-        return ReadTextRunsForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
+        return ReadTextSpansForShape(shape, context, includePlaceholders).Select(span => span.Run).ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
+        XElement shape,
+        PptxRenderContext context,
+        bool includePlaceholders)
+    {
+        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
     }
 
     private static IReadOnlyList<TextRun> ReadTextRunsForShape(
+        XElement shape,
+        PptxDocument document,
+        PptxTheme theme,
+        int slideNumber,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return ReadTextSpansForShape(shape, document, theme, slideNumber, includePlaceholders, placeholderSources)
+            .Select(span => span.Run)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
         XElement shape,
         PptxDocument document,
         PptxTheme theme,
@@ -384,7 +434,7 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return FlattenTextLayout(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources));
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)

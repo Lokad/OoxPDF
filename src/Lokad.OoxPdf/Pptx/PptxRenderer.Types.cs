@@ -86,6 +86,14 @@ internal sealed partial class PptxRenderer
         bool SyntheticBold,
         bool SyntheticItalic);
 
+    private sealed record PptxPositionedTextSpan(
+        PptxTextRunModel? SourceRun,
+        PptxTextLineBoxLayout? LineBox,
+        TextRun Run,
+        double EndX,
+        IReadOnlyList<PptxTextAtomLayout> Atoms,
+        PptxTextGlyphSpanLayout GlyphSpan);
+
     private sealed record TextGlyphAtom(
         int CodePoint,
         ushort GlyphId,
