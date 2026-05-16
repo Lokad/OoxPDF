@@ -44,51 +44,52 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
             var graphics = new PdfGraphicsBuilder();
             PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
+            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, diagnosticSink);
 
-            foreach (XDocument inherited in inheritedXml)
+            foreach (XDocument inherited in context.InheritedXml)
             {
-                RenderBackground(inherited, document, graphics, theme);
-                RenderShapes(inherited, document, graphics, theme, renderPlaceholders: false);
+                RenderBackground(inherited, context.Document, graphics, context.Theme);
+                RenderShapes(inherited, context.Document, graphics, context.Theme, renderPlaceholders: false);
             }
 
-            RenderBackground(slideXml, document, graphics, theme);
-            if (CanRenderSlideInOrder(slideXml))
+            RenderBackground(context.SlideXml, context.Document, graphics, context.Theme);
+            if (CanRenderSlideInOrder(context.SlideXml))
             {
-                var relationships = package.GetRelationships(slide.PartName)
+                var relationships = context.Package.GetRelationships(context.Slide.PartName)
                     .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                     .ToDictionary(r => r.Id, StringComparer.Ordinal);
                 var orderedImages = new List<PdfImageResource>();
                 int imageIndex = 1;
-                IReadOnlyList<TextRun> inheritedTextRuns = inheritedXml
-                    .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
+                IReadOnlyList<TextRun> inheritedTextRuns = context.InheritedXml
+                    .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
                     .ToArray();
-                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml);
-                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(slideXml, document, new PdfGraphicsBuilder(), theme);
+                IReadOnlyList<TextRun> slideTextRuns = ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml);
+                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context.SlideXml, context.Document, new PdfGraphicsBuilder(), context.Theme);
                 RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextRuns.Concat(slideTextRuns).Concat(slideTableTextRuns).ToArray());
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
-                foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
+                foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
                 {
-                    RenderOrderedShapeTextContainer(shapeTree, relationships, package, document, graphics, diagnosticSink, slideIndex + 1, theme, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, inheritedXml);
+                    RenderOrderedShapeTextContainer(shapeTree, relationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, context.Theme, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, context.InheritedXml);
                 }
 
-                pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages, graphics.ExtGStates.ToArray()));
+                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages, graphics.ExtGStates.ToArray()));
                 continue;
             }
 
-            IReadOnlyList<PdfImageResource> images = RenderPictures(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
-            RenderShapes(slideXml, document, graphics, theme, renderPlaceholders: true);
-            IReadOnlyList<TextRun> tableTextRuns = inheritedXml
-                .Append(slideXml)
-                .SelectMany(xml => RenderTables(xml, document, graphics, theme))
+            IReadOnlyList<PdfImageResource> images = RenderPictures(context.Package, context.Slide.PartName, context.SlideXml, context.Document, graphics, context.DiagnosticSink, context.SlideNumber);
+            RenderShapes(context.SlideXml, context.Document, graphics, context.Theme, renderPlaceholders: true);
+            IReadOnlyList<TextRun> tableTextRuns = context.InheritedXml
+                .Append(context.SlideXml)
+                .SelectMany(xml => RenderTables(xml, context.Document, graphics, context.Theme))
                 .ToArray();
-            RenderCharts(package, slide.PartName, slideXml, document, graphics, diagnosticSink, slideIndex + 1);
-            IReadOnlyList<TextRun> textRuns = inheritedXml
-                .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
-                .Concat(ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
+            RenderCharts(context.Package, context.Slide.PartName, context.SlideXml, context.Document, graphics, context.DiagnosticSink, context.SlideNumber);
+            IReadOnlyList<TextRun> textRuns = context.InheritedXml
+                .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
+                .Concat(ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml))
                 .Concat(tableTextRuns)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderTextRuns(textRuns, graphics);
-            pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints, graphics.ToString(), fonts, images, graphics.ExtGStates.ToArray()));
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), fonts, images, graphics.ExtGStates.ToArray()));
         }
 
         return pages;
