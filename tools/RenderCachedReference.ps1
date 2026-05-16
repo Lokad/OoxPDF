@@ -23,7 +23,13 @@ $toolHashSource = @(
     (Get-FileHash -LiteralPath $rasterizePdf -Algorithm SHA256).Hash
 ) -join "|"
 $toolHashBytes = [System.Text.Encoding]::UTF8.GetBytes($toolHashSource)
-$toolHash = [System.Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($toolHashBytes)).ToLowerInvariant()
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+try {
+    $toolHash = ([System.BitConverter]::ToString($sha256.ComputeHash($toolHashBytes)) -replace "-", "").ToLowerInvariant()
+}
+finally {
+    $sha256.Dispose()
+}
 $extension = [System.IO.Path]::GetExtension($inputFull).TrimStart(".").ToLowerInvariant()
 $key = "{0}-{1}-{2}-dpi{3}" -f $extension, $inputHash.Substring(0, 24), $toolHash.Substring(0, 12), $Dpi
 $cacheRoot = Join-Path $repoRoot "artifacts/reference-cache"

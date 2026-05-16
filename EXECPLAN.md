@@ -108,6 +108,9 @@ High-priority actions:
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
+- [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
+  slide XML, inherited XML, slide identity, and diagnostics; extend it toward relationships/media/cache
+  ownership in later rendering splits.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
@@ -192,9 +195,10 @@ Shape adjustment oracle family map:
   and thin/wide-head right arrow.
 - Star, donut, cross, trapezoid, and triangle `0007..0014` plus `0021..0022`: ported in
   `pptx-ladder-06-shape-adjust-port-b`.
-- Block arc, folded corner, bevel, pentagon, can, heart, moon, and left brace `0015..0020` plus
-  `0023..0031`: still need source-aligned adjustment variants. Clean ports should preserve one feature per
-  case or compact paired variants where Office output remains easy to inspect.
+- Block arc, folded corner, bevel, pentagon, can, and heart `0015..0020` plus `0023..0027`: ported in
+  `pptx-ladder-06-shape-adjust-port-c`.
+- Moon and left brace `0028..0031`: still need source-aligned adjustment variants. Clean ports should
+  preserve one feature per case or compact paired variants where Office output remains easy to inspect.
 
 ## Test Suite Performance
 

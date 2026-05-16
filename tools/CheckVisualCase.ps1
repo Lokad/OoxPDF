@@ -83,7 +83,13 @@ if ($manifest.expected.maxChangedPixelRatioAtThreshold16 -ne $null) {
     }
 }
 
-$diagnosticItems = @(Get-Content -Raw -LiteralPath $diagnostics | ConvertFrom-Json)
+$diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
+$diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
+    @()
+}
+else {
+    @(ConvertFrom-Json -InputObject $diagnosticsJson)
+}
 if ($manifest.expected.diagnosticsMustBeEmpty -eq $true -and $diagnosticItems.Count -ne 0) {
     $ids = ($diagnosticItems | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ", "
     throw "Expected no diagnostics, but found: $ids."
