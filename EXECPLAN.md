@@ -227,9 +227,10 @@ Current `pptx-renderer` parity tracking:
 - Source `oracle-pypptx-composite-0001..0010`:
   - Coverage: mixed shapes, text, tables, charts, and dashboard-like slides.
   - OOXPDF fixtures: `pptx-ladder-08-composite-port-a`, `pptx-ladder-10-composite-table-port`,
-    and `pptx-ladder-11-composite-chart-port`.
+    `pptx-ladder-11-composite-chart-port`, `pptx-ladder-11-composite-two-charts-port`, and
+    `pptx-ladder-11-dashboard-table-chart-port`.
   - Gate type: public visual families `pptx-composition`, `pptx-tables`, and `pptx-charts`.
-  - Status: partially ported; chart composites `0008` and `0010` still pending.
+  - Status: partially ported; remaining composite ports should stay Office-backed and public.
 - Source `oracle-pypptx-chart-0001..0021`:
   - Coverage: column, bar, line, pie, doughnut, area, scatter, radar, and bubble variants.
   - OOXPDF fixtures: `pptx-ladder-11-composite-chart-port` only.
@@ -249,7 +250,14 @@ Composite oracle family map:
 - Chart composite `0006` is represented by `pptx-ladder-11-composite-chart-port` as an Office-authored
   default clustered-column chart baseline. It currently allows `PPTX_CHART_STATIC_FALLBACK` and should be
   tightened only after the chart renderer/fallback boundary is separated.
-- Chart composites `0008` and `0010` still need ports after chart fallback renderer separation.
+- Chart composites `0008` and `0010` are now ported as public fixtures
+  `pptx-ladder-11-composite-two-charts-port` and `pptx-ladder-11-dashboard-table-chart-port`.
+  They are intentionally loose chart/composition gates until chart fallback/rendering is separated.
+- Cached numeric line and pie chart static fallbacks are now covered by a synthetic unit test and by
+  `pptx-ladder-11-composite-two-charts-port`. The port improved from MAE `21.305318`, changed16
+  `0.223965` with unsupported-chart diagnostics to MAE `16.063279`, changed16 `0.202201` with two
+  `PPTX_CHART_STATIC_FALLBACK` diagnostics. The dashboard table/chart port currently gates at MAE
+  `18.630753`, changed16 `0.246106`.
 
 PPTX table style targets from the table composite port:
 

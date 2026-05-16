@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-11-dashboard-table-chart-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-dashboard-table-chart-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "table", "composite", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 20,
+    "maxChangedPixelRatioAtThreshold16": 0.25
+  },
+  "allowedUnsupportedFeatures": [
+    "PPTX_UNSUPPORTED_CHART",
+    "PPTX_CHART_STATIC_FALLBACK"
+  ]
+}

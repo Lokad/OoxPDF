@@ -40,22 +40,46 @@ internal sealed partial class PptxRenderer
 
             using Stream chartStream = chartPart.OpenRead();
             XDocument chartXml = SafeXml.Load(chartStream);
-            IReadOnlyList<IReadOnlyList<double>> series = ReadBarChartSeries(chartXml);
-            if (series.Count == 0)
+            if (TryRenderChartFallback(graphics, context.Document, bounds.Value, chartXml))
             {
-                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
+                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static chart fallback.", chartPart.Name, context.SlideNumber, "Static chart fallback");
                 continue;
             }
 
-            RenderBarChartFallback(graphics, context.Document, bounds.Value, series);
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static bar-chart fallback.", chartPart.Name, context.SlideNumber, "Static bar-chart fallback");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, and pie chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
         }
     }
 
-    private static IReadOnlyList<IReadOnlyList<double>> ReadBarChartSeries(XDocument chartXml)
+    private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml)
+    {
+        IReadOnlyList<IReadOnlyList<double>> barSeries = ReadChartSeries(chartXml, "barChart");
+        if (barSeries.Count != 0)
+        {
+            RenderBarChartFallback(graphics, document, bounds, barSeries);
+            return true;
+        }
+
+        IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadChartSeries(chartXml, "lineChart");
+        if (lineSeries.Count != 0)
+        {
+            RenderLineChartFallback(graphics, document, bounds, lineSeries);
+            return true;
+        }
+
+        IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(chartXml, "pieChart");
+        if (pieSeries.Count != 0)
+        {
+            RenderPieChartFallback(graphics, document, bounds, pieSeries[0]);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XDocument chartXml, string chartElementName)
     {
         var series = new List<IReadOnlyList<double>>();
-        foreach (XElement element in chartXml.Descendants(ChartNamespace + "barChart").Elements(ChartNamespace + "ser"))
+        foreach (XElement element in chartXml.Descendants(ChartNamespace + chartElementName).Elements(ChartNamespace + "ser"))
         {
             double[] values = element
                 .Elements(ChartNamespace + "val")
@@ -74,7 +98,7 @@ internal sealed partial class PptxRenderer
         return series;
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    private static RgbColor ChartPalette(int index)
     {
         RgbColor[] palette =
         [
@@ -85,6 +109,11 @@ internal sealed partial class PptxRenderer
             new RgbColor(91, 155, 213),
             new RgbColor(112, 173, 71)
         ];
+        return palette[index % palette.Length];
+    }
+
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
         double width = OoxUnits.EmuToPoints(bounds.Width);
@@ -117,10 +146,106 @@ internal sealed partial class PptxRenderer
 
                 double value = Math.Max(0d, values[category]);
                 double barHeight = value / maxValue * plotHeight;
-                RgbColor fill = palette[seriesIndex % palette.Length];
+                RgbColor fill = ChartPalette(seriesIndex);
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
                 graphics.FillRectangle(categoryX + seriesIndex * barSlot, plotY, Math.Max(0.5d, barSlot * 0.86d), barHeight);
             }
+        }
+    }
+
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    {
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double plotX = x + width * 0.12d;
+        double plotY = y + height * 0.16d;
+        double plotWidth = width * 0.76d;
+        double plotHeight = height * 0.68d;
+        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
+        double valueRange = Math.Max(1d, maxValue - minValue);
+
+        graphics.SetStrokeRgb(90, 90, 90);
+        graphics.SetLineWidth(0.75d);
+        graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+        graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            IReadOnlyList<double> values = series[seriesIndex];
+            if (values.Count == 0)
+            {
+                continue;
+            }
+
+            RgbColor stroke = ChartPalette(seriesIndex);
+            graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+            graphics.SetLineWidth(1.5d);
+            double previousX = 0d;
+            double previousY = 0d;
+            for (int i = 0; i < values.Count; i++)
+            {
+                double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
+                double pointY = plotY + (values[i] - minValue) / valueRange * plotHeight;
+                if (i > 0)
+                {
+                    graphics.StrokeLine(previousX, previousY, pointX, pointY);
+                }
+
+                graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                graphics.FillEllipse(pointX - 2d, pointY - 2d, 4d, 4d);
+                previousX = pointX;
+                previousY = pointY;
+            }
+        }
+    }
+
+    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
+    {
+        double total = values.Where(value => value > 0d).Sum();
+        if (total <= 0d)
+        {
+            return;
+        }
+
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double radius = Math.Min(width, height) * 0.34d;
+        double centerX = x + width * 0.46d;
+        double centerY = y + height * 0.52d;
+        double angle = -Math.PI / 2d;
+
+        for (int i = 0; i < values.Count; i++)
+        {
+            double value = Math.Max(0d, values[i]);
+            if (value <= 0d)
+            {
+                continue;
+            }
+
+            double sweep = value / total * Math.PI * 2d;
+            int segments = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 18d)));
+            var points = new (double X, double Y)[segments + 2];
+            points[0] = (centerX, centerY);
+            for (int segment = 0; segment <= segments; segment++)
+            {
+                double segmentAngle = angle + sweep * segment / segments;
+                points[segment + 1] = (
+                    centerX + Math.Cos(segmentAngle) * radius,
+                    centerY + Math.Sin(segmentAngle) * radius);
+            }
+
+            RgbColor fill = ChartPalette(i);
+            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.FillPolygon(points);
+            angle += sweep;
         }
     }
 
