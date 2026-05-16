@@ -193,19 +193,17 @@ internal sealed partial class PptxRenderer
                 double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties, lineSpacing);
                 double cursorX = paragraphTextX;
                 double maxFontSize = paragraphFontSize;
-                var paragraphRuns = new List<TextRun>();
-                double paragraphEndX = paragraphTextX;
+                var line = new TextLayoutLine(paragraphTextX);
                 foreach (XElement child in paragraph.Elements())
                 {
                     if (child.Name == DrawingNamespace + "br")
                     {
-                        AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                        paragraphRuns.Clear();
+                        AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
                         cursorLineTop -= ReadManualBreakLineAdvance(lineSpacing, maxFontSize);
                         cursorY = double.NaN;
                         afterManualLineBreak = true;
                         cursorX = paragraphTextX;
-                        paragraphEndX = paragraphTextX;
+                        line.Reset(paragraphTextX);
                         maxFontSize = paragraphFontSize;
                         continue;
                     }
@@ -266,8 +264,8 @@ internal sealed partial class PptxRenderer
                     {
                         BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY));
-                        paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing));
+                        double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing);
+                        line.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY), bulletEndX);
                         bulletPending = false;
                     }
 
@@ -278,9 +276,9 @@ internal sealed partial class PptxRenderer
                         if (tabPartIndex > 0)
                         {
                             double tabSpaceWidth = advanceEstimator.Measure(" ", fontSize, typeface, bold, italic, characterSpacing);
-                            paragraphRuns.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true));
+                            line.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
                             cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, fontSize);
-                            paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                            line.AdvanceTo(cursorX);
                         }
 
                         foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], runProperties, defaultRunProperties))
@@ -301,12 +299,11 @@ internal sealed partial class PptxRenderer
                                         (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
                                 if (overflowsLine)
                                 {
-                                    AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
-                                    paragraphRuns.Clear();
+                                    AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
                                     cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
                                     cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, lineSpacing);
                                     cursorX = paragraphTextX;
-                                    paragraphEndX = paragraphTextX;
+                                    line.Reset(paragraphTextX);
                                     maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
                                     currentSegment = currentSegment.TrimStart();
                                     currentAdvanceText = currentAdvanceText.TrimStart();
@@ -320,17 +317,17 @@ internal sealed partial class PptxRenderer
 
                                 if (flowSegment.Draw && currentSegment.Length != 0)
                                 {
-                                    paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce));
+                                    line.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
                                 }
 
                                 cursorX += segmentWidth;
-                                paragraphEndX = Math.Max(paragraphEndX, cursorX);
+                                line.AdvanceTo(cursorX);
                             }
                         }
                     }
                 }
 
-                AddAlignedParagraphRuns(runs, paragraphRuns, alignment, textX, textWidth, paragraphEndX);
+                AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
                 cursorLineTop -= ReadParagraphAdvance(lineSpacing, maxFontSize) + spacingAfter;
             }
         }
@@ -557,14 +554,14 @@ internal sealed partial class PptxRenderer
             : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing);
     }
 
-    private static void AddAlignedParagraphRuns(List<TextRun> runs, List<TextRun> paragraphRuns, TextAlignment alignment, double textX, double textWidth, double paragraphEndX)
+    private static void AddAlignedParagraphRuns(List<TextRun> runs, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth)
     {
-        if (paragraphRuns.Count == 0)
+        if (line.Runs.Count == 0)
         {
             return;
         }
 
-        double paragraphWidth = Math.Max(0d, paragraphEndX - textX);
+        double paragraphWidth = Math.Max(0d, line.EndX - textX);
         double offset = alignment switch
         {
             TextAlignment.Center => Math.Max(0d, textWidth - paragraphWidth) / 2d,
@@ -572,7 +569,7 @@ internal sealed partial class PptxRenderer
             _ => 0d
         };
 
-        foreach (TextRun run in paragraphRuns)
+        foreach (TextRun run in line.Runs)
         {
             runs.Add(run with
             {

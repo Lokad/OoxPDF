@@ -131,6 +131,12 @@ High-priority actions:
 - [ ] Tighten near-miss simple typography cases before locking:
   `pptx-ladder-04-highlight-single` has a 0.06 pt baseline delta, and
   `pptx-ladder-04-mixed-font-size-line` has a 0.056 pt second-run x delta.
+- [x] Introduce the first behavior-neutral intermediate text layout object: `TextLayoutLine` owns positioned
+  runs and line end advance before alignment/PDF emission.
+- [ ] Extend the intermediate typography model from line ownership to explicit text body, paragraph,
+  line, positioned run, and hidden-control advance records.
+- [ ] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
+  accented-letter pairs, Cambria/Calibri/Arial differences, highlighted runs, and mixed run boundaries.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,

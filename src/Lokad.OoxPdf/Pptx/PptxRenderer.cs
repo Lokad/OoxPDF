@@ -2125,6 +2125,30 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce, double? AdvanceFontSizeFactor = null);
 
+    private sealed class TextLayoutLine(double startX)
+    {
+        public List<TextRun> Runs { get; } = [];
+
+        public double EndX { get; private set; } = startX;
+
+        public void Add(TextRun run, double endX)
+        {
+            Runs.Add(run);
+            AdvanceTo(endX);
+        }
+
+        public void AdvanceTo(double x)
+        {
+            EndX = Math.Max(EndX, x);
+        }
+
+        public void Reset(double startX)
+        {
+            Runs.Clear();
+            EndX = startX;
+        }
+    }
+
     private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
 
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
