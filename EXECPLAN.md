@@ -105,8 +105,10 @@ High-priority actions:
 - [x] Add runner-level timing output so regressions in test duration are visible in normal local runs.
 - [x] Cache Windows font resolver discovery across resolver instances. This reduced the full custom console
   runner from roughly 180 seconds to roughly 13 seconds on the local machine, with `108 passed, 0 failed`.
-- [ ] Cache immutable expensive fixtures in tests, especially parsed fonts, repeated synthetic packages,
-  Office reference PDFs, and rasterized oracle pages when the input file and tool version have not changed.
+- [x] Cache immutable Office reference PDFs and rasterized oracle pages for public/private visual cases under
+  ignored `artifacts/reference-cache/`, keyed by input hash, DPI, and reference/raster tool hashes.
+- [ ] Cache additional expensive test fixtures where useful, especially parsed fonts and repeated synthetic
+  packages.
 - [ ] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
   reference inputs as part of caching.
 - [ ] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
