@@ -3583,16 +3583,10 @@ internal sealed class PptxRenderer
         }
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
-        double cursorY = run.Y;
-        double lineHeight = run.FontSize * 1.2d;
-        foreach (string line in WrapWords(run.Text, run.Width, run.FontSize, run.CharacterSpacing, embedded))
+        string line = run.Text;
+        if (run.Y >= run.Y - run.Height &&
+            run.Y - run.FontSize * 1.2d >= run.ClipY)
         {
-            if (cursorY < run.Y - run.Height ||
-                cursorY - lineHeight < run.ClipY)
-            {
-                break;
-            }
-
             string glyphHex = embedded.EncodeGlyphHex(line);
             if (glyphHex.Length != 0)
             {
@@ -3604,7 +3598,7 @@ internal sealed class PptxRenderer
                     _ => run.X
                 };
 
-                double baselineY = cursorY + run.BaselineOffset;
+                double baselineY = run.Y + run.BaselineOffset;
                 if (run.HighlightColor is { } highlight)
                 {
                     graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
@@ -3644,8 +3638,6 @@ internal sealed class PptxRenderer
                     graphics.RestoreState();
                 }
             }
-
-            cursorY -= lineHeight;
         }
 
         graphics.RestoreState();

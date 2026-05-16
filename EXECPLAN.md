@@ -556,10 +556,10 @@ document-specific business content into public notes.
     changed-pixel ratio threshold 16 `0.004212`.
 - Public PPTX slide-3 bottom-up rungs:
   - `pptx-ladder-04-spautofit-overflow` captures a minimal `spAutoFit` overflow case. Latest run:
-    `artifacts/visual/pptx-ladder-04-spautofit-overflow/20260516-113818`, MAE `0.331849`, changed-pixel
-    ratio threshold 16 `0.004832`, with `PPTX_UNSUPPORTED_TEXT_AUTOFIT` still expected. Office keeps the
-    text inside the box on three lines; the candidate currently wraps into an extra line and lets the last
-    line fall through the box.
+    `artifacts/visual/pptx-ladder-04-spautofit-overflow/20260516-114453`, MAE `0.224563`, changed-pixel
+    ratio threshold 16 `0.003963`, with `PPTX_UNSUPPORTED_TEXT_AUTOFIT` still expected. Office keeps the
+    text inside the box on three lines; the candidate now matches the three-line wrap after suppressing
+    draw-time double wrapping, but exact vertical placement and the unsupported diagnostic remain open.
   - `pptx-ladder-08-grouped-picture-caption` locks a grouped picture plus centered italic caption cell.
     Latest gated run: `artifacts/visual/pptx-ladder-08-grouped-picture-caption/20260516-114125`, MAE
     `0.124819`, changed-pixel ratio threshold 16 `0.002018`.
