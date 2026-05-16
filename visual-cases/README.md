@@ -14,6 +14,7 @@ powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family ppt
 powershell -ExecutionPolicy Bypass -File tools/CompareVisualReports.ps1 -Baseline artifacts/visual/reports/pptx-images-old.json -Current artifacts/visual/reports/pptx-images.json
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-04-font-size-port/case.json
 powershell -ExecutionPolicy Bypass -File tools/ComparePdfTextOperations.ps1 -Reference artifacts/.../reference-inspect/text-operations.json -Candidate artifacts/.../candidate-inspect/text-operations.json -MatchByPosition
+powershell -ExecutionPolicy Bypass -File tools/ComparePdfTextLineStarts.ps1 -Reference artifacts/.../reference-inspect/text-operations.json -Candidate artifacts/.../candidate-inspect/text-operations.json -MatchByPosition
 ```
 
 Family runs write ignored latest and timestamped summaries under `artifacts/visual/reports/`.

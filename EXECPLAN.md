@@ -204,8 +204,11 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
   `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
-- [ ] Next PPTX typography sequence: add diagnostics for Office-vs-candidate word starts per visual line,
+- [x] Next PPTX typography sequence: add diagnostics for Office-vs-candidate word starts per visual line,
   then use those diagnostics to tighten justified text spacing without relying on late-game MAE.
+  `tools/ComparePdfTextLineStarts.ps1` now groups inspected PDF text operations by visual line and compares
+  text-operation start positions. `CheckVisualCase.ps1` can enforce this with `maxTextLineStartDelta`; the
+  boundary-invariance probe locks line starts at `0.1pt` while retaining the existing text-op gate.
 - [x] Next PPTX typography sequence: move highlight rectangles from the legacy `TextRun` drawing path to
   layout-owned line boxes and glyph spans, keeping `highlight-single` locked throughout the migration.
   Shape-text highlights now consume positioned spans and line-box baselines while highlighted text emission

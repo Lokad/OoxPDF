@@ -183,6 +183,58 @@ if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
     }
 }
 
+if ($manifest.expected.maxTextLineStartDelta -ne $null) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect | Out-Null
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF text line-start gate failed because one inspected PDF had no text operations."
+    }
+
+    $lineStartTolerance = [double]$manifest.expected.maxTextLineStartDelta
+    $lineYTolerance = if ($manifest.expected.maxTextLineStartYDelta -ne $null) {
+        [double]$manifest.expected.maxTextLineStartYDelta
+    }
+    else {
+        0.75
+    }
+
+    if ($manifest.expected.matchTextLineStartsByPosition -eq $true) {
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") `
+            -Reference $referenceTextOperations `
+            -Candidate $candidateTextOperations `
+            -StartTolerance $lineStartTolerance `
+            -LineTolerance $lineYTolerance `
+            -MatchByPosition
+    }
+    else {
+        & (Join-Path $PSScriptRoot "ComparePdfTextLineStarts.ps1") `
+            -Reference $referenceTextOperations `
+            -Candidate $candidateTextOperations `
+            -StartTolerance $lineStartTolerance `
+            -LineTolerance $lineYTolerance
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF text line-start gate failed."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()
