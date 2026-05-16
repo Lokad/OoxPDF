@@ -9,16 +9,17 @@ internal static class TestRunner
 
         foreach (Action test in tests)
         {
+            long start = Environment.TickCount64;
             try
             {
                 test();
                 passed++;
-                Console.WriteLine($"PASS {test.Method.Name}");
+                Console.WriteLine($"PASS {test.Method.Name} ({Environment.TickCount64 - start} ms)");
             }
             catch (Exception ex)
             {
                 failed++;
-                Console.WriteLine($"FAIL {test.Method.Name}: {ex.Message}");
+                Console.WriteLine($"FAIL {test.Method.Name} ({Environment.TickCount64 - start} ms): {ex.Message}");
             }
         }
 

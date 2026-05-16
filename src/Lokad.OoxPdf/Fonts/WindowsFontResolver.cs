@@ -2,6 +2,8 @@ namespace Lokad.OoxPdf.Fonts;
 
 public sealed class WindowsFontResolver : IFontResolver
 {
+    private static readonly object CacheLock = new();
+    private static readonly Dictionary<string, Lazy<IReadOnlyList<FontResolution>>> DiscoveryCaches = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lazy<IReadOnlyList<FontResolution>> cache;
 
     public WindowsFontResolver()
@@ -11,7 +13,7 @@ public sealed class WindowsFontResolver : IFontResolver
 
     internal WindowsFontResolver(string fontsDirectory)
     {
-        cache = new Lazy<IReadOnlyList<FontResolution>>(() => Discover(fontsDirectory));
+        cache = GetOrCreateCache(fontsDirectory);
     }
 
     public FontResolution Resolve(FontRequest request)
@@ -64,6 +66,20 @@ public sealed class WindowsFontResolver : IFontResolver
     internal IReadOnlyList<FontResolution> GetDiscoveredFonts()
     {
         return cache.Value;
+    }
+
+    private static Lazy<IReadOnlyList<FontResolution>> GetOrCreateCache(string fontsDirectory)
+    {
+        lock (CacheLock)
+        {
+            if (!DiscoveryCaches.TryGetValue(fontsDirectory, out Lazy<IReadOnlyList<FontResolution>>? cached))
+            {
+                cached = new Lazy<IReadOnlyList<FontResolution>>(() => Discover(fontsDirectory));
+                DiscoveryCaches[fontsDirectory] = cached;
+            }
+
+            return cached;
+        }
     }
 
     private static IReadOnlyList<FontResolution> Discover(string fontsDirectory)
