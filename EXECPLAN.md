@@ -216,6 +216,10 @@ High-priority actions:
   invariance probe passes its text-operation gate with MAE `0.921847`.
 - [ ] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
   narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
+  Split public cases now exist for repeated spaces, NBSP/narrow spaces, punctuation boundaries, and
+  tab-plus-space handling. Repeated spaces and tab-plus-space are locked on raster metrics plus line-start
+  parity; NBSP/narrow-space remains a probe because Office start positions still differ by up to `1.722pt`,
+  and punctuation remains a probe because Office emits separate punctuation-boundary text operations.
 - [x] Add the first whitespace-control interaction probe:
   `pptx-ladder-04-typography-whitespace-controls-probe` covers repeated spaces, NBSP, narrow NBSP,
   punctuation-adjacent words, tab plus spaces, and accented Latin with spacing controls. `U+202F` narrow
