@@ -159,52 +159,44 @@ internal sealed partial class PptxRenderer
                 paragraphPropertySources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
                 paragraphPropertySources.Add(FindDefaultTextStyle(placeholderSources, levelName));
                 defaultParagraphProperties = MergeParagraphProperties(paragraphPropertySources.ToArray());
-                XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
-                    defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
-                double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
-                double spacingBefore = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", paragraphFontSize);
-                double spacingAfter = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", paragraphFontSize);
-                LineSpacing lineSpacing = ReadLineSpacing(paragraphProperties, defaultParagraphProperties);
+                ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties);
                 if (!ParagraphHasVisibleContent(paragraph))
                 {
                     if (ParagraphHasLayoutContent(paragraph))
                     {
                         XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                        double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
+                        double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties);
                         double emptySpacingBefore = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", emptyFontSize);
                         double emptySpacingAfter = ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", emptyFontSize);
-                        cursorLineTop -= emptySpacingBefore + ReadParagraphAdvance(lineSpacing, emptyFontSize) + emptySpacingAfter;
+                        cursorLineTop -= emptySpacingBefore + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
                     }
 
                     continue;
                 }
 
-                TextAlignment alignment = ReadAlignment(paragraph, defaultParagraphProperties);
                 string? bulletText = ReadBulletText(paragraphProperties, ref autoNumberValue);
                 bool bulletPending = bulletText is not null;
-                ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
-                IReadOnlyList<double> tabStops = ReadTabStops(paragraphProperties);
-                double bulletX = textX + Math.Max(0d, indent.MarginLeft + indent.Hanging);
+                double bulletX = textX + Math.Max(0d, paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
                 double paragraphTextX = bulletText is null
-                    ? textX + Math.Max(0d, indent.MarginLeft + indent.Hanging)
-                    : textX + Math.Max(0d, indent.MarginLeft);
-                cursorLineTop -= spacingBefore;
+                    ? textX + Math.Max(0d, paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                    : textX + Math.Max(0d, paragraphStyle.Indent.MarginLeft);
+                cursorLineTop -= paragraphStyle.SpacingBefore;
                 bool afterManualLineBreak = false;
-                double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties, lineSpacing);
+                double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.DefaultRunProperties, paragraphStyle.LineSpacing);
                 double cursorX = paragraphTextX;
-                double maxFontSize = paragraphFontSize;
+                double maxFontSize = paragraphStyle.FontSize;
                 var line = new TextLayoutLine(paragraphTextX);
                 foreach (XElement child in paragraph.Elements())
                 {
                     if (child.Name == DrawingNamespace + "br")
                     {
-                        AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
-                        cursorLineTop -= ReadManualBreakLineAdvance(lineSpacing, maxFontSize);
+                        AddAlignedParagraphRuns(runs, line, paragraphStyle.Alignment, textX, textWidth);
+                        cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                         cursorY = double.NaN;
                         afterManualLineBreak = true;
                         cursorX = paragraphTextX;
                         line.Reset(paragraphTextX);
-                        maxFontSize = paragraphFontSize;
+                        maxFontSize = paragraphStyle.FontSize;
                         continue;
                     }
 
@@ -215,57 +207,22 @@ internal sealed partial class PptxRenderer
 
                     XElement run = child;
                     XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                    double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
-                    maxFontSize = Math.Max(maxFontSize, nominalFontSize);
-                    double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
+                    ResolvedRunTextStyle runStyle = ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme);
+                    maxFontSize = Math.Max(maxFontSize, runStyle.NominalFontSize);
                     if (double.IsNaN(cursorY))
                     {
                         cursorY = cursorLineTop - (afterManualLineBreak
-                            ? ManualBreakBaselineOffset(nominalFontSize, lineSpacing)
-                            : LineBaselineOffset(nominalFontSize, lineSpacing));
+                            ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing)
+                            : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing));
                         afterManualLineBreak = false;
                     }
 
-                    double fontSize = Math.Abs(baselineOffset) > 0.001d
-                        ? nominalFontSize * 2d / 3d
-                        : nominalFontSize;
-                    double alpha = 1d;
-                    RgbColor color;
-                    if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
-                    {
-                        color = runColor;
-                        alpha = runAlpha;
-                    }
-                    else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
-                    {
-                        color = defaultColor;
-                        alpha = defaultAlpha;
-                    }
-                    else
-                    {
-                        color = shapeFontColor ?? new RgbColor(0, 0, 0);
-                    }
-                    string? typeface = theme.ResolveTypeface((string?)(runProperties?
-                        .Element(DrawingNamespace + "latin") ??
-                        defaultRunProperties?.Element(DrawingNamespace + "latin"))
-                        ?.Attribute("typeface"));
-                    bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
-                        (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
-                    bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
-                        (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
-                    bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
-                        && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                    bool strike = IsStrikeEnabled(runProperties, defaultRunProperties);
-                    double characterSpacing = ReadCharacterSpacing(runProperties, defaultRunProperties);
-                    RgbColor? highlight = TryReadHighlightColor(runProperties, out RgbColor highlightColor)
-                        ? highlightColor
-                        : null;
                     if (bulletPending)
                     {
-                        BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
+                        BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing);
-                        line.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY), bulletEndX);
+                        double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
+                        line.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY), bulletEndX);
                         bulletPending = false;
                     }
 
@@ -275,39 +232,39 @@ internal sealed partial class PptxRenderer
                     {
                         if (tabPartIndex > 0)
                         {
-                            double tabSpaceWidth = advanceEstimator.Measure(" ", fontSize, typeface, bold, italic, characterSpacing);
-                            line.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
-                            cursorX = ResolveNextTabX(cursorX, paragraphTextX, tabStops, fontSize);
+                            double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
+                            line.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
+                            cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
                             line.AdvanceTo(cursorX);
                         }
 
-                        foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], runProperties, defaultRunProperties))
+                        foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], runProperties, paragraphStyle.DefaultRunProperties))
                         {
                             if (fragment.Text.Length == 0)
                             {
                                 continue;
                             }
 
-                            double fragmentFontSize = fontSize * fragment.FontScale;
+                            double fragmentFontSize = runStyle.FontSize * fragment.FontScale;
                             foreach (TextFlowSegment flowSegment in SplitFlowSegments(fragment.Text))
                             {
                                 string currentSegment = flowSegment.Text;
                                 string currentAdvanceText = flowSegment.AdvanceText;
-                                double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                                 bool overflowsLine = cursorX > paragraphTextX &&
                                     (cursorX + segmentWidth > textX + textWidth ||
-                                        (characterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
+                                        (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
                                 if (overflowsLine)
                                 {
-                                    AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
-                                    cursorLineTop -= ReadLineAdvance(lineSpacing, maxFontSize);
-                                    cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, lineSpacing);
+                                    AddAlignedParagraphRuns(runs, line, paragraphStyle.Alignment, textX, textWidth);
+                                    cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                                    cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing);
                                     cursorX = paragraphTextX;
                                     line.Reset(paragraphTextX);
-                                    maxFontSize = Math.Max(nominalFontSize, fragmentFontSize);
+                                    maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
                                     currentSegment = currentSegment.TrimStart();
                                     currentAdvanceText = currentAdvanceText.TrimStart();
-                                    segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, typeface, bold, italic, characterSpacing);
+                                    segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                                 }
 
                                 if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
@@ -317,7 +274,7 @@ internal sealed partial class PptxRenderer
 
                                 if (flowSegment.Draw && currentSegment.Length != 0)
                                 {
-                                    line.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
+                                    line.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
                                 }
 
                                 cursorX += segmentWidth;
@@ -327,8 +284,8 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                AddAlignedParagraphRuns(runs, line, alignment, textX, textWidth);
-                cursorLineTop -= ReadParagraphAdvance(lineSpacing, maxFontSize) + spacingAfter;
+                AddAlignedParagraphRuns(runs, line, paragraphStyle.Alignment, textX, textWidth);
+                cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
             }
         }
 
@@ -657,6 +614,80 @@ internal sealed partial class PptxRenderer
     {
         return paragraph.Element(DrawingNamespace + "pPr") is not null ||
             paragraph.Element(DrawingNamespace + "endParaRPr") is not null;
+    }
+
+    private static ResolvedParagraphTextStyle ResolveParagraphTextStyle(
+        XElement paragraph,
+        XElement? paragraphProperties,
+        XElement? defaultParagraphProperties)
+    {
+        XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
+            defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
+        double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
+        return new ResolvedParagraphTextStyle(
+            ReadAlignment(paragraph, defaultParagraphProperties),
+            paragraphProperties,
+            defaultRunProperties,
+            fontSize,
+            ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
+            ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
+            ReadLineSpacing(paragraphProperties, defaultParagraphProperties),
+            ReadParagraphIndent(paragraphProperties),
+            ReadTabStops(paragraphProperties));
+    }
+
+    private static ResolvedRunTextStyle ResolveRunTextStyle(
+        XElement? runProperties,
+        XElement? defaultRunProperties,
+        RgbColor? shapeFontColor,
+        PptxTheme theme)
+    {
+        double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties);
+        double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
+        double fontSize = Math.Abs(baselineOffset) > 0.001d
+            ? nominalFontSize * 2d / 3d
+            : nominalFontSize;
+        double alpha = 1d;
+        RgbColor color;
+        if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+        {
+            color = runColor;
+            alpha = runAlpha;
+        }
+        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
+        {
+            color = defaultColor;
+            alpha = defaultAlpha;
+        }
+        else
+        {
+            color = shapeFontColor ?? new RgbColor(0, 0, 0);
+        }
+
+        string? typeface = theme.ResolveTypeface((string?)(runProperties?
+            .Element(DrawingNamespace + "latin") ??
+            defaultRunProperties?.Element(DrawingNamespace + "latin"))
+            ?.Attribute("typeface"));
+        bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+            (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
+        bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
+            (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+        bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
+            && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+
+        return new ResolvedRunTextStyle(
+            nominalFontSize,
+            fontSize,
+            ReadCharacterSpacing(runProperties, defaultRunProperties),
+            baselineOffset,
+            color,
+            alpha,
+            TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
+            bold,
+            italic,
+            underline,
+            IsStrikeEnabled(runProperties, defaultRunProperties),
+            typeface);
     }
 
     private static bool IsTextRunElement(XElement element)

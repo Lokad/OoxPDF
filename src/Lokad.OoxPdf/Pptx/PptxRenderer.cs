@@ -2125,6 +2125,31 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce, double? AdvanceFontSizeFactor = null);
 
+    private readonly record struct ResolvedParagraphTextStyle(
+        TextAlignment Alignment,
+        XElement? Properties,
+        XElement? DefaultRunProperties,
+        double FontSize,
+        double SpacingBefore,
+        double SpacingAfter,
+        LineSpacing LineSpacing,
+        ParagraphIndent Indent,
+        IReadOnlyList<double> TabStops);
+
+    private readonly record struct ResolvedRunTextStyle(
+        double NominalFontSize,
+        double FontSize,
+        double CharacterSpacing,
+        double BaselineOffset,
+        RgbColor Color,
+        double Alpha,
+        RgbColor? Highlight,
+        bool Bold,
+        bool Italic,
+        bool Underline,
+        bool Strike,
+        string? Typeface);
+
     private sealed class TextLayoutLine(double startX)
     {
         public List<TextRun> Runs { get; } = [];

@@ -133,8 +133,11 @@ High-priority actions:
   `pptx-ladder-04-mixed-font-size-line` has a 0.056 pt second-run x delta.
 - [x] Introduce the first behavior-neutral intermediate text layout object: `TextLayoutLine` owns positioned
   runs and line end advance before alignment/PDF emission.
-- [ ] Extend the intermediate typography model from line ownership to explicit text body, paragraph,
-  line, positioned run, and hidden-control advance records.
+- [x] Extend the intermediate typography model from line ownership to explicit paragraph/run style records
+  in the direct PPTX renderer. `ResolvedParagraphTextStyle` and `ResolvedRunTextStyle` now gather cascade
+  decisions before line layout and PDF emission.
+- [ ] Continue the intermediate typography model from resolved style records to explicit text body,
+  paragraph, line, positioned run, glyph span, and hidden-control advance records.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
