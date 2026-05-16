@@ -144,6 +144,8 @@ Porting priorities:
   text rendering, shapes/presets, groups, images, tables, charts, SmartArt, security, and public API.
 - [ ] Inventory `pptx-renderer` Office-oracle/e2e cases by generated fixture family and map them to the
   `ooxpdf` public visual ladder naming scheme.
+- [x] Inventory `pptx-renderer` generated typography oracle family and map it to current `ooxpdf` Ladder 4
+  coverage.
 - [ ] Port the typography oracle family first: font families, sizes, bold/italic/underline, colors,
   mixed formatting, bullets, vertical text, anchoring, and line spacing.
 - [ ] Port shape/preset oracle families next, preserving Office-authored/generated public fixtures and
@@ -157,6 +159,29 @@ Porting priorities:
 - [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate
   the minimal OOXML/PPTX or generator logic locally under `tests/` or `tools/` with dependency-free runtime
   constraints for `src/Lokad.OoxPdf`.
+
+Typography oracle family map:
+
+- Fonts `oracle-pypptx-text-0001..0008`: partially covered by
+  `pptx-ladder-04-typography-font-families`; still missing separate gates for Times New Roman,
+  Courier New, Georgia, Verdana, Impact, and Comic Sans MS.
+- Sizes `0009..0015`: partially covered by mixed-size and large-text rungs; still missing isolated
+  `10/14/18/24/36/48/72 pt` Office-generated gates.
+- Styles `0016..0021`: mostly covered by bold/italic/underline/combined public rungs; still needs a
+  clean-port manifest tying each source case to the corresponding public fixture and Office metrics.
+- Alignment `0022..0025`: left/center/right are partially covered; justify needs a dedicated public gate.
+- Colors `0026..0030`: direct RGB text colors need dedicated public gates by color; current coverage is
+  mostly theme/fontRef/highlight.
+- Mixed formatting `0031`: partially covered by mixed-run rungs; still needs a clean Office-generated
+  mixed paragraph fixture matching the source case shape.
+- Bullet list `0032`: partially covered by bullet rungs; still missing the multi-level python-pptx-style
+  list as one visual gate.
+- Vertical text `0033..0034`: `vert270` exists; East Asian vertical and wordArt vertical stacked remain
+  missing and should become explicit gates before private vertical text is revisited.
+- Anchor `0035..0037`: partially covered by centered anchor; top/middle/bottom shape text anchors should
+  be clean-ported as a grouped case.
+- Line spacing `0038`: partially covered by points/percent/paragraph spacing; needs the generated
+  multi-paragraph spacing fixture.
 
 ## Test Suite Performance
 
