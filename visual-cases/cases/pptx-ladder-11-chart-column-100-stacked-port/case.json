@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-11-chart-column-100-stacked-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-100-stacked-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "stacked-100", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 15.4,
+    "maxChangedPixelRatioAtThreshold16": 0.226
+  },
+  "allowedUnsupportedFeatures": [
+    "PPTX_CHART_STATIC_FALLBACK"
+  ]
+}

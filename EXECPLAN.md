@@ -235,7 +235,9 @@ Current `pptx-renderer` parity tracking:
   - Coverage: column, bar, line, pie, doughnut, area, scatter, radar, and bubble variants.
   - OOXPDF fixtures: `pptx-ladder-11-composite-chart-port`,
     `pptx-ladder-11-chart-column-clustered-port`, `pptx-ladder-11-chart-bar-clustered-port`,
-    `pptx-ladder-11-chart-line-3series-port`, and `pptx-ladder-11-chart-pie-5-categories-port`.
+    `pptx-ladder-11-chart-line-3series-port`, `pptx-ladder-11-chart-pie-5-categories-port`,
+    `pptx-ladder-11-chart-column-negative-port`, `pptx-ladder-11-chart-column-stacked-port`,
+    `pptx-ladder-11-chart-column-100-stacked-port`, and `pptx-ladder-11-chart-bar-stacked-port`.
   - Gate type: public visual family `pptx-charts`.
   - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
     should be ported incrementally while chart rendering is separated from fallback behavior.
@@ -266,6 +268,12 @@ Composite oracle family map:
   3-series line MAE `3.515034`, changed16 `0.032532`; and 5-category pie MAE `10.866346`,
   changed16 `0.158026`. The horizontal bar port confirms that `barDir="bar"` needs different geometry,
   but all four still need Office-like axes, gridlines, labels, legends, data labels, and chart-area layout.
+- Negative and stacked chart ports are now gated: negative columns MAE `8.843941`, changed16 `0.103373`;
+  stacked columns MAE `13.334796`, changed16 `0.179621`; 100% stacked columns MAE `15.340911`,
+  changed16 `0.225668`; and stacked horizontal bars MAE `16.026032`, changed16 `0.189521`.
+  The renderer now separates clustered, stacked, and 100% stacked bar geometry and draws bars around a
+  zero axis for negative values. Remaining gaps are axis scaling/ticks, labels, legends, overlap/gap width,
+  Office chart templates, and cached chart-image fallback.
 
 PPTX table style targets from the table composite port:
 

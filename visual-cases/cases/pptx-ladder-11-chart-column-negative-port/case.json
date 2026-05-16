@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-11-chart-column-negative-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-negative-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "negative-values", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 8.9,
+    "maxChangedPixelRatioAtThreshold16": 0.104
+  },
+  "allowedUnsupportedFeatures": [
+    "PPTX_CHART_STATIC_FALLBACK"
+  ]
+}

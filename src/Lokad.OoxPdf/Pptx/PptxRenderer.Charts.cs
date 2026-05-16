@@ -59,7 +59,8 @@ internal sealed partial class PptxRenderer
             if (barSeries.Count != 0)
             {
                 bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
-                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars);
+                string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
+                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping);
                 return true;
             }
         }
@@ -123,7 +124,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -135,16 +136,38 @@ internal sealed partial class PptxRenderer
         double plotWidth = width * 0.82d;
         double plotHeight = height * 0.72d;
         int categoryCount = Math.Max(1, series.Max(values => values.Count));
-        double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max(value => Math.Abs(value)));
+        bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
+            string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+        bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+        (double minValue, double maxValue) = stacked
+            ? GetStackedValueExtents(series, categoryCount, percentStacked)
+            : GetClusteredValueExtents(series);
+        double valueRange = Math.Max(1d, maxValue - minValue);
 
         graphics.SetStrokeRgb(90, 90, 90);
         graphics.SetLineWidth(0.75d);
-        graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+        double zeroX = plotX + (-minValue) / valueRange * plotWidth;
+        double zeroY = plotY + (-minValue) / valueRange * plotHeight;
+        graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
         graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
 
         if (horizontalBars)
         {
-            RenderHorizontalBars(graphics, plotX, plotY, plotWidth, plotHeight, series, categoryCount, maxValue);
+            if (stacked)
+            {
+                RenderStackedHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, percentStacked);
+            }
+            else
+            {
+                RenderClusteredHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX);
+            }
+
+            return;
+        }
+
+        if (stacked)
+        {
+            RenderStackedColumns(graphics, plotX, plotWidth, plotHeight, series, categoryCount, valueRange, zeroY, percentStacked);
             return;
         }
 
@@ -161,16 +184,60 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                double value = Math.Max(0d, values[category]);
-                double barHeight = value / maxValue * plotHeight;
+                double value = values[category];
+                double barHeight = Math.Abs(value) / valueRange * plotHeight;
                 RgbColor fill = ChartPalette(seriesIndex);
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                graphics.FillRectangle(categoryX + seriesIndex * barSlot, plotY, Math.Max(0.5d, barSlot * 0.86d), barHeight);
+                graphics.FillRectangle(categoryX + seriesIndex * barSlot, value >= 0d ? zeroY : zeroY - barHeight, Math.Max(0.5d, barSlot * 0.86d), barHeight);
             }
         }
     }
 
-    private static void RenderHorizontalBars(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double maxValue)
+    private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
+    {
+        double maxValue = Math.Max(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
+        return (minValue, maxValue);
+    }
+
+    private static (double Min, double Max) GetStackedValueExtents(IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, bool percentStacked)
+    {
+        if (percentStacked)
+        {
+            return (0d, 1d);
+        }
+
+        double minValue = 0d;
+        double maxValue = 0d;
+        for (int category = 0; category < categoryCount; category++)
+        {
+            double positive = 0d;
+            double negative = 0d;
+            foreach (IReadOnlyList<double> values in series)
+            {
+                if (category >= values.Count)
+                {
+                    continue;
+                }
+
+                if (values[category] >= 0d)
+                {
+                    positive += values[category];
+                }
+                else
+                {
+                    negative += values[category];
+                }
+            }
+
+            maxValue = Math.Max(maxValue, positive);
+            minValue = Math.Min(minValue, negative);
+        }
+
+        return (minValue, maxValue);
+    }
+
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
@@ -185,13 +252,103 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                double value = Math.Max(0d, values[category]);
-                double barWidth = value / maxValue * plotWidth;
+                double value = values[category];
+                double barWidth = Math.Abs(value) / valueRange * plotWidth;
                 RgbColor fill = ChartPalette(seriesIndex);
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                graphics.FillRectangle(plotX, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d));
+                graphics.FillRectangle(value >= 0d ? zeroX : zeroX - barWidth, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d));
             }
         }
+    }
+
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, double plotX, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroY, bool percentStacked)
+    {
+        double categoryWidth = plotWidth / categoryCount;
+        double barWidth = Math.Max(0.5d, categoryWidth * 0.58d);
+        for (int category = 0; category < categoryCount; category++)
+        {
+            double categoryX = plotX + category * categoryWidth + (categoryWidth - barWidth) / 2d;
+            double positiveY = zeroY;
+            double negativeY = zeroY;
+            double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            {
+                IReadOnlyList<double> values = series[seriesIndex];
+                if (category >= values.Count)
+                {
+                    continue;
+                }
+
+                double value = NormalizeStackedValue(values[category], positiveTotal, percentStacked);
+                double segmentHeight = Math.Abs(value) / valueRange * plotHeight;
+                RgbColor fill = ChartPalette(seriesIndex);
+                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                if (value >= 0d)
+                {
+                    graphics.FillRectangle(categoryX, positiveY, barWidth, segmentHeight);
+                    positiveY += segmentHeight;
+                }
+                else
+                {
+                    negativeY -= segmentHeight;
+                    graphics.FillRectangle(categoryX, negativeY, barWidth, segmentHeight);
+                }
+            }
+        }
+    }
+
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, bool percentStacked)
+    {
+        double categoryHeight = plotHeight / categoryCount;
+        double barHeight = Math.Max(0.5d, categoryHeight * 0.58d);
+        for (int category = 0; category < categoryCount; category++)
+        {
+            double categoryY = plotY + plotHeight - (category + 1) * categoryHeight + (categoryHeight - barHeight) / 2d;
+            double positiveX = zeroX;
+            double negativeX = zeroX;
+            double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            {
+                IReadOnlyList<double> values = series[seriesIndex];
+                if (category >= values.Count)
+                {
+                    continue;
+                }
+
+                double value = NormalizeStackedValue(values[category], positiveTotal, percentStacked);
+                double segmentWidth = Math.Abs(value) / valueRange * plotWidth;
+                RgbColor fill = ChartPalette(seriesIndex);
+                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                if (value >= 0d)
+                {
+                    graphics.FillRectangle(positiveX, categoryY, segmentWidth, barHeight);
+                    positiveX += segmentWidth;
+                }
+                else
+                {
+                    negativeX -= segmentWidth;
+                    graphics.FillRectangle(negativeX, categoryY, segmentWidth, barHeight);
+                }
+            }
+        }
+    }
+
+    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double>> series, int category, bool percentStacked)
+    {
+        if (!percentStacked)
+        {
+            return 1d;
+        }
+
+        return Math.Max(1d, series
+            .Where(values => category < values.Count)
+            .Select(values => Math.Max(0d, values[category]))
+            .Sum());
+    }
+
+    private static double NormalizeStackedValue(double value, double positiveTotal, bool percentStacked)
+    {
+        return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
     private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
