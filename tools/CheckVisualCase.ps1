@@ -134,12 +134,23 @@ if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
         0.001
     }
 
-    & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") `
-        -Reference $referenceTextOperations `
-        -Candidate $candidateTextOperations `
-        -PositionTolerance $positionTolerance `
-        -FontSizeTolerance $fontSizeTolerance `
-        -CharacterSpacingTolerance $characterSpacingTolerance
+    if ($manifest.expected.matchTextOperationsByPosition -eq $true) {
+        & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") `
+            -Reference $referenceTextOperations `
+            -Candidate $candidateTextOperations `
+            -PositionTolerance $positionTolerance `
+            -FontSizeTolerance $fontSizeTolerance `
+            -CharacterSpacingTolerance $characterSpacingTolerance `
+            -MatchByPosition
+    }
+    else {
+        & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") `
+            -Reference $referenceTextOperations `
+            -Candidate $candidateTextOperations `
+            -PositionTolerance $positionTolerance `
+            -FontSizeTolerance $fontSizeTolerance `
+            -CharacterSpacingTolerance $characterSpacingTolerance
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "PDF text operation gate failed."
     }
