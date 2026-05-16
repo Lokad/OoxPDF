@@ -309,6 +309,13 @@ internal sealed class DocxRenderer
                 PngImage png = PngImage.Read(image.Bytes);
                 return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
             }
+
+            if (image.ContentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
+                image.ContentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
+            {
+                BmpImage bmp = BmpImage.Read(image.Bytes);
+                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha);
+            }
         }
         catch (Exception ex) when (ex is InvalidDataException or NotSupportedException)
         {

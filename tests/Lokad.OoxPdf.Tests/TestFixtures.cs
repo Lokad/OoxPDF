@@ -135,6 +135,40 @@ internal static class TestFixtures
         return CreatePngFromRaw(width, height, 6, 8, interlace: 1, null, null, raw.ToArray());
     }
 
+    public static byte[] CreateRgbBmp(int width, int height, byte[] rgb)
+    {
+        int rowBytes = width * 3;
+        int stride = ((rowBytes + 3) / 4) * 4;
+        int pixelOffset = 54;
+        int fileSize = pixelOffset + stride * height;
+        byte[] bytes = new byte[fileSize];
+        bytes[0] = (byte)'B';
+        bytes[1] = (byte)'M';
+        WriteInt32LittleEndian(bytes.AsSpan(2, 4), fileSize);
+        WriteInt32LittleEndian(bytes.AsSpan(10, 4), pixelOffset);
+        WriteInt32LittleEndian(bytes.AsSpan(14, 4), 40);
+        WriteInt32LittleEndian(bytes.AsSpan(18, 4), width);
+        WriteInt32LittleEndian(bytes.AsSpan(22, 4), height);
+        bytes[26] = 1;
+        bytes[28] = 24;
+
+        for (int y = 0; y < height; y++)
+        {
+            int sourceY = height - 1 - y;
+            int source = sourceY * width * 3;
+            int target = pixelOffset + y * stride;
+            for (int x = 0; x < width; x++)
+            {
+                bytes[target++] = rgb[source + 2];
+                bytes[target++] = rgb[source + 1];
+                bytes[target++] = rgb[source];
+                source += 3;
+            }
+        }
+
+        return bytes;
+    }
+
     public static byte[] CreateUnsupportedHighBitDepthPng()
     {
         using var stream = new MemoryStream();
@@ -253,5 +287,13 @@ internal static class TestFixtures
         target[1] = (byte)(value >> 16);
         target[2] = (byte)(value >> 8);
         target[3] = (byte)value;
+    }
+
+    private static void WriteInt32LittleEndian(Span<byte> target, int value)
+    {
+        target[0] = (byte)value;
+        target[1] = (byte)(value >> 8);
+        target[2] = (byte)(value >> 16);
+        target[3] = (byte)(value >> 24);
     }
 }

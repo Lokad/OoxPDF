@@ -3111,6 +3111,13 @@ internal sealed class PptxRenderer
                 return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
             }
 
+            if (imagePart.ContentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
+                imagePart.ContentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
+            {
+                BmpImage bmp = BmpImage.Read(bytes);
+                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha);
+            }
+
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_UNSUPPORTED_FORMAT",
                 OoxPdfSeverity.Error,

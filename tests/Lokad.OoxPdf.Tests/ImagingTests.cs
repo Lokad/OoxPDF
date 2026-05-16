@@ -105,4 +105,16 @@ internal static class ImagingTests
         }), "Adam7 RGBA PNG should expand to RGB pixels in final image order.");
         TestAssert.True(image.Alpha is not null && image.Alpha.SequenceEqual(new byte[] { 255, 128, 64, 0, 255, 255, 255, 255, 255, 255, 255, 255 }), "Adam7 RGBA PNG should preserve alpha in final image order.");
     }
+
+    public static void BmpImageReadsBottomUpRgbPixels()
+    {
+        byte[] bmp = TestFixtures.CreateRgbBmp(2, 1, [255, 0, 0, 0, 0, 255]);
+
+        BmpImage image = BmpImage.Read(bmp);
+
+        TestAssert.Equal(2, image.Width);
+        TestAssert.Equal(1, image.Height);
+        TestAssert.True(image.Rgb.SequenceEqual(new byte[] { 255, 0, 0, 0, 0, 255 }), "BMP BGR pixels should expand to RGB pixels.");
+        TestAssert.True(image.Alpha is null, "24-bit BMP should not produce an alpha channel.");
+    }
 }
