@@ -522,6 +522,14 @@ document-specific business content into public notes.
   - The formatted-empty-paragraph fix materially improved slide-1 title/body separation. Remaining slide-1
     generic gaps are fine font metrics, exact title/body baseline placement, underline bounds, and dense
     bullet/list wrapping precision.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260516-090605`:
+  - 84 visual comparison entries were produced for local assessment.
+  - Mean absolute error average: `13.278538`; max mean absolute error: `30.864359`.
+  - Mean changed-pixel ratio at threshold 16: `0.155895`; max changed-pixel ratio: `0.468661`.
+  - Diagnostics remain public-safe feature categories: chart static fallbacks plus unsupported effects,
+    custom geometry, and transparency.
+  - This run is assessment evidence only; the implementation track remains public bottom-up PPTX typography
+    and feature fixtures before private-slide tuning.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
