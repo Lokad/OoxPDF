@@ -139,8 +139,13 @@ internal sealed partial class PptxRenderer
         XElement? Properties,
         XElement? DefaultProperties,
         int Level,
+        PptxParagraphStyleCascade Cascade,
         ResolvedParagraphTextStyle Style,
         IReadOnlyList<PptxTextRunModel> Runs);
+
+    private sealed record PptxParagraphStyleCascade(
+        string LevelName,
+        IReadOnlyList<XElement?> Sources);
 
     private sealed record PptxTextRunModel(
         PptxTextRunKind Kind,

@@ -205,6 +205,8 @@ internal static class PptxTests
         PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
         TestAssert.Equal(1, textFrame.Paragraphs.Count);
         TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
+        TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
+        TestAssert.True(textFrame.Paragraphs[0].ResolvedCascadeSourceCount >= 2, "Expected text model to expose inherited cascade inputs before style resolution.");
         TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
         TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
         TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);

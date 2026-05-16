@@ -31,6 +31,8 @@ internal sealed record PptxTextFrameModelSnapshot(
 
 internal sealed record PptxTextParagraphModelSnapshot(
     int Level,
+    string CascadeLevelName,
+    int ResolvedCascadeSourceCount,
     string Alignment,
     double FontSize,
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);

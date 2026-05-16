@@ -155,6 +155,11 @@ High-priority actions:
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
+- [x] Make paragraph cascade inputs explicit in the direct PPTX text model:
+  `PptxParagraphStyleCascade` now records the paragraph level and source layers before merged paragraph
+  defaults and resolved styles are produced.
+- [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
+  paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
   `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.

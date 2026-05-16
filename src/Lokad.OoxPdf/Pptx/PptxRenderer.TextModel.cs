@@ -45,6 +45,8 @@ internal sealed partial class PptxRenderer
     {
         return new PptxTextParagraphModelSnapshot(
             paragraph.Level,
+            paragraph.Cascade.LevelName,
+            paragraph.Cascade.Sources.Count(source => source is not null),
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.FontSize,
             paragraph.Runs.Select(ToSnapshot).ToArray());
@@ -133,10 +135,7 @@ internal sealed partial class PptxRenderer
             ? fontColor
             : null;
         XElement? defaultParagraphProperties = MergeParagraphProperties(
-            textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
-            inheritedTextBody?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
-            FindInheritedTextStyle(shape, placeholderSources, "lvl1pPr"),
-            FindDefaultTextStyle(placeholderSources, "lvl1pPr"));
+            BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, "lvl1pPr").Sources.ToArray());
         double verticalOffset = ReadVerticalAnchor(textBody) switch
         {
             TextVerticalAnchor.Top when inheritedTextBody is not null => ReadVerticalAnchor(inheritedTextBody) switch
@@ -197,27 +196,39 @@ internal sealed partial class PptxRenderer
                 ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
                 : 0;
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
-            var paragraphPropertySources = new List<XElement?>
-            {
-                textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)
-            };
-            paragraphPropertySources.AddRange(inheritedPlaceholders
-                .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
-                .Reverse());
-            paragraphPropertySources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
-            paragraphPropertySources.Add(FindDefaultTextStyle(placeholderSources, levelName));
-            XElement? defaultParagraphProperties = MergeParagraphProperties(paragraphPropertySources.ToArray());
+            PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
+            XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
                 defaultParagraphProperties,
                 paragraphLevel,
+                cascade,
                 paragraphStyle,
                 BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale)));
         }
 
         return paragraphs;
+    }
+
+    private static PptxParagraphStyleCascade BuildParagraphStyleCascade(
+        XElement shape,
+        XElement textBody,
+        IReadOnlyList<XElement> inheritedPlaceholders,
+        IReadOnlyList<XDocument> placeholderSources,
+        string levelName)
+    {
+        var sources = new List<XElement?>
+        {
+            textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)
+        };
+        sources.AddRange(inheritedPlaceholders
+            .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
+            .Reverse());
+        sources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
+        sources.Add(FindDefaultTextStyle(placeholderSources, levelName));
+        return new PptxParagraphStyleCascade(levelName, sources);
     }
 
     private static IReadOnlyList<PptxTextRunModel> BuildRunModels(
