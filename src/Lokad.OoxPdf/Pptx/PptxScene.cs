@@ -20,7 +20,28 @@ internal sealed record PptxSceneNode(
     string Name,
     bool IsPlaceholder,
     PptxSceneBounds? Bounds,
+    PptxSceneTextBody? TextBody,
     XElement Source);
+
+internal sealed record PptxSceneTextBody(
+    XElement? BodyProperties,
+    XElement? ListStyle,
+    IReadOnlyList<PptxSceneTextParagraph> Paragraphs);
+
+internal sealed record PptxSceneTextParagraph(
+    XElement? Properties,
+    XElement? EndParagraphProperties,
+    int Level,
+    IReadOnlyList<PptxSceneTextRun> Runs);
+
+internal sealed record PptxSceneTextRun(PptxSceneTextRunKind Kind, string Text, XElement? Properties, XElement Source);
+
+internal enum PptxSceneTextRunKind
+{
+    Text,
+    Break,
+    Field
+}
 
 internal sealed record PptxSceneBounds(
     double X,
@@ -105,7 +126,7 @@ internal sealed class PptxSceneBuilder
                 }
 
                 (string id, string name) = ReadNonVisualProperties(child);
-                nodes.Add(new PptxSceneNode(kind, id, name, IsPlaceholder(child), ReadBounds(child), child));
+                nodes.Add(new PptxSceneNode(kind, id, name, IsPlaceholder(child), ReadBounds(child), ReadTextBody(child), child));
             }
         }
 
@@ -201,6 +222,58 @@ internal sealed class PptxSceneBuilder
             transform.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
             ReadBool(transform, "flipH"),
             ReadBool(transform, "flipV"));
+    }
+
+    private static PptxSceneTextBody? ReadTextBody(XElement element)
+    {
+        XElement? textBody = element.Element(PresentationNamespace + "txBody");
+        if (textBody is null)
+        {
+            return null;
+        }
+
+        return new PptxSceneTextBody(
+            textBody.Element(DrawingNamespace + "bodyPr"),
+            textBody.Element(DrawingNamespace + "lstStyle"),
+            textBody.Elements(DrawingNamespace + "p").Select(ReadParagraph).ToArray());
+    }
+
+    private static PptxSceneTextParagraph ReadParagraph(XElement paragraph)
+    {
+        XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
+        return new PptxSceneTextParagraph(
+            properties,
+            paragraph.Element(DrawingNamespace + "endParaRPr"),
+            properties?.Attribute("lvl") is { } level ? int.Parse(level.Value, CultureInfo.InvariantCulture) : 0,
+            paragraph.Elements().Select(ReadRun).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
+    }
+
+    private static PptxSceneTextRun? ReadRun(XElement element)
+    {
+        if (element.Name == DrawingNamespace + "r")
+        {
+            return new PptxSceneTextRun(
+                PptxSceneTextRunKind.Text,
+                (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
+                element.Element(DrawingNamespace + "rPr"),
+                element);
+        }
+
+        if (element.Name == DrawingNamespace + "br")
+        {
+            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", element.Element(DrawingNamespace + "rPr"), element);
+        }
+
+        if (element.Name == DrawingNamespace + "fld")
+        {
+            return new PptxSceneTextRun(
+                PptxSceneTextRunKind.Field,
+                (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
+                element.Element(DrawingNamespace + "rPr"),
+                element);
+        }
+
+        return null;
     }
 
     private static long ReadLong(XElement element, string name)

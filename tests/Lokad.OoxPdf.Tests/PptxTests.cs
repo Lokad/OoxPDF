@@ -124,7 +124,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr sz="2400"/><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
                   </p:spTree></p:cSld>
@@ -148,6 +148,13 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
         TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
+        PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);
+        TestAssert.Equal(1, textBody.Paragraphs.Count);
+        TestAssert.Equal(1, textBody.Paragraphs[0].Level);
+        TestAssert.Equal(3, textBody.Paragraphs[0].Runs.Count);
+        TestAssert.Equal(PptxSceneTextRunKind.Text, textBody.Paragraphs[0].Runs[0].Kind);
+        TestAssert.Equal(PptxSceneTextRunKind.Break, textBody.Paragraphs[0].Runs[1].Kind);
+        TestAssert.Equal(PptxSceneTextRunKind.Field, textBody.Paragraphs[0].Runs[2].Kind);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()

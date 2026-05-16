@@ -86,8 +86,10 @@ High-priority actions:
   generation before more large changes to `PptxRenderer`.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
   node kind classification, placeholder metadata, and bounds extraction.
-- [ ] Extend the `ooxpdf` scene slice to text boxes: resolved slide context, typed shape node, resolved text
-  body, paragraph style cascade, and run style cascade.
+- [x] Extend the `ooxpdf` scene slice to text bodies: body properties, list style, paragraphs, levels,
+  ordered text/break/field runs, run properties, and end paragraph properties.
+- [ ] Extend the `ooxpdf` scene slice to resolved text styling: paragraph style cascade and run style
+  cascade from master/layout/shape/paragraph/run context.
 - [ ] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
   before replacing behavior.
 - [ ] Consider porting the testing strategy, especially generated Office-oracle case families and SSIM plus
