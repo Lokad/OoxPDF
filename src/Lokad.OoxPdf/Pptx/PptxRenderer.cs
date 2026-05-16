@@ -44,7 +44,10 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
             var graphics = new PdfGraphicsBuilder();
             PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, diagnosticSink);
+            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
+                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, slideRelationships, diagnosticSink);
 
             foreach (XDocument inherited in context.InheritedXml)
             {
@@ -55,9 +58,6 @@ internal sealed partial class PptxRenderer
             RenderBackground(context.SlideXml, context.Document, graphics, context.Theme);
             if (CanRenderSlideInOrder(context.SlideXml))
             {
-                var relationships = context.Package.GetRelationships(context.Slide.PartName)
-                    .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-                    .ToDictionary(r => r.Id, StringComparer.Ordinal);
                 var orderedImages = new List<PdfImageResource>();
                 int imageIndex = 1;
                 IReadOnlyList<TextRun> inheritedTextRuns = context.InheritedXml
@@ -69,20 +69,20 @@ internal sealed partial class PptxRenderer
                 DrawTextRunsWithFonts(inheritedTextRuns, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
                 {
-                    RenderOrderedShapeTextContainer(shapeTree, relationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, context.Theme, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true, context.InheritedXml);
+                    RenderOrderedShapeTextContainer(shapeTree, context, graphics, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
                 }
 
                 pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages, graphics.ExtGStates.ToArray()));
                 continue;
             }
 
-            IReadOnlyList<PdfImageResource> images = RenderPictures(context.Package, context.Slide.PartName, context.SlideXml, context.Document, graphics, context.DiagnosticSink, context.SlideNumber);
+            IReadOnlyList<PdfImageResource> images = RenderPictures(context, graphics);
             RenderShapes(context.SlideXml, context.Document, graphics, context.Theme, renderPlaceholders: true);
             IReadOnlyList<TextRun> tableTextRuns = context.InheritedXml
                 .Append(context.SlideXml)
                 .SelectMany(xml => RenderTables(xml, context.Document, graphics, context.Theme))
                 .ToArray();
-            RenderCharts(context.Package, context.Slide.PartName, context.SlideXml, context.Document, graphics, context.DiagnosticSink, context.SlideNumber);
+            RenderCharts(context, graphics);
             IReadOnlyList<TextRun> textRuns = context.InheritedXml
                 .SelectMany(xml => ReadTextRuns(xml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: false, placeholderSources: []))
                 .Concat(ReadTextRuns(context.SlideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders: true, context.InheritedXml))
@@ -338,19 +338,13 @@ internal sealed partial class PptxRenderer
 
     private static void RenderOrderedShapeTextContainer(
         XElement container,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPackage package,
-        PptxDocument document,
+        PptxRenderContext context,
         PdfGraphicsBuilder graphics,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
-        PptxTheme theme,
         IReadOnlyDictionary<string, RenderedFont> fonts,
         List<PdfImageResource> images,
         ref int imageIndex,
         GroupTransform transform,
-        bool renderPlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        bool renderPlaceholders)
     {
         foreach (XElement child in container.Elements())
         {
@@ -358,8 +352,8 @@ internal sealed partial class PptxRenderer
             {
                 if (renderPlaceholders || !IsPlaceholder(child))
                 {
-                    RenderShape(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, transform, images, ref imageIndex);
-                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, document, theme, slideIndex, renderPlaceholders, placeholderSources), graphics, fonts);
+                    RenderShape(child, context.SlideRelationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, context.Theme, transform, images, ref imageIndex);
+                    DrawTextRunsWithFonts(ReadTextRunsForShape(child, context.Document, context.Theme, context.SlideNumber, renderPlaceholders, context.InheritedXml), graphics, fonts);
                 }
 
                 continue;
@@ -367,26 +361,26 @@ internal sealed partial class PptxRenderer
 
             if (child.Name == PresentationNamespace + "cxnSp")
             {
-                RenderShape(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, transform, images, ref imageIndex);
+                RenderShape(child, context.SlideRelationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, context.Theme, transform, images, ref imageIndex);
                 continue;
             }
 
             if (child.Name == PresentationNamespace + "pic")
             {
-                RenderPicture(child, relationships, package, document, graphics, diagnosticSink, slideIndex, transform, images, ref imageIndex);
+                RenderPicture(child, context.SlideRelationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, transform, images, ref imageIndex);
                 continue;
             }
 
             if (child.Name == PresentationNamespace + "graphicFrame")
             {
-                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(child, document, graphics, theme);
+                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(child, context.Document, graphics, context.Theme);
                 DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
                 continue;
             }
 
             if (child.Name == PresentationNamespace + "grpSp")
             {
-                RenderOrderedShapeTextContainer(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, fonts, images, ref imageIndex, transform.Combine(ReadGroupTransform(child)), renderPlaceholders, placeholderSources);
+                RenderOrderedShapeTextContainer(child, context, graphics, fonts, images, ref imageIndex, transform.Combine(ReadGroupTransform(child)), renderPlaceholders);
             }
         }
     }
@@ -2124,16 +2118,13 @@ internal sealed partial class PptxRenderer
             ?.Element(PresentationNamespace + "ph") is not null;
     }
 
-    private static IReadOnlyList<PdfImageResource> RenderPictures(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
+    private static IReadOnlyList<PdfImageResource> RenderPictures(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
-        var relationships = package.GetRelationships(slidePartName)
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
         var images = new List<PdfImageResource>();
         int index = 1;
-        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
+        foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            RenderPictureContainer(shapeTree, relationships, package, document, graphics, diagnosticSink, slideIndex, GroupTransform.Identity, images, ref index);
+            RenderPictureContainer(shapeTree, context, graphics, GroupTransform.Identity, images, ref index);
         }
 
         return images;
@@ -2141,12 +2132,8 @@ internal sealed partial class PptxRenderer
 
     private static void RenderPictureContainer(
         XElement container,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPackage package,
-        PptxDocument document,
+        PptxRenderContext context,
         PdfGraphicsBuilder graphics,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
         GroupTransform transform,
         List<PdfImageResource> images,
         ref int index)
@@ -2155,14 +2142,14 @@ internal sealed partial class PptxRenderer
         {
             if (child.Name == PresentationNamespace + "pic")
             {
-                RenderPicture(child, relationships, package, document, graphics, diagnosticSink, slideIndex, transform, images, ref index);
+                RenderPicture(child, context.SlideRelationships, context.Package, context.Document, graphics, context.DiagnosticSink, context.SlideNumber, transform, images, ref index);
                 continue;
             }
 
             if (child.Name == PresentationNamespace + "grpSp")
             {
                 GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
-                RenderPictureContainer(child, relationships, package, document, graphics, diagnosticSink, slideIndex, childTransform, images, ref index);
+                RenderPictureContainer(child, context, graphics, childTransform, images, ref index);
                 continue;
             }
         }

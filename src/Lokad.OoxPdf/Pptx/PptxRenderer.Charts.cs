@@ -8,13 +8,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderCharts(OoxPackage package, string slidePartName, XDocument slideXml, PptxDocument document, PdfGraphicsBuilder graphics, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
+    private static void RenderCharts(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
-        IReadOnlyDictionary<string, OoxRelationship> relationships = package.GetRelationships(slidePartName)
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
-
-        foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
+        foreach (XElement frame in context.SlideXml.Descendants(PresentationNamespace + "graphicFrame"))
         {
             XElement? graphicData = frame
                 .Element(DrawingNamespace + "graphic")
@@ -29,16 +25,16 @@ internal sealed partial class PptxRenderer
             string? relationshipId = (string?)graphicData
                 .Element(ChartNamespace + "chart")
                 ?.Attribute(RelationshipsNamespace + "id");
-            if (bounds is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+            if (bounds is null || relationshipId is null || !context.SlideRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
             {
-                EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", slidePartName, slideIndex, "Ignored");
+                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
                 continue;
             }
 
-            OoxPart? chartPart = package.GetPart(relationship.ResolvedTarget);
+            OoxPart? chartPart = context.Package.GetPart(relationship.ResolvedTarget);
             if (chartPart is null)
             {
-                EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", relationship.ResolvedTarget, slideIndex, "Ignored");
+                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", relationship.ResolvedTarget, context.SlideNumber, "Ignored");
                 continue;
             }
 
@@ -47,12 +43,12 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> series = ReadBarChartSeries(chartXml);
             if (series.Count == 0)
             {
-                EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar chart cached numeric values have a static fallback.", chartPart.Name, slideIndex, "Ignored");
+                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
                 continue;
             }
 
-            RenderBarChartFallback(graphics, document, bounds.Value, series);
-            EmitChartDiagnostic(diagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static bar-chart fallback.", chartPart.Name, slideIndex, "Static bar-chart fallback");
+            RenderBarChartFallback(graphics, context.Document, bounds.Value, series);
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static bar-chart fallback.", chartPart.Name, context.SlideNumber, "Static bar-chart fallback");
         }
     }
 

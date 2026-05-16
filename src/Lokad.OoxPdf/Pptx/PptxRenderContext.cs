@@ -11,6 +11,7 @@ internal sealed record PptxRenderContext(
     PptxSlide Slide,
     XDocument SlideXml,
     IReadOnlyList<XDocument> InheritedXml,
+    IReadOnlyDictionary<string, OoxRelationship> SlideRelationships,
     Action<OoxPdfDiagnostic>? DiagnosticSink)
 {
     public int SlideNumber => Slide.Index + 1;
