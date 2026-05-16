@@ -1359,9 +1359,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   can be emitted as one positioned text object.
 - [x] Split PPTX text layout and text drawing into `PptxRenderer` partial files so typography work no longer
   lands in the monolithic renderer body.
-- [ ] Continue splitting `PptxRenderer` by responsibility: shapes/presets, pictures, tables, charts,
-  diagnostics, and shared geometry/types. Keep splits mechanical and behavior-neutral unless a scoped
-  fidelity fix is part of the same area.
+- [ ] Continue splitting `PptxRenderer` by responsibility: shapes/presets, pictures, table layout,
+  diagnostics, and shared geometry/types. Table-style and chart-fallback helpers now live in dedicated
+  partials. Keep splits mechanical and behavior-neutral unless a scoped fidelity fix is part of the same
+  area.
 - [ ] Refactor PDF rendering primitives where Office-like structure is more robust for fidelity, while
   preserving deterministic output and keeping `src/Lokad.OoxPdf` dependency-free.
 - [ ] Add PDF hyperlinks, outlines/bookmarks, metadata, and optional tagged-PDF structure if needed by
