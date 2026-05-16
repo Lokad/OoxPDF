@@ -123,7 +123,7 @@ internal sealed class PdfEmbeddedFont
         return EncodeGlyphPositioningArray(text, 0d, 1d);
     }
 
-    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray = false)
+    public string? EncodeGlyphPositioningArray(string text, double characterSpacingPoints, double fontSize, bool forcePositioningArray = false, bool kerningEnabled = true)
     {
         var glyphs = new List<ushort>();
         foreach (Rune rune in text.EnumerateRunes())
@@ -150,7 +150,7 @@ internal sealed class PdfEmbeddedFont
             if (i > 0)
             {
                 double adjustment = trackingAdjustment;
-                short kerning = Font.GetKerning(glyphs[i - 1], glyphs[i]);
+                short kerning = kerningEnabled ? Font.GetKerning(glyphs[i - 1], glyphs[i]) : (short)0;
                 if (kerning != 0)
                 {
                     adjustment += -kerning * 1000d / Font.UnitsPerEm;
@@ -172,12 +172,17 @@ internal sealed class PdfEmbeddedFont
 
     public double MeasureTextPoints(string text, double fontSize)
     {
+        return MeasureTextPoints(text, fontSize, kerningEnabled: true);
+    }
+
+    public double MeasureTextPoints(string text, double fontSize, bool kerningEnabled)
+    {
         double units = 0;
         ushort previousGlyph = 0;
         foreach (Rune rune in text.EnumerateRunes())
         {
             ushort glyph = Font.MapCodePoint(rune.Value);
-            if (previousGlyph != 0 && glyph != 0)
+            if (kerningEnabled && previousGlyph != 0 && glyph != 0)
             {
                 units += Font.GetKerning(previousGlyph, glyph);
             }

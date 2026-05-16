@@ -222,7 +222,7 @@ internal sealed partial class PptxRenderer
                         BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
                         double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
-                        line.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY), bulletEndX);
+                        line.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY), bulletEndX);
                         bulletPending = false;
                     }
 
@@ -232,8 +232,8 @@ internal sealed partial class PptxRenderer
                     {
                         if (tabPartIndex > 0)
                         {
-                            double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
-                            line.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
+                            double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            line.Add(new TextRun(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), textHeight, textX, textClipY, textWidth, textClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, PreventCoalesce: true), cursorX + tabSpaceWidth);
                             cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
                             line.AdvanceTo(cursorX);
                         }
@@ -250,7 +250,7 @@ internal sealed partial class PptxRenderer
                             {
                                 string currentSegment = flowSegment.Text;
                                 string currentAdvanceText = flowSegment.AdvanceText;
-                                double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
+                                double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                                 bool overflowsLine = cursorX > paragraphTextX &&
                                     (cursorX + segmentWidth > textX + textWidth ||
                                         (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > textX + textWidth - fragmentFontSize));
@@ -264,7 +264,7 @@ internal sealed partial class PptxRenderer
                                     maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
                                     currentSegment = currentSegment.TrimStart();
                                     currentAdvanceText = currentAdvanceText.TrimStart();
-                                    segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
+                                    segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                                 }
 
                                 if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
@@ -274,7 +274,7 @@ internal sealed partial class PptxRenderer
 
                                 if (flowSegment.Draw && currentSegment.Length != 0)
                                 {
-                                    line.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
+                                    line.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY, flowSegment.PreventCoalesce), cursorX + segmentWidth);
                                 }
 
                                 cursorX += segmentWidth;
@@ -504,11 +504,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, TextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing)
+    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, TextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
     {
         return segment.AdvanceFontSizeFactor is { } factor
             ? Math.Max(0d, fontSize * factor)
-            : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing);
+            : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
     }
 
     private static void AddAlignedParagraphRuns(List<TextRun> runs, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth)
@@ -687,7 +687,20 @@ internal sealed partial class PptxRenderer
             italic,
             underline,
             IsStrikeEnabled(runProperties, defaultRunProperties),
+            IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
             typeface);
+    }
+
+    private static bool IsKerningEnabled(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
+    {
+        XAttribute? threshold = runProperties?.Attribute("kern") ?? defaultRunProperties?.Attribute("kern");
+        if (threshold is null)
+        {
+            return true;
+        }
+
+        double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;
+        return minimumFontSize <= 0d || fontSize >= minimumFontSize;
     }
 
     private static bool IsTextRunElement(XElement element)

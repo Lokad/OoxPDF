@@ -146,6 +146,9 @@ High-priority actions:
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
+- [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
+  kerning is disabled when the run font size is below the OOXML threshold, and a unit test locks the
+  no-adjustment `TJ` array for Times New Roman `To`.
 - [x] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
   accented-letter pairs, Cambria/Calibri/Arial differences, highlighted runs, and mixed run boundaries.
   The first probes are `pptx-ladder-04-typography-capital-spacing-probe`,

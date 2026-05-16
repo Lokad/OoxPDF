@@ -1704,7 +1704,7 @@ internal sealed partial class PptxRenderer
                     double fragmentFontSize = fontSize * fragment.FontScale;
                     maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                     double advance = advanceEstimator.Measure(fragment.Text, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
-                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface, 0d, 0d, 0d));
+                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d));
                     cursorX += advance;
                 }
             }
@@ -2114,6 +2114,7 @@ internal sealed partial class PptxRenderer
         bool Italic,
         bool Underline,
         bool Strike,
+        bool KerningEnabled,
         TextAlignment Alignment,
         string? FontFamily,
         double RotationDegrees,
@@ -2148,6 +2149,7 @@ internal sealed partial class PptxRenderer
         bool Italic,
         bool Underline,
         bool Strike,
+        bool KerningEnabled,
         string? Typeface);
 
     private sealed class TextLayoutLine(double startX)
@@ -2213,7 +2215,7 @@ internal sealed partial class PptxRenderer
         private readonly WindowsFontResolver resolver = new();
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
 
-        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d)
+        public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
         {
             OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
             if (font is null)
@@ -2227,7 +2229,7 @@ internal sealed partial class PptxRenderer
             foreach (Rune rune in text.EnumerateRunes())
             {
                 ushort glyph = font.MapCodePoint(rune.Value);
-                if (previousGlyph != 0 && glyph != 0)
+                if (kerningEnabled && previousGlyph != 0 && glyph != 0)
                 {
                     units += font.GetKerning(previousGlyph, glyph);
                 }

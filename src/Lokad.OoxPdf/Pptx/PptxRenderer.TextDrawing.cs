@@ -118,6 +118,7 @@ internal sealed partial class PptxRenderer
             left.Italic == right.Italic &&
             left.Underline == right.Underline &&
             left.Strike == right.Strike &&
+            left.KerningEnabled == right.KerningEnabled &&
             left.Alignment == right.Alignment &&
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             right.X >= left.X &&
@@ -195,6 +196,7 @@ internal sealed partial class PptxRenderer
             !right.Strike &&
             left.Bold == right.Bold &&
             left.Italic == right.Italic &&
+            left.KerningEnabled == right.KerningEnabled &&
             left.Alignment == right.Alignment &&
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             left.Color.Equals(right.Color) &&
@@ -242,7 +244,7 @@ internal sealed partial class PptxRenderer
         double baselineY = run.Y + run.BaselineOffset;
         if (glyphHex.Length != 0 && BaselineIntersectsClip(run, baselineY))
         {
-            double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing);
+            double lineWidth = MeasureRenderedText(embedded, line, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
             double x = run.Alignment switch
             {
                 TextAlignment.Center => run.X + Math.Max(0, run.Width - lineWidth) / 2d,
@@ -257,10 +259,10 @@ internal sealed partial class PptxRenderer
                 graphics.SetAlpha(run.Alpha, 1d);
             }
 
-            DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
+            DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing, run.KerningEnabled);
             if (syntheticBold)
             {
-                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing);
+                DrawGlyphText(graphics, embedded, resourceName, run.FontSize, x + 0.35d, baselineY, run.Color, line, glyphHex, syntheticItalic, run.CharacterSpacing, run.KerningEnabled);
             }
 
             if (run.Underline)
@@ -300,7 +302,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing);
+        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing, run.KerningEnabled);
         graphics.SaveState();
         if (Math.Abs(run.RotationDegrees) > 0.001d)
         {
@@ -331,9 +333,9 @@ internal sealed partial class PptxRenderer
         graphics.Transform(cos, sin, -sin, cos, e, f);
     }
 
-    private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing)
+    private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing, bool kerningEnabled)
     {
-        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize, forcePositioningArray: true);
+        string? positioningArray = embedded.EncodeGlyphPositioningArray(text, characterSpacing, fontSize, forcePositioningArray: true, kerningEnabled);
         if (positioningArray is null)
         {
             graphics.DrawGlyphText(resourceName, fontSize, x, y, color.Red, color.Green, color.Blue, glyphHex, syntheticItalic);
@@ -346,7 +348,7 @@ internal sealed partial class PptxRenderer
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
     {
-        if (MeasureRenderedText(embedded, text, fontSize, characterSpacing) <= maxWidth)
+        if (MeasureRenderedText(embedded, text, fontSize, characterSpacing, kerningEnabled: true) <= maxWidth)
         {
             yield return text;
             yield break;
@@ -362,7 +364,7 @@ internal sealed partial class PptxRenderer
         foreach (string word in words)
         {
             string candidate = line.Length == 0 ? word : line + " " + word;
-            if (line.Length > 0 && MeasureRenderedText(embedded, candidate, fontSize, characterSpacing) > maxWidth)
+            if (line.Length > 0 && MeasureRenderedText(embedded, candidate, fontSize, characterSpacing, kerningEnabled: true) > maxWidth)
             {
                 yield return line.ToString();
                 line.Clear();
@@ -381,9 +383,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static double MeasureRenderedText(PdfEmbeddedFont embedded, string text, double fontSize, double characterSpacing)
+    private static double MeasureRenderedText(PdfEmbeddedFont embedded, string text, double fontSize, double characterSpacing, bool kerningEnabled)
     {
-        double width = embedded.MeasureTextPoints(text, fontSize);
+        double width = embedded.MeasureTextPoints(text, fontSize, kerningEnabled);
         int runeCount = text.EnumerateRunes().Count();
         return Math.Max(0d, width + Math.Max(0, runeCount - 1) * characterSpacing);
     }
