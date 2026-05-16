@@ -241,6 +241,9 @@ High-priority actions:
   `spcAft + spcBef`. This improved `pptx-ladder-04-line-spacing-port` from MAE `4.347075` to `1.443223`
   and brought all inspected text baselines within about `0.32 pt` of Office, so the case now has a PDF
   text-operation position gate.
+- [x] Port the first `pptx-renderer` manual-break line-spacing lock:
+  a synthetic layout inspection test now proves `spcPts` line spacing stays as an absolute line-box advance
+  across `<a:br/>`, matching the renderer pattern that uses explicit line wrappers for absolute spacing.
 - [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
   ascender, internal leading, or another generic font metric for top-to-baseline placement.
