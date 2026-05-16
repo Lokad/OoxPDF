@@ -161,6 +161,13 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
 
+        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(bodyProperties =>
+                bodyProperties.Element(DrawingNamespace + "normAutofit") is not null ||
+                bodyProperties.Element(DrawingNamespace + "spAutoFit") is not null))
+        {
+            Emit("PPTX_UNSUPPORTED_TEXT_AUTOFIT", "text autofit");
+        }
+
         if (slideXml.Descendants(PresentationNamespace + "spPr").Any(shapeProperties =>
                 shapeProperties.Element(DrawingNamespace + "blipFill") is not null))
         {
