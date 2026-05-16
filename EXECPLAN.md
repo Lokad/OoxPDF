@@ -748,6 +748,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-crop-fill-rect` locks source crop combined with destination fill-rect
   placement with exact raster parity.
+- [x] Ladder 7 gate `pptx-ladder-07-shape-picture-fill` locks rectangular shape `a:blipFill` rendering through
+  the image pipeline with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-alpha` locks a transparent PNG soft-mask case with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-jpeg-image` locks minimal JPEG placement at MAE `0.134097`, changed16
   `0.005486`.
@@ -1048,7 +1050,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-101 passed, 0 failed
+102 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

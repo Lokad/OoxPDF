@@ -1739,6 +1739,52 @@ internal static class PptxTests
         TestAssert.Contains("/Width 2 /Height 1", pdf);
     }
 
+    public static void PptxSyntheticShapePictureFillRendersImageXObject()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                </Types>
+                """),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="rect"/>
+                      <a:blipFill><a:blip r:embed="rId1"/></a:blipFill>
+                    </p:spPr>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/media/image1.png"] = TestFixtures.CreateRgbPng(1, 1, [255, 0, 0])
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/Im1 Do", pdf);
+    }
+
     public static void PptxSyntheticBmpPictureRendersImageXObject()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
@@ -2293,7 +2339,7 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:effectLst><a:outerShdw/></a:effectLst></p:spPr></p:sp>
                     <p:sp><p:spPr><a:custGeom/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
-                    <p:sp><p:spPr><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:prstGeom prst="ellipse"/><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
                     <p:pic><p:blipFill><a:blip><a:grayscl/></a:blip><a:tile/></p:blipFill></p:pic>
                     <p:sp><p:txBody><a:bodyPr><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody></p:sp>
                     <p:sp><p:txBody><a:bodyPr numCol="2"/><a:lstStyle/><a:p/></p:txBody></p:sp>

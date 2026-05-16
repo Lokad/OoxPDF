@@ -30,6 +30,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticInheritedPlaceholderTextIsSkipped,
     PptxTests.PptxSyntheticSlidePlaceholderTextUsesInheritedBounds,
     PptxTests.PptxSyntheticPngPictureRendersImageXObject,
+    PptxTests.PptxSyntheticShapePictureFillRendersImageXObject,
     PptxTests.PptxSyntheticBmpPictureRendersImageXObject,
     PptxTests.PptxSyntheticSlideShapesRenderAbovePictures,
     PptxTests.PptxSyntheticSlidePicturesRenderAboveEarlierShapes,

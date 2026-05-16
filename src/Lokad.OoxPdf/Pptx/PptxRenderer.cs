@@ -178,8 +178,7 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "spPr").Any(shapeProperties =>
-                shapeProperties.Element(DrawingNamespace + "blipFill") is not null))
+        if (slideXml.Descendants(PresentationNamespace + "spPr").Any(HasUnsupportedPictureFill))
         {
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
         }
@@ -359,7 +358,7 @@ internal sealed class PptxRenderer
             {
                 if (renderPlaceholders || !IsPlaceholder(child))
                 {
-                    RenderShape(child, document, graphics, theme, transform);
+                    RenderShape(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, transform, images, ref imageIndex);
                     DrawTextRunsWithFonts(ReadTextRunsForShape(child, document, theme, renderPlaceholders, placeholderSources), graphics, fonts);
                 }
 
@@ -368,7 +367,7 @@ internal sealed class PptxRenderer
 
             if (child.Name == PresentationNamespace + "cxnSp")
             {
-                RenderShape(child, document, graphics, theme, transform);
+                RenderShape(child, relationships, package, document, graphics, diagnosticSink, slideIndex, theme, transform, images, ref imageIndex);
                 continue;
             }
 
@@ -422,6 +421,23 @@ internal sealed class PptxRenderer
 
     private static void RenderShape(XElement shape, PptxDocument document, PdfGraphicsBuilder graphics, PptxTheme theme, GroupTransform groupTransform)
     {
+        int imageIndex = 1;
+        RenderShape(shape, relationships: null, package: null, document, graphics, diagnosticSink: null, slideIndex: 0, theme, groupTransform, images: null, ref imageIndex);
+    }
+
+    private static void RenderShape(
+        XElement shape,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships,
+        OoxPackage? package,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        PptxTheme theme,
+        GroupTransform groupTransform,
+        List<PdfImageResource>? images,
+        ref int imageIndex)
+    {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         if (shapeProperties is null)
         {
@@ -435,9 +451,7 @@ internal sealed class PptxRenderer
         }
 
         ShapeBounds bounds = groupTransform.Apply(rawBounds.Value);
-        string preset = (string?)shapeProperties
-            .Element(DrawingNamespace + "prstGeom")
-            ?.Attribute("prst") ?? "rect";
+        string preset = ReadPreset(shapeProperties);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -456,6 +470,16 @@ internal sealed class PptxRenderer
             _ => null
         };
         int? lineJoin = ReadLineJoin(shapeProperties);
+        bool hasPictureFill = TryReadShapePictureFill(
+            shapeProperties,
+            relationships,
+            package,
+            diagnosticSink,
+            slideIndex,
+            images,
+            ref imageIndex,
+            out string? pictureFillName,
+            out PdfImageXObject? pictureFillImage);
 
         if (transformed)
         {
@@ -537,7 +561,26 @@ internal sealed class PptxRenderer
             return;
         }
 
-        if (hasFill)
+        if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
+        {
+            CropRect crop = ReadCrop(shapeProperties);
+            FillRect fillRect = ReadFillRect(shapeProperties);
+            double imageX = x + fillRect.Left * width;
+            double imageY = y + fillRect.Bottom * height;
+            double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
+            double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+            if (crop.IsEmpty)
+            {
+                graphics.DrawImage(pictureFillName, imageX, imageY, imageWidth, imageHeight);
+            }
+            else
+            {
+                graphics.DrawImageCropped(pictureFillName, imageX, imageY, imageWidth, imageHeight, crop.Left, crop.Top, crop.Right, crop.Bottom);
+            }
+
+            images?.Add(new PdfImageResource(pictureFillName, pictureFillImage));
+        }
+        else if (hasFill)
         {
             bool transparentFill = fillAlpha < 0.999d;
             if (transparentFill)
@@ -639,6 +682,76 @@ internal sealed class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    private static bool HasUnsupportedPictureFill(XElement shapeProperties)
+    {
+        if (shapeProperties.Element(DrawingNamespace + "blipFill") is null)
+        {
+            return false;
+        }
+
+        return ReadPreset(shapeProperties) != "rect";
+    }
+
+    private static string ReadPreset(XElement shapeProperties)
+    {
+        return (string?)shapeProperties
+            .Element(DrawingNamespace + "prstGeom")
+            ?.Attribute("prst") ?? "rect";
+    }
+
+    private static bool TryReadShapePictureFill(
+        XElement shapeProperties,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships,
+        OoxPackage? package,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        List<PdfImageResource>? images,
+        ref int imageIndex,
+        out string? name,
+        out PdfImageXObject? image)
+    {
+        name = null;
+        image = null;
+        if (relationships is null || package is null || images is null || ReadPreset(shapeProperties) != "rect")
+        {
+            return false;
+        }
+
+        string? relationshipId = (string?)shapeProperties
+            .Element(DrawingNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip")
+            ?.Attribute(RelationshipsNamespace + "embed");
+        if (relationshipId is null ||
+            !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
+            relationship.ResolvedTarget is null)
+        {
+            return false;
+        }
+
+        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        if (imagePart is null)
+        {
+            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "IMAGE_MISSING_PART",
+                OoxPdfSeverity.Error,
+                "Referenced image part was missing and the image was ignored.",
+                relationship.ResolvedTarget,
+                SlideIndex: slideIndex,
+                Feature: "image",
+                Fallback: "Ignored"));
+            return false;
+        }
+
+        image = CreateImage(imagePart, diagnosticSink, slideIndex);
+        if (image is null)
+        {
+            return false;
+        }
+
+        name = "Im" + imageIndex++;
+        return true;
     }
 
     private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, double directionX, double directionY, double lineWidth)
@@ -3160,9 +3273,9 @@ internal sealed class PptxRenderer
 
     private static CropRect ReadCrop(XElement picture)
     {
-        XElement? sourceRectangle = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "srcRect");
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        XElement? sourceRectangle = blipFill?.Element(DrawingNamespace + "srcRect");
         if (sourceRectangle is null)
         {
             return default;
@@ -3177,8 +3290,9 @@ internal sealed class PptxRenderer
 
     private static FillRect ReadFillRect(XElement picture)
     {
-        XElement? fillRectangle = picture
-            .Element(PresentationNamespace + "blipFill")
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        XElement? fillRectangle = blipFill
             ?.Element(DrawingNamespace + "stretch")
             ?.Element(DrawingNamespace + "fillRect");
         if (fillRectangle is null)
