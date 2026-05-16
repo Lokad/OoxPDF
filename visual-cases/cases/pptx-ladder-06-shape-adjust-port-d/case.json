@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-shape-adjust-port-d",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-shape-adjust-port-d.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shape", "adjustment", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 2.78,
+    "maxChangedPixelRatioAtThreshold16": 0.0982
+  },
+  "allowedUnsupportedFeatures": []
+}

@@ -151,8 +151,10 @@ Porting priorities:
   coverage.
 - [x] Port the typography oracle family first: font families, sizes, bold/italic/underline, colors,
   mixed formatting, bullets, vertical text, anchoring, and line spacing.
-- [ ] Port shape/preset oracle families next, preserving Office-authored/generated public fixtures and
-  adding PDF/raster inspection notes for every accepted gate.
+- [x] Port the generated shape-adjustment oracle family, preserving Office-authored public fixtures and
+  source-aligned variants from `oracle-pypptx-shape-adj-0001..0031`.
+- [ ] Port broader shape/preset oracle families next, preserving Office-authored/generated public fixtures
+  and adding PDF/raster inspection notes for every accepted gate.
 - [ ] Port layout-composition cases: master/layout placeholders, grouped transforms, z-order, image crop,
   table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
 - [ ] Port test organization patterns: capability folders, generated-case manifests, cached reference
@@ -197,8 +199,7 @@ Shape adjustment oracle family map:
   `pptx-ladder-06-shape-adjust-port-b`.
 - Block arc, folded corner, bevel, pentagon, can, and heart `0015..0020` plus `0023..0027`: ported in
   `pptx-ladder-06-shape-adjust-port-c`.
-- Moon and left brace `0028..0031`: still need source-aligned adjustment variants. Clean ports should
-  preserve one feature per case or compact paired variants where Office output remains easy to inspect.
+- Moon and left brace `0028..0031`: ported in `pptx-ladder-06-shape-adjust-port-d`.
 
 ## Test Suite Performance
 
