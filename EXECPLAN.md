@@ -565,9 +565,10 @@ document-specific business content into public notes.
 - Public PPTX slide-3 bottom-up rungs:
   - `pptx-ladder-04-spautofit-overflow` captures a minimal `spAutoFit` overflow case. Latest run:
     `artifacts/visual/pptx-ladder-04-spautofit-overflow/20260516-114453`, MAE `0.224563`, changed-pixel
-    ratio threshold 16 `0.003963`, with `PPTX_UNSUPPORTED_TEXT_AUTOFIT` still expected. Office keeps the
-    text inside the box on three lines; the candidate now matches the three-line wrap after suppressing
-    draw-time double wrapping, but exact vertical placement and the unsupported diagnostic remain open.
+    ratio threshold 16 `0.003963`. Office keeps the text inside the box on three lines; the candidate now
+    matches the three-line wrap after suppressing draw-time double wrapping. Plain `spAutoFit` is no longer
+    diagnosed as unsupported because Office persists the grown text-frame geometry in the package; shrink
+    and scale autofit through `normAutofit` remains diagnostic-only.
   - `pptx-ladder-08-grouped-picture-caption` locks a grouped picture plus centered italic caption cell.
     Latest gated run: `artifacts/visual/pptx-ladder-08-grouped-picture-caption/20260516-114125`, MAE
     `0.124819`, changed-pixel ratio threshold 16 `0.002018`.
@@ -939,7 +940,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   without explicit character spacing.
 - [x] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
   rectangles for small centered text boxes.
-- [ ] Slide 3 public ladder: lock `spAutoFit` overflow/autosize text boxes with Office-authored PDFs before
+- [x] Slide 3 public ladder: lock `spAutoFit` overflow/autosize text boxes with Office-authored PDFs before
   enabling renderer-side autofit behavior.
 - [x] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,
   including mixed regular, bold, and italic runs.

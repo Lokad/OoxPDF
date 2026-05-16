@@ -162,8 +162,7 @@ internal sealed class PptxRenderer
         }
 
         if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(bodyProperties =>
-                bodyProperties.Element(DrawingNamespace + "normAutofit") is not null ||
-                bodyProperties.Element(DrawingNamespace + "spAutoFit") is not null))
+                bodyProperties.Element(DrawingNamespace + "normAutofit") is not null))
         {
             Emit("PPTX_UNSUPPORTED_TEXT_AUTOFIT", "text autofit");
         }
