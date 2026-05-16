@@ -101,7 +101,7 @@ quality requirement, not as incidental tooling work.
 
 High-priority actions:
 
-- [ ] Profile the dependency-free console runner and identify the slowest tests by name and elapsed time.
+- [x] Profile the dependency-free console runner and identify the slowest tests by name and elapsed time.
 - [x] Add runner-level timing output so regressions in test duration are visible in normal local runs.
 - [x] Cache Windows font resolver discovery across resolver instances. This reduced the full custom console
   runner from roughly 180 seconds to roughly 13 seconds on the local machine, with `108 passed, 0 failed`.
@@ -109,7 +109,7 @@ High-priority actions:
   ignored `artifacts/reference-cache/`, keyed by input hash, DPI, and reference/raster tool hashes.
 - [ ] Cache additional expensive test fixtures where useful, especially parsed fonts and repeated synthetic
   packages.
-- [ ] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
+- [x] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
   reference inputs as part of caching.
 - [ ] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
   tests/Lokad.OoxPdf.Tests` stays fast and visual gates can be run explicitly.
