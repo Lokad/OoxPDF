@@ -179,6 +179,16 @@ High-priority actions:
 - [x] Inspect Office vs candidate text operations for `pptx-ladder-04-typography-justify-port`: word-level
   positions now reach candidate PDF emission, but baselines remain about 0.7 pt low and raster drift remains
   high, so the next pass should target baseline/line-advance parity before private-deck tuning.
+- [x] Reject font-name-specific baseline constants after comparing `pptx-renderer`: its text layout uses
+  OOXML line-height semantics and browser/font metrics rather than Calibri/Aptos special cases. `ooxpdf`
+  baseline work must stay metric-driven and generic across all resolved fonts.
+- [x] Replace the rejected font-name baseline tweak with a generic OpenType-metric rule:
+  first-line PPTX baselines now use the resolved font's ascender metrics when available, falling back to the
+  previous heuristic only when font resolution fails. The justified text probe improved from MAE ~`4.63` to
+  `4.210743`, with the first-line baseline delta reduced from about `0.71 pt` to about `0.32 pt`.
+- [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
+  boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
+  ascender, internal leading, or another generic font metric for top-to-baseline placement.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:

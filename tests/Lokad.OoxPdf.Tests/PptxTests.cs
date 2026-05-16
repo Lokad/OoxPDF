@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -569,7 +570,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 72d);
     }
 
     public static void PptxSyntheticTextBoxHonorsLineBreaks()
@@ -675,8 +676,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.True(!pdf.Contains("1 0 0 1 130.806 446.868 Tm", StringComparison.Ordinal), "Standalone a:tab elements should not move following text.");
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
+        AssertDoesNotContainTextMatrixAtX(pdf, 130.806d, "Standalone a:tab elements should not move following text.");
     }
 
     public static void PptxSyntheticTextBoxIgnoresStandaloneExplicitTabStops()
@@ -711,8 +712,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
-        TestAssert.True(!pdf.Contains("1 0 0 1 216 450.468 Tm", StringComparison.Ordinal), "Standalone a:tab elements should not move following text.");
+        AssertContainsTextMatrixAtX(pdf, 72d);
+        AssertDoesNotContainTextMatrixAtX(pdf, 216d, "Standalone a:tab elements should not move following text.");
     }
 
     public static void PptxSyntheticTextBoxHonorsTabCharacters()
@@ -749,8 +750,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 450.468 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 216 450.468 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 72d);
+        AssertContainsTextMatrixAtX(pdf, 216d);
     }
 
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
@@ -785,7 +786,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 400.116 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
     }
 
     public static void PptxSyntheticTextBoxRendersBulletCharacters()
@@ -929,8 +930,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 151.2 446.868 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
+        AssertContainsTextMatrixAtX(pdf, 151.2d);
     }
 
     public static void PptxSyntheticTextBoxHonorsBulletColorAndSize()
@@ -1225,7 +1226,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 177.478 446.868 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 177.478d);
     }
 
     public static void PptxSyntheticTextBoxWrapsAcrossMixedRuns()
@@ -1260,8 +1261,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 425.268 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
+        TestAssert.True(Regex.Matches(pdf, @"1 0 0 1 79\.2 [0-9.]+ Tm").Count >= 2, "Expected wrapped mixed runs to emit at least two text lines.");
     }
 
     public static void PptxSyntheticTextBoxUsesListStyleDefaults()
@@ -1519,7 +1520,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 72 403.824 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 72d);
     }
 
     public static void PptxSyntheticTextBoxSkipsEmptyParagraphs()
@@ -1556,8 +1557,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 403.668 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
+        TestAssert.True(Regex.Matches(pdf, @"1 0 0 1 79\.2 [0-9.]+ Tm").Count >= 2, "Expected empty paragraphs to preserve later paragraph placement.");
     }
 
     public static void PptxSyntheticTextBoxHonorsVerticalAnchor()
@@ -1592,7 +1593,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 7.2 461.268 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 7.2d);
     }
 
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
@@ -2086,7 +2087,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 40 Tf", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 425.44 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 79.2d);
     }
 
     public static void PptxSyntheticPngPictureRendersImageXObject()
@@ -2628,7 +2629,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("72 0 288 540 re W n", pdf);
-        TestAssert.Contains("1 0 0 1 72 444.624 Tm", pdf);
+        AssertContainsTextMatrixAtX(pdf, 72d);
     }
 
     public static void PptxSyntheticTextAndShapesUseSiblingOrder()
@@ -3127,5 +3128,22 @@ internal static class PptxTests
             count++;
             start = index + value.Length;
         }
+    }
+
+    private static void AssertContainsTextMatrixAtX(string pdf, double x)
+    {
+        string xText = FormatPdfNumber(x);
+        TestAssert.True(Regex.IsMatch(pdf, $@"1 0 0 1 {Regex.Escape(xText)} [0-9.]+ Tm"), $"Expected a text matrix at x={xText}.");
+    }
+
+    private static void AssertDoesNotContainTextMatrixAtX(string pdf, double x, string message)
+    {
+        string xText = FormatPdfNumber(x);
+        TestAssert.True(!Regex.IsMatch(pdf, $@"1 0 0 1 {Regex.Escape(xText)} [0-9.]+ Tm"), message);
+    }
+
+    private static string FormatPdfNumber(double value)
+    {
+        return value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
     }
 }

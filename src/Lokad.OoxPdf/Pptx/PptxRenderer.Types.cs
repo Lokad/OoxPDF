@@ -283,6 +283,11 @@ internal sealed partial class PptxRenderer
             return Math.Max(0d, units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing);
         }
 
+        public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
+        {
+            return ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
+        }
+
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
         {
             string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
