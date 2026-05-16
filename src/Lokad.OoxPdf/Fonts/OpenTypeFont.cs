@@ -328,9 +328,20 @@ internal sealed class OpenTypeFont
             return;
         }
 
+        HashSet<ushort> kernLookupIndices = ReadGposKernLookupIndices(bytes, gpos.Offset, tableEnd);
+        if (kernLookupIndices.Count == 0)
+        {
+            return;
+        }
+
         ushort lookupCount = U16(bytes, lookupList);
         for (int i = 0; i < lookupCount && lookupList + 2 + i * 2 + 2 <= tableEnd; i++)
         {
+            if (!kernLookupIndices.Contains((ushort)i))
+            {
+                continue;
+            }
+
             int lookup = lookupList + U16(bytes, lookupList + 2 + i * 2);
             if (lookup + 6 > tableEnd || U16(bytes, lookup) != 2)
             {
@@ -344,6 +355,41 @@ internal sealed class OpenTypeFont
                 ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
             }
         }
+    }
+
+    private static HashSet<ushort> ReadGposKernLookupIndices(byte[] bytes, int gposOffset, int tableEnd)
+    {
+        var lookupIndices = new HashSet<ushort>();
+        int featureList = gposOffset + U16(bytes, gposOffset + 6);
+        if (featureList + 2 > tableEnd)
+        {
+            return lookupIndices;
+        }
+
+        ushort featureCount = U16(bytes, featureList);
+        for (int i = 0; i < featureCount && featureList + 2 + i * 6 + 6 <= tableEnd; i++)
+        {
+            int record = featureList + 2 + i * 6;
+            string tag = Encoding.ASCII.GetString(bytes, record, 4);
+            if (!tag.Equals("kern", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int feature = featureList + U16(bytes, record + 4);
+            if (feature + 4 > tableEnd)
+            {
+                continue;
+            }
+
+            ushort lookupIndexCount = U16(bytes, feature + 2);
+            for (int j = 0; j < lookupIndexCount && feature + 4 + j * 2 + 2 <= tableEnd; j++)
+            {
+                lookupIndices.Add(U16(bytes, feature + 4 + j * 2));
+            }
+        }
+
+        return lookupIndices;
     }
 
     private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, Dictionary<uint, short> pairs)

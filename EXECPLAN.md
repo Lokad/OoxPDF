@@ -586,6 +586,10 @@ document-specific business content into public notes.
     spans and a wrapped continuation line. Latest gated run:
     `artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260516-115932`, MAE `0.292685`,
     changed-pixel ratio threshold 16 `0.006998`.
+  - `pptx-ladder-04-vertical-text-270` captures a minimal vertical Latin text frame. Latest run:
+    `artifacts/visual/pptx-ladder-04-vertical-text-270/20260516-124317`, MAE `0.368511`, changed-pixel
+    ratio threshold 16 `0.003190`, with `PPTX_UNSUPPORTED_TEXT_ORIENTATION` still expected. Office stacks
+    and rotates glyphs inside the vertical frame; the current renderer still lays the text horizontally.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260516-121040` after the slide-2/3
   public ladder work:
   - 84 visual comparison entries were produced; all paired page dimensions matched.
@@ -598,6 +602,13 @@ document-specific business content into public notes.
   - The previous slide-3 text-autofit diagnostic is gone. Remaining diagnostics are public-safe categories:
     chart static fallbacks plus unsupported effects, custom geometry, vertical text, transparency,
     multi-column text, and image recolor.
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260516-123248` after restricting GPOS
+  pair positioning to the active `kern` feature:
+  - 84 visual comparison entries were produced; all paired page dimensions matched.
+  - Deck mean absolute error average: `12.734628`; max mean absolute error: `31.067204`.
+  - Deck mean changed-pixel ratio at threshold 16: `0.151359`; max changed-pixel ratio: `0.467519`.
+  - Aggregate metrics are effectively unchanged; this run is typography evidence for manual inspection of
+    the reported parasite inter-letter gaps, not a deck-level visual-correctness milestone.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -773,6 +784,12 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   not expose legacy `kern` pairs.
 - [x] OpenType GPOS pair positioning is unit-tested with Arial `To` as typography infrastructure for later
   visual tightening.
+- [x] OpenType GPOS pair positioning is restricted to lookups referenced by the `kern` feature, avoiding
+  inactive pair-positioning lookups that created parasite inter-letter gaps in Cambria/Cambria Math text.
+- [x] Ladder 4 gate `pptx-ladder-04-kerning-accent-highlight` covers normal words with uppercase starts,
+  accented letters, and reported French/English word shapes. Latest gated run:
+  `artifacts/visual/pptx-ladder-04-kerning-accent-highlight/20260516-123113`, MAE `0.314506`,
+  changed16 `0.006260`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
 - [ ] Ladder 4 remaining combined-stack gaps are finer glyph/font details after basic bullet font selection.
@@ -960,6 +977,12 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   picture positioning, centered italic caption text, and z-order.
 - [x] Slide 3 public ladder: lock highlighted headline text with multiple runs and Office-matched highlight
   bounds.
+- [x] Slide 2/3 public ladder: lock a Cambria/Cambria Math kerning/accent typography probe for parasite
+  gaps such as uppercase-start words, accented words, and dense French/English word pairs.
+- [ ] PPTX typography ladder: refine highlighted-run rectangle origin and height for mixed highlighted text
+  after kerning fixes, using Office PDF/raster inspection rather than private-deck MAE.
+- [ ] PPTX typography ladder: implement vertical Latin text frames for `a:bodyPr @vert="vert"` after
+  surveying Office glyph order, line stacking, and alignment on public fixtures.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
   derive public fixtures from private slide content.
 - [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX

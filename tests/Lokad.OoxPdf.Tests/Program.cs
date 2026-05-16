@@ -101,6 +101,7 @@ return TestRunner.Run(
     FontTests.WindowsFontResolverFindsInstalledFonts,
     FontTests.OpenTypeParserMapsBasicLatinGlyphs,
     FontTests.OpenTypeParserReadsGposPairAdjustments,
+    FontTests.OpenTypeParserIgnoresInactiveGposPairAdjustments,
     FontTests.OpenTypeParserMapsWindowsSymbolCmap,
     FontTests.WindowsFontResolverMapsCambriaMathToCambria,
     FontTests.WindowsFontResolverMapsAptosThemeFontsToCalibri,

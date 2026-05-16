@@ -70,6 +70,22 @@ internal static class FontTests
         TestAssert.True(font.GetKerning(left, right) != 0, "Expected Arial GPOS pair adjustment for 'To'.");
     }
 
+    public static void OpenTypeParserIgnoresInactiveGposPairAdjustments()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string cambria = Path.Combine(fontsDirectory, "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(cambria);
+        AssertNoKerning(font, 'L', 'o');
+        AssertNoKerning(font, 'o', 'k');
+        AssertNoKerning(font, 'q', 'u');
+        AssertNoKerning(font, 'D', 'é');
+    }
+
     public static void OpenTypeParserMapsWindowsSymbolCmap()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
@@ -83,6 +99,14 @@ internal static class FontTests
         ushort glyph = font.MapCodePoint(0xF0B7);
 
         TestAssert.True(glyph > 0, "Expected a glyph mapping for the common Symbol bullet code point.");
+    }
+
+    private static void AssertNoKerning(OpenTypeFont font, char leftChar, char rightChar)
+    {
+        ushort left = font.MapCodePoint(leftChar);
+        ushort right = font.MapCodePoint(rightChar);
+
+        TestAssert.Equal((short)0, font.GetKerning(left, right));
     }
 
     public static void WindowsFontResolverMapsCambriaMathToCambria()
