@@ -120,6 +120,11 @@ High-priority actions:
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
+- [x] Lock the first exact typography cases with PDF text-operation gates:
+  `pptx-ladder-04-all-caps` and `pptx-ladder-04-field-text`.
+- [ ] Investigate Office text-operation splits for preserved whitespace controls before locking:
+  `pptx-ladder-04-nonbreaking-space`, `pptx-ladder-04-soft-hyphen`, and
+  `pptx-ladder-04-tab-character` render visually close but Office emits extra text operations.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
