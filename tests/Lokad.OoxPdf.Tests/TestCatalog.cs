@@ -61,13 +61,6 @@ internal static class TestCatalog
             return "pptx-typography";
         }
 
-        if (name.Contains("Shape", StringComparison.Ordinal) ||
-            name.Contains("Connector", StringComparison.Ordinal) ||
-            name.Contains("Arrow", StringComparison.Ordinal))
-        {
-            return "pptx-shapes";
-        }
-
         if (name.Contains("Picture", StringComparison.Ordinal) ||
             name.Contains("Image", StringComparison.Ordinal) ||
             name.Contains("Png", StringComparison.Ordinal) ||
@@ -75,6 +68,13 @@ internal static class TestCatalog
             name.Contains("Crop", StringComparison.Ordinal))
         {
             return "pptx-images";
+        }
+
+        if (name.Contains("Shape", StringComparison.Ordinal) ||
+            name.Contains("Connector", StringComparison.Ordinal) ||
+            name.Contains("Arrow", StringComparison.Ordinal))
+        {
+            return "pptx-shapes";
         }
 
         if (name.Contains("Table", StringComparison.Ordinal))
