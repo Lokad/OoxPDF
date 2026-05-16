@@ -78,6 +78,7 @@ internal sealed partial class PptxRenderer
             theme,
             groupTransform,
             images: null,
+            imageCache: null,
             ref imageIndex);
     }
 }

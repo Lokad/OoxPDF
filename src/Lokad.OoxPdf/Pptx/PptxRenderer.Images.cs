@@ -43,6 +43,7 @@ internal sealed partial class PptxRenderer
                     context.SlideNumber,
                     transform,
                     images,
+                    context.ImageCache,
                     ref index);
                 continue;
             }
@@ -66,6 +67,7 @@ internal sealed partial class PptxRenderer
         int slideIndex,
         GroupTransform transform,
         List<PdfImageResource> images,
+        Dictionary<string, PdfImageXObject?> imageCache,
         ref int index)
     {
         string? relationshipId = (string?)picture
@@ -93,7 +95,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
+        PdfImageXObject? image = GetOrCreateImage(imagePart, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return;
@@ -147,6 +149,22 @@ internal sealed partial class PptxRenderer
         }
 
         images.Add(new PdfImageResource(name, image));
+    }
+
+    private static PdfImageXObject? GetOrCreateImage(
+        OoxPart imagePart,
+        Dictionary<string, PdfImageXObject?>? imageCache,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex)
+    {
+        if (imageCache is not null && imageCache.TryGetValue(imagePart.Name, out PdfImageXObject? cached))
+        {
+            return cached;
+        }
+
+        PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
+        imageCache?.TryAdd(imagePart.Name, image);
+        return image;
     }
 
     private static PdfImageXObject? CreateImage(OoxPart imagePart, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)

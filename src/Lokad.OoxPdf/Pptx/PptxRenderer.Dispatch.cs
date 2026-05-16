@@ -40,6 +40,7 @@ internal sealed partial class PptxRenderer
                         context.Theme,
                         transform,
                         images,
+                        context.ImageCache,
                         ref imageIndex);
                     DrawTextRunsWithFonts(ReadTextRunsForShape(child, context, renderPlaceholders), graphics, fonts);
                 }
@@ -60,6 +61,7 @@ internal sealed partial class PptxRenderer
                     context.Theme,
                     transform,
                     images,
+                    context.ImageCache,
                     ref imageIndex);
                 continue;
             }
@@ -76,6 +78,7 @@ internal sealed partial class PptxRenderer
                     context.SlideNumber,
                     transform,
                     images,
+                    context.ImageCache,
                     ref imageIndex);
                 continue;
             }

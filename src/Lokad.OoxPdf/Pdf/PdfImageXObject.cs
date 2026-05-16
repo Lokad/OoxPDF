@@ -2,6 +2,8 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfImageXObject
 {
+    private string? resourceKey;
+
     private PdfImageXObject(int width, int height, byte[] bytes, string filter, byte[]? alpha)
     {
         Width = width;
@@ -21,7 +23,7 @@ internal sealed class PdfImageXObject
 
     public byte[]? Alpha { get; }
 
-    public string ResourceKey => $"{Width}x{Height}:{Filter}:{Bytes.Length}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes))[..16]}";
+    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{Bytes.Length}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes))[..16]}";
 
     public static PdfImageXObject Jpeg(int width, int height, byte[] bytes)
     {

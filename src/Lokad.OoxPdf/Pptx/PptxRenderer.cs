@@ -29,6 +29,7 @@ internal sealed partial class PptxRenderer
     {
         var pages = new List<PdfPage>(document.Slides.Count);
         PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
+        var imageCache = new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase);
         for (int slideIndex = 0; slideIndex < document.Slides.Count; slideIndex++)
         {
             PptxSlide slide = document.Slides[slideIndex];
@@ -47,7 +48,7 @@ internal sealed partial class PptxRenderer
             IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, slideRelationships, diagnosticSink);
+            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, slideRelationships, imageCache, diagnosticSink);
 
             foreach (XDocument inherited in context.InheritedXml)
             {
@@ -316,6 +317,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
+        Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
@@ -357,6 +359,7 @@ internal sealed partial class PptxRenderer
             diagnosticSink,
             slideIndex,
             images,
+            imageCache,
             ref imageIndex,
             out string? pictureFillName,
             out PdfImageXObject? pictureFillImage);
@@ -593,6 +596,7 @@ internal sealed partial class PptxRenderer
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
         List<PdfImageResource>? images,
+        Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex,
         out string? name,
         out PdfImageXObject? image)
@@ -629,7 +633,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        image = CreateImage(imagePart, diagnosticSink, slideIndex);
+        image = GetOrCreateImage(imagePart, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return false;

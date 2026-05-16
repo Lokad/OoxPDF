@@ -361,6 +361,10 @@ High-priority actions:
   runner from roughly 180 seconds to roughly 13 seconds on the local machine, with `108 passed, 0 failed`.
 - [x] Cache immutable Office reference PDFs and rasterized oracle pages for public/private visual cases under
   ignored `artifacts/reference-cache/`, keyed by input hash, DPI, and reference/raster tool hashes.
+- [x] Cache decoded PPTX image XObjects by package part and cache PDF image resource keys. The private
+  `lokad-value-based` conversion-only Release run dropped from `52.474s` to `25.622s` with identical PDF
+  bytes, confirming repeated image decoding and repeated full-image SHA-256 hashing were major large-deck
+  anti-patterns.
 - [x] Cache additional expensive test fixtures where useful, especially parsed fonts and repeated synthetic
   packages.
 - [x] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
