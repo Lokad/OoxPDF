@@ -554,6 +554,10 @@ document-specific business content into public notes.
     a highlighted middle run and Office-authored highlight geometry. Latest gated run:
     `artifacts/visual/pptx-ladder-04-cambria-highlight-center/20260516-113529`, MAE `0.291465`,
     changed-pixel ratio threshold 16 `0.004212`.
+  - `pptx-ladder-04-cambria-highlight-footer` locks footer-sized centered mixed-run Cambria/Cambria Math
+    text with a highlighted middle run over a dark background. Latest gated run:
+    `artifacts/visual/pptx-ladder-04-cambria-highlight-footer/20260516-114746`, MAE `0.021215`,
+    changed-pixel ratio threshold 16 `0.000521`.
 - Public PPTX slide-3 bottom-up rungs:
   - `pptx-ladder-04-spautofit-overflow` captures a minimal `spAutoFit` overflow case. Latest run:
     `artifacts/visual/pptx-ladder-04-spautofit-overflow/20260516-114453`, MAE `0.224563`, changed-pixel
@@ -913,7 +917,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   text runs have no direct fill, including a no-fill shape with a visible line and centered text.
 - [x] Slide 2 public ladder: lock highlighted centered mixed-run title-sized text using Cambria/Cambria Math
   without explicit character spacing.
-- [ ] Slide 2 public ladder: lock highlighted centered mixed-run footer-sized text using Cambria/Cambria Math
+- [x] Slide 2 public ladder: lock highlighted centered mixed-run footer-sized text using Cambria/Cambria Math
   without explicit character spacing.
 - [ ] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
   rectangles for small centered text boxes.
