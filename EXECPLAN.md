@@ -180,8 +180,8 @@ Typography oracle family map:
   missing and should become explicit gates before private vertical text is revisited.
 - Anchor `0035..0037`: covered by `pptx-ladder-04-anchor-port` for top, middle, and bottom shape text
   anchors.
-- Line spacing `0038`: partially covered by points/percent/paragraph spacing; needs the generated
-  multi-paragraph spacing fixture.
+- Line spacing `0038`: ported as `pptx-ladder-04-line-spacing-port`. It is gated as a baseline but still
+  has poor structural similarity, so paragraph spacing and baseline placement remain implementation targets.
 
 ## Test Suite Performance
 
