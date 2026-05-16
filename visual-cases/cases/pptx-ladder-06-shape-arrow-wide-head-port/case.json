@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-shape-arrow-wide-head-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-shape-arrow-wide-head-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shape", "adjustment", "arrow", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 6.4,
+    "maxChangedPixelRatioAtThreshold16": 0.108
+  },
+  "allowedUnsupportedFeatures": []
+}

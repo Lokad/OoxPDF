@@ -331,10 +331,16 @@ Typography oracle family map:
 
 Shape adjustment oracle family map:
 
-- Round rect `shape-adj-0001..0002`: ported in `pptx-ladder-06-shape-adjust-port-a` for small and large
-  corner radius.
-- Chevron and arrow `0003..0006`: ported in `pptx-ladder-06-shape-adjust-port-a` for shallow/deep chevron
-  and thin/wide-head right arrow.
+- Round rect `shape-adj-0001..0002`: source-aligned ports now exist as
+  `pptx-ladder-06-shape-roundrect-small-port` and `pptx-ladder-06-shape-roundrect-large-port`.
+  Gated baselines after the theme-fill fallback are MAE `5.954323`, changed16 `0.202635`, and MAE
+  `7.136207`, changed16 `0.197371`.
+- Chevron and arrow `0003..0006`: source-aligned ports now exist as
+  `pptx-ladder-06-shape-chevron-shallow-port`, `pptx-ladder-06-shape-chevron-deep-port`,
+  `pptx-ladder-06-shape-arrow-thin-port`, and `pptx-ladder-06-shape-arrow-wide-head-port`.
+  Gated baselines after the theme-fill fallback are MAE `7.186928`, `4.102828`, `7.001761`, and
+  `6.315083`. Remaining work is actual preset `avLst` adjustment support, gradient fills, shadows, and
+  exact Office path geometry.
 - Star, donut, cross, trapezoid, and triangle `0007..0014` plus `0021..0022`: ported in
   `pptx-ladder-06-shape-adjust-port-b`.
 - Block arc, folded corner, bevel, pentagon, can, and heart `0015..0020` plus `0023..0027`: ported in

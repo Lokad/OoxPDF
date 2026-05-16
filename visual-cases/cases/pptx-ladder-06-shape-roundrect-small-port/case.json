@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-shape-roundrect-small-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-shape-roundrect-small-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shape", "adjustment", "roundRect", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 6.0,
+    "maxChangedPixelRatioAtThreshold16": 0.203
+  },
+  "allowedUnsupportedFeatures": []
+}

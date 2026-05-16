@@ -1949,9 +1949,14 @@ internal sealed partial class PptxRenderer
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "fillRef");
         int fillIndex = ParseOptionalIntAttribute(fillRef, "idx", 0);
-        return fillIndex > 0 &&
+        if (fillIndex > 0 &&
             theme.TryGetFillStyle(fillIndex, out XElement fillStyle) &&
-            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha);
+            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha))
+        {
+            return true;
+        }
+
+        return fillIndex > 0 && TryReadSolidColorWithAlpha(fillRef, theme, out color, out alpha);
     }
 
     private static bool TryReadShapeLine(XElement shape, XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
