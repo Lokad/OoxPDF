@@ -2269,7 +2269,7 @@ internal sealed class PptxRenderer
                 cursorLineTop -= spacingBefore;
                 double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, defaultRunProperties, lineSpacing);
                 double cursorX = paragraphTextX;
-                double maxFontSize = 18d;
+                double maxFontSize = paragraphFontSize;
                 var paragraphRuns = new List<TextRun>();
                 double paragraphEndX = paragraphTextX;
                 foreach (XElement child in paragraph.Elements())
@@ -2282,7 +2282,7 @@ internal sealed class PptxRenderer
                         cursorY = double.NaN;
                         cursorX = paragraphTextX;
                         paragraphEndX = paragraphTextX;
-                        maxFontSize = 18d;
+                        maxFontSize = paragraphFontSize;
                         continue;
                     }
 
@@ -2865,7 +2865,7 @@ internal sealed class PptxRenderer
     {
         return lineSpacing.IsExplicit
             ? lineSpacing.Resolve(fontSize)
-            : fontSize * 1.2d;
+            : fontSize <= 12d ? fontSize : fontSize * 1.2d;
     }
 
     private static double ReadFirstLineBaselineOffset(XElement paragraph, XElement? defaultRunProperties, LineSpacing lineSpacing)

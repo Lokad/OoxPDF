@@ -8,7 +8,9 @@
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.772,
+    "maxChangedPixelRatioAtThreshold16": 0.00831
   },
   "allowedUnsupportedFeatures": []
 }

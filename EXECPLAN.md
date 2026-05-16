@@ -572,10 +572,15 @@ document-specific business content into public notes.
     Latest gated run: `artifacts/visual/pptx-ladder-08-grouped-picture-caption/20260516-114125`, MAE
     `0.124819`, changed-pixel ratio threshold 16 `0.002018`.
   - `pptx-ladder-04-square-wrap-mixed-small` captures a 10.5/12 pt square-wrapped mixed-run text frame.
-    Latest run: `artifacts/visual/pptx-ladder-04-square-wrap-mixed-small/20260516-115112`, MAE
-    `0.873985`, changed-pixel ratio threshold 16 `0.009113`. Hyphen-aware flow segmentation now matches
-    Office's break after the hyphenated prefix, but the third-line baseline still sits too low and remains
-    open before this case can be locked.
+    Latest gated run: `artifacts/visual/pptx-ladder-04-square-wrap-mixed-small/20260516-120526`, MAE
+    `0.771472`, changed-pixel ratio threshold 16 `0.008302`. Hyphen-aware flow segmentation now matches
+    Office's break after the hyphenated prefix, and wrapped-line advance now uses the paragraph's actual
+    font size instead of an 18 pt floor. Remaining drift is mixed bold/italic metrics and exact baseline
+    placement.
+  - `pptx-ladder-04-square-wrap-small-plain` locks the same compact square-wrapped small-text behavior
+    without mixed styles. Latest gated run:
+    `artifacts/visual/pptx-ladder-04-square-wrap-small-plain/20260516-120434`, MAE `0.202193`,
+    changed-pixel ratio threshold 16 `0.003082`.
   - `pptx-ladder-04-highlighted-headline-runs` locks a headline-sized mixed-run line with two highlighted
     spans and a wrapped continuation line. Latest gated run:
     `artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260516-115932`, MAE `0.292685`,
@@ -936,7 +941,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   rectangles for small centered text boxes.
 - [ ] Slide 3 public ladder: lock `spAutoFit` overflow/autosize text boxes with Office-authored PDFs before
   enabling renderer-side autofit behavior.
-- [ ] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,
+- [x] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,
   including mixed regular, bold, and italic runs.
 - [x] Slide 3 public ladder: lock grouped picture-plus-caption cells, including group transform precision,
   picture positioning, centered italic caption text, and z-order.
