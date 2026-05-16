@@ -343,16 +343,17 @@ internal sealed class OpenTypeFont
             }
 
             int lookup = lookupList + U16(bytes, lookupList + 2 + i * 2);
-            if (lookup + 6 > tableEnd || U16(bytes, lookup) != 2)
+            if (lookup + 6 > tableEnd)
             {
                 continue;
             }
 
+            ushort lookupType = U16(bytes, lookup);
             ushort subtableCount = U16(bytes, lookup + 4);
             for (int j = 0; j < subtableCount && lookup + 6 + j * 2 + 2 <= tableEnd; j++)
             {
                 int subtable = lookup + U16(bytes, lookup + 6 + j * 2);
-                ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
+                ReadGposPairAdjustmentLookupSubtable(bytes, subtable, lookupType, tableEnd, pairs);
             }
         }
     }
@@ -390,6 +391,40 @@ internal sealed class OpenTypeFont
         }
 
         return lookupIndices;
+    }
+
+    private static void ReadGposPairAdjustmentLookupSubtable(
+        byte[] bytes,
+        int subtable,
+        ushort lookupType,
+        int tableEnd,
+        Dictionary<uint, short> pairs)
+    {
+        if (lookupType == 2)
+        {
+            ReadGposPairAdjustmentSubtable(bytes, subtable, tableEnd, pairs);
+            return;
+        }
+
+        if (lookupType != 9 || subtable + 8 > tableEnd || U16(bytes, subtable) != 1)
+        {
+            return;
+        }
+
+        ushort extensionLookupType = U16(bytes, subtable + 2);
+        uint extensionOffset = U32(bytes, subtable + 4);
+        if (extensionLookupType != 2 || extensionOffset > int.MaxValue)
+        {
+            return;
+        }
+
+        int extensionSubtable = subtable + (int)extensionOffset;
+        if (extensionSubtable < subtable || extensionSubtable >= tableEnd)
+        {
+            return;
+        }
+
+        ReadGposPairAdjustmentSubtable(bytes, extensionSubtable, tableEnd, pairs);
     }
 
     private static void ReadGposPairAdjustmentSubtable(byte[] bytes, int subtable, int tableEnd, Dictionary<uint, short> pairs)

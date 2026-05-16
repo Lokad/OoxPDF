@@ -80,10 +80,22 @@ internal static class FontTests
         }
 
         OpenTypeFont font = OpenTypeFont.Load(cambria);
-        AssertNoKerning(font, 'L', 'o');
-        AssertNoKerning(font, 'o', 'k');
-        AssertNoKerning(font, 'q', 'u');
         AssertNoKerning(font, 'D', 'é');
+    }
+
+    public static void OpenTypeParserReadsGposExtensionKerning()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string cambria = Path.Combine(fontsDirectory, "cambria.ttc");
+        if (!File.Exists(cambria))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(cambria);
+        AssertHasKerning(font, 'L', 'o');
+        AssertHasKerning(font, 'o', 'k');
+        AssertHasKerning(font, 'q', 'u');
     }
 
     public static void OpenTypeParserMapsWindowsSymbolCmap()
@@ -107,6 +119,14 @@ internal static class FontTests
         ushort right = font.MapCodePoint(rightChar);
 
         TestAssert.Equal((short)0, font.GetKerning(left, right));
+    }
+
+    private static void AssertHasKerning(OpenTypeFont font, char leftChar, char rightChar)
+    {
+        ushort left = font.MapCodePoint(leftChar);
+        ushort right = font.MapCodePoint(rightChar);
+
+        TestAssert.True(font.GetKerning(left, right) != 0, $"Expected kerning for '{leftChar}{rightChar}'.");
     }
 
     public static void WindowsFontResolverMapsCambriaMathToCambria()

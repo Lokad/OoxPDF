@@ -800,19 +800,21 @@ paths, and ExecPlan references together.
   inactive pair-positioning lookups that created parasite inter-letter gaps in Cambria/Cambria Math text.
 - [x] Ladder 4 gate `pptx-ladder-04-kerning-accent-highlight` covers normal words with uppercase starts,
   accented letters, and reported French/English word shapes. Latest gated run:
-  `artifacts/visual/pptx-ladder-04-kerning-accent-highlight/20260516-124907`, MAE `0.296921`,
-  changed16 `0.005984`.
+  `artifacts/visual/pptx-ladder-04-kerning-accent-highlight/20260516-130917`, MAE `0.197946`,
+  changed16 `0.005130`.
 - [x] PPTX highlighted-run rectangles use font Windows ascender/descender metrics instead of a fixed
   height multiplier, keeping Arial highlight parity while tightening Cambria/Cambria Math marker height.
 - [ ] Add normalized typography rungs for Office-authored kerning words by font family: Arial, Aptos/Calibri,
   Cambria/Cambria Math, and Segoe UI.
 - [x] Add normalized typography rung `pptx-ladder-04-typography-run-boundaries` for Office-authored
   Cambria/Cambria Math words, accented Latin, headline words, and highlighted run boundaries. Latest gated
-  run: `artifacts/visual/pptx-ladder-04-typography-run-boundaries/20260516-130239`, MAE `0.444912`,
-  changed16 `0.007555`.
-- [ ] Tighten `pptx-ladder-04-typography-run-boundaries` by reproducing Office's small intra-word pair
-  adjustments for Cambria/Cambria Math without reintroducing inactive GPOS lookups that caused large
-  parasite gaps.
+  run: `artifacts/visual/pptx-ladder-04-typography-run-boundaries/20260516-130900`, MAE `0.203680`,
+  changed16 `0.005800`.
+- [x] OpenType GPOS extension lookups are parsed for active `kern` feature pair positioning, recovering
+  Office-like small Cambria/Cambria Math intra-word adjustments without reintroducing inactive feature
+  lookups that caused large parasite gaps.
+- [ ] Continue tightening `pptx-ladder-04-typography-run-boundaries` toward near-pixel parity by comparing
+  Office and candidate `TJ` arrays, baseline `Tm` values, and highlight geometry line by line.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
   apostrophes, non-breaking spaces, narrow spaces, currency symbols, and hyphen/dash variants.
 - [ ] Add normalized typography rungs for run-boundary invariance: same text as one run, per-word runs,
