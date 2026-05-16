@@ -29,6 +29,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 
 - `tools/CheckVisualCase.ps1`: run a public visual case.
 - `tools/CheckVisualFamily.ps1`: run or list a public visual capability family.
+- `tools/CompareVisualReports.ps1`: compare two visual family reports for regressions.
 - `tools/CheckPrivateCase.ps1`: run a private, ignored visual case.
 - `tools/SummarizePrivateCase.ps1`: summarize ignored private-case metrics without document content.
 - `tools/InventoryPptxSlides.ps1`: produce private-safe PPTX slide feature counts.

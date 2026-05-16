@@ -176,10 +176,12 @@ Porting priorities:
   family runner, matching the `pptx-renderer` idea of generated/oracle cases grouped by feature area.
 - [x] Port the first unit-runner organization pattern: unit tests now come from a capability catalog and can
   be listed or filtered by group, so PPTX typography/shapes/images/composition checks can run independently.
-- [ ] Continue porting test organization patterns: generated-case manifests, richer per-case reports,
-  explicit fast/slow/oracle lanes, and tighter parity reporting.
-- [ ] Add parity tracking in `EXECPLAN.md`: each ported family must state source coverage, `ooxpdf` fixture
-  names, current pass/fail status, and whether it is a unit, structural, or visual gate.
+- [x] Continue porting test organization patterns: visual family runs now emit ignored JSON/CSV reports,
+  support `-OnlyUnsupported`, `-OnlyChanged`, and `-UpdateCatalog`, and can be compared for regressions.
+- [ ] Continue porting generated-case manifests and richer parity reporting for the remaining
+  `pptx-renderer` oracle families.
+- [x] Add first parity tracking in `EXECPLAN.md`: ported families now state source coverage, `ooxpdf`
+  fixture names, current status, and gate type; keep extending this table as more families are ported.
 - [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate
   the minimal OOXML/PPTX or generator logic locally under `tests/` or `tools/` with dependency-free runtime
   constraints for `src/Lokad.OoxPdf`.
@@ -203,6 +205,33 @@ Generated Office-oracle family inventory from `pptx-renderer`:
 - Composite `oracle-pypptx-composite-0001..0010`: next visual-port target after shape adjustments.
 - Charts `oracle-pypptx-chart-0001..0021`: later visual-port target, after chart fallback architecture is
   separated from the main PPTX renderer.
+
+Current `pptx-renderer` parity tracking:
+
+- Source `oracle-pypptx-text-0001..0038`:
+  - Coverage: font families, sizes, styles, alignments, colors, bullets, vertical text, anchoring,
+    and line spacing.
+  - OOXPDF fixtures: `pptx-ladder-04-*` typography cases.
+  - Gate type: public visual family `pptx-typography` plus unit group `pptx-typography`.
+  - Status: ported; several typography rungs remain `needs-review` quality targets rather than final
+    pixel-perfect gates.
+- Source `oracle-pypptx-shape-adj-0001..0031`:
+  - Coverage: adjustment handles for common preset shapes.
+  - OOXPDF fixtures: `pptx-ladder-06-*` shape-adjustment cases.
+  - Gate type: public visual family `pptx-shapes`.
+  - Status: ported as Office-oracle public fixtures; remaining work is broader preset coverage and
+    effect/fill families.
+- Source `oracle-pypptx-composite-0001..0010`:
+  - Coverage: mixed shapes, text, tables, charts, and dashboard-like slides.
+  - OOXPDF fixtures: `pptx-ladder-08-composite-port-a`, `pptx-ladder-10-composite-table-port`,
+    and `pptx-ladder-11-composite-chart-port`.
+  - Gate type: public visual families `pptx-composition`, `pptx-tables`, and `pptx-charts`.
+  - Status: partially ported; chart composites `0008` and `0010` still pending.
+- Source `oracle-pypptx-chart-0001..0021`:
+  - Coverage: column, bar, line, pie, doughnut, area, scatter, radar, and bubble variants.
+  - OOXPDF fixtures: `pptx-ladder-11-composite-chart-port` only.
+  - Gate type: public visual family `pptx-charts`.
+  - Status: mostly pending until chart fallback/rendering architecture is ready.
 
 Composite oracle family map:
 

@@ -10,8 +10,13 @@ Useful commands:
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-typography -List
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-shapes -Limit 3
+powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-images -OnlyUnsupported -UpdateCatalog
+powershell -ExecutionPolicy Bypass -File tools/CompareVisualReports.ps1 -Baseline artifacts/visual/reports/pptx-images-old.json -Current artifacts/visual/reports/pptx-images.json
 powershell -ExecutionPolicy Bypass -File tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-04-font-size-port/case.json
 ```
+
+Family runs write ignored latest and timestamped summaries under `artifacts/visual/reports/`.
+Use `-UpdateCatalog` to update the ignored local support catalog at `artifacts/visual/support-catalog.json`.
 
 PPTX families:
 
