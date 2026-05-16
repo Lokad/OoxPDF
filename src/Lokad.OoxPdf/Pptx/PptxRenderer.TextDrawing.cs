@@ -46,7 +46,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath);
+            OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
             string resourceName = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);

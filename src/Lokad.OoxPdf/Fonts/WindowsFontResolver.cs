@@ -18,6 +18,17 @@ public sealed class WindowsFontResolver : IFontResolver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.FamilyName);
 
+        if (request.FamilyName.Equals("Cambria Math", StringComparison.OrdinalIgnoreCase))
+        {
+            FontResolution[] cambria = cache.Value
+                .Where(f => f.FamilyName.Equals("Cambria", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (cambria.Length != 0)
+            {
+                return SelectBest(cambria, request) with { IsFallback = true };
+            }
+        }
+
         FontResolution[] exact = cache.Value
             .Where(f => f.FamilyName.Equals(request.FamilyName, StringComparison.OrdinalIgnoreCase))
             .ToArray();
@@ -71,16 +82,22 @@ public sealed class WindowsFontResolver : IFontResolver
         {
             try
             {
-                OpenTypeFont font = OpenTypeFont.Load(path);
-                if (!string.IsNullOrWhiteSpace(font.FamilyName))
+                byte[] bytes = File.ReadAllBytes(path);
+                int faceCount = OpenTypeFont.GetCollectionFontCount(bytes);
+                for (int faceIndex = 0; faceIndex < faceCount; faceIndex++)
                 {
-                    fonts.Add(new FontResolution(
-                        font.FamilyName,
-                        path,
-                        IsFallback: false,
-                        Bold: font.Os2.WeightClass >= 600,
-                        Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
-                        WeightClass: font.Os2.WeightClass));
+                    OpenTypeFont font = OpenTypeFont.Load(bytes, faceIndex);
+                    if (!string.IsNullOrWhiteSpace(font.FamilyName))
+                    {
+                        fonts.Add(new FontResolution(
+                            font.FamilyName,
+                            path,
+                            IsFallback: false,
+                            Bold: font.Os2.WeightClass >= 600,
+                            Italic: Math.Abs(font.Post.ItalicAngle) > 0.01d,
+                            WeightClass: font.Os2.WeightClass,
+                            FontFaceIndex: faceIndex));
+                    }
                 }
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
@@ -106,11 +123,6 @@ public sealed class WindowsFontResolver : IFontResolver
 
     private static IReadOnlyList<string> ResolveAliases(string familyName)
     {
-        if (familyName.Equals("Cambria Math", StringComparison.OrdinalIgnoreCase))
-        {
-            return ["Cambria"];
-        }
-
         if (familyName.Equals("Aptos Display", StringComparison.OrdinalIgnoreCase))
         {
             return ["Calibri Light", "Calibri"];

@@ -2603,7 +2603,7 @@ internal sealed partial class PptxRenderer
                 FontResolution resolution = resolver.Resolve(new FontRequest(familyName, bold, italic));
                 cached = resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath)
                     ? null
-                    : OpenTypeFont.Load(resolution.FontFilePath);
+                    : OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
             {

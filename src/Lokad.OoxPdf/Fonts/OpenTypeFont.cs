@@ -58,7 +58,17 @@ internal sealed class OpenTypeFont
         return Load(File.ReadAllBytes(path));
     }
 
+    public static OpenTypeFont Load(string path, int fontIndex)
+    {
+        return Load(File.ReadAllBytes(path), fontIndex);
+    }
+
     public static OpenTypeFont Load(byte[] bytes)
+    {
+        return Load(bytes, 0);
+    }
+
+    public static OpenTypeFont Load(byte[] bytes, int fontIndex)
     {
         if (bytes.Length < 12)
         {
@@ -67,7 +77,11 @@ internal sealed class OpenTypeFont
 
         if (Encoding.ASCII.GetString(bytes, 0, 4) == "ttcf")
         {
-            bytes = ExtractCollectionFont(bytes, 0);
+            bytes = ExtractCollectionFont(bytes, fontIndex);
+        }
+        else if (fontIndex != 0)
+        {
+            throw new InvalidDataException("Font index can only be non-zero for TrueType collections.");
         }
 
         ushort numTables = U16(bytes, 4);
@@ -97,6 +111,22 @@ internal sealed class OpenTypeFont
         ushort[] advances = ReadAdvances(bytes, tables);
         IReadOnlyDictionary<uint, short> kerningPairs = ReadKerningPairs(bytes, tables);
         return new OpenTypeFont(bytes, tables, familyName, unitsPerEm, bounds, glyphCount, os2, post, cmap, advances, kerningPairs);
+    }
+
+    public static int GetCollectionFontCount(byte[] bytes)
+    {
+        if (bytes.Length < 12 || Encoding.ASCII.GetString(bytes, 0, 4) != "ttcf")
+        {
+            return 1;
+        }
+
+        if (bytes.Length < 16)
+        {
+            throw new InvalidDataException("TrueType collection header is too small.");
+        }
+
+        uint fontCount = U32(bytes, 8);
+        return fontCount > int.MaxValue ? throw new InvalidDataException("TrueType collection font count is too large.") : (int)fontCount;
     }
 
     public ushort MapCodePoint(int codePoint)

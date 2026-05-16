@@ -106,4 +106,5 @@ return TestRunner.Run(
     FontTests.OpenTypeParserMapsWindowsSymbolCmap,
     FontTests.WindowsFontResolverMapsCambriaMathToCambria,
     FontTests.WindowsFontResolverMapsAptosThemeFontsToCalibri,
-    FontTests.OpenTypeParserLoadsTrueTypeCollections);
+    FontTests.OpenTypeParserLoadsTrueTypeCollections,
+    FontTests.OpenTypeParserLoadsSpecificTrueTypeCollectionFace);

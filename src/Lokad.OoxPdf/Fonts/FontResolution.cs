@@ -6,4 +6,5 @@ public sealed record FontResolution(
     bool IsFallback,
     bool Bold = false,
     bool Italic = false,
-    int WeightClass = 400);
+    int WeightClass = 400,
+    int FontFaceIndex = 0);

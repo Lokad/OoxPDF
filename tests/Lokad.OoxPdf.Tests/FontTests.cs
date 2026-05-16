@@ -179,4 +179,25 @@ internal static class FontTests
         TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the first TTC face.");
         TestAssert.True(font.TableTags.Contains("cmap"), "Expected cmap table from the first TTC face.");
     }
+
+    public static void OpenTypeParserLoadsSpecificTrueTypeCollectionFace()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string cambriaCollection = Path.Combine(fontsDirectory, "cambria.ttc");
+        if (!File.Exists(cambriaCollection))
+        {
+            return;
+        }
+
+        byte[] bytes = File.ReadAllBytes(cambriaCollection);
+        if (OpenTypeFont.GetCollectionFontCount(bytes) < 2)
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(bytes, 1);
+
+        TestAssert.Equal("Cambria Math", font.FamilyName);
+        TestAssert.True(font.GlyphCount > 0, "Expected glyphs from the selected TTC face.");
+    }
 }
