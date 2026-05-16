@@ -143,9 +143,9 @@ assets.
 
 Porting priorities:
 
-- [ ] Inventory `pptx-renderer` unit tests by capability: model parsing, theme/style/color resolution,
+- [x] Inventory `pptx-renderer` unit tests by capability: model parsing, theme/style/color resolution,
   text rendering, shapes/presets, groups, images, tables, charts, SmartArt, security, and public API.
-- [ ] Inventory `pptx-renderer` Office-oracle/e2e cases by generated fixture family and map them to the
+- [x] Inventory `pptx-renderer` Office-oracle/e2e cases by generated fixture family and map them to the
   `ooxpdf` public visual ladder naming scheme.
 - [x] Inventory `pptx-renderer` generated typography oracle family and map it to current `ooxpdf` Ladder 4
   coverage.
@@ -164,6 +164,26 @@ Porting priorities:
 - [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate
   the minimal OOXML/PPTX or generator logic locally under `tests/` or `tools/` with dependency-free runtime
   constraints for `src/Lokad.OoxPdf`.
+
+Unit-test capability inventory from `pptx-renderer`:
+
+- Public API/viewer lifecycle tests mostly do not map to `ooxpdf`, except input-type validation,
+  deterministic conversion, batch/list handling, and safe disposal of temporary resources.
+- Parser/model tests map to `OoxPackage`, relationships, units, `PptxDocument`, `PptxTheme`,
+  `PptxSlide`, `PptxScene`, and typed scene nodes.
+- Renderer boundary tests map to future `PptxRenderContext`, background/slide/group/image/shape/text/table
+  renderer partials, style resolver, color resolver, and chart fallback renderer.
+- Shape utility tests map to preset path generation, adjustment handling, custom geometry, and arc geometry.
+- Utility tests map to visual metrics, media path safety, EMF/WMF diagnostics or fallback, PDF inspection,
+  and preview/raster scaling.
+
+Generated Office-oracle family inventory from `pptx-renderer`:
+
+- Text `oracle-pypptx-text-0001..0038`: ported as public Ladder 4 typography visual cases.
+- Shape adjustments `oracle-pypptx-shape-adj-0001..0031`: ported as public Ladder 6 shape-adjustment cases.
+- Composite `oracle-pypptx-composite-0001..0010`: next visual-port target after shape adjustments.
+- Charts `oracle-pypptx-chart-0001..0021`: later visual-port target, after chart fallback architecture is
+  separated from the main PPTX renderer.
 
 Typography oracle family map:
 
