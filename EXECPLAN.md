@@ -163,8 +163,9 @@ Porting priorities:
 Typography oracle family map:
 
 - Fonts `oracle-pypptx-text-0001..0008`: partially covered by
-  `pptx-ladder-04-typography-font-families`; still missing separate gates for Times New Roman,
-  Courier New, Georgia, Verdana, Impact, and Comic Sans MS.
+  `pptx-ladder-04-typography-font-families` and the clean-port gate
+  `pptx-ladder-04-font-family-port` for Times New Roman, Courier New, Georgia, Verdana, Impact,
+  and Comic Sans MS.
 - Sizes `0009..0015`: partially covered by mixed-size and large-text rungs; still missing isolated
   `10/14/18/24/36/48/72 pt` Office-generated gates.
 - Styles `0016..0021`: mostly covered by bold/italic/underline/combined public rungs; still needs a

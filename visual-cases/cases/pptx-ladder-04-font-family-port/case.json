@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-font-family-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-font-family-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "font-family", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 3.31,
+    "maxChangedPixelRatioAtThreshold16": 0.0341
+  },
+  "allowedUnsupportedFeatures": []
+}
