@@ -1,0 +1,193 @@
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$cases = Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases"
+New-Item -ItemType Directory -Force -Path $cases | Out-Null
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+function New-ZipPackage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable] $Entries
+    )
+
+    if (Test-Path -LiteralPath $Path) {
+        Remove-Item -LiteralPath $Path -Force
+    }
+
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::CreateNew)
+    try {
+        $archive = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create, $true)
+        try {
+            foreach ($name in $Entries.Keys) {
+                $entry = $archive.CreateEntry($name)
+                $entryStream = $entry.Open()
+                try {
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Entries[$name])
+                    $entryStream.Write($bytes, 0, $bytes.Length)
+                }
+                finally {
+                    $entryStream.Dispose()
+                }
+            }
+        }
+        finally {
+            $archive.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+$contentTypes = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+</Types>
+'@
+
+$packageRels = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>
+'@
+
+$presentationRels = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>
+'@
+
+$presentation = @'
+<?xml version="1.0" encoding="UTF-8"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+</p:presentation>
+'@
+
+function New-TypographyProbe {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Id,
+
+        [Parameter(Mandatory = $true)]
+        [string] $TextBody
+    )
+
+    $slide = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <p:cSld>
+    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></p:bgPr></p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+      <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
+      <p:sp>
+        <p:nvSpPr><p:cNvPr id="2" name="$Id"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+        <p:spPr>
+          <a:xfrm><a:off x="822960" y="685800"/><a:ext cx="7498080" cy="5486400"/></a:xfrm>
+          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+          <a:noFill/>
+          <a:ln><a:noFill/></a:ln>
+        </p:spPr>
+        <p:txBody>
+          <a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>
+          <a:lstStyle/>
+$TextBody
+        </p:txBody>
+      </p:sp>
+    </p:spTree>
+  </p:cSld>
+  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
+</p:sld>
+"@
+
+    $path = Join-Path $cases "$Id.pptx"
+    if (Test-Path -LiteralPath $path) {
+        Remove-Item -LiteralPath $path -Force
+    }
+
+    $basePackage = Join-Path $cases "pptx-ladder-04-all-caps.pptx"
+    $source = [System.IO.Compression.ZipFile]::OpenRead($basePackage)
+    try {
+        $destinationStream = [System.IO.File]::Open($path, [System.IO.FileMode]::CreateNew)
+        try {
+            $destination = [System.IO.Compression.ZipArchive]::new($destinationStream, [System.IO.Compression.ZipArchiveMode]::Create, $true)
+            try {
+                foreach ($entry in $source.Entries) {
+                    if ($entry.FullName -eq "ppt/slides/slide1.xml") {
+                        continue
+                    }
+
+                    $copy = $destination.CreateEntry($entry.FullName, [System.IO.Compression.CompressionLevel]::Optimal)
+                    $sourceStream = $entry.Open()
+                    try {
+                        $copyStream = $copy.Open()
+                        try {
+                            $sourceStream.CopyTo($copyStream)
+                        }
+                        finally {
+                            $copyStream.Dispose()
+                        }
+                    }
+                    finally {
+                        $sourceStream.Dispose()
+                    }
+                }
+
+                $slideEntry = $destination.CreateEntry("ppt/slides/slide1.xml", [System.IO.Compression.CompressionLevel]::Optimal)
+                $slideStream = $slideEntry.Open()
+                try {
+                    $bytes = [System.Text.Encoding]::UTF8.GetBytes($slide)
+                    $slideStream.Write($bytes, 0, $bytes.Length)
+                }
+                finally {
+                    $slideStream.Dispose()
+                }
+            }
+            finally {
+                $destination.Dispose()
+            }
+        }
+        finally {
+            $destinationStream.Dispose()
+        }
+    }
+    finally {
+        $source.Dispose()
+    }
+}
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-capital-spacing-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>The scale and growth</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Large Global Supply</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Lokad en quelques mots</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>To Va Ta AV</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-accent-spacing-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance à l'offre</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Calibri"/></a:rPr><a:t>Dépendance élevée côté coût</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Cambria"/></a:rPr><a:t>Écart dépendance qualité</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>éèê ÉÈÊ ÀÂ Çç</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-boundary-invariance-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>The scale and growth</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>The </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>scale </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>and </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>growth</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Large </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>Global </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Supply</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/></a:rPr><a:t>Dépendance </a:t></a:r><a:r><a:rPr sz="2800"><a:latin typeface="Arial"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>élevée</a:t></a:r></a:p>
+'@
+
+Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

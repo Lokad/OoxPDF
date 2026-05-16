@@ -135,8 +135,17 @@ High-priority actions:
   runs and line end advance before alignment/PDF emission.
 - [ ] Extend the intermediate typography model from line ownership to explicit text body, paragraph,
   line, positioned run, and hidden-control advance records.
-- [ ] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
+- [x] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
   accented-letter pairs, Cambria/Calibri/Arial differences, highlighted runs, and mixed run boundaries.
+  The first probes are `pptx-ladder-04-typography-capital-spacing-probe`,
+  `pptx-ladder-04-typography-accent-spacing-probe`, and
+  `pptx-ladder-04-typography-boundary-invariance-probe`.
+- [x] Split highlighted-run decoration from text emission for PPTX text drawing. This matches Office's
+  pattern where highlight rectangles are painted separately while unchanged font metrics can still emit
+  a single continuous text operation across run boundaries.
+- [ ] Tighten `pptx-ladder-04-typography-accent-spacing-probe`: Office splits accented Latin into several
+  font/text operations for missing glyph fallback and combining marks, while the candidate currently emits
+  fewer operations and has large x/y mismatches on Calibri and Arial accent rows.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
@@ -1175,6 +1184,10 @@ paths, and ExecPlan references together.
 - [ ] Add normalized typography rungs for run-boundary invariance: same text as one run, per-word runs,
   per-style runs, highlighted spans, and mixed fill spans must keep the same visible advances when styles
   do not change metrics.
+- [x] Add diagnostic public rungs for capital spacing, accented Latin spacing, and run-boundary invariance.
+  `pptx-ladder-04-typography-capital-spacing-probe` and
+  `pptx-ladder-04-typography-boundary-invariance-probe` now enforce Office PDF text-operation parity at
+  `0.05pt`; the accented probe remains a targeted gap for font fallback and combining-mark handling.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
   and text matrices against Office for simple lines before accepting near-pixel raster gates.
 - [x] Extend `PdfInspect` with `text-operations.json` output so public typography cases can compare Office

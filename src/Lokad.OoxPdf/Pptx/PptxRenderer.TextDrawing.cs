@@ -17,8 +17,6 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        textRuns = CoalesceAdjacentTextRuns(textRuns);
-        textRuns = CoalesceUnderlineRuns(textRuns);
         RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
@@ -31,7 +29,7 @@ internal sealed partial class PptxRenderer
             return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
         }
 
-        textRuns = CoalesceAdjacentTextRuns(textRuns);
+        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
@@ -58,7 +56,8 @@ internal sealed partial class PptxRenderer
 
     private static void DrawTextRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
     {
-        textRuns = CoalesceAdjacentTextRuns(textRuns);
+        DrawHighlightRunsWithFonts(textRuns, graphics, fonts);
+        textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
         foreach (TextRun run in textRuns)
         {
@@ -69,12 +68,81 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns)
+    private static IReadOnlyList<TextRun> CoalesceAdjacentTextRuns(IReadOnlyList<TextRun> textRuns, bool compareHighlight = true)
     {
         var coalesced = new List<TextRun>(textRuns.Count);
         foreach (TextRun run in textRuns)
         {
             if (run.Text.Length == 0)
+            {
+                continue;
+            }
+
+            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1], run, compareHighlight))
+            {
+                TextRun previous = coalesced[^1];
+                coalesced[^1] = previous with
+                {
+                    Text = previous.Text + run.Text,
+                    Width = run.X + run.Width - previous.X
+                };
+            }
+            else
+            {
+                coalesced.Add(run);
+            }
+        }
+
+        return coalesced;
+    }
+
+    private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight = true)
+    {
+        return Math.Abs(left.Y - right.Y) < 0.01d &&
+            Math.Abs(left.FontSize - right.FontSize) < 0.01d &&
+            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < 0.01d &&
+            Math.Abs(left.BaselineOffset - right.BaselineOffset) < 0.01d &&
+            Math.Abs(left.RotationDegrees - right.RotationDegrees) < 0.01d &&
+            Math.Abs(left.RotationCenterX - right.RotationCenterX) < 0.01d &&
+            Math.Abs(left.RotationCenterY - right.RotationCenterY) < 0.01d &&
+            Math.Abs(left.ClipX - right.ClipX) < 0.01d &&
+            Math.Abs(left.ClipY - right.ClipY) < 0.01d &&
+            Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
+            Math.Abs(left.ClipHeight - right.ClipHeight) < 0.01d &&
+            left.Color.Equals(right.Color) &&
+            Math.Abs(left.Alpha - right.Alpha) < 0.001d &&
+            (!compareHighlight || left.HighlightColor.Equals(right.HighlightColor)) &&
+            !left.PreventCoalesce &&
+            !right.PreventCoalesce &&
+            left.Bold == right.Bold &&
+            left.Italic == right.Italic &&
+            left.Underline == right.Underline &&
+            left.Strike == right.Strike &&
+            left.Alignment == right.Alignment &&
+            string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
+            right.X >= left.X &&
+            Math.Abs(right.X - (left.X + left.Width)) < Math.Max(1d, left.FontSize * 0.2d);
+    }
+
+    private static void DrawHighlightRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
+    {
+        foreach (TextRun run in CoalesceHighlightRuns(textRuns))
+        {
+            if (run.HighlightColor is null || !fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            {
+                continue;
+            }
+
+            DrawHighlightRun(graphics, rendered.Font, run);
+        }
+    }
+
+    private static IReadOnlyList<TextRun> CoalesceHighlightRuns(IReadOnlyList<TextRun> textRuns)
+    {
+        var coalesced = new List<TextRun>(textRuns.Count);
+        foreach (TextRun run in textRuns)
+        {
+            if (run.Text.Length == 0 || run.HighlightColor is null)
             {
                 continue;
             }
@@ -95,34 +163,6 @@ internal sealed partial class PptxRenderer
         }
 
         return coalesced;
-    }
-
-    private static bool CanCoalesceTextRun(TextRun left, TextRun right)
-    {
-        return Math.Abs(left.Y - right.Y) < 0.01d &&
-            Math.Abs(left.FontSize - right.FontSize) < 0.01d &&
-            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < 0.01d &&
-            Math.Abs(left.BaselineOffset - right.BaselineOffset) < 0.01d &&
-            Math.Abs(left.RotationDegrees - right.RotationDegrees) < 0.01d &&
-            Math.Abs(left.RotationCenterX - right.RotationCenterX) < 0.01d &&
-            Math.Abs(left.RotationCenterY - right.RotationCenterY) < 0.01d &&
-            Math.Abs(left.ClipX - right.ClipX) < 0.01d &&
-            Math.Abs(left.ClipY - right.ClipY) < 0.01d &&
-            Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
-            Math.Abs(left.ClipHeight - right.ClipHeight) < 0.01d &&
-            left.Color.Equals(right.Color) &&
-            Math.Abs(left.Alpha - right.Alpha) < 0.001d &&
-            left.HighlightColor.Equals(right.HighlightColor) &&
-            !left.PreventCoalesce &&
-            !right.PreventCoalesce &&
-            left.Bold == right.Bold &&
-            left.Italic == right.Italic &&
-            left.Underline == right.Underline &&
-            left.Strike == right.Strike &&
-            left.Alignment == right.Alignment &&
-            string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
-            right.X >= left.X &&
-            Math.Abs(right.X - (left.X + left.Width)) < Math.Max(1d, left.FontSize * 0.2d);
     }
 
     private static IReadOnlyList<TextRun> CoalesceUnderlineRuns(IReadOnlyList<TextRun> textRuns)
@@ -210,15 +250,6 @@ internal sealed partial class PptxRenderer
                 _ => run.X
             };
 
-            if (run.HighlightColor is { } highlight)
-            {
-                graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
-                double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
-                double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
-                double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
-                graphics.FillRectangle(x, highlightY, lineWidth, highlightHeight);
-            }
-
             bool transparentText = run.Alpha < 0.999d;
             if (transparentText)
             {
@@ -253,6 +284,35 @@ internal sealed partial class PptxRenderer
             }
         }
 
+        graphics.RestoreState();
+    }
+
+    private static void DrawHighlightRun(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run)
+    {
+        if (run.HighlightColor is not { } highlight)
+        {
+            return;
+        }
+
+        double baselineY = run.Y + run.BaselineOffset;
+        if (!BaselineIntersectsClip(run, baselineY))
+        {
+            return;
+        }
+
+        double lineWidth = MeasureRenderedText(embedded, run.Text, run.FontSize, run.CharacterSpacing);
+        graphics.SaveState();
+        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        {
+            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+        }
+
+        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+        double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
+        double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
+        double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+        graphics.FillRectangle(run.X, highlightY, lineWidth, highlightHeight);
         graphics.RestoreState();
     }
 

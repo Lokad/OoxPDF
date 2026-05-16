@@ -1,0 +1,17 @@
+{
+  "id": "pptx-ladder-04-typography-capital-spacing-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-capital-spacing-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spacing", "capital", "probe", "locked-text-ops"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxTextOperationPositionDelta": 0.05,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true
+  },
+  "allowedUnsupportedFeatures": []
+}
