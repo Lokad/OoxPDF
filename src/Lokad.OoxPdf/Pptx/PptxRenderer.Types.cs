@@ -199,7 +199,22 @@ internal sealed partial class PptxRenderer
         double Advance,
         double BaselineOffset,
         double MaxFontSize,
-        LineSpacing LineSpacing);
+        LineSpacing LineSpacing,
+        PptxTextBaselineMetricLayout BaselineMetric);
+
+    private sealed record PptxTextBaselineMetricLayout(
+        string Source,
+        string? Typeface,
+        bool Bold,
+        bool Italic,
+        double FontSize,
+        double Ratio,
+        int UnitsPerEm,
+        int WindowsAscender,
+        int WindowsDescender,
+        int TypographicAscender,
+        int TypographicDescender,
+        int TypographicLineGap);
 
     private sealed record PptxTextSpanLayout(
         PptxTextRunModel? SourceRun,

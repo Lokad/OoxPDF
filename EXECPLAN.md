@@ -217,10 +217,20 @@ High-priority actions:
 - [x] Reject font-name-specific baseline constants after comparing `pptx-renderer`: its text layout uses
   OOXML line-height semantics and browser/font metrics rather than Calibri/Aptos special cases. `ooxpdf`
   baseline work must stay metric-driven and generic across all resolved fonts.
+- [x] Reverse-engineer `pptx-renderer`'s baseline and line-height strategy for the next typography slice:
+  `spcPct` becomes unitless CSS line-height, `spcPts` becomes absolute point line-height, manual line breaks
+  under absolute spacing use block wrappers with explicit height, and normal text baselines are delegated to
+  browser/font layout. Only OOXML run `baseline` is an explicit superscript/subscript shift. `ooxpdf` should
+  therefore expose deterministic font metrics and line-box diagnostics, not hard-code family-specific
+  offsets.
 - [x] Replace the rejected font-name baseline tweak with a generic OpenType-metric rule:
   first-line PPTX baselines now use the resolved font's ascender metrics when available, falling back to the
   previous heuristic only when font resolution fails. The justified text probe improved from MAE ~`4.63` to
   `4.210743`, with the first-line baseline delta reduced from about `0.71 pt` to about `0.32 pt`.
+- [ ] Align `ooxpdf` line-height handling with that strategy: keep percent line spacing as a multiplier,
+  keep point line spacing as absolute line box height, model manual-break line boxes explicitly, and compare
+  line top, baseline, and highlight rectangle geometry against Office PDF text operations before changing
+  broader deck rendering.
 - [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
   ascender, internal leading, or another generic font metric for top-to-baseline placement.

@@ -62,10 +62,25 @@ internal sealed record PptxTextLineLayoutSnapshot(
     double BaselineOffset,
     double MaxFontSize,
     string LineSpacingKind,
+    PptxTextBaselineMetricSnapshot BaselineMetric,
     double StartX,
     double EndX,
     string Alignment,
     IReadOnlyList<PptxTextSpanLayoutSnapshot> Spans);
+
+internal sealed record PptxTextBaselineMetricSnapshot(
+    string Source,
+    string? Typeface,
+    bool Bold,
+    bool Italic,
+    double FontSize,
+    double Ratio,
+    int UnitsPerEm,
+    int WindowsAscender,
+    int WindowsDescender,
+    int TypographicAscender,
+    int TypographicDescender,
+    int TypographicLineGap);
 
 internal sealed record PptxTextSpanLayoutSnapshot(
     string? SourceText,

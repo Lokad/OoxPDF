@@ -1731,6 +1731,10 @@ internal static class PptxTests
 
         TestAssert.True(justifiedLine.Spans.Count > 1, "Expected justified lines to keep word spans separate before PDF emission.");
         TestAssert.True(justifiedLine.EndX - justifiedLine.StartX > 500d, "Expected justified line to stretch to the text frame width.");
+        TestAssert.True(justifiedLine.BaselineMetric.Ratio > 0d, "Expected line boxes to expose the generic baseline metric ratio used for Office comparison.");
+        TestAssert.True(!string.IsNullOrWhiteSpace(justifiedLine.BaselineMetric.Source), "Expected line boxes to expose baseline metric provenance.");
+        TestAssert.True(justifiedLine.BaselineMetric.UnitsPerEm > 0, "Expected resolved-font line boxes to expose OpenType units-per-em diagnostics.");
+        TestAssert.True(justifiedLine.BaselineMetric.WindowsAscender > 0, "Expected resolved-font line boxes to expose OS/2 Windows ascender diagnostics.");
         TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Space"), "Expected layout atoms to preserve explicit word spaces for justification.");
         TestAssert.True(justifiedLine.Spans.SelectMany(span => span.Atoms).Any(atom => atom.Kind == "Word"), "Expected layout atoms to preserve word fragments separately from spaces.");
         double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
