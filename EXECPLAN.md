@@ -176,8 +176,9 @@ Typography oracle family map:
 - Mixed formatting `0031`: covered by `pptx-ladder-04-mixed-bullet-port`, alongside older mixed-run rungs.
 - Bullet list `0032`: covered by `pptx-ladder-04-mixed-bullet-port` for a multi-level PowerPoint-authored
   bullet list.
-- Vertical text `0033..0034`: `vert270` exists; East Asian vertical and wordArt vertical stacked remain
-  missing and should become explicit gates before private vertical text is revisited.
+- Vertical text `0033..0034`: ported as `pptx-ladder-04-vertical-text-port` with an explicit
+  `PPTX_UNSUPPORTED_TEXT_ORIENTATION` diagnostic gate. Rendering remains a planned capability before
+  private vertical text is revisited.
 - Anchor `0035..0037`: covered by `pptx-ladder-04-anchor-port` for top, middle, and bottom shape text
   anchors.
 - Line spacing `0038`: ported as `pptx-ladder-04-line-spacing-port`. It is gated as a baseline but still

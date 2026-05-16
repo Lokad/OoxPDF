@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-vertical-text-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-vertical-text-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "vertical-text", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 1.39,
+    "maxChangedPixelRatioAtThreshold16": 0.0095
+  },
+  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_TEXT_ORIENTATION"]
+}
