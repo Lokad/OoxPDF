@@ -18,6 +18,7 @@ return TestRunner.Run(
     PdfWriterTests.WritesDrawingOperators,
     PdfWriterTests.WritesEmbeddedTrueTypeFontObjects,
     PptxTests.PptxSyntheticTwoSlidesProducesTwoPdfPages,
+    PptxTests.PptxSceneBuilderBuildsResolvedNodeLists,
     PptxTests.PptxSyntheticShapesProduceDrawingOperators,
     PptxTests.PptxSyntheticArrowAndConnectorShapesRender,
     PptxTests.PptxSyntheticRotatedShapeProducesTransform,

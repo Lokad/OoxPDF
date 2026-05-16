@@ -1,6 +1,8 @@
 using System.Text;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Ooxml;
+using Lokad.OoxPdf.Pptx;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -53,6 +55,99 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("<< /Type /Pages /Count 2 /Kids [3 0 R 5 0 R] >>", pdf);
         TestAssert.Contains("/MediaBox [0 0 960 540]", pdf);
+    }
+
+    public static void PptxSceneBuilderBuildsResolvedNodeLists()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+                </Relationships>
+                """,
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:sldSz cx="9144000" cy="6858000"/>
+                  <p:sldIdLst><p:sldId id="256" r:id="rId1"/></p:sldIdLst>
+                </p:presentation>
+                """,
+            ["ppt/slideMasters/slideMaster1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:nvSpPr><p:cNvPr id="1" name="MasterBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                  </p:spTree></p:cSld>
+                </p:sldMaster>
+                """,
+            ["ppt/slideLayouts/slideLayout1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="LayoutDecoration"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="3" name="Title Placeholder"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                  </p:spTree></p:cSld>
+                </p:sldLayout>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
+                    <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+
+        TestAssert.Equal(1, scene.Slides.Count);
+        PptxSceneSlide slide = scene.Slides[0];
+        TestAssert.Equal(1, slide.MasterNodes.Count);
+        TestAssert.Equal(2, slide.LayoutNodes.Count);
+        TestAssert.Equal(3, slide.SlideNodes.Count);
+        TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
+        TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
+        TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()
