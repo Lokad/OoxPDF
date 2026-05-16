@@ -32,9 +32,39 @@ internal sealed record PptxSceneTextParagraph(
     XElement? Properties,
     XElement? EndParagraphProperties,
     int Level,
+    PptxSceneParagraphStyle ResolvedStyle,
     IReadOnlyList<PptxSceneTextRun> Runs);
 
-internal sealed record PptxSceneTextRun(PptxSceneTextRunKind Kind, string Text, XElement? Properties, XElement Source);
+internal sealed record PptxSceneTextRun(
+    PptxSceneTextRunKind Kind,
+    string Text,
+    XElement? Properties,
+    PptxSceneRunStyle ResolvedStyle,
+    XElement Source);
+
+internal sealed record PptxSceneParagraphStyle(
+    int Level,
+    string Alignment,
+    double FontSize,
+    RgbColor Color,
+    double Alpha,
+    string? Typeface,
+    bool Bold,
+    bool Italic,
+    double CharacterSpacing);
+
+internal sealed record PptxSceneRunStyle(
+    double FontSize,
+    RgbColor Color,
+    double Alpha,
+    string? Typeface,
+    bool Bold,
+    bool Italic,
+    bool Underline,
+    bool Strike,
+    double CharacterSpacing,
+    double BaselineOffset,
+    RgbColor? Highlight);
 
 internal enum PptxSceneTextRunKind
 {
@@ -87,13 +117,19 @@ internal sealed class PptxSceneBuilder
             XDocument slideXml = LoadXml(slidePart);
             OoxPart? layoutPart = GetRelatedPart(package, slide.PartName, SlideLayoutRelationshipType);
             OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
+            XDocument? masterXml = masterPart is null ? null : LoadXml(masterPart);
+            XDocument? layoutXml = layoutPart is null ? null : LoadXml(layoutPart);
+            IReadOnlyList<XDocument> layoutSources = masterXml is null ? [] : [masterXml];
+            IReadOnlyList<XDocument> slideSources = masterXml is null
+                ? layoutXml is null ? [] : [layoutXml]
+                : layoutXml is null ? [masterXml] : [masterXml, layoutXml];
             slides.Add(new PptxSceneSlide(
                 slide.Index,
                 slide.PartName,
                 slideXml,
-                masterPart is null ? [] : ReadNodes(LoadXml(masterPart)),
-                layoutPart is null ? [] : ReadNodes(LoadXml(layoutPart)),
-                ReadNodes(slideXml)));
+                masterXml is null ? [] : ReadNodes(masterXml, [], theme),
+                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme),
+                ReadNodes(slideXml, slideSources, theme)));
         }
 
         return new PptxScene(document, theme, slides);
@@ -112,7 +148,7 @@ internal sealed class PptxSceneBuilder
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static IReadOnlyList<PptxSceneNode> ReadNodes(XDocument xml)
+    private static IReadOnlyList<PptxSceneNode> ReadNodes(XDocument xml, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
@@ -126,7 +162,7 @@ internal sealed class PptxSceneBuilder
                 }
 
                 (string id, string name) = ReadNonVisualProperties(child);
-                nodes.Add(new PptxSceneNode(kind, id, name, IsPlaceholder(child), ReadBounds(child), ReadTextBody(child), child));
+                nodes.Add(new PptxSceneNode(kind, id, name, IsPlaceholder(child), ReadBounds(child), ReadTextBody(child, placeholderSources, theme), child));
             }
         }
 
@@ -224,7 +260,7 @@ internal sealed class PptxSceneBuilder
             ReadBool(transform, "flipV"));
     }
 
-    private static PptxSceneTextBody? ReadTextBody(XElement element)
+    private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
     {
         XElement? textBody = element.Element(PresentationNamespace + "txBody");
         if (textBody is null)
@@ -232,48 +268,398 @@ internal sealed class PptxSceneBuilder
             return null;
         }
 
+        XElement? inheritedTextBody = FindInheritedPlaceholderShape(element, placeholderSources)?.Element(PresentationNamespace + "txBody");
         return new PptxSceneTextBody(
             textBody.Element(DrawingNamespace + "bodyPr"),
             textBody.Element(DrawingNamespace + "lstStyle"),
-            textBody.Elements(DrawingNamespace + "p").Select(ReadParagraph).ToArray());
+            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBody, placeholderSources, theme)).ToArray());
     }
 
-    private static PptxSceneTextParagraph ReadParagraph(XElement paragraph)
+    private static PptxSceneTextParagraph ReadParagraph(
+        XElement paragraph,
+        XElement shape,
+        XElement textBody,
+        XElement? inheritedTextBody,
+        IReadOnlyList<XDocument> placeholderSources,
+        PptxTheme theme)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
+        int level = properties?.Attribute("lvl") is { } levelAttribute
+            ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
+            : 0;
+        XElement? defaultParagraphProperties = ResolveDefaultParagraphProperties(
+            level,
+            shape,
+            textBody,
+            inheritedTextBody,
+            placeholderSources);
+        XElement? defaultRunProperties = properties?.Element(DrawingNamespace + "defRPr") ??
+            defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
+        PptxSceneParagraphStyle resolvedStyle = ResolveParagraphStyle(level, properties, defaultParagraphProperties, defaultRunProperties, shape, theme);
         return new PptxSceneTextParagraph(
             properties,
             paragraph.Element(DrawingNamespace + "endParaRPr"),
-            properties?.Attribute("lvl") is { } level ? int.Parse(level.Value, CultureInfo.InvariantCulture) : 0,
-            paragraph.Elements().Select(ReadRun).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
+            level,
+            resolvedStyle,
+            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
     }
 
-    private static PptxSceneTextRun? ReadRun(XElement element)
+    private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme)
     {
         if (element.Name == DrawingNamespace + "r")
         {
+            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
             return new PptxSceneTextRun(
                 PptxSceneTextRunKind.Text,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
-                element.Element(DrawingNamespace + "rPr"),
+                runProperties,
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme),
                 element);
         }
 
         if (element.Name == DrawingNamespace + "br")
         {
-            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", element.Element(DrawingNamespace + "rPr"), element);
+            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
+            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme), element);
         }
 
         if (element.Name == DrawingNamespace + "fld")
         {
+            XElement? runProperties = element.Element(DrawingNamespace + "rPr");
             return new PptxSceneTextRun(
                 PptxSceneTextRunKind.Field,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
-                element.Element(DrawingNamespace + "rPr"),
+                runProperties,
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme),
                 element);
         }
 
         return null;
+    }
+
+    private static XElement? ResolveDefaultParagraphProperties(
+        int level,
+        XElement shape,
+        XElement textBody,
+        XElement? inheritedTextBody,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        string levelName = $"lvl{Math.Clamp(level + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
+        return MergeParagraphProperties(
+            textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName),
+            inheritedTextBody?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName),
+            FindInheritedTextStyle(shape, placeholderSources, levelName));
+    }
+
+    private static XElement? MergeParagraphProperties(params XElement?[] sources)
+    {
+        XElement? merged = null;
+        foreach (XElement source in sources.Reverse().Where(source => source is not null).Cast<XElement>())
+        {
+            merged ??= new XElement(source.Name);
+            foreach (XAttribute attribute in source.Attributes())
+            {
+                merged.SetAttributeValue(attribute.Name, attribute.Value);
+            }
+
+            foreach (XElement child in source.Elements())
+            {
+                XElement? existing = merged.Element(child.Name);
+                if (existing is null)
+                {
+                    merged.Add(new XElement(child));
+                }
+                else
+                {
+                    MergeElementInto(existing, child);
+                }
+            }
+        }
+
+        return merged;
+    }
+
+    private static void MergeElementInto(XElement target, XElement source)
+    {
+        foreach (XAttribute attribute in source.Attributes())
+        {
+            target.SetAttributeValue(attribute.Name, attribute.Value);
+        }
+
+        foreach (XElement child in source.Elements())
+        {
+            target.Elements(child.Name).Remove();
+            target.Add(new XElement(child));
+        }
+    }
+
+    private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)
+    {
+        string? placeholderType = (string?)shape
+            .Element(PresentationNamespace + "nvSpPr")
+            ?.Element(PresentationNamespace + "nvPr")
+            ?.Element(PresentationNamespace + "ph")
+            ?.Attribute("type");
+        string styleName = placeholderType switch
+        {
+            "title" or "ctrTitle" => "titleStyle",
+            "body" or "subTitle" => "bodyStyle",
+            _ => "otherStyle"
+        };
+
+        foreach (XDocument source in placeholderSources)
+        {
+            XElement? style = source.Root?
+                .Element(PresentationNamespace + "txStyles")
+                ?.Element(PresentationNamespace + styleName);
+            XElement? level = style?.Element(DrawingNamespace + levelName) ??
+                style?.Element(DrawingNamespace + "defPPr");
+            if (level is not null)
+            {
+                return level;
+            }
+        }
+
+        return null;
+    }
+
+    private static XElement? FindInheritedPlaceholderShape(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    {
+        XElement? placeholder = shape
+            .Element(PresentationNamespace + "nvSpPr")
+            ?.Element(PresentationNamespace + "nvPr")
+            ?.Element(PresentationNamespace + "ph");
+        if (placeholder is null)
+        {
+            return null;
+        }
+
+        string? type = (string?)placeholder.Attribute("type");
+        string? index = (string?)placeholder.Attribute("idx");
+        foreach (XDocument source in placeholderSources.Reverse())
+        {
+            foreach (XElement candidate in source.Descendants(PresentationNamespace + "sp"))
+            {
+                XElement? candidatePlaceholder = candidate
+                    .Element(PresentationNamespace + "nvSpPr")
+                    ?.Element(PresentationNamespace + "nvPr")
+                    ?.Element(PresentationNamespace + "ph");
+                if (candidatePlaceholder is null)
+                {
+                    continue;
+                }
+
+                string? candidateType = (string?)candidatePlaceholder.Attribute("type");
+                string? candidateIndex = (string?)candidatePlaceholder.Attribute("idx");
+                bool indexMatches = index is not null && candidateIndex == index;
+                bool typeMatches = index is null && type is not null && candidateType == type;
+                if (indexMatches || typeMatches)
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static PptxSceneParagraphStyle ResolveParagraphStyle(
+        int level,
+        XElement? paragraphProperties,
+        XElement? defaultParagraphProperties,
+        XElement? defaultRunProperties,
+        XElement shape,
+        PptxTheme theme)
+    {
+        double fontSize = ReadFontSize(defaultRunProperties, null);
+        RgbColor color = TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double alpha)
+            ? defaultColor
+            : TryReadShapeFontColor(shape, theme, out RgbColor shapeColor)
+                ? shapeColor
+                : new RgbColor(0, 0, 0);
+        if (!TryReadSolidColorWithAlpha(defaultRunProperties, theme, out _, out alpha))
+        {
+            alpha = 1d;
+        }
+
+        string? typeface = theme.ResolveTypeface((string?)defaultRunProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface"));
+        return new PptxSceneParagraphStyle(
+            level,
+            (string?)(paragraphProperties?.Attribute("algn") ?? defaultParagraphProperties?.Attribute("algn")) ?? "l",
+            fontSize,
+            color,
+            alpha,
+            typeface,
+            ParseOptionalBoolAttribute(defaultRunProperties, "b"),
+            ParseOptionalBoolAttribute(defaultRunProperties, "i"),
+            ReadCharacterSpacing(defaultRunProperties, null));
+    }
+
+    private static PptxSceneRunStyle ResolveRunStyle(XElement? runProperties, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme)
+    {
+        double fontSize = ReadFontSize(runProperties, defaultRunProperties);
+        double alpha = paragraphStyle.Alpha;
+        RgbColor color = paragraphStyle.Color;
+        if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+        {
+            color = runColor;
+            alpha = runAlpha;
+        }
+        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
+        {
+            color = defaultColor;
+            alpha = defaultAlpha;
+        }
+
+        string? typeface = theme.ResolveTypeface((string?)(runProperties?.Element(DrawingNamespace + "latin") ??
+            defaultRunProperties?.Element(DrawingNamespace + "latin"))?.Attribute("typeface")) ?? paragraphStyle.Typeface;
+        bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+            (runProperties?.Attribute("b") is null && paragraphStyle.Bold);
+        bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
+            (runProperties?.Attribute("i") is null && paragraphStyle.Italic);
+        bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue &&
+            !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+        bool strike = IsStrikeEnabled(runProperties, defaultRunProperties);
+        return new PptxSceneRunStyle(
+            fontSize,
+            color,
+            alpha,
+            typeface,
+            bold,
+            italic,
+            underline,
+            strike,
+            ReadCharacterSpacing(runProperties, defaultRunProperties),
+            ReadBaselineOffset(runProperties, defaultRunProperties, fontSize),
+            TryReadHighlightColor(runProperties, out RgbColor highlight) ? highlight : null);
+    }
+
+    private static double ReadFontSize(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (runProperties?.Attribute("sz") ?? defaultRunProperties?.Attribute("sz")) is { } size
+            ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
+            : 18d;
+    }
+
+    private static double ReadCharacterSpacing(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (runProperties?.Attribute("spc") ?? defaultRunProperties?.Attribute("spc")) is { } spacing
+            ? int.Parse(spacing.Value, CultureInfo.InvariantCulture) / 100d
+            : 0d;
+    }
+
+    private static double ReadBaselineOffset(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
+    {
+        return (runProperties?.Attribute("baseline") ?? defaultRunProperties?.Attribute("baseline")) is { } baseline
+            ? fontSize * int.Parse(baseline.Value, CultureInfo.InvariantCulture) / 100000d
+            : 0d;
+    }
+
+    private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        string? value = (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
+        return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ParseOptionalBoolAttribute(XElement? element, string attributeName)
+    {
+        string? value = (string?)element?.Attribute(attributeName);
+        return value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
+    {
+        XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight");
+        string? hex = (string?)highlight?.Element(DrawingNamespace + "srgbClr")?.Attribute("val");
+        return RgbColor.TryParse(hex, out color);
+    }
+
+    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
+    {
+        XElement? fontRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "fontRef");
+        return TryReadSolidColorWithAlpha(fontRef, theme, out color, out _);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
+    {
+        XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
+        XElement? colorContainer = solidFill ?? element;
+        alpha = ReadAlpha(colorContainer);
+        XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
+        if (RgbColor.TryParse((string?)srgbColor?.Attribute("val"), out color))
+        {
+            color = ApplyColorTransforms(srgbColor, color);
+            return true;
+        }
+
+        XElement? schemeColorElement = colorContainer?.Element(DrawingNamespace + "schemeClr");
+        string? schemeColor = (string?)schemeColorElement?.Attribute("val");
+        if (schemeColor is not null && theme.TryResolveColor(schemeColor, out color))
+        {
+            color = ApplyColorTransforms(schemeColorElement, color);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static double ReadAlpha(XElement? colorContainer)
+    {
+        XElement? alpha = colorContainer?
+            .Elements()
+            .FirstOrDefault(element => element.Name.LocalName is "srgbClr" or "schemeClr")
+            ?.Element(DrawingNamespace + "alpha");
+        if (alpha?.Attribute("val") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        {
+            return Math.Clamp(parsed / 100000d, 0d, 1d);
+        }
+
+        return 1d;
+    }
+
+    private static RgbColor ApplyColorTransforms(XElement? colorElement, RgbColor color)
+    {
+        if (colorElement is null)
+        {
+            return color;
+        }
+
+        double red = color.Red;
+        double green = color.Green;
+        double blue = color.Blue;
+        foreach (XElement transform in colorElement.Elements())
+        {
+            double value = ReadLong(transform, "val", 100000) / 100000d;
+            switch (transform.Name.LocalName)
+            {
+                case "lumMod":
+                case "shade":
+                    red *= value;
+                    green *= value;
+                    blue *= value;
+                    break;
+                case "lumOff":
+                    red += 255d * value;
+                    green += 255d * value;
+                    blue += 255d * value;
+                    break;
+                case "tint":
+                    red += (255d - red) * value;
+                    green += (255d - green) * value;
+                    blue += (255d - blue) * value;
+                    break;
+            }
+        }
+
+        return new RgbColor(ToByte(red), ToByte(green), ToByte(blue));
+    }
+
+    private static byte ToByte(double value)
+    {
+        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
     }
 
     private static long ReadLong(XElement element, string name)
@@ -281,6 +667,13 @@ internal sealed class PptxSceneBuilder
         return element.Attribute(name) is { } attribute
             ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
             : 0L;
+    }
+
+    private static long ReadLong(XElement element, string name, long defaultValue)
+    {
+        return element.Attribute(name) is { } attribute
+            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
+            : defaultValue;
     }
 
     private static bool ReadBool(XElement element, string name)

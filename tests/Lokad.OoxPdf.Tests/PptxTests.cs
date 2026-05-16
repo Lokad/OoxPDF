@@ -70,6 +70,7 @@ internal static class PptxTests
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
                   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -82,6 +83,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
                 </Relationships>
                 """,
             ["ppt/slides/_rels/slide1.xml.rels"] = """
@@ -96,6 +98,27 @@ internal static class PptxTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
                 </Relationships>
                 """,
+            ["ppt/slideMasters/_rels/slideMaster1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Test">
+                  <a:themeElements>
+                    <a:clrScheme name="Test">
+                      <a:dk1><a:srgbClr val="111111"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                    </a:clrScheme>
+                    <a:fontScheme name="Test">
+                      <a:majorFont><a:latin typeface="Arial"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+                    </a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -109,6 +132,9 @@ internal static class PptxTests
                   <p:cSld><p:spTree>
                     <p:sp><p:nvSpPr><p:cNvPr id="1" name="MasterBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
                   </p:spTree></p:cSld>
+                  <p:txStyles>
+                    <p:bodyStyle><a:lvl2pPr algn="ctr"><a:defRPr sz="2800" b="1" spc="120"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill><a:latin typeface="+mj-lt"/></a:defRPr></a:lvl2pPr></p:bodyStyle>
+                  </p:txStyles>
                 </p:sldMaster>
                 """,
             ["ppt/slideLayouts/slideLayout1.xml"] = """
@@ -117,6 +143,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree>
                     <p:sp><p:nvSpPr><p:cNvPr id="2" name="LayoutDecoration"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
                     <p:sp><p:nvSpPr><p:cNvPr id="3" name="Title Placeholder"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="7" name="Body Placeholder"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl2pPr><a:defRPr sz="2600" i="1"/></a:lvl2pPr></a:lstStyle><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
@@ -124,7 +151,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr sz="2400"/><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
                   </p:spTree></p:cSld>
@@ -141,7 +168,7 @@ internal static class PptxTests
         TestAssert.Equal(1, scene.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
         TestAssert.Equal(1, slide.MasterNodes.Count);
-        TestAssert.Equal(2, slide.LayoutNodes.Count);
+        TestAssert.Equal(3, slide.LayoutNodes.Count);
         TestAssert.Equal(3, slide.SlideNodes.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
@@ -155,6 +182,16 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneTextRunKind.Text, textBody.Paragraphs[0].Runs[0].Kind);
         TestAssert.Equal(PptxSceneTextRunKind.Break, textBody.Paragraphs[0].Runs[1].Kind);
         TestAssert.Equal(PptxSceneTextRunKind.Field, textBody.Paragraphs[0].Runs[2].Kind);
+        TestAssert.Equal(1, textBody.Paragraphs[0].ResolvedStyle.Level);
+        TestAssert.Equal("ctr", textBody.Paragraphs[0].ResolvedStyle.Alignment);
+        TestAssert.Equal(26d, textBody.Paragraphs[0].ResolvedStyle.FontSize);
+        TestAssert.True(textBody.Paragraphs[0].ResolvedStyle.Bold, "Expected master body style bold setting to survive the scene style cascade.");
+        TestAssert.True(textBody.Paragraphs[0].ResolvedStyle.Italic, "Expected layout placeholder default run style to override inherited italic setting.");
+        TestAssert.Equal("Arial", textBody.Paragraphs[0].ResolvedStyle.Typeface ?? string.Empty);
+        TestAssert.Equal(new RgbColor(17, 17, 17), textBody.Paragraphs[0].ResolvedStyle.Color);
+        TestAssert.Equal(26d, textBody.Paragraphs[0].Runs[0].ResolvedStyle.FontSize);
+        TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Underline, "Expected run underline in resolved scene style.");
+        TestAssert.Equal(new RgbColor(255, 255, 0), textBody.Paragraphs[0].Runs[0].ResolvedStyle.Highlight ?? default);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()

@@ -88,7 +88,7 @@ High-priority actions:
   node kind classification, placeholder metadata, and bounds extraction.
 - [x] Extend the `ooxpdf` scene slice to text bodies: body properties, list style, paragraphs, levels,
   ordered text/break/field runs, run properties, and end paragraph properties.
-- [ ] Extend the `ooxpdf` scene slice to resolved text styling: paragraph style cascade and run style
+- [x] Extend the `ooxpdf` scene slice to resolved text styling: paragraph style cascade and run style
   cascade from master/layout/shape/paragraph/run context.
 - [ ] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
   before replacing behavior.
