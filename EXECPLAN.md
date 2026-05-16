@@ -135,6 +135,14 @@ High-priority actions:
   runs and line end advance before alignment/PDF emission.
 - [ ] Extend the intermediate typography model from line ownership to explicit text body, paragraph,
   line, positioned run, and hidden-control advance records.
+- [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
+  (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
+  paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
+- [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
+  `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
+  tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
+- [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
+  explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Add explicit public probes for the private-deck spacing failures: capital-letter kerning,
   accented-letter pairs, Cambria/Calibri/Arial differences, highlighted runs, and mixed run boundaries.
   The first probes are `pptx-ladder-04-typography-capital-spacing-probe`,
