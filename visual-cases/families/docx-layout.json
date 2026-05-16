@@ -2,6 +2,10 @@
   "id": "docx-layout",
   "kind": "docx",
   "description": "DOCX page setup, paragraphs, spacing, numbering, images, tables, headers, and footers.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
   "casePatterns": [
     "docx-*"
   ]

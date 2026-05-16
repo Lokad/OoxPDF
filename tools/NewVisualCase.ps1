@@ -28,6 +28,9 @@ $manifest = [ordered]@{
         minAgentRating = 3
         pageCountMustMatch = $true
         dimensionsMustMatch = $true
+        diagnosticsMustBeEmpty = $true
+        minStructuralSimilarity = 0.95
+        minForegroundColorHistogramCorrelation = 0.80
     }
     allowedUnsupportedFeatures = @()
 }

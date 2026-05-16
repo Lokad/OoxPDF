@@ -91,6 +91,14 @@ function Get-LatestCaseRun([string] $caseId) {
         Select-Object -First 1
 }
 
+function Get-ManifestDouble($object, [string] $name, $defaultValue) {
+    if ($object -ne $null -and $object.PSObject.Properties.Name -contains $name -and $object.$name -ne $null) {
+        return [double]$object.$name
+    }
+
+    return $defaultValue
+}
+
 function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
     $caseManifestPath = Join-Path $case.FullName "case.json"
     $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
@@ -117,10 +125,19 @@ function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
     $ssimValues = @($metrics | Where-Object { $_.StructuralSimilarity -ne $null } | ForEach-Object { [double]$_.StructuralSimilarity })
     $histValues = @($metrics | Where-Object { $_.ForegroundColorHistogramCorrelation -ne $null } | ForEach-Object { [double]$_.ForegroundColorHistogramCorrelation })
     $dimensionMismatchCount = @($metrics | Where-Object { $_.DimensionsMatch -ne $true }).Count
+    $minStructuralSimilarity = if ($ssimValues.Count -eq 0) { $null } else { ($ssimValues | Measure-Object -Minimum).Minimum }
+    $minForegroundColorHistogramCorrelation = if ($histValues.Count -eq 0) { $null } else { ($histValues | Measure-Object -Minimum).Minimum }
+    $support = $caseManifest.support
+    $familySupport = $familyManifest.support
+    $requiredStructuralSimilarity = Get-ManifestDouble $support "minStructuralSimilarity" (Get-ManifestDouble $familySupport "minStructuralSimilarity" 0.995)
+    $requiredColorHistogram = Get-ManifestDouble $support "minForegroundColorHistogramCorrelation" (Get-ManifestDouble $familySupport "minForegroundColorHistogramCorrelation" 0.98)
     $status = if (-not $passed) {
         "unsupported"
     }
-    elseif ($ssimValues.Count -ne 0 -and (($ssimValues | Measure-Object -Minimum).Minimum -lt 0.99)) {
+    elseif ($minStructuralSimilarity -eq $null -or
+        $minForegroundColorHistogramCorrelation -eq $null -or
+        $minStructuralSimilarity -lt $requiredStructuralSimilarity -or
+        $minForegroundColorHistogramCorrelation -lt $requiredColorHistogram) {
         "needs-review"
     }
     else {
@@ -138,8 +155,10 @@ function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
         dimensionMismatchCount = $dimensionMismatchCount
         diagnosticsCount = $diagnostics.Count
         diagnosticIds = @($diagnostics | ForEach-Object { $_.Id } | Sort-Object -Unique) -join ";"
-        minStructuralSimilarity = if ($ssimValues.Count -eq 0) { $null } else { ($ssimValues | Measure-Object -Minimum).Minimum }
-        minForegroundColorHistogramCorrelation = if ($histValues.Count -eq 0) { $null } else { ($histValues | Measure-Object -Minimum).Minimum }
+        minStructuralSimilarity = $minStructuralSimilarity
+        minForegroundColorHistogramCorrelation = $minForegroundColorHistogramCorrelation
+        requiredStructuralSimilarity = $requiredStructuralSimilarity
+        requiredForegroundColorHistogramCorrelation = $requiredColorHistogram
         maxMeanAbsoluteError = if ($maeValues.Count -eq 0) { $null } else { ($maeValues | Measure-Object -Maximum).Maximum }
         maxChangedPixelRatioAtThreshold16 = if ($changed16Values.Count -eq 0) { $null } else { ($changed16Values | Measure-Object -Maximum).Maximum }
         error = $errorMessage
@@ -238,6 +257,8 @@ if ($UpdateCatalog) {
             lastRunPath = $row.runPath
             minStructuralSimilarity = $row.minStructuralSimilarity
             minForegroundColorHistogramCorrelation = $row.minForegroundColorHistogramCorrelation
+            requiredStructuralSimilarity = $row.requiredStructuralSimilarity
+            requiredForegroundColorHistogramCorrelation = $row.requiredForegroundColorHistogramCorrelation
             maxMeanAbsoluteError = $row.maxMeanAbsoluteError
             maxChangedPixelRatioAtThreshold16 = $row.maxChangedPixelRatioAtThreshold16
         }

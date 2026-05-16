@@ -2,6 +2,10 @@
   "id": "pptx-images",
   "kind": "pptx",
   "description": "Pictures, crops, alpha, rotation, flips, and picture fills.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
   "casePatterns": [
     "pptx-ladder-07-*"
   ]

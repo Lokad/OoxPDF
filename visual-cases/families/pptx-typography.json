@@ -2,6 +2,10 @@
   "id": "pptx-typography",
   "kind": "pptx",
   "description": "Text layout, fonts, runs, spacing, bullets, highlighting, and vertical text.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
   "casePatterns": [
     "pptx-ladder-02-*",
     "pptx-ladder-03-*",

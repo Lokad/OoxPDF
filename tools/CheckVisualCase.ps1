@@ -83,6 +83,24 @@ if ($manifest.expected.maxChangedPixelRatioAtThreshold16 -ne $null) {
     }
 }
 
+if ($manifest.expected.minStructuralSimilarity -ne $null) {
+    $minStructuralSimilarity = [double]$manifest.expected.minStructuralSimilarity
+    $exceeded = @($metrics | Where-Object { $_.StructuralSimilarity -eq $null -or [double]$_.StructuralSimilarity -lt $minStructuralSimilarity })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property StructuralSimilarity | Select-Object -First 1
+        throw "Structural similarity gate failed. Page $($worst.Page) was $($worst.StructuralSimilarity), minimum is $minStructuralSimilarity."
+    }
+}
+
+if ($manifest.expected.minForegroundColorHistogramCorrelation -ne $null) {
+    $minColorHistogram = [double]$manifest.expected.minForegroundColorHistogramCorrelation
+    $exceeded = @($metrics | Where-Object { $_.ForegroundColorHistogramCorrelation -eq $null -or [double]$_.ForegroundColorHistogramCorrelation -lt $minColorHistogram })
+    if ($exceeded.Count -ne 0) {
+        $worst = $exceeded | Sort-Object -Property ForegroundColorHistogramCorrelation | Select-Object -First 1
+        throw "Foreground color histogram gate failed. Page $($worst.Page) was $($worst.ForegroundColorHistogramCorrelation), minimum is $minColorHistogram."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()

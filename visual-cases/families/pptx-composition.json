@@ -2,6 +2,10 @@
   "id": "pptx-composition",
   "kind": "pptx",
   "description": "Groups, z-order, placeholders, inheritance, and mixed slide composition.",
+  "support": {
+    "minStructuralSimilarity": 0.995,
+    "minForegroundColorHistogramCorrelation": 0.98
+  },
   "casePatterns": [
     "pptx-ladder-01-*",
     "pptx-ladder-08-*",

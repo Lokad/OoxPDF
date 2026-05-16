@@ -178,6 +178,9 @@ Porting priorities:
   be listed or filtered by group, so PPTX typography/shapes/images/composition checks can run independently.
 - [x] Continue porting test organization patterns: visual family runs now emit ignored JSON/CSV reports,
   support `-OnlyUnsupported`, `-OnlyChanged`, and `-UpdateCatalog`, and can be compared for regressions.
+- [x] Make strict visual support explicit: case manifests can gate on SSIM/color histogram, and family
+  manifests define a stricter `supported` threshold so loose legacy gates remain runnable while bottom-up
+  pixel-perfect rungs are tracked separately as `supported` versus `needs-review`.
 - [ ] Continue porting generated-case manifests and richer parity reporting for the remaining
   `pptx-renderer` oracle families.
 - [x] Add first parity tracking in `EXECPLAN.md`: ported families now state source coverage, `ooxpdf`

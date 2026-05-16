@@ -17,6 +17,8 @@ powershell -ExecutionPolicy Bypass -File tools/CheckVisualCase.ps1 -Case visual-
 
 Family runs write ignored latest and timestamped summaries under `artifacts/visual/reports/`.
 Use `-UpdateCatalog` to update the ignored local support catalog at `artifacts/visual/support-catalog.json`.
+Family manifests define strict support thresholds. A case can pass its manifest gates while still being
+cataloged as `needs-review` until it reaches the stricter SSIM/color-histogram support bar.
 
 PPTX families:
 
