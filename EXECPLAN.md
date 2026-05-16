@@ -84,12 +84,35 @@ High-priority actions:
   tooling.
 - [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
   generation before more large changes to `PptxRenderer`.
-- [ ] Prototype the smallest `ooxpdf` PPTX intermediate model slice for text boxes: resolved slide context,
-  typed shape node, resolved text body, paragraph style cascade, and run style cascade.
+- [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
+  node kind classification, placeholder metadata, and bounds extraction.
+- [ ] Extend the `ooxpdf` scene slice to text boxes: resolved slide context, typed shape node, resolved text
+  body, paragraph style cascade, and run style cascade.
 - [ ] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
   before replacing behavior.
 - [ ] Consider porting the testing strategy, especially generated Office-oracle case families and SSIM plus
   color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
+
+## Test Suite Performance
+
+The public test loop is now slow enough to reduce iteration speed. The full custom console runner can take
+minutes, despite `pptx-renderer` sustaining a much larger Office-oracle suite. Treat test performance as a
+quality requirement, not as incidental tooling work.
+
+High-priority actions:
+
+- [ ] Profile the dependency-free console runner and identify the slowest tests by name and elapsed time.
+- [x] Add runner-level timing output so regressions in test duration are visible in normal local runs.
+- [x] Cache Windows font resolver discovery across resolver instances. This reduced the full custom console
+  runner from roughly 180 seconds to roughly 13 seconds on the local machine, with `108 passed, 0 failed`.
+- [ ] Cache immutable expensive fixtures in tests, especially parsed fonts, repeated synthetic packages,
+  Office reference PDFs, and rasterized oracle pages when the input file and tool version have not changed.
+- [ ] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
+  reference inputs as part of caching.
+- [ ] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
+  tests/Lokad.OoxPdf.Tests` stays fast and visual gates can be run explicitly.
+- [ ] Review `pptx-renderer`'s generated oracle and report reuse strategy for ideas that fit the .NET
+  dependency-free constraint.
 
 ## Progress
 
@@ -1201,17 +1224,19 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 1. Complete the `pptx-renderer` survey and decide the intermediate-model direction before further broad
    PPTX renderer patching. Prioritize what explains its higher-quality output on real decks: resolved model
    structure, style inheritance, text handling, grouped content, and oracle tooling.
-2. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list
+2. Improve test-loop performance: add per-test timing, identify the slowest tests, and introduce ignored
+   caches for immutable oracle artifacts and expensive parsed resources where safe.
+3. Audit the existing unit tests against the Office-PDF-first workflow. Keep strong low-level tests, and list
    renderer tests that should be replaced or complemented by public visual fixtures.
-3. Continue PPTX Ladder 4 bottom-up, with typography as the first priority: inspect the Office reference
+4. Continue PPTX Ladder 4 bottom-up, with typography as the first priority: inspect the Office reference
    PDF/raster for each minimal styled-text fixture, tighten baselines, advances, tracking, highlights,
    underlines, bullets, and paragraph flow toward near pixel-perfect output, and only then revisit larger
    combinations.
-4. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for
+5. Start a public DOCX synthetic ladder before optimizing private DOCX pages: inspect Office PDFs for
    blank/plain paragraph/table primitives, then add visual gates.
-5. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not
+6. Use `lokad-value-based` and `user-requirements-spec` only to discover public-safe feature gaps. Do not
    optimize for private MAE or changed-pixel ratios while public ladders are incomplete.
-6. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest
+7. For every private-discovered gap not covered by a passing public fixture, create or tighten the smallest
    public synthetic fixture first.
 
 ## Decisions
