@@ -124,6 +124,13 @@ High-priority actions:
   `pptx-ladder-04-all-caps`, `pptx-ladder-04-field-text`,
   `pptx-ladder-04-nonbreaking-space`, `pptx-ladder-04-soft-hyphen`, and
   `pptx-ladder-04-tab-character`.
+- [x] Lock additional simple typography cases with text-operation gates:
+  `pptx-ladder-04-bold-face-single`, `pptx-ladder-04-italic-face-single`,
+  `pptx-ladder-04-underline-single`, `pptx-ladder-04-strikethrough-single`, and
+  `pptx-ladder-04-line-spacing-points`.
+- [ ] Tighten near-miss simple typography cases before locking:
+  `pptx-ladder-04-highlight-single` has a 0.06 pt baseline delta, and
+  `pptx-ladder-04-mixed-font-size-line` has a 0.056 pt second-run x delta.
 - [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
