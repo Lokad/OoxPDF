@@ -788,8 +788,10 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   inactive pair-positioning lookups that created parasite inter-letter gaps in Cambria/Cambria Math text.
 - [x] Ladder 4 gate `pptx-ladder-04-kerning-accent-highlight` covers normal words with uppercase starts,
   accented letters, and reported French/English word shapes. Latest gated run:
-  `artifacts/visual/pptx-ladder-04-kerning-accent-highlight/20260516-123113`, MAE `0.314506`,
-  changed16 `0.006260`.
+  `artifacts/visual/pptx-ladder-04-kerning-accent-highlight/20260516-124907`, MAE `0.296921`,
+  changed16 `0.005984`.
+- [x] PPTX highlighted-run rectangles use font Windows ascender/descender metrics instead of a fixed
+  height multiplier, keeping Arial highlight parity while tightening Cambria/Cambria Math marker height.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-font-size-stack` is at MAE `0.071192`, changed16 `0.001852`.
 - [x] Ladder 4 gate `pptx-ladder-04-mixed-paragraph-stack` is at MAE `0.452275`, changed16 `0.008806`.
 - [ ] Ladder 4 remaining combined-stack gaps are finer glyph/font details after basic bullet font selection.
@@ -979,7 +981,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   bounds.
 - [x] Slide 2/3 public ladder: lock a Cambria/Cambria Math kerning/accent typography probe for parasite
   gaps such as uppercase-start words, accented words, and dense French/English word pairs.
-- [ ] PPTX typography ladder: refine highlighted-run rectangle origin and height for mixed highlighted text
+- [x] PPTX typography ladder: refine highlighted-run rectangle origin and height for mixed highlighted text
   after kerning fixes, using Office PDF/raster inspection rather than private-deck MAE.
 - [ ] PPTX typography ladder: implement vertical Latin text frames for `a:bodyPr @vert="vert"` after
   surveying Office glyph order, line stacking, and alignment on public fixtures.

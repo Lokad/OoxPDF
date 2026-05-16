@@ -3605,7 +3605,10 @@ internal sealed class PptxRenderer
                 if (run.HighlightColor is { } highlight)
                 {
                     graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
-                    graphics.FillRectangle(x, baselineY - run.FontSize * 0.2275d, lineWidth, run.FontSize * 1.119d);
+                    double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
+                    double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
+                    double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+                    graphics.FillRectangle(x, highlightY, lineWidth, highlightHeight);
                 }
 
                 bool transparentText = run.Alpha < 0.999d;
