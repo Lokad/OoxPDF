@@ -237,7 +237,9 @@ Current `pptx-renderer` parity tracking:
     `pptx-ladder-11-chart-column-clustered-port`, `pptx-ladder-11-chart-bar-clustered-port`,
     `pptx-ladder-11-chart-line-3series-port`, `pptx-ladder-11-chart-pie-5-categories-port`,
     `pptx-ladder-11-chart-column-negative-port`, `pptx-ladder-11-chart-column-stacked-port`,
-    `pptx-ladder-11-chart-column-100-stacked-port`, and `pptx-ladder-11-chart-bar-stacked-port`.
+    `pptx-ladder-11-chart-column-100-stacked-port`, `pptx-ladder-11-chart-bar-stacked-port`,
+    `pptx-ladder-11-chart-line-markers-port`, `pptx-ladder-11-chart-line-stacked-port`,
+    `pptx-ladder-11-chart-pie-exploded-port`, and `pptx-ladder-11-chart-doughnut-port`.
   - Gate type: public visual family `pptx-charts`.
   - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
     should be ported incrementally while chart rendering is separated from fallback behavior.
@@ -274,6 +276,11 @@ Composite oracle family map:
   The renderer now separates clustered, stacked, and 100% stacked bar geometry and draws bars around a
   zero axis for negative values. Remaining gaps are axis scaling/ticks, labels, legends, overlap/gap width,
   Office chart templates, and cached chart-image fallback.
+- Additional chart ports are gated: line with markers MAE `2.864938`, changed16 `0.026264`;
+  stacked line MAE `3.087048`, changed16 `0.026508`; exploded pie MAE `13.159580`, changed16
+  `0.165800`; and doughnut MAE `12.345606`, changed16 `0.139337`. Doughnut charts now get a simple
+  static fallback instead of an unsupported-chart diagnostic. Remaining gaps are marker shapes, stacked-line
+  scaling semantics, exploded-slice offsets, doughnut hole size, labels, and legends.
 
 PPTX table style targets from the table composite port:
 

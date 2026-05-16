@@ -79,6 +79,13 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadChartSeries(chartXml, "doughnutChart");
+        if (doughnutSeries.Count != 0)
+        {
+            RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0]);
+            return true;
+        }
+
         return false;
     }
 
@@ -445,6 +452,23 @@ internal sealed partial class PptxRenderer
             graphics.FillPolygon(points);
             angle += sweep;
         }
+    }
+
+    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
+    {
+        RenderPieChartFallback(graphics, document, bounds, values);
+
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double radius = Math.Min(width, height) * 0.34d;
+        double centerX = x + width * 0.46d;
+        double centerY = y + height * 0.52d;
+        double innerRadius = radius * 0.56d;
+        graphics.SetFillRgb(255, 255, 255);
+        graphics.FillEllipse(centerX - innerRadius, centerY - innerRadius, innerRadius * 2d, innerRadius * 2d);
     }
 
     private static void EmitChartDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, string id, OoxPdfSeverity severity, string message, string? partName, int slideIndex, string fallback)
