@@ -1,0 +1,15 @@
+{
+  "id": "pptx-ladder-04-spautofit-overflow",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-spautofit-overflow.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "text", "autofit", "spautofit"],
+  "expected": {
+    "minAgentRating": 2,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "maxMeanAbsoluteError": 0.332,
+    "maxChangedPixelRatioAtThreshold16": 0.00484
+  },
+  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_TEXT_AUTOFIT"]
+}

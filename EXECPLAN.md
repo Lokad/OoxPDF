@@ -554,6 +554,15 @@ document-specific business content into public notes.
     a highlighted middle run and Office-authored highlight geometry. Latest gated run:
     `artifacts/visual/pptx-ladder-04-cambria-highlight-center/20260516-113529`, MAE `0.291465`,
     changed-pixel ratio threshold 16 `0.004212`.
+- Public PPTX slide-3 bottom-up rungs:
+  - `pptx-ladder-04-spautofit-overflow` captures a minimal `spAutoFit` overflow case. Latest run:
+    `artifacts/visual/pptx-ladder-04-spautofit-overflow/20260516-113818`, MAE `0.331849`, changed-pixel
+    ratio threshold 16 `0.004832`, with `PPTX_UNSUPPORTED_TEXT_AUTOFIT` still expected. Office keeps the
+    text inside the box on three lines; the candidate currently wraps into an extra line and lets the last
+    line fall through the box.
+  - `pptx-ladder-08-grouped-picture-caption` locks a grouped picture plus centered italic caption cell.
+    Latest gated run: `artifacts/visual/pptx-ladder-08-grouped-picture-caption/20260516-114125`, MAE
+    `0.124819`, changed-pixel ratio threshold 16 `0.002018`.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -908,11 +917,11 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   without explicit character spacing.
 - [ ] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
   rectangles for small centered text boxes.
-- [ ] Slide 3 public ladder: lock `spAutoFit` shrink-to-fit text boxes with Office-authored PDFs before
-  enabling renderer-side shrink behavior.
+- [ ] Slide 3 public ladder: lock `spAutoFit` overflow/autosize text boxes with Office-authored PDFs before
+  enabling renderer-side autofit behavior.
 - [ ] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,
   including mixed regular, bold, and italic runs.
-- [ ] Slide 3 public ladder: lock grouped picture-plus-caption cells, including group transform precision,
+- [x] Slide 3 public ladder: lock grouped picture-plus-caption cells, including group transform precision,
   picture positioning, centered italic caption text, and z-order.
 - [ ] Slide 3 public ladder: lock highlighted headline text with multiple runs and Office-matched highlight
   bounds.
