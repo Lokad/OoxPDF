@@ -530,6 +530,21 @@ document-specific business content into public notes.
     custom geometry, and transparency.
   - This run is assessment evidence only; the implementation track remains public bottom-up PPTX typography
     and feature fixtures before private-slide tuning.
+- Private PPTX slide 2/3 feature survey from
+  `artifacts/private-visual/lokad-value-based/20260516-110649`:
+  - 84 visual comparison entries were produced; all paired page dimensions matched.
+  - Slide 2 metrics: mean absolute error `6.866764`; RMSE `21.429890`; changed-pixel ratio threshold 16
+    `0.109705`; changed-pixel ratio threshold 32 `0.034132`.
+  - Slide 2 has no unsupported-feature diagnostics. Generic gaps are text style inheritance for
+    `fontRef`/theme colors when runs lack direct fills, text frame vertical anchoring/insets, highlighted
+    mixed-run geometry, and Cambria/Cambria Math advance and baseline fidelity.
+  - Slide 3 metrics: mean absolute error `11.521155`; RMSE `43.489984`; changed-pixel ratio threshold 16
+    `0.135031`; changed-pixel ratio threshold 32 `0.117801`.
+  - Slide 3 emits `PPTX_UNSUPPORTED_TEXT_AUTOFIT` for text autofit. Generic gaps are `spAutoFit`
+    shrink-to-fit behavior, square-wrapped overflow text frames, grouped picture-plus-caption positioning,
+    centered/italic label metrics, highlighted headline geometry, and dense wrapped text layout.
+  - Bottom-up response: add or tighten public fixtures for these capabilities before attempting private
+    slide-specific tuning.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
@@ -876,6 +891,20 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets,
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
+- [ ] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
+  text runs have no direct fill, including a no-fill shape with a visible line and centered text.
+- [ ] Slide 2 public ladder: lock highlighted centered mixed-run text using Cambria/Cambria Math without
+  explicit character spacing, including title-sized text and small footer-sized text.
+- [ ] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
+  rectangles for small centered text boxes.
+- [ ] Slide 3 public ladder: lock `spAutoFit` shrink-to-fit text boxes with Office-authored PDFs before
+  enabling renderer-side shrink behavior.
+- [ ] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,
+  including mixed regular, bold, and italic runs.
+- [ ] Slide 3 public ladder: lock grouped picture-plus-caption cells, including group transform precision,
+  picture positioning, centered italic caption text, and z-order.
+- [ ] Slide 3 public ladder: lock highlighted headline text with multiple runs and Office-matched highlight
+  bounds.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
   derive public fixtures from private slide content.
 - [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX
