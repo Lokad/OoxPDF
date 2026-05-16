@@ -99,8 +99,11 @@ High-priority actions:
   ordered text/break/field runs, run properties, and end paragraph properties.
 - [x] Extend the `ooxpdf` scene slice to resolved text styling: paragraph style cascade and run style
   cascade from master/layout/shape/paragraph/run context.
-- [ ] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
+- [x] Compare the current direct `ReadTextRuns` path with the model-slice output on Ladder 4 typography cases
   before replacing behavior.
+- [x] Fix a direct-renderer text cascade gap found by that comparison: paragraph defaults now use the
+  paragraph's actual `lvlNpPr` level, not only `lvl1pPr`, and the direct inspection hook exposes resolved
+  text-run snapshots for future scene-vs-renderer checks.
 - [ ] Consider porting the testing strategy, especially generated Office-oracle case families and SSIM plus
   color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
 

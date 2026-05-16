@@ -10,6 +10,51 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    internal static IReadOnlyList<PptxTextRunSnapshot> InspectTextRuns(PptxDocument document, OoxPackage package, int slideIndex)
+    {
+        if (slideIndex < 0 || slideIndex >= document.Slides.Count)
+        {
+            return [];
+        }
+
+        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
+        PptxSlide slide = document.Slides[slideIndex];
+        OoxPart? slidePart = package.GetPart(slide.PartName);
+        if (slidePart is null)
+        {
+            return [];
+        }
+
+        using Stream stream = slidePart.OpenRead();
+        XDocument slideXml = SafeXml.Load(stream);
+        IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
+        return inheritedXml
+            .SelectMany(xml => ReadTextRuns(xml, document, theme, slideIndex + 1, includePlaceholders: false, placeholderSources: []))
+            .Concat(ReadTextRuns(slideXml, document, theme, slideIndex + 1, includePlaceholders: true, inheritedXml))
+            .Select(ToSnapshot)
+            .ToArray();
+    }
+
+    private static PptxTextRunSnapshot ToSnapshot(TextRun run)
+    {
+        return new PptxTextRunSnapshot(
+            run.Text,
+            run.X,
+            run.Y,
+            run.Width,
+            run.FontSize,
+            run.CharacterSpacing,
+            run.Color,
+            run.Alpha,
+            run.HighlightColor,
+            run.Bold,
+            run.Italic,
+            run.Underline,
+            run.Strike,
+            run.Alignment.ToString(),
+            run.FontFamily);
+    }
+
     private static IReadOnlyList<TextRun> ReadTextRuns(XDocument slideXml, PptxDocument document, PptxTheme theme, int slideNumber, bool includePlaceholders, IReadOnlyList<XDocument> placeholderSources)
     {
         var runs = new List<TextRun>();
@@ -23,7 +68,8 @@ internal sealed partial class PptxRenderer
 
             XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
             XElement? textBody = shape.Element(PresentationNamespace + "txBody");
-            XElement? inheritedPlaceholder = FindInheritedPlaceholderShape(shape, placeholderSources);
+            IReadOnlyList<XElement> inheritedPlaceholders = FindInheritedPlaceholderShapes(shape, placeholderSources);
+            XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
             XElement? inheritedTextBody = inheritedPlaceholder?.Element(PresentationNamespace + "txBody");
             ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
             bounds ??= inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties
@@ -58,7 +104,8 @@ internal sealed partial class PptxRenderer
             XElement? defaultParagraphProperties = MergeParagraphProperties(
                 textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
                 inheritedTextBody?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + "lvl1pPr"),
-                FindInheritedTextStyle(shape, placeholderSources));
+                FindInheritedTextStyle(shape, placeholderSources, "lvl1pPr"),
+                FindDefaultTextStyle(placeholderSources, "lvl1pPr"));
             double verticalOffset = ReadVerticalAnchor(textBody) switch
             {
                 TextVerticalAnchor.Top when inheritedTextBody is not null => ReadVerticalAnchor(inheritedTextBody) switch
@@ -77,6 +124,20 @@ internal sealed partial class PptxRenderer
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
                 XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
+                int paragraphLevel = paragraphProperties?.Attribute("lvl") is { } levelAttribute
+                    ? int.Parse(levelAttribute.Value, CultureInfo.InvariantCulture)
+                    : 0;
+                string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
+                var paragraphPropertySources = new List<XElement?>
+                {
+                    textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)
+                };
+                paragraphPropertySources.AddRange(inheritedPlaceholders
+                    .Select(placeholder => placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
+                    .Reverse());
+                paragraphPropertySources.Add(FindInheritedTextStyle(shape, placeholderSources, levelName));
+                paragraphPropertySources.Add(FindDefaultTextStyle(placeholderSources, levelName));
+                defaultParagraphProperties = MergeParagraphProperties(paragraphPropertySources.ToArray());
                 XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
                     defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
                 double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
@@ -282,7 +343,7 @@ internal sealed partial class PptxRenderer
         return ReadTextRuns(slide, document, theme, slideNumber, includePlaceholders, placeholderSources);
     }
 
-    private static XElement? FindInheritedPlaceholderShape(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {
         XElement? placeholder = shape
             .Element(PresentationNamespace + "nvSpPr")
@@ -290,12 +351,13 @@ internal sealed partial class PptxRenderer
             ?.Element(PresentationNamespace + "ph");
         if (placeholder is null)
         {
-            return null;
+            return [];
         }
 
+        var matches = new List<XElement>();
         string? type = (string?)placeholder.Attribute("type");
         string? index = (string?)placeholder.Attribute("idx");
-        foreach (XDocument source in placeholderSources.Reverse())
+        foreach (XDocument source in placeholderSources)
         {
             foreach (XElement candidate in source.Descendants(PresentationNamespace + "sp"))
             {
@@ -317,14 +379,15 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                return candidate;
+                matches.Add(candidate);
+                break;
             }
         }
 
-        return null;
+        return matches;
     }
 
-    private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources)
+    private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)
     {
         string? placeholderType = (string?)shape
             .Element(PresentationNamespace + "nvSpPr")
@@ -343,8 +406,24 @@ internal sealed partial class PptxRenderer
             XElement? style = source.Root?
                 .Element(PresentationNamespace + "txStyles")
                 ?.Element(PresentationNamespace + styleName);
-            XElement? level = style?.Element(DrawingNamespace + "lvl1pPr") ??
+            XElement? level = style?.Element(DrawingNamespace + levelName) ??
                 style?.Element(DrawingNamespace + "defPPr");
+            if (level is not null)
+            {
+                return level;
+            }
+        }
+
+        return null;
+    }
+
+    private static XElement? FindDefaultTextStyle(IReadOnlyList<XDocument> placeholderSources, string levelName)
+    {
+        foreach (XDocument source in placeholderSources)
+        {
+            XElement? defaultTextStyle = source.Root?.Element(PresentationNamespace + "defaultTextStyle");
+            XElement? level = defaultTextStyle?.Element(DrawingNamespace + levelName) ??
+                defaultTextStyle?.Element(DrawingNamespace + "defPPr");
             if (level is not null)
             {
                 return level;

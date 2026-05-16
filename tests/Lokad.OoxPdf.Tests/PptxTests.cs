@@ -194,6 +194,12 @@ internal static class PptxTests
         TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Underline, "Expected run underline in resolved scene style.");
         TestAssert.True(textBody.Paragraphs[0].Runs[0].ResolvedStyle.Strike, "Expected master defaultTextStyle to participate in resolved scene style.");
         TestAssert.Equal(new RgbColor(255, 255, 0), textBody.Paragraphs[0].Runs[0].ResolvedStyle.Highlight ?? default);
+
+        IReadOnlyList<PptxTextRunSnapshot> directTextRuns = PptxRenderer.InspectTextRuns(document, package, 0);
+        PptxTextRunSnapshot directHello = directTextRuns.First(run => run.Text == "Hello");
+        TestAssert.Equal(26d, directHello.FontSize);
+        TestAssert.True(directHello.Underline, "Expected direct renderer inspection to expose run underline.");
+        TestAssert.Equal(new RgbColor(255, 255, 0), directHello.Highlight ?? default);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()
