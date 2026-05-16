@@ -166,8 +166,11 @@ High-priority actions:
 - [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
   `pptx-ladder-04-typography-justify-port` now exposes the missing PowerPoint word-spacing behavior for
   wrapped justified paragraphs.
-- [ ] Implement PowerPoint-like justified paragraph layout: only fully wrapped lines distribute extra width
-  across word spaces; final visual lines and manual-break lines remain left aligned.
+- [x] Implement the first PowerPoint-like justified paragraph layout slice: fully wrapped lines distribute
+  extra width across word spaces, final visual lines and manual-break lines remain left aligned, and
+  justified layout spans are protected from text-run coalescing so the expanded positions reach PDF emission.
+- [ ] Tighten justified paragraph parity against Office: current public probe still has large raster drift,
+  so inspect Office text operations and refine baseline, line advance, and per-word spacing strategy.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
@@ -233,6 +236,8 @@ High-priority actions:
   color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
 - [x] Add dependency-free VisualDiff metrics for global luminance SSIM and foreground RGB histogram
   correlation, so MAE remains diagnostic rather than the only quality signal.
+- [x] Fix `tools/CheckVisualCase.ps1` stale-build detection for CLI-based validation: the harness now
+  considers `src/Lokad.OoxPdf` source timestamps, not only `src/Lokad.OoxPdf.Cli`.
 
 ## PPTX Renderer Test Port Plan
 

@@ -200,6 +200,7 @@ internal sealed partial class PptxRenderer
         {
             "ctr" => TextAlignment.Center,
             "r" => TextAlignment.Right,
+            "just" or "dist" or "justLow" or "thaiDist" => TextAlignment.Justify,
             _ => TextAlignment.Left
         };
     }

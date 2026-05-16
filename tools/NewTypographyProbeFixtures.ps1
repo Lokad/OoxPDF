@@ -204,9 +204,9 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-dense-column-probe" -TextBody
 '@
 
 New-TypographyProbe -Id "pptx-ladder-04-typography-justify-port" -TextBody @'
-          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph one aligned justify. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</a:t></a:r></a:p>
-          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph two aligned justify. Demand planning text should distribute word spacing across wrapped lines.</a:t></a:r></a:p>
-          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph three aligned justify. The last visual line should remain left aligned like PowerPoint.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph one aligned justify. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph two aligned justify. Demand planning text should distribute word spacing across wrapped lines while preserving the final visual line.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph three aligned justify. The last visual line should remain left aligned like PowerPoint even when earlier lines expand spaces.</a:t></a:r></a:p>
 '@
 
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

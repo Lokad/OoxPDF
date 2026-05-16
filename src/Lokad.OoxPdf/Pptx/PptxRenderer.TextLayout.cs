@@ -220,7 +220,7 @@ internal sealed partial class PptxRenderer
             {
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth);
+                    AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
                     cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
@@ -278,7 +278,7 @@ internal sealed partial class PptxRenderer
                                     (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
                             if (overflowsLine)
                             {
-                                AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth);
+                                AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify);
                                 cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                                 cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing);
                                 cursorX = paragraphTextX;
@@ -306,7 +306,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth);
+            AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
@@ -532,7 +532,7 @@ internal sealed partial class PptxRenderer
             : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
     }
 
-    private static void AddAlignedParagraphLine(List<PptxTextLineLayout> lines, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth)
+    private static void AddAlignedParagraphLine(List<PptxTextLineLayout> lines, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth, bool justify)
     {
         if (line.Spans.Count == 0)
         {
@@ -540,12 +540,23 @@ internal sealed partial class PptxRenderer
         }
 
         double paragraphWidth = Math.Max(0d, line.EndX - textX);
+        bool justifyLine = justify && paragraphWidth > 0d && paragraphWidth < textWidth;
         double offset = alignment switch
         {
             TextAlignment.Center => Math.Max(0d, textWidth - paragraphWidth) / 2d,
             TextAlignment.Right => Math.Max(0d, textWidth - paragraphWidth),
             _ => 0d
         };
+
+        if (justifyLine)
+        {
+            PptxTextLineLayout? justified = TryJustifyLine(line, textX, textWidth);
+            if (justified is not null)
+            {
+                lines.Add(justified);
+                return;
+            }
+        }
 
         PptxTextSpanLayout[] spans = line.Spans
             .Select(span => span with
@@ -560,6 +571,44 @@ internal sealed partial class PptxRenderer
             })
             .ToArray();
         lines.Add(new PptxTextLineLayout(textX + offset, line.EndX + offset, alignment, spans));
+    }
+
+    private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, double textX, double textWidth)
+    {
+        int spaceCount = line.Spans.Sum(span => span.Run.Text.Count(static c => c == ' '));
+        if (spaceCount == 0)
+        {
+            return null;
+        }
+
+        double extraWidth = textWidth - Math.Max(0d, line.EndX - textX);
+        if (extraWidth <= 0.001d)
+        {
+            return null;
+        }
+
+        double extraPerSpace = extraWidth / spaceCount;
+        double shift = 0d;
+        var spans = new List<PptxTextSpanLayout>(line.Spans.Count);
+        foreach (PptxTextSpanLayout span in line.Spans)
+        {
+            int spanSpaces = span.Run.Text.Count(static c => c == ' ');
+            double spanExtra = spanSpaces * extraPerSpace;
+            spans.Add(span with
+            {
+                Run = span.Run with
+                {
+                    X = span.Run.X + shift,
+                    Width = span.Run.Width + spanExtra,
+                    Alignment = TextAlignment.Left,
+                    PreventCoalesce = true
+                },
+                EndX = span.EndX + shift + spanExtra
+            });
+            shift += spanExtra;
+        }
+
+        return new PptxTextLineLayout(textX, textX + textWidth, TextAlignment.Justify, spans);
     }
 
     private static XElement? MergeParagraphProperties(params XElement?[] sources)

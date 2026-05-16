@@ -26,11 +26,16 @@ function Invoke-DotnetBuildIfStale {
         [string] $OutputDll,
 
         [Parameter(Mandatory = $true)]
-        [string] $Description
+        [string] $Description,
+
+        [string[]] $AdditionalSourceDirectories = @()
     )
 
     $projectDirectory = Split-Path -Parent $Project
-    $sourceNewest = Get-ChildItem -LiteralPath $projectDirectory -Recurse -Include *.cs,*.csproj |
+    $sourceDirectories = @($projectDirectory) + $AdditionalSourceDirectories
+    $sourceNewest = $sourceDirectories | ForEach-Object {
+        Get-ChildItem -LiteralPath $_ -Recurse -Include *.cs,*.csproj
+    } |
         Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
         Sort-Object LastWriteTimeUtc -Descending |
         Select-Object -First 1
@@ -52,7 +57,8 @@ $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
 
 $cliProject = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj"
 $cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/net10.0/Lokad.OoxPdf.Cli.dll"
-Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI"
+$librarySourceDirectory = Join-Path $repoRoot "src/Lokad.OoxPdf"
+Invoke-DotnetBuildIfStale -Project $cliProject -OutputDll $cliDll -Description "CLI" -AdditionalSourceDirectories @($librarySourceDirectory)
 dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnostics
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."

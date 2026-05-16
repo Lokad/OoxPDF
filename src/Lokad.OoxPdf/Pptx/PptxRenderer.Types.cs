@@ -289,7 +289,8 @@ internal sealed partial class PptxRenderer
     {
         Left,
         Center,
-        Right
+        Right,
+        Justify
     }
 
     private enum TextVerticalAnchor

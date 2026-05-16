@@ -1702,6 +1702,29 @@ internal static class PptxTests
         TestAssert.Contains("72 0 72 540 re W n", pdf);
     }
 
+    public static void PptxJustifiedTextLayoutDistributesWrappedLines()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-justify-port.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextLineLayoutSnapshot justifiedLine = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .First(line => line.Alignment == "Justify");
+
+        TestAssert.True(justifiedLine.Spans.Count > 1, "Expected justified lines to keep word spans separate before PDF emission.");
+        TestAssert.True(justifiedLine.EndX - justifiedLine.StartX > 500d, "Expected justified line to stretch to the text frame width.");
+    }
+
     public static void PptxSyntheticStyledTextProducesStyleOperators()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
