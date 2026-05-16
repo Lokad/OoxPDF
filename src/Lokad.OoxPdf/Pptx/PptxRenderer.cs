@@ -43,12 +43,13 @@ internal sealed partial class PptxRenderer
             using Stream stream = slidePart.OpenRead();
             XDocument slideXml = SafeXml.Load(stream);
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
-            IReadOnlyList<XDocument> inheritedXml = LoadInheritedSlideXml(package, slide.PartName);
+            PptxSlideInheritance inheritance = LoadSlideInheritance(package, slide.PartName);
+            IReadOnlyList<XDocument> inheritedXml = inheritance.Sources;
             var graphics = new PdfGraphicsBuilder();
             IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
                 .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
                 .ToDictionary(r => r.Id, StringComparer.Ordinal);
-            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritedXml, slideRelationships, imageCache, diagnosticSink);
+            var context = new PptxRenderContext(package, document, theme, slide, slideXml, inheritance, inheritedXml, slideRelationships, imageCache, diagnosticSink);
 
             foreach (XDocument inherited in context.InheritedXml)
             {
@@ -95,23 +96,29 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
     {
-        var documents = new List<XDocument>();
+        return LoadSlideInheritance(package, slidePartName).Sources;
+    }
+
+    private static PptxSlideInheritance LoadSlideInheritance(OoxPackage package, string slidePartName)
+    {
         OoxPart? layoutPart = GetRelatedPart(package, slidePartName, SlideLayoutRelationshipType);
         OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
 
+        XDocument? masterXml = null;
         if (masterPart is not null)
         {
             using Stream masterStream = masterPart.OpenRead();
-            documents.Add(SafeXml.Load(masterStream));
+            masterXml = SafeXml.Load(masterStream);
         }
 
+        XDocument? layoutXml = null;
         if (layoutPart is not null)
         {
             using Stream layoutStream = layoutPart.OpenRead();
-            documents.Add(SafeXml.Load(layoutStream));
+            layoutXml = SafeXml.Load(layoutStream);
         }
 
-        return documents;
+        return new PptxSlideInheritance(masterXml, layoutXml);
     }
 
     private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType)

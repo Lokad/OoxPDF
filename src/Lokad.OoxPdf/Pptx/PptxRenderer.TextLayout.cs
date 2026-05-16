@@ -116,7 +116,17 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextLineLayoutSnapshot ToSnapshot(PptxTextLineLayout line)
     {
-        return new PptxTextLineLayoutSnapshot(line.StartX, line.EndX, line.Alignment.ToString(), line.Spans.Select(ToSnapshot).ToArray());
+        return new PptxTextLineLayoutSnapshot(
+            line.Box.TopY,
+            line.Box.BaselineY,
+            line.Box.Advance,
+            line.Box.BaselineOffset,
+            line.Box.MaxFontSize,
+            line.Box.LineSpacing.IsAbsolute ? "Absolute" : line.Box.LineSpacing.IsExplicit ? "Multiple" : "Default",
+            line.StartX,
+            line.EndX,
+            line.Alignment.ToString(),
+            line.Spans.Select(ToSnapshot).ToArray());
     }
 
     private static PptxTextSpanLayoutSnapshot ToSnapshot(PptxTextSpanLayout span)
@@ -232,7 +242,7 @@ internal sealed partial class PptxRenderer
             {
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
+                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
                     cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
@@ -292,7 +302,7 @@ internal sealed partial class PptxRenderer
                                     (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
                             if (overflowsLine)
                             {
-                                AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify);
+                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify);
                                 cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                                 cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
                                 cursorX = paragraphTextX;
@@ -321,7 +331,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
+            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
@@ -590,7 +600,19 @@ internal sealed partial class PptxRenderer
         return atoms;
     }
 
-    private static void AddAlignedParagraphLine(List<PptxTextLineLayout> lines, TextLayoutLine line, TextAlignment alignment, double textX, double textWidth, bool justify)
+    private static PptxTextLineBoxLayout CreateLineBox(double lineTopY, double baselineY, LineSpacing lineSpacing, double maxFontSize)
+    {
+        double advance = ReadLineAdvance(lineSpacing, maxFontSize);
+        return new PptxTextLineBoxLayout(
+            lineTopY,
+            baselineY,
+            advance,
+            lineTopY - baselineY,
+            maxFontSize,
+            lineSpacing);
+    }
+
+    private static void AddAlignedParagraphLine(List<PptxTextLineLayout> lines, TextLayoutLine line, PptxTextLineBoxLayout box, TextAlignment alignment, double textX, double textWidth, bool justify)
     {
         if (line.Spans.Count == 0)
         {
@@ -608,7 +630,7 @@ internal sealed partial class PptxRenderer
 
         if (justifyLine)
         {
-            PptxTextLineLayout? justified = TryJustifyLine(line, textX, textWidth);
+            PptxTextLineLayout? justified = TryJustifyLine(line, box, textX, textWidth);
             if (justified is not null)
             {
                 lines.Add(justified);
@@ -629,7 +651,7 @@ internal sealed partial class PptxRenderer
                 Atoms = OffsetAtoms(span.Atoms, offset)
             })
             .ToArray();
-        lines.Add(new PptxTextLineLayout(textX + offset, line.EndX + offset, alignment, spans));
+        lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, alignment, spans));
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)
@@ -642,7 +664,7 @@ internal sealed partial class PptxRenderer
         return atoms.Select(atom => atom with { X = atom.X + offset }).ToArray();
     }
 
-    private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, double textX, double textWidth)
+    private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth)
     {
         int spaceCount = line.Spans.Sum(span => span.Run.Text.Count(static c => c == ' '));
         if (spaceCount == 0)
@@ -678,7 +700,7 @@ internal sealed partial class PptxRenderer
             shift += spanExtra;
         }
 
-        return new PptxTextLineLayout(textX, textX + textWidth, TextAlignment.Justify, spans);
+        return new PptxTextLineLayout(box, textX, textX + textWidth, TextAlignment.Justify, spans);
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> JustifyAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double initialShift, double extraPerSpace)

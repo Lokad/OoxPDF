@@ -33,6 +33,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     int Level,
     string CascadeLevelName,
     int ResolvedCascadeSourceCount,
+    IReadOnlyList<string> CascadeLayerNames,
     string Alignment,
     double FontSize,
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);
@@ -55,6 +56,12 @@ internal sealed record PptxTextParagraphLayoutSnapshot(
     IReadOnlyList<PptxTextLineLayoutSnapshot> Lines);
 
 internal sealed record PptxTextLineLayoutSnapshot(
+    double TopY,
+    double BaselineY,
+    double Advance,
+    double BaselineOffset,
+    double MaxFontSize,
+    string LineSpacingKind,
     double StartX,
     double EndX,
     string Alignment,

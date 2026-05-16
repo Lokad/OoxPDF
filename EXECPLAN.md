@@ -142,6 +142,10 @@ High-priority actions:
 - [x] Promote PPTX direct-renderer text layout to a first-class layout model:
   `PptxTextLayoutModel`, frame layouts, paragraph layouts, line layouts, and span layouts now exist before
   flattening to PDF text runs. Inspection tests lock model and layout ownership separately from emission.
+- [x] Add first-class PPTX text line boxes:
+  each line layout now owns top Y, baseline Y, baseline offset, line advance, max font size, and line-spacing
+  kind before spans are flattened to PDF `TextRun`s. This gives baseline, highlight, wrapping, and line-height
+  fixes a model home instead of another PDF-emission tweak.
 - [x] Add first-class text layout atoms under positioned spans:
   each span now exposes word, space, tab, and hidden-advance atom kinds through the layout inspector, so
   wrapping and justification can reason about structured text instead of opaque strings.
@@ -163,6 +167,10 @@ High-priority actions:
 - [x] Make paragraph cascade inputs explicit in the direct PPTX text model:
   `PptxParagraphStyleCascade` now records the paragraph level and source layers before merged paragraph
   defaults and resolved styles are produced.
+- [x] Name the paragraph cascade layers in the direct text model:
+  `shape.lstStyle`, inherited placeholder list styles, inherited text styles, and `defaultTextStyle` are now
+  observable before merge. This mirrors the useful `pptx-renderer` pattern of making cascade layers testable
+  instead of keeping anonymous XML fallback lists.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
@@ -221,6 +229,10 @@ High-priority actions:
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
   slide XML, inherited XML, slide identity, and diagnostics; extend it toward relationships/media/cache
   ownership in later rendering splits.
+- [x] Split slide inheritance ownership in `PptxRenderContext`:
+  master and layout XML are now carried as a `PptxSlideInheritance` object while preserving the legacy
+  ordered inherited-source list. This is a bridge toward `pptx-renderer`-style typed slide/layout/master
+  context without forcing a full renderer rewrite.
 - [x] Route background and shape traversal through the PPTX render context and move that dispatch into a
   dedicated renderer partial, keeping the shape drawing primitive behavior-neutral for later typed-node work.
 - [x] Move picture traversal, image decoding, crop/fill, and alpha handling into a dedicated renderer partial

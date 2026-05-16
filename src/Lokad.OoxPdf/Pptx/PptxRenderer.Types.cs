@@ -152,7 +152,14 @@ internal sealed partial class PptxRenderer
 
     private sealed record PptxParagraphStyleCascade(
         string LevelName,
-        IReadOnlyList<XElement?> Sources);
+        IReadOnlyList<PptxParagraphStyleLayer> Layers)
+    {
+        public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
+    }
+
+    private sealed record PptxParagraphStyleLayer(
+        string Name,
+        XElement? Source);
 
     private sealed record PptxTextRunModel(
         PptxTextRunKind Kind,
@@ -172,10 +179,19 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextLineLayout> Lines);
 
     private sealed record PptxTextLineLayout(
+        PptxTextLineBoxLayout Box,
         double StartX,
         double EndX,
         TextAlignment Alignment,
         IReadOnlyList<PptxTextSpanLayout> Spans);
+
+    private sealed record PptxTextLineBoxLayout(
+        double TopY,
+        double BaselineY,
+        double Advance,
+        double BaselineOffset,
+        double MaxFontSize,
+        LineSpacing LineSpacing);
 
     private sealed record PptxTextSpanLayout(
         PptxTextRunModel? SourceRun,

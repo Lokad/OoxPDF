@@ -208,6 +208,9 @@ internal static class PptxTests
         TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
         TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
         TestAssert.True(textFrame.Paragraphs[0].ResolvedCascadeSourceCount >= 2, "Expected text model to expose inherited cascade inputs before style resolution.");
+        TestAssert.Contains("shape.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
+        TestAssert.Contains("inherited.txStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
+        TestAssert.Contains("defaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
         TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
         TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);
@@ -226,6 +229,10 @@ internal static class PptxTests
         TestAssert.Equal("Hello", layoutFrame.Paragraphs[0].Lines[0].Spans[0].SourceText);
         TestAssert.Equal("1", layoutFrame.Paragraphs[0].Lines[1].Spans[0].Text);
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].EndX > layoutFrame.Paragraphs[0].Lines[0].StartX, "Expected layout line to own measured advance before PDF emission.");
+        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].TopY > layoutFrame.Paragraphs[0].Lines[0].BaselineY, "Expected layout line boxes to expose top-to-baseline geometry before PDF emission.");
+        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].Advance > 0d, "Expected layout line boxes to expose line advance before paragraph stacking.");
+        TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].BaselineOffset > 0d, "Expected layout line boxes to own baseline offset separately from text spans.");
+        TestAssert.Equal("Default", layoutFrame.Paragraphs[0].Lines[0].LineSpacingKind);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()
