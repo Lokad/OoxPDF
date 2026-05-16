@@ -738,7 +738,7 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 6 custom geometry and unsupported callout shapes emit explicit unsupported diagnostics.
 - [ ] Ladder 6 remaining subcases should isolate additional visual callout rendering and other preset
   geometries.
-- [ ] Ladder 7: images cover JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior,
+- [x] Ladder 7: images cover JPEG/PNG placement, alpha masks, crop rectangles, aspect-fit/fill behavior,
   rotation/flip interactions, and unsupported image diagnostics.
 - [x] Ladder 7 gate `pptx-ladder-07-basic-image` locks the existing public stretched-image fixture with exact
   raster parity.
@@ -764,7 +764,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 7 gate `pptx-ladder-07-image-rotate-flip` locks combined rotation/flip with exact raster parity.
 - [x] PPTX tiled image fills and blip recolor modes emit explicit unsupported diagnostics instead of being
   silently flattened.
-- [ ] Ladder 7 remaining subcases should isolate aspect-fit/fill variants and unsupported image diagnostics.
+- [x] Ladder 7 remaining subcases isolate aspect/fill variants and unsupported image diagnostics, including
+  shape picture fills, clipped picture fills, tiled fills, recolor modes, and unsupported advanced fills.
 - [ ] Ladder 8: grouped content covers nested group transforms, grouped pictures, grouped text, grouped shapes,
   child coordinate scaling, z-order, and clips.
 - [x] Ladder 8 gate `pptx-ladder-08-grouped-shape` locks grouped shape child coordinate scaling at MAE
