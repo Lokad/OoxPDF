@@ -198,7 +198,10 @@ Composite oracle family map:
   It now recognizes the common Medium Style 2 Accent 1 built-in style for first-row/accent/banded fills
   and header text color, but remains visually poor because full Office table styles are not resolved from
   all table style ids, banding flags, border layers, and cell text layout details.
-- Chart composites `0006`, `0008`, and `0010` should wait for chart fallback renderer separation.
+- Chart composite `0006` is represented by `pptx-ladder-11-composite-chart-port` as an Office-authored
+  default clustered-column chart baseline. It currently allows `PPTX_CHART_STATIC_FALLBACK` and should be
+  tightened only after the chart renderer/fallback boundary is separated.
+- Chart composites `0008` and `0010` still need ports after chart fallback renderer separation.
 
 PPTX table style targets from the table composite port:
 
