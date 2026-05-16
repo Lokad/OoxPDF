@@ -197,7 +197,42 @@ internal sealed partial class PptxRenderer
         PptxTextRunModel? SourceRun,
         TextRun Run,
         double EndX,
-        IReadOnlyList<PptxTextAtomLayout> Atoms);
+        IReadOnlyList<PptxTextAtomLayout> Atoms,
+        PptxTextGlyphSpanLayout GlyphSpan);
+
+    private sealed record PptxTextGlyphSpanLayout(
+        string Text,
+        string? Typeface,
+        bool Bold,
+        bool Italic,
+        double FontSize,
+        double CharacterSpacing,
+        bool KerningEnabled,
+        double NaturalWidth,
+        double LayoutWidth,
+        IReadOnlyList<PptxTextGlyphLayout> Glyphs)
+    {
+        public static PptxTextGlyphSpanLayout Empty(TextRun run)
+        {
+            return new PptxTextGlyphSpanLayout(
+                run.Text,
+                run.FontFamily,
+                run.Bold,
+                run.Italic,
+                run.FontSize,
+                run.CharacterSpacing,
+                run.KerningEnabled,
+                run.Width,
+                run.Width,
+                []);
+        }
+    }
+
+    private sealed record PptxTextGlyphLayout(
+        int CodePoint,
+        ushort GlyphId,
+        double Advance,
+        double AdjustmentBefore);
 
     private sealed record PptxTextAtomLayout(
         PptxTextAtomKind Kind,
@@ -227,9 +262,14 @@ internal sealed partial class PptxRenderer
 
         public double EndX { get; private set; } = startX;
 
-        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX, IReadOnlyList<PptxTextAtomLayout>? atoms = null)
+        public void Add(PptxTextRunModel? sourceRun, TextRun run, double endX, IReadOnlyList<PptxTextAtomLayout>? atoms = null, PptxTextGlyphSpanLayout? glyphSpan = null)
         {
-            Spans.Add(new PptxTextSpanLayout(sourceRun, run, endX, atoms ?? [new PptxTextAtomLayout(PptxTextAtomKind.Word, run.Text, run.X, run.Width, Draw: true)]));
+            Spans.Add(new PptxTextSpanLayout(
+                sourceRun,
+                run,
+                endX,
+                atoms ?? [new PptxTextAtomLayout(PptxTextAtomKind.Word, run.Text, run.X, run.Width, Draw: true)],
+                glyphSpan ?? PptxTextGlyphSpanLayout.Empty(run)));
             AdvanceTo(endX);
         }
 

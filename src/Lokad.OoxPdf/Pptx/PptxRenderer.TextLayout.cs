@@ -118,12 +118,31 @@ internal sealed partial class PptxRenderer
             span.Run.Y,
             span.Run.Width,
             span.Run.FontSize,
-            span.Atoms.Select(ToSnapshot).ToArray());
+            span.Atoms.Select(ToSnapshot).ToArray(),
+            ToSnapshot(span.GlyphSpan));
     }
 
     private static PptxTextAtomLayoutSnapshot ToSnapshot(PptxTextAtomLayout atom)
     {
         return new PptxTextAtomLayoutSnapshot(atom.Kind.ToString(), atom.Text, atom.X, atom.Width, atom.Draw);
+    }
+
+    private static PptxTextGlyphSpanLayoutSnapshot ToSnapshot(PptxTextGlyphSpanLayout span)
+    {
+        return new PptxTextGlyphSpanLayoutSnapshot(
+            span.Text,
+            span.Typeface,
+            span.FontSize,
+            span.NaturalWidth,
+            span.LayoutWidth,
+            span.Glyphs.Count,
+            span.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
+            span.Glyphs.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextGlyphLayoutSnapshot ToSnapshot(PptxTextGlyphLayout glyph)
+    {
+        return new PptxTextGlyphLayoutSnapshot(glyph.CodePoint, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore);
     }
 
     private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
@@ -251,7 +270,7 @@ internal sealed partial class PptxRenderer
                     double bulletWidth = Math.Max(1d, frame.TextWidth - (bulletX - frame.TextX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                     TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY);
-                    line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word));
+                    line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));
                     bulletPending = false;
                 }
 
@@ -262,7 +281,7 @@ internal sealed partial class PptxRenderer
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         TextRun tabRun = new(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
-                        line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab));
+                        line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
                         line.AdvanceTo(cursorX);
                     }
@@ -304,7 +323,7 @@ internal sealed partial class PptxRenderer
                             if (flowSegment.Draw && currentSegment.Length != 0)
                             {
                                 TextRun textRun = new(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
-                                line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator));
+                                line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                             }
 
                             cursorX += segmentWidth;
@@ -583,6 +602,53 @@ internal sealed partial class PptxRenderer
         return atoms;
     }
 
+    private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator)
+    {
+        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(run.FontFamily, run.Bold, run.Italic);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return PptxTextGlyphSpanLayout.Empty(run);
+        }
+
+        var glyphs = new List<PptxTextGlyphLayout>();
+        ushort previousGlyph = 0;
+        foreach (Rune rune in run.Text.EnumerateRunes())
+        {
+            ushort glyph = font.MapCodePoint(rune.Value);
+            if (glyph == 0)
+            {
+                continue;
+            }
+
+            double adjustmentBefore = 0d;
+            if (glyphs.Count > 0)
+            {
+                adjustmentBefore += run.CharacterSpacing;
+                if (run.KerningEnabled && previousGlyph != 0)
+                {
+                    adjustmentBefore += font.GetKerning(previousGlyph, glyph) * run.FontSize / font.UnitsPerEm;
+                }
+            }
+
+            double advance = font.GetAdvanceWidth(glyph) * run.FontSize / font.UnitsPerEm;
+            glyphs.Add(new PptxTextGlyphLayout(rune.Value, glyph, advance, adjustmentBefore));
+            previousGlyph = glyph;
+        }
+
+        double naturalWidth = glyphs.Sum(glyph => glyph.Advance) + glyphs.Sum(glyph => glyph.AdjustmentBefore);
+        return new PptxTextGlyphSpanLayout(
+            run.Text,
+            run.FontFamily,
+            run.Bold,
+            run.Italic,
+            run.FontSize,
+            run.CharacterSpacing,
+            run.KerningEnabled,
+            Math.Max(0d, naturalWidth),
+            run.Width,
+            glyphs);
+    }
+
     private static PptxTextLineBoxLayout CreateLineBox(double lineTopY, double baselineY, LineSpacing lineSpacing, double maxFontSize)
     {
         double advance = ReadLineAdvance(lineSpacing, maxFontSize);
@@ -678,7 +744,8 @@ internal sealed partial class PptxRenderer
                     PreventCoalesce = true
                 },
                 EndX = span.EndX + shift + spanExtra,
-                Atoms = JustifyAtoms(span.Atoms, shift, extraPerSpace)
+                Atoms = JustifyAtoms(span.Atoms, shift, extraPerSpace),
+                GlyphSpan = span.GlyphSpan with { LayoutWidth = span.GlyphSpan.LayoutWidth + spanExtra }
             });
             shift += spanExtra;
         }

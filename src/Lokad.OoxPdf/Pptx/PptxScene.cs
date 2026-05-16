@@ -74,7 +74,24 @@ internal sealed record PptxTextSpanLayoutSnapshot(
     double Y,
     double Width,
     double FontSize,
-    IReadOnlyList<PptxTextAtomLayoutSnapshot> Atoms);
+    IReadOnlyList<PptxTextAtomLayoutSnapshot> Atoms,
+    PptxTextGlyphSpanLayoutSnapshot GlyphSpan);
+
+internal sealed record PptxTextGlyphSpanLayoutSnapshot(
+    string Text,
+    string? Typeface,
+    double FontSize,
+    double NaturalWidth,
+    double LayoutWidth,
+    int GlyphCount,
+    double FirstAdjustmentAfterOrigin,
+    IReadOnlyList<PptxTextGlyphLayoutSnapshot> Glyphs);
+
+internal sealed record PptxTextGlyphLayoutSnapshot(
+    int CodePoint,
+    ushort GlyphId,
+    double Advance,
+    double AdjustmentBefore);
 
 internal sealed record PptxTextAtomLayoutSnapshot(
     string Kind,

@@ -159,8 +159,13 @@ High-priority actions:
   flags before PDF text operators are written. This is behavior-neutral but separates emission from layout.
 - [x] Extend `TextGlyphRun` with glyph atoms: decoded code point, glyph id, glyph advance, and adjustment
   before each glyph are now observable before PDF text operators are written.
-- [ ] Move glyph-run construction upstream so layout spans own glyph ids and advances before coalescing,
-  highlighting, underline/strike decoration, and PDF emission.
+- [x] Move the first glyph-positioning slice upstream into PPTX text layout:
+  `PptxTextSpanLayout` now owns a `PptxTextGlyphSpanLayout` with code points, glyph ids, advances,
+  kerning/tracking adjustments, natural width, and layout width before PDF emission. The justified text
+  model test locks parity between the layout-owned glyph span and downstream glyph-run inspection.
+- [ ] Make PDF emission consume layout-owned glyph spans directly:
+  `TextRun` remains the compatibility bridge today, so the next slice should carry glyph-span identity
+  through coalescing, highlighting, underline/strike decoration, and `TJ` array construction.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
