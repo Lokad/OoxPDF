@@ -81,6 +81,9 @@ Initial survey findings:
 - Its color resolver applies master/layout color-map remapping before theme color lookup and supports more
   color forms/modifiers than `ooxpdf` currently does, including `phClr`, preset/HSL/scrgb colors, gradients,
   and broader modifier handling.
+- Its shape renderer resolves theme format-scheme `fillRef` and `lnRef` through `fillStyleLst` and
+  `lnStyleLst`, replacing `phClr` with the reference color. `ooxpdf` now has the same basic solid
+  fill/line path for default Office shapes.
 - Its generated typography oracle ladder includes public cases for fonts, sizes, styles, alignments, colors,
   mixed formatting, bullets, vertical text, anchoring, and line spacing.
 - Its visual loop is explicitly Office-oracle based, with generated public cases, PowerPoint PDF ground
@@ -189,9 +192,8 @@ Composite oracle family map:
 
 - Non-chart composite cases `0001..0004`, `0007`, and `0009` are ported in
   `pptx-ladder-08-composite-port-a`.
-- The first two slides in `pptx-ladder-08-composite-port-a` show a large Office gap for default shape
-  styling/theme formatting. Explicit fill/text overlays are much closer. Resolve theme style-matrix defaults
-  bottom-up before using this family as a tight visual gate.
+- Default shape styling/theme formatting in `pptx-ladder-08-composite-port-a` is now resolved for solid
+  `fillRef` and `lnRef` references. Gradient/pattern/effect format-scheme styles remain future work.
 - Table composite `0005` still needs a public port after table style handling is revisited.
 - Chart composites `0006`, `0008`, and `0010` should wait for chart fallback renderer separation.
 

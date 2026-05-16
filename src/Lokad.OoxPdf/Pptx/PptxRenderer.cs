@@ -460,8 +460,8 @@ internal sealed partial class PptxRenderer
         double y = document.SlideHeightPoints - yTop - height;
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
-        bool hasFill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fill, out double fillAlpha);
-        bool hasStroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha);
+        bool hasFill = TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fill, out double fillAlpha);
+        bool hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
         {
@@ -2069,8 +2069,15 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
     {
+        return TryReadSolidColorWithAlpha(element, theme, placeholderColorContainer: null, out color, out alpha);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
+    {
         XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
-        XElement? colorContainer = solidFill ?? element;
+        XElement? colorContainer = element?.Name == DrawingNamespace + "solidFill"
+            ? element
+            : solidFill ?? element;
         alpha = ReadAlpha(colorContainer);
         XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
         string? hex = (string?)srgbColor?.Attribute("val");
@@ -2082,6 +2089,15 @@ internal sealed partial class PptxRenderer
 
         XElement? schemeColorElement = colorContainer?.Element(DrawingNamespace + "schemeClr");
         string? schemeColor = (string?)schemeColorElement?.Attribute("val");
+        if (schemeColor == "phClr" &&
+            placeholderColorContainer is not null &&
+            TryReadSolidColorWithAlpha(placeholderColorContainer, theme, placeholderColorContainer: null, out color, out double placeholderAlpha))
+        {
+            color = ApplyColorTransforms(schemeColorElement, color);
+            alpha *= placeholderAlpha;
+            return true;
+        }
+
         if (schemeColor is not null && theme.TryResolveColor(schemeColor, out color))
         {
             color = ApplyColorTransforms(schemeColorElement, color);
@@ -2160,6 +2176,63 @@ internal sealed partial class PptxRenderer
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
         return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
+    }
+
+    private static bool TryReadShapeFill(XElement shape, XElement shapeProperties, PptxTheme theme, out RgbColor color, out double alpha)
+    {
+        if (shapeProperties.Element(DrawingNamespace + "noFill") is not null)
+        {
+            color = default;
+            alpha = 1d;
+            return false;
+        }
+
+        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out color, out alpha))
+        {
+            return true;
+        }
+
+        XElement? fillRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "fillRef");
+        int fillIndex = ParseOptionalIntAttribute(fillRef, "idx", 0);
+        return fillIndex > 0 &&
+            theme.TryGetFillStyle(fillIndex, out XElement fillStyle) &&
+            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha);
+    }
+
+    private static bool TryReadShapeLine(XElement shape, XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    {
+        XElement? explicitLine = shapeProperties.Element(DrawingNamespace + "ln");
+        if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            color = default;
+            lineWidth = 0d;
+            alpha = 1d;
+            return false;
+        }
+
+        if (explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha))
+        {
+            return true;
+        }
+
+        XElement? lineRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "lnRef");
+        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
+        if (lineIndex <= 0 || !theme.TryGetLineStyle(lineIndex, out XElement lineStyle))
+        {
+            color = default;
+            lineWidth = 0d;
+            alpha = 1d;
+            return false;
+        }
+
+        lineWidth = lineStyle.Attribute("w") is { } widthAttribute
+            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
+            : 1d;
+        return TryReadSolidColorWithAlpha(lineStyle, theme, lineRef, out color, out alpha);
     }
 
     private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
@@ -2434,6 +2507,13 @@ internal sealed partial class PptxRenderer
     {
         return element.Attribute(name) is { } value
             ? long.Parse(value.Value, CultureInfo.InvariantCulture)
+            : defaultValue;
+    }
+
+    private static int ParseOptionalIntAttribute(XElement? element, string name, int defaultValue)
+    {
+        return element?.Attribute(name) is { } value
+            ? int.Parse(value.Value, CultureInfo.InvariantCulture)
             : defaultValue;
     }
 

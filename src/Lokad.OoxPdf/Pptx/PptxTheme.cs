@@ -9,11 +9,18 @@ internal sealed class PptxTheme
     private const string ThemeRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
-    private PptxTheme(IReadOnlyDictionary<string, RgbColor> colors, string? majorLatinFont, string? minorLatinFont)
+    private PptxTheme(
+        IReadOnlyDictionary<string, RgbColor> colors,
+        string? majorLatinFont,
+        string? minorLatinFont,
+        IReadOnlyList<XElement> fillStyles,
+        IReadOnlyList<XElement> lineStyles)
     {
         Colors = colors;
         MajorLatinFont = majorLatinFont;
         MinorLatinFont = minorLatinFont;
+        FillStyles = fillStyles;
+        LineStyles = lineStyles;
     }
 
     public IReadOnlyDictionary<string, RgbColor> Colors { get; }
@@ -22,7 +29,11 @@ internal sealed class PptxTheme
 
     public string? MinorLatinFont { get; }
 
-    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null);
+    public IReadOnlyList<XElement> FillStyles { get; }
+
+    public IReadOnlyList<XElement> LineStyles { get; }
+
+    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, [], []);
 
     public static PptxTheme Load(OoxPackage package, string presentationPartName)
     {
@@ -76,7 +87,19 @@ internal sealed class PptxTheme
             .Element(DrawingNamespace + "latin")?
             .Attribute("typeface");
 
-        return new PptxTheme(colors, majorLatin, minorLatin);
+        XElement? formatScheme = document.Descendants(DrawingNamespace + "fmtScheme").FirstOrDefault();
+        IReadOnlyList<XElement> fillStyles = formatScheme?
+            .Element(DrawingNamespace + "fillStyleLst")?
+            .Elements()
+            .Select(element => new XElement(element))
+            .ToArray() ?? [];
+        IReadOnlyList<XElement> lineStyles = formatScheme?
+            .Element(DrawingNamespace + "lnStyleLst")?
+            .Elements(DrawingNamespace + "ln")
+            .Select(element => new XElement(element))
+            .ToArray() ?? [];
+
+        return new PptxTheme(colors, majorLatin, minorLatin, fillStyles, lineStyles);
     }
 
     public bool TryResolveColor(string schemeColor, out RgbColor color)
@@ -94,6 +117,30 @@ internal sealed class PptxTheme
             null or "" => MinorLatinFont,
             _ => typeface
         };
+    }
+
+    public bool TryGetFillStyle(int index, out XElement fillStyle)
+    {
+        if (index > 0 && index <= FillStyles.Count)
+        {
+            fillStyle = FillStyles[index - 1];
+            return true;
+        }
+
+        fillStyle = null!;
+        return false;
+    }
+
+    public bool TryGetLineStyle(int index, out XElement lineStyle)
+    {
+        if (index > 0 && index <= LineStyles.Count)
+        {
+            lineStyle = LineStyles[index - 1];
+            return true;
+        }
+
+        lineStyle = null!;
+        return false;
     }
 
     private static bool TryReadColorElement(XElement colorElement, out RgbColor color)
