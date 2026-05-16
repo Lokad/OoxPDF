@@ -1570,6 +1570,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    bullets, and paragraph flow toward near pixel-perfect output.
 5. Keep test-loop performance work in service of the `pptx-renderer` test-port track: cached oracles,
    fast/slow/oracle lanes, and richer visual metrics should make hundreds of public cases practical.
+   Hot-loop visual checks now avoid rebuilding the CLI, PDFium rasterizer, VisualDiff, and PdfInspect when
+   source files outside `bin`/`obj` are older than the output DLLs. A cached typography probe now reruns in
+   about 4.5s on this machine.
 6. Defer DOCX and private-deck optimization while the PPTX public ladder and `pptx-renderer`-derived tests
    are still incomplete. Private files remain gap discovery and acceptance evidence only.
 

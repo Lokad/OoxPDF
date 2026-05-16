@@ -20,12 +20,19 @@ $inputFull = (Resolve-Path -LiteralPath $InputPdf).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 
-dotnet build (Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj") --tl:off --nologo -v minimal
-if ($LASTEXITCODE -ne 0) {
-    throw "PDFium rasterizer build failed with exit code $LASTEXITCODE."
+$rasterizerProject = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/Lokad.OoxPdf.PdfiumRasterizer.csproj"
+$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
+$sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $rasterizerProject) -Recurse -Include *.cs,*.csproj |
+    Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
+    Sort-Object LastWriteTimeUtc -Descending |
+    Select-Object -First 1
+if (-not (Test-Path -LiteralPath $rasterizerDll) -or $sourceNewest.LastWriteTimeUtc -gt (Get-Item -LiteralPath $rasterizerDll).LastWriteTimeUtc) {
+    dotnet build $rasterizerProject --tl:off --nologo -v minimal
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDFium rasterizer build failed with exit code $LASTEXITCODE."
+    }
 }
 
-$rasterizerDll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PdfiumRasterizer/bin/Debug/net10.0/Lokad.OoxPdf.PdfiumRasterizer.dll"
 dotnet $rasterizerDll $inputFull $outputFull $Dpi
 if ($LASTEXITCODE -ne 0) {
     throw "PDFium rasterizer failed with exit code $LASTEXITCODE."
