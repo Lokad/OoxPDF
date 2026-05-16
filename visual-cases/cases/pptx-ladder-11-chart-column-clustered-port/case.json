@@ -1,0 +1,18 @@
+{
+  "id": "pptx-ladder-11-chart-column-clustered-port",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-column-clustered-port.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "column-chart", "pptx-renderer-port"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 16.4,
+    "maxChangedPixelRatioAtThreshold16": 0.220
+  },
+  "allowedUnsupportedFeatures": [
+    "PPTX_CHART_STATIC_FALLBACK"
+  ]
+}

@@ -52,11 +52,16 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml)
     {
-        IReadOnlyList<IReadOnlyList<double>> barSeries = ReadChartSeries(chartXml, "barChart");
-        if (barSeries.Count != 0)
+        XElement? barChart = chartXml.Descendants(ChartNamespace + "barChart").FirstOrDefault();
+        if (barChart is not null)
         {
-            RenderBarChartFallback(graphics, document, bounds, barSeries);
-            return true;
+            IReadOnlyList<IReadOnlyList<double>> barSeries = ReadChartSeries(barChart);
+            if (barSeries.Count != 0)
+            {
+                bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
+                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars);
+                return true;
+            }
         }
 
         IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadChartSeries(chartXml, "lineChart");
@@ -78,8 +83,14 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XDocument chartXml, string chartElementName)
     {
+        XElement? chartElement = chartXml.Descendants(ChartNamespace + chartElementName).FirstOrDefault();
+        return chartElement is null ? [] : ReadChartSeries(chartElement);
+    }
+
+    private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XElement chartElement)
+    {
         var series = new List<IReadOnlyList<double>>();
-        foreach (XElement element in chartXml.Descendants(ChartNamespace + chartElementName).Elements(ChartNamespace + "ser"))
+        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             double[] values = element
                 .Elements(ChartNamespace + "val")
@@ -112,7 +123,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -130,6 +141,12 @@ internal sealed partial class PptxRenderer
         graphics.SetLineWidth(0.75d);
         graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
         graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+
+        if (horizontalBars)
+        {
+            RenderHorizontalBars(graphics, plotX, plotY, plotWidth, plotHeight, series, categoryCount, maxValue);
+            return;
+        }
 
         double categoryWidth = plotWidth / categoryCount;
         double barSlot = categoryWidth * 0.82d / Math.Max(1, series.Count);
@@ -149,6 +166,30 @@ internal sealed partial class PptxRenderer
                 RgbColor fill = ChartPalette(seriesIndex);
                 graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
                 graphics.FillRectangle(categoryX + seriesIndex * barSlot, plotY, Math.Max(0.5d, barSlot * 0.86d), barHeight);
+            }
+        }
+    }
+
+    private static void RenderHorizontalBars(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double maxValue)
+    {
+        double categoryHeight = plotHeight / categoryCount;
+        double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
+        for (int category = 0; category < categoryCount; category++)
+        {
+            double categoryY = plotY + plotHeight - (category + 1) * categoryHeight + categoryHeight * 0.09d;
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+            {
+                IReadOnlyList<double> values = series[seriesIndex];
+                if (category >= values.Count)
+                {
+                    continue;
+                }
+
+                double value = Math.Max(0d, values[category]);
+                double barWidth = value / maxValue * plotWidth;
+                RgbColor fill = ChartPalette(seriesIndex);
+                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                graphics.FillRectangle(plotX, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d));
             }
         }
     }

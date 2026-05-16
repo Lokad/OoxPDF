@@ -233,9 +233,12 @@ Current `pptx-renderer` parity tracking:
   - Status: partially ported; remaining composite ports should stay Office-backed and public.
 - Source `oracle-pypptx-chart-0001..0021`:
   - Coverage: column, bar, line, pie, doughnut, area, scatter, radar, and bubble variants.
-  - OOXPDF fixtures: `pptx-ladder-11-composite-chart-port` only.
+  - OOXPDF fixtures: `pptx-ladder-11-composite-chart-port`,
+    `pptx-ladder-11-chart-column-clustered-port`, `pptx-ladder-11-chart-bar-clustered-port`,
+    `pptx-ladder-11-chart-line-3series-port`, and `pptx-ladder-11-chart-pie-5-categories-port`.
   - Gate type: public visual family `pptx-charts`.
-  - Status: mostly pending until chart fallback/rendering architecture is ready.
+  - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
+    should be ported incrementally while chart rendering is separated from fallback behavior.
 
 Composite oracle family map:
 
@@ -258,6 +261,11 @@ Composite oracle family map:
   `0.223965` with unsupported-chart diagnostics to MAE `16.063279`, changed16 `0.202201` with two
   `PPTX_CHART_STATIC_FALLBACK` diagnostics. The dashboard table/chart port currently gates at MAE
   `18.630753`, changed16 `0.246106`.
+- First standalone chart-family ports are now gated from `pptx-renderer`: clustered column MAE
+  `16.371853`, changed16 `0.218999`; clustered horizontal bar MAE `15.860384`, changed16 `0.185180`;
+  3-series line MAE `3.515034`, changed16 `0.032532`; and 5-category pie MAE `10.866346`,
+  changed16 `0.158026`. The horizontal bar port confirms that `barDir="bar"` needs different geometry,
+  but all four still need Office-like axes, gridlines, labels, legends, data labels, and chart-area layout.
 
 PPTX table style targets from the table composite port:
 
