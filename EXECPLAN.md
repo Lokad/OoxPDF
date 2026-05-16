@@ -128,9 +128,10 @@ High-priority actions:
   `pptx-ladder-04-bold-face-single`, `pptx-ladder-04-italic-face-single`,
   `pptx-ladder-04-underline-single`, `pptx-ladder-04-strikethrough-single`, and
   `pptx-ladder-04-line-spacing-points`.
-- [ ] Tighten near-miss simple typography cases before locking:
-  `pptx-ladder-04-highlight-single` has a 0.06 pt baseline delta, and
-  `pptx-ladder-04-mixed-font-size-line` has a 0.056 pt second-run x delta.
+- [x] Tighten near-miss simple typography cases before locking:
+  `pptx-ladder-04-highlight-single` now passes its tight visual gate after the display-size baseline fix,
+  and `pptx-ladder-04-mixed-font-size-line` now has a PDF text-operation gate with the remaining second-run
+  x delta bounded at `0.07 pt`.
 - [x] Introduce the first behavior-neutral intermediate text layout object: `TextLayoutLine` owns positioned
   runs and line end advance before alignment/PDF emission.
 - [x] Extend the intermediate typography model from line ownership to explicit paragraph/run style records
