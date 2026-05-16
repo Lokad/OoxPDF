@@ -2026,6 +2026,7 @@ internal sealed class PptxRenderer
                 _ => 0d
             };
             double cursorLineTop = document.SlideHeightPoints - yTop - insets.Top - verticalOffset;
+            int autoNumberValue = 1;
 
             foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
             {
@@ -2047,7 +2048,7 @@ internal sealed class PptxRenderer
                 }
 
                 TextAlignment alignment = ReadAlignment(paragraph, defaultParagraphProperties);
-                string? bulletText = ReadBulletText(paragraphProperties);
+                string? bulletText = ReadBulletText(paragraphProperties, ref autoNumberValue);
                 bool bulletPending = bulletText is not null;
                 ParagraphIndent indent = ReadParagraphIndent(paragraphProperties);
                 IReadOnlyList<double> tabStops = ReadTabStops(paragraphProperties);
@@ -2669,14 +2670,68 @@ internal sealed class PptxRenderer
         return fontSize * baselineOffsetFactor;
     }
 
-    private static string? ReadBulletText(XElement? paragraphProperties)
+    private static string? ReadBulletText(XElement? paragraphProperties, ref int autoNumberValue)
     {
         if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
         {
             return null;
         }
 
-        return (string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char");
+        if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } bullet)
+        {
+            return bullet;
+        }
+
+        XElement? autoNumber = paragraphProperties.Element(DrawingNamespace + "buAutoNum");
+        if (autoNumber is null)
+        {
+            return null;
+        }
+
+        if (autoNumber.Attribute("startAt") is { } startAt &&
+            int.TryParse(startAt.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int start) &&
+            start > 0)
+        {
+            autoNumberValue = start;
+        }
+
+        string result = FormatAutoNumber(autoNumberValue, (string?)autoNumber.Attribute("type"));
+        autoNumberValue++;
+        return result;
+    }
+
+    private static string FormatAutoNumber(int value, string? type)
+    {
+        return type switch
+        {
+            "arabicParenBoth" => $"({value})",
+            "arabicParenR" => $"{value})",
+            "alphaLcPeriod" => $"{FormatAlphaNumber(value, upper: false)}.",
+            "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true)}.",
+            "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false)})",
+            "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true)})",
+            _ => $"{value}."
+        };
+    }
+
+    private static string FormatAlphaNumber(int value, bool upper)
+    {
+        if (value <= 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+        int current = value;
+        while (current > 0)
+        {
+            current--;
+            char letter = (char)((upper ? 'A' : 'a') + current % 26);
+            builder.Insert(0, letter);
+            current /= 26;
+        }
+
+        return builder.ToString();
     }
 
     private static BulletStyle ReadBulletStyle(XElement? paragraphProperties, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)

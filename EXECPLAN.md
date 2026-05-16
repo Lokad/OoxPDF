@@ -661,6 +661,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Windows Symbol cmap subtables are parsed so common private-use PPTX bullet glyphs map through
   `buFont typeface="Symbol"`.
 - [x] Ladder 4 gate `pptx-ladder-04-symbol-bullet` is at MAE `0.001766`, changed16 `0.000043`.
+- [x] Ladder 4 auto-numbered PPTX paragraphs render basic sequential `buAutoNum` labels.
+- [x] Ladder 4 gate `pptx-ladder-04-auto-number-bullets` is at MAE `0.968827`, changed16 `0.008053`.
 - [x] Ladder 4 valid `buClr`/`buSzPts` before the marker remain unit-tested.
 - [x] Ladder 4 underline geometry uses scaled OpenType underline metrics.
 - [x] Ladder 4 gate `pptx-ladder-04-underline-single` is at MAE `0.052158`, changed16 `0.000768`.
@@ -1016,7 +1018,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-94 passed, 0 failed
+95 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

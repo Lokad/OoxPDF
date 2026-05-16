@@ -44,6 +44,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticTextBoxHonorsTabCharacters,
     PptxTests.PptxSyntheticTextBoxOffsetsLargeTextByFontSize,
     PptxTests.PptxSyntheticTextBoxRendersBulletCharacters,
+    PptxTests.PptxSyntheticTextBoxRendersAutoNumberedBullets,
     PptxTests.PptxSyntheticTextBoxHonorsBulletHangingIndent,
     PptxTests.PptxSyntheticTextBoxHonorsBulletColorAndSize,
     PptxTests.PptxSyntheticTextBoxUsesPerRunFontResources,
