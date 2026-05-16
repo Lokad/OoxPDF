@@ -166,8 +166,8 @@ Typography oracle family map:
   `pptx-ladder-04-typography-font-families` and the clean-port gate
   `pptx-ladder-04-font-family-port` for Times New Roman, Courier New, Georgia, Verdana, Impact,
   and Comic Sans MS.
-- Sizes `0009..0015`: partially covered by mixed-size and large-text rungs; still missing isolated
-  `10/14/18/24/36/48/72 pt` Office-generated gates.
+- Sizes `0009..0015`: covered by `pptx-ladder-04-font-size-port` for isolated
+  `10/14/18/24/36/48/72 pt` Office-generated text, plus older mixed-size and large-text rungs.
 - Styles `0016..0021`: mostly covered by bold/italic/underline/combined public rungs; still needs a
   clean-port manifest tying each source case to the corresponding public fixture and Office metrics.
 - Alignment `0022..0025`: left/center/right are partially covered; justify needs a dedicated public gate.
