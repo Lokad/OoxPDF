@@ -1069,17 +1069,6 @@ internal sealed partial class PptxRenderer
         ];
     }
 
-    private static IReadOnlyList<TextRun> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
-    {
-        var textRuns = new List<TextRun>();
-        foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
-        {
-            textRuns.AddRange(RenderTableFrame(context, frame, graphics));
-        }
-
-        return textRuns;
-    }
-
     private static GroupTransform ReadGroupTransform(XElement group)
     {
         XElement? transform = group
