@@ -91,6 +91,11 @@ High-priority actions:
 - [ ] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
   text layout, group transforms, shape geometry, fills/strokes, images, tables, charts, SmartArt, and oracle
   tooling.
+- [ ] Inspect `pptx-renderer` architecturally, not just feature-by-feature: package parsing boundaries,
+  normalized model ownership, render context lifetime, per-node renderers, style/color resolvers,
+  diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
+- [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
+  scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
   generation before more large changes to `PptxRenderer`.
 - [x] Prototype the smallest `ooxpdf` PPTX intermediate scene slice for slide/master/layout node lists,
@@ -108,6 +113,32 @@ High-priority actions:
   color-histogram metrics, while keeping `src/Lokad.OoxPdf` dependency-free.
 - [x] Add dependency-free VisualDiff metrics for global luminance SSIM and foreground RGB histogram
   correlation, so MAE remains diagnostic rather than the only quality signal.
+
+## PPTX Renderer Test Port Plan
+
+`pptx-renderer` has a much broader and better organized PPTX test corpus. Treat it as a test-design asset:
+clean-port the cases and expected behaviors into `ooxpdf`; do not vendor TypeScript/Python code or private
+assets.
+
+Porting priorities:
+
+- [ ] Inventory `pptx-renderer` unit tests by capability: model parsing, theme/style/color resolution,
+  text rendering, shapes/presets, groups, images, tables, charts, SmartArt, security, and public API.
+- [ ] Inventory `pptx-renderer` Office-oracle/e2e cases by generated fixture family and map them to the
+  `ooxpdf` public visual ladder naming scheme.
+- [ ] Port the typography oracle family first: font families, sizes, bold/italic/underline, colors,
+  mixed formatting, bullets, vertical text, anchoring, and line spacing.
+- [ ] Port shape/preset oracle families next, preserving Office-authored/generated public fixtures and
+  adding PDF/raster inspection notes for every accepted gate.
+- [ ] Port layout-composition cases: master/layout placeholders, grouped transforms, z-order, image crop,
+  table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
+- [ ] Port test organization patterns: capability folders, generated-case manifests, cached reference
+  oracles, per-case reports, and explicit fast/slow/oracle lanes.
+- [ ] Add parity tracking in `EXECPLAN.md`: each ported family must state source coverage, `ooxpdf` fixture
+  names, current pass/fail status, and whether it is a unit, structural, or visual gate.
+- [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate
+  the minimal OOXML/PPTX or generator logic locally under `tests/` or `tools/` with dependency-free runtime
+  constraints for `src/Lokad.OoxPdf`.
 
 ## Test Suite Performance
 
