@@ -21,6 +21,7 @@ return TestRunner.Run(
     PptxTests.PptxSyntheticShapesProduceDrawingOperators,
     PptxTests.PptxSyntheticArrowAndConnectorShapesRender,
     PptxTests.PptxSyntheticRotatedShapeProducesTransform,
+    PptxTests.PptxSyntheticRotatedTextBoxProducesTransform,
     PptxTests.PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs,
     PptxTests.PptxSyntheticStyledTextProducesStyleOperators,
     PptxTests.PptxSyntheticThemeColorsAndFontsResolve,

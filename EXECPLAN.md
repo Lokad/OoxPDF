@@ -675,6 +675,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 4 gate `pptx-ladder-04-auto-number-bullets` is at MAE `0.968827`, changed16 `0.008053`.
 - [x] Ladder 4 Roman `buAutoNum` labels expand through the same numbered-list path.
 - [x] Ladder 4 gate `pptx-ladder-04-roman-number-bullets` is at MAE `0.494357`, changed16 `0.004535`.
+- [x] Ladder 4 rotated text boxes apply the shape rotation around the Office-like text-frame center.
+- [x] Ladder 4 gate `pptx-ladder-04-rotated-text-box` is at MAE `0.032549`, changed16 `0.000842`.
 - [x] Ladder 4 valid `buClr`/`buSzPts` before the marker remain unit-tested.
 - [x] Ladder 4 underline geometry uses scaled OpenType underline metrics.
 - [x] Ladder 4 gate `pptx-ladder-04-underline-single` is at MAE `0.052158`, changed16 `0.000768`.
@@ -1030,7 +1032,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-97 passed, 0 failed
+98 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -1744,7 +1744,7 @@ internal sealed class PptxRenderer
                     double fragmentFontSize = fontSize * fragment.FontScale;
                     maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                     double advance = advanceEstimator.Measure(fragment.Text, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
-                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface));
+                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, alignment, typeface, 0d, 0d, 0d));
                     cursorX += advance;
                 }
             }
@@ -1999,6 +1999,8 @@ internal sealed class PptxRenderer
             double textX = x + insets.Left;
             double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
             double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
+            double rotationCenterX = x + width / 2d;
+            double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
             bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
             double textClipY = clipsVerticalOverflow
                 ? document.SlideHeightPoints - yTop - insets.Top - textHeight
@@ -2133,7 +2135,7 @@ internal sealed class PptxRenderer
                     {
                         BulletStyle bulletStyle = ReadBulletStyle(paragraphProperties, theme, fontSize, color, typeface);
                         double bulletWidth = Math.Max(1d, textWidth - (bulletX - textX));
-                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface));
+                        paragraphRuns.Add(new TextRun(bulletText!, bulletX, cursorY, bulletWidth, textHeight, textX, textClipY, textWidth, textClipHeight, bulletStyle.FontSize, characterSpacing, 0d, bulletStyle.Color, 1d, null, bold, italic, underline, strike, alignment, bulletStyle.Typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY));
                         paragraphEndX = Math.Max(paragraphEndX, bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, bold, italic, characterSpacing));
                         bulletPending = false;
                     }
@@ -2181,7 +2183,7 @@ internal sealed class PptxRenderer
                                     continue;
                                 }
 
-                                paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface));
+                                paragraphRuns.Add(new TextRun(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), textHeight, textX, textClipY, textWidth, textClipHeight, fragmentFontSize, characterSpacing, baselineOffset, color, alpha, highlight, bold, italic, underline, strike, alignment, typeface, bounds.Value.RotationDegrees, rotationCenterX, rotationCenterY));
                                 cursorX += segmentWidth;
                                 paragraphEndX = Math.Max(paragraphEndX, cursorX);
                             }
@@ -3252,6 +3254,9 @@ internal sealed class PptxRenderer
             Math.Abs(left.FontSize - right.FontSize) < 0.01d &&
             Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < 0.01d &&
             Math.Abs(left.BaselineOffset - right.BaselineOffset) < 0.01d &&
+            Math.Abs(left.RotationDegrees - right.RotationDegrees) < 0.01d &&
+            Math.Abs(left.RotationCenterX - right.RotationCenterX) < 0.01d &&
+            Math.Abs(left.RotationCenterY - right.RotationCenterY) < 0.01d &&
             Math.Abs(left.ClipX - right.ClipX) < 0.01d &&
             Math.Abs(left.ClipY - right.ClipY) < 0.01d &&
             Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
@@ -3313,6 +3318,9 @@ internal sealed class PptxRenderer
             NearlyEqual(left.FontSize, right.FontSize) &&
             NearlyEqual(left.CharacterSpacing, right.CharacterSpacing) &&
             NearlyEqual(left.BaselineOffset, right.BaselineOffset) &&
+            NearlyEqual(left.RotationDegrees, right.RotationDegrees) &&
+            NearlyEqual(left.RotationCenterX, right.RotationCenterX) &&
+            NearlyEqual(left.RotationCenterY, right.RotationCenterY) &&
             Math.Abs((left.X + left.Width) - right.X) <= Math.Max(1d, left.FontSize * 0.08d);
     }
 
@@ -3330,6 +3338,11 @@ internal sealed class PptxRenderer
     private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         graphics.SaveState();
+        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        {
+            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+        }
+
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         double cursorY = run.Y;
         double lineHeight = run.FontSize * 1.2d;
@@ -3397,6 +3410,16 @@ internal sealed class PptxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    private static void ApplyTextRotation(PdfGraphicsBuilder graphics, double rotationDegrees, double centerX, double centerY)
+    {
+        double radians = -rotationDegrees * Math.PI / 180d;
+        double cos = Math.Cos(radians);
+        double sin = Math.Sin(radians);
+        double e = centerX - cos * centerX + sin * centerY;
+        double f = centerY - sin * centerX - cos * centerY;
+        graphics.Transform(cos, sin, -sin, cos, e, f);
     }
 
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, string resourceName, double fontSize, double x, double y, RgbColor color, string text, string glyphHex, bool syntheticItalic, double characterSpacing)
@@ -3551,7 +3574,10 @@ internal sealed class PptxRenderer
         bool Underline,
         bool Strike,
         TextAlignment Alignment,
-        string? FontFamily);
+        string? FontFamily,
+        double RotationDegrees,
+        double RotationCenterX,
+        double RotationCenterY);
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
