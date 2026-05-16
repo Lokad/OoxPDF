@@ -2726,6 +2726,10 @@ internal sealed class PptxRenderer
             "alphaUcPeriod" => $"{FormatAlphaNumber(value, upper: true)}.",
             "alphaLcParenR" => $"{FormatAlphaNumber(value, upper: false)})",
             "alphaUcParenR" => $"{FormatAlphaNumber(value, upper: true)})",
+            "romanLcPeriod" => $"{FormatRomanNumber(value, upper: false)}.",
+            "romanUcPeriod" => $"{FormatRomanNumber(value, upper: true)}.",
+            "romanLcParenR" => $"{FormatRomanNumber(value, upper: false)})",
+            "romanUcParenR" => $"{FormatRomanNumber(value, upper: true)})",
             _ => $"{value}."
         };
     }
@@ -2748,6 +2752,45 @@ internal sealed class PptxRenderer
         }
 
         return builder.ToString();
+    }
+
+    private static string FormatRomanNumber(int value, bool upper)
+    {
+        if (value <= 0)
+        {
+            return string.Empty;
+        }
+
+        (int Value, string Numeral)[] numerals =
+        [
+            (1000, "M"),
+            (900, "CM"),
+            (500, "D"),
+            (400, "CD"),
+            (100, "C"),
+            (90, "XC"),
+            (50, "L"),
+            (40, "XL"),
+            (10, "X"),
+            (9, "IX"),
+            (5, "V"),
+            (4, "IV"),
+            (1, "I")
+        ];
+
+        var builder = new StringBuilder();
+        int current = value;
+        foreach ((int numeralValue, string numeral) in numerals)
+        {
+            while (current >= numeralValue)
+            {
+                builder.Append(numeral);
+                current -= numeralValue;
+            }
+        }
+
+        string result = builder.ToString();
+        return upper ? result : result.ToLowerInvariant();
     }
 
     private static BulletStyle ReadBulletStyle(XElement? paragraphProperties, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
