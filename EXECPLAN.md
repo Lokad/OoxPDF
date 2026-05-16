@@ -241,7 +241,10 @@ Current `pptx-renderer` parity tracking:
     `pptx-ladder-11-chart-line-markers-port`, `pptx-ladder-11-chart-line-stacked-port`,
     `pptx-ladder-11-chart-pie-exploded-port`, `pptx-ladder-11-chart-doughnut-port`,
     `pptx-ladder-11-chart-doughnut-exploded-port`, `pptx-ladder-11-chart-area-2series-port`,
-    `pptx-ladder-11-chart-area-stacked-port`, and `pptx-ladder-11-chart-line-trend-port`.
+    `pptx-ladder-11-chart-area-stacked-port`, `pptx-ladder-11-chart-line-trend-port`,
+    `pptx-ladder-11-chart-scatter-clusters-port`, `pptx-ladder-11-chart-scatter-smooth-port`,
+    `pptx-ladder-11-chart-radar-2series-port`, `pptx-ladder-11-chart-radar-filled-port`, and
+    `pptx-ladder-11-chart-bubble-port`.
   - Gate type: public visual family `pptx-charts`.
   - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
     should be ported incrementally while chart rendering is separated from fallback behavior.
@@ -288,6 +291,12 @@ Composite oracle family map:
   `0.341778`; and 24-month line trend MAE `3.299024`, changed16 `0.028131`. Area charts now render from
   cached numeric values with translucent filled polygons, but still need Office series draw order, alpha,
   smoothing, labels, axes, legends, and exact plot-area bounds.
+- Scatter/radar/bubble ports complete the current `pptx-renderer` chart-family import. Gated baselines:
+  scatter clusters MAE `2.183515`, changed16 `0.019723`; smooth scatter MAE `2.748172`, changed16
+  `0.024889`; 2-series radar MAE `4.098692`, changed16 `0.091844`; filled radar MAE `4.689211`,
+  changed16 `0.106274`; and bubble MAE `5.392324`, changed16 `0.051635`. Remaining work is full Office
+  chart styling/layout rather than chart-type recognition: axes/ticks, titles, legends, labels, marker
+  shapes, bubble scaling, radar grid rings, smoothing, cached chart images, and theme/style colors.
 
 PPTX table style targets from the table composite port:
 

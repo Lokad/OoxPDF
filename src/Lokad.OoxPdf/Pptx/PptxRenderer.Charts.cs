@@ -86,6 +86,36 @@ internal sealed partial class PptxRenderer
             }
         }
 
+        XElement? scatterChart = chartXml.Descendants(ChartNamespace + "scatterChart").FirstOrDefault();
+        if (scatterChart is not null)
+        {
+            IReadOnlyList<ScatterSeries> scatterSeries = ReadScatterSeries(scatterChart, readBubbleSize: false);
+            if (scatterSeries.Count != 0)
+            {
+                bool connectLines = ((string?)scatterChart.Element(ChartNamespace + "scatterStyle")?.Attribute("val"))?.Contains("Line", StringComparison.OrdinalIgnoreCase) == true;
+                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false);
+                return true;
+            }
+        }
+
+        XElement? bubbleChart = chartXml.Descendants(ChartNamespace + "bubbleChart").FirstOrDefault();
+        if (bubbleChart is not null)
+        {
+            IReadOnlyList<ScatterSeries> bubbleSeries = ReadScatterSeries(bubbleChart, readBubbleSize: true);
+            if (bubbleSeries.Count != 0)
+            {
+                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true);
+                return true;
+            }
+        }
+
+        IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadChartSeries(chartXml, "radarChart");
+        if (radarSeries.Count != 0)
+        {
+            RenderRadarChartFallback(graphics, document, bounds, radarSeries);
+            return true;
+        }
+
         IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(chartXml, "pieChart");
         if (pieSeries.Count != 0)
         {
@@ -129,6 +159,45 @@ internal sealed partial class PptxRenderer
         }
 
         return series;
+    }
+
+    private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
+    {
+        var series = new List<ScatterSeries>();
+        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
+        {
+            double[] xValues = ReadCachedNumbers(element, "xVal");
+            double[] yValues = ReadCachedNumbers(element, "yVal");
+            double[] bubbleSizes = readBubbleSize ? ReadCachedNumbers(element, "bubbleSize") : [];
+            int count = Math.Min(xValues.Length, yValues.Length);
+            if (count == 0)
+            {
+                continue;
+            }
+
+            var points = new ScatterPoint[count];
+            for (int i = 0; i < count; i++)
+            {
+                double size = i < bubbleSizes.Length ? bubbleSizes[i] : 1d;
+                points[i] = new ScatterPoint(xValues[i], yValues[i], size);
+            }
+
+            series.Add(new ScatterSeries(points));
+        }
+
+        return series;
+    }
+
+    private static double[] ReadCachedNumbers(XElement element, string containerName)
+    {
+        return element
+            .Elements(ChartNamespace + containerName)
+            .Descendants(ChartNamespace + "pt")
+            .Select(point => (string?)point.Element(ChartNamespace + "v"))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? parsed : double.NaN)
+            .Where(value => !double.IsNaN(value))
+            .ToArray();
     }
 
     private static RgbColor ChartPalette(int index)
@@ -512,6 +581,103 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
+    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble)
+    {
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double plotX = x + width * 0.12d;
+        double plotY = y + height * 0.16d;
+        double plotWidth = width * 0.76d;
+        double plotHeight = height * 0.68d;
+        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
+        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
+        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
+        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
+        double xRange = Math.Max(1d, maxX - minX);
+        double yRange = Math.Max(1d, maxY - minY);
+        double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Size));
+
+        graphics.SetStrokeRgb(90, 90, 90);
+        graphics.SetLineWidth(0.75d);
+        graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+        graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            RgbColor color = ChartPalette(seriesIndex);
+            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.SetLineWidth(1.2d);
+            (double X, double Y)? previous = null;
+            foreach (ScatterPoint point in series[seriesIndex].Points)
+            {
+                double pointX = plotX + (point.X - minX) / xRange * plotWidth;
+                double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
+                if (connectLines && previous is { } prior)
+                {
+                    graphics.StrokeLine(prior.X, prior.Y, pointX, pointY);
+                }
+
+                double radius = bubble ? 3d + Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * 8d : 3d;
+                graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
+                previous = (pointX, pointY);
+            }
+        }
+    }
+
+    private static void RenderRadarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    {
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double centerX = x + width * 0.5d;
+        double centerY = y + height * 0.52d;
+        double radius = Math.Min(width, height) * 0.32d;
+        int pointCount = Math.Max(3, series.Max(values => values.Count));
+        double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
+
+        graphics.SetStrokeRgb(180, 180, 180);
+        graphics.SetLineWidth(0.5d);
+        for (int i = 0; i < pointCount; i++)
+        {
+            double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
+            graphics.StrokeLine(centerX, centerY, centerX + Math.Cos(angle) * radius, centerY + Math.Sin(angle) * radius);
+        }
+
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            IReadOnlyList<double> values = series[seriesIndex];
+            var points = new (double X, double Y)[pointCount];
+            for (int i = 0; i < pointCount; i++)
+            {
+                double value = i < values.Count ? Math.Max(0d, values[i]) : 0d;
+                double pointRadius = value / maxValue * radius;
+                double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
+                points[i] = (centerX + Math.Cos(angle) * pointRadius, centerY + Math.Sin(angle) * pointRadius);
+            }
+
+            RgbColor color = ChartPalette(seriesIndex);
+            graphics.SaveState();
+            graphics.SetAlpha(series.Count == 1 ? 0.40d : 0.18d, 1d);
+            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.FillPolygon(points);
+            graphics.RestoreState();
+            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
+            graphics.SetLineWidth(1.2d);
+            for (int i = 0; i < points.Length; i++)
+            {
+                (double X, double Y) a = points[i];
+                (double X, double Y) b = points[(i + 1) % points.Length];
+                graphics.StrokeLine(a.X, a.Y, b.X, b.Y);
+            }
+        }
+    }
+
     private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
     {
         double total = values.Where(value => value > 0d).Sum();
@@ -585,4 +751,8 @@ internal sealed partial class PptxRenderer
             Feature: "chart",
             Fallback: fallback));
     }
+
+    private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points);
+
+    private readonly record struct ScatterPoint(double X, double Y, double Size);
 }
