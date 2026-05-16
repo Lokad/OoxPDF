@@ -2528,6 +2528,10 @@ internal sealed class PptxRenderer
             while (index < text.Length && text[index] != ' ')
             {
                 index++;
+                if (text[index - 1] == '-' && index < text.Length && text[index] != ' ')
+                {
+                    break;
+                }
             }
 
             while (index < text.Length && text[index] == ' ')

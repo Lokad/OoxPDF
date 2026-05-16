@@ -567,6 +567,11 @@ document-specific business content into public notes.
   - `pptx-ladder-08-grouped-picture-caption` locks a grouped picture plus centered italic caption cell.
     Latest gated run: `artifacts/visual/pptx-ladder-08-grouped-picture-caption/20260516-114125`, MAE
     `0.124819`, changed-pixel ratio threshold 16 `0.002018`.
+  - `pptx-ladder-04-square-wrap-mixed-small` captures a 10.5/12 pt square-wrapped mixed-run text frame.
+    Latest run: `artifacts/visual/pptx-ladder-04-square-wrap-mixed-small/20260516-115112`, MAE
+    `0.873985`, changed-pixel ratio threshold 16 `0.009113`. Hyphen-aware flow segmentation now matches
+    Office's break after the hyphenated prefix, but the third-line baseline still sits too low and remains
+    open before this case can be locked.
 - Private DOCX run `artifacts/private-visual/user-requirements-spec/20260514-164847`:
   - Reference output had 16 pages; candidate output had 18 pages.
   - Candidate page height differed by 1 raster pixel from reference at 144 DPI, preventing pixel metrics.
