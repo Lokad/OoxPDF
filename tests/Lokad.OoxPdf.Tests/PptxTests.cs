@@ -2294,6 +2294,7 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:custGeom/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
+                    <p:pic><p:blipFill><a:blip><a:grayscl/></a:blip><a:tile/></p:blipFill></p:pic>
                     <p:sp><p:txBody><a:bodyPr><a:normAutofit fontScale="80000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody></p:sp>
                     <p:sp><p:txBody><a:bodyPr numCol="2"/><a:lstStyle/><a:p/></p:txBody></p:sp>
                     <p:sp><p:txBody><a:bodyPr vert="vert270"/><a:lstStyle/><a:p/></p:txBody></p:sp>
@@ -2309,7 +2310,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(16, ids.Length);
+        TestAssert.Equal(18, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
@@ -2317,6 +2318,8 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_EFFECT", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_GRADIENT_FILL", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_IMAGE_RECOLOR", string.Join("|", ids));
+        TestAssert.Contains("PPTX_UNSUPPORTED_IMAGE_TILE", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_OLE_OBJECT", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_PATTERN_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_PICTURE_FILL", string.Join("|", ids));

@@ -754,6 +754,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
 - [x] Ladder 7 gate `pptx-ladder-07-image-rotation` locks rotated picture transforms with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-flip` locks horizontal picture flips with exact raster parity.
 - [x] Ladder 7 gate `pptx-ladder-07-image-rotate-flip` locks combined rotation/flip with exact raster parity.
+- [x] PPTX tiled image fills and blip recolor modes emit explicit unsupported diagnostics instead of being
+  silently flattened.
 - [ ] Ladder 7 remaining subcases should isolate aspect-fit/fill variants and unsupported image diagnostics.
 - [ ] Ladder 8: grouped content covers nested group transforms, grouped pictures, grouped text, grouped shapes,
   child coordinate scaling, z-order, and clips.

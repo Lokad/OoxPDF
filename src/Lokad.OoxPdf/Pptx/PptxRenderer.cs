@@ -184,6 +184,22 @@ internal sealed class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
         }
 
+        if (slideXml.Descendants().Any(fill =>
+                fill.Name.LocalName == "blipFill" &&
+                fill.Element(DrawingNamespace + "tile") is not null))
+        {
+            Emit("PPTX_UNSUPPORTED_IMAGE_TILE", "tiled image fill");
+        }
+
+        if (slideXml.Descendants(DrawingNamespace + "blip").Any(blip =>
+                blip.Element(DrawingNamespace + "grayscl") is not null ||
+                blip.Element(DrawingNamespace + "duotone") is not null ||
+                blip.Element(DrawingNamespace + "biLevel") is not null ||
+                blip.Element(DrawingNamespace + "lum") is not null))
+        {
+            Emit("PPTX_UNSUPPORTED_IMAGE_RECOLOR", "image recolor");
+        }
+
         if (slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha))
         {
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
