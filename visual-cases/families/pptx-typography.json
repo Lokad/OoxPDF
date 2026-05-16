@@ -1,0 +1,10 @@
+{
+  "id": "pptx-typography",
+  "kind": "pptx",
+  "description": "Text layout, fonts, runs, spacing, bullets, highlighting, and vertical text.",
+  "casePatterns": [
+    "pptx-ladder-02-*",
+    "pptx-ladder-03-*",
+    "pptx-ladder-04-*"
+  ]
+}

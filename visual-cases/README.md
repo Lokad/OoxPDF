@@ -1,15 +1,26 @@
 # Visual Cases
 
-Visual cases describe OOXML inputs, expected page counts, and comparison settings for the validation harness.
+Visual cases are organized like `pptx-renderer`: small Office-oracle cases grouped by capability family.
 
-Run a case from the repository root:
+- `cases/<id>/case.json`: one public synthetic visual gate.
+- `families/<id>.json`: capability-family manifest using case-name patterns.
 
-    pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-blank/case.json
+Useful commands:
 
-The script writes timestamped outputs under `artifacts/visual/<case-id>/<run-id>/`, including the Office `reference.pdf`, reference PNGs rasterized from that PDF, the candidate PDF, candidate PNGs, `comparison/metrics.json`, `comparison/index.html`, and `assessment.md`.
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-typography -List
+powershell -ExecutionPolicy Bypass -File tools/CheckVisualFamily.ps1 -Family pptx-shapes -Limit 3
+powershell -ExecutionPolicy Bypass -File tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-04-font-size-port/case.json
+```
 
-PowerPoint and Word reference rendering require Microsoft Office COM automation on Windows. Candidate PDF rasterization requires `tools/vendor/pdfium/win-x64/bin/pdfium.dll`.
+PPTX families:
 
-Inspect an Office or candidate PDF content stream:
+- `pptx-typography`: text layout, fonts, runs, bullets, spacing, highlights.
+- `pptx-shapes`: preset geometry, connectors, arrowheads, joins, adjustments.
+- `pptx-images`: pictures, crops, alpha, rotation, flips, picture fills.
+- `pptx-composition`: groups, z-order, placeholders, inheritance, mixed slides.
+- `pptx-tables`: grid layout, merges, borders, fills, text, margins, styles.
+- `pptx-charts`: chart fallback and future chart rendering.
+- `pptx-effects`: transparency, advanced fills, shadows, diagnostics.
 
-    pwsh tools/InspectPdf.ps1 -InputPdf artifacts/visual/<case-id>/<run-id>/reference/reference.pdf -OutputDirectory artifacts/visual/<case-id>/<run-id>/reference/inspect
+Keep private-document findings out of this tree. Convert them into minimal public synthetic cases first.

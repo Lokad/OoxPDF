@@ -7,7 +7,9 @@ param(
     [string] $Kind,
 
     [Parameter(Mandatory = $true)]
-    [string] $Input
+    [string] $Input,
+
+    [string] $Family
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,3 +34,12 @@ $manifest = [ordered]@{
 
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $caseDir "case.json")
 Write-Host "Created visual case: $caseDir"
+if (-not [string]::IsNullOrWhiteSpace($Family)) {
+    $familyPath = Join-Path $repoRoot ("visual-cases/families/{0}.json" -f $Family)
+    if (-not (Test-Path -LiteralPath $familyPath)) {
+        Write-Warning "Family '$Family' does not exist yet. Create $familyPath or choose an existing family."
+    }
+    else {
+        Write-Host "Family: $Family"
+    }
+}

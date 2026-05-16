@@ -1,0 +1,8 @@
+{
+  "id": "pptx-charts",
+  "kind": "pptx",
+  "description": "Chart fallback and future chart rendering cases.",
+  "casePatterns": [
+    "pptx-ladder-11-*"
+  ]
+}

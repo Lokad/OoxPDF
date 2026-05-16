@@ -1,0 +1,10 @@
+{
+  "id": "pptx-composition",
+  "kind": "pptx",
+  "description": "Groups, z-order, placeholders, inheritance, and mixed slide composition.",
+  "casePatterns": [
+    "pptx-ladder-01-*",
+    "pptx-ladder-08-*",
+    "pptx-ladder-09-*"
+  ]
+}

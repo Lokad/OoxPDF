@@ -1,0 +1,8 @@
+{
+  "id": "docx-layout",
+  "kind": "docx",
+  "description": "DOCX page setup, paragraphs, spacing, numbering, images, tables, headers, and footers.",
+  "casePatterns": [
+    "docx-*"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "pptx-tables",
+  "kind": "pptx",
+  "description": "Table grid layout, merges, borders, fills, text, margins, alignment, and styles.",
+  "casePatterns": [
+    "pptx-ladder-10-*"
+  ]
+}

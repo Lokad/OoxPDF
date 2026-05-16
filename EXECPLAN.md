@@ -160,8 +160,10 @@ Porting priorities:
   and adding PDF/raster inspection notes for every accepted gate.
 - [ ] Port layout-composition cases: master/layout placeholders, grouped transforms, z-order, image crop,
   table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
-- [ ] Port test organization patterns: capability folders, generated-case manifests, cached reference
-  oracles, per-case reports, and explicit fast/slow/oracle lanes.
+- [x] Port the first test organization pattern: visual cases now have capability-family manifests and a
+  family runner, matching the `pptx-renderer` idea of generated/oracle cases grouped by feature area.
+- [ ] Continue porting test organization patterns: generated-case manifests, richer per-case reports,
+  and explicit fast/slow/oracle lanes.
 - [ ] Add parity tracking in `EXECPLAN.md`: each ported family must state source coverage, `ooxpdf` fixture
   names, current pass/fail status, and whether it is a unit, structural, or visual gate.
 - [ ] Keep all ported tests public and synthetic. If a `pptx-renderer` case uses generated assets, recreate

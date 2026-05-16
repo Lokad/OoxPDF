@@ -1,0 +1,8 @@
+{
+  "id": "pptx-effects",
+  "kind": "pptx",
+  "description": "Transparency, advanced fills, shadows, and diagnostics for unsupported effects.",
+  "casePatterns": [
+    "pptx-ladder-12-*"
+  ]
+}

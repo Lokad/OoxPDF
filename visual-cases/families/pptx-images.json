@@ -1,0 +1,8 @@
+{
+  "id": "pptx-images",
+  "kind": "pptx",
+  "description": "Pictures, crops, alpha, rotation, flips, and picture fills.",
+  "casePatterns": [
+    "pptx-ladder-07-*"
+  ]
+}
