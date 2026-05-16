@@ -665,6 +665,8 @@ regress while early rungs are rebuilt; the goal is a strict bottom-up progressio
   parity.
 - [x] Ladder 4 run highlight rectangles follow Office's taller marker bounds.
 - [x] Ladder 4 gate `pptx-ladder-04-highlight-single` is at MAE `0.032134`, changed16 `0.001214`.
+- [x] Ladder 4 gate `pptx-ladder-04-transparent-text` locks supported run-level alpha text at MAE
+  `0.008701`, changed16 `0.000261`.
 - [x] Ladder 4 bullet styling and hanging wrap are order-aware and Office-positioned.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-style` is at MAE `0.029019`, changed16 `0.000670`.
 - [x] Ladder 4 gate `pptx-ladder-04-bullet-wrap` is at MAE `0.137307`, changed16 `0.003059`.

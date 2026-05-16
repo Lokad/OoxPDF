@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-transparent-text",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-transparent-text.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "transparency"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.009,
+    "maxChangedPixelRatioAtThreshold16": 0.00027
+  },
+  "allowedUnsupportedFeatures": []
+}
