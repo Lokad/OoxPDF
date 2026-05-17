@@ -1639,6 +1639,12 @@ internal sealed partial class PptxRenderer
             : long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d;
     }
 
+    private static double NormalizeRotationDegrees(double rotationDegrees)
+    {
+        double normalized = rotationDegrees % 360d;
+        return normalized < 0d ? normalized + 360d : normalized;
+    }
+
     private static double ReadNormAutofitFontScale(XElement textBody)
     {
         XElement? normAutofit = textBody

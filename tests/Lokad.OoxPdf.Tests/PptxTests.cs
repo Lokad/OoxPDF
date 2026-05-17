@@ -653,7 +653,7 @@ internal static class PptxTests
         TestAssert.Contains("0052", pdf);
     }
 
-    public static void PptxSyntheticFlippedRotatedTextBoxProducesTransform()
+    public static void PptxSyntheticFlippedRotatedTextBoxKeepsTextReadable()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -686,7 +686,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(Regex.IsMatch(pdf, @"-1\s+-?0\s+-?0\s+1\s+432\s+0\s+cm"), "Expected text to receive the shape rotation plus vertical flip transform.");
+        TestAssert.Equal(1, Regex.Matches(pdf, @"-1\s+-?0\s+-?0\s+1\s+432\s+0\s+cm").Count);
         TestAssert.Contains("0046", pdf);
     }
 

@@ -1732,9 +1732,9 @@ paths, and ExecPlan references together.
   public autofit/overflow fixtures before adjusting text layout.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
-  - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and propagate shape flip flags
-    through the PPTX text model/drawing path. This covers the first structural transform gap found on the
-    slide without depending on private content.
+  - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
+    transforms as rotation adjustments for text, keeping shape text readable instead of mirrored. This covers
+    the first structural transform gap found on the slide without depending on private content.
   - [x] Add a public synthetic `a:bodyPr rot="0"` fixture for rotated/flipped shapes and let explicit
     text-body rotation override inherited shape text rotation/flips. The private slide uses this pattern to
     keep text readable inside a transformed shape.

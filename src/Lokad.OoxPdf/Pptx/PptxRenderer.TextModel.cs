@@ -131,8 +131,13 @@ internal sealed partial class PptxRenderer
         double flowHeight = height;
         double? explicitTextRotationDegrees = ReadTextBodyRotationDegrees(textBody);
         double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
-        bool textFlipHorizontal = explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal;
-        bool textFlipVertical = explicitTextRotationDegrees is null && bounds.Value.FlipVertical;
+        if (explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal != bounds.Value.FlipVertical)
+        {
+            textRotationDegrees = NormalizeRotationDegrees(textRotationDegrees + 180d);
+        }
+
+        bool textFlipHorizontal = false;
+        bool textFlipVertical = false;
         if (orientation is PptxTextOrientation.Vertical or
             PptxTextOrientation.Vertical270 or
             PptxTextOrientation.EastAsianVertical or
