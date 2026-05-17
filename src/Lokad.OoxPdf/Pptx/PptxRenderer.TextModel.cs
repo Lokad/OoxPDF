@@ -155,6 +155,7 @@ internal sealed partial class PptxRenderer
         double textX = flowX + insets.Left;
         double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
+        (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
         bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
         double textClipY = clipsVerticalOverflow
             ? document.SlideHeightPoints - flowYTop - insets.Top - textHeight
@@ -204,6 +205,8 @@ internal sealed partial class PptxRenderer
             textHeight,
             textClipY,
             textClipHeight,
+            columnCount,
+            columnSpacing,
             rotationCenterX,
             rotationCenterY,
             textRotationDegrees,

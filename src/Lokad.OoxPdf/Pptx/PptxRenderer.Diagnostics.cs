@@ -73,11 +73,6 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextColumns))
-        {
-            Emit("PPTX_UNSUPPORTED_TEXT_COLUMNS", "multi-column text");
-        }
-
         if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextOrientation))
         {
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
@@ -131,13 +126,6 @@ internal sealed partial class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
-    }
-
-    private static bool HasUnsupportedTextColumns(XElement bodyProperties)
-    {
-        return bodyProperties.Attribute("numCol") is { } columns &&
-            int.TryParse(columns.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) &&
-            count > 1;
     }
 
     private static bool HasUnsupportedTextOrientation(XElement bodyProperties)

@@ -1730,6 +1730,20 @@ paths, and ExecPlan references together.
   fixtures.
 - [ ] Private slide 13 visible remaining problem: text overflows on the bottom-right content. Reproduce via
   public autofit/overflow fixtures before adjusting text layout.
+  - [x] Add first-class PPTX text-column flow for `a:bodyPr numCol`/`spcCol`, remove the unsupported
+    diagnostic for handled columns, and lock a public synthetic multi-column text fixture.
+  - [ ] Header text issue: the top-left section label font color is incorrect. Inspect whether the color
+    should come from inherited placeholder/theme style, direct run properties, or master/layout shape style,
+    then lock with a public placeholder/theme fixture.
+  - [ ] Header placement issue: the top-left title line is a few pixels too high. Inspect inherited
+    placeholder bounds, body insets, baseline metrics, and paragraph spacing against Office PDF output, then
+    reproduce with a public title/header fixture.
+- [ ] Private slide 7 visible remaining problem: curves on the left render as straight horizontal lines.
+  Survey the shape presets/path data structurally, then reproduce with public curve/connector fixtures before
+  changing renderer logic.
+- [ ] Private slide 17 visible remaining problem: left-side schema geometry has issues. Inventory the involved
+  shapes, groups, connectors, and transforms with public-safe diagnostics, then isolate public geometry
+  fixtures.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
@@ -1738,8 +1752,23 @@ paths, and ExecPlan references together.
   - [x] Add a public synthetic `a:bodyPr rot="0"` fixture for rotated/flipped shapes and let explicit
     text-body rotation override inherited shape text rotation/flips. The private slide uses this pattern to
     keep text readable inside a transformed shape.
-  - [ ] Re-run the private case and inspect page 15 again; if artifacts remain, isolate remaining transform
-    gaps with public fixtures for connector flips, picture flips, and grouped transform edge cases.
+  - [x] Re-run the private case and inspect page 15 again. The mirror artifact is gone in
+    `artifacts/private-visual/lokad-value-based/20260517-115012`; remaining differences are now dominated
+    by overlay placement/coverage and ordinary text-flow drift, not mirrored text.
+  - [ ] Private slide 15 visible remaining problem: left-side images and their matching text items are
+    vertically misaligned. Inspect picture bounds, text-frame bounds, z-order, and any shared grouping
+    assumptions, then reproduce with a public image-plus-text alignment fixture.
+  - [ ] If slide-15 issues remain after text flow improves, isolate public fixtures for connector flips,
+    picture flips, and grouped transform edge cases.
+- [ ] Private slide 56 visible remaining problem: text is incorrectly boxed. Inspect whether the issue comes
+  from shape fill/stroke, text highlight, clipping, or placeholder/text-frame bounds, then lock the generic
+  behavior with public synthetic fixtures.
+- [ ] Private-deck sweep loop: iterate over all `lokad-value-based` slides, keep a public-safe issue inventory,
+  and for each visible problem add a minimal synthetic public case before implementing the generic fix.
+- [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
+  first-class intermediate models rather than piling more ad hoc logic into rendering code.
+- [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is
+  discovered, add it to the survey/backlog and prefer filling the general gap over patching a single deck.
 - [ ] PPTX typography ladder: add Office-PDF-backed visual gates for all known `a:bodyPr @vert` variants.
   Unit coverage now routes `vert`, `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, and
   `wordArtVertRtl` through first-class orientation handling, but the ladder must still lock glyph stacking,

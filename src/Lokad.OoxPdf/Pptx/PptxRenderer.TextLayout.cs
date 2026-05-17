@@ -506,6 +506,12 @@ internal sealed partial class PptxRenderer
     {
         PptxTextFrameModel frame = flowFrame.Model;
         double cursorLineTop = flowFrame.Box.CursorTop;
+        int columnIndex = 0;
+        double totalColumnSpacing = frame.ColumnSpacing * (frame.ColumnCount - 1);
+        double columnWidth = frame.ColumnCount <= 1
+            ? frame.TextWidth
+            : Math.Max(1d, (frame.TextWidth - totalColumnSpacing) / frame.ColumnCount);
+        double columnStartX = frame.TextX;
         int autoNumberValue = 1;
         bool hasPlacedParagraph = false;
         var paragraphLayouts = new List<PptxTextParagraphLayout>();
@@ -533,13 +539,19 @@ internal sealed partial class PptxRenderer
 
             string? bulletText = ReadBulletText(paragraph.Properties, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
-            double bulletX = frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
+            double effectiveTextWidth = columnWidth;
+            double bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
             double paragraphTextX = bulletText is null
-                ? frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
-                : frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
+                ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
             if (hasPlacedParagraph)
             {
                 cursorLineTop -= paragraphStyle.SpacingBefore;
+                MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, paragraphStyle.FontSize);
+                bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
+                paragraphTextX = bulletText is null
+                    ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                    : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
             }
 
             bool afterManualLineBreak = false;
@@ -575,9 +587,9 @@ internal sealed partial class PptxRenderer
                 if (bulletPending)
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
-                    double bulletWidth = PptxTextMetricRules.MinimumWidth(frame.TextWidth - (bulletX - frame.TextX));
+                    double bulletWidth = PptxTextMetricRules.MinimumWidth(columnWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
-                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical);
+                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));
                     bulletPending = false;
                 }
@@ -587,7 +599,7 @@ internal sealed partial class PptxRenderer
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                        TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: true);
+                        TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: true);
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
@@ -629,12 +641,16 @@ internal sealed partial class PptxRenderer
                     }
 
                     bool overflowsLine = cursorX > paragraphTextX &&
-                        (cursorX + segmentWidth > frame.TextX + frame.TextWidth ||
-                            (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
+                        (cursorX + segmentWidth > columnStartX + effectiveTextWidth ||
+                            (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > columnStartX + effectiveTextWidth - fragmentFontSize));
                     if (overflowsLine)
                     {
-                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                         cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, maxFontSize);
+                        paragraphTextX = bulletText is null
+                            ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                            : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
                         cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
                         cursorX = paragraphTextX;
                         line.Reset(paragraphTextX);
@@ -651,7 +667,7 @@ internal sealed partial class PptxRenderer
 
                     if (flowSegment.Draw && currentSegment.Length != 0)
                     {
-                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce);
+                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce);
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                     }
 
@@ -660,8 +676,9 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
+            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, maxFontSize);
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
@@ -697,6 +714,34 @@ internal sealed partial class PptxRenderer
         }
 
         return chunks.Count == 0 ? [text] : chunks.ToArray();
+    }
+
+    private static void MoveToNextColumnIfNeeded(
+        ref double cursorLineTop,
+        ref int columnIndex,
+        ref double columnStartX,
+        double firstColumnTop,
+        double frameTextX,
+        double columnWidth,
+        double columnSpacing,
+        int columnCount,
+        PptxTextFlowBox box,
+        double fontSize)
+    {
+        if (columnCount <= 1 || columnIndex >= columnCount - 1)
+        {
+            return;
+        }
+
+        double bottom = box.CursorTop - box.TextHeight;
+        if (cursorLineTop - fontSize >= bottom - PptxTextMetricRules.TextStateTolerance)
+        {
+            return;
+        }
+
+        columnIndex++;
+        columnStartX = frameTextX + columnIndex * (columnWidth + columnSpacing);
+        cursorLineTop = firstColumnTop;
     }
 
     private static GroupTransform ReadAncestorGroupTransform(XElement shape)
@@ -1637,6 +1682,20 @@ internal sealed partial class PptxRenderer
         return rotation is null
             ? null
             : long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d;
+    }
+
+    private static (int Count, double Spacing) ReadTextColumns(XElement textBody)
+    {
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        int count = bodyProperties?.Attribute("numCol") is { } countAttribute &&
+            int.TryParse(countAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedCount)
+                ? Math.Clamp(parsedCount, 1, 16)
+                : 1;
+        double spacing = bodyProperties?.Attribute("spcCol") is { } spacingAttribute &&
+            long.TryParse(spacingAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsedSpacing)
+                ? Math.Max(0d, OoxUnits.EmuToPoints(parsedSpacing))
+                : 0d;
+        return (count, spacing);
     }
 
     private static double NormalizeRotationDegrees(double rotationDegrees)

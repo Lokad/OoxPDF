@@ -154,6 +154,8 @@ internal sealed partial class PptxRenderer
         double TextHeight,
         double TextClipY,
         double TextClipHeight,
+        int ColumnCount,
+        double ColumnSpacing,
         double RotationCenterX,
         double RotationCenterY,
         double TextRotationDegrees,
