@@ -1720,8 +1720,9 @@ paths, and ExecPlan references together.
   - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
     obvious rectangular/straight connector artifacts in the slide-9 schema.
   - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,
-    `vert270`, `eaVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit fixture and route
-    them through orientation-aware text-frame flow instead of silently treating them as horizontal text.
+    `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit
+    fixture and route them through orientation-aware text-frame flow instead of silently treating them as
+    horizontal text.
   - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
     fidelity before marking the slide-9 schema as resolved.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
@@ -1730,7 +1731,12 @@ paths, and ExecPlan references together.
 - [ ] Private slide 13 visible remaining problem: text overflows on the bottom-right content. Reproduce via
   public autofit/overflow fixtures before adjusting text layout.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
-  flips, and group/image drawing order, then create a public transform fixture if coverage is missing.
+  flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
+  - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and propagate shape flip flags
+    through the PPTX text model/drawing path. This covers the first structural transform gap found on the
+    slide without depending on private content.
+  - [ ] Re-run the private case and inspect page 15 again; if artifacts remain, isolate remaining transform
+    gaps with public fixtures for connector flips, picture flips, and grouped transform edge cases.
 - [ ] PPTX typography ladder: add Office-PDF-backed visual gates for all known `a:bodyPr @vert` variants.
   Unit coverage now routes `vert`, `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, and
   `wordArtVertRtl` through first-class orientation handling, but the ladder must still lock glyph stacking,

@@ -199,6 +199,8 @@ internal sealed partial class PptxRenderer
             rotationCenterX,
             rotationCenterY,
             textRotationDegrees,
+            bounds.Value.FlipHorizontal,
+            bounds.Value.FlipVertical,
             flowYTop,
             verticalOffset,
             orientation,

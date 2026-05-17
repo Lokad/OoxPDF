@@ -226,6 +226,8 @@ internal sealed partial class PptxRenderer
             Math.Abs(left.RotationDegrees - right.RotationDegrees) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.RotationCenterX - right.RotationCenterX) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.RotationCenterY - right.RotationCenterY) < PptxTextMetricRules.CoordinateTolerance &&
+            left.FlipHorizontal == right.FlipHorizontal &&
+            left.FlipVertical == right.FlipVertical &&
             Math.Abs(left.ClipX - right.ClipX) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.ClipY - right.ClipY) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.ClipWidth - right.ClipWidth) < PptxTextMetricRules.CoordinateTolerance &&
@@ -412,6 +414,8 @@ internal sealed partial class PptxRenderer
             NearlyEqual(left.RotationDegrees, right.RotationDegrees) &&
             NearlyEqual(left.RotationCenterX, right.RotationCenterX) &&
             NearlyEqual(left.RotationCenterY, right.RotationCenterY) &&
+            left.FlipHorizontal == right.FlipHorizontal &&
+            left.FlipVertical == right.FlipVertical &&
             Math.Abs((left.X + left.Width) - right.X) <= PptxTextMetricRules.UnderlineCoalesceGap(left.FontSize);
     }
 
@@ -429,9 +433,9 @@ internal sealed partial class PptxRenderer
     private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
+        if (HasTextTransform(run))
         {
-            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+            ApplyTextTransform(graphics, run);
         }
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
@@ -479,9 +483,9 @@ internal sealed partial class PptxRenderer
     {
         TextRun run = span.Run;
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
+        if (HasTextTransform(run))
         {
-            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+            ApplyTextTransform(graphics, run);
         }
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
@@ -671,9 +675,9 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
+        if (HasTextTransform(run))
         {
-            ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
+            ApplyTextTransform(graphics, run);
         }
 
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
@@ -691,14 +695,27 @@ internal sealed partial class PptxRenderer
         return baselineY >= run.ClipY && baselineY <= run.ClipY + run.ClipHeight + run.FontSize;
     }
 
-    private static void ApplyTextRotation(PdfGraphicsBuilder graphics, double rotationDegrees, double centerX, double centerY)
+    private static bool HasTextTransform(TextRun run)
     {
-        double radians = -rotationDegrees * Math.PI / 180d;
+        return Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance ||
+            run.FlipHorizontal ||
+            run.FlipVertical;
+    }
+
+    private static void ApplyTextTransform(PdfGraphicsBuilder graphics, TextRun run)
+    {
+        double radians = -run.RotationDegrees * Math.PI / 180d;
+        double sx = run.FlipHorizontal ? -1d : 1d;
+        double sy = run.FlipVertical ? -1d : 1d;
         double cos = Math.Cos(radians);
         double sin = Math.Sin(radians);
-        double e = centerX - cos * centerX + sin * centerY;
-        double f = centerY - sin * centerX - cos * centerY;
-        graphics.Transform(cos, sin, -sin, cos, e, f);
+        double a = cos * sx;
+        double b = sin * sx;
+        double c = -sin * sy;
+        double d = cos * sy;
+        double e = run.RotationCenterX - a * run.RotationCenterX - c * run.RotationCenterY;
+        double f = run.RotationCenterY - b * run.RotationCenterX - d * run.RotationCenterY;
+        graphics.Transform(a, b, c, d, e, f);
     }
 
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)

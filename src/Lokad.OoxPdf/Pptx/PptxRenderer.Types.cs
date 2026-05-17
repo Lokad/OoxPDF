@@ -71,6 +71,8 @@ internal sealed partial class PptxRenderer
         double RotationDegrees,
         double RotationCenterX,
         double RotationCenterY,
+        bool FlipHorizontal,
+        bool FlipVertical,
         bool PreventCoalesce = false);
 
     private sealed record TextGlyphRun(
@@ -155,6 +157,8 @@ internal sealed partial class PptxRenderer
         double RotationCenterX,
         double RotationCenterY,
         double TextRotationDegrees,
+        bool TextFlipHorizontal,
+        bool TextFlipVertical,
         double FlowYTop,
         double VerticalOffset,
         PptxTextOrientation Orientation,
