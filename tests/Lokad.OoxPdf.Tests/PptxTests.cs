@@ -847,6 +847,14 @@ internal static class PptxTests
         TestAssert.True(line.Spans.Any(span => span.Text == "beta"), "Expected narrow no-break space to split the following word span.");
         TestAssert.True(line.Spans.All(span => !span.Text.Contains('\u202F', StringComparison.Ordinal)), "Expected narrow no-break space to stay out of emitted text spans.");
         TestAssert.True(line.Spans.Zip(line.Spans.Skip(1), (left, right) => right.X - (left.X + left.Width)).Any(gap => gap > 0d), "Expected narrow no-break space to contribute hidden advance between words.");
+        PptxTextFlowSegmentSnapshot hiddenAdvance = PptxRenderer.InspectTextFlow(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Runs)
+            .SelectMany(run => run.Segments)
+            .Single(segment => segment.Kind == "HiddenAdvance");
+        TestAssert.Equal("\u202F", hiddenAdvance.AdvanceText);
+        TestAssert.True(hiddenAdvance.AdvanceFontSizeFactor is null, "Expected narrow no-break space advance to come from font metrics, not a fixed font-size factor.");
     }
 
     public static void PptxSyntheticTextBoxTreatsNoBreakSpaceAsHiddenRegularSpaceAdvance()

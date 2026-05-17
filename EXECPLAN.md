@@ -158,6 +158,12 @@ High-priority actions:
 - [ ] Reverse-engineer the remaining PPTX text formulas from Office/PDF evidence and `pptx-renderer`
   semantics, replacing local constants with named general rules for hidden advances, baseline offsets,
   line advances, highlight rectangles, and text-operation boundaries.
+- [x] Replace the first hidden-advance approximation with a general font-metric rule:
+  non-drawn NBSP and narrow NBSP flow segments now advance by measuring their Unicode space glyphs in the
+  resolved run font, instead of using a font-size multiplier for U+202F.
+- [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
+  offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
+  probes before broad visual MAE gates.
 - [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
   font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
   `TJ` array construction.

@@ -750,9 +750,7 @@ internal sealed partial class PptxRenderer
                     builder.Clear();
                 }
 
-                string advanceText = c == '\u00A0' ? " " : string.Empty;
-                double? advanceFactor = c == '\u202F' ? 0.21d : null;
-                yield return new PptxTextFlowSegment(string.Empty, advanceText, PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
+                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true);
                 nextPreventsCoalesce = true;
                 continue;
             }
