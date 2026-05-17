@@ -2037,6 +2037,49 @@ internal static class PptxTests
         TestAssert.True(distributed.EndX - distributed.Spans.Last().X > distributed.Spans.Last().Width, "Expected distributed alignment to stretch glyph positions across the text frame.");
     }
 
+    public static void PptxHighlightedRunAppliesOfficeTrackingToFollowingRuns()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-tracking-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0);
+        PptxTextFlowRunSnapshot[] runs = flow.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Runs)
+            .Where(run => run.SourceText.Length != 0)
+            .ToArray();
+
+        PptxTextFlowRunSnapshot highlighted = runs.First(run => run.SourceText == "AI");
+        PptxTextFlowRunSnapshot following = runs.First(run => run.SourceText.StartsWith(" boundary", StringComparison.Ordinal));
+
+        TestAssert.True(Math.Abs(highlighted.FontSize - 12d) < 0.01d, "Expected the probe highlight run to stay at 12pt.");
+        TestAssert.True(highlighted.Segments.All(segment => Math.Abs(segment.FontScale - 1d) < 0.01d), "Expected highlight tracking to avoid fake font scaling.");
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextSpanLayoutSnapshot aiSpan = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .First(span => span.Text == "AI");
+        PptxTextSpanLayoutSnapshot followingSpan = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .First(span => span.Text.StartsWith("boundary", StringComparison.Ordinal));
+
+        double expectedTracking = -0.036d;
+        TestAssert.True(Math.Abs(aiSpan.GlyphSpan.Glyphs[1].AdjustmentBefore - expectedTracking) < 0.001d, "Expected highlighted runs to use Office's compact tracking.");
+        TestAssert.True(Math.Abs(followingSpan.GlyphSpan.Glyphs[1].AdjustmentBefore - expectedTracking) < 0.001d, "Expected runs after a highlight to keep Office's compact tracking within the paragraph.");
+    }
+
     public static void PptxTypographyTextHyphenBoundariesRemainSeparateSpans()
     {
         string input = Path.GetFullPath(Path.Combine(

@@ -265,4 +265,35 @@ New-TypographyProbe `
           <a:p><a:pPr algn="l"><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-spautofit-tracking-probe" `
+    -Transform '<a:xfrm><a:off x="685800" y="548640"/><a:ext cx="7772400" cy="5760720"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>No autofit, 12pt Cambria Math, plain words should reveal default tracking.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>No autofit, 12pt bold Cambria Math should reveal bold tracking behavior.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>No autofit highlighted </a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> boundary should reveal highlight tracking behavior.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-spautofit-tracking-wide-probe" `
+    -Transform '<a:xfrm><a:off x="685800" y="548640"/><a:ext cx="7772400" cy="5760720"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:spAutoFit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit wide 12pt Cambria Math, plain words should reveal default tracking.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit wide highlighted </a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> boundary should reveal highlight tracking behavior.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-spautofit-tracking-narrow-probe" `
+    -Transform '<a:xfrm><a:off x="685800" y="548640"/><a:ext cx="2514600" cy="5760720"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:spAutoFit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1000" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit narrow 10pt Cambria Math keeps words readable across wrapped lines.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit narrow 12pt Cambria Math keeps words readable across wrapped lines.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1400" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit narrow 14pt Cambria Math keeps words readable across wrapped lines.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit narrow 12pt bold Cambria Math keeps words readable across wrapped lines.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit highlighted </a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> boundary keeps neighboring words stable.</a:t></a:r></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

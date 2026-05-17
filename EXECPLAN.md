@@ -1464,6 +1464,13 @@ paths, and ExecPlan references together.
 - [ ] Reverse-engineer Office's `spAutoFit` text fitting for narrow PPTX columns. The refined probe shows
   Office applying about `-0.036pt` character spacing to 12pt body lines, which changes wraps around short
   highlighted runs; candidate currently emits `Tc=0`.
+- [x] Add stress probes for highlight tracking across no-autofit, wide `spAutoFit`, and narrow `spAutoFit`
+  variants. Office evidence shows plain `spAutoFit` text keeps `Tc=0`; compact tracking starts on the
+  highlighted run and carries through following runs in the same paragraph.
+- [x] Apply Office's highlighted-run tracking rule in the PPTX text model:
+  `CharacterSpacing += -0.003 * fontSize` on the highlighted run and following text runs in the paragraph.
+  The candidate still encodes this via `TJ` positioning arrays rather than Office-style `Tc`, but layout
+  measurement and rendered glyph positions now share the same rule.
 - [ ] Tighten the slide-3-inspired Cambria probes next: compare Office and candidate line breaks, `TJ`
   arrays, highlight rectangles, and font metrics before rerunning the private deck.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays

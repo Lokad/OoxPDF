@@ -205,6 +205,8 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale);
+            IReadOnlyList<PptxTextRunModel> runs = ApplyOfficeHighlightTracking(
+                BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale));
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
@@ -212,7 +214,7 @@ internal sealed partial class PptxRenderer
                 paragraphLevel,
                 cascade,
                 paragraphStyle,
-                BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale)));
+                runs));
         }
 
         return paragraphs;
@@ -277,5 +279,31 @@ internal sealed partial class PptxRenderer
         }
 
         return runs;
+    }
+
+    private static IReadOnlyList<PptxTextRunModel> ApplyOfficeHighlightTracking(IReadOnlyList<PptxTextRunModel> runs)
+    {
+        bool afterHighlight = false;
+        PptxTextRunModel[] adjusted = new PptxTextRunModel[runs.Count];
+        for (int i = 0; i < runs.Count; i++)
+        {
+            PptxTextRunModel run = runs[i];
+            bool applies = run.Kind != PptxTextRunKind.Break && (afterHighlight || run.Style.Highlight is not null);
+            adjusted[i] = applies
+                ? run with
+                {
+                    Style = run.Style with
+                    {
+                        CharacterSpacing = run.Style.CharacterSpacing + run.Style.FontSize * PptxTextMetricRules.HighlightRunTrackingFontScale
+                    }
+                }
+                : run;
+            if (run.Style.Highlight is not null)
+            {
+                afterHighlight = true;
+            }
+        }
+
+        return adjusted;
     }
 }
