@@ -384,7 +384,9 @@ internal sealed partial class PptxRenderer
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             TextAlignment alignment = ReadAlignment(paragraph, null);
-            double cursorX = x + insets.Left;
+            double textX = x + insets.Left;
+            double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
+            double cursorX = textX;
             double maxFontSize = 12d;
             foreach (XElement run in paragraph.Elements().Where(IsTextRunElement))
             {
@@ -413,20 +415,64 @@ internal sealed partial class PptxRenderer
                 bool strike = IsStrikeEnabled(runProperties, null);
                 foreach (TextCapsFragment fragment in ApplyTextCaps(ReadTextElementText(run, slideNumber: 0), runProperties, null))
                 {
-                    if (fragment.Text.Length == 0)
+                    foreach (string token in SplitTableTextWrapTokens(fragment.Text))
                     {
-                        continue;
-                    }
+                        if (token.Length == 0)
+                        {
+                            continue;
+                        }
 
-                    double fragmentFontSize = fontSize * fragment.FontScale;
-                    maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
-                    double advance = advanceEstimator.Measure(fragment.Text, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
-                    runs.Add(new TextRun(fragment.Text, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d, false, false));
-                    cursorX += advance;
+                        double fragmentFontSize = fontSize * fragment.FontScale;
+                        maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
+                        double advance = advanceEstimator.Measure(token, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
+                        if (!string.IsNullOrWhiteSpace(token) &&
+                            cursorX > textX + PptxTextMetricRules.TextStateTolerance &&
+                            cursorX + advance > textX + textWidth)
+                        {
+                            cursorY -= maxFontSize * 1.2d;
+                            cursorX = textX;
+                            maxFontSize = fragmentFontSize;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(token) && cursorX <= textX + PptxTextMetricRules.TextStateTolerance)
+                        {
+                            continue;
+                        }
+
+                        runs.Add(new TextRun(token, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d, false, false));
+                        cursorX += advance;
+                    }
                 }
             }
 
             cursorY -= maxFontSize * 1.2d;
+        }
+    }
+
+    private static IEnumerable<string> SplitTableTextWrapTokens(string text)
+    {
+        int start = 0;
+        bool? whitespace = null;
+        for (int i = 0; i < text.Length; i++)
+        {
+            bool currentWhitespace = char.IsWhiteSpace(text[i]);
+            if (whitespace is null)
+            {
+                whitespace = currentWhitespace;
+                continue;
+            }
+
+            if (currentWhitespace != whitespace.Value)
+            {
+                yield return text[start..i];
+                start = i;
+                whitespace = currentWhitespace;
+            }
+        }
+
+        if (start < text.Length)
+        {
+            yield return text[start..];
         }
     }
 

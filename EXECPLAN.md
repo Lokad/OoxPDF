@@ -1728,6 +1728,12 @@ paths, and ExecPlan references together.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
   issues on the right, especially around the bottom-right content, and map them to public image/layout
   fixtures.
+  - [x] Fix the dominant right-side table text overflow: PPTX table-cell text now wraps words to the cell
+    text width instead of emitting one horizontal run per paragraph. Public synthetic unit
+    `PptxSyntheticTableWrapsCellTextToColumnWidth` locks the generic behavior, and private page 12 now
+    wraps the rightmost table column.
+  - [ ] Continue slide-12 parity with public fixtures for exact table vertical alignment, cell text anchoring,
+    image placement, and any remaining bottom-right clipping/overlap after table wrapping.
 - [ ] Private slide 13 visible remaining problem: text overflows on the bottom-right content. Reproduce via
   public autofit/overflow fixtures before adjusting text layout.
   - [x] Add first-class PPTX text-column flow for `a:bodyPr numCol`/`spcCol`, remove the unsupported
