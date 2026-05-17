@@ -258,11 +258,11 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-cambria-math-run-boundaries-p
 New-TypographyProbe `
     -Id "pptx-ladder-04-typography-slide3-narrow-cambria-probe" `
     -Transform '<a:xfrm><a:off x="775665" y="1466572"/><a:ext cx="3371526" cy="1923604"/></a:xfrm>' `
-    -BodyPr '<a:bodyPr wrap="square"/>' `
+    -BodyPr '<a:bodyPr wrap="square"><a:spAutoFit/></a:bodyPr>' `
     -TextBody @'
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1400" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large Global Supply Network means strategic constraints and operational volatility</a:t></a:r></a:p>
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Inventory Optimization and Planning depend on local decisions across locations. The </a:t></a:r><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> workflow must keep words readable without parasite letter spacing.</a:t></a:r></a:p>
-          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1400" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large Global Supply Network means strategic constraints and operational volatility</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Inventory Optimization and Planning depend on local decisions across locations. The </a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> workflow must keep words readable without parasite letter spacing.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"><a:spcBef><a:spcPct val="0"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>
 '@
 
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

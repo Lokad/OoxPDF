@@ -1458,6 +1458,12 @@ paths, and ExecPlan references together.
 - [x] Remove the small-text natural-line-height exception from PPTX wrapping. The slide-3-inspired narrow
   Cambria probe showed Office advancing 12pt wrapped lines by about `14.4pt`; candidate line Y deltas dropped
   from multi-point drift to about `0.3pt` after using the general `1.2` default line-height rule.
+- [x] Refine the public slide-3 narrow Cambria probe to mirror private-safe structure: `spAutoFit`, explicit
+  `spcAft=600`, non-bold body runs, and a short highlighted run. Latest visual run:
+  `artifacts/visual/pptx-ladder-04-typography-slide3-narrow-cambria-probe/20260517-092613`, MAE `1.332658`.
+- [ ] Reverse-engineer Office's `spAutoFit` text fitting for narrow PPTX columns. The refined probe shows
+  Office applying about `-0.036pt` character spacing to 12pt body lines, which changes wraps around short
+  highlighted runs; candidate currently emits `Tc=0`.
 - [ ] Tighten the slide-3-inspired Cambria probes next: compare Office and candidate line breaks, `TJ`
   arrays, highlight rectangles, and font metrics before rerunning the private deck.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
