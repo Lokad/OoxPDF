@@ -1601,12 +1601,14 @@ internal sealed partial class PptxRenderer
             "vert" => PptxTextOrientation.Vertical,
             "vert270" => PptxTextOrientation.Vertical270,
             "eaVert" => PptxTextOrientation.EastAsianVertical,
+            "mongolianVert" => PptxTextOrientation.MongolianVertical,
             "wordArtVert" => PptxTextOrientation.WordArtVertical,
             "wordArtVertRtl" => PptxTextOrientation.WordArtVerticalRightToLeft,
             _ when orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Horizontal,
             _ when orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Vertical,
             _ when orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Vertical270,
             _ when orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.EastAsianVertical,
+            _ when orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.MongolianVertical,
             _ when orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVertical,
             _ when orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVerticalRightToLeft,
             _ => PptxTextOrientation.Horizontal
@@ -1620,6 +1622,7 @@ internal sealed partial class PptxRenderer
             PptxTextOrientation.Vertical270 => 270d,
             PptxTextOrientation.Vertical or
             PptxTextOrientation.EastAsianVertical or
+            PptxTextOrientation.MongolianVertical or
             PptxTextOrientation.WordArtVertical or
             PptxTextOrientation.WordArtVerticalRightToLeft => 90d,
             _ => 0d

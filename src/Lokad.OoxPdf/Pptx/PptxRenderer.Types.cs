@@ -540,6 +540,7 @@ internal sealed partial class PptxRenderer
         Vertical,
         Vertical270,
         EastAsianVertical,
+        MongolianVertical,
         WordArtVertical,
         WordArtVerticalRightToLeft
     }

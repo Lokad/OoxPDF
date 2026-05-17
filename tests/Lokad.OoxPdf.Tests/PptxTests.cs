@@ -676,6 +676,7 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="eaVert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>EAV</a:t></a:r></a:p></p:txBody></p:sp>
                     <p:sp><p:spPr><a:xfrm><a:off x="5029200" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="wordArtVert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>WAV</a:t></a:r></a:p></p:txBody></p:sp>
                     <p:sp><p:spPr><a:xfrm><a:off x="6400800" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="wordArtVertRtl" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>WAR</a:t></a:r></a:p></p:txBody></p:sp>
+                    <p:sp><p:spPr><a:xfrm><a:off x="7772400" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="mongolianVert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>MON</a:t></a:r></a:p></p:txBody></p:sp>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """

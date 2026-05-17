@@ -148,6 +148,7 @@ internal sealed partial class PptxRenderer
             !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
     }

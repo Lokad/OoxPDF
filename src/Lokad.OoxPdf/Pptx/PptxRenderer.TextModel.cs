@@ -133,6 +133,7 @@ internal sealed partial class PptxRenderer
         if (orientation is PptxTextOrientation.Vertical or
             PptxTextOrientation.Vertical270 or
             PptxTextOrientation.EastAsianVertical or
+            PptxTextOrientation.MongolianVertical or
             PptxTextOrientation.WordArtVertical or
             PptxTextOrientation.WordArtVerticalRightToLeft)
         {

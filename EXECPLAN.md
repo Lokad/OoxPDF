@@ -1732,12 +1732,15 @@ paths, and ExecPlan references together.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create a public transform fixture if coverage is missing.
 - [ ] PPTX typography ladder: add Office-PDF-backed visual gates for all known `a:bodyPr @vert` variants.
-  Unit coverage now routes `vert`, `vert270`, `eaVert`, `wordArtVert`, and `wordArtVertRtl` through
-  first-class orientation handling, but the ladder must still lock glyph stacking, anchoring, clipping, and
-  exact baseline placement before vertical labels are considered pixel-close.
+  Unit coverage now routes `vert`, `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, and
+  `wordArtVertRtl` through first-class orientation handling, but the ladder must still lock glyph stacking,
+  anchoring, clipping, and exact baseline placement before vertical labels are considered pixel-close.
   - [x] Add vertical-orientation character-boundary wrapping for overlong Latin words. Public visual reruns:
     `pptx-ladder-04-vertical-text-270` at MAE `0.292444`, changed16 `0.002682`; and
     `pptx-ladder-04-vertical-text-port` improved to MAE `0.796678`, changed16 `0.005765`.
+  - [x] Route `mongolianVert` through the same first-class vertical orientation model. The ported visual case
+    nudged to MAE `0.791131`, changed16 `0.005626`; remaining differences are still dominated by Office's
+    exact stacked-glyph positioning.
   - [ ] Continue vertical text parity with Office text-operation inspection: stacked-letter orientation,
     column order, per-column x positions, and baseline placement remain visibly approximate.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
