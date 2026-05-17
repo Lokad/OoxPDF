@@ -494,7 +494,7 @@ internal sealed partial class PptxRenderer
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         TextRun tabRun = new(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
-                        cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
+                        cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
                         continue;
                     }
@@ -1421,7 +1421,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static double ResolveNextTabX(double cursorX, double paragraphTextX, IReadOnlyList<double> tabStops, double fontSize)
+    private static double ResolveNextTabX(double cursorX, double paragraphTextX, IReadOnlyList<double> tabStops)
     {
         double current = cursorX - paragraphTextX;
         foreach (double tabStop in tabStops)
@@ -1432,7 +1432,9 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return cursorX + fontSize * 2.2d;
+        const long defaultTabStopEmus = 914400;
+        double defaultTabStop = OoxUnits.EmuToPoints(defaultTabStopEmus);
+        return paragraphTextX + Math.Ceiling((current + 0.01d) / defaultTabStop) * defaultTabStop;
     }
 
     private static LineSpacing ReadLineSpacing(XElement? paragraphProperties, XElement? defaultParagraphProperties)
