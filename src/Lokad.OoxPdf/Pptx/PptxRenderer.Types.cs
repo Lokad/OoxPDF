@@ -154,7 +154,10 @@ internal sealed partial class PptxRenderer
         double TextClipHeight,
         double RotationCenterX,
         double RotationCenterY,
+        double TextRotationDegrees,
+        double FlowYTop,
         double VerticalOffset,
+        PptxTextOrientation Orientation,
         RgbColor? ShapeFontColor,
         IReadOnlyList<PptxTextParagraphModel> Paragraphs);
 
@@ -529,6 +532,16 @@ internal sealed partial class PptxRenderer
         Top,
         Middle,
         Bottom
+    }
+
+    private enum PptxTextOrientation
+    {
+        Horizontal,
+        Vertical,
+        Vertical270,
+        EastAsianVertical,
+        WordArtVertical,
+        WordArtVerticalRightToLeft
     }
 
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)

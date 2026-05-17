@@ -1710,6 +1710,9 @@ paths, and ExecPlan references together.
   geometry fixtures before changing renderer logic.
   - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
     obvious rectangular/straight connector artifacts in the slide-9 schema.
+  - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,
+    `vert270`, `eaVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit fixture and route
+    them through orientation-aware text-frame flow instead of silently treating them as horizontal text.
   - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
     fidelity before marking the slide-9 schema as resolved.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
@@ -1719,8 +1722,10 @@ paths, and ExecPlan references together.
   public autofit/overflow fixtures before adjusting text layout.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create a public transform fixture if coverage is missing.
-- [ ] PPTX typography ladder: implement vertical Latin text frames for `a:bodyPr @vert="vert"` after
-  surveying Office glyph order, line stacking, and alignment on public fixtures.
+- [ ] PPTX typography ladder: add Office-PDF-backed visual gates for all known `a:bodyPr @vert` variants.
+  Unit coverage now routes `vert`, `vert270`, `eaVert`, `wordArtVert`, and `wordArtVertRtl` through
+  first-class orientation handling, but the ladder must still lock glyph stacking, anchoring, clipping, and
+  exact baseline placement before vertical labels are considered pixel-close.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
   derive public fixtures from private slide content.
 - [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX

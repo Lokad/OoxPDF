@@ -144,7 +144,12 @@ internal sealed partial class PptxRenderer
     {
         string? orientation = (string?)bodyProperties.Attribute("vert");
         return !string.IsNullOrEmpty(orientation) &&
-            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase);
+            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)

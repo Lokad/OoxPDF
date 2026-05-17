@@ -345,10 +345,9 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document)
     {
-        double yTop = OoxUnits.EmuToPoints(frame.Bounds.Y);
         var box = new PptxTextFlowBox(
-            yTop,
-            document.SlideHeightPoints - yTop - frame.Insets.Top - frame.VerticalOffset,
+            frame.FlowYTop,
+            document.SlideHeightPoints - frame.FlowYTop - frame.Insets.Top - frame.VerticalOffset,
             frame.TextX,
             frame.TextWidth,
             frame.TextHeight,
@@ -578,7 +577,7 @@ internal sealed partial class PptxRenderer
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(frame.TextWidth - (bulletX - frame.TextX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
-                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY);
+                    TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));
                     bulletPending = false;
                 }
@@ -588,7 +587,7 @@ internal sealed partial class PptxRenderer
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                        TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
+                        TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
@@ -622,7 +621,7 @@ internal sealed partial class PptxRenderer
 
                     if (flowSegment.Draw && currentSegment.Length != 0)
                     {
-                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
+                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                     }
 
@@ -1524,6 +1523,46 @@ internal sealed partial class PptxRenderer
             ReadInset(bodyProperties, "rIns", 91440),
             ReadInset(bodyProperties, "tIns", 45720),
             ReadInset(bodyProperties, "bIns", 45720));
+    }
+
+    private static PptxTextOrientation ReadTextOrientation(XElement textBody, XElement? inheritedTextBody)
+    {
+        string? orientation = (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("vert");
+        orientation ??= (string?)inheritedTextBody
+            ?.Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("vert");
+        return orientation switch
+        {
+            null or "" => PptxTextOrientation.Horizontal,
+            "horz" => PptxTextOrientation.Horizontal,
+            "vert" => PptxTextOrientation.Vertical,
+            "vert270" => PptxTextOrientation.Vertical270,
+            "eaVert" => PptxTextOrientation.EastAsianVertical,
+            "wordArtVert" => PptxTextOrientation.WordArtVertical,
+            "wordArtVertRtl" => PptxTextOrientation.WordArtVerticalRightToLeft,
+            _ when orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Horizontal,
+            _ when orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Vertical,
+            _ when orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.Vertical270,
+            _ when orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.EastAsianVertical,
+            _ when orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVertical,
+            _ when orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVerticalRightToLeft,
+            _ => PptxTextOrientation.Horizontal
+        };
+    }
+
+    private static double TextOrientationRotationDegrees(PptxTextOrientation orientation)
+    {
+        return orientation switch
+        {
+            PptxTextOrientation.Vertical270 => 270d,
+            PptxTextOrientation.Vertical or
+            PptxTextOrientation.EastAsianVertical or
+            PptxTextOrientation.WordArtVertical or
+            PptxTextOrientation.WordArtVerticalRightToLeft => 90d,
+            _ => 0d
+        };
     }
 
     private static double ReadNormAutofitFontScale(XElement textBody)

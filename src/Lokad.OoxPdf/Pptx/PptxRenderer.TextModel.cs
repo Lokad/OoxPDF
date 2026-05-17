@@ -120,16 +120,35 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(bounds.Value.Width);
         double height = OoxUnits.EmuToPoints(bounds.Value.Height);
         TextInsets insets = ReadTextInsets(textBody);
+        PptxTextOrientation orientation = ReadTextOrientation(textBody, inheritedTextBody);
         double fontScale = ReadNormAutofitFontScale(textBody);
         double lineSpacingScale = ReadNormAutofitLineSpacingScale(textBody);
-        double textX = x + insets.Left;
-        double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
-        double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
+        double flowX = x;
+        double flowYTop = yTop;
+        double flowWidth = width;
+        double flowHeight = height;
+        double textRotationDegrees = bounds.Value.RotationDegrees;
+        if (orientation is PptxTextOrientation.Vertical or
+            PptxTextOrientation.Vertical270 or
+            PptxTextOrientation.EastAsianVertical or
+            PptxTextOrientation.WordArtVertical or
+            PptxTextOrientation.WordArtVerticalRightToLeft)
+        {
+            flowWidth = height;
+            flowHeight = width;
+            flowX = rotationCenterX - flowWidth / 2d;
+            flowYTop = document.SlideHeightPoints - rotationCenterY - flowHeight / 2d;
+            textRotationDegrees += TextOrientationRotationDegrees(orientation);
+        }
+
+        double textX = flowX + insets.Left;
+        double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
+        double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
         bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
         double textClipY = clipsVerticalOverflow
-            ? document.SlideHeightPoints - yTop - insets.Top - textHeight
+            ? document.SlideHeightPoints - flowYTop - insets.Top - textHeight
             : 0d;
         double textClipHeight = clipsVerticalOverflow
             ? textHeight
@@ -178,7 +197,10 @@ internal sealed partial class PptxRenderer
             textClipHeight,
             rotationCenterX,
             rotationCenterY,
+            textRotationDegrees,
+            flowYTop,
             verticalOffset,
+            orientation,
             shapeFontColor,
             paragraphs);
     }

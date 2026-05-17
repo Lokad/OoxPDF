@@ -543,6 +543,44 @@ internal static class PptxTests
         TestAssert.Contains("0052", pdf);
     }
 
+    public static void PptxSyntheticTextOrientationVariantsProduceTransforms()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="vert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>VERT</a:t></a:r></a:p></p:txBody></p:sp>
+                    <p:sp><p:spPr><a:xfrm><a:off x="2286000" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="vert270" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>V270</a:t></a:r></a:p></p:txBody></p:sp>
+                    <p:sp><p:spPr><a:xfrm><a:off x="3657600" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="eaVert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>EAV</a:t></a:r></a:p></p:txBody></p:sp>
+                    <p:sp><p:spPr><a:xfrm><a:off x="5029200" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="wordArtVert" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>WAV</a:t></a:r></a:p></p:txBody></p:sp>
+                    <p:sp><p:spPr><a:xfrm><a:off x="6400800" y="914400"/><a:ext cx="914400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr><p:txBody><a:bodyPr vert="wordArtVertRtl" lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>WAR</a:t></a:r></a:p></p:txBody></p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 -1 1 0", pdf);
+        TestAssert.Contains("-0 1 -1 -0", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Known text orientation variants should be routed through the orientation model.");
+    }
+
     public static void PptxSyntheticTextBoxEmbedsFontAndDrawsGlyphs()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -3587,7 +3625,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string[] ids = diagnostics.Select(d => d.Id).Order(StringComparer.Ordinal).ToArray();
-        TestAssert.Equal(17, ids.Length);
+        TestAssert.Equal(16, ids.Length);
         TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_CALLOUT", string.Join("|", ids));
@@ -3602,7 +3640,6 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_PICTURE_FILL", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_COLUMNS", string.Join("|", ids));
-        TestAssert.Contains("PPTX_UNSUPPORTED_TEXT_ORIENTATION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", string.Join("|", ids));
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", string.Join("|", ids));
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
