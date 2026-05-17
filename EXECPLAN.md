@@ -1738,9 +1738,12 @@ paths, and ExecPlan references together.
     - Fixed by giving shape `fontRef` color precedence over generic default text style while keeping direct
       run color as the strongest source. Public fixture
       `PptxSyntheticShapeFontRefColorOverridesDefaultTextStyle` locks the general rule.
-  - [ ] Header placement issue: the top-left title line is a few pixels too high. Inspect inherited
+  - [x] Header placement issue: the top-left title line is a few pixels too high. Inspect inherited
     placeholder bounds, body insets, baseline metrics, and paragraph spacing against Office PDF output, then
     reproduce with a public title/header fixture.
+    - Fixed by treating PPTX `spcPct` line spacing as a percentage over the normal PowerPoint line height
+      and placing explicit-percentage baselines at the resolved line advance. Private page-13 header bounds
+      now match the Office raster in the top text band.
 - [ ] Private slide 7 visible remaining problem: curves on the left render as straight horizontal lines.
   Survey the shape presets/path data structurally, then reproduce with public curve/connector fixtures before
   changing renderer logic.

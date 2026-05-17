@@ -1838,16 +1838,20 @@ internal sealed partial class PptxRenderer
 
     private static double ReadParagraphAdvance(LineSpacing lineSpacing, double fontSize)
     {
-        return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize)
-            : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+        return ReadLineAdvance(lineSpacing, fontSize);
     }
 
     private static double ReadLineAdvance(LineSpacing lineSpacing, double fontSize)
     {
+        if (lineSpacing.IsAbsolute)
+        {
+            return lineSpacing.Resolve(fontSize);
+        }
+
+        double normalAdvance = fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
         return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize)
-            : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            ? normalAdvance * lineSpacing.Value
+            : normalAdvance;
     }
 
     private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator)
@@ -1909,7 +1913,7 @@ internal sealed partial class PptxRenderer
         }
 
         return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize) - fontSize * PptxTextMetricRules.ExplicitLineBaselineGapFallback
+            ? ReadLineAdvance(lineSpacing, fontSize)
             : BaselineOffset(fontSize);
     }
 
@@ -1921,7 +1925,7 @@ internal sealed partial class PptxRenderer
         }
 
         return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize) - fontSize * PptxTextMetricRules.ExplicitLineBaselineGapFallback
+            ? ReadLineAdvance(lineSpacing, fontSize)
             : BaselineOffset(fontSize, style, advanceEstimator);
     }
 
