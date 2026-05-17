@@ -172,6 +172,11 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("f");
     }
 
+    public void StrokeCurrentPath()
+    {
+        builder.AppendLine("S");
+    }
+
     public void StrokePolygon((double X, double Y)[] points)
     {
         AppendPolygonPath(points);

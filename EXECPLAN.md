@@ -1708,6 +1708,10 @@ paths, and ExecPlan references together.
 - [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
   involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
   geometry fixtures before changing renderer logic.
+  - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
+    obvious rectangular/straight connector artifacts in the slide-9 schema.
+  - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
+    fidelity before marking the slide-9 schema as resolved.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
   issues on the right, especially around the bottom-right content, and map them to public image/layout
   fixtures.

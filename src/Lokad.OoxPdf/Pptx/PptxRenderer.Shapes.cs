@@ -223,6 +223,61 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        if (preset == "curvedConnector3")
+        {
+            if (hasStroke)
+            {
+                bool transparentStroke = strokeAlpha < 0.999d;
+                if (transparentStroke)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(strokeAlpha, strokeAlpha);
+                }
+
+                graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+                graphics.SetLineWidth(lineWidth);
+                if (hasDash)
+                {
+                    graphics.SetLineDash(dashPattern);
+                }
+
+                if (lineCap is { } cap)
+                {
+                    graphics.SetLineCap(cap);
+                    graphics.SetLineJoin(1);
+                }
+
+                string? headArrowType = ReadLineEndType(shapeProperties, "headEnd");
+                string? tailArrowType = ReadLineEndType(shapeProperties, "tailEnd");
+                bool hasHeadArrow = IsFilledTriangleArrow(headArrowType);
+                bool hasTailArrow = IsFilledTriangleArrow(tailArrowType);
+                DrawCurvedConnector3(graphics, x, yTop, width, height, document.SlideHeightPoints, stroke, lineWidth, hasHeadArrow, hasTailArrow);
+
+                if (hasDash)
+                {
+                    graphics.ClearLineDash();
+                }
+
+                if (lineCap is not null)
+                {
+                    graphics.SetLineCap(0);
+                    graphics.SetLineJoin(0);
+                }
+
+                if (transparentStroke)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
+            if (transformed)
+            {
+                graphics.RestoreState();
+            }
+
+            return;
+        }
+
         if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
         {
             CropRect crop = ReadCrop(shapeProperties);
@@ -612,6 +667,44 @@ internal sealed partial class PptxRenderer
         c3 = Point(lineWidth * 3.74d, -lineWidth * 2.181667d);
         graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
         graphics.ClosePath();
+    }
+
+    private static void DrawCurvedConnector3(
+        PdfGraphicsBuilder graphics,
+        double x,
+        double yTop,
+        double width,
+        double height,
+        double slideHeight,
+        RgbColor stroke,
+        double lineWidth,
+        bool headArrow,
+        bool tailArrow)
+    {
+        double x1 = x;
+        double y1 = slideHeight - yTop;
+        double x2 = x + width;
+        double y2 = slideHeight - yTop - height;
+        double c1x = x2;
+        double c1y = y1;
+        double c2x = x2;
+        double c2y = y2;
+
+        graphics.MoveTo(x1, y1);
+        graphics.CurveTo(c1x, c1y, c2x, c2y, x2, y2);
+        graphics.StrokeCurrentPath();
+
+        if (headArrow)
+        {
+            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            FillLineArrowhead(graphics, x1, y1, x1 - c1x, y1 - c1y, lineWidth);
+        }
+
+        if (tailArrow)
+        {
+            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+            FillLineArrowhead(graphics, x2, y2, x2 - c2x, y2 - c2y, lineWidth);
+        }
     }
 
     private static string? ReadLineEndType(XElement shapeProperties, string elementName)
