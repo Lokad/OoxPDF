@@ -254,7 +254,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        if (preset == "curvedConnector3")
+        if (preset is "curvedConnector2" or "curvedConnector3")
         {
             if (hasStroke)
             {

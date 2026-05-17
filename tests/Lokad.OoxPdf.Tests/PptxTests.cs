@@ -422,6 +422,42 @@ internal static class PptxTests
         TestAssert.Contains("S", pdf);
     }
 
+    public static void PptxSyntheticCurvedConnector2RendersCurve()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="curvedConnector2"><a:avLst/></a:prstGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
+                        </p:spPr>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.867 0.867 0.867 RG", pdf);
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.Contains("144 468 144 396 144 396 c", pdf);
+        TestAssert.Contains("S", pdf);
+    }
+
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

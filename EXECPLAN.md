@@ -1756,6 +1756,10 @@ paths, and ExecPlan references together.
 - [ ] Private slide 17 visible remaining problem: left-side schema geometry has issues. Inventory the involved
   shapes, groups, connectors, and transforms with public-safe diagnostics, then isolate public geometry
   fixtures.
+  - [x] Inspect slide-17 geometry structurally: the broken circular loop uses four `curvedConnector2`
+    quarter-curve connectors with triangle tail arrows.
+  - [x] Add public synthetic `curvedConnector2` coverage and render it through the curved connector path
+    instead of falling back to rectangular geometry. Private page 17 now shows the loop as curved geometry.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
