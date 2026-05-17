@@ -167,6 +167,16 @@ High-priority actions:
 - [x] Port the `pptx-renderer` formula for `normAutofit @lnSpcReduction`:
   resolved paragraph line spacing now scales explicit `spcPct`/`spcPts` by
   `1 - lnSpcReduction / 100000` while preserving default line spacing behavior.
+- [x] Centralize remaining PPTX text constants behind named metric rules:
+  baseline, default line-height fallback, manual-break offsets, small caps, superscript/subscript scaling,
+  fallback advances, synthetic bold, highlight, strike, and coalescing tolerances now have one explicit
+  formula owner instead of scattered literals in flow, layout, and drawing code.
+- [x] Remove the hidden text-flow hard-coded advance escape hatch:
+  `PptxTextFlowSegment` no longer carries an arbitrary font-size factor. Hidden advances now have to be
+  measurable text in the resolved font, or they need a separately named formula in the metric-rule layer.
+- [x] Port the `pptx-renderer`/CSS superscript and subscript scale:
+  baseline-shifted runs now use `0.65x` font size instead of the previous `2/3` approximation, with a
+  synthetic PPTX unit lock.
 - [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
   offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
   probes before broad visual MAE gates.

@@ -160,8 +160,7 @@ internal sealed partial class PptxRenderer
             segment.AdvanceText,
             segment.Draw,
             segment.PreventCoalesce,
-            segment.FontScale,
-            segment.AdvanceFontSizeFactor);
+            segment.FontScale);
     }
 
     private static PptxTextFrameLayoutSnapshot ToSnapshot(PptxTextFrameLayout frame)
@@ -438,10 +437,10 @@ internal sealed partial class PptxRenderer
 
             string? bulletText = ReadBulletText(paragraph.Properties, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
-            double bulletX = frame.TextX + Math.Max(0d, paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
+            double bulletX = frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
             double paragraphTextX = bulletText is null
-                ? frame.TextX + Math.Max(0d, paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
-                : frame.TextX + Math.Max(0d, paragraphStyle.Indent.MarginLeft);
+                ? frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
+                : frame.TextX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
             if (hasPlacedParagraph)
             {
                 cursorLineTop -= paragraphStyle.SpacingBefore;
@@ -480,7 +479,7 @@ internal sealed partial class PptxRenderer
                 if (bulletPending)
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
-                    double bulletWidth = Math.Max(1d, frame.TextWidth - (bulletX - frame.TextX));
+                    double bulletWidth = PptxTextMetricRules.MinimumWidth(frame.TextWidth - (bulletX - frame.TextX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                     TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));
@@ -492,7 +491,7 @@ internal sealed partial class PptxRenderer
                     if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                        TextRun tabRun = new(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
+                        TextRun tabRun = new(" ", cursorX, cursorY, PptxTextMetricRules.MinimumWidth(tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
@@ -519,14 +518,14 @@ internal sealed partial class PptxRenderer
                         segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                     }
 
-                    if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
+                    if (currentAdvanceText.Length == 0)
                     {
                         continue;
                     }
 
                     if (flowSegment.Draw && currentSegment.Length != 0)
                     {
-                        TextRun textRun = new(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
+                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                     }
 
@@ -796,9 +795,7 @@ internal sealed partial class PptxRenderer
 
     private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, PptxTextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
     {
-        return segment.AdvanceFontSizeFactor is { } factor
-            ? Math.Max(0d, fontSize * factor)
-            : advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
+        return advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> BuildTextAtoms(TextRun run, TextAdvanceEstimator advanceEstimator, PptxTextAtomKind? forcedKind = null)
@@ -835,7 +832,7 @@ internal sealed partial class PptxRenderer
         {
             PptxTextAtomLayout last = atoms[^1];
             double delta = run.X + run.Width - (last.X + last.Width);
-            if (Math.Abs(delta) > 0.001d)
+            if (Math.Abs(delta) > PptxTextMetricRules.TextStateTolerance)
             {
                 atoms[^1] = last with { Width = Math.Max(0d, last.Width + delta) };
             }
@@ -900,6 +897,7 @@ internal sealed partial class PptxRenderer
         TextAdvanceEstimator advanceEstimator)
     {
         double advance = ReadLineAdvance(lineSpacing, maxFontSize);
+        PptxTextLineMetrics lineMetrics = ResolvePositionedLineMetrics(lineTopY, baselineY, advance);
         PptxTextSpanLayout? baselineSpan = line.Spans.FirstOrDefault();
         ResolvedRunTextStyle? baselineStyle = baselineSpan?.SourceRun?.Style;
         double baselineFontSize = baselineSpan?.Run.FontSize ?? maxFontSize;
@@ -907,11 +905,16 @@ internal sealed partial class PptxRenderer
         return new PptxTextLineBoxLayout(
             lineTopY,
             baselineY,
-            advance,
-            lineTopY - baselineY,
+            lineMetrics.LineAdvance,
+            lineMetrics.BaselineOffset,
             maxFontSize,
             lineSpacing,
             baselineMetric);
+    }
+
+    private static PptxTextLineMetrics ResolvePositionedLineMetrics(double lineTopY, double baselineY, double lineAdvance)
+    {
+        return new PptxTextLineMetrics(lineTopY - baselineY, lineAdvance, "positioned-line");
     }
 
     private static void AddAlignedParagraphLine(
@@ -966,7 +969,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)
     {
-        if (Math.Abs(offset) <= 0.001d)
+        if (Math.Abs(offset) <= PptxTextMetricRules.TextStateTolerance)
         {
             return atoms;
         }
@@ -983,7 +986,7 @@ internal sealed partial class PptxRenderer
         }
 
         double extraWidth = textWidth - Math.Max(0d, line.EndX - textX);
-        if (extraWidth <= 0.001d)
+        if (extraWidth <= PptxTextMetricRules.TextStateTolerance)
         {
             return null;
         }
@@ -1180,8 +1183,8 @@ internal sealed partial class PptxRenderer
     {
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
-        double fontSize = Math.Abs(baselineOffset) > 0.001d
-            ? nominalFontSize * 2d / 3d
+        double fontSize = Math.Abs(baselineOffset) > PptxTextMetricRules.TextStateTolerance
+            ? PptxTextMetricRules.SuperscriptSubscriptFontSize(nominalFontSize)
             : nominalFontSize;
         double alpha = 1d;
         RgbColor color;
@@ -1315,7 +1318,7 @@ internal sealed partial class PptxRenderer
             bool isSmall = char.IsLetter(character) && char.IsLower(character);
             if (currentSmall is not null && currentSmall != isSmall)
             {
-                fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? 0.8d : 1d));
+                fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? PptxTextMetricRules.SmallCapsFontScale() : 1d));
                 builder.Clear();
             }
 
@@ -1325,7 +1328,7 @@ internal sealed partial class PptxRenderer
 
         if (builder.Length > 0 && currentSmall is not null)
         {
-            fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? 0.8d : 1d));
+            fragments.Add(new TextCapsFragment(builder.ToString(), currentSmall.Value ? PptxTextMetricRules.SmallCapsFontScale() : 1d));
         }
 
         return fragments;
@@ -1351,7 +1354,7 @@ internal sealed partial class PptxRenderer
             return 1d;
         }
 
-        return Math.Clamp(int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d, 0.01d, 10d);
+        return Math.Clamp(int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d, PptxTextMetricRules.MinimumAutofitScale, PptxTextMetricRules.MaximumAutofitScale);
     }
 
     private static double ReadNormAutofitLineSpacingScale(XElement textBody)
@@ -1364,7 +1367,7 @@ internal sealed partial class PptxRenderer
             return 1d;
         }
 
-        double reductionRatio = Math.Clamp(int.Parse(reduction.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.99d);
+        double reductionRatio = Math.Clamp(int.Parse(reduction.Value, CultureInfo.InvariantCulture) / 100000d, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
         return 1d - reductionRatio;
     }
 
@@ -1399,7 +1402,7 @@ internal sealed partial class PptxRenderer
 
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
-            return referenceFontSize * Math.Max(0d, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
+            return referenceFontSize * PptxTextMetricRules.ClampNonNegative(int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d);
         }
 
         return 0d;
@@ -1441,7 +1444,7 @@ internal sealed partial class PptxRenderer
         double current = cursorX - paragraphTextX;
         foreach (double tabStop in tabStops)
         {
-            if (tabStop > current + 0.01d)
+            if (tabStop > current + PptxTextMetricRules.CoordinateTolerance)
             {
                 return paragraphTextX + tabStop;
             }
@@ -1449,7 +1452,7 @@ internal sealed partial class PptxRenderer
 
         const long defaultTabStopEmus = 914400;
         double defaultTabStop = OoxUnits.EmuToPoints(defaultTabStopEmus);
-        return paragraphTextX + Math.Ceiling((current + 0.01d) / defaultTabStop) * defaultTabStop;
+        return paragraphTextX + Math.Ceiling((current + PptxTextMetricRules.CoordinateTolerance) / defaultTabStop) * defaultTabStop;
     }
 
     private static LineSpacing ReadLineSpacing(XElement? paragraphProperties, XElement? defaultParagraphProperties)
@@ -1458,12 +1461,12 @@ internal sealed partial class PptxRenderer
             defaultParagraphProperties?.Element(DrawingNamespace + "lnSpc");
         if (spacing?.Element(DrawingNamespace + "spcPts")?.Attribute("val") is { } points)
         {
-            return LineSpacing.Absolute(Math.Max(0.1d, int.Parse(points.Value, CultureInfo.InvariantCulture) / 100d));
+            return LineSpacing.Absolute(Math.Max(PptxTextMetricRules.MinimumLineSpacing, int.Parse(points.Value, CultureInfo.InvariantCulture) / 100d));
         }
 
         if (spacing?.Element(DrawingNamespace + "spcPct")?.Attribute("val") is { } percent)
         {
-            return LineSpacing.Multiple(Math.Max(0.1d, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d), true);
+            return LineSpacing.Multiple(Math.Max(PptxTextMetricRules.MinimumLineSpacing, int.Parse(percent.Value, CultureInfo.InvariantCulture) / 100000d), true);
         }
 
         return LineSpacing.Multiple(1d, false);
@@ -1473,14 +1476,14 @@ internal sealed partial class PptxRenderer
     {
         return lineSpacing.IsExplicit
             ? lineSpacing.Resolve(fontSize)
-            : fontSize * 1.2d;
+            : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
     }
 
     private static double ReadLineAdvance(LineSpacing lineSpacing, double fontSize)
     {
         return lineSpacing.IsExplicit
             ? lineSpacing.Resolve(fontSize)
-            : fontSize <= 12d ? fontSize : fontSize * 1.2d;
+            : fontSize <= PptxTextMetricRules.SmallTextNaturalLineHeightLimit ? fontSize : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
     }
 
     private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator)
@@ -1499,7 +1502,7 @@ internal sealed partial class PptxRenderer
 
     private static double ReadManualBreakLineAdvance(LineSpacing lineSpacing, double fontSize)
     {
-        return lineSpacing.IsExplicit ? ReadLineAdvance(lineSpacing, fontSize) : fontSize * 1.24d;
+        return lineSpacing.IsExplicit ? ReadLineAdvance(lineSpacing, fontSize) : fontSize * PptxTextMetricRules.OfficeManualBreakDefaultLineHeightFallback;
     }
 
     private static double ReadFirstParagraphFontSize(XElement paragraph, XElement? defaultRunProperties)
@@ -1538,11 +1541,11 @@ internal sealed partial class PptxRenderer
     {
         if (lineSpacing.IsAbsolute)
         {
-            return Math.Max(BaselineOffset(fontSize), lineSpacing.Value - fontSize * 0.374d);
+            return Math.Max(BaselineOffset(fontSize), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
         }
 
         return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize) - fontSize * 0.234d
+            ? lineSpacing.Resolve(fontSize) - fontSize * PptxTextMetricRules.ExplicitLineBaselineGapFallback
             : BaselineOffset(fontSize);
     }
 
@@ -1550,23 +1553,22 @@ internal sealed partial class PptxRenderer
     {
         if (lineSpacing.IsAbsolute)
         {
-            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator), lineSpacing.Value - fontSize * 0.374d);
+            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
         }
 
         return lineSpacing.IsExplicit
-            ? lineSpacing.Resolve(fontSize) - fontSize * 0.234d
+            ? lineSpacing.Resolve(fontSize) - fontSize * PptxTextMetricRules.ExplicitLineBaselineGapFallback
             : BaselineOffset(fontSize, style, advanceEstimator);
     }
 
     private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing)
     {
-        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing) : fontSize * 0.9344d;
+        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
     }
 
     private static double BaselineOffset(double fontSize)
     {
-        const double baselineOffsetFactor = 0.974d;
-        return fontSize * baselineOffsetFactor;
+        return fontSize * PptxTextMetricRules.OfficeBaselineFallback;
     }
 
     private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
@@ -1589,10 +1591,10 @@ internal sealed partial class PptxRenderer
             return BaselineOffset(fontSize);
         }
 
-        double metricRatio = Math.Clamp(ascenderRatio, 0.75d, 1.05d);
-        if (fontSize >= 24d)
+        double metricRatio = Math.Clamp(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio, PptxTextMetricRules.MaximumBaselineMetricRatio);
+        if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
         {
-            metricRatio = Math.Max(0.974d, metricRatio);
+            metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
         }
 
         return fontSize * metricRatio;
@@ -1600,7 +1602,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
     {
-        const double fallbackRatio = 0.974d;
+        const double fallbackRatio = PptxTextMetricRules.OfficeBaselineFallback;
         if (style is null)
         {
             return new PptxTextBaselineMetricLayout("Fallback", null, false, false, fontSize, fallbackRatio, 0, 0, 0, 0, 0, 0);
@@ -1615,9 +1617,9 @@ internal sealed partial class PptxRenderer
 
         double ascenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
         double ratio = ascenderRatio > 0d
-            ? Math.Clamp(ascenderRatio, 0.75d, 1.05d)
+            ? Math.Clamp(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio, PptxTextMetricRules.MaximumBaselineMetricRatio)
             : fallbackRatio;
-        if (fontSize >= 24d)
+        if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }

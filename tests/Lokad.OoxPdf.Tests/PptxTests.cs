@@ -892,7 +892,6 @@ internal static class PptxTests
             .SelectMany(run => run.Segments)
             .Single(segment => segment.Kind == "HiddenAdvance");
         TestAssert.Equal("\u202F", hiddenAdvance.AdvanceText);
-        TestAssert.True(hiddenAdvance.AdvanceFontSizeFactor is null, "Expected narrow no-break space advance to come from font metrics, not a fixed font-size factor.");
     }
 
     public static void PptxSyntheticTextBoxTreatsNoBreakSpaceAsHiddenRegularSpaceAdvance()
@@ -1373,6 +1372,42 @@ internal static class PptxTests
         TestAssert.Contains("24 Tf", pdf);
         TestAssert.Contains("19.2 Tf", pdf);
         TestAssert.True(CountOccurrences(pdf, " TJ") >= 3, "Expected small-caps text to split into full-size and scaled positioned text runs.");
+    }
+
+    public static void PptxSyntheticTextBoxRendersBaselineShiftWithCssScale()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Base</a:t></a:r><a:r><a:rPr sz="2400" baseline="30000"><a:latin typeface="Arial"/></a:rPr><a:t>2</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("24 Tf", pdf);
+        TestAssert.Contains("15.6 Tf", pdf);
     }
 
     public static void PptxSyntheticTextBoxCentersMixedRunsTogether()

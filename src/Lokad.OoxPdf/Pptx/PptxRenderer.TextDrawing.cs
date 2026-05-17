@@ -219,19 +219,19 @@ internal sealed partial class PptxRenderer
 
     private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight = true)
     {
-        return Math.Abs(left.Y - right.Y) < 0.01d &&
-            Math.Abs(left.FontSize - right.FontSize) < 0.01d &&
-            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < 0.01d &&
-            Math.Abs(left.BaselineOffset - right.BaselineOffset) < 0.01d &&
-            Math.Abs(left.RotationDegrees - right.RotationDegrees) < 0.01d &&
-            Math.Abs(left.RotationCenterX - right.RotationCenterX) < 0.01d &&
-            Math.Abs(left.RotationCenterY - right.RotationCenterY) < 0.01d &&
-            Math.Abs(left.ClipX - right.ClipX) < 0.01d &&
-            Math.Abs(left.ClipY - right.ClipY) < 0.01d &&
-            Math.Abs(left.ClipWidth - right.ClipWidth) < 0.01d &&
-            Math.Abs(left.ClipHeight - right.ClipHeight) < 0.01d &&
+        return Math.Abs(left.Y - right.Y) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.BaselineOffset - right.BaselineOffset) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.RotationDegrees - right.RotationDegrees) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.RotationCenterX - right.RotationCenterX) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.RotationCenterY - right.RotationCenterY) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.ClipX - right.ClipX) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.ClipY - right.ClipY) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.ClipWidth - right.ClipWidth) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.ClipHeight - right.ClipHeight) < PptxTextMetricRules.CoordinateTolerance &&
             left.Color.Equals(right.Color) &&
-            Math.Abs(left.Alpha - right.Alpha) < 0.001d &&
+            Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
             (!compareHighlight || left.HighlightColor.Equals(right.HighlightColor)) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
@@ -243,7 +243,7 @@ internal sealed partial class PptxRenderer
             left.Alignment == right.Alignment &&
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             right.X >= left.X &&
-            Math.Abs(right.X - (left.X + left.Width)) < Math.Max(1d, left.FontSize * 0.2d);
+            Math.Abs(right.X - (left.X + left.Width)) < PptxTextMetricRules.TextCoalesceGap(left.FontSize);
     }
 
     private static void DrawHighlightRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)
@@ -412,12 +412,12 @@ internal sealed partial class PptxRenderer
             NearlyEqual(left.RotationDegrees, right.RotationDegrees) &&
             NearlyEqual(left.RotationCenterX, right.RotationCenterX) &&
             NearlyEqual(left.RotationCenterY, right.RotationCenterY) &&
-            Math.Abs((left.X + left.Width) - right.X) <= Math.Max(1d, left.FontSize * 0.08d);
+            Math.Abs((left.X + left.Width) - right.X) <= PptxTextMetricRules.UnderlineCoalesceGap(left.FontSize);
     }
 
     private static bool NearlyEqual(double left, double right)
     {
-        return Math.Abs(left - right) <= 0.001d;
+        return Math.Abs(left - right) <= PptxTextMetricRules.TextStateTolerance;
     }
 
     private static string FontKey(TextRun run)
@@ -429,7 +429,7 @@ internal sealed partial class PptxRenderer
     private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)
     {
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
         {
             ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
         }
@@ -438,7 +438,7 @@ internal sealed partial class PptxRenderer
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
-            bool transparentText = run.Alpha < 0.999d;
+            bool transparentText = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance;
             if (transparentText)
             {
                 graphics.SaveState();
@@ -448,14 +448,14 @@ internal sealed partial class PptxRenderer
             DrawGlyphText(graphics, glyphRun);
             if (syntheticBold)
             {
-                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + 0.35d });
+                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + PptxTextMetricRules.SyntheticBoldOffset() });
             }
 
             if (run.Underline)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-                double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+                double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
                 double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
                 graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
             }
@@ -463,7 +463,7 @@ internal sealed partial class PptxRenderer
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                graphics.FillRectangle(glyphRun.X, glyphRun.BaselineY + run.FontSize * 0.211d, glyphRun.Width, Math.Max(0.5d, run.FontSize * 0.05d));
+                graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
             }
 
             if (transparentText)
@@ -479,7 +479,7 @@ internal sealed partial class PptxRenderer
     {
         TextRun run = span.Run;
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
         {
             ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
         }
@@ -488,7 +488,7 @@ internal sealed partial class PptxRenderer
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
-            bool transparentText = run.Alpha < 0.999d;
+            bool transparentText = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance;
             if (transparentText)
             {
                 graphics.SaveState();
@@ -498,14 +498,14 @@ internal sealed partial class PptxRenderer
             DrawGlyphText(graphics, glyphRun);
             if (syntheticBold)
             {
-                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + 0.35d });
+                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + PptxTextMetricRules.SyntheticBoldOffset() });
             }
 
             if (run.Underline)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-                double underlineThickness = Math.Max(0.5d, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+                double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
                 double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
                 graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
             }
@@ -513,7 +513,7 @@ internal sealed partial class PptxRenderer
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                graphics.FillRectangle(glyphRun.X, glyphRun.BaselineY + run.FontSize * 0.211d, glyphRun.Width, Math.Max(0.5d, run.FontSize * 0.05d));
+                graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
             }
 
             if (transparentText)
@@ -595,7 +595,7 @@ internal sealed partial class PptxRenderer
             if (i > 0)
             {
                 double adjustment = span.FontSize <= 0d ? 0d : -glyph.AdjustmentBefore * 1000d / span.FontSize;
-                if (Math.Abs(adjustment) > 0.001d)
+                if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
                 {
                     builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
                     hasPositioning = true;
@@ -671,7 +671,7 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        if (Math.Abs(run.RotationDegrees) > 0.001d)
+        if (Math.Abs(run.RotationDegrees) > PptxTextMetricRules.TextStateTolerance)
         {
             ApplyTextRotation(graphics, run.RotationDegrees, run.RotationCenterX, run.RotationCenterY);
         }
@@ -679,8 +679,8 @@ internal sealed partial class PptxRenderer
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
         double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
-        double highlightY = baselineY - (embedded.Font.Os2.WindowsDescender + 32d) * fontScale;
-        double highlightHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+        double highlightY = PptxTextMetricRules.HighlightY(embedded, baselineY, fontScale);
+        double highlightHeight = PptxTextMetricRules.HighlightHeight(embedded, fontScale);
         graphics.FillRectangle(run.X, highlightY, lineWidth, highlightHeight);
         graphics.RestoreState();
     }

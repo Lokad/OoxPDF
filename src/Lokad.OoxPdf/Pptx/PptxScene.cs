@@ -77,8 +77,7 @@ internal sealed record PptxTextFlowSegmentSnapshot(
     string AdvanceText,
     bool Draw,
     bool PreventCoalesce,
-    double FontScale,
-    double? AdvanceFontSizeFactor);
+    double FontScale);
 
 internal sealed record PptxTextLayoutSnapshot(IReadOnlyList<PptxTextFrameLayoutSnapshot> Frames);
 

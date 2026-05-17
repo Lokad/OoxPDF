@@ -102,14 +102,15 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
+    private readonly record struct PptxTextLineMetrics(double BaselineOffset, double LineAdvance, string Source);
+
     private readonly record struct PptxTextFlowSegment(
         string Text,
         string AdvanceText,
         PptxTextFlowSegmentKind Kind,
         bool Draw,
         bool PreventCoalesce,
-        double FontScale = 1d,
-        double? AdvanceFontSizeFactor = null);
+        double FontScale = 1d);
 
     private readonly record struct ResolvedParagraphTextStyle(
         TextAlignment Alignment,
@@ -393,7 +394,7 @@ internal sealed partial class PptxRenderer
             if (font is null)
             {
                 int fallbackRuneCount = text.EnumerateRunes().Count();
-                return Math.Max(0d, text.Length * fontSize * 0.42d + Math.Max(0, fallbackRuneCount - 1) * characterSpacing);
+                return PptxTextMetricRules.FallbackAdvanceWidth(text.Length, fallbackRuneCount, fontSize, characterSpacing);
             }
 
             double units = 0d;
@@ -450,6 +451,70 @@ internal sealed partial class PptxRenderer
         Center,
         Right,
         Justify
+    }
+
+    private static class PptxTextMetricRules
+    {
+        public const double CoordinateTolerance = 0.01d;
+        public const double TextStateTolerance = 0.001d;
+        public const double MinimumDrawableDimension = 1d;
+        public const double MinimumStrokeWidth = 0.5d;
+        public const double CssSuperscriptSubscriptScale = 0.65d;
+        public const double CssNormalLineHeightFallback = 1.2d;
+        public const double SmallTextNaturalLineHeightLimit = 12d;
+        public const double OfficeManualBreakDefaultLineHeightFallback = 1.24d;
+        public const double OfficeManualBreakBaselineFallback = 0.9344d;
+        public const double OfficeBaselineFallback = 0.974d;
+        public const double MinimumBaselineMetricRatio = 0.75d;
+        public const double MaximumBaselineMetricRatio = 1.05d;
+        public const double LargeTextBaselineMinimumFontSize = 24d;
+        public const double AbsoluteLineBaselineGapFallback = 0.374d;
+        public const double ExplicitLineBaselineGapFallback = 0.234d;
+        public const double MinimumLineSpacing = 0.1d;
+        public const double MinimumAutofitScale = 0.01d;
+        public const double MaximumAutofitScale = 10d;
+        public const double MaximumLineSpacingReduction = 0.99d;
+        public const double SmallCapsFallbackScale = 0.8d;
+        public const double SyntheticBoldOffsetPoints = 0.35d;
+        public const double StrikePositionFallback = 0.211d;
+        public const double StrikeThicknessFallback = 0.05d;
+        public const double HighlightDescenderPaddingFontUnits = 32d;
+        public const double AdjacentTextCoalesceGapFontScale = 0.2d;
+        public const double AdjacentUnderlineCoalesceGapFontScale = 0.08d;
+        public const double FallbackAdvanceWidthScale = 0.42d;
+
+        public static double ClampNonNegative(double value) => Math.Max(0d, value);
+
+        public static double MinimumWidth(double width) => Math.Max(MinimumDrawableDimension, width);
+
+        public static double SuperscriptSubscriptFontSize(double nominalFontSize) => nominalFontSize * CssSuperscriptSubscriptScale;
+
+        public static double SmallCapsFontScale() => SmallCapsFallbackScale;
+
+        public static double SyntheticBoldOffset() => SyntheticBoldOffsetPoints;
+
+        public static double StrikeY(double baselineY, double fontSize) => baselineY + fontSize * StrikePositionFallback;
+
+        public static double StrikeThickness(double fontSize) => Math.Max(MinimumStrokeWidth, fontSize * StrikeThicknessFallback);
+
+        public static double HighlightY(PdfEmbeddedFont embedded, double baselineY, double fontScale)
+        {
+            return baselineY - (embedded.Font.Os2.WindowsDescender + HighlightDescenderPaddingFontUnits) * fontScale;
+        }
+
+        public static double HighlightHeight(PdfEmbeddedFont embedded, double fontScale)
+        {
+            return (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+        }
+
+        public static double TextCoalesceGap(double fontSize) => Math.Max(MinimumDrawableDimension, fontSize * AdjacentTextCoalesceGapFontScale);
+
+        public static double UnderlineCoalesceGap(double fontSize) => Math.Max(MinimumDrawableDimension, fontSize * AdjacentUnderlineCoalesceGapFontScale);
+
+        public static double FallbackAdvanceWidth(int codeUnitCount, int runeCount, double fontSize, double characterSpacing)
+        {
+            return Math.Max(0d, codeUnitCount * fontSize * FallbackAdvanceWidthScale + Math.Max(0, runeCount - 1) * characterSpacing);
+        }
     }
 
     private enum TextVerticalAnchor
