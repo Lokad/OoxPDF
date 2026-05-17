@@ -450,7 +450,10 @@ internal sealed partial class PptxRenderer
         Left,
         Center,
         Right,
-        Justify
+        Justify,
+        Distributed,
+        JustLow,
+        ThaiDistributed
     }
 
     private static class PptxTextMetricRules

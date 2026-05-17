@@ -2001,6 +2001,42 @@ internal static class PptxTests
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");
     }
 
+    public static void PptxAlignmentValuesKeepDistinctOfficeTextDistributionModes()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-alignment-values-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, 0);
+        string[] alignments = flow.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .Select(paragraph => paragraph.Alignment)
+            .ToArray();
+
+        string alignmentList = string.Join("|", alignments);
+        TestAssert.Contains("Justify", alignmentList);
+        TestAssert.Contains("Distributed", alignmentList);
+        TestAssert.Contains("JustLow", alignmentList);
+        TestAssert.Contains("ThaiDistributed", alignmentList);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextLineLayoutSnapshot distributed = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .First(line => line.Alignment == "Distributed");
+
+        TestAssert.True(distributed.Spans.Count > 10, "Expected distributed alignment to own per-glyph positioned spans.");
+        TestAssert.True(distributed.Spans.All(span => span.Text.Length <= 2), "Expected distributed alignment to avoid word-level spans that hide letter spacing.");
+        TestAssert.True(distributed.EndX - distributed.Spans.Last().X > distributed.Spans.Last().Width, "Expected distributed alignment to stretch glyph positions across the text frame.");
+    }
+
     public static void PptxTypographyTextHyphenBoundariesRemainSeparateSpans()
     {
         string input = Path.GetFullPath(Path.Combine(

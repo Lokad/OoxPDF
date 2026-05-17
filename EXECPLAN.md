@@ -1445,6 +1445,18 @@ paths, and ExecPlan references together.
   `pptx-ladder-04-typography-capital-spacing-probe` and
   `pptx-ladder-04-typography-boundary-invariance-probe` now enforce Office PDF text-operation parity at
   `0.05pt`; the accented probe remains a targeted gap for font fallback and combining-mark handling.
+- [x] Isolate the private slide-3 XML locally and keep only public-safe structural findings in the work
+  log. The source text does not contain the visible parasite capital/accent spaces, so the defect is in
+  renderer layout/emission rather than private document content.
+- [x] Add public slide-3-inspired typography probes:
+  `pptx-ladder-04-typography-alignment-values-probe` covers `just`, `dist`, `justLow`, and `thaiDist`;
+  `pptx-ladder-04-typography-cambria-math-run-boundaries-probe` covers mixed highlighted Cambria Math runs;
+  `pptx-ladder-04-typography-slide3-narrow-cambria-probe` covers narrow wrapped Cambria Math columns.
+- [x] Split PPTX alignment handling so `dist`, `justLow`, and `thaiDist` remain observable text-flow modes
+  instead of collapsing into `Justify`. Office-style distributed Latin text now uses positioned per-glyph
+  spans, while `justLow` and `thaiDist` use word-spacing justification for Latin text.
+- [ ] Tighten the slide-3-inspired Cambria probes next: compare Office and candidate line breaks, `TJ`
+  arrays, highlight rectangles, and font metrics before rerunning the private deck.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
   and text matrices against Office for simple lines before accepting near-pixel raster gates.
 - [x] Extend `PdfInspect` with `text-operations.json` output so public typography cases can compare Office

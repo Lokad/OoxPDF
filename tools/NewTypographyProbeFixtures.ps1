@@ -82,7 +82,11 @@ function New-TypographyProbe {
         [string] $Id,
 
         [Parameter(Mandatory = $true)]
-        [string] $TextBody
+        [string] $TextBody,
+
+        [string] $Transform = '<a:xfrm><a:off x="822960" y="685800"/><a:ext cx="7498080" cy="5486400"/></a:xfrm>',
+
+        [string] $BodyPr = '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>'
     )
 
     $slide = @"
@@ -96,13 +100,13 @@ function New-TypographyProbe {
       <p:sp>
         <p:nvSpPr><p:cNvPr id="2" name="$Id"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
         <p:spPr>
-          <a:xfrm><a:off x="822960" y="685800"/><a:ext cx="7498080" cy="5486400"/></a:xfrm>
+          $Transform
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
           <a:noFill/>
           <a:ln><a:noFill/></a:ln>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>
+          $BodyPr
           <a:lstStyle/>
 $TextBody
         </p:txBody>
@@ -235,6 +239,30 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-justify-port" -TextBody @'
           <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph one aligned justify. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</a:t></a:r></a:p>
           <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph two aligned justify. Demand planning text should distribute word spacing across wrapped lines while preserving the final visual line.</a:t></a:r></a:p>
           <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Calibri"/></a:rPr><a:t>Paragraph three aligned justify. The last visual line should remain left aligned like PowerPoint even when earlier lines expand spaces.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-alignment-values-probe" -TextBody @'
+          <a:p><a:pPr algn="just"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Just alignment should stretch spaces between words but must never insert extra spacing between letters.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="dist"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Distributed alignment with Latin text should not produce parasite letter spacing inside words.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="justLow"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Low justify alignment with Latin text should preserve normal glyph advances inside each word.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="thaiDist"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Thai distributed alignment on Latin text should be isolated from regular word layout behavior.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe -Id "pptx-ladder-04-typography-cambria-math-run-boundaries-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The scale and growth of </a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>XXXXXX</a:t></a:r><a:r><a:rPr sz="1800"><a:latin typeface="Cambria Math"/></a:rPr><a:t> supply network induces inefficiencies that compound over time.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1400" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large Global Supply Network implies structural inefficiencies and external volatility</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Client operates production facilities across countries, producing units annually. The sheer scale of this activity leads to inefficiencies that compound over time.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-slide3-narrow-cambria-probe" `
+    -Transform '<a:xfrm><a:off x="775665" y="1466572"/><a:ext cx="3371526" cy="1923604"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square"/>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1400" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Large Global Supply Network means strategic constraints and operational volatility</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Inventory Optimization and Planning depend on local decisions across locations. The </a:t></a:r><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/><a:highlight><a:srgbClr val="FFF200"/></a:highlight></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" b="1" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> workflow must keep words readable without parasite letter spacing.</a:t></a:r></a:p>
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>The key to reducing internal inefficiencies is in optimizing decisions despite external uncertainties.</a:t></a:r></a:p>
 '@
 
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

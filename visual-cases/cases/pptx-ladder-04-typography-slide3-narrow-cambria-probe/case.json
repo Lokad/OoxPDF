@@ -1,0 +1,14 @@
+{
+  "id": "pptx-ladder-04-typography-slide3-narrow-cambria-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-slide3-narrow-cambria-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "spacing", "cambria", "run-boundaries", "highlight", "slide3", "probe"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true
+  },
+  "allowedUnsupportedFeatures": []
+}

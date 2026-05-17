@@ -456,7 +456,7 @@ internal sealed partial class PptxRenderer
                 PptxTextRunModel modelRun = flowRun.Source;
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, advanceEstimator);
+                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: false, advanceEstimator);
                     cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
@@ -507,7 +507,7 @@ internal sealed partial class PptxRenderer
                             (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
                     if (overflowsLine)
                     {
-                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify, advanceEstimator);
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                         cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
                         cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
                         cursorX = paragraphTextX;
@@ -534,7 +534,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, advanceEstimator);
+            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
@@ -925,6 +925,7 @@ internal sealed partial class PptxRenderer
         double textX,
         double textWidth,
         bool justify,
+        bool distribute,
         TextAdvanceEstimator advanceEstimator)
     {
         if (line.Spans.Count == 0)
@@ -947,6 +948,16 @@ internal sealed partial class PptxRenderer
             if (justified is not null)
             {
                 lines.Add(justified);
+                return;
+            }
+        }
+
+        if (distribute && paragraphWidth > 0d && paragraphWidth < textWidth)
+        {
+            PptxTextLineLayout? distributed = TryDistributeLine(line, box, textX, textWidth);
+            if (distributed is not null)
+            {
+                lines.Add(distributed);
                 return;
             }
         }
@@ -975,6 +986,11 @@ internal sealed partial class PptxRenderer
         }
 
         return atoms.Select(atom => atom with { X = atom.X + offset }).ToArray();
+    }
+
+    private static bool IsWordJustifiedAlignment(TextAlignment alignment)
+    {
+        return alignment is TextAlignment.Justify or TextAlignment.JustLow or TextAlignment.ThaiDistributed;
     }
 
     private static PptxTextLineLayout? TryJustifyLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth, TextAdvanceEstimator advanceEstimator)
@@ -1020,6 +1036,75 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextLineLayout(box, textX, textX + textWidth, TextAlignment.Justify, spans);
+    }
+
+    private static PptxTextLineLayout? TryDistributeLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth)
+    {
+        int glyphCount = line.Spans.Sum(span => span.GlyphSpan.Glyphs.Count);
+        if (glyphCount <= 1)
+        {
+            return null;
+        }
+
+        double extraWidth = textWidth - Math.Max(0d, line.EndX - textX);
+        if (extraWidth <= PptxTextMetricRules.TextStateTolerance)
+        {
+            return null;
+        }
+
+        double extraPerGlyphGap = extraWidth / (glyphCount - 1);
+        double cursor = textX;
+        int globalGlyphIndex = 0;
+        var spans = new List<PptxTextSpanLayout>(glyphCount);
+        foreach (PptxTextSpanLayout span in line.Spans)
+        {
+            TextElementEnumerator elements = StringInfo.GetTextElementEnumerator(span.Run.Text);
+            foreach (PptxTextGlyphLayout glyph in span.GlyphSpan.Glyphs)
+            {
+                if (!elements.MoveNext())
+                {
+                    return null;
+                }
+
+                string text = elements.GetTextElement();
+                cursor += glyph.AdjustmentBefore;
+                TextRun glyphRun = span.Run with
+                {
+                    Text = text,
+                    X = cursor,
+                    Width = glyph.Advance,
+                    CharacterSpacing = 0d,
+                    Alignment = TextAlignment.Left,
+                    PreventCoalesce = true
+                };
+                var glyphSpan = new PptxTextGlyphSpanLayout(
+                    text,
+                    span.GlyphSpan.Typeface,
+                    span.GlyphSpan.Bold,
+                    span.GlyphSpan.Italic,
+                    span.GlyphSpan.FontSize,
+                    0d,
+                    span.GlyphSpan.KerningEnabled,
+                    glyph.Advance,
+                    glyph.Advance,
+                    [glyph with { AdjustmentBefore = 0d }]);
+                spans.Add(span with
+                {
+                    Run = glyphRun,
+                    EndX = cursor + glyph.Advance,
+                    Atoms = [new PptxTextAtomLayout(char.IsWhiteSpace(text, 0) ? PptxTextAtomKind.Space : PptxTextAtomKind.Word, text, cursor, glyph.Advance, Draw: true)],
+                    GlyphSpan = glyphSpan
+                });
+
+                cursor += glyph.Advance;
+                if (++globalGlyphIndex < glyphCount)
+                {
+                    cursor += extraPerGlyphGap;
+                }
+            }
+        }
+
+        return new PptxTextLineLayout(box, textX, textX + textWidth, TextAlignment.Distributed, spans);
     }
 
     private static IEnumerable<PptxTextSpanLayout> SplitJustifiedWordSpans(PptxTextSpanLayout span, TextAdvanceEstimator advanceEstimator)
