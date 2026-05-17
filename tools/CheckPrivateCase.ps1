@@ -19,9 +19,18 @@ function Test-UnderDirectory([string] $Path, [string] $Directory) {
 }
 
 function Test-GitTracked([string] $Path) {
-    $relative = [System.IO.Path]::GetRelativePath($repoRoot, $Path)
-    git -C $repoRoot ls-files --error-unmatch -- $relative *> $null
-    return $LASTEXITCODE -eq 0
+    $fullPath = [System.IO.Path]::GetFullPath($Path)
+    $fullRoot = [System.IO.Path]::GetFullPath($repoRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $relative = $fullPath.Substring($fullRoot.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        git -C $repoRoot ls-files --error-unmatch -- $relative *> $null
+        return $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 }
 
 function Assert-PrivateUntracked([string] $Path, [string] $Label) {

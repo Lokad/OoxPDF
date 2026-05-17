@@ -32,12 +32,18 @@ internal static class TestRunner
         bool onlySlow = args.Contains("--only-slow", StringComparer.Ordinal);
         bool list = args.Contains("--list", StringComparer.Ordinal);
         string? group = ReadOption(args, "--group");
+        string? name = ReadOption(args, "--test");
 
         foreach (TestCase testCase in tests)
         {
             Action test = testCase.Action;
             bool isSlow = SlowTests.Contains(test.Method.Name);
             if (group is not null && !string.Equals(testCase.Group, group, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (name is not null && !test.Method.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

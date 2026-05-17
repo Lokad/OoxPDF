@@ -679,8 +679,9 @@ internal sealed partial class PptxRenderer
         graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
         double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
-        double highlightY = PptxTextMetricRules.HighlightY(embedded, baselineY, fontScale);
-        double highlightHeight = PptxTextMetricRules.HighlightHeight(embedded, fontScale);
+        double highlightDescent = PptxTextMetricRules.HighlightDescent(embedded, run.FontSize, fontScale);
+        double highlightHeight = PptxTextMetricRules.HighlightHeight(embedded, run.FontSize, fontScale);
+        double highlightY = baselineY - highlightDescent;
         graphics.FillRectangle(run.X, highlightY, lineWidth, highlightHeight);
         graphics.RestoreState();
     }

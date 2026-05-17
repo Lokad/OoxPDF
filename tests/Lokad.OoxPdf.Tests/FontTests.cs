@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text;
 using Lokad.OoxPdf.Fonts;
+using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -150,27 +152,35 @@ internal static class FontTests
         return false;
     }
 
-    public static void WindowsFontResolverMapsCambriaMathToCambria()
+    public static void WindowsFontResolverKeepsExactMathCollectionFace()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
         if (!Directory.Exists(fontsDirectory) ||
-            !Directory.EnumerateFiles(fontsDirectory, "cambria*.ttf", SearchOption.TopDirectoryOnly).Any())
+            !Directory.EnumerateFiles(fontsDirectory, "*.ttc", SearchOption.TopDirectoryOnly).Any())
         {
             return;
         }
 
         var resolver = new WindowsFontResolver(fontsDirectory);
-        FontResolution resolved = resolver.Resolve(new FontRequest("Cambria Math"));
+        FontResolution? mathFace = resolver.GetDiscoveredFonts()
+            .FirstOrDefault(f => f.HasMathTable && f.FontFilePath is not null && f.FontFilePath.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase));
+        if (mathFace is null)
+        {
+            return;
+        }
 
-        TestAssert.Equal("Cambria", resolved.FamilyName);
+        FontResolution resolved = resolver.Resolve(new FontRequest(mathFace.FamilyName));
+
         TestAssert.NotNull(resolved.FontFilePath);
+        TestAssert.True(resolved.HasMathTable, "Expected exact font resolution to keep the requested math-table face.");
+        TestAssert.Equal(mathFace.FontFilePath, resolved.FontFilePath);
+        TestAssert.True(!resolved.IsFallback, "Expected exact font resolution not to be marked as fallback.");
     }
 
-    public static void WindowsFontResolverMapsAptosThemeFontsToCalibri()
+    public static void WindowsFontResolverUsesMetadataRatherThanFontNameAliases()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
-        if (!Directory.Exists(fontsDirectory) ||
-            !Directory.EnumerateFiles(fontsDirectory, "calibri*.ttf", SearchOption.TopDirectoryOnly).Any())
+        if (!Directory.Exists(fontsDirectory))
         {
             return;
         }
@@ -179,10 +189,73 @@ internal static class FontTests
         FontResolution display = resolver.Resolve(new FontRequest("Aptos Display"));
         FontResolution body = resolver.Resolve(new FontRequest("Aptos"));
 
-        TestAssert.Equal("Calibri Light", display.FamilyName);
-        TestAssert.Equal("Calibri", body.FamilyName);
         TestAssert.NotNull(display.FontFilePath);
         TestAssert.NotNull(body.FontFilePath);
+        if (!resolver.GetDiscoveredFonts().Any(f => f.FamilyName.Equals("Aptos Display", StringComparison.OrdinalIgnoreCase)))
+        {
+            TestAssert.True(
+                !display.FamilyName.Equals("Calibri Light", StringComparison.OrdinalIgnoreCase),
+                "Expected missing display font resolution to avoid font-name aliases.");
+        }
+
+        if (!resolver.GetDiscoveredFonts().Any(f => f.FamilyName.Equals("Aptos", StringComparison.OrdinalIgnoreCase)))
+        {
+            TestAssert.True(
+                !body.FamilyName.Equals("Calibri", StringComparison.OrdinalIgnoreCase),
+                "Expected missing body font resolution to avoid font-name aliases.");
+        }
+    }
+
+    public static void WindowsFontResolverDiscoversMicrosoftCloudFonts()
+    {
+        string cloudFonts = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Microsoft",
+            "FontCache",
+            "4",
+            "CloudFonts");
+        if (!Directory.Exists(cloudFonts) ||
+            !Directory.EnumerateFiles(cloudFonts, "*.ttf", SearchOption.AllDirectories).Any())
+        {
+            return;
+        }
+
+        var resolver = new WindowsFontResolver();
+        IReadOnlyList<FontResolution> fonts = resolver.GetDiscoveredFonts();
+
+        TestAssert.True(
+            fonts.Any(f => f.FontFilePath is not null && f.FontFilePath.StartsWith(cloudFonts, StringComparison.OrdinalIgnoreCase)),
+            "Expected the default Windows resolver to scan Microsoft cloud font cache directories.");
+    }
+
+    public static void PdfEmbeddedFontWidthsCoverEncodedGlyphs()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string cambriaCollection = Path.Combine(fontsDirectory, "cambria.ttc");
+        if (!File.Exists(cambriaCollection))
+        {
+            return;
+        }
+
+        byte[] bytes = File.ReadAllBytes(cambriaCollection);
+        if (OpenTypeFont.GetCollectionFontCount(bytes) < 2)
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(bytes, 1);
+        ushort glyph = font.MapCodePoint('h');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, "The scale".EnumerateRunes().Select(rune => rune.Value));
+        string positioning = TestAssert.NotNull(embedded.EncodeGlyphPositioningArray("The scale", 0d, 18d, forcePositioningArray: true));
+        string widths = embedded.BuildWidthArray();
+
+        TestAssert.Contains($"<{glyph:X4}>", positioning);
+        TestAssert.Contains(glyph.ToString(CultureInfo.InvariantCulture) + " [", widths);
     }
 
     public static void OpenTypeParserLoadsTrueTypeCollections()

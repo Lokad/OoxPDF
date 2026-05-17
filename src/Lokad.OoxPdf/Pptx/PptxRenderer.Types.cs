@@ -464,7 +464,6 @@ internal sealed partial class PptxRenderer
         public const double MinimumStrokeWidth = 0.5d;
         public const double CssSuperscriptSubscriptScale = 0.65d;
         public const double CssNormalLineHeightFallback = 1.2d;
-        public const double HighlightRunTrackingFontScale = -0.003d;
         public const double OfficeManualBreakDefaultLineHeightFallback = 1.24d;
         public const double OfficeManualBreakBaselineFallback = 0.9344d;
         public const double OfficeBaselineFallback = 0.974d;
@@ -482,9 +481,12 @@ internal sealed partial class PptxRenderer
         public const double StrikePositionFallback = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
+        public const double HighlightMaximumDescentFontScale = 0.23d;
+        public const double HighlightMaximumHeightFontScale = 1.18d;
         public const double AdjacentTextCoalesceGapFontScale = 0.2d;
         public const double AdjacentUnderlineCoalesceGapFontScale = 0.08d;
         public const double FallbackAdvanceWidthScale = 0.42d;
+        public const int ShapeAutoFitSearchIterations = 10;
 
         public static double ClampNonNegative(double value) => Math.Max(0d, value);
 
@@ -500,14 +502,16 @@ internal sealed partial class PptxRenderer
 
         public static double StrikeThickness(double fontSize) => Math.Max(MinimumStrokeWidth, fontSize * StrikeThicknessFallback);
 
-        public static double HighlightY(PdfEmbeddedFont embedded, double baselineY, double fontScale)
+        public static double HighlightDescent(PdfEmbeddedFont embedded, double fontSize, double fontScale)
         {
-            return baselineY - (embedded.Font.Os2.WindowsDescender + HighlightDescenderPaddingFontUnits) * fontScale;
+            double metricDescent = (embedded.Font.Os2.WindowsDescender + HighlightDescenderPaddingFontUnits) * fontScale;
+            return Math.Min(metricDescent, fontSize * HighlightMaximumDescentFontScale);
         }
 
-        public static double HighlightHeight(PdfEmbeddedFont embedded, double fontScale)
+        public static double HighlightHeight(PdfEmbeddedFont embedded, double fontSize, double fontScale)
         {
-            return (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+            double metricHeight = (embedded.Font.Os2.WindowsAscender + embedded.Font.Os2.WindowsDescender) * fontScale;
+            return Math.Min(metricHeight, fontSize * HighlightMaximumHeightFontScale);
         }
 
         public static double TextCoalesceGap(double fontSize) => Math.Max(MinimumDrawableDimension, fontSize * AdjacentTextCoalesceGapFontScale);

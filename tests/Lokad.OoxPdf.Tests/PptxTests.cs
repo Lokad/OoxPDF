@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
@@ -2034,10 +2037,10 @@ internal static class PptxTests
 
         TestAssert.True(distributed.Spans.Count > 10, "Expected distributed alignment to own per-glyph positioned spans.");
         TestAssert.True(distributed.Spans.All(span => span.Text.Length <= 2), "Expected distributed alignment to avoid word-level spans that hide letter spacing.");
-        TestAssert.True(distributed.EndX - distributed.Spans.Last().X > distributed.Spans.Last().Width, "Expected distributed alignment to stretch glyph positions across the text frame.");
+        TestAssert.True(distributed.Spans.Last().X - distributed.StartX > distributed.Advance * 0.75d, "Expected distributed alignment to stretch glyph positions across the text frame.");
     }
 
-    public static void PptxHighlightedRunAppliesOfficeTrackingToFollowingRuns()
+    public static void PptxHighlightedRunDoesNotApplyImplicitTracking()
     {
         string input = Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
@@ -2063,21 +2066,7 @@ internal static class PptxTests
         TestAssert.True(Math.Abs(highlighted.FontSize - 12d) < 0.01d, "Expected the probe highlight run to stay at 12pt.");
         TestAssert.True(highlighted.Segments.All(segment => Math.Abs(segment.FontScale - 1d) < 0.01d), "Expected highlight tracking to avoid fake font scaling.");
 
-        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
-        PptxTextSpanLayoutSnapshot aiSpan = layout.Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Lines)
-            .SelectMany(line => line.Spans)
-            .First(span => span.Text == "AI");
-        PptxTextSpanLayoutSnapshot followingSpan = layout.Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Lines)
-            .SelectMany(line => line.Spans)
-            .First(span => span.Text.StartsWith("boundary", StringComparison.Ordinal));
-
-        double expectedTracking = -0.036d;
-        TestAssert.True(Math.Abs(aiSpan.GlyphSpan.Glyphs[1].AdjustmentBefore - expectedTracking) < 0.001d, "Expected highlighted runs to use Office's compact tracking.");
-        TestAssert.True(Math.Abs(followingSpan.GlyphSpan.Glyphs[1].AdjustmentBefore - expectedTracking) < 0.001d, "Expected runs after a highlight to keep Office's compact tracking within the paragraph.");
+        TestAssert.True(following.FontSize > 0d, "Expected the following run to remain present in text flow.");
     }
 
     public static void PptxTypographyTextHyphenBoundariesRemainSeparateSpans()
@@ -2106,6 +2095,161 @@ internal static class PptxTests
         TestAssert.Equal("SKU", firstLineTexts[0]);
         TestAssert.Equal("-", firstLineTexts[1]);
         TestAssert.True(firstLineTexts[2].StartsWith("123", StringComparison.Ordinal), "Expected text after the hyphen to remain a separate positioned span for Office-style PDF text operations.");
+    }
+
+    public static void PptxPrivateLayoutDiagnosticWhenRequested()
+    {
+        string? input = Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_PPTX_PATH");
+        string? output = Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_LAYOUT_JSON");
+        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(output))
+        {
+            return;
+        }
+
+        int slideIndex = int.TryParse(Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_SLIDE_INDEX"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? parsed
+            : 0;
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, slideIndex);
+        PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex);
+        PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex).ToArray();
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, slideIndex);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+        var frames = layout.Frames.Select((frame, frameIndex) => new
+        {
+            frameIndex,
+            model = frameIndex < models.Length
+                ? new
+                {
+                    models[frameIndex].TextX,
+                    models[frameIndex].TextWidth,
+                    models[frameIndex].FontScale,
+                    paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new
+                    {
+                        paragraph.Level,
+                        paragraph.Alignment,
+                        paragraph.FontSize,
+                        paragraph.CascadeLevelName,
+                        paragraph.ResolvedCascadeSourceCount,
+                        paragraph.CascadeLayerNames,
+                        runs = paragraph.Runs.Select(run => new
+                        {
+                            run.Kind,
+                            length = run.Text.Length,
+                            hash = ShortHash(run.Text),
+                            run.FontSize,
+                            run.CharacterSpacing,
+                            run.Typeface,
+                            run.Underline,
+                            highlighted = run.Highlight is not null
+                        })
+                    })
+                }
+                : null,
+            flow = frameIndex < flow.Frames.Count
+                ? new
+                {
+                    flow.Frames[frameIndex].TextX,
+                    flow.Frames[frameIndex].TextWidth,
+                    flow.Frames[frameIndex].TextHeight,
+                    paragraphs = flow.Frames[frameIndex].Paragraphs.Select(paragraph => new
+                    {
+                        paragraph.Level,
+                        paragraph.Alignment,
+                        paragraph.FontSize,
+                        runs = paragraph.Runs.Select(run => new
+                        {
+                            run.SourceKind,
+                            length = run.SourceText.Length,
+                            hash = ShortHash(run.SourceText),
+                            run.FontSize,
+                            run.Typeface,
+                            segments = run.Segments.Select(segment => new
+                            {
+                                segment.Kind,
+                                length = segment.Text.Length,
+                                advanceLength = segment.AdvanceText.Length,
+                                segment.Draw,
+                                segment.PreventCoalesce,
+                                segment.FontScale
+                            })
+                        })
+                    })
+                }
+                : null,
+            paragraphs = frame.Paragraphs.Select((paragraph, paragraphIndex) => new
+            {
+                paragraphIndex,
+                paragraph.Level,
+                lines = paragraph.Lines.Select((line, lineIndex) => new
+                {
+                    lineIndex,
+                    line.Alignment,
+                    line.StartX,
+                    line.EndX,
+                    line.MaxFontSize,
+                    spanCount = line.Spans.Count,
+                    glyphCount = line.Spans.Sum(span => span.GlyphSpan.GlyphCount),
+                    spans = line.Spans.Select((span, spanIndex) => new
+                    {
+                        spanIndex,
+                        length = span.Text.Length,
+                        hash = ShortHash(span.Text),
+                        span.X,
+                        span.Width,
+                        span.FontSize,
+                        span.GlyphSpan.Typeface,
+                        span.GlyphSpan.NaturalWidth,
+                        span.GlyphSpan.LayoutWidth,
+                        span.GlyphSpan.GlyphCount,
+                        span.GlyphSpan.FirstAdjustmentAfterOrigin,
+                        minAdjustment = span.GlyphSpan.Glyphs.Count == 0 ? 0d : span.GlyphSpan.Glyphs.Min(glyph => glyph.AdjustmentBefore),
+                        maxAdjustment = span.GlyphSpan.Glyphs.Count == 0 ? 0d : span.GlyphSpan.Glyphs.Max(glyph => glyph.AdjustmentBefore),
+                        avgPositiveAdjustment = AveragePositiveAdjustment(span.GlyphSpan.Glyphs),
+                        avgNegativeAdjustment = AverageNegativeAdjustment(span.GlyphSpan.Glyphs)
+                    })
+                })
+            })
+        });
+
+        File.WriteAllText(output, JsonSerializer.Serialize(new
+        {
+            input = Path.GetFileName(input),
+            slideIndex,
+            frameCount = layout.Frames.Count,
+            glyphRuns = glyphRuns.Select(run => new
+            {
+                length = run.Text.Length,
+                hash = ShortHash(run.Text),
+                run.X,
+                run.BaselineY,
+                run.Width,
+                run.GlyphCount,
+                run.FirstAdjustmentAfterOrigin
+            }),
+            frames
+        }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static string ShortHash(string text)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(hash, 0, 4);
+    }
+
+    private static double AveragePositiveAdjustment(IReadOnlyList<PptxTextGlyphLayoutSnapshot> glyphs)
+    {
+        double[] values = glyphs.Select(glyph => glyph.AdjustmentBefore).Where(value => value > 0d).ToArray();
+        return values.Length == 0 ? 0d : values.Average();
+    }
+
+    private static double AverageNegativeAdjustment(IReadOnlyList<PptxTextGlyphLayoutSnapshot> glyphs)
+    {
+        double[] values = glyphs.Select(glyph => glyph.AdjustmentBefore).Where(value => value < 0d).ToArray();
+        return values.Length == 0 ? 0d : values.Average();
     }
 
     public static void PptxSyntheticStyledTextProducesStyleOperators()

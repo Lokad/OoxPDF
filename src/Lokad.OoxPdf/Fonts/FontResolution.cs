@@ -7,4 +7,5 @@ public sealed record FontResolution(
     bool Bold = false,
     bool Italic = false,
     int WeightClass = 400,
-    int FontFaceIndex = 0);
+    int FontFaceIndex = 0,
+    bool HasMathTable = false);

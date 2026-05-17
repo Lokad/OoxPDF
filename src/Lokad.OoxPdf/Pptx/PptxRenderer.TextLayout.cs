@@ -301,10 +301,18 @@ internal sealed partial class PptxRenderer
     {
         var advanceEstimator = new TextAdvanceEstimator();
         var frames = new List<PptxTextFrameLayout>();
-        PptxTextFlowModel flow = BuildTextFlowModel(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
-        foreach (PptxTextFlowFrame frame in flow.Frames)
+        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
+        foreach (PptxTextFrameModel frameModel in frameModels)
         {
-            frames.Add(BuildTextFrameLayout(frame, document, advanceEstimator));
+            PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
+            PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
+            if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflows(layout, flowFrame.Box))
+            {
+                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator);
+                layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
+            }
+
+            frames.Add(layout);
         }
 
         return new PptxTextLayoutModel(frames);
@@ -349,6 +357,95 @@ internal sealed partial class PptxRenderer
             frame.RotationCenterX,
             frame.RotationCenterY);
         return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(BuildTextFlowParagraph).ToArray());
+    }
+
+    private static bool HasShapeAutoFit(XElement textBody)
+    {
+        return textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Element(DrawingNamespace + "spAutoFit") is not null;
+    }
+
+    private static PptxTextFrameModel FitShapeAutoFitFrame(
+        PptxTextFrameModel frame,
+        PptxDocument document,
+        TextAdvanceEstimator advanceEstimator)
+    {
+        double high = frame.FontScale;
+        double low = PptxTextMetricRules.MinimumAutofitScale;
+        PptxTextFrameModel best = ScaleTextFrameModel(frame, low);
+        for (int i = 0; i < PptxTextMetricRules.ShapeAutoFitSearchIterations; i++)
+        {
+            double candidateScale = (low + high) / 2d;
+            PptxTextFrameModel candidate = ScaleTextFrameModel(frame, candidateScale);
+            PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document);
+            PptxTextFrameLayout candidateLayout = BuildTextFrameLayout(candidateFlow, document, advanceEstimator);
+            if (TextLayoutOverflows(candidateLayout, candidateFlow.Box))
+            {
+                high = candidateScale;
+            }
+            else
+            {
+                low = candidateScale;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    private static bool TextLayoutOverflows(PptxTextFrameLayout layout, PptxTextFlowBox box)
+    {
+        double bottom = box.CursorTop - box.TextHeight;
+        return layout.Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .Any(line => line.Box.TopY - line.Box.Advance < bottom - PptxTextMetricRules.TextStateTolerance);
+    }
+
+    private static PptxTextFrameModel ScaleTextFrameModel(PptxTextFrameModel frame, double fontScale)
+    {
+        if (Math.Abs(frame.FontScale - fontScale) <= PptxTextMetricRules.TextStateTolerance)
+        {
+            return frame;
+        }
+
+        double ratio = frame.FontScale <= 0d ? fontScale : fontScale / frame.FontScale;
+        return frame with
+        {
+            FontScale = fontScale,
+            Paragraphs = frame.Paragraphs.Select(paragraph => ScaleTextParagraphModel(paragraph, ratio)).ToArray()
+        };
+    }
+
+    private static PptxTextParagraphModel ScaleTextParagraphModel(PptxTextParagraphModel paragraph, double ratio)
+    {
+        return paragraph with
+        {
+            Style = ScaleParagraphStyle(paragraph.Style, ratio),
+            Runs = paragraph.Runs.Select(run => run with { Style = ScaleRunStyle(run.Style, ratio) }).ToArray()
+        };
+    }
+
+    private static ResolvedParagraphTextStyle ScaleParagraphStyle(ResolvedParagraphTextStyle style, double ratio)
+    {
+        return style with
+        {
+            FontSize = style.FontSize * ratio,
+            SpacingBefore = style.SpacingBefore * ratio,
+            SpacingAfter = style.SpacingAfter * ratio,
+            LineSpacing = style.LineSpacing.ScaleExplicit(ratio)
+        };
+    }
+
+    private static ResolvedRunTextStyle ScaleRunStyle(ResolvedRunTextStyle style, double ratio)
+    {
+        return style with
+        {
+            NominalFontSize = style.NominalFontSize * ratio,
+            FontSize = style.FontSize * ratio,
+            CharacterSpacing = style.CharacterSpacing * ratio,
+            BaselineOffset = style.BaselineOffset * ratio
+        };
     }
 
     private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph)

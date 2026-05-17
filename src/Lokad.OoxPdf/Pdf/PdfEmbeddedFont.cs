@@ -80,22 +80,29 @@ internal sealed class PdfEmbeddedFont
 
     public string BuildWidthArray()
     {
-        if (UnicodeByCid.Count == 0)
+        if (Font.GlyphCount == 0)
         {
             return "[]";
         }
 
         var builder = new StringBuilder("[");
         bool first = true;
-        foreach (ushort cid in UnicodeByCid.Keys.Order())
+        for (int glyphId = 0; glyphId < Font.GlyphCount; glyphId++)
         {
+            ushort cid = (ushort)glyphId;
+            ushort advance = Font.GetAdvanceWidth(cid);
+            if (advance == 0)
+            {
+                continue;
+            }
+
             if (!first)
             {
                 builder.Append(' ');
             }
 
             first = false;
-            int width = (int)Math.Round(Font.GetAdvanceWidth(cid) * 1000d / Font.UnitsPerEm);
+            int width = (int)Math.Round(advance * 1000d / Font.UnitsPerEm);
             builder.Append(CultureInfo.InvariantCulture, $"{cid} [{width}]");
         }
 

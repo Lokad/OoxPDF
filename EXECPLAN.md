@@ -1430,10 +1430,24 @@ paths, and ExecPlan references together.
 - [x] OpenType GPOS extension lookups are parsed for active `kern` feature pair positioning, recovering
   Office-like small Cambria/Cambria Math intra-word adjustments without reintroducing inactive feature
   lookups that caused large parasite gaps.
-- [x] Typography experiment: resolving `Cambria Math` to its exact TTC face made the Office-authored
-  `pptx-ladder-04-typography-run-boundaries` visual error much worse, so PowerPoint appears to use regular
-  Cambria metrics for this Latin text despite the OOXML typeface attribute. Keep the Cambria Math -> Cambria
-  fallback for now, while retaining TTC face-index support for future fonts that genuinely need it.
+- [x] Typography experiment: Office PDFs can embed and use math-table TTC faces directly for normal slide
+  text when OOXML requests that exact typeface. Remove the family-name workaround and keep exact font
+  resolution exact; remaining drift belongs in OpenType shaping/PDF text emission, not substitution.
+- [x] Slide-3 typography gap: fix CID font width emission so every embedded glyph has a `/W` entry.
+  Missing glyph widths caused PDF viewers to use default advances, producing the parasite inter-letter
+  gaps seen with exact math-table fonts. `PdfEmbeddedFontWidthsCoverEncodedGlyphs` now locks this.
+- [x] Slide-3 typography gap: include Microsoft cloud-font cache discovery in the Windows resolver.
+  Office-authored decks may use cloud fonts that are absent from `C:\Windows\Fonts`; missing those fonts
+  sent text through unrelated installed fallbacks.
+- [x] Slide-3 typography gap: clamp highlight rectangles to line-box proportions when font OS/2 metrics
+  are extreme, instead of letting raw ascender/descender values create multi-line yellow bands.
+- [ ] Revisit locked public typography visual thresholds after exact-font rendering: current private slide 3
+  improves substantially, but `pptx-ladder-04-typography-run-boundaries` and
+  `pptx-ladder-04-typography-font-families` now fail their old MAE gates and need line-by-line Office PDF
+  text-operation review before re-locking.
+- [ ] Remove remaining PPTX text-flow approximations that pick specific families as default behavior.
+  Defaults must come from OOXML theme resolution, font metadata, or a documented generic fallback stack,
+  not font-by-font aliases.
 - [ ] Continue tightening `pptx-ladder-04-typography-run-boundaries` toward near-pixel parity by comparing
   Office and candidate `TJ` arrays, baseline `Tm` values, and highlight geometry line by line.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
