@@ -1735,6 +1735,11 @@ paths, and ExecPlan references together.
   Unit coverage now routes `vert`, `vert270`, `eaVert`, `wordArtVert`, and `wordArtVertRtl` through
   first-class orientation handling, but the ladder must still lock glyph stacking, anchoring, clipping, and
   exact baseline placement before vertical labels are considered pixel-close.
+  - [x] Add vertical-orientation character-boundary wrapping for overlong Latin words. Public visual reruns:
+    `pptx-ladder-04-vertical-text-270` at MAE `0.292444`, changed16 `0.002682`; and
+    `pptx-ladder-04-vertical-text-port` improved to MAE `0.796678`, changed16 `0.005765`.
+  - [ ] Continue vertical text parity with Office text-operation inspection: stacked-letter orientation,
+    column order, per-column x positions, and baseline placement remain visibly approximate.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
   derive public fixtures from private slide content.
 - [ ] Run `pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json` after each scoped PPTX

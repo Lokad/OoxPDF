@@ -598,6 +598,36 @@ internal sealed partial class PptxRenderer
                     string currentSegment = flowSegment.Text;
                     string currentAdvanceText = flowSegment.AdvanceText;
                     double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    if (frame.Orientation != PptxTextOrientation.Horizontal &&
+                        flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
+                        flowSegment.Draw &&
+                        currentSegment == currentAdvanceText &&
+                        currentSegment.Length > 1 &&
+                        segmentWidth > frame.TextWidth)
+                    {
+                        string[] chunks = SplitTextIntoFittingChunks(currentSegment, frame.TextWidth, fragmentFontSize, runStyle, advanceEstimator);
+                        for (int chunkIndex = 0; chunkIndex < chunks.Length; chunkIndex++)
+                        {
+                            string chunk = chunks[chunkIndex];
+                            double chunkWidth = advanceEstimator.Measure(chunk, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            TextRun textRun = new(chunk, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
+                            line.Add(modelRun, textRun, cursorX + chunkWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
+                            cursorX += chunkWidth;
+                            line.AdvanceTo(cursorX);
+                            if (chunkIndex < chunks.Length - 1)
+                            {
+                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                                cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
+                                cursorX = paragraphTextX;
+                                line.Reset(paragraphTextX);
+                                maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
+                            }
+                        }
+
+                        continue;
+                    }
+
                     bool overflowsLine = cursorX > paragraphTextX &&
                         (cursorX + segmentWidth > frame.TextX + frame.TextWidth ||
                             (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
@@ -638,6 +668,37 @@ internal sealed partial class PptxRenderer
 
         return new PptxTextFrameLayout(frame, paragraphLayouts);
     }
+
+    private static string[] SplitTextIntoFittingChunks(
+        string text,
+        double maxWidth,
+        double fontSize,
+        ResolvedRunTextStyle style,
+        TextAdvanceEstimator advanceEstimator)
+    {
+        var chunks = new List<string>();
+        var chunk = new StringBuilder();
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            string candidate = chunk.ToString() + rune;
+            double candidateWidth = advanceEstimator.Measure(candidate, fontSize, style.Typeface, style.Bold, style.Italic, style.CharacterSpacing, style.KerningEnabled);
+            if (chunk.Length > 0 && candidateWidth > maxWidth)
+            {
+                chunks.Add(chunk.ToString());
+                chunk.Clear();
+            }
+
+            chunk.Append(rune);
+        }
+
+        if (chunk.Length > 0)
+        {
+            chunks.Add(chunk.ToString());
+        }
+
+        return chunks.Count == 0 ? [text] : chunks.ToArray();
+    }
+
     private static GroupTransform ReadAncestorGroupTransform(XElement shape)
     {
         GroupTransform transform = GroupTransform.Identity;
