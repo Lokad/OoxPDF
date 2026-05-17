@@ -1114,6 +1114,10 @@ document-specific business content into public notes.
     supported.
   - Unsupported PPTX custom geometry (`a:custGeom`) and preset callout shapes now emit slide-scoped
     diagnostics instead of silently falling back to ordinary rectangles.
+  - PPTX custom geometry now supports `a:arcTo` paths with common guide formulas (`val`, `+-`, `*/`,
+    `abs`, `min`, `max`, `?:`, `sin`, `cos`). Public synthetic unit
+    `PptxSyntheticCustomGeometryArcPathRendersCurve` locks the behavior, and the private deck no longer
+    emits `PPTX_UNSUPPORTED_CUSTOM_GEOMETRY`.
   - `pptx-ladder-10-explicit-borders` now locks a minimal 2x2 table with per-edge borders. Explicit table
     borders are collected, coalesced, and stroked after cell fills to match Office's PDF order and avoid
     double-stroking shared edges, improving the case from MAE `0.445408`, changed-pixel ratio threshold 16

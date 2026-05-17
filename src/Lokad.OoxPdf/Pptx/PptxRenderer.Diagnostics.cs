@@ -140,6 +140,7 @@ internal sealed partial class PptxRenderer
                     command.Name != DrawingNamespace + "lnTo" &&
                     command.Name != DrawingNamespace + "cubicBezTo" &&
                     command.Name != DrawingNamespace + "quadBezTo" &&
+                    command.Name != DrawingNamespace + "arcTo" &&
                     command.Name != DrawingNamespace + "close"));
     }
 

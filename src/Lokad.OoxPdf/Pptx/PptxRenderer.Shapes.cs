@@ -567,6 +567,7 @@ internal sealed partial class PptxRenderer
             child.Name == DrawingNamespace + "lnTo" ||
             child.Name == DrawingNamespace + "cubicBezTo" ||
             child.Name == DrawingNamespace + "quadBezTo" ||
+            child.Name == DrawingNamespace + "arcTo" ||
             child.Name == DrawingNamespace + "close");
     }
 
@@ -585,23 +586,27 @@ internal sealed partial class PptxRenderer
     {
         double coordinateWidth = Math.Max(1d, ParseOptionalDoubleAttribute(path, "w", 21600d));
         double coordinateHeight = Math.Max(1d, ParseOptionalDoubleAttribute(path, "h", 21600d));
+        IReadOnlyDictionary<string, double> guides = BuildCustomGeometryGuides(
+            path.Parent?.Parent,
+            coordinateWidth,
+            coordinateHeight);
         (double X, double Y)? current = null;
 
         foreach (XElement command in path.Elements())
         {
             if (command.Name == DrawingNamespace + "moveTo")
             {
-                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight, guides);
                 graphics.MoveTo(current.Value.X, current.Value.Y);
             }
             else if (command.Name == DrawingNamespace + "lnTo")
             {
-                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight, guides);
                 graphics.LineTo(current.Value.X, current.Value.Y);
             }
             else if (command.Name == DrawingNamespace + "cubicBezTo")
             {
-                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight, guides);
                 if (points.Count == 3)
                 {
                     graphics.CurveTo(points[0].X, points[0].Y, points[1].X, points[1].Y, points[2].X, points[2].Y);
@@ -610,7 +615,7 @@ internal sealed partial class PptxRenderer
             }
             else if (command.Name == DrawingNamespace + "quadBezTo")
             {
-                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight, guides);
                 if (points.Count == 2 && current is { } start)
                 {
                     (double X, double Y) control = points[0];
@@ -624,6 +629,10 @@ internal sealed partial class PptxRenderer
                         end.Y);
                     current = end;
                 }
+            }
+            else if (command.Name == DrawingNamespace + "arcTo" && current is { } arcStart)
+            {
+                current = AppendCustomGeometryArc(graphics, command, arcStart, x, y, width, height, coordinateWidth, coordinateHeight, guides);
             }
             else if (command.Name == DrawingNamespace + "close")
             {
@@ -639,10 +648,11 @@ internal sealed partial class PptxRenderer
         double width,
         double height,
         double coordinateWidth,
-        double coordinateHeight)
+        double coordinateHeight,
+        IReadOnlyDictionary<string, double> guides)
     {
         XElement point = command.Element(DrawingNamespace + "pt") ?? command;
-        return MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight);
+        return MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight, guides);
     }
 
     private static List<(double X, double Y)> ReadCustomGeometryPoints(
@@ -652,11 +662,12 @@ internal sealed partial class PptxRenderer
         double width,
         double height,
         double coordinateWidth,
-        double coordinateHeight)
+        double coordinateHeight,
+        IReadOnlyDictionary<string, double> guides)
     {
         return command
             .Elements(DrawingNamespace + "pt")
-            .Select(point => MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight))
+            .Select(point => MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight, guides))
             .ToList();
     }
 
@@ -667,11 +678,140 @@ internal sealed partial class PptxRenderer
         double width,
         double height,
         double coordinateWidth,
-        double coordinateHeight)
+        double coordinateHeight,
+        IReadOnlyDictionary<string, double> guides)
     {
-        double pointX = ParseOptionalDoubleAttribute(point, "x", 0d);
-        double pointY = ParseOptionalDoubleAttribute(point, "y", 0d);
+        double pointX = ReadCustomGeometryValue((string?)point.Attribute("x"), guides, 0d);
+        double pointY = ReadCustomGeometryValue((string?)point.Attribute("y"), guides, 0d);
         return (x + pointX / coordinateWidth * width, y + height - pointY / coordinateHeight * height);
+    }
+
+    private static (double X, double Y) AppendCustomGeometryArc(
+        PdfGraphicsBuilder graphics,
+        XElement arc,
+        (double X, double Y) start,
+        double x,
+        double y,
+        double width,
+        double height,
+        double coordinateWidth,
+        double coordinateHeight,
+        IReadOnlyDictionary<string, double> guides)
+    {
+        double radiusX = Math.Abs(ReadCustomGeometryValue((string?)arc.Attribute("wR"), guides, 0d) / coordinateWidth * width);
+        double radiusY = Math.Abs(ReadCustomGeometryValue((string?)arc.Attribute("hR"), guides, 0d) / coordinateHeight * height);
+        double startAngle = DegreesToRadians(ReadCustomGeometryValue((string?)arc.Attribute("stAng"), guides, 0d) / 60000d);
+        double sweepAngle = DegreesToRadians(ReadCustomGeometryValue((string?)arc.Attribute("swAng"), guides, 0d) / 60000d);
+        if (radiusX <= PptxTextMetricRules.TextStateTolerance ||
+            radiusY <= PptxTextMetricRules.TextStateTolerance ||
+            Math.Abs(sweepAngle) <= PptxTextMetricRules.TextStateTolerance)
+        {
+            return start;
+        }
+
+        double centerX = start.X - radiusX * Math.Cos(startAngle);
+        double centerY = start.Y + radiusY * Math.Sin(startAngle);
+        int segments = Math.Max(1, (int)Math.Ceiling(Math.Abs(sweepAngle) / (Math.PI / 2d)));
+        double delta = sweepAngle / segments;
+        double angle = startAngle;
+        (double X, double Y) current = start;
+        for (int i = 0; i < segments; i++)
+        {
+            double nextAngle = angle + delta;
+            double k = 4d / 3d * Math.Tan(delta / 4d);
+            (double X, double Y) end = (
+                centerX + radiusX * Math.Cos(nextAngle),
+                centerY - radiusY * Math.Sin(nextAngle));
+            (double X, double Y) control1 = (
+                current.X + k * -radiusX * Math.Sin(angle),
+                current.Y + k * -radiusY * Math.Cos(angle));
+            (double X, double Y) control2 = (
+                end.X - k * -radiusX * Math.Sin(nextAngle),
+                end.Y - k * -radiusY * Math.Cos(nextAngle));
+            graphics.CurveTo(control1.X, control1.Y, control2.X, control2.Y, end.X, end.Y);
+            current = end;
+            angle = nextAngle;
+        }
+
+        return current;
+    }
+
+    private static IReadOnlyDictionary<string, double> BuildCustomGeometryGuides(XElement? customGeometry, double width, double height)
+    {
+        var guides = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["w"] = width,
+            ["h"] = height,
+            ["ss"] = Math.Min(width, height),
+            ["ls"] = Math.Max(width, height)
+        };
+
+        foreach (XElement guide in customGeometry
+                     ?.Element(DrawingNamespace + "gdLst")
+                     ?.Elements(DrawingNamespace + "gd") ?? [])
+        {
+            string? name = (string?)guide.Attribute("name");
+            string? formula = (string?)guide.Attribute("fmla");
+            if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(formula))
+            {
+                guides[name] = EvaluateCustomGeometryFormula(formula, guides);
+            }
+        }
+
+        return guides;
+    }
+
+    private static double EvaluateCustomGeometryFormula(string formula, IReadOnlyDictionary<string, double> guides)
+    {
+        string[] parts = formula.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+        {
+            return 0d;
+        }
+
+        return parts[0] switch
+        {
+            "val" when parts.Length >= 2 => ReadCustomGeometryValue(parts[1], guides, 0d),
+            "+-" when parts.Length >= 4 => ReadCustomGeometryValue(parts[1], guides, 0d) +
+                ReadCustomGeometryValue(parts[2], guides, 0d) -
+                ReadCustomGeometryValue(parts[3], guides, 0d),
+            "*/" when parts.Length >= 4 => ReadCustomGeometryValue(parts[3], guides, 0d) == 0d
+                ? 0d
+                : ReadCustomGeometryValue(parts[1], guides, 0d) *
+                    ReadCustomGeometryValue(parts[2], guides, 0d) /
+                    ReadCustomGeometryValue(parts[3], guides, 0d),
+            "abs" when parts.Length >= 2 => Math.Abs(ReadCustomGeometryValue(parts[1], guides, 0d)),
+            "min" when parts.Length >= 3 => Math.Min(ReadCustomGeometryValue(parts[1], guides, 0d), ReadCustomGeometryValue(parts[2], guides, 0d)),
+            "max" when parts.Length >= 3 => Math.Max(ReadCustomGeometryValue(parts[1], guides, 0d), ReadCustomGeometryValue(parts[2], guides, 0d)),
+            "?:" when parts.Length >= 4 => ReadCustomGeometryValue(parts[1], guides, 0d) > 0d
+                ? ReadCustomGeometryValue(parts[2], guides, 0d)
+                : ReadCustomGeometryValue(parts[3], guides, 0d),
+            "sin" when parts.Length >= 3 => ReadCustomGeometryValue(parts[1], guides, 0d) *
+                Math.Sin(DegreesToRadians(ReadCustomGeometryValue(parts[2], guides, 0d) / 60000d)),
+            "cos" when parts.Length >= 3 => ReadCustomGeometryValue(parts[1], guides, 0d) *
+                Math.Cos(DegreesToRadians(ReadCustomGeometryValue(parts[2], guides, 0d) / 60000d)),
+            _ => 0d
+        };
+    }
+
+    private static double ReadCustomGeometryValue(string? value, IReadOnlyDictionary<string, double> guides, double defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return defaultValue;
+        }
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+        {
+            return parsed;
+        }
+
+        return guides.TryGetValue(value, out double guide) ? guide : defaultValue;
+    }
+
+    private static double DegreesToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180d;
     }
 
     private static double ParseOptionalDoubleAttribute(XElement element, string name, double defaultValue)

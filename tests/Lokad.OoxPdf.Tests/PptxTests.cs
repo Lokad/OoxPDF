@@ -507,6 +507,56 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Renderable custom cubic geometry should not emit the unsupported diagnostic.");
     }
 
+    public static void PptxSyntheticCustomGeometryArcPathRendersCurve()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                          <a:custGeom>
+                            <a:gdLst>
+                              <a:gd name="rx" fmla="val 10800"/>
+                              <a:gd name="ry" fmla="val 5400"/>
+                              <a:gd name="start" fmla="val 0"/>
+                              <a:gd name="sweep" fmla="val 10800000"/>
+                            </a:gdLst>
+                            <a:pathLst>
+                              <a:path w="21600" h="10800" fill="none">
+                                <a:moveTo><a:pt x="21600" y="5400"/></a:moveTo>
+                                <a:arcTo wR="rx" hR="ry" stAng="start" swAng="sweep"/>
+                              </a:path>
+                            </a:pathLst>
+                          </a:custGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="008000"/></a:solidFill></a:ln>
+                        </p:spPr>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0.502 0 RG", pdf);
+        TestAssert.Contains("216 432 m", pdf);
+        TestAssert.Contains(" c", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Renderable custom arc geometry should not emit the unsupported diagnostic.");
+    }
+
     public static void PptxSyntheticShapeStrokeDashCapAndJoinRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
