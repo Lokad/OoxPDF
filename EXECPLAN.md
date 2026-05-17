@@ -164,6 +164,9 @@ High-priority actions:
 - [x] Replace the default-tab approximation with the OOXML default tab interval:
   tabs without explicit stops now advance to the next 914400 EMU stop from the paragraph text origin,
   matching the `pptx-renderer` rule instead of scaling by font size.
+- [x] Port the `pptx-renderer` formula for `normAutofit @lnSpcReduction`:
+  resolved paragraph line spacing now scales explicit `spcPct`/`spcPts` by
+  `1 - lnSpcReduction / 100000` while preserving default line spacing behavior.
 - [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
   offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
   probes before broad visual MAE gates.

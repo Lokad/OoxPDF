@@ -121,6 +121,7 @@ internal sealed partial class PptxRenderer
         double height = OoxUnits.EmuToPoints(bounds.Value.Height);
         TextInsets insets = ReadTextInsets(textBody);
         double fontScale = ReadNormAutofitFontScale(textBody);
+        double lineSpacingScale = ReadNormAutofitLineSpacingScale(textBody);
         double textX = x + insets.Left;
         double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
         double textHeight = Math.Max(1d, height - insets.Top - insets.Bottom);
@@ -158,6 +159,7 @@ internal sealed partial class PptxRenderer
             theme,
             slideNumber,
             fontScale,
+            lineSpacingScale,
             shapeFontColor);
 
         return new PptxTextFrameModel(
@@ -168,6 +170,7 @@ internal sealed partial class PptxRenderer
             bounds.Value,
             insets,
             fontScale,
+            lineSpacingScale,
             textX,
             textWidth,
             textHeight,
@@ -188,6 +191,7 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         int slideNumber,
         double fontScale,
+        double lineSpacingScale,
         RgbColor? shapeFontColor)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
@@ -200,7 +204,7 @@ internal sealed partial class PptxRenderer
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale);
+            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,

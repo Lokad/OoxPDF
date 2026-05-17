@@ -145,6 +145,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds Bounds,
         TextInsets Insets,
         double FontScale,
+        double LineSpacingScale,
         double TextX,
         double TextWidth,
         double TextHeight,
@@ -367,6 +368,13 @@ internal sealed partial class PptxRenderer
         public static LineSpacing Absolute(double points) => new(points, true, true);
 
         public static LineSpacing Multiple(double factor, bool isExplicit) => new(factor, false, isExplicit);
+
+        public LineSpacing ScaleExplicit(double factor)
+        {
+            return IsExplicit
+                ? new LineSpacing(Value * factor, IsAbsolute, IsExplicit)
+                : this;
+        }
 
         public double Resolve(double fontSize)
         {

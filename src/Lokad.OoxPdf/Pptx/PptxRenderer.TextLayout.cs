@@ -1153,7 +1153,8 @@ internal sealed partial class PptxRenderer
         XElement paragraph,
         XElement? paragraphProperties,
         XElement? defaultParagraphProperties,
-        double fontScale)
+        double fontScale,
+        double lineSpacingScale)
     {
         XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
@@ -1165,7 +1166,7 @@ internal sealed partial class PptxRenderer
             fontSize,
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
-            ReadLineSpacing(paragraphProperties, defaultParagraphProperties),
+            ReadLineSpacing(paragraphProperties, defaultParagraphProperties).ScaleExplicit(lineSpacingScale),
             ReadParagraphIndent(paragraphProperties),
             ReadTabStops(paragraphProperties));
     }
@@ -1351,6 +1352,20 @@ internal sealed partial class PptxRenderer
         }
 
         return Math.Clamp(int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d, 0.01d, 10d);
+    }
+
+    private static double ReadNormAutofitLineSpacingScale(XElement textBody)
+    {
+        XElement? normAutofit = textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Element(DrawingNamespace + "normAutofit");
+        if (normAutofit?.Attribute("lnSpcReduction") is not { } reduction)
+        {
+            return 1d;
+        }
+
+        double reductionRatio = Math.Clamp(int.Parse(reduction.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.99d);
+        return 1d - reductionRatio;
     }
 
     private static bool ClipsVerticalOverflow(XElement textBody)
