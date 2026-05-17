@@ -544,6 +544,16 @@ internal sealed partial class PptxRenderer
         WordArtVerticalRightToLeft
     }
 
+    private enum LineEndKind
+    {
+        None,
+        Triangle,
+        Arrow,
+        Stealth,
+        Diamond,
+        Oval
+    }
+
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
