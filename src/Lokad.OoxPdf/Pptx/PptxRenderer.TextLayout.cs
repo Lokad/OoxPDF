@@ -1480,6 +1480,10 @@ internal sealed partial class PptxRenderer
             color = runColor;
             alpha = runAlpha;
         }
+        else if (shapeFontColor is { } fontRefColor)
+        {
+            color = fontRefColor;
+        }
         else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
@@ -1487,7 +1491,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            color = shapeFontColor ?? new RgbColor(0, 0, 0);
+            color = new RgbColor(0, 0, 0);
         }
 
         string? typeface = theme.ResolveTypeface((string?)(runProperties?

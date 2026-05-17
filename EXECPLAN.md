@@ -1732,9 +1732,12 @@ paths, and ExecPlan references together.
   public autofit/overflow fixtures before adjusting text layout.
   - [x] Add first-class PPTX text-column flow for `a:bodyPr numCol`/`spcCol`, remove the unsupported
     diagnostic for handled columns, and lock a public synthetic multi-column text fixture.
-  - [ ] Header text issue: the top-left section label font color is incorrect. Inspect whether the color
+  - [x] Header text issue: the top-left section label font color is incorrect. Inspect whether the color
     should come from inherited placeholder/theme style, direct run properties, or master/layout shape style,
     then lock with a public placeholder/theme fixture.
+    - Fixed by giving shape `fontRef` color precedence over generic default text style while keeping direct
+      run color as the strongest source. Public fixture
+      `PptxSyntheticShapeFontRefColorOverridesDefaultTextStyle` locks the general rule.
   - [ ] Header placement issue: the top-left title line is a few pixels too high. Inspect inherited
     placeholder bounds, body insets, baseline metrics, and paragraph spacing against Office PDF output, then
     reproduce with a public title/header fixture.
