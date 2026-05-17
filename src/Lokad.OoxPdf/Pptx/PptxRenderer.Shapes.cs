@@ -149,6 +149,34 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
+        XElement? customGeometry = shapeProperties.Element(DrawingNamespace + "custGeom");
+        if (customGeometry is not null && TryRenderCustomGeometry(
+                customGeometry,
+                graphics,
+                x,
+                y,
+                width,
+                height,
+                hasFill,
+                fill,
+                fillAlpha,
+                hasStroke,
+                stroke,
+                lineWidth,
+                strokeAlpha,
+                hasDash,
+                dashPattern,
+                lineCap,
+                lineJoin))
+        {
+            if (transformed)
+            {
+                graphics.RestoreState();
+            }
+
+            return;
+        }
+
         if (preset is "line" or "straightConnector1")
         {
             if (hasStroke)
@@ -422,6 +450,236 @@ internal sealed partial class PptxRenderer
         return (string?)shapeProperties
             .Element(DrawingNamespace + "prstGeom")
             ?.Attribute("prst") ?? "rect";
+    }
+
+    private static bool TryRenderCustomGeometry(
+        XElement customGeometry,
+        PdfGraphicsBuilder graphics,
+        double x,
+        double y,
+        double width,
+        double height,
+        bool hasFill,
+        RgbColor fill,
+        double fillAlpha,
+        bool hasStroke,
+        RgbColor stroke,
+        double lineWidth,
+        double strokeAlpha,
+        bool hasDash,
+        IReadOnlyList<double> dashPattern,
+        int? lineCap,
+        int? lineJoin)
+    {
+        List<XElement> paths = customGeometry
+            .Element(DrawingNamespace + "pathLst")
+            ?.Elements(DrawingNamespace + "path")
+            .Where(CanRenderCustomGeometryPath)
+            .ToList() ?? [];
+        if (paths.Count == 0)
+        {
+            return false;
+        }
+
+        if (hasFill)
+        {
+            bool transparentFill = fillAlpha < 0.999d;
+            if (transparentFill)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fillAlpha, 1d);
+            }
+
+            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            foreach (XElement path in paths.Where(CustomGeometryPathAllowsFill))
+            {
+                AppendCustomGeometryPath(graphics, path, x, y, width, height);
+                graphics.FillCurrentPath();
+            }
+
+            if (transparentFill)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        if (hasStroke)
+        {
+            bool transparentStroke = strokeAlpha < 0.999d;
+            if (transparentStroke)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, strokeAlpha);
+            }
+
+            graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+            graphics.SetLineWidth(lineWidth);
+            if (hasDash)
+            {
+                graphics.SetLineDash(dashPattern);
+            }
+
+            int? appliedLineJoin = lineJoin ?? (lineCap is null ? null : 1);
+            if (lineCap is { } cap)
+            {
+                graphics.SetLineCap(cap);
+            }
+
+            if (appliedLineJoin is { } join)
+            {
+                graphics.SetLineJoin(join);
+            }
+
+            foreach (XElement path in paths.Where(CustomGeometryPathAllowsStroke))
+            {
+                AppendCustomGeometryPath(graphics, path, x, y, width, height);
+                graphics.StrokeCurrentPath();
+            }
+
+            if (hasDash)
+            {
+                graphics.ClearLineDash();
+            }
+
+            if (lineCap is not null)
+            {
+                graphics.SetLineCap(0);
+            }
+
+            if (appliedLineJoin is not null)
+            {
+                graphics.SetLineJoin(0);
+            }
+
+            if (transparentStroke)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        return true;
+    }
+
+    private static bool CanRenderCustomGeometryPath(XElement path)
+    {
+        return path.Elements().Any() && path.Elements().All(child =>
+            child.Name == DrawingNamespace + "moveTo" ||
+            child.Name == DrawingNamespace + "lnTo" ||
+            child.Name == DrawingNamespace + "cubicBezTo" ||
+            child.Name == DrawingNamespace + "quadBezTo" ||
+            child.Name == DrawingNamespace + "close");
+    }
+
+    private static bool CustomGeometryPathAllowsFill(XElement path)
+    {
+        string? fill = (string?)path.Attribute("fill");
+        return !string.Equals(fill, "none", StringComparison.Ordinal);
+    }
+
+    private static bool CustomGeometryPathAllowsStroke(XElement path)
+    {
+        return !string.Equals((string?)path.Attribute("stroke"), "false", StringComparison.Ordinal);
+    }
+
+    private static void AppendCustomGeometryPath(PdfGraphicsBuilder graphics, XElement path, double x, double y, double width, double height)
+    {
+        double coordinateWidth = Math.Max(1d, ParseOptionalDoubleAttribute(path, "w", 21600d));
+        double coordinateHeight = Math.Max(1d, ParseOptionalDoubleAttribute(path, "h", 21600d));
+        (double X, double Y)? current = null;
+
+        foreach (XElement command in path.Elements())
+        {
+            if (command.Name == DrawingNamespace + "moveTo")
+            {
+                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                graphics.MoveTo(current.Value.X, current.Value.Y);
+            }
+            else if (command.Name == DrawingNamespace + "lnTo")
+            {
+                current = ReadCustomGeometryPoint(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                graphics.LineTo(current.Value.X, current.Value.Y);
+            }
+            else if (command.Name == DrawingNamespace + "cubicBezTo")
+            {
+                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                if (points.Count == 3)
+                {
+                    graphics.CurveTo(points[0].X, points[0].Y, points[1].X, points[1].Y, points[2].X, points[2].Y);
+                    current = points[2];
+                }
+            }
+            else if (command.Name == DrawingNamespace + "quadBezTo")
+            {
+                List<(double X, double Y)> points = ReadCustomGeometryPoints(command, x, y, width, height, coordinateWidth, coordinateHeight);
+                if (points.Count == 2 && current is { } start)
+                {
+                    (double X, double Y) control = points[0];
+                    (double X, double Y) end = points[1];
+                    graphics.CurveTo(
+                        start.X + (2d / 3d) * (control.X - start.X),
+                        start.Y + (2d / 3d) * (control.Y - start.Y),
+                        end.X + (2d / 3d) * (control.X - end.X),
+                        end.Y + (2d / 3d) * (control.Y - end.Y),
+                        end.X,
+                        end.Y);
+                    current = end;
+                }
+            }
+            else if (command.Name == DrawingNamespace + "close")
+            {
+                graphics.ClosePath();
+            }
+        }
+    }
+
+    private static (double X, double Y) ReadCustomGeometryPoint(
+        XElement command,
+        double x,
+        double y,
+        double width,
+        double height,
+        double coordinateWidth,
+        double coordinateHeight)
+    {
+        XElement point = command.Element(DrawingNamespace + "pt") ?? command;
+        return MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight);
+    }
+
+    private static List<(double X, double Y)> ReadCustomGeometryPoints(
+        XElement command,
+        double x,
+        double y,
+        double width,
+        double height,
+        double coordinateWidth,
+        double coordinateHeight)
+    {
+        return command
+            .Elements(DrawingNamespace + "pt")
+            .Select(point => MapCustomGeometryPoint(point, x, y, width, height, coordinateWidth, coordinateHeight))
+            .ToList();
+    }
+
+    private static (double X, double Y) MapCustomGeometryPoint(
+        XElement point,
+        double x,
+        double y,
+        double width,
+        double height,
+        double coordinateWidth,
+        double coordinateHeight)
+    {
+        double pointX = ParseOptionalDoubleAttribute(point, "x", 0d);
+        double pointY = ParseOptionalDoubleAttribute(point, "y", 0d);
+        return (x + pointX / coordinateWidth * width, y + height - pointY / coordinateHeight * height);
+    }
+
+    private static double ParseOptionalDoubleAttribute(XElement element, string name, double defaultValue)
+    {
+        return element.Attribute(name) is { } value &&
+            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : defaultValue;
     }
 
     private static bool TryReadShapePictureFill(

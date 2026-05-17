@@ -1741,6 +1741,12 @@ paths, and ExecPlan references together.
 - [ ] Private slide 7 visible remaining problem: curves on the left render as straight horizontal lines.
   Survey the shape presets/path data structurally, then reproduce with public curve/connector fixtures before
   changing renderer logic.
+  - [x] Inspect slide-7 geometry structurally: the broken curves are `a:custGeom` freeform paths using
+    `moveTo` plus `cubicBezTo`, not preset connectors.
+  - [x] Add public synthetic coverage for cubic custom geometry paths and render DrawingML custom paths with
+    `moveTo`, `lnTo`, `cubicBezTo`, `quadBezTo`, and `close` instead of falling back to rectangles.
+  - [x] Re-run the private case and inspect page 7. The curve geometry now follows the Office-style smooth
+    paths; remaining differences are dominated by text metrics, line/axis styling, and small placement gaps.
 - [ ] Private slide 17 visible remaining problem: left-side schema geometry has issues. Inventory the involved
   shapes, groups, connectors, and transforms with public-safe diagnostics, then isolate public geometry
   fixtures.
