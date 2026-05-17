@@ -2205,9 +2205,10 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties)
+    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties, double textWidth)
     {
         double height = 0d;
+        var advanceEstimator = new TextAdvanceEstimator();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
@@ -2230,6 +2231,7 @@ internal sealed partial class PptxRenderer
             }
 
             double maxFontSize = 18d;
+            double lineWidth = 0d;
             bool hasLineContent = false;
             foreach (XElement child in paragraph.Elements())
             {
@@ -2237,6 +2239,7 @@ internal sealed partial class PptxRenderer
                 {
                     height += ReadLineAdvance(lineSpacing, maxFontSize);
                     maxFontSize = 18d;
+                    lineWidth = 0d;
                     hasLineContent = false;
                     continue;
                 }
@@ -2248,8 +2251,40 @@ internal sealed partial class PptxRenderer
 
                 XElement? runProperties = child.Element(DrawingNamespace + "rPr");
                 double fontSize = ReadFontSize(runProperties, defaultRunProperties);
-                maxFontSize = Math.Max(maxFontSize, fontSize);
-                hasLineContent = true;
+                string? typeface = (string?)(runProperties?.Element(DrawingNamespace + "latin") ??
+                    defaultRunProperties?.Element(DrawingNamespace + "latin"))
+                    ?.Attribute("typeface");
+                bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+                    ParseOptionalBoolAttribute(defaultRunProperties, "b");
+                bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
+                    ParseOptionalBoolAttribute(defaultRunProperties, "i");
+                foreach (string token in SplitTableTextWrapTokens(ReadTextElementText(child, slideNumber: 0)))
+                {
+                    if (token.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    double advance = advanceEstimator.Measure(token, fontSize, typeface, bold, italic, characterSpacing: 0d);
+                    if (!string.IsNullOrWhiteSpace(token) &&
+                        lineWidth > PptxTextMetricRules.TextStateTolerance &&
+                        lineWidth + advance > textWidth)
+                    {
+                        height += ReadLineAdvance(lineSpacing, maxFontSize);
+                        maxFontSize = fontSize;
+                        lineWidth = 0d;
+                        hasLineContent = false;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(token) && lineWidth <= PptxTextMetricRules.TextStateTolerance)
+                    {
+                        continue;
+                    }
+
+                    maxFontSize = Math.Max(maxFontSize, fontSize);
+                    lineWidth += advance;
+                    hasLineContent = true;
+                }
             }
 
             if (hasLineContent || maxFontSize > 0d)

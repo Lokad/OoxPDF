@@ -1780,6 +1780,11 @@ paths, and ExecPlan references together.
   - [ ] Private slide 15 visible remaining problem: left-side images and their matching text items are
     vertically misaligned. Inspect picture bounds, text-frame bounds, z-order, and any shared grouping
     assumptions, then reproduce with a public image-plus-text alignment fixture.
+    - [x] Fix the dominant text-frame side of the misalignment: center-anchored PPTX text frames now estimate
+      wrapped line height before computing vertical anchor offset, instead of centering as if each paragraph
+      were a single unwrapped line. Public synthetic unit
+      `PptxSyntheticTextBoxVerticalAnchorUsesWrappedHeight` locks the generic rule, and private page 15 now
+      places the text rows much closer to the matching images.
   - [ ] If slide-15 issues remain after text flow improves, isolate public fixtures for connector flips,
     picture flips, and grouped transform edge cases.
 - [ ] Private slide 56 visible remaining problem: text is incorrectly boxed. Inspect whether the issue comes
