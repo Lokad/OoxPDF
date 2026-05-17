@@ -1735,6 +1735,9 @@ paths, and ExecPlan references together.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and propagate shape flip flags
     through the PPTX text model/drawing path. This covers the first structural transform gap found on the
     slide without depending on private content.
+  - [x] Add a public synthetic `a:bodyPr rot="0"` fixture for rotated/flipped shapes and let explicit
+    text-body rotation override inherited shape text rotation/flips. The private slide uses this pattern to
+    keep text readable inside a transformed shape.
   - [ ] Re-run the private case and inspect page 15 again; if artifacts remain, isolate remaining transform
     gaps with public fixtures for connector flips, picture flips, and grouped transform edge cases.
 - [ ] PPTX typography ladder: add Office-PDF-backed visual gates for all known `a:bodyPr @vert` variants.

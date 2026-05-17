@@ -129,7 +129,10 @@ internal sealed partial class PptxRenderer
         double flowYTop = yTop;
         double flowWidth = width;
         double flowHeight = height;
-        double textRotationDegrees = bounds.Value.RotationDegrees;
+        double? explicitTextRotationDegrees = ReadTextBodyRotationDegrees(textBody);
+        double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
+        bool textFlipHorizontal = explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal;
+        bool textFlipVertical = explicitTextRotationDegrees is null && bounds.Value.FlipVertical;
         if (orientation is PptxTextOrientation.Vertical or
             PptxTextOrientation.Vertical270 or
             PptxTextOrientation.EastAsianVertical or
@@ -199,8 +202,8 @@ internal sealed partial class PptxRenderer
             rotationCenterX,
             rotationCenterY,
             textRotationDegrees,
-            bounds.Value.FlipHorizontal,
-            bounds.Value.FlipVertical,
+            textFlipHorizontal,
+            textFlipVertical,
             flowYTop,
             verticalOffset,
             orientation,
