@@ -1455,6 +1455,9 @@ paths, and ExecPlan references together.
 - [x] Split PPTX alignment handling so `dist`, `justLow`, and `thaiDist` remain observable text-flow modes
   instead of collapsing into `Justify`. Office-style distributed Latin text now uses positioned per-glyph
   spans, while `justLow` and `thaiDist` use word-spacing justification for Latin text.
+- [x] Remove the small-text natural-line-height exception from PPTX wrapping. The slide-3-inspired narrow
+  Cambria probe showed Office advancing 12pt wrapped lines by about `14.4pt`; candidate line Y deltas dropped
+  from multi-point drift to about `0.3pt` after using the general `1.2` default line-height rule.
 - [ ] Tighten the slide-3-inspired Cambria probes next: compare Office and candidate line breaks, `TJ`
   arrays, highlight rectangles, and font metrics before rerunning the private deck.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays

@@ -464,7 +464,6 @@ internal sealed partial class PptxRenderer
         public const double MinimumStrokeWidth = 0.5d;
         public const double CssSuperscriptSubscriptScale = 0.65d;
         public const double CssNormalLineHeightFallback = 1.2d;
-        public const double SmallTextNaturalLineHeightLimit = 12d;
         public const double OfficeManualBreakDefaultLineHeightFallback = 1.24d;
         public const double OfficeManualBreakBaselineFallback = 0.9344d;
         public const double OfficeBaselineFallback = 0.974d;

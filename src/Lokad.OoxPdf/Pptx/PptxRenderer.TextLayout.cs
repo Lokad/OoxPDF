@@ -1568,7 +1568,7 @@ internal sealed partial class PptxRenderer
     {
         return lineSpacing.IsExplicit
             ? lineSpacing.Resolve(fontSize)
-            : fontSize <= PptxTextMetricRules.SmallTextNaturalLineHeightLimit ? fontSize : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
+            : fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
     }
 
     private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator)
