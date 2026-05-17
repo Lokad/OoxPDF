@@ -1554,8 +1554,9 @@ paths, and ExecPlan references together.
 - [x] Ladder 6 gate `pptx-ladder-06-rect-callout` locks the `wedgeRectCallout` preset with exact raster parity.
 - [x] Ladder 6 gates `pptx-ladder-06-dashed-connector` and `pptx-ladder-06-dash-dot-connector` lock Office dash
   presets with exact raster parity.
-- [x] PPTX stroke enum unit coverage now covers all known `a:prstDash` values and the non-triangle line-end
-  marker variants (`stealth`, `diamond`, `oval`) with first-pass PDF geometry.
+- [x] PPTX stroke enum unit coverage now covers all known `a:prstDash` values, non-triangle line-end
+  marker variants (`stealth`, `diamond`, `oval`), and `w`/`len` marker size variants with first-pass
+  PDF geometry.
 - [x] Ladder 6 gates `pptx-ladder-06-round-cap-connector` and `pptx-ladder-06-square-cap-connector` lock round
   and square caps/joins with exact raster parity.
 - [x] Ladder 6 gates `pptx-ladder-06-bevel-join-rect` and `pptx-ladder-06-round-join-rect` lock explicit

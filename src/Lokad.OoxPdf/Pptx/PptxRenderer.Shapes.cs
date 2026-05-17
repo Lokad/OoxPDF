@@ -164,16 +164,14 @@ internal sealed partial class PptxRenderer
                 double y1 = document.SlideHeightPoints - yTop;
                 double x2 = x + width;
                 double y2 = document.SlideHeightPoints - yTop - height;
-                string? headArrowType = ReadLineEndType(shapeProperties, "headEnd");
-                string? tailArrowType = ReadLineEndType(shapeProperties, "tailEnd");
-                LineEndKind headEnd = ReadLineEndKind(headArrowType);
-                LineEndKind tailEnd = ReadLineEndKind(tailArrowType);
+                LineEndStyle headEnd = ReadLineEnd(shapeProperties, "headEnd");
+                LineEndStyle tailEnd = ReadLineEnd(shapeProperties, "tailEnd");
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
-                if ((hasHeadArrow || hasTailArrow) && headEnd is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
+                if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-                    bool usesOfficeArrowType = headEnd == LineEndKind.Arrow || tailEnd == LineEndKind.Arrow;
+                    bool usesOfficeArrowType = headEnd.Kind == LineEndKind.Arrow || tailEnd.Kind == LineEndKind.Arrow;
                     if (usesOfficeArrowType)
                     {
                         FillOfficeArrowedLine(graphics, x1, y1, x2, y2, lineWidth, hasHeadArrow, hasTailArrow);
@@ -252,10 +250,8 @@ internal sealed partial class PptxRenderer
                     graphics.SetLineJoin(1);
                 }
 
-                string? headArrowType = ReadLineEndType(shapeProperties, "headEnd");
-                string? tailArrowType = ReadLineEndType(shapeProperties, "tailEnd");
-                bool hasHeadArrow = IsFilledTriangleArrow(ReadLineEndKind(headArrowType));
-                bool hasTailArrow = IsFilledTriangleArrow(ReadLineEndKind(tailArrowType));
+                bool hasHeadArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "headEnd"));
+                bool hasTailArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "tailEnd"));
                 DrawCurvedConnector3(graphics, x, yTop, width, height, document.SlideHeightPoints, stroke, lineWidth, hasHeadArrow, hasTailArrow);
 
                 if (hasDash)
@@ -544,9 +540,9 @@ internal sealed partial class PptxRenderer
         ]);
     }
 
-    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndKind kind, double tipX, double tipY, double directionX, double directionY, double lineWidth)
+    private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
     {
-        if (kind == LineEndKind.None || kind is LineEndKind.Triangle or LineEndKind.Arrow)
+        if (style.IsNone || style.Kind is LineEndKind.Triangle or LineEndKind.Arrow)
         {
             return;
         }
@@ -561,15 +557,15 @@ internal sealed partial class PptxRenderer
         double uy = directionY / length;
         double nx = -uy;
         double ny = ux;
-        double markerLength = Math.Max(6.5d, lineWidth * 4d);
-        double markerWidth = Math.Max(5d, lineWidth * 3.2d);
+        double markerLength = Math.Max(6.5d, lineWidth * 4d) * style.LengthScale;
+        double markerWidth = Math.Max(5d, lineWidth * 3.2d) * style.WidthScale;
 
         (double X, double Y) Point(double along, double normal)
         {
             return (tipX - ux * along + nx * normal, tipY - uy * along + ny * normal);
         }
 
-        switch (kind)
+        switch (style.Kind)
         {
             case LineEndKind.Stealth:
                 graphics.FillPolygon(
@@ -764,12 +760,16 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static string? ReadLineEndType(XElement shapeProperties, string elementName)
+    private static LineEndStyle ReadLineEnd(XElement shapeProperties, string elementName)
     {
-        return (string?)shapeProperties
+        XElement? end = shapeProperties
             .Element(DrawingNamespace + "ln")
-            ?.Element(DrawingNamespace + elementName)
-            ?.Attribute("type");
+            ?.Element(DrawingNamespace + elementName);
+        LineEndKind kind = ReadLineEndKind((string?)end?.Attribute("type"));
+        return new LineEndStyle(
+            kind,
+            ReadLineEndScale((string?)end?.Attribute("w")),
+            ReadLineEndScale((string?)end?.Attribute("len")));
     }
 
     private static LineEndKind ReadLineEndKind(string? type)
@@ -785,9 +785,19 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static bool IsFilledTriangleArrow(LineEndKind kind)
+    private static double ReadLineEndScale(string? value)
     {
-        return kind is LineEndKind.Arrow or LineEndKind.Triangle;
+        return value switch
+        {
+            "sm" => 0.5d,
+            "lg" => 1.5d,
+            _ => 1d
+        };
+    }
+
+    private static bool IsFilledTriangleArrow(LineEndStyle style)
+    {
+        return style.Kind is LineEndKind.Arrow or LineEndKind.Triangle;
     }
 
     private static bool TryReadPresetDash(XElement shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)

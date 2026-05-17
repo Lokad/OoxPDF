@@ -554,6 +554,11 @@ internal sealed partial class PptxRenderer
         Oval
     }
 
+    private readonly record struct LineEndStyle(LineEndKind Kind, double WidthScale, double LengthScale)
+    {
+        public bool IsNone => Kind == LineEndKind.None;
+    }
+
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
