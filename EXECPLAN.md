@@ -1779,6 +1779,13 @@ paths, and ExecPlan references together.
 - [ ] Private slide 56 visible remaining problem: text is incorrectly boxed. Inspect whether the issue comes
   from shape fill/stroke, text highlight, clipping, or placeholder/text-frame bounds, then lock the generic
   behavior with public synthetic fixtures.
+  - [x] Fix the first generic slide-56 text-list gap: symbol-font `buChar` values with OOXML charset `2`
+    now map legacy byte bullets into the font private-use range before glyph lookup. Public synthetic unit
+    `PptxSyntheticTextBoxMapsSymbolFontBulletCharacters` locks the rule, and private page 56 now renders
+    the right-side square bullets.
+  - [ ] Continue slide-56 text-list parity: bold list emphasis and red arrow callouts still differ from the
+    Office PDF, so isolate those as public typography and line/arrow fixtures rather than treating the slide
+    as resolved.
 - [ ] Private-deck sweep loop: iterate over all `lokad-value-based` slides, keep a public-safe issue inventory,
   and for each visible problem add a minimal synthetic public case before implementing the generic fix.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and

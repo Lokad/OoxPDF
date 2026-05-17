@@ -2018,7 +2018,10 @@ internal sealed partial class PptxRenderer
 
         if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } bullet)
         {
-            return bullet;
+            XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
+            return IsSymbolBulletFont(bulletFont)
+                ? MapSymbolBulletText(bullet)
+                : bullet;
         }
 
         XElement? autoNumber = paragraphProperties.Element(DrawingNamespace + "buAutoNum");
@@ -2037,6 +2040,28 @@ internal sealed partial class PptxRenderer
         string result = FormatAutoNumber(autoNumberValue, (string?)autoNumber.Attribute("type"));
         autoNumberValue++;
         return result;
+    }
+
+    private static bool IsSymbolBulletFont(XElement? bulletFont)
+    {
+        string? charset = (string?)bulletFont?.Attribute("charset");
+        return charset is "2" or "-2";
+    }
+
+    private static string MapSymbolBulletText(string bullet)
+    {
+        Span<char> mapped = bullet.Length <= 256
+            ? stackalloc char[bullet.Length]
+            : new char[bullet.Length];
+        for (int i = 0; i < bullet.Length; i++)
+        {
+            char ch = bullet[i];
+            mapped[i] = ch <= 0x00FF
+                ? (char)(0xF000 + ch)
+                : ch;
+        }
+
+        return new string(mapped);
     }
 
     private static string FormatAutoNumber(int value, string? type)

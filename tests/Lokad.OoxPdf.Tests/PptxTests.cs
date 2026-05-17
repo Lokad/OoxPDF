@@ -1350,6 +1350,55 @@ internal static class PptxTests
         TestAssert.Contains("2022", pdf);
     }
 
+    public static void PptxSyntheticTextBoxMapsSymbolFontBulletCharacters()
+    {
+        string wingdings = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "wingding.ttf");
+        if (!File.Exists(wingdings))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p>
+                        <a:pPr>
+                          <a:buFont typeface="Wingdings" charset="2"/>
+                          <a:buChar char="&#xA7;"/>
+                        </a:pPr>
+                        <a:r><a:rPr sz="1800"/><a:t>Symbol item</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextSpanLayoutSnapshot bullet = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .Single(span => span.Text == "\uF0A7");
+
+        TestAssert.Equal("\uF0A7", bullet.Text);
+        TestAssert.Equal("Wingdings", bullet.GlyphSpan.Typeface);
+    }
+
     public static void PptxSyntheticTextBoxRendersAutoNumberedBullets()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
