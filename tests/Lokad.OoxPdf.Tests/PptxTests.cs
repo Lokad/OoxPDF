@@ -221,6 +221,18 @@ internal static class PptxTests
         TestAssert.True(textFrame.Paragraphs[0].Runs[0].Underline, "Expected text model to preserve resolved run underline before layout.");
         TestAssert.Equal(new RgbColor(255, 255, 0), textFrame.Paragraphs[0].Runs[0].Highlight ?? default);
 
+        PptxTextFlowSnapshot textFlow = PptxRenderer.InspectTextFlow(document, package, 0);
+        PptxTextFlowFrameSnapshot flowFrame = textFlow.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.SourceText == "Hello")));
+        TestAssert.Equal(1, flowFrame.Paragraphs.Count);
+        TestAssert.Equal(1, flowFrame.Paragraphs[0].Level);
+        TestAssert.Equal("Center", flowFrame.Paragraphs[0].Alignment);
+        TestAssert.Equal("Hello", flowFrame.Paragraphs[0].Runs[0].SourceText);
+        TestAssert.Equal("Text", flowFrame.Paragraphs[0].Runs[0].Segments[0].Kind);
+        TestAssert.Equal("Hello", flowFrame.Paragraphs[0].Runs[0].Segments[0].Text);
+        TestAssert.Equal("Break", flowFrame.Paragraphs[0].Runs[1].SourceKind);
+        TestAssert.Equal("Break", flowFrame.Paragraphs[0].Runs[1].Segments[0].Kind);
+        TestAssert.True(flowFrame.TextWidth > 0d, "Expected text flow box to own text bounds before line layout.");
+
         PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextFrameLayoutSnapshot layoutFrame = textLayout.Frames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Lines.Any(line => line.Spans.Any(span => span.Text == "Hello"))));
         TestAssert.Equal(1, layoutFrame.Paragraphs.Count);

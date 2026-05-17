@@ -150,8 +150,14 @@ High-priority actions:
 - [x] Add first-class text layout atoms under positioned spans:
   each span now exposes word, space, tab, and hidden-advance atom kinds through the layout inspector, so
   wrapping and justification can reason about structured text instead of opaque strings.
-- [ ] Continue the intermediate typography model from resolved style records to explicit text body,
-  paragraph, line, positioned run, glyph span, and hidden-control advance records.
+- [x] Continue the intermediate typography model from resolved style records to explicit text body,
+  paragraph, line, positioned run, glyph span, and hidden-control advance records. The direct PPTX renderer
+  now has a first-class `PptxTextFlowModel` between resolved frame models and measured line layout:
+  flow frames own text boxes, flow paragraphs own resolved paragraph styles, and flow runs own tabs,
+  hidden advances, boundary punctuation, breaks, and caps scaling before measuring or PDF emission.
+- [ ] Reverse-engineer the remaining PPTX text formulas from Office/PDF evidence and `pptx-renderer`
+  semantics, replacing local constants with named general rules for hidden advances, baseline offsets,
+  line advances, highlight rectangles, and text-operation boundaries.
 - [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
   font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
   `TJ` array construction.

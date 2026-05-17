@@ -47,6 +47,39 @@ internal sealed record PptxTextRunModelSnapshot(
     bool Underline,
     RgbColor? Highlight);
 
+internal sealed record PptxTextFlowSnapshot(IReadOnlyList<PptxTextFlowFrameSnapshot> Frames);
+
+internal sealed record PptxTextFlowFrameSnapshot(
+    double TextX,
+    double TextWidth,
+    double TextHeight,
+    double ClipY,
+    double ClipHeight,
+    double CursorTop,
+    IReadOnlyList<PptxTextFlowParagraphSnapshot> Paragraphs);
+
+internal sealed record PptxTextFlowParagraphSnapshot(
+    int Level,
+    string Alignment,
+    double FontSize,
+    IReadOnlyList<PptxTextFlowRunSnapshot> Runs);
+
+internal sealed record PptxTextFlowRunSnapshot(
+    string SourceKind,
+    string SourceText,
+    double FontSize,
+    string? Typeface,
+    IReadOnlyList<PptxTextFlowSegmentSnapshot> Segments);
+
+internal sealed record PptxTextFlowSegmentSnapshot(
+    string Kind,
+    string Text,
+    string AdvanceText,
+    bool Draw,
+    bool PreventCoalesce,
+    double FontScale,
+    double? AdvanceFontSizeFactor);
+
 internal sealed record PptxTextLayoutSnapshot(IReadOnlyList<PptxTextFrameLayoutSnapshot> Frames);
 
 internal sealed record PptxTextFrameLayoutSnapshot(IReadOnlyList<PptxTextParagraphLayoutSnapshot> Paragraphs);

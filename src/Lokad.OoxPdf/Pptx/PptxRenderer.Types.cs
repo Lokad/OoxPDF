@@ -102,7 +102,14 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
-    private readonly record struct TextFlowSegment(string Text, string AdvanceText, bool Draw, bool PreventCoalesce, double? AdvanceFontSizeFactor = null);
+    private readonly record struct PptxTextFlowSegment(
+        string Text,
+        string AdvanceText,
+        PptxTextFlowSegmentKind Kind,
+        bool Draw,
+        bool PreventCoalesce,
+        double FontScale = 1d,
+        double? AdvanceFontSizeFactor = null);
 
     private readonly record struct ResolvedParagraphTextStyle(
         TextAlignment Alignment,
@@ -175,6 +182,34 @@ internal sealed partial class PptxRenderer
         XElement? Properties,
         string Text,
         ResolvedRunTextStyle Style);
+
+    private sealed record PptxTextFlowModel(IReadOnlyList<PptxTextFlowFrame> Frames);
+
+    private sealed record PptxTextFlowFrame(
+        PptxTextFrameModel Model,
+        PptxTextFlowBox Box,
+        IReadOnlyList<PptxTextFlowParagraph> Paragraphs);
+
+    private sealed record PptxTextFlowBox(
+        double YTop,
+        double CursorTop,
+        double TextX,
+        double TextWidth,
+        double TextHeight,
+        double ClipY,
+        double ClipHeight,
+        double RotationCenterX,
+        double RotationCenterY);
+
+    private sealed record PptxTextFlowParagraph(
+        PptxTextParagraphModel Model,
+        ResolvedParagraphTextStyle Style,
+        IReadOnlyList<PptxTextFlowRun> Runs);
+
+    private sealed record PptxTextFlowRun(
+        PptxTextRunModel Source,
+        ResolvedRunTextStyle Style,
+        IReadOnlyList<PptxTextFlowSegment> Segments);
 
     private sealed record PptxTextLayoutModel(IReadOnlyList<PptxTextFrameLayout> Frames);
 
@@ -270,6 +305,15 @@ internal sealed partial class PptxRenderer
         Space,
         Tab,
         HiddenAdvance
+    }
+
+    private enum PptxTextFlowSegmentKind
+    {
+        Text,
+        Tab,
+        HiddenAdvance,
+        BoundaryPunctuation,
+        Break
     }
 
     private enum PptxTextRunKind

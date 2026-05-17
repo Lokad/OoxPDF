@@ -51,6 +51,20 @@ internal sealed partial class PptxRenderer
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
     }
 
+    internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex)
+    {
+        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        if (context is null)
+        {
+            return new PptxTextFlowSnapshot([]);
+        }
+
+        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedXml, context);
+        PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
+        return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
+    }
+
     private static PptxTextLayoutModel BuildTextLayoutModelForSources(
         IReadOnlyList<XDocument> sources,
         PptxRenderContext context)
@@ -62,6 +76,19 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextLayoutModel(frames);
+    }
+
+    private static PptxTextFlowModel BuildTextFlowModelForSources(
+        IReadOnlyList<XDocument> sources,
+        PptxRenderContext context)
+    {
+        var frames = new List<PptxTextFlowFrame>();
+        foreach (XDocument source in sources)
+        {
+            frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+        }
+
+        return new PptxTextFlowModel(frames);
     }
 
     private static PptxTextRunSnapshot ToSnapshot(TextRun run)
@@ -87,6 +114,54 @@ internal sealed partial class PptxRenderer
     private static PptxTextLayoutSnapshot ToSnapshot(PptxTextLayoutModel layout)
     {
         return new PptxTextLayoutSnapshot(layout.Frames.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextFlowSnapshot ToSnapshot(PptxTextFlowModel flow)
+    {
+        return new PptxTextFlowSnapshot(flow.Frames.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextFlowFrameSnapshot ToSnapshot(PptxTextFlowFrame frame)
+    {
+        return new PptxTextFlowFrameSnapshot(
+            frame.Box.TextX,
+            frame.Box.TextWidth,
+            frame.Box.TextHeight,
+            frame.Box.ClipY,
+            frame.Box.ClipHeight,
+            frame.Box.CursorTop,
+            frame.Paragraphs.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextFlowParagraphSnapshot ToSnapshot(PptxTextFlowParagraph paragraph)
+    {
+        return new PptxTextFlowParagraphSnapshot(
+            paragraph.Model.Level,
+            paragraph.Style.Alignment.ToString(),
+            paragraph.Style.FontSize,
+            paragraph.Runs.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextFlowRunSnapshot ToSnapshot(PptxTextFlowRun run)
+    {
+        return new PptxTextFlowRunSnapshot(
+            run.Source.Kind.ToString(),
+            run.Source.Text,
+            run.Style.FontSize,
+            run.Style.Typeface,
+            run.Segments.Select(ToSnapshot).ToArray());
+    }
+
+    private static PptxTextFlowSegmentSnapshot ToSnapshot(PptxTextFlowSegment segment)
+    {
+        return new PptxTextFlowSegmentSnapshot(
+            segment.Kind.ToString(),
+            segment.Text,
+            segment.AdvanceText,
+            segment.Draw,
+            segment.PreventCoalesce,
+            segment.FontScale,
+            segment.AdvanceFontSizeFactor);
     }
 
     private static PptxTextFrameLayoutSnapshot ToSnapshot(PptxTextFrameLayout frame)
@@ -227,12 +302,95 @@ internal sealed partial class PptxRenderer
     {
         var advanceEstimator = new TextAdvanceEstimator();
         var frames = new List<PptxTextFrameLayout>();
-        foreach (PptxTextFrameModel frame in BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources))
+        PptxTextFlowModel flow = BuildTextFlowModel(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
+        foreach (PptxTextFlowFrame frame in flow.Frames)
         {
             frames.Add(BuildTextFrameLayout(frame, document, advanceEstimator));
         }
 
         return new PptxTextLayoutModel(frames);
+    }
+
+    private static PptxTextFlowModel BuildTextFlowModel(
+        PptxRenderContext context,
+        XDocument slideXml,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return BuildTextFlowModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+    }
+
+    private static PptxTextFlowModel BuildTextFlowModel(
+        XDocument slideXml,
+        PptxDocument document,
+        PptxTheme theme,
+        int slideNumber,
+        bool includePlaceholders,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        return BuildTextFlowModel(BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources), document);
+    }
+
+    private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)
+    {
+        return new PptxTextFlowModel(frames.Select(frame => BuildTextFlowFrame(frame, document)).ToArray());
+    }
+
+    private static PptxTextFlowFrame BuildTextFlowFrame(PptxTextFrameModel frame, PptxDocument document)
+    {
+        double yTop = OoxUnits.EmuToPoints(frame.Bounds.Y);
+        var box = new PptxTextFlowBox(
+            yTop,
+            document.SlideHeightPoints - yTop - frame.Insets.Top - frame.VerticalOffset,
+            frame.TextX,
+            frame.TextWidth,
+            frame.TextHeight,
+            frame.TextClipY,
+            frame.TextClipHeight,
+            frame.RotationCenterX,
+            frame.RotationCenterY);
+        return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(BuildTextFlowParagraph).ToArray());
+    }
+
+    private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph)
+    {
+        return new PptxTextFlowParagraph(paragraph, paragraph.Style, paragraph.Runs.Select(run => BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties)).ToArray());
+    }
+
+    private static PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties)
+    {
+        if (run.Kind == PptxTextRunKind.Break)
+        {
+            return new PptxTextFlowRun(run, run.Style, [new PptxTextFlowSegment("\n", "\n", PptxTextFlowSegmentKind.Break, Draw: false, PreventCoalesce: true)]);
+        }
+
+        var segments = new List<PptxTextFlowSegment>();
+        string[] tabParts = run.Text.Split('\t');
+        for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
+        {
+            if (tabPartIndex > 0)
+            {
+                segments.Add(new PptxTextFlowSegment(" ", " ", PptxTextFlowSegmentKind.Tab, Draw: true, PreventCoalesce: true));
+            }
+
+            foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], run.Properties, defaultRunProperties))
+            {
+                if (fragment.Text.Length == 0)
+                {
+                    continue;
+                }
+
+                foreach (PptxTextFlowSegment segment in SplitFlowSegments(fragment.Text))
+                {
+                    segments.Add(segment with
+                    {
+                        FontScale = fragment.FontScale
+                    });
+                }
+            }
+        }
+
+        return new PptxTextFlowRun(run, run.Style, segments);
     }
 
     private static IReadOnlyList<TextRun> FlattenTextLayout(PptxTextLayoutModel layout)
@@ -249,18 +407,19 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFrameModel frame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
+    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
     {
-        double yTop = OoxUnits.EmuToPoints(frame.Bounds.Y);
-        double cursorLineTop = document.SlideHeightPoints - yTop - frame.Insets.Top - frame.VerticalOffset;
+        PptxTextFrameModel frame = flowFrame.Model;
+        double cursorLineTop = flowFrame.Box.CursorTop;
         int autoNumberValue = 1;
         bool hasPlacedParagraph = false;
         var paragraphLayouts = new List<PptxTextParagraphLayout>();
 
-        foreach (PptxTextParagraphModel paragraph in frame.Paragraphs)
+        foreach (PptxTextFlowParagraph flowParagraph in flowFrame.Paragraphs)
         {
+            PptxTextParagraphModel paragraph = flowParagraph.Model;
             var lineLayouts = new List<PptxTextLineLayout>();
-            ResolvedParagraphTextStyle paragraphStyle = paragraph.Style;
+            ResolvedParagraphTextStyle paragraphStyle = flowParagraph.Style;
             if (!ParagraphHasVisibleContent(paragraph.Source))
             {
                 if (ParagraphHasLayoutContent(paragraph.Source))
@@ -293,8 +452,9 @@ internal sealed partial class PptxRenderer
             double cursorX = paragraphTextX;
             double maxFontSize = paragraphStyle.FontSize;
             var line = new TextLayoutLine(paragraphTextX);
-            foreach (PptxTextRunModel modelRun in paragraph.Runs)
+            foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
+                PptxTextRunModel modelRun = flowRun.Source;
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
                     AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, advanceEstimator);
@@ -307,7 +467,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                ResolvedRunTextStyle runStyle = modelRun.Style;
+                ResolvedRunTextStyle runStyle = flowRun.Style;
                 maxFontSize = Math.Max(maxFontSize, runStyle.NominalFontSize);
                 if (double.IsNaN(cursorY))
                 {
@@ -327,62 +487,51 @@ internal sealed partial class PptxRenderer
                     bulletPending = false;
                 }
 
-                string[] tabParts = modelRun.Text.Split('\t');
-                for (int tabPartIndex = 0; tabPartIndex < tabParts.Length; tabPartIndex++)
+                foreach (PptxTextFlowSegment flowSegment in flowRun.Segments)
                 {
-                    if (tabPartIndex > 0)
+                    if (flowSegment.Kind == PptxTextFlowSegmentKind.Tab)
                     {
                         double tabSpaceWidth = advanceEstimator.Measure(" ", runStyle.FontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                         TextRun tabRun = new(" ", cursorX, cursorY, Math.Max(1d, tabSpaceWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, runStyle.FontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, PreventCoalesce: true);
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops, runStyle.FontSize);
                         line.AdvanceTo(cursorX);
+                        continue;
                     }
 
-                    foreach (TextCapsFragment fragment in ApplyTextCaps(tabParts[tabPartIndex], modelRun.Properties, paragraphStyle.DefaultRunProperties))
+                    double fragmentFontSize = runStyle.FontSize * flowSegment.FontScale;
+                    string currentSegment = flowSegment.Text;
+                    string currentAdvanceText = flowSegment.AdvanceText;
+                    double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    bool overflowsLine = cursorX > paragraphTextX &&
+                        (cursorX + segmentWidth > frame.TextX + frame.TextWidth ||
+                            (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
+                    if (overflowsLine)
                     {
-                        if (fragment.Text.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        double fragmentFontSize = runStyle.FontSize * fragment.FontScale;
-                        foreach (TextFlowSegment flowSegment in SplitFlowSegments(fragment.Text))
-                        {
-                            string currentSegment = flowSegment.Text;
-                            string currentAdvanceText = flowSegment.AdvanceText;
-                            double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                            bool overflowsLine = cursorX > paragraphTextX &&
-                                (cursorX + segmentWidth > frame.TextX + frame.TextWidth ||
-                                    (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > frame.TextX + frame.TextWidth - fragmentFontSize));
-                            if (overflowsLine)
-                            {
-                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify, advanceEstimator);
-                                cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
-                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
-                                cursorX = paragraphTextX;
-                                line.Reset(paragraphTextX);
-                                maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
-                                currentSegment = currentSegment.TrimStart();
-                                currentAdvanceText = currentAdvanceText.TrimStart();
-                                segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
-                            }
-
-                            if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
-                            {
-                                continue;
-                            }
-
-                            if (flowSegment.Draw && currentSegment.Length != 0)
-                            {
-                                TextRun textRun = new(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
-                                line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
-                            }
-
-                            cursorX += segmentWidth;
-                            line.AdvanceTo(cursorX);
-                        }
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: paragraphStyle.Alignment == TextAlignment.Justify, advanceEstimator);
+                        cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                        cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
+                        cursorX = paragraphTextX;
+                        line.Reset(paragraphTextX);
+                        maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
+                        currentSegment = currentSegment.TrimStart();
+                        currentAdvanceText = currentAdvanceText.TrimStart();
+                        segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                     }
+
+                    if (currentAdvanceText.Length == 0 && flowSegment.AdvanceFontSizeFactor is null)
+                    {
+                        continue;
+                    }
+
+                    if (flowSegment.Draw && currentSegment.Length != 0)
+                    {
+                        TextRun textRun = new(currentSegment, cursorX, cursorY, Math.Max(1d, segmentWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.Bounds.RotationDegrees, frame.RotationCenterX, frame.RotationCenterY, flowSegment.PreventCoalesce);
+                        line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
+                    }
+
+                    cursorX += segmentWidth;
+                    line.AdvanceTo(cursorX);
                 }
             }
 
@@ -552,7 +701,7 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static IEnumerable<TextFlowSegment> SplitFlowSegments(string text)
+    private static IEnumerable<PptxTextFlowSegment> SplitFlowSegments(string text)
     {
         int index = 0;
         while (index < text.Length)
@@ -579,7 +728,7 @@ internal sealed partial class PptxRenderer
 
             if (index > start)
             {
-                foreach (TextFlowSegment segment in SplitControlSegments(text[start..index]))
+                foreach (PptxTextFlowSegment segment in SplitControlSegments(text[start..index]))
                 {
                     yield return segment;
                 }
@@ -587,7 +736,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IEnumerable<TextFlowSegment> SplitControlSegments(string text)
+    private static IEnumerable<PptxTextFlowSegment> SplitControlSegments(string text)
     {
         var builder = new StringBuilder();
         bool nextPreventsCoalesce = false;
@@ -597,13 +746,13 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
                     builder.Clear();
                 }
 
                 string advanceText = c == '\u00A0' ? " " : string.Empty;
                 double? advanceFactor = c == '\u202F' ? 0.21d : null;
-                yield return new TextFlowSegment(string.Empty, advanceText, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
+                yield return new PptxTextFlowSegment(string.Empty, advanceText, PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, AdvanceFontSizeFactor: advanceFactor);
                 nextPreventsCoalesce = true;
                 continue;
             }
@@ -612,7 +761,7 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
                     builder.Clear();
                 }
 
@@ -624,11 +773,11 @@ internal sealed partial class PptxRenderer
             {
                 if (builder.Length > 0)
                 {
-                    yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
                     builder.Clear();
                 }
 
-                yield return new TextFlowSegment(c.ToString(), c.ToString(), Draw: true, PreventCoalesce: true);
+                yield return new PptxTextFlowSegment(c.ToString(), c.ToString(), PptxTextFlowSegmentKind.BoundaryPunctuation, Draw: true, PreventCoalesce: true);
                 nextPreventsCoalesce = true;
                 continue;
             }
@@ -638,7 +787,7 @@ internal sealed partial class PptxRenderer
 
         if (builder.Length > 0)
         {
-            yield return new TextFlowSegment(builder.ToString(), builder.ToString(), Draw: true, nextPreventsCoalesce);
+            yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
         }
     }
 
@@ -647,7 +796,7 @@ internal sealed partial class PptxRenderer
         return value is '-' or '\u2010' or '\u2011' or '\u2012' or '\u2013';
     }
 
-    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, TextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
+    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, PptxTextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
     {
         return segment.AdvanceFontSizeFactor is { } factor
             ? Math.Max(0d, fontSize * factor)
