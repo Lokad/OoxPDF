@@ -109,6 +109,12 @@ High-priority actions:
   diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
+- [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
+  progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
+  PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
+  and arrowhead presets, preset geometries and adjustments, fills/color transforms, picture crop/tile/recolor
+  modes, table borders/anchors, chart types/marker styles, and DOCX alignment, breaks, table layout,
+  numbering, underline/border/shading, drawing wrap, and section/page settings.
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
   paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
 - [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF

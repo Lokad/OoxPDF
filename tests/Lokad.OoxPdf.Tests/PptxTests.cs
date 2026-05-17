@@ -471,6 +471,54 @@ internal static class PptxTests
         TestAssert.Contains("2 j", pdf);
     }
 
+    public static void PptxSyntheticShapeStrokeDashPresetVariantsRender()
+    {
+        string[] dashValues = ["dot", "sysDot", "dash", "sysDash", "lgDash", "dashDot", "sysDashDot", "lgDashDot", "lgDashDotDot", "sysDashDotDot", "solid"];
+        var shapes = new StringBuilder();
+        for (int i = 0; i < dashValues.Length; i++)
+        {
+            int y = 914400 + i * 274320;
+            shapes.Append(CultureInfo.InvariantCulture, $"""
+                    <p:sp>
+                      <p:spPr>
+                        <a:xfrm><a:off x="914400" y="{y}"/><a:ext cx="1828800" cy="0"/></a:xfrm>
+                        <a:prstGeom prst="line"/>
+                        <a:ln w="12700"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:prstDash val="{dashValues[i]}"/></a:ln>
+                      </p:spPr>
+                    </p:sp>
+
+                """);
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                {{shapes}}
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("[1 2 ] 0 d", pdf);
+        TestAssert.Contains("[4 3 ] 0 d", pdf);
+        TestAssert.Contains("[8 3 ] 0 d", pdf);
+        TestAssert.Contains("[4 3 1 3 ] 0 d", pdf);
+        TestAssert.Contains("[8 3 1 3 ] 0 d", pdf);
+        TestAssert.Contains("[8 3 1 3 1 3 ] 0 d", pdf);
+        TestAssert.True(CountOccurrences(pdf, "[] 0 d") == dashValues.Length - 1, "Each dashed line should reset the dash pattern; solid must not set a dash pattern.");
+    }
+
     public static void PptxSyntheticRotatedShapeProducesTransform()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

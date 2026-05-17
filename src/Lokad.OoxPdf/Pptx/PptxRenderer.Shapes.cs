@@ -726,20 +726,18 @@ internal sealed partial class PptxRenderer
             .Element(DrawingNamespace + "ln")
             ?.Element(DrawingNamespace + "prstDash")
             ?.Attribute("val");
-        if (presetDash == "dash")
+        double w = Math.Max(lineWidth, PptxTextMetricRules.MinimumStrokeWidth);
+        dashPattern = presetDash switch
         {
-            dashPattern = [lineWidth * 4d, lineWidth * 3d];
-            return true;
-        }
-
-        if (presetDash == "dashDot")
-        {
-            dashPattern = [lineWidth * 4d, lineWidth * 3d, lineWidth, lineWidth * 3d];
-            return true;
-        }
-
-        dashPattern = [];
-        return false;
+            "dot" or "sysDot" => [w, w * 2d],
+            "dash" or "sysDash" => [w * 4d, w * 3d],
+            "lgDash" => [w * 8d, w * 3d],
+            "dashDot" or "sysDashDot" => [w * 4d, w * 3d, w, w * 3d],
+            "lgDashDot" => [w * 8d, w * 3d, w, w * 3d],
+            "lgDashDotDot" or "sysDashDotDot" => [w * 8d, w * 3d, w, w * 3d, w, w * 3d],
+            _ => []
+        };
+        return dashPattern.Count > 0;
     }
 
     private static string? ReadLineCap(XElement shapeProperties)
