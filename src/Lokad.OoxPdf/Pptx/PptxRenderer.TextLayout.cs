@@ -1768,12 +1768,12 @@ internal sealed partial class PptxRenderer
         }
 
         double ascenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
-        if (ascenderRatio <= 0d)
+        if (ascenderRatio <= 0d || ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio)
         {
             return BaselineOffset(fontSize);
         }
 
-        double metricRatio = Math.Clamp(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio, PptxTextMetricRules.MaximumBaselineMetricRatio);
+        double metricRatio = Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio);
         if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
         {
             metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
@@ -1798,14 +1798,16 @@ internal sealed partial class PptxRenderer
         }
 
         double ascenderRatio = font.Os2.WindowsAscender / (double)font.UnitsPerEm;
-        double ratio = ascenderRatio > 0d
-            ? Math.Clamp(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio, PptxTextMetricRules.MaximumBaselineMetricRatio)
+        double ratio = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
+            ? Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio)
             : fallbackRatio;
         if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }
-        string source = ascenderRatio > 0d ? "OS/2 usWinAscent" : "Fallback";
+        string source = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
+            ? "OS/2 usWinAscent"
+            : "Fallback";
         return new PptxTextBaselineMetricLayout(
             source,
             runStyle.Typeface,

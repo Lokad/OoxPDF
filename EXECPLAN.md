@@ -1441,10 +1441,11 @@ paths, and ExecPlan references together.
   sent text through unrelated installed fallbacks.
 - [x] Slide-3 typography gap: clamp highlight rectangles to line-box proportions when font OS/2 metrics
   are extreme, instead of letting raw ascender/descender values create multi-line yellow bands.
-- [ ] Revisit locked public typography visual thresholds after exact-font rendering: current private slide 3
-  improves substantially, but `pptx-ladder-04-typography-run-boundaries` and
-  `pptx-ladder-04-typography-font-families` now fail their old MAE gates and need line-by-line Office PDF
-  text-operation review before re-locking.
+- [x] Revisit locked public typography visual thresholds after exact-font rendering. Reject out-of-range
+  ascender metrics for baseline placement instead of clamping them, which keeps exact math-table fonts
+  while restoring the public typography gates: `pptx-ladder-04-typography-run-boundaries`
+  MAE `0.186656`, changed16 `0.005533`; `pptx-ladder-04-typography-font-families`
+  MAE `0.715017`, changed16 `0.011127`.
 - [ ] Remove remaining PPTX text-flow approximations that pick specific families as default behavior.
   Defaults must come from OOXML theme resolution, font metadata, or a documented generic fallback stack,
   not font-by-font aliases.
@@ -1704,6 +1705,16 @@ paths, and ExecPlan references together.
   gaps such as uppercase-start words, accented words, and dense French/English word pairs.
 - [x] PPTX typography ladder: refine highlighted-run rectangle origin and height for mixed highlighted text
   after kerning fixes, using Office PDF/raster inspection rather than private-deck MAE.
+- [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
+  involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
+  geometry fixtures before changing renderer logic.
+- [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
+  issues on the right, especially around the bottom-right content, and map them to public image/layout
+  fixtures.
+- [ ] Private slide 13 visible remaining problem: text overflows on the bottom-right content. Reproduce via
+  public autofit/overflow fixtures before adjusting text layout.
+- [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
+  flips, and group/image drawing order, then create a public transform fixture if coverage is missing.
 - [ ] PPTX typography ladder: implement vertical Latin text frames for `a:bodyPr @vert="vert"` after
   surveying Office glyph order, line stacking, and alignment on public fixtures.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
