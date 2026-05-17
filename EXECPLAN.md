@@ -1803,6 +1803,15 @@ paths, and ExecPlan references together.
     as resolved.
 - [ ] Private-deck sweep loop: iterate over all `lokad-value-based` slides, keep a public-safe issue inventory,
   and for each visible problem add a minimal synthetic public case before implementing the generic fix.
+  - [x] After custom arc geometry support, the private deck no longer has unsupported custom-geometry
+    diagnostics. Remaining private diagnostics are now concentrated in broader public-feature families:
+    approximate chart fallbacks, `outerShdw`/`glow` effects, image recolor (`lum`, `duotone`), and alpha
+    values inside effect definitions.
+  - [ ] Add public synthetic effect rungs for `outerShdw` and `glow` before attempting private-slide shadow
+    parity. Start with no-blur/low-blur cases, then add blur/alpha/direction/distance variants only when
+    the simpler Office PDF paths are understood.
+  - [ ] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
+    recolored raster output is actually generated, and make the image cache key include recolor parameters.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
   first-class intermediate models rather than piling more ad hoc logic into rendering code.
 - [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is
