@@ -136,18 +136,28 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(chartXml, "pieChart");
-        if (pieSeries.Count != 0)
+        XElement? pieChart = chartXml.Descendants(ChartNamespace + "pieChart").FirstOrDefault();
+        if (pieChart is not null)
         {
-            RenderPieChartFallback(graphics, document, bounds, pieSeries[0]);
-            return true;
+            IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(pieChart);
+            if (pieSeries.Count != 0)
+            {
+                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(pieChart, theme);
+                RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills);
+                return true;
+            }
         }
 
-        IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadChartSeries(chartXml, "doughnutChart");
-        if (doughnutSeries.Count != 0)
+        XElement? doughnutChart = chartXml.Descendants(ChartNamespace + "doughnutChart").FirstOrDefault();
+        if (doughnutChart is not null)
         {
-            RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0]);
-            return true;
+            IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadChartSeries(doughnutChart);
+            if (doughnutSeries.Count != 0)
+            {
+                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
+                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills);
+                return true;
+            }
         }
 
         return false;
@@ -190,6 +200,33 @@ internal sealed partial class PptxRenderer
             fills.Add(TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
                 ? new ChartSeriesFill(color, alpha)
                 : null);
+        }
+
+        return fills;
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesFill> ReadChartPointFills(XElement chartElement, PptxTheme theme)
+    {
+        var fills = new Dictionary<int, ChartSeriesFill>();
+        XElement? series = chartElement.Element(ChartNamespace + "ser");
+        if (series is null)
+        {
+            return fills;
+        }
+
+        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
+        {
+            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
+                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            {
+                continue;
+            }
+
+            XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
+            if (TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha))
+            {
+                fills[index] = new ChartSeriesFill(color, alpha);
+            }
         }
 
         return fills;
@@ -868,7 +905,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
+    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -906,16 +943,29 @@ internal sealed partial class PptxRenderer
                     centerY + Math.Sin(segmentAngle) * radius);
             }
 
-            RgbColor fill = ChartPalette(i);
-            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill explicitFill)
+                ? explicitFill
+                : new ChartSeriesFill(ChartPalette(i), 1d);
+            if (fill.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+            }
+
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             graphics.FillPolygon(points);
+            if (fill.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
+
             angle += sweep;
         }
     }
 
-    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values)
+    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills)
     {
-        RenderPieChartFallback(graphics, document, bounds, values);
+        RenderPieChartFallback(graphics, document, bounds, values, pointFills);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);

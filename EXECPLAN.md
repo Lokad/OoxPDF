@@ -612,6 +612,9 @@ Composite oracle family map:
 - Line and scatter chart fallbacks now read basic series marker symbols and sizes, with first-pass support
   for `circle`, `square`, `diamond`, `triangle`, and `none`. Remaining marker work is Office's full marker
   preset set, marker fill/line overrides, and exact marker sizing from the chart style parts.
+- Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
+  through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
+  slice borders, data labels, and inherited chart style/color-style defaults.
 
 PPTX table style targets from the table composite port:
 
