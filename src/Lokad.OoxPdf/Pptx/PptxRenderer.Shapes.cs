@@ -142,6 +142,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             out string? pictureFillName,
             out PdfImageXObject? pictureFillImage);
+        XElement? customGeometry = shapeProperties.Element(DrawingNamespace + "custGeom");
 
         if (transformed)
         {
@@ -149,7 +150,13 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        XElement? customGeometry = shapeProperties.Element(DrawingNamespace + "custGeom");
+        if (TryReadOuterShadow(shapeProperties, theme, out OuterShadow outerShadow) &&
+            preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
+            customGeometry is null)
+        {
+            DrawOuterShadow(graphics, preset, x, y, width, height, outerShadow);
+        }
+
         if (customGeometry is not null && TryRenderCustomGeometry(
                 customGeometry,
                 graphics,
@@ -341,22 +348,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-            if (preset == "ellipse")
-            {
-                graphics.FillEllipse(x, y, width, height);
-            }
-            else if (preset == "roundRect")
-            {
-                graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
-            }
-            else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
-            {
-                graphics.FillPolygon(polygonPoints);
-            }
-            else
-            {
-                graphics.FillRectangle(x, y, width, height);
-            }
+            DrawPresetFill(graphics, preset, x, y, width, height);
 
             if (transparentFill)
             {
@@ -443,6 +435,73 @@ internal sealed partial class PptxRenderer
         }
 
         return !CanRenderPictureFillPreset(ReadPreset(shapeProperties));
+    }
+
+    private static bool TryReadOuterShadow(XElement shapeProperties, PptxTheme theme, out OuterShadow shadow)
+    {
+        XElement? outerShadow = shapeProperties
+            .Element(DrawingNamespace + "effectLst")
+            ?.Element(DrawingNamespace + "outerShdw");
+        if (outerShadow is null)
+        {
+            shadow = default;
+            return false;
+        }
+
+        XElement? colorElement = outerShadow.Elements().FirstOrDefault(element =>
+            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
+        if (colorElement is not null &&
+            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+        {
+            double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
+            double distance = OoxUnits.EmuToPoints(ParseOptionalLongAttribute(outerShadow, "dist", 0));
+            double direction = ParseOptionalLongAttribute(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
+            shadow = new OuterShadow(
+                color,
+                alpha,
+                distance * Math.Cos(direction),
+                -distance * Math.Sin(direction));
+            return true;
+        }
+
+        shadow = default;
+        return false;
+    }
+
+    private static void DrawOuterShadow(
+        PdfGraphicsBuilder graphics,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        OuterShadow shadow)
+    {
+        graphics.SaveState();
+        graphics.SetAlpha(shadow.Alpha, 1d);
+        graphics.SetFillRgb(shadow.Color.Red, shadow.Color.Green, shadow.Color.Blue);
+        DrawPresetFill(graphics, preset, x + shadow.OffsetX, y + shadow.OffsetY, width, height);
+        graphics.RestoreState();
+    }
+
+    private static void DrawPresetFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height)
+    {
+        if (preset == "ellipse")
+        {
+            graphics.FillEllipse(x, y, width, height);
+        }
+        else if (preset == "roundRect")
+        {
+            graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+        }
+        else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
+        {
+            graphics.FillPolygon(polygonPoints);
+        }
+        else
+        {
+            graphics.FillRectangle(x, y, width, height);
+        }
     }
 
     private static string ReadPreset(XElement shapeProperties)

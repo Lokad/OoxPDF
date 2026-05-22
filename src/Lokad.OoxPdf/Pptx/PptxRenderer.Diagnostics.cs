@@ -102,7 +102,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "effectLst").Any(effectList => effectList.Elements().Any()) ||
+        if (slideXml.Descendants(DrawingNamespace + "effectLst").Any(effectList => effectList.Elements().Any(IsUnsupportedEffect)) ||
             slideXml.Descendants(DrawingNamespace + "effectDag").Any())
         {
             Emit("PPTX_UNSUPPORTED_EFFECT", "effect");
@@ -124,6 +124,11 @@ internal sealed partial class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
+    }
+
+    private static bool IsUnsupportedEffect(XElement effect)
+    {
+        return effect.Name != DrawingNamespace + "outerShdw";
     }
 
     private static bool IsUnsupportedCustomGeometry(XElement customGeometry)
@@ -190,6 +195,8 @@ internal sealed partial class PptxRenderer
             owner.Name.Namespace == DrawingNamespace &&
             owner.Name.LocalName is "lnL" or "lnR" or "lnT" or "lnB" &&
             lineOwner?.Name == DrawingNamespace + "tcPr";
-        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder;
+        bool supportedOuterShadow = fill?.Name == DrawingNamespace + "outerShdw" &&
+            owner?.Name == DrawingNamespace + "effectLst";
+        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow;
     }
 }

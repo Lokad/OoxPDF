@@ -572,4 +572,6 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct FillRect(double Left, double Top, double Right, double Bottom);
+
+    private readonly record struct OuterShadow(RgbColor Color, double Alpha, double OffsetX, double OffsetY);
 }

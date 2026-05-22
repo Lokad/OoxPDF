@@ -1810,6 +1810,10 @@ paths, and ExecPlan references together.
   - [ ] Add public synthetic effect rungs for `outerShdw` and `glow` before attempting private-slide shadow
     parity. Start with no-blur/low-blur cases, then add blur/alpha/direction/distance variants only when
     the simpler Office PDF paths are understood.
+    - [x] Add first-pass `outerShdw` rendering for ordinary preset shapes as a translucent offset duplicate
+      behind the foreground shape. Public synthetic unit `PptxSyntheticOuterShadowRendersOffsetShape` locks
+      the rendering and diagnostic behavior. Private effect diagnostics dropped from 17 to 1 and private
+      transparency diagnostics dropped from 8 to 1; the remaining pair is the unsupported `glow` family.
   - [ ] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
     recolored raster output is actually generated, and make the image cache key include recolor parameters.
     - [x] Add PNG/BMP raster recolor support for `a:lum` brightness/contrast and `a:duotone`, with image-cache
