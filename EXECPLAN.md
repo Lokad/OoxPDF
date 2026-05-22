@@ -1826,6 +1826,9 @@ paths, and ExecPlan references together.
       `PptxSyntheticPngPictureAppliesDuotoneRecolor` lock the path. The private deck image-recolor
       diagnostics dropped from 3 to 1; the remaining case is a JPEG duotone image and still emits a
       content-aware unsupported diagnostic.
+    - [x] Complete decoded-raster recolor coverage for `a:grayscl` and `a:biLevel` on PNG/BMP images.
+      Public synthetic unit `PptxSyntheticPngPictureAppliesGrayAndBilevelRecolor` locks both modes and
+      verifies recolor-specific image cache entries.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
   first-class intermediate models rather than piling more ad hoc logic into rendering code.
 - [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is

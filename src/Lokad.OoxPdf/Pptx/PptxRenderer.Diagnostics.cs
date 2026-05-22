@@ -90,13 +90,6 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_IMAGE_TILE", "tiled image fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "blip").Any(blip =>
-                blip.Element(DrawingNamespace + "grayscl") is not null ||
-                blip.Element(DrawingNamespace + "biLevel") is not null))
-        {
-            Emit("PPTX_UNSUPPORTED_IMAGE_RECOLOR", "image recolor");
-        }
-
         if (slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha))
         {
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");

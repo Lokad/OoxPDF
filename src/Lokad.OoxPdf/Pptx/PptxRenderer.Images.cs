@@ -245,6 +245,18 @@ internal sealed partial class PptxRenderer
             return ImageRecolor.None;
         }
 
+        if (blip.Element(DrawingNamespace + "grayscl") is not null)
+        {
+            return ImageRecolor.Grayscale();
+        }
+
+        XElement? biLevel = blip.Element(DrawingNamespace + "biLevel");
+        if (biLevel is not null)
+        {
+            double threshold = ParseOptionalLongAttribute(biLevel, "thresh", 50000) / 100000d;
+            return ImageRecolor.BiLevel(threshold);
+        }
+
         XElement? luminance = blip.Element(DrawingNamespace + "lum");
         if (luminance is not null)
         {
@@ -308,6 +320,24 @@ internal sealed partial class PptxRenderer
             }
 
             double luma = (0.2126d * red + 0.7152d * green + 0.0722d * blue) / 255d;
+            if (recolor.Kind == ImageRecolorKind.Grayscale)
+            {
+                byte gray = ToByte(luma * 255d);
+                transformed[i] = gray;
+                transformed[i + 1] = gray;
+                transformed[i + 2] = gray;
+                continue;
+            }
+
+            if (recolor.Kind == ImageRecolorKind.BiLevel)
+            {
+                byte value = luma >= recolor.Threshold ? (byte)255 : (byte)0;
+                transformed[i] = value;
+                transformed[i + 1] = value;
+                transformed[i + 2] = value;
+                continue;
+            }
+
             transformed[i] = Interpolate(recolor.Dark.Red, recolor.Light.Red, luma);
             transformed[i + 1] = Interpolate(recolor.Dark.Green, recolor.Light.Green, luma);
             transformed[i + 2] = Interpolate(recolor.Dark.Blue, recolor.Light.Blue, luma);
@@ -393,12 +423,14 @@ internal sealed partial class PptxRenderer
     {
         None,
         Luminance,
-        Duotone
+        Duotone,
+        Grayscale,
+        BiLevel
     }
 
-    private readonly record struct ImageRecolor(ImageRecolorKind Kind, double Brightness, double Contrast, RgbColor Dark, RgbColor Light)
+    private readonly record struct ImageRecolor(ImageRecolorKind Kind, double Brightness, double Contrast, RgbColor Dark, RgbColor Light, double Threshold)
     {
-        public static ImageRecolor None { get; } = new(ImageRecolorKind.None, 0d, 0d, default, default);
+        public static ImageRecolor None { get; } = new(ImageRecolorKind.None, 0d, 0d, default, default, 0d);
 
         public bool IsNone => Kind == ImageRecolorKind.None;
 
@@ -406,6 +438,8 @@ internal sealed partial class PptxRenderer
         {
             ImageRecolorKind.Luminance => FormattableString.Invariant($"lum:{Brightness:0.#####}:{Contrast:0.#####}"),
             ImageRecolorKind.Duotone => FormattableString.Invariant($"duo:{Dark.Red:X2}{Dark.Green:X2}{Dark.Blue:X2}:{Light.Red:X2}{Light.Green:X2}{Light.Blue:X2}"),
+            ImageRecolorKind.Grayscale => "gray",
+            ImageRecolorKind.BiLevel => FormattableString.Invariant($"bi:{Threshold:0.#####}"),
             _ => "none"
         };
 
@@ -416,12 +450,23 @@ internal sealed partial class PptxRenderer
                 Math.Clamp(brightness, -1d, 1d),
                 Math.Clamp(contrast, -1d, 1d),
                 default,
-                default);
+                default,
+                0d);
         }
 
         public static ImageRecolor Duotone(RgbColor dark, RgbColor light)
         {
-            return new ImageRecolor(ImageRecolorKind.Duotone, 0d, 0d, dark, light);
+            return new ImageRecolor(ImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d);
+        }
+
+        public static ImageRecolor Grayscale()
+        {
+            return new ImageRecolor(ImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d);
+        }
+
+        public static ImageRecolor BiLevel(double threshold)
+        {
+            return new ImageRecolor(ImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d));
         }
     }
 }
