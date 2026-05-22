@@ -597,6 +597,9 @@ Composite oracle family map:
   changed16 `0.106274`; and bubble MAE `5.392324`, changed16 `0.051635`. Remaining work is full Office
   chart styling/layout rather than chart-type recognition: axes/ticks, titles, legends, labels, marker
   shapes, bubble scaling, radar grid rings, smoothing, cached chart images, and theme/style colors.
+- Cached bar/column chart fallback now honors simple per-series `c:spPr/a:solidFill/a:srgbClr` fills for
+  clustered, stacked, 100% stacked, horizontal, and vertical bars. The next chart styling slice should
+  generalize series color resolution through theme/chart style parts instead of only direct RGB fills.
 
 PPTX table style targets from the table composite port:
 
@@ -1285,8 +1288,8 @@ document-specific business content into public notes.
   explicit high-severity diagnostics.
 - [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static
   grouped-bar fallback.
-- [ ] Extend PPTX chart rendering beyond basic bar fallbacks: cached image fallbacks when present, labels,
-  legends, axes, line charts, pie charts, stacked/grouped variants, and style fidelity.
+- [ ] Extend PPTX chart rendering beyond current static fallbacks: cached image fallbacks when present,
+  labels, legends, axes, marker styles, theme/chart style colors, and tighter plot-area layout fidelity.
 - [ ] Fix DOCX page geometry and pagination fidelity: section page size/margins, paragraph spacing, manual
   page/column breaks, and keep/widow page-break decisions.
 - [x] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout,
