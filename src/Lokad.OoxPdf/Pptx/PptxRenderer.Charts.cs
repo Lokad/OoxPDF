@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
 
             using Stream chartStream = chartPart.OpenRead();
             XDocument chartXml = SafeXml.Load(chartStream);
-            if (TryRenderChartFallback(graphics, context.Document, bounds.Value, chartXml))
+            if (TryRenderChartFallback(graphics, context.Document, context.Theme, bounds.Value, chartXml))
             {
                 EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static chart fallback.", chartPart.Name, context.SlideNumber, "Static chart fallback");
                 continue;
@@ -50,7 +50,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml)
+    private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml)
     {
         XElement? barChart = chartXml.Descendants(ChartNamespace + "barChart").FirstOrDefault();
         if (barChart is not null)
@@ -60,7 +60,7 @@ internal sealed partial class PptxRenderer
             {
                 bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
                 string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
-                IReadOnlyList<RgbColor?> seriesFills = ReadChartSeriesFills(barChart);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills);
                 return true;
             }
@@ -162,18 +162,15 @@ internal sealed partial class PptxRenderer
         return series;
     }
 
-    private static IReadOnlyList<RgbColor?> ReadChartSeriesFills(XElement chartElement)
+    private static IReadOnlyList<ChartSeriesFill?> ReadChartSeriesFills(XElement chartElement, PptxTheme theme)
     {
-        var fills = new List<RgbColor?>();
+        var fills = new List<ChartSeriesFill?>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            XElement? solidFill = element
-                .Element(ChartNamespace + "spPr")
-                ?.Element(DrawingNamespace + "solidFill");
-            string? hex = (string?)solidFill
-                ?.Element(DrawingNamespace + "srgbClr")
-                ?.Attribute("val");
-            fills.Add(RgbColor.TryParse(hex, out RgbColor color) ? color : null);
+            XElement? shapeProperties = element.Element(ChartNamespace + "spPr");
+            fills.Add(TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
+                ? new ChartSeriesFill(color, alpha)
+                : null);
         }
 
         return fills;
@@ -232,7 +229,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<RgbColor?> seriesFills)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -294,18 +291,34 @@ internal sealed partial class PptxRenderer
 
                 double value = values[category];
                 double barHeight = Math.Abs(value) / valueRange * plotHeight;
-                RgbColor fill = ChartSeriesColor(seriesIndex, seriesFills);
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                graphics.FillRectangle(categoryX + seriesIndex * barSlot, value >= 0d ? zeroY : zeroY - barHeight, Math.Max(0.5d, barSlot * 0.86d), barHeight);
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
+                FillChartRectangle(graphics, categoryX + seriesIndex * barSlot, value >= 0d ? zeroY : zeroY - barHeight, Math.Max(0.5d, barSlot * 0.86d), barHeight, fill);
             }
         }
     }
 
-    private static RgbColor ChartSeriesColor(int seriesIndex, IReadOnlyList<RgbColor?> seriesFills)
+    private static ChartSeriesFill ChartSeriesColor(int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills)
     {
         return seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill
             ? fill
-            : ChartPalette(seriesIndex);
+            : new ChartSeriesFill(ChartPalette(seriesIndex), 1d);
+    }
+
+    private static void FillChartRectangle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartSeriesFill fill)
+    {
+        if (fill.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(fill.Alpha, 1d);
+        }
+
+        graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+        graphics.FillRectangle(x, y, width, height);
+
+        if (fill.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
     }
 
     private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
@@ -352,7 +365,7 @@ internal sealed partial class PptxRenderer
         return (minValue, maxValue);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, IReadOnlyList<RgbColor?> seriesFills)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
@@ -369,14 +382,13 @@ internal sealed partial class PptxRenderer
 
                 double value = values[category];
                 double barWidth = Math.Abs(value) / valueRange * plotWidth;
-                RgbColor fill = ChartSeriesColor(seriesIndex, seriesFills);
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                graphics.FillRectangle(value >= 0d ? zeroX : zeroX - barWidth, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d));
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
+                FillChartRectangle(graphics, value >= 0d ? zeroX : zeroX - barWidth, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d), fill);
             }
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, double plotX, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroY, bool percentStacked, IReadOnlyList<RgbColor?> seriesFills)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, double plotX, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroY, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills)
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = Math.Max(0.5d, categoryWidth * 0.58d);
@@ -396,23 +408,22 @@ internal sealed partial class PptxRenderer
 
                 double value = NormalizeStackedValue(values[category], positiveTotal, percentStacked);
                 double segmentHeight = Math.Abs(value) / valueRange * plotHeight;
-                RgbColor fill = ChartSeriesColor(seriesIndex, seriesFills);
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
                 if (value >= 0d)
                 {
-                    graphics.FillRectangle(categoryX, positiveY, barWidth, segmentHeight);
+                    FillChartRectangle(graphics, categoryX, positiveY, barWidth, segmentHeight, fill);
                     positiveY += segmentHeight;
                 }
                 else
                 {
                     negativeY -= segmentHeight;
-                    graphics.FillRectangle(categoryX, negativeY, barWidth, segmentHeight);
+                    FillChartRectangle(graphics, categoryX, negativeY, barWidth, segmentHeight, fill);
                 }
             }
         }
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, bool percentStacked, IReadOnlyList<RgbColor?> seriesFills)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = Math.Max(0.5d, categoryHeight * 0.58d);
@@ -432,17 +443,16 @@ internal sealed partial class PptxRenderer
 
                 double value = NormalizeStackedValue(values[category], positiveTotal, percentStacked);
                 double segmentWidth = Math.Abs(value) / valueRange * plotWidth;
-                RgbColor fill = ChartSeriesColor(seriesIndex, seriesFills);
-                graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
                 if (value >= 0d)
                 {
-                    graphics.FillRectangle(positiveX, categoryY, segmentWidth, barHeight);
+                    FillChartRectangle(graphics, positiveX, categoryY, segmentWidth, barHeight, fill);
                     positiveX += segmentWidth;
                 }
                 else
                 {
                     negativeX -= segmentWidth;
-                    graphics.FillRectangle(negativeX, categoryY, segmentWidth, barHeight);
+                    FillChartRectangle(graphics, negativeX, categoryY, segmentWidth, barHeight, fill);
                 }
             }
         }
@@ -780,4 +790,6 @@ internal sealed partial class PptxRenderer
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points);
 
     private readonly record struct ScatterPoint(double X, double Y, double Size);
+
+    private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha);
 }

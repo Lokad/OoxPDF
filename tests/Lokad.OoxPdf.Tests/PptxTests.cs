@@ -4191,10 +4191,32 @@ internal static class PptxTests
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes().Replace(
+                "</Types>",
+                "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
+                StringComparison.Ordinal)),
             ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """),
             ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="ChartTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="ChartTheme">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent1><a:srgbClr val="00AA00"/></a:accent1>
+                    </a:clrScheme>
+                    <a:fontScheme name="ChartTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """),
             ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -4220,7 +4242,7 @@ internal static class PptxTests
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:barChart>
-                    <c:ser><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr><c:val><c:numLit>
+                    <c:ser><c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>4</c:v></c:pt>
                     </c:numLit></c:val></c:ser>

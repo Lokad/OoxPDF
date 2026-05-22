@@ -600,6 +600,9 @@ Composite oracle family map:
 - Cached bar/column chart fallback now honors simple per-series `c:spPr/a:solidFill/a:srgbClr` fills for
   clustered, stacked, 100% stacked, horizontal, and vertical bars. The next chart styling slice should
   generalize series color resolution through theme/chart style parts instead of only direct RGB fills.
+- Chart series fill resolution now uses the shared PPTX solid-color resolver, so direct `srgbClr`,
+  `schemeClr`, color transforms, and fill alpha flow through the same theme-aware path as shapes/tables.
+  Remaining chart color work is chart style/color-style parts and defaults inherited from Office templates.
 
 PPTX table style targets from the table composite port:
 
