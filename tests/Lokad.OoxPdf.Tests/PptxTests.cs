@@ -4301,9 +4301,10 @@ internal static class PptxTests
                 """),
             ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:lineChart>
-                    <c:ser><c:val><c:numLit>
+                    <c:ser><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>5</c:v></c:pt>
                       <c:pt idx="2"><c:v>4</c:v></c:pt>
@@ -4330,6 +4331,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
         TestAssert.True(collector.Diagnostics.Count(d => d.Id == "PPTX_CHART_STATIC_FALLBACK") == 2, "Expected static fallbacks for both line and pie charts.");
