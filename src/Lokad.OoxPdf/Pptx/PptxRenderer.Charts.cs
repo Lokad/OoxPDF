@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
             if (lineSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
                 RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles);
                 return true;
             }
@@ -104,7 +104,7 @@ internal sealed partial class PptxRenderer
                 bool connectLines = ((string?)scatterChart.Element(ChartNamespace + "scatterStyle")?.Attribute("val"))?.Contains("Line", StringComparison.OrdinalIgnoreCase) == true;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart, theme);
                 RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles);
                 return true;
             }
@@ -318,7 +318,7 @@ internal sealed partial class PptxRenderer
         return strokes;
     }
 
-    private static IReadOnlyList<ChartMarkerStyle> ReadChartMarkerStyles(XElement chartElement)
+    private static IReadOnlyList<ChartMarkerStyle> ReadChartMarkerStyles(XElement chartElement, PptxTheme theme)
     {
         var styles = new List<ChartMarkerStyle>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
@@ -329,7 +329,15 @@ internal sealed partial class PptxRenderer
                 double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                     ? Math.Clamp(parsed, 2d, 30d)
                     : 4d;
-            styles.Add(new ChartMarkerStyle(symbol, size));
+            XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
+            ChartSeriesFill? fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+                ? new ChartSeriesFill(fillColor, fillAlpha)
+                : null;
+            ChartSeriesStroke? stroke = shapeProperties is not null &&
+                TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double strokeWidth, out double strokeAlpha)
+                    ? new ChartSeriesStroke(strokeColor, strokeAlpha, strokeWidth)
+                    : null;
+            styles.Add(new ChartMarkerStyle(symbol, size, fill, stroke));
         }
 
         return styles;
@@ -684,7 +692,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color);
+                DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
                 previousX = pointX;
                 previousY = pointY;
             }
@@ -698,10 +706,10 @@ internal sealed partial class PptxRenderer
 
     private static ChartMarkerStyle ChartMarker(int seriesIndex, IReadOnlyList<ChartMarkerStyle> markerStyles)
     {
-        return seriesIndex < markerStyles.Count ? markerStyles[seriesIndex] : new ChartMarkerStyle("circle", 4d);
+        return seriesIndex < markerStyles.Count ? markerStyles[seriesIndex] : ChartMarkerStyle.Default;
     }
 
-    private static void DrawChartMarker(PdfGraphicsBuilder graphics, double x, double y, ChartMarkerStyle marker, RgbColor color)
+    private static void DrawChartMarker(PdfGraphicsBuilder graphics, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke)
     {
         if (string.Equals(marker.Symbol, "none", StringComparison.Ordinal))
         {
@@ -709,7 +717,15 @@ internal sealed partial class PptxRenderer
         }
 
         double size = marker.Size;
-        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
+        ChartSeriesStroke? stroke = marker.Stroke;
+        if (fill.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(fill.Alpha, 1d);
+        }
+
+        graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
         switch (marker.Symbol)
         {
             case "square":
@@ -733,6 +749,53 @@ internal sealed partial class PptxRenderer
             default:
                 graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
                 break;
+        }
+
+        if (fill.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+
+        if (stroke is not { } markerStroke)
+        {
+            return;
+        }
+
+        if (markerStroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, markerStroke.Alpha);
+        }
+
+        SetChartStroke(graphics, markerStroke);
+        switch (marker.Symbol)
+        {
+            case "square":
+                graphics.StrokeRectangle(x - size / 2d, y - size / 2d, size, size);
+                break;
+            case "diamond":
+                graphics.StrokePolygon([
+                    (x, y + size / 2d),
+                    (x + size / 2d, y),
+                    (x, y - size / 2d),
+                    (x - size / 2d, y)
+                ]);
+                break;
+            case "triangle":
+                graphics.StrokePolygon([
+                    (x, y + size / 2d),
+                    (x + size / 2d, y - size / 2d),
+                    (x - size / 2d, y - size / 2d)
+                ]);
+                break;
+            default:
+                graphics.StrokeEllipse(x - size / 2d, y - size / 2d, size, size);
+                break;
+        }
+
+        if (markerStroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
         }
     }
 
@@ -902,7 +965,7 @@ internal sealed partial class PptxRenderer
                 }
                 else
                 {
-                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color);
+                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
                 }
 
                 previous = (pointX, pointY);
@@ -1091,5 +1154,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartSeriesStroke(RgbColor Color, double Alpha, double Width);
 
-    private readonly record struct ChartMarkerStyle(string Symbol, double Size);
+    private readonly record struct ChartMarkerStyle(string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
+    {
+        public static ChartMarkerStyle Default { get; } = new("circle", 4d, null, null);
+    }
 }
