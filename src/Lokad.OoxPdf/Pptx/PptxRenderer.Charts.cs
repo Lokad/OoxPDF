@@ -155,7 +155,8 @@ internal sealed partial class PptxRenderer
             if (doughnutSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
-                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills);
+                double holeSize = ReadDoughnutHoleSize(doughnutChart);
+                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, holeSize);
                 return true;
             }
         }
@@ -230,6 +231,17 @@ internal sealed partial class PptxRenderer
         }
 
         return fills;
+    }
+
+    private static double ReadDoughnutHoleSize(XElement doughnutChart)
+    {
+        if (doughnutChart.Element(ChartNamespace + "holeSize")?.Attribute("val") is { } value &&
+            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+        {
+            return Math.Clamp(parsed / 100d, 0.1d, 0.9d);
+        }
+
+        return 0.56d;
     }
 
     private static IReadOnlyList<ChartSeriesStroke?> ReadChartSeriesStrokes(XElement chartElement, PptxTheme theme)
@@ -963,7 +975,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills)
+    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, double holeSize)
     {
         RenderPieChartFallback(graphics, document, bounds, values, pointFills);
 
@@ -975,7 +987,7 @@ internal sealed partial class PptxRenderer
         double radius = Math.Min(width, height) * 0.34d;
         double centerX = x + width * 0.46d;
         double centerY = y + height * 0.52d;
-        double innerRadius = radius * 0.56d;
+        double innerRadius = radius * holeSize;
         graphics.SetFillRgb(255, 255, 255);
         graphics.FillEllipse(centerX - innerRadius, centerY - innerRadius, innerRadius * 2d, innerRadius * 2d);
     }

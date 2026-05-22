@@ -615,6 +615,8 @@ Composite oracle family map:
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.
+- Doughnut chart fallback now reads `c:holeSize` and uses it for the inner cutout instead of a fixed ratio.
+  Remaining doughnut work is exploded slices, slice border styling, data labels, and Office chart layout.
 
 PPTX table style targets from the table composite port:
 
