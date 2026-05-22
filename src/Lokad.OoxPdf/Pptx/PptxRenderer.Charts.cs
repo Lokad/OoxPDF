@@ -143,7 +143,8 @@ internal sealed partial class PptxRenderer
             if (pieSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(pieChart, theme);
-                RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(pieChart);
+                RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills, pointExplosions);
                 return true;
             }
         }
@@ -155,8 +156,9 @@ internal sealed partial class PptxRenderer
             if (doughnutSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(doughnutChart);
                 double holeSize = ReadDoughnutHoleSize(doughnutChart);
-                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, holeSize);
+                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, pointExplosions, holeSize);
                 return true;
             }
         }
@@ -231,6 +233,33 @@ internal sealed partial class PptxRenderer
         }
 
         return fills;
+    }
+
+    private static IReadOnlyDictionary<int, double> ReadChartPointExplosions(XElement chartElement)
+    {
+        var explosions = new Dictionary<int, double>();
+        XElement? series = chartElement.Element(ChartNamespace + "ser");
+        if (series is null)
+        {
+            return explosions;
+        }
+
+        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
+        {
+            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
+                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            {
+                continue;
+            }
+
+            if (point.Element(ChartNamespace + "explosion")?.Attribute("val") is { } explosionAttribute &&
+                double.TryParse(explosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double explosion))
+            {
+                explosions[index] = Math.Clamp(explosion / 100d, 0d, 1d);
+            }
+        }
+
+        return explosions;
     }
 
     private static double ReadDoughnutHoleSize(XElement doughnutChart)
@@ -917,7 +946,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills)
+    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -944,15 +973,19 @@ internal sealed partial class PptxRenderer
             }
 
             double sweep = value / total * Math.PI * 2d;
+            double midpointAngle = angle + sweep / 2d;
+            double explosionOffset = pointExplosions.TryGetValue(i, out double explosion) ? radius * explosion : 0d;
+            double sliceCenterX = centerX + Math.Cos(midpointAngle) * explosionOffset;
+            double sliceCenterY = centerY + Math.Sin(midpointAngle) * explosionOffset;
             int segments = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 18d)));
             var points = new (double X, double Y)[segments + 2];
-            points[0] = (centerX, centerY);
+            points[0] = (sliceCenterX, sliceCenterY);
             for (int segment = 0; segment <= segments; segment++)
             {
                 double segmentAngle = angle + sweep * segment / segments;
                 points[segment + 1] = (
-                    centerX + Math.Cos(segmentAngle) * radius,
-                    centerY + Math.Sin(segmentAngle) * radius);
+                    sliceCenterX + Math.Cos(segmentAngle) * radius,
+                    sliceCenterY + Math.Sin(segmentAngle) * radius);
             }
 
             ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill explicitFill)
@@ -975,9 +1008,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, double holeSize)
+    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
-        RenderPieChartFallback(graphics, document, bounds, values, pointFills);
+        RenderPieChartFallback(graphics, document, bounds, values, pointFills, pointExplosions);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);

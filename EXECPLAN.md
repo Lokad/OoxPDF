@@ -617,6 +617,8 @@ Composite oracle family map:
   slice borders, data labels, and inherited chart style/color-style defaults.
 - Doughnut chart fallback now reads `c:holeSize` and uses it for the inner cutout instead of a fixed ratio.
   Remaining doughnut work is exploded slices, slice border styling, data labels, and Office chart layout.
+- Pie and doughnut chart fallbacks now honor point-level `c:explosion` by offsetting slices along their
+  midpoint angle. Remaining slice work is border styling, exact Office explosion scaling, and data labels.
 
 PPTX table style targets from the table composite port:
 
