@@ -866,7 +866,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        image = GetOrCreateImage(imagePart, imageCache, diagnosticSink, slideIndex);
+        image = GetOrCreateImage(imagePart, ImageRecolor.None, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return false;

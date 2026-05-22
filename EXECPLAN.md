@@ -1812,6 +1812,12 @@ paths, and ExecPlan references together.
     the simpler Office PDF paths are understood.
   - [ ] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
     recolored raster output is actually generated, and make the image cache key include recolor parameters.
+    - [x] Add PNG/BMP raster recolor support for `a:lum` brightness/contrast and `a:duotone`, with image-cache
+      keys including recolor parameters. Public synthetic units
+      `PptxSyntheticPngPictureAppliesLuminanceRecolor` and
+      `PptxSyntheticPngPictureAppliesDuotoneRecolor` lock the path. The private deck image-recolor
+      diagnostics dropped from 3 to 1; the remaining case is a JPEG duotone image and still emits a
+      content-aware unsupported diagnostic.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
   first-class intermediate models rather than piling more ad hoc logic into rendering code.
 - [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is

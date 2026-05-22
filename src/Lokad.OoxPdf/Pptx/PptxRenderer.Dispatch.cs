@@ -73,6 +73,7 @@ internal sealed partial class PptxRenderer
                     context.SlideRelationships,
                     context.Package,
                     context.Document,
+                    context.Theme,
                     graphics,
                     context.DiagnosticSink,
                     context.SlideNumber,

@@ -92,9 +92,7 @@ internal sealed partial class PptxRenderer
 
         if (slideXml.Descendants(DrawingNamespace + "blip").Any(blip =>
                 blip.Element(DrawingNamespace + "grayscl") is not null ||
-                blip.Element(DrawingNamespace + "duotone") is not null ||
-                blip.Element(DrawingNamespace + "biLevel") is not null ||
-                blip.Element(DrawingNamespace + "lum") is not null))
+                blip.Element(DrawingNamespace + "biLevel") is not null))
         {
             Emit("PPTX_UNSUPPORTED_IMAGE_RECOLOR", "image recolor");
         }

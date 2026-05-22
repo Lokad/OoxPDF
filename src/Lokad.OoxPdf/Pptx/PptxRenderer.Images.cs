@@ -38,6 +38,7 @@ internal sealed partial class PptxRenderer
                     context.SlideRelationships,
                     context.Package,
                     context.Document,
+                    context.Theme,
                     graphics,
                     context.DiagnosticSink,
                     context.SlideNumber,
@@ -62,6 +63,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPackage package,
         PptxDocument document,
+        PptxTheme theme,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
@@ -95,7 +97,8 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        PdfImageXObject? image = GetOrCreateImage(imagePart, imageCache, diagnosticSink, slideIndex);
+        ImageRecolor recolor = ReadImageRecolor(picture, theme);
+        PdfImageXObject? image = GetOrCreateImage(imagePart, recolor, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return;
@@ -153,21 +156,23 @@ internal sealed partial class PptxRenderer
 
     private static PdfImageXObject? GetOrCreateImage(
         OoxPart imagePart,
+        ImageRecolor recolor,
         Dictionary<string, PdfImageXObject?>? imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex)
     {
-        if (imageCache is not null && imageCache.TryGetValue(imagePart.Name, out PdfImageXObject? cached))
+        string cacheKey = imagePart.Name + "\u001f" + recolor.CacheKey;
+        if (imageCache is not null && imageCache.TryGetValue(cacheKey, out PdfImageXObject? cached))
         {
             return cached;
         }
 
-        PdfImageXObject? image = CreateImage(imagePart, diagnosticSink, slideIndex);
-        imageCache?.TryAdd(imagePart.Name, image);
+        PdfImageXObject? image = CreateImage(imagePart, recolor, diagnosticSink, slideIndex);
+        imageCache?.TryAdd(cacheKey, image);
         return image;
     }
 
-    private static PdfImageXObject? CreateImage(OoxPart imagePart, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
+    private static PdfImageXObject? CreateImage(OoxPart imagePart, ImageRecolor recolor, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex)
     {
         byte[] bytes = imagePart.Bytes;
         try
@@ -176,20 +181,34 @@ internal sealed partial class PptxRenderer
                 imagePart.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
             {
                 JpegInfo info = JpegInfo.Read(bytes);
+                if (!recolor.IsNone)
+                {
+                    diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                        "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
+                        OoxPdfSeverity.Warning,
+                        "PPTX image recolor could not be applied to JPEG image data and was ignored.",
+                        imagePart.Name,
+                        SlideIndex: slideIndex,
+                        Feature: "image recolor",
+                        Fallback: "Original image"));
+                }
+
                 return PdfImageXObject.Jpeg(info.Width, info.Height, bytes);
             }
 
             if (imagePart.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
             {
                 PngImage png = PngImage.Read(bytes);
-                return PdfImageXObject.RgbPng(png.Width, png.Height, png.Rgb, png.Alpha);
+                byte[] rgb = ApplyImageRecolor(png.Rgb, recolor);
+                return PdfImageXObject.RgbPng(png.Width, png.Height, rgb, png.Alpha);
             }
 
             if (imagePart.ContentType.Equals("image/bmp", StringComparison.OrdinalIgnoreCase) ||
                 imagePart.ContentType.Equals("image/x-ms-bmp", StringComparison.OrdinalIgnoreCase))
             {
                 BmpImage bmp = BmpImage.Read(bytes);
-                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, bmp.Rgb, bmp.Alpha);
+                byte[] rgb = ApplyImageRecolor(bmp.Rgb, recolor);
+                return PdfImageXObject.RgbPng(bmp.Width, bmp.Height, rgb, bmp.Alpha);
             }
 
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
@@ -214,6 +233,102 @@ internal sealed partial class PptxRenderer
         }
 
         return null;
+    }
+
+    private static ImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
+    {
+        XElement? blip = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        if (blip is null)
+        {
+            return ImageRecolor.None;
+        }
+
+        XElement? luminance = blip.Element(DrawingNamespace + "lum");
+        if (luminance is not null)
+        {
+            double brightness = ParseOptionalLongAttribute(luminance, "bright", 0) / 100000d;
+            double contrast = ParseOptionalLongAttribute(luminance, "contrast", 0) / 100000d;
+            return ImageRecolor.Luminance(brightness, contrast);
+        }
+
+        XElement? duotone = blip.Element(DrawingNamespace + "duotone");
+        if (duotone is not null)
+        {
+            XElement[] colors = duotone.Elements().Take(2).ToArray();
+            if (colors.Length == 2 &&
+                TryReadImageRecolorColor(colors[0], theme, out RgbColor dark) &&
+                TryReadImageRecolorColor(colors[1], theme, out RgbColor light))
+            {
+                return ImageRecolor.Duotone(dark, light);
+            }
+        }
+
+        return ImageRecolor.None;
+    }
+
+    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
+    {
+        if (colorElement.Name == DrawingNamespace + "prstClr")
+        {
+            string? preset = (string?)colorElement.Attribute("val");
+            color = preset switch
+            {
+                "black" => new RgbColor(0, 0, 0),
+                "white" => new RgbColor(255, 255, 255),
+                _ => default
+            };
+            return preset is "black" or "white";
+        }
+
+        XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
+        return TryReadSolidColorWithAlpha(wrapper, theme, out color, out _);
+    }
+
+    private static byte[] ApplyImageRecolor(byte[] rgb, ImageRecolor recolor)
+    {
+        if (recolor.IsNone)
+        {
+            return rgb;
+        }
+
+        byte[] transformed = new byte[rgb.Length];
+        for (int i = 0; i < rgb.Length; i += 3)
+        {
+            double red = rgb[i];
+            double green = rgb[i + 1];
+            double blue = rgb[i + 2];
+            if (recolor.Kind == ImageRecolorKind.Luminance)
+            {
+                transformed[i] = ApplyBrightnessContrast(red, recolor.Brightness, recolor.Contrast);
+                transformed[i + 1] = ApplyBrightnessContrast(green, recolor.Brightness, recolor.Contrast);
+                transformed[i + 2] = ApplyBrightnessContrast(blue, recolor.Brightness, recolor.Contrast);
+                continue;
+            }
+
+            double luma = (0.2126d * red + 0.7152d * green + 0.0722d * blue) / 255d;
+            transformed[i] = Interpolate(recolor.Dark.Red, recolor.Light.Red, luma);
+            transformed[i + 1] = Interpolate(recolor.Dark.Green, recolor.Light.Green, luma);
+            transformed[i + 2] = Interpolate(recolor.Dark.Blue, recolor.Light.Blue, luma);
+        }
+
+        return transformed;
+    }
+
+    private static byte ApplyBrightnessContrast(double channel, double brightness, double contrast)
+    {
+        double value = channel / 255d;
+        value = (value - 0.5d) * Math.Max(0d, 1d + contrast) + 0.5d;
+        value = brightness >= 0d
+            ? value + (1d - value) * brightness
+            : value * (1d + brightness);
+        return ToByte(value * 255d);
+    }
+
+    private static byte Interpolate(byte from, byte to, double ratio)
+    {
+        return ToByte(from + (to - from) * Math.Clamp(ratio, 0d, 1d));
     }
 
     private static CropRect ReadCrop(XElement picture)
@@ -272,5 +387,41 @@ internal sealed partial class PptxRenderer
         return element.Attribute(attribute) is { } value
             ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
             : 0d;
+    }
+
+    private enum ImageRecolorKind
+    {
+        None,
+        Luminance,
+        Duotone
+    }
+
+    private readonly record struct ImageRecolor(ImageRecolorKind Kind, double Brightness, double Contrast, RgbColor Dark, RgbColor Light)
+    {
+        public static ImageRecolor None { get; } = new(ImageRecolorKind.None, 0d, 0d, default, default);
+
+        public bool IsNone => Kind == ImageRecolorKind.None;
+
+        public string CacheKey => Kind switch
+        {
+            ImageRecolorKind.Luminance => FormattableString.Invariant($"lum:{Brightness:0.#####}:{Contrast:0.#####}"),
+            ImageRecolorKind.Duotone => FormattableString.Invariant($"duo:{Dark.Red:X2}{Dark.Green:X2}{Dark.Blue:X2}:{Light.Red:X2}{Light.Green:X2}{Light.Blue:X2}"),
+            _ => "none"
+        };
+
+        public static ImageRecolor Luminance(double brightness, double contrast)
+        {
+            return new ImageRecolor(
+                ImageRecolorKind.Luminance,
+                Math.Clamp(brightness, -1d, 1d),
+                Math.Clamp(contrast, -1d, 1d),
+                default,
+                default);
+        }
+
+        public static ImageRecolor Duotone(RgbColor dark, RgbColor light)
+        {
+            return new ImageRecolor(ImageRecolorKind.Duotone, 0d, 0d, dark, light);
+        }
     }
 }
