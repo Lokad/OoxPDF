@@ -1814,6 +1814,10 @@ paths, and ExecPlan references together.
       behind the foreground shape. Public synthetic unit `PptxSyntheticOuterShadowRendersOffsetShape` locks
       the rendering and diagnostic behavior. Private effect diagnostics dropped from 17 to 1 and private
       transparency diagnostics dropped from 8 to 1; the remaining pair is the unsupported `glow` family.
+    - [x] Add first-pass `glow` rendering for ordinary preset shapes as an expanded translucent duplicate
+      behind the foreground shape. Public synthetic unit `PptxSyntheticGlowRendersExpandedShape` locks the
+      rendering and diagnostic behavior. The private deck now has no unsupported effect or transparency
+      diagnostics.
   - [ ] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
     recolored raster output is actually generated, and make the image cache key include recolor parameters.
     - [x] Add PNG/BMP raster recolor support for `a:lum` brightness/contrast and `a:duotone`, with image-cache

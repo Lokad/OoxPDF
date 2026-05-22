@@ -150,6 +150,13 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
+        if (TryReadGlow(shapeProperties, theme, out Glow glow) &&
+            preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
+            customGeometry is null)
+        {
+            DrawGlow(graphics, preset, x, y, width, height, glow);
+        }
+
         if (TryReadOuterShadow(shapeProperties, theme, out OuterShadow outerShadow) &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
             customGeometry is null)
@@ -437,6 +444,34 @@ internal sealed partial class PptxRenderer
         return !CanRenderPictureFillPreset(ReadPreset(shapeProperties));
     }
 
+    private static bool TryReadGlow(XElement shapeProperties, PptxTheme theme, out Glow glow)
+    {
+        XElement? glowElement = shapeProperties
+            .Element(DrawingNamespace + "effectLst")
+            ?.Element(DrawingNamespace + "glow");
+        if (glowElement is null)
+        {
+            glow = default;
+            return false;
+        }
+
+        XElement? colorElement = glowElement.Elements().FirstOrDefault(element =>
+            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
+        if (colorElement is not null &&
+            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+        {
+            double radius = OoxUnits.EmuToPoints(ParseOptionalLongAttribute(glowElement, "rad", 0));
+            glow = new Glow(
+                color,
+                ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
+                radius);
+            return radius > PptxTextMetricRules.TextStateTolerance;
+        }
+
+        glow = default;
+        return false;
+    }
+
     private static bool TryReadOuterShadow(XElement shapeProperties, PptxTheme theme, out OuterShadow shadow)
     {
         XElement? outerShadow = shapeProperties
@@ -466,6 +501,22 @@ internal sealed partial class PptxRenderer
 
         shadow = default;
         return false;
+    }
+
+    private static void DrawGlow(
+        PdfGraphicsBuilder graphics,
+        string preset,
+        double x,
+        double y,
+        double width,
+        double height,
+        Glow glow)
+    {
+        graphics.SaveState();
+        graphics.SetAlpha(glow.Alpha, 1d);
+        graphics.SetFillRgb(glow.Color.Red, glow.Color.Green, glow.Color.Blue);
+        DrawPresetFill(graphics, preset, x - glow.Radius, y - glow.Radius, width + 2d * glow.Radius, height + 2d * glow.Radius);
+        graphics.RestoreState();
     }
 
     private static void DrawOuterShadow(

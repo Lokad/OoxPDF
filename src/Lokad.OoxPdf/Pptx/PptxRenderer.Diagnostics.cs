@@ -128,7 +128,8 @@ internal sealed partial class PptxRenderer
 
     private static bool IsUnsupportedEffect(XElement effect)
     {
-        return effect.Name != DrawingNamespace + "outerShdw";
+        return effect.Name != DrawingNamespace + "outerShdw" &&
+            effect.Name != DrawingNamespace + "glow";
     }
 
     private static bool IsUnsupportedCustomGeometry(XElement customGeometry)
@@ -197,6 +198,8 @@ internal sealed partial class PptxRenderer
             lineOwner?.Name == DrawingNamespace + "tcPr";
         bool supportedOuterShadow = fill?.Name == DrawingNamespace + "outerShdw" &&
             owner?.Name == DrawingNamespace + "effectLst";
-        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow;
+        bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
+            owner?.Name == DrawingNamespace + "effectLst";
+        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
     }
 }

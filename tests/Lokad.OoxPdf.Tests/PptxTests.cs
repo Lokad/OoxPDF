@@ -691,6 +691,43 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered outer shadow alpha should not emit an unsupported-transparency diagnostic.");
     }
 
+    public static void PptxSyntheticGlowRendersExpandedShape()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr>
+                        <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                        <a:prstGeom prst="rect"/>
+                        <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+                        <a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow></a:effectLst>
+                      </p:spPr>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/GS25000F100000S gs", pdf);
+        TestAssert.Contains("64.8 388.8 86.4 86.4 re f", pdf);
+        TestAssert.Contains("72 396 72 72 re f", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_EFFECT"), "Supported glow should not emit an unsupported-effect diagnostic.");
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered glow alpha should not emit an unsupported-transparency diagnostic.");
+    }
+
     public static void PptxSyntheticLineEndPresetVariantsRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -4323,7 +4360,7 @@ internal static class PptxTests
                     <p:sp><p:spPr><a:gradFill/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:pattFill/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:solidFill><a:srgbClr val="FF0000"><a:alpha val="50000"/></a:srgbClr></a:solidFill></p:spPr></p:sp>
-                    <p:sp><p:spPr><a:effectLst><a:glow/></a:effectLst></p:spPr></p:sp>
+                    <p:sp><p:spPr><a:effectLst><a:reflection/></a:effectLst></p:spPr></p:sp>
                     <p:sp><p:spPr><a:custGeom/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:prstGeom prst="wedgeRoundRectCallout"/></p:spPr></p:sp>
                     <p:sp><p:spPr><a:prstGeom prst="heart"/><a:blipFill><a:blip/></a:blipFill></p:spPr></p:sp>
