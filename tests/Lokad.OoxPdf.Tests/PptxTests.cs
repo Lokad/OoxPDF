@@ -4308,7 +4308,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>5</c:v></c:pt>
                       <c:pt idx="2"><c:v>4</c:v></c:pt>
-                    </c:numLit></c:val></c:ser>
+                    </c:numLit></c:val><c:marker><c:symbol val="square"/><c:size val="8"/></c:marker></c:ser>
                   </c:lineChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """),
@@ -4332,6 +4332,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
+        TestAssert.Contains("8 8 re f", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
         TestAssert.True(collector.Diagnostics.Count(d => d.Id == "PPTX_CHART_STATIC_FALLBACK") == 2, "Expected static fallbacks for both line and pie charts.");

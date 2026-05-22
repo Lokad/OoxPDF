@@ -73,7 +73,8 @@ internal sealed partial class PptxRenderer
             if (lineSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
-                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart);
+                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles);
                 return true;
             }
         }
@@ -103,7 +104,8 @@ internal sealed partial class PptxRenderer
                 bool connectLines = ((string?)scatterChart.Element(ChartNamespace + "scatterStyle")?.Attribute("val"))?.Contains("Line", StringComparison.OrdinalIgnoreCase) == true;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
-                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart);
+                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles);
                 return true;
             }
         }
@@ -116,7 +118,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(bubbleChart, theme);
-                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes);
+                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, []);
                 return true;
             }
         }
@@ -206,6 +208,23 @@ internal sealed partial class PptxRenderer
         }
 
         return strokes;
+    }
+
+    private static IReadOnlyList<ChartMarkerStyle> ReadChartMarkerStyles(XElement chartElement)
+    {
+        var styles = new List<ChartMarkerStyle>();
+        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
+        {
+            XElement? marker = element.Element(ChartNamespace + "marker");
+            string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ?? "circle";
+            double size = marker?.Element(ChartNamespace + "size")?.Attribute("val") is { } value &&
+                double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+                    ? Math.Clamp(parsed, 2d, 30d)
+                    : 4d;
+            styles.Add(new ChartMarkerStyle(symbol, size));
+        }
+
+        return styles;
     }
 
     private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
@@ -508,7 +527,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -557,7 +576,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                graphics.FillEllipse(pointX - 2d, pointY - 2d, 4d, 4d);
+                DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color);
                 previousX = pointX;
                 previousY = pointY;
             }
@@ -566,6 +585,46 @@ internal sealed partial class PptxRenderer
             {
                 graphics.RestoreState();
             }
+        }
+    }
+
+    private static ChartMarkerStyle ChartMarker(int seriesIndex, IReadOnlyList<ChartMarkerStyle> markerStyles)
+    {
+        return seriesIndex < markerStyles.Count ? markerStyles[seriesIndex] : new ChartMarkerStyle("circle", 4d);
+    }
+
+    private static void DrawChartMarker(PdfGraphicsBuilder graphics, double x, double y, ChartMarkerStyle marker, RgbColor color)
+    {
+        if (string.Equals(marker.Symbol, "none", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        double size = marker.Size;
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        switch (marker.Symbol)
+        {
+            case "square":
+                graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
+                break;
+            case "diamond":
+                graphics.FillPolygon([
+                    (x, y + size / 2d),
+                    (x + size / 2d, y),
+                    (x, y - size / 2d),
+                    (x - size / 2d, y)
+                ]);
+                break;
+            case "triangle":
+                graphics.FillPolygon([
+                    (x, y + size / 2d),
+                    (x + size / 2d, y - size / 2d),
+                    (x - size / 2d, y - size / 2d)
+                ]);
+                break;
+            default:
+                graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
+                break;
         }
     }
 
@@ -682,7 +741,7 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
-    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -729,7 +788,15 @@ internal sealed partial class PptxRenderer
                 }
 
                 double radius = bubble ? 3d + Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * 8d : 3d;
-                graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
+                if (bubble)
+                {
+                    graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
+                }
+                else
+                {
+                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color);
+                }
+
                 previous = (pointX, pointY);
             }
 
@@ -882,4 +949,6 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha);
 
     private readonly record struct ChartSeriesStroke(RgbColor Color, double Alpha, double Width);
+
+    private readonly record struct ChartMarkerStyle(string Symbol, double Size);
 }

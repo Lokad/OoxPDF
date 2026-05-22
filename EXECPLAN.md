@@ -609,6 +609,9 @@ Composite oracle family map:
 - Area, scatter, bubble, and radar chart fallbacks now share the same explicit series fill/stroke style
   plumbing as bars and lines. Remaining chart styling work is mostly inherited chart style/color-style
   defaults, point-level overrides, marker shapes, axes/ticks, labels, legends, and exact plot-area layout.
+- Line and scatter chart fallbacks now read basic series marker symbols and sizes, with first-pass support
+  for `circle`, `square`, `diamond`, `triangle`, and `none`. Remaining marker work is Office's full marker
+  preset set, marker fill/line overrides, and exact marker sizing from the chart style parts.
 
 PPTX table style targets from the table composite port:
 
