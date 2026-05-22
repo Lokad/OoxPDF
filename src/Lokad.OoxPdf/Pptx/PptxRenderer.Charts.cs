@@ -87,7 +87,9 @@ internal sealed partial class PptxRenderer
                 string grouping = (string?)areaChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "standard";
                 bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-                RenderAreaChartFallback(graphics, document, bounds, areaSeries, stacked);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(areaChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(areaChart, theme);
+                RenderAreaChartFallback(graphics, document, bounds, areaSeries, stacked, seriesFills, seriesStrokes);
                 return true;
             }
         }
@@ -99,7 +101,9 @@ internal sealed partial class PptxRenderer
             if (scatterSeries.Count != 0)
             {
                 bool connectLines = ((string?)scatterChart.Element(ChartNamespace + "scatterStyle")?.Attribute("val"))?.Contains("Line", StringComparison.OrdinalIgnoreCase) == true;
-                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
+                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes);
                 return true;
             }
         }
@@ -110,16 +114,24 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadScatterSeries(bubbleChart, readBubbleSize: true);
             if (bubbleSeries.Count != 0)
             {
-                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(bubbleChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(bubbleChart, theme);
+                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes);
                 return true;
             }
         }
 
-        IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadChartSeries(chartXml, "radarChart");
-        if (radarSeries.Count != 0)
+        XElement? radarChart = chartXml.Descendants(ChartNamespace + "radarChart").FirstOrDefault();
+        if (radarChart is not null)
         {
-            RenderRadarChartFallback(graphics, document, bounds, radarSeries);
-            return true;
+            IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadChartSeries(radarChart);
+            if (radarSeries.Count != 0)
+            {
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(radarChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(radarChart, theme);
+                RenderRadarChartFallback(graphics, document, bounds, radarSeries, seriesFills, seriesStrokes);
+                return true;
+            }
         }
 
         IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadChartSeries(chartXml, "pieChart");
@@ -317,11 +329,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartSeriesFill ChartSeriesColor(int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills)
+    private static ChartSeriesFill ChartSeriesColor(int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha = 1d)
     {
         return seriesIndex < seriesFills.Count && seriesFills[seriesIndex] is { } fill
             ? fill
-            : new ChartSeriesFill(ChartPalette(seriesIndex), 1d);
+            : new ChartSeriesFill(ChartPalette(seriesIndex), defaultAlpha);
     }
 
     private static void FillChartRectangle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartSeriesFill fill)
@@ -570,7 +582,7 @@ internal sealed partial class PptxRenderer
         graphics.SetLineWidth(stroke.Width);
     }
 
-    private static void RenderAreaChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool stacked)
+    private static void RenderAreaChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -624,17 +636,28 @@ internal sealed partial class PptxRenderer
                 polygon[polygon.Length - i - 1] = lowerPoints[i];
             }
 
-            RgbColor fill = ChartPalette(seriesIndex);
+            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, 0.62d);
             graphics.SaveState();
-            graphics.SetAlpha(0.62d, 1d);
-            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.SetAlpha(fill.Alpha, 1d);
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             graphics.FillPolygon(polygon);
             graphics.RestoreState();
-            graphics.SetStrokeRgb(fill.Red, fill.Green, fill.Blue);
-            graphics.SetLineWidth(1.2d);
+            ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+            if (stroke.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, stroke.Alpha);
+            }
+
+            SetChartStroke(graphics, stroke);
             for (int i = 1; i < upperPoints.Length; i++)
             {
                 graphics.StrokeLine(upperPoints[i - 1].X, upperPoints[i - 1].Y, upperPoints[i].X, upperPoints[i].Y);
+            }
+
+            if (stroke.Alpha < 1d)
+            {
+                graphics.RestoreState();
             }
         }
     }
@@ -659,7 +682,7 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
-    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble)
+    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -685,10 +708,16 @@ internal sealed partial class PptxRenderer
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            RgbColor color = ChartPalette(seriesIndex);
-            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            graphics.SetLineWidth(1.2d);
+            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
+            ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+            if (fill.Alpha < 1d || stroke.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, stroke.Alpha);
+            }
+
+            SetChartStroke(graphics, stroke);
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             (double X, double Y)? previous = null;
             foreach (ScatterPoint point in series[seriesIndex].Points)
             {
@@ -703,10 +732,15 @@ internal sealed partial class PptxRenderer
                 graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
                 previous = (pointX, pointY);
             }
+
+            if (fill.Alpha < 1d || stroke.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
         }
     }
 
-    private static void RenderRadarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series)
+    private static void RenderRadarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -739,19 +773,30 @@ internal sealed partial class PptxRenderer
                 points[i] = (centerX + Math.Cos(angle) * pointRadius, centerY + Math.Sin(angle) * pointRadius);
             }
 
-            RgbColor color = ChartPalette(seriesIndex);
+            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
             graphics.SaveState();
-            graphics.SetAlpha(series.Count == 1 ? 0.40d : 0.18d, 1d);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+            graphics.SetAlpha(fill.Alpha, 1d);
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             graphics.FillPolygon(points);
             graphics.RestoreState();
-            graphics.SetStrokeRgb(color.Red, color.Green, color.Blue);
-            graphics.SetLineWidth(1.2d);
+            ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+            if (stroke.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, stroke.Alpha);
+            }
+
+            SetChartStroke(graphics, stroke);
             for (int i = 0; i < points.Length; i++)
             {
                 (double X, double Y) a = points[i];
                 (double X, double Y) b = points[(i + 1) % points.Length];
                 graphics.StrokeLine(a.X, a.Y, b.X, b.Y);
+            }
+
+            if (stroke.Alpha < 1d)
+            {
+                graphics.RestoreState();
             }
         }
     }

@@ -606,6 +606,9 @@ Composite oracle family map:
 - Line chart fallback now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
+- Area, scatter, bubble, and radar chart fallbacks now share the same explicit series fill/stroke style
+  plumbing as bars and lines. Remaining chart styling work is mostly inherited chart style/color-style
+  defaults, point-level overrides, marker shapes, axes/ticks, labels, legends, and exact plot-area layout.
 
 PPTX table style targets from the table composite port:
 
