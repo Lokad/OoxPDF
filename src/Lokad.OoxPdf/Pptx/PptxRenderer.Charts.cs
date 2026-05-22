@@ -143,8 +143,9 @@ internal sealed partial class PptxRenderer
             if (pieSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(pieChart, theme);
+                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(pieChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(pieChart);
-                RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills, pointExplosions);
+                RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
                 return true;
             }
         }
@@ -156,9 +157,10 @@ internal sealed partial class PptxRenderer
             if (doughnutSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
+                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(doughnutChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(doughnutChart);
                 double holeSize = ReadDoughnutHoleSize(doughnutChart);
-                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, pointExplosions, holeSize);
+                RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
                 return true;
             }
         }
@@ -233,6 +235,34 @@ internal sealed partial class PptxRenderer
         }
 
         return fills;
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesStroke> ReadChartPointStrokes(XElement chartElement, PptxTheme theme)
+    {
+        var strokes = new Dictionary<int, ChartSeriesStroke>();
+        XElement? series = chartElement.Element(ChartNamespace + "ser");
+        if (series is null)
+        {
+            return strokes;
+        }
+
+        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
+        {
+            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
+                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            {
+                continue;
+            }
+
+            XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
+            if (shapeProperties is not null &&
+                TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha))
+            {
+                strokes[index] = new ChartSeriesStroke(color, alpha, width);
+            }
+        }
+
+        return strokes;
     }
 
     private static IReadOnlyDictionary<int, double> ReadChartPointExplosions(XElement chartElement)
@@ -946,7 +976,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions)
+    private static void RenderPieChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -1004,13 +1034,29 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
 
+            if (pointStrokes.TryGetValue(i, out ChartSeriesStroke stroke))
+            {
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(1d, stroke.Alpha);
+                }
+
+                SetChartStroke(graphics, stroke);
+                graphics.StrokePolygon(points);
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.RestoreState();
+                }
+            }
+
             angle += sweep;
         }
     }
 
-    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
+    private static void RenderDoughnutChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
-        RenderPieChartFallback(graphics, document, bounds, values, pointFills, pointExplosions);
+        RenderPieChartFallback(graphics, document, bounds, values, pointFills, pointStrokes, pointExplosions);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);

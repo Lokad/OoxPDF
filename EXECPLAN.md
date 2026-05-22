@@ -619,6 +619,9 @@ Composite oracle family map:
   Remaining doughnut work is exploded slices, slice border styling, data labels, and Office chart layout.
 - Pie and doughnut chart fallbacks now honor point-level `c:explosion` by offsetting slices along their
   midpoint angle. Remaining slice work is border styling, exact Office explosion scaling, and data labels.
+- Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr/a:ln` slice borders through the
+  shared line resolver. Remaining slice work is data labels, exact Office explosion scaling, and chart
+  style/color-style inherited defaults.
 
 PPTX table style targets from the table composite port:
 

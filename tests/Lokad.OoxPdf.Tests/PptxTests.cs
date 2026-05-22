@@ -4318,7 +4318,7 @@ internal static class PptxTests
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:pieChart>
                     <c:ser>
-                    <c:dPt><c:idx val="1"/><c:explosion val="25"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:idx val="1"/><c:explosion val="25"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></a:ln></c:spPr></c:dPt>
                     <c:val><c:numLit>
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
@@ -4337,6 +4337,7 @@ internal static class PptxTests
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);
         TestAssert.Contains("0 0.667 0 rg", pdf);
+        TestAssert.Contains("0.667 0 0 RG", pdf);
         TestAssert.Contains("531.352 418.454 m", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
