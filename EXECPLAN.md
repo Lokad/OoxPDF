@@ -607,6 +607,9 @@ Composite oracle family map:
   `pptx-charts` gates because area and bubble ports moved in the wrong direction. The next color slice
   should be a first-class chart palette resolver that reads chart style/color parts, then falls back to
   document theme accents or legacy Office palette defaults only when those parts are absent.
+- Native bar/column chart rendering now reads chart color-style relationship parts (`chartColorStyle`) and
+  uses their resolved DrawingML colors before falling back to document theme accents or legacy palette
+  defaults. This is locked by a synthetic chart fixture with an explicit `colorsN.xml` palette.
 - Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.

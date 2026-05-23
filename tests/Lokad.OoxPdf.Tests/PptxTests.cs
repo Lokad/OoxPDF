@@ -4774,6 +4774,21 @@ internal static class PptxTests
                     </c:numLit></c:val></c:ser>
                   </c:barChart></c:plotArea></c:chart>
                 </c:chartSpace>
+                """),
+            ["ppt/charts/_rels/chart2.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors2.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/colors2.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:colorStyle xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                               meth="cycle" id="10">
+                  <a:srgbClr val="FF00CC"/>
+                  <a:schemeClr val="accent1"/>
+                </cs:colorStyle>
                 """)
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -4782,6 +4797,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1 0 0.8 rg", pdf);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
         TestAssert.Contains("0 0 0.667 rg", pdf);
