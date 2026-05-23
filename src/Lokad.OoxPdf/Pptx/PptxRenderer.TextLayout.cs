@@ -1521,6 +1521,10 @@ internal sealed partial class PptxRenderer
             color = runColor;
             alpha = runAlpha;
         }
+        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", out RgbColor hyperlinkColor))
+        {
+            color = hyperlinkColor;
+        }
         else if (shapeFontColor is { } fontRefColor)
         {
             color = fontRefColor;
@@ -1570,6 +1574,11 @@ internal sealed partial class PptxRenderer
     private static bool HasTextNoFill(XElement? runProperties)
     {
         return runProperties?.Element(DrawingNamespace + "noFill") is not null;
+    }
+
+    private static bool HasHyperlinkClick(XElement? runProperties)
+    {
+        return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
     }
 
     private static bool IsKerningEnabled(XElement? runProperties, XElement? defaultRunProperties, double fontSize)

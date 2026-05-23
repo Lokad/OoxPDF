@@ -125,6 +125,9 @@ High-priority actions:
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
+- [x] Port the `pptx-renderer` hyperlink color precedence rule:
+  hyperlink runs without an explicit fill now use the theme `hlink` color before inherited shape/default
+  colors. A synthetic theme-backed PPTX case locks the behavior.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
