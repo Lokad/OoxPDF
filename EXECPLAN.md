@@ -720,6 +720,9 @@ Composite oracle family map:
   and no visible legend. This is locked by the secondary-axis overlay probe and updates brittle unit
   assertions that encoded the older low/short plot area. Remaining chart-layout work is replacing heuristic
   title/legend margins with a typed chart-layout model.
+- Bar and line chart rendering now route through a first `ChartLayout` model that owns the chart frame,
+  plot box, title text, and legend layout before drawing. This preserves the current Office-backed output
+  while moving chart work toward the `pptx-renderer` pattern of computing layout as data before rendering.
 - Bar and line chart renderer now honor explicit `c:valAx/c:scaling` min/max values for both plotted
   geometry and value-axis tick labels. Remaining axis-scaling work is orientation, logarithmic scales,
   major/minor units, crossing rules, and date/category axis semantics.
