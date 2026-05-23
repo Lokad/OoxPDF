@@ -293,8 +293,8 @@ internal sealed partial class PptxRenderer
                     graphics.SetLineJoin(1);
                 }
 
-                bool hasHeadArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "headEnd"));
-                bool hasTailArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "tailEnd"));
+                LineEndStyle headEnd = ReadLineEnd(shapeProperties, "headEnd");
+                LineEndStyle tailEnd = ReadLineEnd(shapeProperties, "tailEnd");
                 DrawCurvedConnectorPreset(
                     graphics,
                     shapeProperties,
@@ -306,8 +306,8 @@ internal sealed partial class PptxRenderer
                     document.SlideHeightPoints,
                     stroke,
                     lineWidth,
-                    hasHeadArrow,
-                    hasTailArrow);
+                    headEnd,
+                    tailEnd);
 
                 if (hasDash)
                 {
@@ -1352,8 +1352,8 @@ internal sealed partial class PptxRenderer
         double slideHeight,
         RgbColor stroke,
         double lineWidth,
-        bool headArrow,
-        bool tailArrow)
+        LineEndStyle headEnd,
+        LineEndStyle tailEnd)
     {
         List<BezierSegment> segments = preset switch
         {
@@ -1375,27 +1375,70 @@ internal sealed partial class PptxRenderer
         }
         graphics.StrokeCurrentPath();
 
-        if (headArrow)
+        if (!headEnd.IsNone)
         {
-            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(
+            FillCurvedConnectorEndMarker(
                 graphics,
+                headEnd,
+                stroke,
                 first.StartX,
                 first.StartY,
                 ResolveEndpointDirection(first.StartX, first.StartY, first.Control1X, first.Control1Y, first.Control2X, first.Control2Y),
                 lineWidth);
         }
 
-        if (tailArrow)
+        if (!tailEnd.IsNone)
         {
-            graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(
+            FillCurvedConnectorEndMarker(
                 graphics,
+                tailEnd,
+                stroke,
                 last.EndX,
                 last.EndY,
                 ResolveEndpointDirection(last.EndX, last.EndY, last.Control2X, last.Control2Y, last.Control1X, last.Control1Y),
                 lineWidth);
         }
+    }
+
+    private static void FillCurvedConnectorEndMarker(
+        PdfGraphicsBuilder graphics,
+        LineEndStyle style,
+        RgbColor stroke,
+        double tipX,
+        double tipY,
+        (double X, double Y) awayDirection,
+        double lineWidth)
+    {
+        if (style.Kind is LineEndKind.None)
+        {
+            return;
+        }
+
+        graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+        if (style.Kind == LineEndKind.Arrow)
+        {
+            double length = Math.Sqrt(awayDirection.X * awayDirection.X + awayDirection.Y * awayDirection.Y);
+            if (length <= 0.001d)
+            {
+                return;
+            }
+
+            double ux = -awayDirection.X / length;
+            double uy = -awayDirection.Y / length;
+            double nx = -uy;
+            double ny = ux;
+            AppendOfficeArrowHeadPath(graphics, tipX, tipY, ux, uy, nx, ny, lineWidth);
+            graphics.FillCurrentPath();
+            return;
+        }
+
+        if (style.Kind == LineEndKind.Triangle)
+        {
+            FillLineArrowhead(graphics, tipX, tipY, awayDirection, lineWidth);
+            return;
+        }
+
+        FillLineEndMarker(graphics, style, tipX, tipY, awayDirection.X, awayDirection.Y, lineWidth);
     }
 
     private static List<BezierSegment> CreateCurvedConnector2Segments(double x, double yTop, double width, double height, double slideHeight)

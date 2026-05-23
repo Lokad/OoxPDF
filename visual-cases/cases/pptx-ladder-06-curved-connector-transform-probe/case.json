@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-06-curved-connector-transform-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-06-curved-connector-transform-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "shapes", "connector", "curved", "transform"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.25,
+    "maxChangedPixelRatioAtThreshold16": 0.003
+  },
+  "allowedUnsupportedFeatures": []
+}

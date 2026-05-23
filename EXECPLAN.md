@@ -2049,6 +2049,10 @@ paths, and ExecPlan references together.
   - [x] Replace the approximate one-cubic curved connector path with the OOXML preset formulas used by
     `pptx-renderer`: `curvedConnector2` is one cubic with distinct controls, while `curvedConnector3`
     is two cubic segments joined at the vertical midpoint and honoring `adj1`.
+  - [x] Add public Office-backed `pptx-ladder-06-curved-connector-transform-probe` for rotated/flipped
+    curved connectors with `tailEnd type="arrow"`, and render curved connector arrows through the same
+    Office-style arrow marker path used by straight connectors. Latest gate: MAE `0.206527`, changed16
+    `0.002595`.
   - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,
     `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit
     fixture and route them through orientation-aware text-frame flow instead of silently treating them as
