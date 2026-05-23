@@ -1986,6 +1986,62 @@ internal static class PptxTests
         TestAssert.Equal("Courier New", span.GlyphSpan.Typeface ?? string.Empty);
     }
 
+    public static void PptxSyntheticTextBoxResolvesThemeEaAndCsFonts()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes().Replace(
+                "</Types>",
+                "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
+                StringComparison.Ordinal)),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="FontTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="FontTheme"><a:dk1><a:srgbClr val="000000"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1></a:clrScheme>
+                    <a:fontScheme name="FontTheme">
+                      <a:majorFont><a:latin typeface="Arial"/><a:ea typeface="Microsoft YaHei"/><a:cs typeface="Arial Unicode MS"/></a:majorFont>
+                      <a:minorFont><a:latin typeface="Aptos"/><a:ea typeface="SimSun"/><a:cs typeface="Tahoma"/></a:minorFont>
+                    </a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p>
+                        <a:r><a:rPr sz="2400"><a:latin typeface="+mj-ea"/></a:rPr><a:t>MajorEastAsian</a:t></a:r>
+                        <a:br/>
+                        <a:r><a:rPr sz="2400"><a:latin typeface="+mn-cs"/></a:rPr><a:t>MinorComplex</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """)
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal("Microsoft YaHei", frame.Paragraphs[0].Runs[0].Typeface);
+        TestAssert.Equal("Tahoma", frame.Paragraphs[0].Runs[2].Typeface);
+    }
+
     public static void PptxSyntheticTextBoxUsesDistinctFontResourcesForStyles()
     {
         string fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

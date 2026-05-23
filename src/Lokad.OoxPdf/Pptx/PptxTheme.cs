@@ -12,13 +12,21 @@ internal sealed class PptxTheme
     private PptxTheme(
         IReadOnlyDictionary<string, RgbColor> colors,
         string? majorLatinFont,
+        string? majorEastAsianFont,
+        string? majorComplexScriptFont,
         string? minorLatinFont,
+        string? minorEastAsianFont,
+        string? minorComplexScriptFont,
         IReadOnlyList<XElement> fillStyles,
         IReadOnlyList<XElement> lineStyles)
     {
         Colors = colors;
         MajorLatinFont = majorLatinFont;
+        MajorEastAsianFont = majorEastAsianFont;
+        MajorComplexScriptFont = majorComplexScriptFont;
         MinorLatinFont = minorLatinFont;
+        MinorEastAsianFont = minorEastAsianFont;
+        MinorComplexScriptFont = minorComplexScriptFont;
         FillStyles = fillStyles;
         LineStyles = lineStyles;
     }
@@ -27,13 +35,21 @@ internal sealed class PptxTheme
 
     public string? MajorLatinFont { get; }
 
+    public string? MajorEastAsianFont { get; }
+
+    public string? MajorComplexScriptFont { get; }
+
     public string? MinorLatinFont { get; }
+
+    public string? MinorEastAsianFont { get; }
+
+    public string? MinorComplexScriptFont { get; }
 
     public IReadOnlyList<XElement> FillStyles { get; }
 
     public IReadOnlyList<XElement> LineStyles { get; }
 
-    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, [], []);
+    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], []);
 
     public static PptxTheme Load(OoxPackage package, string presentationPartName)
     {
@@ -82,9 +98,25 @@ internal sealed class PptxTheme
             .Element(DrawingNamespace + "majorFont")?
             .Element(DrawingNamespace + "latin")?
             .Attribute("typeface");
+        string? majorEastAsian = (string?)fontScheme?
+            .Element(DrawingNamespace + "majorFont")?
+            .Element(DrawingNamespace + "ea")?
+            .Attribute("typeface");
+        string? majorComplexScript = (string?)fontScheme?
+            .Element(DrawingNamespace + "majorFont")?
+            .Element(DrawingNamespace + "cs")?
+            .Attribute("typeface");
         string? minorLatin = (string?)fontScheme?
             .Element(DrawingNamespace + "minorFont")?
             .Element(DrawingNamespace + "latin")?
+            .Attribute("typeface");
+        string? minorEastAsian = (string?)fontScheme?
+            .Element(DrawingNamespace + "minorFont")?
+            .Element(DrawingNamespace + "ea")?
+            .Attribute("typeface");
+        string? minorComplexScript = (string?)fontScheme?
+            .Element(DrawingNamespace + "minorFont")?
+            .Element(DrawingNamespace + "cs")?
             .Attribute("typeface");
 
         XElement? formatScheme = document.Descendants(DrawingNamespace + "fmtScheme").FirstOrDefault();
@@ -99,7 +131,7 @@ internal sealed class PptxTheme
             .Select(element => new XElement(element))
             .ToArray() ?? [];
 
-        return new PptxTheme(colors, majorLatin, minorLatin, fillStyles, lineStyles);
+        return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript, fillStyles, lineStyles);
     }
 
     public bool TryResolveColor(string schemeColor, out RgbColor color)
@@ -113,7 +145,11 @@ internal sealed class PptxTheme
         return typeface switch
         {
             "+mj-lt" => MajorLatinFont,
+            "+mj-ea" => MajorEastAsianFont ?? MajorLatinFont,
+            "+mj-cs" => MajorComplexScriptFont ?? MajorLatinFont,
             "+mn-lt" => MinorLatinFont,
+            "+mn-ea" => MinorEastAsianFont ?? MinorLatinFont,
+            "+mn-cs" => MinorComplexScriptFont ?? MinorLatinFont,
             null or "" => MinorLatinFont,
             _ => typeface
         };
