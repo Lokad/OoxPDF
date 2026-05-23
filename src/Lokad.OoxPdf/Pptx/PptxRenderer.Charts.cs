@@ -171,6 +171,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(pieChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieChart, pieSeries[0], pointExplosions, holeSize: 0d));
                 return true;
             }
         }
@@ -187,6 +188,7 @@ internal sealed partial class PptxRenderer
                 double holeSize = ReadDoughnutHoleSize(doughnutChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutChart, doughnutSeries[0], pointExplosions, holeSize));
                 return true;
             }
         }
@@ -496,6 +498,90 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics);
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XElement chartElement, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
+    {
+        if (!ShouldRenderValueDataLabels(chartElement) || values.Count == 0)
+        {
+            return [];
+        }
+
+        double total = values.Sum();
+        if (total <= 0d)
+        {
+            return [];
+        }
+
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double radius = Math.Min(width, height) * 0.34d;
+        double centerX = x + width * 0.46d;
+        double centerY = y + height * 0.52d;
+        double labelRadius = radius * (holeSize > 0d ? Math.Max(0.62d, (1d + holeSize) / 2d) : 0.62d);
+        double fontSize = 8.5d;
+        double labelWidth = Math.Max(18d, radius * 0.55d);
+        double labelHeight = fontSize * 1.35d;
+        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        var runs = new List<TextRun>(values.Count);
+        double angle = -90d;
+        for (int i = 0; i < values.Count; i++)
+        {
+            double sweep = values[i] / total * 360d;
+            double mid = (angle + sweep / 2d) * Math.PI / 180d;
+            double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * radius * 0.22d : 0d;
+            double labelX = centerX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
+            double labelY = centerY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
+            runs.Add(new TextRun(
+                FormatChartAxisLabel(values[i]),
+                labelX,
+                labelY,
+                labelWidth,
+                labelHeight,
+                x,
+                y,
+                width,
+                height,
+                fontSize,
+                0d,
+                0d,
+                color,
+                1d,
+                null,
+                Bold: false,
+                Italic: false,
+                Underline: false,
+                Strike: false,
+                KerningEnabled: true,
+                TextAlignment.Center,
+                FontFamily: null,
+                RotationDegrees: 0d,
+                RotationCenterX: 0d,
+                RotationCenterY: 0d,
+                FlipHorizontal: false,
+                FlipVertical: false));
+            angle += sweep;
+        }
+
+        return RenderTextRuns(runs, graphics);
+    }
+
+    private static bool ShouldRenderValueDataLabels(XElement chartElement)
+    {
+        XElement? labels = chartElement.Element(ChartNamespace + "dLbls");
+        if (labels is null)
+        {
+            return false;
+        }
+
+        XElement? showValue = labels.Element(ChartNamespace + "showVal");
+        return showValue is not null &&
+            !string.Equals((string?)showValue.Attribute("val"), "0", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<string> labels, bool horizontalBars)

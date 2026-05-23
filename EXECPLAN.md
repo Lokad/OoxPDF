@@ -655,6 +655,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render simple legends from cached series names, using the same fill or
   stroke styles as the plotted series. Remaining legend work is Office layout positions, overlay behavior,
   rich text, hidden/deleted entries, and chart style inheritance.
+- Pie and doughnut chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
+  Remaining data-label work is category/percentage labels, rich text, leader lines, custom positions,
+  number formats, and exact Office label collision behavior.
 
 PPTX table style targets from the table composite port:
 
