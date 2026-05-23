@@ -305,4 +305,12 @@ New-TypographyProbe `
           <a:p><a:endParaRPr lang="en-US" sz="400"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-bold-wrap-probe" `
+    -Transform '<a:xfrm><a:off x="548640" y="685800"/><a:ext cx="4886960" cy="914400"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:r><a:rPr sz="1400" kern="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Quality decisions depend on careful operational planning and reliable daily execution.</a:t></a:r></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

@@ -1664,6 +1664,9 @@ paths, and ExecPlan references together.
   arrays, highlight rectangles, and font metrics before rerunning the private deck.
 - [ ] Add normalized typography rungs for Office PDF text-object structure: compare candidate `TJ` arrays
   and text matrices against Office for simple lines before accepting near-pixel raster gates.
+- [x] Add a public bold-wrap typography rung for the slide-11 class of issues:
+  `pptx-ladder-04-typography-bold-wrap-probe` locks two-line Cambria Math bold wrapping, synthetic-bold
+  fill-and-stroke emission, and PDF text-operation positions against Office at `0.08pt` tolerance.
 - [x] Extend `PdfInspect` with `text-operations.json` output so public typography cases can compare Office
   and candidate font size, `Tc`, `Tm`, and raw `TJ/Tj` structure before raster tuning. The first
   `pptx-ladder-03-text-flow` inspection shows sub-point baseline drift plus missing Office micro-`TJ`
@@ -1969,6 +1972,9 @@ paths, and ExecPlan references together.
   - [ ] Current layout diagnostics after the break-space wrapping fix show the text frame ending above the
     timeline graphic, while the graphic matrix itself already matches the Office PDF. Regenerate the private
     visual case and keep this open for any remaining title/font/style mismatch.
+  - [x] Private regen `20260523-230344` no longer shows the lower-left timeline overlapping the preceding
+    text. Keep the slide item open for the remaining left text wrap/style differences, now covered first by
+    public bold-wrap typography rungs.
 - [ ] Private slide 19 visible remaining problem: lower-left logo rendering, paired-arrow geometry, and
   center/right font selection differ from Office. Split into public logo/image recolor or crop diagnostics,
   arrow geometry fixtures, and font fallback/style inheritance fixtures.
