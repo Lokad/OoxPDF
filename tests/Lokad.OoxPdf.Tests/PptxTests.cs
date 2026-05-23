@@ -4163,6 +4163,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
         TestAssert.Contains("0.522 0.639 0.761 rg", pdf);
+        TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
     }
 
     public static void PptxSyntheticTableWrapsCellTextToColumnWidth()

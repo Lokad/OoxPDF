@@ -691,6 +691,8 @@ PPTX table style targets from the table composite port:
   style map, not only Accent 1. A public synthetic lock covers Accent 6 header and banded-row fills.
 - Medium Style 2 table text formatting now carries conditional first-row and first-column bold through
   the table text-run path, alongside the existing first-row light text color.
+- Medium Style 2 table fills now honor first-column, last-column, and last-row conditional accent fills
+  using row/column context, while explicit cell fills still override style fills.
 - Apply table style fills/borders before explicit cell overrides, matching Office draw order.
 - Add a focused synthetic table style ladder before tightening `pptx-ladder-10-composite-table-port`.
 

@@ -118,7 +118,7 @@ internal sealed partial class PptxRenderer
                 XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
                 bool hasCellFill = TryReadSolidColorWithAlpha(cellProperties, context.Theme, out RgbColor fill, out double fillAlpha) ||
-                    TryReadBuiltInTableStyleCellFill(table, rowIndex, context.Theme, out fill, out fillAlpha);
+                    TryReadBuiltInTableStyleCellFill(table, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
                 if (hasCellFill)
                 {
                     bool transparentFill = fillAlpha < 0.999d;

@@ -4,7 +4,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool TryReadBuiltInTableStyleCellFill(XElement table, int rowIndex, PptxTheme theme, out RgbColor color, out double alpha)
+    private static bool TryReadBuiltInTableStyleCellFill(XElement table, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, out RgbColor color, out double alpha)
     {
         alpha = 1d;
         if (!TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) ||
@@ -17,7 +17,13 @@ internal sealed partial class PptxRenderer
 
         XElement? tableProperties = table.Element(DrawingNamespace + "tblPr");
         bool firstRow = ParseOptionalBoolAttribute(tableProperties, "firstRow");
-        if (firstRow && rowIndex == 0)
+        bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow");
+        bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol");
+        bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol");
+        if ((firstRow && rowIndex == 0) ||
+            (lastRow && rowIndex == rowCount - 1) ||
+            (firstCol && columnIndex == 0) ||
+            (lastCol && columnIndex == columnCount - 1))
         {
             color = accent;
             return true;
