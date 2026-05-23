@@ -205,6 +205,10 @@ High-priority actions:
 - [x] Preserve glyph metadata through the first coalescing bridge:
   positioned-span coalescing now keeps atoms and line-box identity, and rebuilds merged glyph spans when
   same-style spans are coalesced so `TJ` construction still has pre-emission glyph data.
+- [x] Preserve measured inter-span glyph gaps during coalescing:
+  same-style positioned spans now merge by carrying the original glyph layouts plus the measured gap between
+  spans, instead of recomputing the merged `TJ` array from the concatenated text. This keeps the intermediate
+  typography model authoritative and avoids another source of subtle inter-letter drift.
 - [ ] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
   highlight drawing still receives legacy `TextRun`s today, while underline/strike now use glyph-run width
   from positioned spans for PPTX shape text.

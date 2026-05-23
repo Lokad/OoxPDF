@@ -205,7 +205,7 @@ internal sealed partial class PptxRenderer
                     Run = mergedRun,
                     EndX = span.EndX,
                     Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
                 };
             }
             else
@@ -313,7 +313,7 @@ internal sealed partial class PptxRenderer
                     Run = mergedRun,
                     EndX = span.EndX,
                     Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, run, span.GlyphSpan)
                 };
             }
             else
@@ -365,7 +365,7 @@ internal sealed partial class PptxRenderer
                     Run = mergedRun,
                     EndX = span.EndX,
                     Atoms = previous.Atoms.Concat(span.Atoms).ToArray(),
-                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.GlyphSpan, span.GlyphSpan)
+                    GlyphSpan = MergeGlyphSpans(mergedRun, previous.Run, previous.GlyphSpan, span.Run, span.GlyphSpan)
                 };
                 continue;
             }
@@ -376,14 +376,46 @@ internal sealed partial class PptxRenderer
         return coalesced;
     }
 
-    private static PptxTextGlyphSpanLayout MergeGlyphSpans(TextRun mergedRun, PptxTextGlyphSpanLayout left, PptxTextGlyphSpanLayout right)
+    private static PptxTextGlyphSpanLayout MergeGlyphSpans(TextRun mergedRun, TextRun leftRun, PptxTextGlyphSpanLayout left, TextRun rightRun, PptxTextGlyphSpanLayout right)
     {
         if (left.Glyphs.Count == 0 && right.Glyphs.Count == 0)
         {
             return PptxTextGlyphSpanLayout.Empty(mergedRun);
         }
 
-        return BuildGlyphSpan(mergedRun, new TextAdvanceEstimator());
+        if (left.Glyphs.Count == 0)
+        {
+            return right with
+            {
+                Text = mergedRun.Text,
+                LayoutWidth = mergedRun.Width
+            };
+        }
+
+        if (right.Glyphs.Count == 0)
+        {
+            return left with
+            {
+                Text = mergedRun.Text,
+                LayoutWidth = mergedRun.Width
+            };
+        }
+
+        double leftVisualEnd = leftRun.X + left.NaturalWidth;
+        double interSpanGap = rightRun.X - leftVisualEnd;
+        PptxTextGlyphLayout[] glyphs = left.Glyphs
+            .Concat(right.Glyphs.Select((glyph, index) => index == 0
+                ? glyph with { AdjustmentBefore = glyph.AdjustmentBefore + interSpanGap }
+                : glyph))
+            .ToArray();
+        double naturalWidth = glyphs.Sum(glyph => glyph.Advance) + glyphs.Sum(glyph => glyph.AdjustmentBefore);
+        return left with
+        {
+            Text = mergedRun.Text,
+            NaturalWidth = Math.Max(0d, naturalWidth),
+            LayoutWidth = mergedRun.Width,
+            Glyphs = glyphs
+        };
     }
 
     private static bool CanCoalesceUnderlineRun(TextRun left, TextRun right)
