@@ -1761,42 +1761,45 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
-        ChartSeriesStroke? stroke = marker.Stroke;
-        if (fill.Alpha < 1d)
+        ChartSeriesStroke? stroke = marker.Stroke ?? (IsLineOnlyChartMarker(marker.Symbol) ? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d)) : null);
+        if (!IsLineOnlyChartMarker(marker.Symbol))
         {
-            graphics.SaveState();
-            graphics.SetAlpha(fill.Alpha, 1d);
-        }
+            if (fill.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+            }
 
-        graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-        switch (marker.Symbol)
-        {
-            case "square":
-                graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
-                break;
-            case "diamond":
-                graphics.FillPolygon([
-                    (x, y + size / 2d),
-                    (x + size / 2d, y),
-                    (x, y - size / 2d),
-                    (x - size / 2d, y)
-                ]);
-                break;
-            case "triangle":
-                graphics.FillPolygon([
-                    (x, y + size / 2d),
-                    (x + size / 2d, y - size / 2d),
-                    (x - size / 2d, y - size / 2d)
-                ]);
-                break;
-            default:
-                graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
-                break;
-        }
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+            switch (marker.Symbol)
+            {
+                case "square":
+                    graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
+                    break;
+                case "diamond":
+                    graphics.FillPolygon([
+                        (x, y + size / 2d),
+                        (x + size / 2d, y),
+                        (x, y - size / 2d),
+                        (x - size / 2d, y)
+                    ]);
+                    break;
+                case "triangle":
+                    graphics.FillPolygon([
+                        (x, y + size / 2d),
+                        (x + size / 2d, y - size / 2d),
+                        (x - size / 2d, y - size / 2d)
+                    ]);
+                    break;
+                default:
+                    graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
+                    break;
+            }
 
-        if (fill.Alpha < 1d)
-        {
-            graphics.RestoreState();
+            if (fill.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
         }
 
         if (stroke is not { } markerStroke)
@@ -1813,6 +1816,14 @@ internal sealed partial class PptxRenderer
         SetChartStroke(graphics, markerStroke);
         switch (marker.Symbol)
         {
+            case "plus":
+                graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
+                graphics.StrokeLine(x, y - size / 2d, x, y + size / 2d);
+                break;
+            case "x":
+                graphics.StrokeLine(x - size / 2d, y - size / 2d, x + size / 2d, y + size / 2d);
+                graphics.StrokeLine(x - size / 2d, y + size / 2d, x + size / 2d, y - size / 2d);
+                break;
             case "square":
                 graphics.StrokeRectangle(x - size / 2d, y - size / 2d, size, size);
                 break;
@@ -1840,6 +1851,12 @@ internal sealed partial class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    private static bool IsLineOnlyChartMarker(string symbol)
+    {
+        return string.Equals(symbol, "plus", StringComparison.Ordinal) ||
+            string.Equals(symbol, "x", StringComparison.Ordinal);
     }
 
     private static void StrokeChartPointRectangle(PdfGraphicsBuilder graphics, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height)
