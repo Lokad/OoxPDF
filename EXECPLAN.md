@@ -1866,6 +1866,8 @@ paths, and ExecPlan references together.
     space was scaled but not rotated by OOXPDF.
   - [x] Add public coverage for rotated grouped shapes and propagate group rotation into child bounds before
     rendering.
+  - [x] Render `prstGeom arc` strokes from preset guide angles instead of falling back to rectangle stroking;
+    private page 30 now shows dashed arcs around the milestones rather than dashed bounding boxes.
 - [x] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
   text runs have no direct fill, including a no-fill shape with a visible line and centered text.
 - [x] Slide 2 public ladder: lock highlighted centered mixed-run title-sized text using Cambria/Cambria Math
