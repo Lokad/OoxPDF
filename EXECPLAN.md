@@ -1827,6 +1827,8 @@ paths, and ExecPlan references together.
     axis rather than a standalone rotated axis title.
   - [x] Add a public synthetic bar-chart fixture with a secondary right value axis and lock the right-axis
     stroke/label path in the static fallback.
+  - [x] Render additional `barChart` groups in the same `plotArea` against their referenced value axes,
+    covering combo stacked-bar charts with separate left/right scales.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, and keep primary/secondary scales independent.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its

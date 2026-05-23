@@ -4492,13 +4492,24 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>3</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
                     <c:dLbls><c:showVal val="1"/></c:dLbls>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:barChart>
+                    <c:barDir val="col"/><c:grouping val="stacked"/>
+                    <c:ser><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr><c:val><c:numLit>
+                      <c:pt idx="0"><c:v>0</c:v></c:pt>
+                      <c:pt idx="1"><c:v>20</c:v></c:pt>
+                    </c:numLit></c:val></c:ser>
+                    <c:axId val="3"/><c:axId val="4"/>
                   </c:barChart>
                   <c:valAx>
+                    <c:axId val="2"/>
                     <c:axPos val="l"/>
                     <c:scaling><c:min val="0"/><c:max val="4"/></c:scaling>
                     <c:majorUnit val="2"/>
                   </c:valAx>
                   <c:valAx>
+                    <c:axId val="4"/>
                     <c:axPos val="r"/>
                     <c:scaling><c:min val="0"/><c:max val="40"/></c:scaling>
                     <c:majorUnit val="20"/>
@@ -4532,6 +4543,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
+        TestAssert.Contains("0 0 0.667 rg", pdf);
         TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
         TestAssert.Contains("0.667 0 0.667 rg", pdf);
         TestAssert.Contains("0 0.667 0.667 RG", pdf);

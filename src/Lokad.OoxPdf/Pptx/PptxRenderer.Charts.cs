@@ -56,7 +56,8 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, List<PdfFontResource> fonts)
     {
-        XElement? barChart = chartXml.Descendants(ChartNamespace + "barChart").FirstOrDefault();
+        IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
+        XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
             IReadOnlyList<IReadOnlyList<double>> barSeries = ReadChartSeries(barChart);
@@ -67,14 +68,48 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
-                ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetBarChartValueExtents(barSeries, grouping));
-                ChartAxisUnits axisUnits = ReadChartValueAxisUnits(chartXml);
+                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
+                ChartValueExtents valueExtents = ReadChartValueAxisExtents(valueAxis, GetBarChartValueExtents(barSeries, grouping));
+                ChartAxisUnits axisUnits = ReadChartValueAxisUnits(valueAxis);
                 bool varyColors = ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadChartSeriesPointFills(barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadChartSeriesPointStrokes(barChart, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
                 RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors);
+                foreach (XElement extraBarChart in barCharts.Skip(1))
+                {
+                    IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadChartSeries(extraBarChart);
+                    if (extraSeries.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    string extraGrouping = (string?)extraBarChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
+                    bool extraHorizontalBars = string.Equals((string?)extraBarChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
+                    XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
+                    ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
+                    ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
+                    RenderBarChartFallback(
+                        graphics,
+                        document,
+                        bounds,
+                        chartXml,
+                        extraSeries,
+                        extraHorizontalBars,
+                        extraGrouping,
+                        ReadChartSeriesFills(extraBarChart, theme),
+                        ReadChartSeriesPointFills(extraBarChart, theme),
+                        ReadChartSeriesPointStrokes(extraBarChart, theme),
+                        majorGridlines: false,
+                        minorGridlines: false,
+                        axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
+                        ChartShapeStyle.Empty,
+                        extraValueExtents,
+                        extraAxisUnits,
+                        ReadChartVaryColors(extraBarChart));
+                }
+
                 if (axesStyle.CategoryAxisVisible)
                 {
                     fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
@@ -314,6 +349,19 @@ internal sealed partial class PptxRenderer
         return ReadChartValueAxisExtents(chartXml
             .Descendants(ChartNamespace + "valAx")
             .FirstOrDefault(), fallback);
+    }
+
+    private static XElement? ReadChartValueAxisForChart(XDocument chartXml, XElement chartElement)
+    {
+        HashSet<string> axisIds = chartElement
+            .Elements(ChartNamespace + "axId")
+            .Select(axis => (string?)axis.Attribute("val"))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToHashSet(StringComparer.Ordinal);
+        return chartXml
+            .Descendants(ChartNamespace + "valAx")
+            .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty));
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
