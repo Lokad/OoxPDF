@@ -1845,6 +1845,8 @@ paths, and ExecPlan references together.
     stroke when Office suppresses the axis line.
   - [x] Expand category-axis label layout beyond the exact category slot so labels such as `Inventory` are
     not visually clipped by an over-tight synthetic text box.
+  - [x] Expand the category-axis label clipping rectangle vertically so descenders are not cut from bottom
+    axis labels.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
