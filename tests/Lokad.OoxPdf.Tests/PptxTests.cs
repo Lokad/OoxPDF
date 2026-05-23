@@ -456,6 +456,9 @@ internal static class PptxTests
         TestAssert.Contains("72 468 m", pdf);
         TestAssert.Contains("144 468 144 396 144 396 c", pdf);
         TestAssert.Contains("S", pdf);
+        TestAssert.Contains("144 396 m", pdf);
+        TestAssert.Contains("147.15 403 l", pdf);
+        TestAssert.Contains("140.85 403 l", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()

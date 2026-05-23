@@ -1048,6 +1048,11 @@ internal sealed partial class PptxRenderer
         ]);
     }
 
+    private static void FillLineArrowhead(PdfGraphicsBuilder graphics, double tipX, double tipY, (double X, double Y) direction, double lineWidth)
+    {
+        FillLineArrowhead(graphics, tipX, tipY, direction.X, direction.Y, lineWidth);
+    }
+
     private static void FillLineEndMarker(PdfGraphicsBuilder graphics, LineEndStyle style, double tipX, double tipY, double directionX, double directionY, double lineWidth)
     {
         if (style.IsNone || style.Kind is LineEndKind.Triangle or LineEndKind.Arrow)
@@ -1258,14 +1263,23 @@ internal sealed partial class PptxRenderer
         if (headArrow)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(graphics, x1, y1, x1 - c1x, y1 - c1y, lineWidth);
+            FillLineArrowhead(graphics, x1, y1, ResolveEndpointDirection(x1, y1, c1x, c1y, c2x, c2y), lineWidth);
         }
 
         if (tailArrow)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(graphics, x2, y2, x2 - c2x, y2 - c2y, lineWidth);
+            FillLineArrowhead(graphics, x2, y2, ResolveEndpointDirection(x2, y2, c2x, c2y, c1x, c1y), lineWidth);
         }
+    }
+
+    private static (double X, double Y) ResolveEndpointDirection(double tipX, double tipY, double nearestControlX, double nearestControlY, double fallbackControlX, double fallbackControlY)
+    {
+        double dx = tipX - nearestControlX;
+        double dy = tipY - nearestControlY;
+        return dx * dx + dy * dy > 0.000001d
+            ? (dx, dy)
+            : (tipX - fallbackControlX, tipY - fallbackControlY);
     }
 
     private static LineEndStyle ReadLineEnd(XElement shapeProperties, string elementName)
