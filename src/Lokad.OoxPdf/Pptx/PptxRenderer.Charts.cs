@@ -625,13 +625,18 @@ internal sealed partial class PptxRenderer
         XElement? legend = chartXml
             .Descendants(ChartNamespace + "legend")
             .FirstOrDefault();
-        if (IsOoxmlBooleanElementEnabled(legend?.Element(ChartNamespace + "delete")))
+        if (legend is null)
         {
             return ChartLegendLayout.Hidden;
         }
 
-        string position = (string?)legend?.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
-        bool overlay = IsOoxmlTrue((string?)legend?.Element(ChartNamespace + "overlay")?.Attribute("val"));
+        if (IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")))
+        {
+            return ChartLegendLayout.Hidden;
+        }
+
+        string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
+        bool overlay = IsOoxmlTrue((string?)legend.Element(ChartNamespace + "overlay")?.Attribute("val"));
         return new ChartLegendLayout(position, overlay, Visible: true);
     }
 
