@@ -390,7 +390,11 @@ internal sealed partial class PptxRenderer
                 graphics.SetLineJoin(join);
             }
 
-            if (preset == "ellipse")
+            if (preset == "arc")
+            {
+                DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height);
+            }
+            else if (preset == "ellipse")
             {
                 graphics.StrokeEllipse(x, y, width, height);
             }
@@ -553,6 +557,77 @@ internal sealed partial class PptxRenderer
         {
             graphics.FillRectangle(x, y, width, height);
         }
+    }
+
+    private static void DrawPresetArcStroke(PdfGraphicsBuilder graphics, XElement shapeProperties, double x, double y, double width, double height)
+    {
+        double startDegrees = ReadPresetGeometryGuide(shapeProperties, "adj1", 0d) / 60000d;
+        double endDegrees = ReadPresetGeometryGuide(shapeProperties, "adj2", 90d) / 60000d;
+        double sweepDegrees = endDegrees - startDegrees;
+        while (sweepDegrees <= 0d)
+        {
+            sweepDegrees += 360d;
+        }
+
+        double centerX = x + width / 2d;
+        double centerY = y + height / 2d;
+        double radiusX = width / 2d;
+        double radiusY = height / 2d;
+        double remaining = sweepDegrees;
+        double current = startDegrees;
+        bool first = true;
+        while (remaining > 0.0001d)
+        {
+            double segment = Math.Min(90d, remaining);
+            AppendEllipseArcSegment(graphics, centerX, centerY, radiusX, radiusY, current, segment, first);
+            first = false;
+            current += segment;
+            remaining -= segment;
+        }
+
+        graphics.StrokeCurrentPath();
+    }
+
+    private static double ReadPresetGeometryGuide(XElement shapeProperties, string name, double fallback)
+    {
+        XElement? guide = shapeProperties
+            .Element(DrawingNamespace + "prstGeom")
+            ?.Element(DrawingNamespace + "avLst")
+            ?.Elements(DrawingNamespace + "gd")
+            .FirstOrDefault(element => string.Equals((string?)element.Attribute("name"), name, StringComparison.Ordinal));
+        string? formula = (string?)guide?.Attribute("fmla");
+        if (formula is null || !formula.StartsWith("val ", StringComparison.Ordinal))
+        {
+            return fallback;
+        }
+
+        return double.TryParse(formula[4..], NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+            ? value
+            : fallback;
+    }
+
+    private static void AppendEllipseArcSegment(PdfGraphicsBuilder graphics, double centerX, double centerY, double radiusX, double radiusY, double startDegrees, double sweepDegrees, bool moveToStart)
+    {
+        double start = DegreesToRadians(startDegrees);
+        double sweep = DegreesToRadians(sweepDegrees);
+        double end = start + sweep;
+        double k = 4d / 3d * Math.Tan(sweep / 4d);
+
+        double x0 = centerX + radiusX * Math.Cos(start);
+        double y0 = centerY + radiusY * Math.Sin(start);
+        double x3 = centerX + radiusX * Math.Cos(end);
+        double y3 = centerY + radiusY * Math.Sin(end);
+        double x1 = x0 - radiusX * k * Math.Sin(start);
+        double y1 = y0 + radiusY * k * Math.Cos(start);
+        double x2 = x3 + radiusX * k * Math.Sin(end);
+        double y2 = y3 - radiusY * k * Math.Cos(end);
+
+        if (moveToStart)
+        {
+            graphics.MoveTo(x0, y0);
+        }
+
+        graphics.CurveTo(x1, y1, x2, y2, x3, y3);
     }
 
     private static string ReadPreset(XElement shapeProperties)
