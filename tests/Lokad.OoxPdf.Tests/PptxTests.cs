@@ -4481,8 +4481,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val></c:ser>
-                    <c:dLbls><c:showPercent val="1"/></c:dLbls>
+                    </c:numLit></c:val><c:dLbls><c:showPercent val="1"/></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)

@@ -869,7 +869,10 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement)
     {
-        XElement? labels = chartElement.Element(ChartNamespace + "dLbls");
+        XElement? labels = chartElement.Element(ChartNamespace + "dLbls") ??
+            chartElement.Elements(ChartNamespace + "ser")
+                .Select(series => series.Element(ChartNamespace + "dLbls"))
+                .FirstOrDefault(element => element is not null);
         return labels is null
             ? ChartDataLabelOptions.None
             : new ChartDataLabelOptions(
