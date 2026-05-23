@@ -631,6 +631,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render simple `c:minorGridlines` separately from major gridlines with
   lighter intermediate lines. Remaining gridline work is Office style inheritance, non-default intervals,
   and exact plot-area bounds.
+- Bar and line chart legends now read `c:legend/c:legendPos` for basic top, bottom, left, and right
+  placement and honor deleted legends instead of always emitting a right-side legend. Remaining legend work
+  is overlay semantics, manual layout, text styling, entry order/filtering, and exact Office spacing.
 - Supported chart fallbacks now render simple `c:chartSpace/c:spPr` chart-area fills and borders before
   the plot content. Remaining chart-area work is rounded corners, effects, plot-area fills/borders, and
   exact Office chart layout.

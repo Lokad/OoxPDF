@@ -4460,7 +4460,7 @@ internal static class PptxTests
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
                     </c:numLit></c:val><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
                     <c:dLbls><c:showVal val="1"/></c:dLbls>
-                  </c:lineChart></c:plotArea></c:chart>
+                  </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>
                 """),
             ["ppt/charts/chart2.xml"] = TestFixtures.Utf8("""
