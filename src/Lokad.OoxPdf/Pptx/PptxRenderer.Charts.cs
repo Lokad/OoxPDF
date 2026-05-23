@@ -68,8 +68,8 @@ internal sealed partial class PptxRenderer
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
-                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
-                ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds);
+                ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
+                RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetBarChartValueExtents(barSeries, grouping), horizontalBars));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills)));
@@ -89,8 +89,8 @@ internal sealed partial class PptxRenderer
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
-                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
-                ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds);
+                ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds, chartXml);
+                RenderLineChartFallback(graphics, document, bounds, chartXml, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(lineChart), horizontalBars: false));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetLineChartValueExtents(lineSeries), horizontalBars: false));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes)));
@@ -241,6 +241,44 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault()
             ?.Element(ChartNamespace + "spPr");
         return ReadChartShapeStyle(shapeProperties, theme);
+    }
+
+    private static bool TryReadManualPlotBox(XDocument chartXml, double chartX, double chartY, double chartWidth, double chartHeight, out ChartPlotBox plotBox)
+    {
+        plotBox = default;
+        XElement? manualLayout = chartXml
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault()
+            ?.Element(ChartNamespace + "layout")
+            ?.Element(ChartNamespace + "manualLayout");
+        if (manualLayout is null)
+        {
+            return false;
+        }
+
+        double? x = ReadManualLayoutFactor(manualLayout, "x");
+        double? y = ReadManualLayoutFactor(manualLayout, "y");
+        double? width = ReadManualLayoutFactor(manualLayout, "w");
+        double? height = ReadManualLayoutFactor(manualLayout, "h");
+        if (x is null || y is null || width is null || height is null)
+        {
+            return false;
+        }
+
+        double plotWidth = Math.Clamp(width.Value, 0.02d, 1d) * chartWidth;
+        double plotHeight = Math.Clamp(height.Value, 0.02d, 1d) * chartHeight;
+        double plotX = chartX + Math.Clamp(x.Value, 0d, 1d) * chartWidth;
+        double plotY = chartY + chartHeight - Math.Clamp(y.Value, 0d, 1d) * chartHeight - plotHeight;
+        plotBox = new ChartPlotBox(plotX, plotY, plotWidth, plotHeight);
+        return plotWidth > 0d && plotHeight > 0d;
+    }
+
+    private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
+    {
+        string? value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
     }
 
     private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
@@ -967,9 +1005,9 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
     {
-        ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds);
+        ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
@@ -1058,13 +1096,18 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartPlotBox GetBarChartPlotBox(PptxDocument document, ShapeBounds bounds)
+    private static ChartPlotBox GetBarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
+        if (TryReadManualPlotBox(chartXml, x, y, width, height, out ChartPlotBox manualPlotBox))
+        {
+            return manualPlotBox;
+        }
+
         return new ChartPlotBox(x + width * 0.1d, y + height * 0.14d, width * 0.82d, height * 0.72d);
     }
 
@@ -1293,9 +1336,9 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
     {
-        ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds);
+        ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds, chartXml);
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
@@ -1369,13 +1412,18 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartPlotBox GetLineChartPlotBox(PptxDocument document, ShapeBounds bounds)
+    private static ChartPlotBox GetLineChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
+        if (TryReadManualPlotBox(chartXml, x, y, width, height, out ChartPlotBox manualPlotBox))
+        {
+            return manualPlotBox;
+        }
+
         return new ChartPlotBox(x + width * 0.12d, y + height * 0.16d, width * 0.76d, height * 0.68d);
     }
 
