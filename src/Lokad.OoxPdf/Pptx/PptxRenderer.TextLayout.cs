@@ -596,6 +596,7 @@ internal sealed partial class PptxRenderer
             double cursorX = paragraphTextX;
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
+            int remainingDrawableSegments = CountDrawableTextSegments(flowParagraph);
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
                 PptxTextRunModel modelRun = flowRun.Source;
@@ -647,6 +648,11 @@ internal sealed partial class PptxRenderer
                     double fragmentFontSize = runStyle.FontSize * flowSegment.FontScale;
                     string currentSegment = flowSegment.Text;
                     string currentAdvanceText = flowSegment.AdvanceText;
+                    bool isDrawableTextSegment = flowSegment.Draw && currentAdvanceText.TrimStart().Length > 0;
+                    bool isFinalShortWordSegment = isDrawableTextSegment &&
+                        remainingDrawableSegments == 1 &&
+                        lineLayouts.Count == 0 &&
+                        IsShortWordSegment(currentAdvanceText);
                     double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
                     if (frame.Orientation != PptxTextOrientation.Horizontal &&
                         flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
@@ -677,6 +683,11 @@ internal sealed partial class PptxRenderer
                             }
                         }
 
+                        if (isDrawableTextSegment)
+                        {
+                            remainingDrawableSegments--;
+                        }
+
                         continue;
                     }
 
@@ -685,6 +696,11 @@ internal sealed partial class PptxRenderer
                         paragraphStyle.Alignment == TextAlignment.Distributed
                         ? PptxTextMetricRules.CoordinateTolerance
                         : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
+                    if (isFinalShortWordSegment)
+                    {
+                        wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize);
+                    }
+
                     bool overflowsLine = allowWrapping &&
                         cursorX > paragraphTextX &&
                         cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
@@ -720,6 +736,10 @@ internal sealed partial class PptxRenderer
 
                     cursorX += segmentWidth;
                     line.AdvanceTo(cursorX);
+                    if (isDrawableTextSegment)
+                    {
+                        remainingDrawableSegments--;
+                    }
                 }
             }
 
@@ -732,6 +752,19 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextFrameLayout(frame, paragraphLayouts);
+    }
+
+    private static int CountDrawableTextSegments(PptxTextFlowParagraph paragraph)
+    {
+        return paragraph.Runs
+            .SelectMany(run => run.Segments)
+            .Count(segment => segment.Draw && segment.AdvanceText.TrimStart().Length > 0);
+    }
+
+    private static bool IsShortWordSegment(string text)
+    {
+        string trimmed = text.Trim();
+        return trimmed.Length is > 0 and <= 16 && !trimmed.Any(char.IsWhiteSpace);
     }
 
     private static double ResolveLineFontSize(double visibleMaxFontSize, double fallbackFontSize)
@@ -1733,7 +1766,7 @@ internal sealed partial class PptxRenderer
         XAttribute? threshold = runProperties?.Attribute("kern") ?? defaultRunProperties?.Attribute("kern");
         if (threshold is null)
         {
-            return true;
+            return false;
         }
 
         double minimumFontSize = int.Parse(threshold.Value, CultureInfo.InvariantCulture) / 100d;

@@ -836,6 +836,9 @@ High-priority actions:
   packages.
 - [x] Keep oracle caches under ignored `artifacts/` or another ignored cache directory; never modify checked-in
   reference inputs as part of caching.
+- [x] Harden Office automation scripts so chart fixture generation closes embedded chart workbooks, releases
+  COM objects, and quits only automation-owned Excel instances with no remaining workbooks. This keeps Office
+  reference generation usable without leaving blocking Excel/PowerPoint processes behind.
 - [x] Split fast unit tests from slower visual/oracle tests so routine `dotnet run --project
   tests/Lokad.OoxPdf.Tests` stays fast and visual gates can be run explicitly.
   The custom runner now supports `--skip-slow`, `--only-slow`, and `--list`.
@@ -1606,9 +1609,9 @@ paths, and ExecPlan references together.
 - [x] OpenType GPOS extension lookups are parsed for active `kern` feature pair positioning, recovering
   Office-like small Cambria/Cambria Math intra-word adjustments without reintroducing inactive feature
   lookups that caused large parasite gaps.
-- [x] Typography experiment: Office PDFs can embed and use math-table TTC faces directly for normal slide
-  text when OOXML requests that exact typeface. Remove the family-name workaround and keep exact font
-  resolution exact; remaining drift belongs in OpenType shaping/PDF text emission, not substitution.
+- [x] Typography experiment: exact font resolution still keeps math-table TTC faces exact, while PPTX
+  presentation text now uses a generic same-collection text face when a math-table face has one. This avoids
+  font-name special cases while matching Office's slide-text behavior more closely.
 - [x] Slide-3 typography gap: fix CID font width emission so every embedded glyph has a `/W` entry.
   Missing glyph widths caused PDF viewers to use default advances, producing the parasite inter-letter
   gaps seen with exact math-table fonts. `PdfEmbeddedFontWidthsCoverEncodedGlyphs` now locks this.
@@ -1625,6 +1628,10 @@ paths, and ExecPlan references together.
 - [ ] Remove remaining PPTX text-flow approximations that pick specific families as default behavior.
   Defaults must come from OOXML theme resolution, font metadata, or a documented generic fallback stack,
   not font-by-font aliases.
+- [x] Add `pptx-ladder-04-cambria-math-dense-wrap-probe` for the private slide-11 class of issues:
+  dense Cambria Math paragraphs, mixed bold spans, an empty paragraph, and a narrow public text frame. OOXPDF
+  now keeps the short final heading word on the first line through a named final-word wrap rule instead of a
+  broad wrap tolerance, and the visual gate is at MAE `2.769287`, changed16 `0.025235`.
 - [ ] Continue tightening `pptx-ladder-04-typography-run-boundaries` toward near-pixel parity by comparing
   Office and candidate `TJ` arrays, baseline `Tm` values, and highlight geometry line by line.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,

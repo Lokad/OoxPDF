@@ -87,7 +87,7 @@ internal sealed partial class PptxRenderer
         {
             TextRun first = group.First();
             string familyName = string.IsNullOrWhiteSpace(first.FontFamily) ? "Arial" : first.FontFamily!;
-            FontResolution resolution = resolver.Resolve(new FontRequest(familyName, first.Bold, first.Italic));
+            FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(familyName, first.Bold, first.Italic));
             if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
             {
                 continue;

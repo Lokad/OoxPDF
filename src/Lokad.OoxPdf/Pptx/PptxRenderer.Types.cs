@@ -507,7 +507,7 @@ internal sealed partial class PptxRenderer
 
             try
             {
-                FontResolution resolution = resolver.Resolve(new FontRequest(familyName, bold, italic));
+                FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(familyName, bold, italic));
                 cached = resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath)
                     ? null
                     : OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
@@ -565,6 +565,7 @@ internal sealed partial class PptxRenderer
         public const double AdjacentTextCoalesceGapFontScale = 0.2d;
         public const double AdjacentUnderlineCoalesceGapFontScale = 0.08d;
         public const double WrapFitToleranceFontScale = 0.16d;
+        public const double FinalWordWrapToleranceFontScale = 0.5d;
         public const double FallbackAdvanceWidthScale = 0.42d;
         public const int ShapeAutoFitSearchIterations = 10;
 
@@ -601,6 +602,8 @@ internal sealed partial class PptxRenderer
         public static double UnderlineCoalesceGap(double fontSize) => Math.Max(MinimumDrawableDimension, fontSize * AdjacentUnderlineCoalesceGapFontScale);
 
         public static double WrapFitTolerance(double fontSize) => Math.Max(CoordinateTolerance, fontSize * WrapFitToleranceFontScale);
+
+        public static double FinalWordWrapTolerance(double fontSize) => Math.Max(WrapFitTolerance(fontSize), fontSize * FinalWordWrapToleranceFontScale);
 
         public static double FallbackAdvanceWidth(int codeUnitCount, int runeCount, double fontSize, double characterSpacing)
         {

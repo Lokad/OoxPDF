@@ -46,6 +46,24 @@ public sealed class WindowsFontResolver : IFontResolver
             : new FontResolution(request.FamilyName, null, IsFallback: true);
     }
 
+    internal FontResolution ResolvePresentationTextFace(FontRequest request)
+    {
+        FontResolution resolved = Resolve(request);
+        if (!resolved.HasMathTable || string.IsNullOrWhiteSpace(resolved.FontFilePath))
+        {
+            return resolved;
+        }
+
+        FontResolution[] collectionTextFaces = cache.Value
+            .Where(f => !f.HasMathTable &&
+                f.FontFilePath is not null &&
+                f.FontFilePath.Equals(resolved.FontFilePath, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        return collectionTextFaces.Length == 0
+            ? resolved
+            : SelectBest(collectionTextFaces, request) with { IsFallback = resolved.IsFallback };
+    }
+
     internal IReadOnlyList<FontResolution> GetDiscoveredFonts()
     {
         return cache.Value;

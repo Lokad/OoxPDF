@@ -177,6 +177,37 @@ internal static class FontTests
         TestAssert.True(!resolved.IsFallback, "Expected exact font resolution not to be marked as fallback.");
     }
 
+    public static void WindowsFontResolverUsesCollectionTextFaceForPresentationMathText()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!Directory.Exists(fontsDirectory) ||
+            !Directory.EnumerateFiles(fontsDirectory, "*.ttc", SearchOption.TopDirectoryOnly).Any())
+        {
+            return;
+        }
+
+        var resolver = new WindowsFontResolver(fontsDirectory);
+        FontResolution? mathFace = resolver.GetDiscoveredFonts()
+            .FirstOrDefault(f => f.HasMathTable &&
+                f.FontFilePath is not null &&
+                f.FontFilePath.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase) &&
+                resolver.GetDiscoveredFonts().Any(other =>
+                    !other.HasMathTable &&
+                    other.FontFilePath is not null &&
+                    other.FontFilePath.Equals(f.FontFilePath, StringComparison.OrdinalIgnoreCase)));
+        if (mathFace is null)
+        {
+            return;
+        }
+
+        FontResolution resolved = resolver.ResolvePresentationTextFace(new FontRequest(mathFace.FamilyName));
+
+        TestAssert.NotNull(resolved.FontFilePath);
+        TestAssert.Equal(mathFace.FontFilePath, resolved.FontFilePath);
+        TestAssert.True(!resolved.HasMathTable, "Expected PPTX presentation text to use a non-math text face from the same font collection.");
+        TestAssert.True(!resolved.IsFallback, "Expected same-collection presentation text face not to be marked as fallback.");
+    }
+
     public static void WindowsFontResolverUsesMetadataRatherThanFontNameAliases()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

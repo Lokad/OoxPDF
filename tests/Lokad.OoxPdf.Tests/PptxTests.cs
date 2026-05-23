@@ -2283,6 +2283,30 @@ internal static class PptxTests
         TestAssert.Contains(" TJ", pdf);
     }
 
+    public static void PptxCambriaMathDenseWrapProbeKeepsHeadingOnOneLine()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-04-cambria-math-dense-wrap-probe.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+        string[] texts = lines.Select(line => string.Concat(line.Spans.Select(span => span.Text))).ToArray();
+
+        TestAssert.True(
+            texts.Length > 0 && texts[0].EndsWith("France.", StringComparison.Ordinal),
+            $"Expected Office-compatible first-line wrap. Lines: {string.Join(" | ", texts.Take(4))}. Widths: {string.Join(" | ", lines.Take(4).Select(line => (line.EndX - line.StartX).ToString("0.###", CultureInfo.InvariantCulture)))}");
+    }
+
     public static void PptxSyntheticTextBoxHonorsKerningThreshold()
     {
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");
@@ -5056,7 +5080,7 @@ internal static class PptxTests
             .Distinct(StringComparer.Ordinal)
             .Count();
         TestAssert.True(lineBaselines == 1, $"Expected one rendered baseline for the table header; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 435\.945 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 436\.231 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
     }
 
     public static void PptxSyntheticTableIgnoresLeadingEmptyCellParagraph()
