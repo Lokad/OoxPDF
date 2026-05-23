@@ -67,11 +67,12 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
+                ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetBarChartValueExtents(barSeries, grouping));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
-                RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
+                RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
-                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetBarChartValueExtents(barSeries, grouping), horizontalBars));
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, horizontalBars));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills)));
                 return true;
             }
@@ -88,11 +89,12 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
+                ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetLineChartValueExtents(lineSeries));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds, chartXml);
-                RenderLineChartFallback(graphics, document, bounds, chartXml, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
+                RenderLineChartFallback(graphics, document, bounds, chartXml, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(lineChart), horizontalBars: false));
-                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetLineChartValueExtents(lineSeries), horizontalBars: false));
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, horizontalBars: false));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes)));
                 return true;
             }
@@ -276,6 +278,32 @@ internal sealed partial class PptxRenderer
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
     {
         string? value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
+    }
+
+    private static ChartValueExtents ReadChartValueAxisExtents(XDocument chartXml, ChartValueExtents fallback)
+    {
+        XElement? scaling = chartXml
+            .Descendants(ChartNamespace + "valAx")
+            .FirstOrDefault()
+            ?.Element(ChartNamespace + "scaling");
+        if (scaling is null)
+        {
+            return fallback;
+        }
+
+        double min = ReadAxisScalingValue(scaling, "min") ?? fallback.Min;
+        double max = ReadAxisScalingValue(scaling, "max") ?? fallback.Max;
+        return max > min
+            ? new ChartValueExtents(min, max)
+            : fallback;
+    }
+
+    private static double? ReadAxisScalingValue(XElement scaling, string elementName)
+    {
+        string? value = (string?)scaling.Element(ChartNamespace + elementName)?.Attribute("val");
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? parsed
             : null;
@@ -1005,7 +1033,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents)
     {
         ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
         double plotX = plotBox.X;
@@ -1017,9 +1045,7 @@ internal sealed partial class PptxRenderer
         bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
             string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
         bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-        (double minValue, double maxValue) = stacked
-            ? GetStackedValueExtents(series, categoryCount, percentStacked)
-            : GetClusteredValueExtents(series);
+        (double minValue, double maxValue) = (valueExtents.Min, valueExtents.Max);
         double valueRange = Math.Max(1d, maxValue - minValue);
 
         double zeroX = plotX + (-minValue) / valueRange * plotWidth;
@@ -1336,7 +1362,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents)
     {
         ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds, chartXml);
         double plotX = plotBox.X;
@@ -1345,8 +1371,8 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
         RenderChartShapeStyle(graphics, plotX, plotY, plotWidth, plotHeight, plotAreaStyle);
         int pointCount = Math.Max(1, series.Max(values => values.Count));
-        double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
+        double maxValue = valueExtents.Max;
+        double minValue = valueExtents.Min;
         double valueRange = Math.Max(1d, maxValue - minValue);
 
         if (minorGridlines)

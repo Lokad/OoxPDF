@@ -661,6 +661,9 @@ Composite oracle family map:
 - Bar and line chart plot boxes now honor simple `c:plotArea/c:layout/c:manualLayout` fractional `x/y/w/h`
   values instead of always using heuristic margins. Remaining manual-layout work is `xMode/yMode/wMode/hMode`,
   target variants, title/legend interaction, and applying the same box model to other chart families.
+- Bar and line chart fallbacks now honor explicit `c:valAx/c:scaling` min/max values for both plotted
+  geometry and value-axis tick labels. Remaining axis-scaling work is orientation, logarithmic scales,
+  major/minor units, crossing rules, and date/category axis semantics.
 
 PPTX table style targets from the table composite port:
 
