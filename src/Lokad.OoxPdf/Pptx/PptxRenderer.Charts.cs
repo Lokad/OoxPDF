@@ -8,8 +8,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderCharts(PptxRenderContext context, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PdfFontResource> RenderCharts(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
+        var fonts = new List<PdfFontResource>();
         foreach (XElement frame in context.SlideXml.Descendants(PresentationNamespace + "graphicFrame"))
         {
             XElement? graphicData = frame
@@ -42,12 +43,15 @@ internal sealed partial class PptxRenderer
             XDocument chartXml = SafeXml.Load(chartStream);
             if (TryRenderChartFallback(graphics, context.Document, context.Theme, bounds.Value, chartXml))
             {
+                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, chartXml));
                 EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static chart fallback.", chartPart.Name, context.SlideNumber, "Static chart fallback");
                 continue;
             }
 
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
         }
+
+        return fonts;
     }
 
     private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml)
@@ -253,6 +257,76 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml)
+    {
+        string? title = ReadChartTitleText(chartXml);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return [];
+        }
+
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        double fontSize = 12d;
+        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        var run = new TextRun(
+            title.Trim(),
+            x + width * 0.08d,
+            y + height * 0.88d,
+            width * 0.84d,
+            fontSize * 1.4d,
+            x,
+            y,
+            width,
+            height,
+            fontSize,
+            0d,
+            0d,
+            color,
+            1d,
+            null,
+            Bold: false,
+            Italic: false,
+            Underline: false,
+            Strike: false,
+            KerningEnabled: true,
+            TextAlignment.Center,
+            FontFamily: null,
+            RotationDegrees: 0d,
+            RotationCenterX: 0d,
+            RotationCenterY: 0d,
+            FlipHorizontal: false,
+            FlipVertical: false);
+        return RenderTextRuns([run], graphics);
+    }
+
+    private static string? ReadChartTitleText(XDocument chartXml)
+    {
+        XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
+        if (title is null)
+        {
+            return null;
+        }
+
+        string text = string.Concat(title
+            .Descendants(DrawingNamespace + "t")
+            .Select(element => (string?)element)
+            .Where(value => !string.IsNullOrEmpty(value)));
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        return (string?)title
+            .Descendants(ChartNamespace + "v")
+            .FirstOrDefault();
     }
 
     private static IReadOnlyList<ChartSeriesFill?> ReadChartSeriesFills(XElement chartElement, PptxTheme theme)

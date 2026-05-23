@@ -77,12 +77,12 @@ internal sealed partial class PptxRenderer
                 .Append(context.SlideXml)
                 .SelectMany(xml => RenderTables(context, xml, graphics))
                 .ToArray();
-            RenderCharts(context, graphics);
+            IReadOnlyList<PdfFontResource> chartFonts = RenderCharts(context, graphics);
             IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadInheritedTextSpans(context)
                 .Concat(ReadSlideTextSpans(context))
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, tableTextRuns, graphics);
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), fonts, images, graphics.ExtGStates.ToArray()));
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), chartFonts.Concat(fonts).ToArray(), images, graphics.ExtGStates.ToArray()));
         }
 
         return pages;

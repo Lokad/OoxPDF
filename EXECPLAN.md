@@ -640,6 +640,9 @@ Composite oracle family map:
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr/a:ln` slice borders through the
   shared line resolver. Remaining slice work is data labels, exact Office explosion scaling, and chart
   style/color-style inherited defaults.
+- Supported chart fallbacks now render simple chart titles through the shared PPTX text/font pipeline.
+  Remaining title work is exact Office title layout, rich text styling, overlay/manual layout, and inherited
+  chart style defaults.
 
 PPTX table style targets from the table composite port:
 
