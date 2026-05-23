@@ -209,6 +209,9 @@ High-priority actions:
   same-style positioned spans now merge by carrying the original glyph layouts plus the measured gap between
   spans, instead of recomputing the merged `TJ` array from the concatenated text. This keeps the intermediate
   typography model authoritative and avoids another source of subtle inter-letter drift.
+- [x] Route highlighted PPTX text through layout-owned glyph spans:
+  highlighted runs no longer fall back to legacy `TextRun` glyph remapping after the highlight background is
+  drawn. This keeps text with yellow fills on the same emission path as ordinary shape text.
 - [ ] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
   highlight drawing still receives legacy `TextRun`s today, while underline/strike now use glyph-run width
   from positioned spans for PPTX shape text.

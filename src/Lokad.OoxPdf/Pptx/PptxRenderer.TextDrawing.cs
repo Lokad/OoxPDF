@@ -127,14 +127,7 @@ internal sealed partial class PptxRenderer
             TextRun run = span.Run;
             if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
             {
-                if (run.HighlightColor is null)
-                {
-                    DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
-                }
-                else
-                {
-                    DrawWrappedRun(graphics, rendered.ResourceName, rendered.Font, run, rendered.SyntheticBold, rendered.SyntheticItalic);
-                }
+                DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
             }
         }
     }
