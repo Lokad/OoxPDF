@@ -14,16 +14,31 @@ function Release-ComObject($value) {
     }
 }
 
-function Close-ChartWorkbook($chart) {
-    $workbook = $null
+function Close-ChartWorkbook($workbook) {
+    $excel = $null
     try {
-        $workbook = $chart.ChartData.Workbook
         if ($null -ne $workbook) {
+            $excel = $workbook.Application
             $workbook.Close($false)
+        }
+
+        if ($null -ne $excel) {
+            try {
+                if ($excel.Workbooks.Count -eq 0) {
+                    $excel.Quit()
+                }
+            }
+            catch {
+                # Some Office builds tear down the embedded workbook host during
+                # Close(). The process-lifetime cleanup below is still useful.
+            }
         }
     }
     finally {
+        Release-ComObject $excel
         Release-ComObject $workbook
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
 }
 
@@ -103,7 +118,10 @@ try {
     $line.Line.ForeColor.RGB = Rgb 47 133 106
     $line.Line.Weight = 1.5
     $line.Line.EndArrowheadStyle = 4
-    Close-ChartWorkbook $chart
+    Release-ComObject $worksheet
+    $worksheet = $null
+    Close-ChartWorkbook $workbook
+    $workbook = $null
 
     if (Test-Path -LiteralPath $output) {
         Remove-Item -LiteralPath $output -Force
@@ -196,7 +214,10 @@ try {
     $line = $slide.Shapes.AddConnector(1, 566, 205, 626, 255)
     $line.Line.ForeColor.RGB = Rgb 191 191 191
     $line.Line.Weight = 0.75
-    Close-ChartWorkbook $chart
+    Release-ComObject $worksheet
+    $worksheet = $null
+    Close-ChartWorkbook $workbook
+    $workbook = $null
 
     if (Test-Path -LiteralPath $output) {
         Remove-Item -LiteralPath $output -Force
