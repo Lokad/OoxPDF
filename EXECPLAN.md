@@ -618,6 +618,9 @@ Composite oracle family map:
 - Line and scatter chart fallbacks now honor per-series `c:smooth` by emitting cubic Bezier paths from the
   point sequence instead of straight segments. Remaining smoothing work is exact Office spline tension and
   interaction with missing/blank points.
+- Bar and line chart fallbacks now render simple `c:majorGridlines` inside the plot area. Remaining axis
+  work is tick labels, axis scaling, axis crossing, minor gridlines, axis line styling, and exact Office
+  plot-area bounds.
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.

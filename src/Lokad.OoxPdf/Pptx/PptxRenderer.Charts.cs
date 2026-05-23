@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
                 bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
                 string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
-                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills);
+                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml));
                 return true;
             }
         }
@@ -75,7 +75,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
-                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries);
+                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml));
                 return true;
             }
         }
@@ -357,6 +357,11 @@ internal sealed partial class PptxRenderer
         return smooth;
     }
 
+    private static bool HasMajorGridlines(XDocument chartXml)
+    {
+        return chartXml.Descendants(ChartNamespace + "majorGridlines").Any();
+    }
+
     private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
     {
         var series = new List<ScatterSeries>();
@@ -410,7 +415,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -430,10 +435,22 @@ internal sealed partial class PptxRenderer
             : GetClusteredValueExtents(series);
         double valueRange = Math.Max(1d, maxValue - minValue);
 
-        graphics.SetStrokeRgb(90, 90, 90);
-        graphics.SetLineWidth(0.75d);
         double zeroX = plotX + (-minValue) / valueRange * plotWidth;
         double zeroY = plotY + (-minValue) / valueRange * plotHeight;
+        if (majorGridlines)
+        {
+            if (horizontalBars)
+            {
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight);
+            }
+            else
+            {
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight);
+            }
+        }
+
+        graphics.SetStrokeRgb(90, 90, 90);
+        graphics.SetLineWidth(0.75d);
         graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
         graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
 
@@ -475,6 +492,28 @@ internal sealed partial class PptxRenderer
                 ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
                 FillChartRectangle(graphics, categoryX + seriesIndex * barSlot, value >= 0d ? zeroY : zeroY - barHeight, Math.Max(0.5d, barSlot * 0.86d), barHeight, fill);
             }
+        }
+    }
+
+    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight)
+    {
+        graphics.SetStrokeRgb(217, 217, 217);
+        graphics.SetLineWidth(0.5d);
+        for (int i = 1; i < 4; i++)
+        {
+            double y = plotY + plotHeight * i / 4d;
+            graphics.StrokeLine(plotX, y, plotX + plotWidth, y);
+        }
+    }
+
+    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight)
+    {
+        graphics.SetStrokeRgb(217, 217, 217);
+        graphics.SetLineWidth(0.5d);
+        for (int i = 1; i < 4; i++)
+        {
+            double x = plotX + plotWidth * i / 4d;
+            graphics.StrokeLine(x, plotY, x, plotY + plotHeight);
         }
     }
 
@@ -657,7 +696,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -672,6 +711,11 @@ internal sealed partial class PptxRenderer
         double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
         double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
         double valueRange = Math.Max(1d, maxValue - minValue);
+
+        if (majorGridlines)
+        {
+            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight);
+        }
 
         graphics.SetStrokeRgb(90, 90, 90);
         graphics.SetLineWidth(0.75d);
