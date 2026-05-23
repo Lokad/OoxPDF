@@ -384,12 +384,13 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        TextInsets insets = ReadTextInsets(textBody);
+        TextInsets insets = ReadTableCellTextInsets(cell, textBody);
         double textAreaHeight = Math.Max(0d, height - insets.Top - insets.Bottom);
+        double estimatedTextHeight = EstimateTableCellTextHeight(textBody, Math.Max(1d, width - insets.Left - insets.Right), theme, tableStyleTextStyle);
         double verticalOffset = ReadTableCellVerticalAnchor(cell) switch
         {
-            TextVerticalAnchor.Middle => textAreaHeight / 2d,
-            TextVerticalAnchor.Bottom => textAreaHeight,
+            TextVerticalAnchor.Middle => Math.Max(0d, (textAreaHeight - estimatedTextHeight) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textAreaHeight - estimatedTextHeight),
             _ => 0d
         };
         double firstFontSize = ReadFirstTableCellFontSize(textBody);
@@ -461,6 +462,87 @@ internal sealed partial class PptxRenderer
 
             cursorY -= maxFontSize * 1.2d;
         }
+    }
+
+    private static TextInsets ReadTableCellTextInsets(XElement cell, XElement textBody)
+    {
+        TextInsets bodyInsets = ReadTextInsets(textBody);
+        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+        return new TextInsets(
+            ReadTableCellMargin(cellProperties, "marL", bodyInsets.Left),
+            ReadTableCellMargin(cellProperties, "marR", bodyInsets.Right),
+            ReadTableCellMargin(cellProperties, "marT", bodyInsets.Top),
+            ReadTableCellMargin(cellProperties, "marB", bodyInsets.Bottom));
+    }
+
+    private static double ReadTableCellMargin(XElement? cellProperties, string attributeName, double fallback)
+    {
+        return cellProperties?.Attribute(attributeName) is { } margin &&
+            long.TryParse(margin.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emus)
+                ? OoxUnits.EmuToPoints(emus)
+                : fallback;
+    }
+
+    private static double EstimateTableCellTextHeight(XElement textBody, double textWidth, PptxTheme theme, TableCellTextStyle tableStyleTextStyle)
+    {
+        double height = 0d;
+        var advanceEstimator = new TextAdvanceEstimator();
+        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        {
+            double lineWidth = 0d;
+            double maxFontSize = 12d;
+            bool hasLineContent = false;
+            foreach (XElement run in paragraph.Elements().Where(IsTextRunElement))
+            {
+                XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+                double fontSize = runProperties?.Attribute("sz") is { } size
+                    ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
+                    : 12d;
+                string? typeface = theme.ResolveTypeface((string?)runProperties?
+                    .Element(DrawingNamespace + "latin")
+                    ?.Attribute("typeface"));
+                bool bold = tableStyleTextStyle.Bold || ParseOptionalBoolAttribute(runProperties, "b");
+                bool italic = ParseOptionalBoolAttribute(runProperties, "i");
+                foreach (TextCapsFragment fragment in ApplyTextCaps(ReadTextElementText(run, slideNumber: 0), runProperties, null))
+                {
+                    foreach (string token in SplitTableTextWrapTokens(fragment.Text))
+                    {
+                        if (token.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        double fragmentFontSize = fontSize * fragment.FontScale;
+                        double advance = advanceEstimator.Measure(token, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
+                        if (!string.IsNullOrWhiteSpace(token) &&
+                            lineWidth > PptxTextMetricRules.TextStateTolerance &&
+                            lineWidth + advance > textWidth)
+                        {
+                            height += maxFontSize * 1.2d;
+                            maxFontSize = fragmentFontSize;
+                            lineWidth = 0d;
+                            hasLineContent = false;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(token) && lineWidth <= PptxTextMetricRules.TextStateTolerance)
+                        {
+                            continue;
+                        }
+
+                        maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
+                        lineWidth += advance;
+                        hasLineContent = true;
+                    }
+                }
+            }
+
+            if (hasLineContent)
+            {
+                height += maxFontSize * 1.2d;
+            }
+        }
+
+        return height;
     }
 
     private static IEnumerable<string> SplitTableTextWrapTokens(string text)

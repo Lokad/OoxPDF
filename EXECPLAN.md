@@ -1832,6 +1832,11 @@ paths, and ExecPlan references together.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
   grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
   shape fill/stroke context.
+  - [x] Check `pptx-renderer` handling: table cells apply `a:tcPr` margins as padding and map
+    `a:tcPr@anchor` to content-box vertical alignment with top as the Office default.
+  - [x] Apply the same model to OOXPDF table-cell text placement: tcPr margins override bodyPr defaults,
+    middle/bottom anchors account for estimated wrapped content height, and the behavior is locked by
+    `PptxSyntheticTableCentersTextByContentHeight`.
 - [ ] Private slide 10 visible remaining problem: one headline line is positioned too high. Map it to public
   typography baselines, paragraph spacing, inherited bodyPr insets, or placeholder geometry before fixing.
 - [ ] Private slide 11 visible remaining problem: a lower-left image overlaps preceding text, and adjacent
