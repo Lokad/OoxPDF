@@ -135,8 +135,8 @@ High-priority actions:
   theme parsing now stores major/minor Latin, East Asian, and complex-script typefaces, and resolves
   `+mj-ea`, `+mj-cs`, `+mn-ea`, and `+mn-cs` aliases before font measurement/emission.
 - [x] Port the first broader `pptx-renderer` color-resolution slice:
-  PPTX text/shape color paths now resolve `a:sysClr @lastClr` and common `a:prstClr` preset colors,
-  including alpha/modifier handling through the shared color resolver.
+  PPTX text/shape color paths now resolve `a:sysClr @lastClr`, common `a:prstClr` preset colors,
+  `a:scrgbClr`, and `a:hslClr`, including alpha/modifier handling through the shared color resolver.
 - [x] Port the first `pptx-renderer` text-outline rule:
   `a:rPr/a:ln` is now a first-class run style that flows through text layout into PDF text rendering mode,
   so no-fill outline text is stroked while preserving its layout advance. A synthetic PPTX typography case

@@ -1230,7 +1230,7 @@ internal static class PptxTests
         TestAssert.Contains(" TJ", pdf);
     }
 
-    public static void PptxSyntheticTextBoxResolvesPresetAndSystemColors()
+    public static void PptxSyntheticTextBoxResolvesDrawingMlColorForms()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -1255,6 +1255,10 @@ internal static class PptxTests
                         <a:r><a:rPr sz="2400"><a:solidFill><a:prstClr val="orange"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Preset</a:t></a:r>
                         <a:br/>
                         <a:r><a:rPr sz="2400"><a:solidFill><a:sysClr val="windowText" lastClr="112233"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>System</a:t></a:r>
+                        <a:br/>
+                        <a:r><a:rPr sz="2400"><a:solidFill><a:scrgbClr r="50000" g="25000" b="0"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>ScRgb</a:t></a:r>
+                        <a:br/>
+                        <a:r><a:rPr sz="2400"><a:solidFill><a:hslClr hue="7200000" sat="100000" lum="50000"/></a:solidFill><a:latin typeface="Arial"/></a:rPr><a:t>Hsl</a:t></a:r>
                       </a:p>
                     </p:txBody>
                   </p:sp></p:spTree></p:cSld>
@@ -1268,6 +1272,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0.647 0 rg", pdf);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
+        TestAssert.Contains("0.502 0.251 0 rg", pdf);
+        TestAssert.Contains("0 1 0 rg", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsBodyInsets()
