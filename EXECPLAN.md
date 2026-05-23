@@ -687,6 +687,8 @@ PPTX table style targets from the table composite port:
 
 - Resolve built-in Office table style ids into first-row, whole-table, banded-row, border, and text
   formatting layers.
+- Medium Style 2 built-in table styles now resolve all accent variants from the `pptx-renderer` predefined
+  style map, not only Accent 1. A public synthetic lock covers Accent 6 header and banded-row fills.
 - Apply table style fills/borders before explicit cell overrides, matching Office draw order.
 - Add a focused synthetic table style ladder before tightening `pptx-ladder-10-composite-table-port`.
 

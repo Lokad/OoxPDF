@@ -4095,6 +4095,76 @@ internal static class PptxTests
         TestAssert.Contains(" TJ", pdf);
     }
 
+    public static void PptxSyntheticTableStyleMediumStyle2Accent6RendersFills()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes().Replace(
+                "</Types>",
+                "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
+                StringComparison.Ordinal)),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TableTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="TableTheme">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent6><a:srgbClr val="336699"/></a:accent6>
+                    </a:clrScheme>
+                    <a:fontScheme name="TableTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                        <a:tbl>
+                          <a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
+                          <a:tblGrid><a:gridCol w="1371600"/><a:gridCol w="1371600"/></a:tblGrid>
+                          <a:tr h="914400">
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>H1</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>H2</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                          </a:tr>
+                          <a:tr h="914400">
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>A</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>B</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                          </a:tr>
+                        </a:tbl>
+                      </a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
+        TestAssert.Contains("0.522 0.639 0.761 rg", pdf);
+    }
+
     public static void PptxSyntheticTableWrapsCellTextToColumnWidth()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

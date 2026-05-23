@@ -7,7 +7,9 @@ internal sealed partial class PptxRenderer
     private static bool TryReadBuiltInTableStyleCellFill(XElement table, int rowIndex, PptxTheme theme, out RgbColor color, out double alpha)
     {
         alpha = 1d;
-        if (!IsMediumStyle2Accent1Table(table) || !theme.TryResolveColor("accent1", out RgbColor accent))
+        if (!TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) ||
+            !string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
+            !theme.TryResolveColor(style.Accent, out RgbColor accent))
         {
             color = default;
             return false;
@@ -32,7 +34,8 @@ internal sealed partial class PptxRenderer
     private static bool TryReadBuiltInTableStyleTextColor(XElement table, int rowIndex, PptxTheme theme, out RgbColor color)
     {
         XElement? tableProperties = table.Element(DrawingNamespace + "tblPr");
-        if (IsMediumStyle2Accent1Table(table) &&
+        if (TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
+            string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
             rowIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstRow") &&
             theme.TryResolveColor("lt1", out color))
@@ -44,13 +47,25 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static bool IsMediumStyle2Accent1Table(XElement table)
+    private static bool TryReadBuiltInTableStyle(XElement table, out BuiltInTableStyle style)
     {
         string? styleId = (string?)table
             .Element(DrawingNamespace + "tblPr")
             ?.Element(DrawingNamespace + "tableStyleId");
-        return string.Equals(styleId, "{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}", StringComparison.OrdinalIgnoreCase);
+        return BuiltInTableStyles.TryGetValue(styleId ?? string.Empty, out style);
     }
+
+    private static IReadOnlyDictionary<string, BuiltInTableStyle> BuiltInTableStyles { get; } =
+        new Dictionary<string, BuiltInTableStyle>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}"] = new("Medium-Style-2", "tx1"),
+            ["{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"] = new("Medium-Style-2", "accent1"),
+            ["{21E4AEA4-8DFA-4A89-87EB-49C32662AFE0}"] = new("Medium-Style-2", "accent2"),
+            ["{F5AB1C69-6EDB-4FF4-983F-18BD219EF322}"] = new("Medium-Style-2", "accent3"),
+            ["{00A15C55-8517-42AA-B614-E9B94910E393}"] = new("Medium-Style-2", "accent4"),
+            ["{7DF18680-E054-41AD-8BC1-D1AEF772440D}"] = new("Medium-Style-2", "accent5"),
+            ["{93296810-A885-4BE3-A3E7-6D5BEEA58F35}"] = new("Medium-Style-2", "accent6")
+        };
 
     private static RgbColor TintColor(RgbColor color, double tint)
     {
@@ -59,4 +74,6 @@ internal sealed partial class PptxRenderer
             ToByte(color.Green + (255d - color.Green) * tint),
             ToByte(color.Blue + (255d - color.Blue) * tint));
     }
+
+    private readonly record struct BuiltInTableStyle(string Name, string Accent);
 }
