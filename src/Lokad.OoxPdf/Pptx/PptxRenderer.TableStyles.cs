@@ -19,6 +19,8 @@ internal sealed partial class PptxRenderer
         bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow");
         bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol");
         bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol");
+        bool bandCol = ParseOptionalBoolAttribute(tableProperties, "bandCol");
+        int bodyColumnIndex = columnIndex - (firstCol ? 1 : 0);
         if (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
             ((firstRow && rowIndex == 0) ||
                 (lastRow && rowIndex == rowCount - 1) ||
@@ -70,13 +72,22 @@ internal sealed partial class PptxRenderer
                 return true;
             }
 
+            if (bandCol && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0)
+            {
+                color = accent;
+                alpha = 0.4d;
+                return true;
+            }
+
             color = default;
             return false;
         }
 
         if (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal))
         {
-            color = bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0
+            bool banded = (bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
+                (bandCol && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
+            color = banded
                 ? TintColor(accent, 0.4d)
                 : TintColor(accent, 0.2d);
             return true;
@@ -84,7 +95,9 @@ internal sealed partial class PptxRenderer
 
         if (string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal))
         {
-            color = bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0
+            bool banded = (bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
+                (bandCol && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
+            color = banded
                 ? ShadeColor(accent, 0.4d)
                 : ShadeColor(accent, 0.2d);
             return true;
