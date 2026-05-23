@@ -646,6 +646,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now honor `c:plotArea/c:spPr` fill and border styling through the shared
   chart shape-style helper. Remaining plot-area work is manual layout, rounded corners/effects, and extending
   exact plot bounds to area/scatter/radar/pie/doughnut families.
+- Bar and line chart fallbacks now render first-series cached category labels through the shared PPTX text
+  pipeline. Remaining axis-label work is tick values, rich text, label rotation, multi-level categories,
+  manual positioning, and Office chart font/style inheritance.
 
 PPTX table style targets from the table composite port:
 
