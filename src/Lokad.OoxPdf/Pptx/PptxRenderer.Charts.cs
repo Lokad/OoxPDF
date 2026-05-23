@@ -1855,7 +1855,7 @@ internal sealed partial class PptxRenderer
             return manualPlotBox;
         }
 
-        return new ChartPlotBox(x + width * 0.1d, y + height * 0.14d, width * 0.82d, height * 0.72d);
+        return new ChartPlotBox(x + width * 0.1d, y + height * 0.14d, width * 0.82d, height * 0.81d);
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, string grouping)

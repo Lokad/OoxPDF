@@ -1862,6 +1862,9 @@ paths, and ExecPlan references together.
     such as `45` expand to an Office-like `50` axis cap.
   - [x] Use document theme accent colors for default/vary-colors bar chart fills instead of a hard-coded
     Excel palette; the public horizontal-bar rung now matches Office's category colors.
+  - [x] Increase the default native bar-chart plot height so Office-like value axes use the full plot region
+    instead of compressing labels downward. This directly improves the private slide-5 right axis and keeps
+    the public bar/column chart gates passing.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.

@@ -4864,8 +4864,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        TestAssert.Contains("158.4 334.08 118.08 51.84 re f", pdf);
-        TestAssert.Contains("202.68 334.08 29.52 51.84 re f", pdf);
+        TestAssert.Contains("158.4 334.08 118.08 58.32 re f", pdf);
+        TestAssert.Contains("202.68 334.08 29.52 58.32 re f", pdf);
         TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
     }
 
