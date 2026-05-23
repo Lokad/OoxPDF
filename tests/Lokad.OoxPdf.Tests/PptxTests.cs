@@ -1429,6 +1429,45 @@ internal static class PptxTests
         TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 24d) < 0.01d, "Expected manual line break baselines to step by the absolute line spacing.");
     }
 
+    public static void PptxSyntheticTextWrapDropsBreakSpaceAtLineEnd()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="650000" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha Beta</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        string firstLine = string.Concat(lines[0].Spans.Select(span => span.Text));
+        string secondLine = string.Concat(lines[1].Spans.Select(span => span.Text));
+        TestAssert.Equal("Alpha", firstLine);
+        TestAssert.Equal("Beta", secondLine);
+    }
+
     public static void PptxSyntheticTextBoxUsesCompatibleLineSpacing()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -3208,7 +3247,8 @@ internal static class PptxTests
         double[] wordStarts = justifiedLine.Spans.Select(span => span.X).Take(4).ToArray();
         TestAssert.Equal(4, wordStarts.Length);
         TestAssert.True(wordStarts.Zip(wordStarts.Skip(1), (left, right) => right - left).All(delta => delta > 0d), "Expected justified layout to expose monotonic word starts for Office text-op comparison.");
-        TestAssert.True(justifiedLine.EndX - justifiedLine.Spans.Last().X > justifiedLine.Spans.Last().Width, "Expected justified layout to expose distributed spacing through positioned word starts.");
+        double[] wordGaps = justifiedLine.Spans.Zip(justifiedLine.Spans.Skip(1), (left, right) => right.X - (left.X + left.Width)).ToArray();
+        TestAssert.True(wordGaps.Any(gap => gap > 1d), "Expected justified layout to expose distributed spacing through positioned word starts.");
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphSpan.GlyphSpan.GlyphCount > 0, "Expected layout spans to own glyph ids before PDF emission.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected layout glyph spans to expose mapped glyph ids.");

@@ -1923,6 +1923,9 @@ paths, and ExecPlan references together.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis crossing/orientation, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
+  - [ ] Private slide 25 repeats the remaining multi-axis chart gap: the left schema's right-side value-axis
+    labels and the overlaid green upward arrow are still vertically off. Treat this as the same generic
+    secondary-axis/overlay-transform problem as slide 5, not as a static chart fallback.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
   grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
   shape fill/stroke context.
@@ -1953,6 +1956,9 @@ paths, and ExecPlan references together.
   - [ ] Latest inspection suggests the overlap is caused by preceding text wrapping/flowing too tall, not by
     the timeline graphic being placed too high. Isolate with public typography fixtures for requested-font
     metrics, mixed bold/regular run widths, and default line advance before moving the graphic.
+  - [ ] Current layout diagnostics after the break-space wrapping fix show the text frame ending above the
+    timeline graphic, while the graphic matrix itself already matches the Office PDF. Regenerate the private
+    visual case and keep this open for any remaining title/font/style mismatch.
 - [ ] Private slide 19 visible remaining problem: lower-left logo rendering, paired-arrow geometry, and
   center/right font selection differ from Office. Split into public logo/image recolor or crop diagnostics,
   arrow geometry fixtures, and font fallback/style inheritance fixtures.
@@ -2012,6 +2018,10 @@ paths, and ExecPlan references together.
     horizontal text.
   - [x] Fix the lower input boxes being too high by using visible run font sizes for line advance and
     middle-anchor height estimation instead of seeding every visible line with the unrelated 18 pt fallback.
+  - [x] Fix the center/right text overlap with the lowermost separator. Office PDF inspection shows the three
+    right-side dense columns should end on a baseline around `41.52pt`, not wrap to an extra line around
+    `27.17pt`. Breakable spaces are now owned by the following word and line fitting has an Office-like
+    tolerance, so slide 9 and the duplicate slide 66 diagnostics end at `41.57pt`.
   - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
     fidelity before marking the slide-9 schema as resolved.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous

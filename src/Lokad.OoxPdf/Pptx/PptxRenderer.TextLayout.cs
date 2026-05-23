@@ -369,7 +369,8 @@ internal sealed partial class PptxRenderer
             frame.TextClipHeight,
             frame.RotationCenterX,
             frame.RotationCenterY);
-        return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(BuildTextFlowParagraph).ToArray());
+        bool attachSpacesToFollowingWord = HasNoAutoFit(frame.TextBody);
+        return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(paragraph => BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord)).ToArray());
     }
 
     private static bool HasShapeAutoFit(XElement textBody)
@@ -377,6 +378,13 @@ internal sealed partial class PptxRenderer
         return textBody
             .Element(DrawingNamespace + "bodyPr")
             ?.Element(DrawingNamespace + "spAutoFit") is not null;
+    }
+
+    private static bool HasNoAutoFit(XElement textBody)
+    {
+        return textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Element(DrawingNamespace + "noAutofit") is not null;
     }
 
     private static PptxTextFrameModel FitShapeAutoFitFrame(
@@ -465,12 +473,12 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph)
+    private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph, bool attachSpacesToFollowingWord)
     {
-        return new PptxTextFlowParagraph(paragraph, paragraph.Style, paragraph.Runs.Select(run => BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties)).ToArray());
+        return new PptxTextFlowParagraph(paragraph, paragraph.Style, paragraph.Runs.Select(run => BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties, attachSpacesToFollowingWord)).ToArray());
     }
 
-    private static PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties)
+    private static PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties, bool attachSpacesToFollowingWord)
     {
         if (run.Kind == PptxTextRunKind.Break)
         {
@@ -493,7 +501,7 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                foreach (PptxTextFlowSegment segment in SplitFlowSegments(fragment.Text))
+                foreach (PptxTextFlowSegment segment in SplitFlowSegments(fragment.Text, attachSpacesToFollowingWord))
                 {
                     segments.Add(segment with
                     {
@@ -664,10 +672,14 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
+                    double wrapTolerance = !HasNoAutoFit(frame.TextBody) ||
+                        IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
+                        paragraphStyle.Alignment == TextAlignment.Distributed
+                        ? PptxTextMetricRules.CoordinateTolerance
+                        : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
                     bool overflowsLine = allowWrapping &&
                         cursorX > paragraphTextX &&
-                        (cursorX + segmentWidth > columnStartX + effectiveTextWidth ||
-                            (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > columnStartX + effectiveTextWidth - fragmentFontSize));
+                        cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
                     if (overflowsLine)
                     {
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
@@ -937,8 +949,18 @@ internal sealed partial class PptxRenderer
         return null;
     }
 
-    private static IEnumerable<PptxTextFlowSegment> SplitFlowSegments(string text)
+    private static IEnumerable<PptxTextFlowSegment> SplitFlowSegments(string text, bool attachSpacesToFollowingWord)
     {
+        if (!attachSpacesToFollowingWord)
+        {
+            foreach (PptxTextFlowSegment segment in SplitFlowSegmentsWithTrailingSpaces(text))
+            {
+                yield return segment;
+            }
+
+            yield break;
+        }
+
         int index = 0;
         while (index < text.Length)
         {
@@ -948,6 +970,44 @@ internal sealed partial class PptxRenderer
                 index++;
             }
 
+            if (index >= text.Length)
+            {
+                if (index > start)
+                {
+                    foreach (PptxTextFlowSegment segment in SplitControlSegments(text[start..index]))
+                    {
+                        yield return segment;
+                    }
+                }
+
+                yield break;
+            }
+
+            while (index < text.Length && text[index] != ' ')
+            {
+                index++;
+                if (text[index - 1] == '-' && index < text.Length && text[index] != ' ')
+                {
+                    break;
+                }
+            }
+
+            if (index > start)
+            {
+                foreach (PptxTextFlowSegment segment in SplitControlSegments(text[start..index]))
+                {
+                    yield return segment;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<PptxTextFlowSegment> SplitFlowSegmentsWithTrailingSpaces(string text)
+    {
+        int index = 0;
+        while (index < text.Length)
+        {
+            int start = index;
             while (index < text.Length && text[index] != ' ')
             {
                 index++;
@@ -1351,11 +1411,15 @@ internal sealed partial class PptxRenderer
             .ToArray();
         if (words.Length == 0)
         {
-            yield return span;
+            if (span.Atoms.Any(static atom => atom.Kind is not PptxTextAtomKind.Space and not PptxTextAtomKind.HiddenAdvance))
+            {
+                yield return span;
+            }
+
             yield break;
         }
 
-        foreach (PptxTextAtomLayout word in words)
+        foreach (PptxTextAtomLayout word in words.SelectMany(word => SplitWordAtomOnSpaces(span.Run, word, advanceEstimator)))
         {
             TextRun wordRun = span.Run with
             {
@@ -1371,6 +1435,43 @@ internal sealed partial class PptxRenderer
                 Atoms = [word],
                 GlyphSpan = BuildGlyphSpan(wordRun, advanceEstimator)
             };
+        }
+    }
+
+    private static IEnumerable<PptxTextAtomLayout> SplitWordAtomOnSpaces(TextRun run, PptxTextAtomLayout atom, TextAdvanceEstimator advanceEstimator)
+    {
+        if (atom.Text.IndexOf(' ') < 0)
+        {
+            yield return atom;
+            yield break;
+        }
+
+        double cursorX = atom.X;
+        int index = 0;
+        while (index < atom.Text.Length)
+        {
+            int start = index;
+            bool isSpace = atom.Text[index] == ' ';
+            while (index < atom.Text.Length && (atom.Text[index] == ' ') == isSpace)
+            {
+                index++;
+            }
+
+            string text = atom.Text[start..index];
+            double width = advanceEstimator.Measure(text, run.FontSize, run.FontFamily, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+            if (!isSpace)
+            {
+                yield return atom with
+                {
+                    Kind = PptxTextAtomKind.Word,
+                    Text = text,
+                    X = cursorX,
+                    Width = width,
+                    Draw = true
+                };
+            }
+
+            cursorX += width;
         }
     }
 
