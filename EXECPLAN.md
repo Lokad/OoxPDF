@@ -643,6 +643,9 @@ Composite oracle family map:
 - Supported chart fallbacks now render simple chart titles through the shared PPTX text/font pipeline.
   Remaining title work is exact Office title layout, rich text styling, overlay/manual layout, and inherited
   chart style defaults.
+- Bar and line chart fallbacks now honor `c:plotArea/c:spPr` fill and border styling through the shared
+  chart shape-style helper. Remaining plot-area work is manual layout, rounded corners/effects, and extending
+  exact plot bounds to area/scatter/radar/pie/doughnut families.
 
 PPTX table style targets from the table composite port:
 

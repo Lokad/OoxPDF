@@ -4306,7 +4306,9 @@ internal static class PptxTests
                   <c:spPr><a:solidFill><a:srgbClr val="F0F0F0"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="444444"/></a:solidFill></a:ln></c:spPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Revenue</a:t></a:r></a:p></c:rich></c:tx></c:title>
-                  <c:plotArea><c:valAx><c:majorGridlines/><c:minorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr></c:valAx><c:lineChart>
+                  <c:plotArea>
+                  <c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
+                  <c:valAx><c:majorGridlines/><c:minorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr></c:valAx><c:lineChart>
                     <c:ser><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>5</c:v></c:pt>
@@ -4339,6 +4341,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.941 0.941 0.941 rg", pdf);
         TestAssert.Contains("0.267 0.267 0.267 RG", pdf);
+        TestAssert.Contains("0 1 1 rg", pdf);
+        TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
         TestAssert.Contains("0.851 0.851 0.851 RG", pdf);

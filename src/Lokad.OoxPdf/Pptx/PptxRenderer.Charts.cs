@@ -66,8 +66,9 @@ internal sealed partial class PptxRenderer
                 string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
-                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle);
+                RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
                 return true;
             }
         }
@@ -82,8 +83,9 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
-                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle);
+                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle);
                 return true;
             }
         }
@@ -214,45 +216,69 @@ internal sealed partial class PptxRenderer
 
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxTheme theme)
     {
-        XElement? shapeProperties = chartXml.Root?.Element(ChartNamespace + "spPr");
-        if (shapeProperties is null)
-        {
-            return;
-        }
-
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fill, out double fillAlpha))
+        RenderChartShapeStyle(graphics, x, y, width, height, ReadChartShapeStyle(chartXml.Root?.Element(ChartNamespace + "spPr"), theme));
+    }
+
+    private static ChartShapeStyle ReadChartPlotAreaStyle(XDocument chartXml, PptxTheme theme)
+    {
+        XElement? shapeProperties = chartXml
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault()
+            ?.Element(ChartNamespace + "spPr");
+        return ReadChartShapeStyle(shapeProperties, theme);
+    }
+
+    private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
+    {
+        if (shapeProperties is null)
         {
-            if (fillAlpha < 1d)
+            return ChartShapeStyle.Empty;
+        }
+
+        ChartSeriesFill? fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+            ? new ChartSeriesFill(fillColor, fillAlpha)
+            : null;
+        ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
+            ? new ChartSeriesStroke(strokeColor, strokeAlpha, lineWidth)
+            : null;
+        return new ChartShapeStyle(fill, stroke);
+    }
+
+    private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
+    {
+        if (style.Fill is { } fill)
+        {
+            if (fill.Alpha < 1d)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(fillAlpha, 1d);
+                graphics.SetAlpha(fill.Alpha, 1d);
             }
 
-            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             graphics.FillRectangle(x, y, width, height);
-            if (fillAlpha < 1d)
+            if (fill.Alpha < 1d)
             {
                 graphics.RestoreState();
             }
         }
 
-        if (TryReadLineWithAlpha(shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha))
+        if (style.Stroke is { } stroke)
         {
-            if (strokeAlpha < 1d)
+            if (stroke.Alpha < 1d)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(1d, strokeAlpha);
+                graphics.SetAlpha(1d, stroke.Alpha);
             }
 
-            graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
-            graphics.SetLineWidth(lineWidth);
+            graphics.SetStrokeRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
+            graphics.SetLineWidth(stroke.Width);
             graphics.StrokeRectangle(x, y, width, height);
-            if (strokeAlpha < 1d)
+            if (stroke.Alpha < 1d)
             {
                 graphics.RestoreState();
             }
@@ -570,7 +596,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -581,6 +607,7 @@ internal sealed partial class PptxRenderer
         double plotY = y + height * 0.14d;
         double plotWidth = width * 0.82d;
         double plotHeight = height * 0.72d;
+        RenderChartShapeStyle(graphics, plotX, plotY, plotWidth, plotHeight, plotAreaStyle);
         int categoryCount = Math.Max(1, series.Max(values => values.Count));
         bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
             string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
@@ -877,7 +904,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -888,6 +915,7 @@ internal sealed partial class PptxRenderer
         double plotY = y + height * 0.16d;
         double plotWidth = width * 0.76d;
         double plotHeight = height * 0.68d;
+        RenderChartShapeStyle(graphics, plotX, plotY, plotWidth, plotHeight, plotAreaStyle);
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
         double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
@@ -1461,6 +1489,11 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
     private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? CategoryAxis);
+
+    private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
+    {
+        public static ChartShapeStyle Empty { get; } = new(null, null);
+    }
 
     private readonly record struct ChartMarkerStyle(string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
     {
