@@ -420,7 +420,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = ReadAxisScalingValue(scaling, "min") ?? fallback.Min;
-        double max = ReadAxisScalingValue(scaling, "max") ?? fallback.Max;
+        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, fallback.Min);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -566,7 +566,16 @@ internal sealed partial class PptxRenderer
         XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
         if (title is null)
         {
-            return null;
+            bool autoTitleDeleted = IsOoxmlBooleanElementEnabled(chartXml.Descendants(ChartNamespace + "autoTitleDeleted").FirstOrDefault());
+            if (autoTitleDeleted)
+            {
+                return null;
+            }
+
+            return chartXml
+                .Descendants(ChartNamespace + "ser")
+                .Select(ReadChartSeriesName)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
         }
 
         string text = string.Concat(title
@@ -868,7 +877,7 @@ internal sealed partial class PptxRenderer
             double labelWidth = Math.Max(18d, plotBox.Width * 0.1d);
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryY = plotBox.Y + plotBox.Height - (category + 1) * categoryHeight + categoryHeight * 0.09d;
+                double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * 0.09d;
                 for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
                 {
                     IReadOnlyList<double> values = series[seriesIndex];
@@ -1279,6 +1288,39 @@ internal sealed partial class PptxRenderer
         double target = Math.Max(range / 10d, double.Epsilon);
         double magnitude = Math.Pow(10d, Math.Floor(Math.Log10(target)));
         double normalized = target / magnitude;
+        double nice = normalized <= 1d
+            ? 1d
+            : normalized <= 2d
+                ? 2d
+                : normalized <= 5d
+                    ? 5d
+                    : 10d;
+        return nice * magnitude;
+    }
+
+    private static double GetNiceChartAxisMax(double dataMax, double dataMin)
+    {
+        double interval = GetNiceChartAxisInterval(dataMax, dataMin, desiredTicks: 5);
+        double niceMax = Math.Ceiling(dataMax / interval) * interval;
+        return niceMax <= dataMax ? niceMax + interval : niceMax;
+    }
+
+    private static double GetNiceChartAxisInterval(double dataMax, double dataMin, int desiredTicks)
+    {
+        if (Math.Abs(dataMax) < 0.0001d && Math.Abs(dataMin) < 0.0001d)
+        {
+            return 1d;
+        }
+
+        double range = dataMax - Math.Min(0d, dataMin);
+        if (Math.Abs(range) < 0.0001d)
+        {
+            return dataMax > 0d ? dataMax * 1.2d : 1d;
+        }
+
+        double rawInterval = Math.Max(range / Math.Max(1, desiredTicks), double.Epsilon);
+        double magnitude = Math.Pow(10d, Math.Floor(Math.Log10(rawInterval)));
+        double normalized = rawInterval / magnitude;
         double nice = normalized <= 1d
             ? 1d
             : normalized <= 2d
@@ -1927,7 +1969,7 @@ internal sealed partial class PptxRenderer
         double clusterHeight = barHeight + Math.Max(0, series.Count - 1) * step;
         for (int category = 0; category < categoryCount; category++)
         {
-            double categoryY = plotY + plotHeight - (category + 1) * categoryHeight + (categoryHeight - clusterHeight) / 2d;
+            double categoryY = plotY + category * categoryHeight + (categoryHeight - clusterHeight) / 2d;
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
                 IReadOnlyList<double> values = series[seriesIndex];
@@ -1990,7 +2032,7 @@ internal sealed partial class PptxRenderer
         double barHeight = GetStackedBarWidth(categoryHeight, gapWidthPercent);
         for (int category = 0; category < categoryCount; category++)
         {
-            double categoryY = plotY + plotHeight - (category + 1) * categoryHeight + (categoryHeight - barHeight) / 2d;
+            double categoryY = plotY + category * categoryHeight + (categoryHeight - barHeight) / 2d;
             double positiveX = zeroX;
             double negativeX = zeroX;
             double positiveTotal = GetCategoryPositiveTotal(series, category, percentStacked);

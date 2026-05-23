@@ -1847,6 +1847,12 @@ paths, and ExecPlan references together.
     not visually clipped by an over-tight synthetic text box.
   - [x] Expand the category-axis label clipping rectangle vertically so descenders are not cut from bottom
     axis labels.
+  - [x] Fix horizontal bar chart category/value ordering against the public Office-backed chart rung:
+    category index zero now maps to the bottom bar for `orientation="minMax"`.
+  - [x] Add Office-like automatic chart titles from the first series name when `autoTitleDeleted` is false
+    and no explicit title node is present.
+  - [x] Port the `pptx-renderer` nice-axis maximum rule for axes without explicit `c:max`, so max data values
+    such as `45` expand to an Office-like `50` axis cap.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
