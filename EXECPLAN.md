@@ -723,6 +723,9 @@ Composite oracle family map:
   `pptx-renderer` merged-option approach more closely and is locked by the public native chart synthetic
   case with a secondary-axis stacked bar chart. Remaining combo work is exact Office layout and axis
   interaction across mixed chart families.
+- Combo bar charts now resolve axis visibility and strokes through each chart group's own `axId` bindings,
+  following the `pptx-renderer` axis-object pattern more closely. Secondary right-axis strokes and labels are
+  no longer suppressed just because the primary left value axis is deleted.
 
 PPTX table style targets from the table composite port:
 

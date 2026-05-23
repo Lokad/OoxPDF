@@ -4844,6 +4844,7 @@ internal static class PptxTests
                   </c:barChart>
                   <c:valAx>
                     <c:axId val="2"/>
+                    <c:delete val="1"/>
                     <c:axPos val="l"/>
                     <c:scaling><c:min val="0"/><c:max val="4"/></c:scaling>
                     <c:majorUnit val="2"/>
@@ -4855,6 +4856,7 @@ internal static class PptxTests
                     <c:scaling><c:min val="0"/><c:max val="40"/></c:scaling>
                     <c:majorUnit val="20"/>
                     <c:spPr><a:ln><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:ln></c:spPr>
+                    <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:latin typeface="+mj-lt"/></a:defRPr></a:pPr></a:p></c:txPr>
                   </c:valAx>
                   </c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>

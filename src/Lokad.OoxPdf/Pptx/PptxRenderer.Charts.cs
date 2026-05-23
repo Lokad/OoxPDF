@@ -100,7 +100,7 @@ internal sealed partial class PptxRenderer
                 bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
                 string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
-                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
                 ChartValueExtents valueExtents = ReadChartValueAxisExtents(valueAxis, GetBarChartValueExtents(barSeries, grouping));
@@ -176,10 +176,19 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
                     if (!horizontalBars)
                     {
-                        fonts.AddRange(secondaryValueAxis is not null
-                            ? RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true)
-                            : RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
+                        if (secondaryValueAxis is not null)
+                        {
+                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
+                        }
+                        else
+                        {
+                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
+                        }
                     }
+                }
+                else if (!horizontalBars && secondaryValueAxis is not null && !IsChartAxisDeleted(secondaryValueAxis))
+                {
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, legendEntries, ReadChartLegendLayout(chartXml)));
                 fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barChart, barSeries, valueExtents, horizontalBars));
@@ -196,7 +205,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
-                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetLineChartValueExtents(lineSeries));
                 ChartAxisUnits axisUnits = ReadChartValueAxisUnits(chartXml);
@@ -1642,10 +1651,13 @@ internal sealed partial class PptxRenderer
             : 0d;
     }
 
-    private static ChartAxesStyle ReadChartAxesStyle(XDocument chartXml, PptxTheme theme)
+    private static ChartAxesStyle ReadChartAxesStyle(XDocument chartXml, PptxTheme theme, XElement chartElement)
     {
-        ChartSeriesStroke? valueAxis = ReadChartAxisStroke(chartXml, "valAx", theme);
-        ChartSeriesStroke? categoryAxis = ReadChartAxisStroke(chartXml, "catAx", theme);
+        XElement? valueAxisElement = ReadChartValueAxisForChart(chartXml, chartElement) ??
+            chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+        XElement? categoryAxisElement = ReadChartCategoryAxisForChart(chartXml, chartElement);
+        ChartSeriesStroke? valueAxis = ReadChartAxisStroke(valueAxisElement, theme);
+        ChartSeriesStroke? categoryAxis = ReadChartAxisStroke(categoryAxisElement, theme);
         return new ChartAxesStyle(
             valueAxis,
             ReadChartAxisStroke(chartXml
@@ -1653,16 +1665,13 @@ internal sealed partial class PptxRenderer
                 .FirstOrDefault(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal)),
                 theme),
             categoryAxis,
-            !IsChartAxisDeleted(chartXml, "valAx"),
-            !IsChartAxisDeleted(chartXml, "catAx"));
+            !IsChartAxisDeleted(valueAxisElement),
+            !IsChartAxisDeleted(categoryAxisElement));
     }
 
-    private static bool IsChartAxisDeleted(XDocument chartXml, string axisName)
+    private static bool IsChartAxisDeleted(XElement? axis)
     {
-        XElement? delete = chartXml
-            .Descendants(ChartNamespace + axisName)
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "delete");
+        XElement? delete = axis?.Element(ChartNamespace + "delete");
         return IsOoxmlBooleanElementEnabled(delete);
     }
 
@@ -1821,14 +1830,14 @@ internal sealed partial class PptxRenderer
                 SetChartStroke(graphics, stroke);
                 graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
             }
+        }
 
-            if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+        if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+        {
+            if (secondaryValueAxisStroke.Alpha > 0.001d)
             {
-                if (secondaryValueAxisStroke.Alpha > 0.001d)
-                {
-                    SetChartStroke(graphics, secondaryValueAxisStroke);
-                    graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
-                }
+                SetChartStroke(graphics, secondaryValueAxisStroke);
+                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
             }
         }
 
