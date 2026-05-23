@@ -649,6 +649,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render first-series cached category labels through the shared PPTX text
   pipeline. Remaining axis-label work is tick values, rich text, label rotation, multi-level categories,
   manual positioning, and Office chart font/style inheritance.
+- Bar and line chart fallbacks now render basic value-axis tick labels from the same numeric extents used
+  by the plotted series. Remaining tick-label work is explicit axis scaling/units, number formats, hidden
+  axes, label positions, and exact Office chart text styling.
 
 PPTX table style targets from the table composite port:
 

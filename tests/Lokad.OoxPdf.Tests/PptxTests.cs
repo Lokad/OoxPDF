@@ -4346,7 +4346,7 @@ internal static class PptxTests
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
-        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 3, "Chart title and category labels should both emit text objects.");
+        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 4, "Chart title plus category and value labels should emit chart text objects.");
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
         TestAssert.Contains("0.851 0.851 0.851 RG", pdf);
         TestAssert.Contains("0 0.667 0 RG", pdf);
