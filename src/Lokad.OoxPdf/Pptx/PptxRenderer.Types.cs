@@ -609,4 +609,17 @@ internal sealed partial class PptxRenderer
     private readonly record struct Glow(RgbColor Color, double Alpha, double Radius);
 
     private readonly record struct OuterShadow(RgbColor Color, double Alpha, double OffsetX, double OffsetY);
+
+    private readonly record struct SvgPaint(RgbColor? Color, SvgGradient? Gradient);
+
+    private sealed record SvgGradient(double X1, double Y1, double X2, double Y2, IReadOnlyList<SvgGradientStop> Stops);
+
+    private readonly record struct SvgGradientStop(double Offset, RgbColor Color);
+
+    private readonly record struct SvgPathBounds(double MinX, double MinY, double MaxX, double MaxY)
+    {
+        public double CenterX => (MinX + MaxX) / 2d;
+
+        public double CenterY => (MinY + MaxY) / 2d;
+    }
 }

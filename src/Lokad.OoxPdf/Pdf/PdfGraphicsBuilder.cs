@@ -135,6 +135,11 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("W n");
     }
 
+    public void ClipCurrentPath()
+    {
+        builder.AppendLine("W n");
+    }
+
     public void StrokeLine(double x1, double y1, double x2, double y2)
     {
         builder.Append(N(x1)).Append(' ').Append(N(y1)).Append(" m ");
