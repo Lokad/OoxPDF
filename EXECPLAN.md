@@ -664,6 +664,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now honor explicit `c:valAx/c:scaling` min/max values for both plotted
   geometry and value-axis tick labels. Remaining axis-scaling work is orientation, logarithmic scales,
   major/minor units, crossing rules, and date/category axis semantics.
+- Bar and line chart fallbacks now honor explicit `c:valAx/c:majorUnit` and `c:minorUnit` for value-axis
+  labels and gridline placement. Remaining unit work is automatic Office unit selection, logarithmic/date
+  units, label skip rules, and exact major/minor tick mark rendering.
 
 PPTX table style targets from the table composite port:
 
