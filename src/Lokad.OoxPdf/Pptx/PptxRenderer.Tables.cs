@@ -410,6 +410,7 @@ internal sealed partial class PptxRenderer
             textBodyCopy.AddFirst(bodyProperties);
         }
 
+        PruneLeadingEmptyTableParagraphs(textBodyCopy);
         ApplyTableStyleTextDefaults(textBodyCopy, tableStyleTextStyle);
         long shapeX = PointsToEmu(x);
         long shapeY = PointsToEmu(context.Document.SlideHeightPoints - y - height);
@@ -435,6 +436,25 @@ internal sealed partial class PptxRenderer
                     new XAttribute("prst", "rect"),
                     new XElement(DrawingNamespace + "avLst"))),
             textBodyCopy);
+    }
+
+    private static void PruneLeadingEmptyTableParagraphs(XElement textBody)
+    {
+        XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
+        if (!paragraphs.Any(ParagraphHasVisibleContent))
+        {
+            return;
+        }
+
+        foreach (XElement paragraph in paragraphs)
+        {
+            if (ParagraphHasVisibleContent(paragraph))
+            {
+                return;
+            }
+
+            paragraph.Remove();
+        }
     }
 
     private static void ApplyTableStyleTextDefaults(XElement textBody, TableCellTextStyle style)

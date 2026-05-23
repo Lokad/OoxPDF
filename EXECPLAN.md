@@ -1962,9 +1962,11 @@ paths, and ExecPlan references together.
   - [ ] New review note: the lower-right column text has increasing vertical-position drift from top to
     bottom. Isolate public fixtures for repeated column items with inherited paragraph spacing, vertical
     anchor, and cumulative line-height rounding.
-    - [ ] Latest inspection shows the affected cells use `tcPr anchor="ctr"` with explicit small margins.
-      Build public table fixtures for centered cells containing wrapped and multi-paragraph text; replace
-      the current rough table-cell content-height estimate with a layout result that matches Office.
+    - [x] Latest inspection showed the bottom-right cell had a leading empty paragraph containing only
+      `endParaRPr`, followed by visible centered text. OOXPDF now prunes leading empty table-cell
+      paragraphs when visible content follows, so the phantom line no longer pushes the real text below the
+      clipped cell. Public synthetic case `PptxSyntheticTableIgnoresLeadingEmptyCellParagraph` locks this
+      slide-12 pattern.
   - [x] Fix the dominant right-side table text overflow: PPTX table-cell text now wraps words to the cell
     text width instead of emitting one horizontal run per paragraph. Public synthetic unit
     `PptxSyntheticTableWrapsCellTextToColumnWidth` locks the generic behavior, and private page 12 now
