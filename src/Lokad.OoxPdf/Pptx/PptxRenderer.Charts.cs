@@ -1154,8 +1154,8 @@ internal sealed partial class PptxRenderer
             }
 
             double labelWidth = Math.Max(1d, width);
-            double clipY = horizontalBars ? y : plotBox.Y;
-            double clipHeight = horizontalBars ? height : plotBox.Height;
+            double clipY = horizontalBars ? y : plotBox.Y - height;
+            double clipHeight = horizontalBars ? height : plotBox.Height + height * 2d;
             runs.Add(new TextRun(
                 label,
                 x,
@@ -1215,9 +1215,7 @@ internal sealed partial class PptxRenderer
         double range = Math.Max(1d, extents.Max - extents.Min);
         if (explicitUnit is not { } unit || unit <= 0d)
         {
-            return Enumerable.Range(0, 5)
-                .Select(i => extents.Min + range * i / 4d)
-                .ToArray();
+            unit = ChooseChartAxisMajorUnit(range);
         }
 
         var values = new List<double>();
@@ -1241,6 +1239,21 @@ internal sealed partial class PptxRenderer
         }
 
         return values;
+    }
+
+    private static double ChooseChartAxisMajorUnit(double range)
+    {
+        double target = Math.Max(range / 10d, double.Epsilon);
+        double magnitude = Math.Pow(10d, Math.Floor(Math.Log10(target)));
+        double normalized = target / magnitude;
+        double nice = normalized <= 1d
+            ? 1d
+            : normalized <= 2d
+                ? 2d
+                : normalized <= 5d
+                    ? 5d
+                    : 10d;
+        return nice * magnitude;
     }
 
     private static string FormatChartAxisLabel(double value)
