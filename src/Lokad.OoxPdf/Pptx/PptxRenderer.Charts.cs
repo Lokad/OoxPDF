@@ -174,16 +174,21 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.ValueAxisVisible)
                 {
+                    bool sameSideSecondaryValueAxis = !horizontalBars &&
+                        secondaryValueAxis is not null &&
+                        IsChartAxisLabelVisible(secondaryValueAxis) &&
+                        GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true) > 0;
                     if (IsChartAxisLabelVisible(valueAxis))
                     {
-                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
+                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
                     }
 
                     if (!horizontalBars)
                     {
                         if (secondaryValueAxis is not null && IsChartAxisLabelVisible(secondaryValueAxis))
                         {
-                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
+                            int sideSlot = GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true);
+                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
                         }
                         else
                         {
@@ -650,10 +655,15 @@ internal sealed partial class PptxRenderer
                 return null;
             }
 
-            return chartXml
+            IReadOnlyList<XElement> series = chartXml
                 .Descendants(ChartNamespace + "ser")
-                .Select(ReadChartSeriesName)
-                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+                .ToArray();
+            if (series.Count != 1)
+            {
+                return null;
+            }
+
+            return ReadChartSeriesName(series[0]);
         }
 
         string text = string.Concat(title
@@ -1242,7 +1252,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CCA");
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? valueAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false)
+    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? valueAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
         ChartTextStyle style = ReadChartTextStyle(theme, chartXml, valueAxis, fallbackFontSize: 8.5d);
@@ -1250,6 +1260,11 @@ internal sealed partial class PptxRenderer
         double height = fontSize * 1.35d;
         RgbColor color = style.Color;
         IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true);
+        double maxLabelWidth = tickValues
+            .Select(value => FormatChartAxisLabel(value, valueAxis))
+            .DefaultIfEmpty("0")
+            .Max(label => EstimateChartTextWidth(label, fontSize));
+        double valueAxisLabelWidth = Math.Max(fontSize * 1.6d, maxLabelWidth + fontSize * 0.45d);
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
@@ -1269,10 +1284,11 @@ internal sealed partial class PptxRenderer
             else
             {
                 bool labelsRightSide = ResolveValueAxisLabelsRightSide(valueAxis, rightSide);
-                width = plotBox.Width * 0.12d;
+                width = useTextSizedWidth ? valueAxisLabelWidth : plotBox.Width * 0.12d;
+                double sideGap = Math.Max(3d, fontSize * 0.45d);
                 x = labelsRightSide
-                    ? plotBox.X + plotBox.Width + 3d
-                    : Math.Max(0d, plotBox.X - width - 3d);
+                    ? plotBox.X + plotBox.Width + sideGap + axisSideSlot * (width + sideGap)
+                    : Math.Max(0d, plotBox.X - (axisSideSlot + 1) * (width + sideGap));
                 y = plotBox.Y + plotBox.Height * offset - height * 0.45d;
                 alignment = labelsRightSide ? TextAlignment.Left : TextAlignment.Right;
             }
@@ -1311,6 +1327,28 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CVA");
+    }
+
+    private static double EstimateChartTextWidth(string text, double fontSize)
+    {
+        double width = 0d;
+        foreach (char ch in text)
+        {
+            width += char.IsWhiteSpace(ch)
+                ? fontSize * 0.32d
+                : char.IsDigit(ch)
+                    ? fontSize * 0.55d
+                    : fontSize * 0.58d;
+        }
+
+        return width;
+    }
+
+    private static int GetValueAxisSideSlot(XElement? primaryAxis, XElement secondaryAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
+    {
+        bool primaryRight = ResolveValueAxisLabelsRightSide(primaryAxis, defaultPrimaryRightSide);
+        bool secondaryRight = ResolveValueAxisLabelsRightSide(secondaryAxis, defaultSecondaryRightSide);
+        return primaryRight == secondaryRight ? 1 : 0;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, ChartValueExtents fallback)

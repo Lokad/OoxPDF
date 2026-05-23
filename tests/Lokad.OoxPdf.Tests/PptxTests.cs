@@ -5447,7 +5447,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        TestAssert.Contains("339.96", pdf);
+        TestAssert.Contains("341.46", pdf);
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()

@@ -1896,8 +1896,8 @@ paths, and ExecPlan references together.
     axis labels.
   - [x] Fix horizontal bar chart category/value ordering against the public Office-backed chart rung:
     category index zero now maps to the bottom bar for `orientation="minMax"`.
-  - [x] Add Office-like automatic chart titles from the first series name when `autoTitleDeleted` is false
-    and no explicit title node is present.
+  - [x] Add Office-like automatic chart titles from the first series name only for single-series bar charts
+    when `autoTitleDeleted` is false and no explicit title node is present.
   - [x] Port the `pptx-renderer` nice-axis maximum rule for axes without explicit `c:max`, so max data values
     such as `45` expand to an Office-like `50` axis cap.
   - [x] Use document theme accent colors for default/vary-colors bar chart fills instead of a hard-coded
@@ -1905,9 +1905,9 @@ paths, and ExecPlan references together.
   - [x] Increase the default native bar-chart plot height so Office-like value axes use the full plot region
     instead of compressing labels downward. This directly improves the private slide-5 right axis and keeps
     the public bar/column chart gates passing.
-  - [x] Restrict implicit chart-title fallback to bar charts. Applying the first-series-name fallback to every
-    chart family created false titles in area/bubble cases; the public `pptx-charts` family now passes the
-    first eight imported chart gates again.
+  - [x] Restrict implicit chart-title fallback to single-series bar charts. Applying the fallback to other
+    chart families creates false titles in the current Office-backed chart ladder; multi-series bar charts no
+    longer get false titles from their first series name.
   - [x] Bind secondary right-axis label rendering to the extra bar-chart group that owns the right value axis,
     so combo charts do not use the primary series as the fallback range for secondary-axis ticks.
   - [x] Port the `pptx-renderer` group-transform flip rule into the shared PPTX transform model:
@@ -1920,6 +1920,11 @@ paths, and ExecPlan references together.
     chart case locks hidden category labels and formatted value-axis labels.
   - [x] Extend the native chart axis-label slice to `tickLblPos high/low` for value axes:
     labels can now be placed on the high or low side independently of the physical axis line.
+  - [x] Add public Office-backed `pptx-ladder-11-secondary-axis-overlay-probe`, generated from PowerPoint,
+    to lock the slide-5/slide-25 chart pattern bottom-up: stacked column groups, independent primary and
+    secondary value axes, patterned secondary bars, and an overlay connector.
+  - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
+    label boxes from tick text instead of a fixed fraction of the plot width.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis crossing/orientation, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.

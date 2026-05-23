@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-11-secondary-axis-overlay-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-secondary-axis-overlay-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "secondary-axis", "connector", "bottom-up"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": false,
+    "maxMeanAbsoluteError": 2.5,
+    "maxChangedPixelRatioAtThreshold16": 0.04
+  },
+  "allowedUnsupportedFeatures": []
+}
