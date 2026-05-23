@@ -46,7 +46,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, and pie chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
         }
     }
 
