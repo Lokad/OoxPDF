@@ -1831,6 +1831,8 @@ paths, and ExecPlan references together.
     covering combo stacked-bar charts with separate left/right scales.
   - [x] Replace the fixed four-interval auto tick fallback with an Office-like 1/2/5/10 major-unit rule and
     expand value-axis label clipping so zero/max labels remain visible.
+  - [x] Render chart `a:pattFill` series/point fills as background plus clipped diagonal hatches instead of
+    collapsing patterned Office fills to a solid palette color. The public chart fixture now locks this path.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, and keep primary/secondary scales independent.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its

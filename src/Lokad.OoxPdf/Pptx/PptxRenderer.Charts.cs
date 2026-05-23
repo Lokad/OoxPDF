@@ -1270,9 +1270,7 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             XElement? shapeProperties = element.Element(ChartNamespace + "spPr");
-            fills.Add(TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
-                ? new ChartSeriesFill(color, alpha)
-                : null);
+            fills.Add(TryReadChartFill(shapeProperties, theme));
         }
 
         return fills;
@@ -1298,13 +1296,36 @@ internal sealed partial class PptxRenderer
             }
 
             XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
-            if (TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha))
+            if (TryReadChartFill(shapeProperties, theme) is { } fill)
             {
-                fills[index] = new ChartSeriesFill(color, alpha);
+                fills[index] = fill;
             }
         }
 
         return fills;
+    }
+
+    private static ChartSeriesFill? TryReadChartFill(XElement? shapeProperties, PptxTheme theme)
+    {
+        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha))
+        {
+            return new ChartSeriesFill(color, alpha);
+        }
+
+        XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
+        if (patternFill is null)
+        {
+            return null;
+        }
+
+        RgbColor foreground = TryReadSolidColor(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor)
+            ? foregroundColor
+            : new RgbColor(0, 0, 0);
+        RgbColor background = TryReadSolidColor(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor)
+            ? backgroundColor
+            : new RgbColor(255, 255, 255);
+        string preset = (string?)patternFill.Attribute("prst") ?? "pct50";
+        return new ChartSeriesFill(foreground, 1d, preset, background);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadChartSeriesPointFills(XElement chartElement, PptxTheme theme)
@@ -1739,13 +1760,52 @@ internal sealed partial class PptxRenderer
             graphics.SetAlpha(fill.Alpha, 1d);
         }
 
-        graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+        RgbColor fillColor = fill.BackgroundColor ?? fill.Color;
+        graphics.SetFillRgb(fillColor.Red, fillColor.Green, fillColor.Blue);
         graphics.FillRectangle(x, y, width, height);
+        if (fill.PatternPreset is not null)
+        {
+            StrokeChartPatternFill(graphics, x, y, width, height, fill);
+        }
 
         if (fill.Alpha < 1d)
         {
             graphics.RestoreState();
         }
+    }
+
+    private static void StrokeChartPatternFill(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartSeriesFill fill)
+    {
+        if (width <= 0d || height <= 0d)
+        {
+            return;
+        }
+
+        graphics.SaveState();
+        graphics.ClipRectangle(x, y, width, height);
+        graphics.SetStrokeRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+        string patternPreset = fill.PatternPreset ?? "pct50";
+        graphics.SetLineWidth(IsDarkChartPattern(patternPreset) ? 1.0d : 0.5d);
+        double spacing = IsDarkChartPattern(patternPreset) ? 4d : 5d;
+        bool up = patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase);
+        for (double offset = -height; offset <= width + height; offset += spacing)
+        {
+            if (up)
+            {
+                graphics.StrokeLine(x + offset, y, x + offset + height, y + height);
+            }
+            else
+            {
+                graphics.StrokeLine(x + offset, y + height, x + offset + height, y);
+            }
+        }
+
+        graphics.RestoreState();
+    }
+
+    private static bool IsDarkChartPattern(string patternPreset)
+    {
+        return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
     private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
@@ -2585,7 +2645,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ScatterPoint(double X, double Y, double Size);
 
-    private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha);
+    private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset = null, RgbColor? BackgroundColor = null);
 
     private readonly record struct ChartSeriesStroke(RgbColor Color, double Alpha, double Width);
 

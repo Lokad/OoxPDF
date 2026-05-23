@@ -4714,6 +4714,7 @@ internal static class PptxTests
                   <c:chart><c:plotArea><c:barChart>
                     <c:varyColors val="1"/>
                     <c:ser>
+                    <c:dPt><c:idx val="1"/><c:spPr><a:pattFill prst="ltUpDiag"><a:fgClr><a:srgbClr val="2F856A"/></a:fgClr><a:bgClr><a:srgbClr val="EEEEEE"/></a:bgClr></a:pattFill></c:spPr></c:dPt>
                     <c:dPt><c:idx val="2"/><c:spPr><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="00AAAA"/></a:solidFill></a:ln></c:spPr></c:dPt>
                     <c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
@@ -4733,11 +4734,13 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
         TestAssert.Contains("0 0 0.667 rg", pdf);
-        TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
         TestAssert.Contains("0.667 0 0.667 rg", pdf);
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
+        TestAssert.Contains("0.933 0.933 0.933 rg", pdf);
+        TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
+        TestAssert.Contains(" re W n", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_STATIC_FALLBACK" && d.Severity == OoxPdfSeverity.Info), "Rendered chart fallback should emit an informational diagnostic.");
