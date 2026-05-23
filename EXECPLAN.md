@@ -1938,6 +1938,11 @@ paths, and ExecPlan references together.
   - [x] Add public Office-backed `pptx-ladder-11-secondary-axis-overlay-probe`, generated from PowerPoint,
     to lock the slide-5/slide-25 chart pattern bottom-up: stacked column groups, independent primary and
     secondary value axes, patterned secondary bars, and an overlay connector.
+  - [x] Add public Office-backed `pptx-ladder-11-compact-stacked-secondary-axis-probe` to mirror the compact
+    private slide-5/slide-25 chart shape more closely: no legend/title, suppressed gridlines, stacked
+    primary and secondary column groups, patterned secondary series, compact tick labels, and overlay
+    connectors. The fixture generator now closes embedded Excel workbooks after editing chart data so it
+    does not leave orphaned Excel instances.
   - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
     label boxes from tick text instead of a fixed fraction of the plot width.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
