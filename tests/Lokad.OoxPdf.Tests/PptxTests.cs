@@ -5406,8 +5406,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        TestAssert.Contains("158.4 334.08 118.08 58.32 re f", pdf);
-        TestAssert.Contains("202.68 334.08 29.52 58.32 re f", pdf);
+        TestAssert.Contains("160.128 326.52 123.84 63.72 re f", pdf);
+        TestAssert.Contains("206.568 326.52 30.96 63.72 re f", pdf);
         TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
     }
 
@@ -5471,7 +5471,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        TestAssert.Contains("341.46", pdf);
+        TestAssert.Contains("356.436", pdf);
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()

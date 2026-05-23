@@ -716,6 +716,10 @@ Composite oracle family map:
 - Bar and line chart plot boxes now honor simple `c:plotArea/c:layout/c:manualLayout` fractional `x/y/w/h`
   values instead of always using heuristic margins. Remaining manual-layout work is `xMode/yMode/wMode/hMode`,
   target variants, title/legend interaction, and applying the same box model to other chart families.
+- Bar/column chart plot boxes now use a larger Office-backed default when the chart has no visible title
+  and no visible legend. This is locked by the secondary-axis overlay probe and updates brittle unit
+  assertions that encoded the older low/short plot area. Remaining chart-layout work is replacing heuristic
+  title/legend margins with a typed chart-layout model.
 - Bar and line chart renderer now honor explicit `c:valAx/c:scaling` min/max values for both plotted
   geometry and value-axis tick labels. Remaining axis-scaling work is orientation, logarithmic scales,
   major/minor units, crossing rules, and date/category axis semantics.

@@ -2008,6 +2008,13 @@ internal sealed partial class PptxRenderer
             return manualPlotBox;
         }
 
+        bool hasTitle = !string.IsNullOrWhiteSpace(ReadChartTitleText(chartXml));
+        bool hasLegend = ReadChartLegendLayout(chartXml).Visible;
+        if (!hasTitle && !hasLegend)
+        {
+            return new ChartPlotBox(x + width * 0.112d, y + height * 0.035d, width * 0.86d, height * 0.885d);
+        }
+
         return new ChartPlotBox(x + width * 0.1d, y + height * 0.14d, width * 0.82d, height * 0.81d);
     }
 
