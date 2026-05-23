@@ -4837,6 +4837,7 @@ internal static class PptxTests
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart><c:plotArea><c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill></c:spPr><c:barChart>
                     <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:gapWidth val="300"/>
                   </c:barChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)
@@ -4848,6 +4849,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("158.4 334.08 118.08 51.84 re f", pdf);
+        TestAssert.Contains("202.68 334.08 29.52 51.84 re f", pdf);
         TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
     }
 
