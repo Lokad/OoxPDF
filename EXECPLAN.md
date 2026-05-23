@@ -1978,6 +1978,10 @@ paths, and ExecPlan references together.
   without explicit character spacing.
 - [x] Slide 2 public ladder: lock Office-compatible text frame insets, vertical anchoring, and highlight
   rectangles for small centered text boxes.
+- [x] Port the Office/PDF synthetic-bold rule observed in private deck baselines and `pptx-renderer` browser
+  output: when no bold face is available, render text as fill-and-stroke with a font-size-proportional stroke
+  instead of drawing duplicate offset glyphs. `PptxSyntheticTextBoxUsesOfficeSyntheticBoldStroke` locks the
+  fill-and-stroke path for Cambria Math.
 - [x] Slide 3 public ladder: lock `spAutoFit` overflow/autosize text boxes with Office-authored PDFs before
   enabling renderer-side autofit behavior.
 - [x] Slide 3 public ladder: lock square-wrapped overflow text frames with 10.5 pt and 12 pt text,

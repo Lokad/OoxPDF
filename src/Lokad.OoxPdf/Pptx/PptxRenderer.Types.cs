@@ -545,8 +545,8 @@ internal sealed partial class PptxRenderer
         public const double MaximumAutofitScale = 10d;
         public const double MaximumLineSpacingReduction = 0.99d;
         public const double SmallCapsFallbackScale = 0.8d;
-        public const double SyntheticBoldOffsetPoints = 0.35d;
         public const double DefaultTextOutlineWidth = 0.75d;
+        public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
         public const double StrikePositionFallback = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -565,9 +565,9 @@ internal sealed partial class PptxRenderer
 
         public static double SmallCapsFontScale() => SmallCapsFallbackScale;
 
-        public static double SyntheticBoldOffset() => SyntheticBoldOffsetPoints;
-
         public static double TextOutlineWidth(double? width) => Math.Max(MinimumStrokeWidth, width ?? DefaultTextOutlineWidth);
+
+        public static double SyntheticBoldStrokeWidth(double fontSize) => Math.Max(0d, fontSize * SyntheticBoldStrokeWidthRatio);
 
         public static double StrikeY(double baselineY, double fontSize) => baselineY + fontSize * StrikePositionFallback;
 

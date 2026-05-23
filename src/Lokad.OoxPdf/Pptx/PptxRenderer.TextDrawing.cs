@@ -492,10 +492,6 @@ internal sealed partial class PptxRenderer
             }
 
             DrawGlyphText(graphics, glyphRun);
-            if (syntheticBold)
-            {
-                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + PptxTextMetricRules.SyntheticBoldOffset() });
-            }
 
             if (run.Underline)
             {
@@ -543,10 +539,6 @@ internal sealed partial class PptxRenderer
             }
 
             DrawGlyphText(graphics, glyphRun);
-            if (syntheticBold)
-            {
-                DrawGlyphText(graphics, glyphRun with { X = glyphRun.X + PptxTextMetricRules.SyntheticBoldOffset() });
-            }
 
             if (run.Underline)
             {
@@ -776,11 +768,11 @@ internal sealed partial class PptxRenderer
                 run.Color.Blue,
                 glyphRun.GlyphHex,
                 glyphRun.SyntheticItalic,
-                textRenderingMode: TextRenderingMode(run),
-                strokeRed: run.Outline?.Color.Red ?? 0,
-                strokeGreen: run.Outline?.Color.Green ?? 0,
-                strokeBlue: run.Outline?.Color.Blue ?? 0,
-                strokeWidth: run.Outline?.Width ?? 0d);
+                textRenderingMode: TextRenderingMode(glyphRun),
+                strokeRed: TextStrokeColor(glyphRun).Red,
+                strokeGreen: TextStrokeColor(glyphRun).Green,
+                strokeBlue: TextStrokeColor(glyphRun).Blue,
+                strokeWidth: TextStrokeWidth(glyphRun));
         }
         else
         {
@@ -794,22 +786,35 @@ internal sealed partial class PptxRenderer
                 run.Color.Blue,
                 glyphRun.PositioningArray,
                 glyphRun.SyntheticItalic,
-                textRenderingMode: TextRenderingMode(run),
-                strokeRed: run.Outline?.Color.Red ?? 0,
-                strokeGreen: run.Outline?.Color.Green ?? 0,
-                strokeBlue: run.Outline?.Color.Blue ?? 0,
-                strokeWidth: run.Outline?.Width ?? 0d);
+                textRenderingMode: TextRenderingMode(glyphRun),
+                strokeRed: TextStrokeColor(glyphRun).Red,
+                strokeGreen: TextStrokeColor(glyphRun).Green,
+                strokeBlue: TextStrokeColor(glyphRun).Blue,
+                strokeWidth: TextStrokeWidth(glyphRun));
         }
     }
 
-    private static int TextRenderingMode(TextRun run)
+    private static int TextRenderingMode(TextGlyphRun glyphRun)
     {
+        TextRun run = glyphRun.Source;
         if (run.Outline is null)
         {
-            return 0;
+            return glyphRun.SyntheticBold ? 2 : 0;
         }
 
         return run.Alpha <= PptxTextMetricRules.TextStateTolerance ? 1 : 2;
+    }
+
+    private static RgbColor TextStrokeColor(TextGlyphRun glyphRun)
+    {
+        TextRun run = glyphRun.Source;
+        return run.Outline?.Color ?? run.Color;
+    }
+
+    private static double TextStrokeWidth(TextGlyphRun glyphRun)
+    {
+        TextRun run = glyphRun.Source;
+        return run.Outline?.Width ?? PptxTextMetricRules.SyntheticBoldStrokeWidth(run.FontSize);
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
