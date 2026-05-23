@@ -371,6 +371,13 @@ internal static class PptxTests
                           <a:ln w="12700"><a:solidFill><a:srgbClr val="222222"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
                         </p:spPr>
                       </p:cxnSp>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm flipV="1"><a:off x="2743200" y="914400"/><a:ext cx="0" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="straightConnector1"/>
+                          <a:ln w="12700"><a:solidFill><a:srgbClr val="2F856A"/></a:solidFill><a:tailEnd type="stealth"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
                       <p:sp>
                         <p:spPr>
                           <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
@@ -392,6 +399,9 @@ internal static class PptxTests
         TestAssert.Contains("72 324.5 m", pdf);
         TestAssert.Contains("213.5 323.5 l", pdf);
         TestAssert.Contains("216 324 m", pdf);
+        TestAssert.Contains("1 -0 -0 -1 0 864 cm", pdf);
+        TestAssert.Contains("216 468 m 216 396 l S", pdf);
+        TestAssert.Contains("0.184 0.522 0.416 rg", pdf);
         TestAssert.Contains("0.753 0 0 rg", pdf);
         TestAssert.Contains("90 468 m", pdf);
         TestAssert.Contains("126 432 l", pdf);

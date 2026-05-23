@@ -1864,6 +1864,9 @@ paths, and ExecPlan references together.
     collapsing patterned Office fills to a solid palette color. The public chart fixture now locks this path.
   - [x] Route chart graphic frames through the same group-transform and z-order dispatcher as shapes, so
     grouped charts and their overlay arrows/labels keep Office-equivalent placement.
+  - [x] Isolate the private slide-5 upward green arrow as a flipped vertical `straightConnector1` overlay,
+    not as chart XML. A public synthetic connector case now locks the zero-width, `flipV`, stealth-tail
+    geometry pattern for future arrow-placement refinements.
   - [x] Port the `pptx-renderer`/OOXML `gapWidth` bar-sizing rule for clustered and stacked bar charts,
     replacing fixed bar-width constants with the general category-band formula.
   - [x] Honor explicit chart-axis `a:ln/a:noFill` so value/category axes do not fall back to a dark default
