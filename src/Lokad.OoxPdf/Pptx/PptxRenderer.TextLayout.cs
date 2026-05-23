@@ -574,25 +574,25 @@ internal sealed partial class PptxRenderer
             bool afterManualLineBreak = false;
             double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator);
             double cursorX = paragraphTextX;
-            double maxFontSize = paragraphStyle.FontSize;
+            double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
                 PptxTextRunModel modelRun = flowRun.Source;
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
-                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: false, advanceEstimator);
-                    cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                    double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: false, advanceEstimator);
+                    cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
                     cursorX = paragraphTextX;
                     line.Reset(paragraphTextX);
-                    maxFontSize = paragraphStyle.FontSize;
+                    maxFontSize = 0d;
                     continue;
                 }
 
                 ResolvedRunTextStyle runStyle = flowRun.Style;
-                maxFontSize = Math.Max(maxFontSize, runStyle.NominalFontSize);
                 if (double.IsNaN(cursorY))
                 {
                     cursorY = cursorLineTop - (afterManualLineBreak
@@ -604,6 +604,7 @@ internal sealed partial class PptxRenderer
                 if (bulletPending)
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
+                    maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(columnWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                     TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical);
@@ -639,18 +640,20 @@ internal sealed partial class PptxRenderer
                         {
                             string chunk = chunks[chunkIndex];
                             double chunkWidth = advanceEstimator.Measure(chunk, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                             TextRun textRun = new(chunk, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce);
                             line.Add(modelRun, textRun, cursorX + chunkWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                             cursorX += chunkWidth;
                             line.AdvanceTo(cursorX);
                             if (chunkIndex < chunks.Length - 1)
                             {
-                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-                                cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
+                                double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                                cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                                 cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
                                 cursorX = paragraphTextX;
                                 line.Reset(paragraphTextX);
-                                maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
+                                maxFontSize = 0d;
                             }
                         }
 
@@ -663,16 +666,17 @@ internal sealed partial class PptxRenderer
                             (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > columnStartX + effectiveTextWidth - fragmentFontSize));
                     if (overflowsLine)
                     {
-                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-                        cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, maxFontSize);
-                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, maxFontSize);
+                        double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                        cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
+                        MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, lineFontSize);
                         paragraphTextX = bulletText is null
                             ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                             : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
                         cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
                         cursorX = paragraphTextX;
                         line.Reset(paragraphTextX);
-                        maxFontSize = Math.Max(runStyle.NominalFontSize, fragmentFontSize);
+                        maxFontSize = 0d;
                         currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
@@ -685,6 +689,7 @@ internal sealed partial class PptxRenderer
 
                     if (flowSegment.Draw && currentSegment.Length != 0)
                     {
+                        maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                         TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce);
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                     }
@@ -694,14 +699,22 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, maxFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
-            cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, maxFontSize) + paragraphStyle.SpacingAfter;
-            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, maxFontSize);
+            double paragraphLineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+            cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize) + paragraphStyle.SpacingAfter;
+            MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, paragraphLineFontSize);
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
         }
 
         return new PptxTextFrameLayout(frame, paragraphLayouts);
+    }
+
+    private static double ResolveLineFontSize(double visibleMaxFontSize, double fallbackFontSize)
+    {
+        return visibleMaxFontSize > PptxTextMetricRules.TextStateTolerance
+            ? visibleMaxFontSize
+            : fallbackFontSize;
     }
 
     private static string[] SplitTextIntoFittingChunks(
@@ -2248,15 +2261,15 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            double maxFontSize = 18d;
+            double maxFontSize = 0d;
             double lineWidth = 0d;
             bool hasLineContent = false;
             foreach (XElement child in paragraph.Elements())
             {
                 if (child.Name == DrawingNamespace + "br")
                 {
-                    height += ReadLineAdvance(lineSpacing, maxFontSize);
-                    maxFontSize = 18d;
+                    height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
+                    maxFontSize = 0d;
                     lineWidth = 0d;
                     hasLineContent = false;
                     continue;
@@ -2288,7 +2301,7 @@ internal sealed partial class PptxRenderer
                         lineWidth > PptxTextMetricRules.TextStateTolerance &&
                         lineWidth + advance > textWidth)
                     {
-                        height += ReadLineAdvance(lineSpacing, maxFontSize);
+                        height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
                         maxFontSize = fontSize;
                         lineWidth = 0d;
                         hasLineContent = false;
@@ -2305,9 +2318,9 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            if (hasLineContent || maxFontSize > 0d)
+            if (hasLineContent || maxFontSize > PptxTextMetricRules.TextStateTolerance)
             {
-                height += ReadLineAdvance(lineSpacing, maxFontSize);
+                height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
             }
 
             height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", paragraphFontSize);

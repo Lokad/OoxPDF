@@ -2443,6 +2443,52 @@ internal static class PptxTests
         TestAssert.True(lines[0].BaselineY > 475d, "Expected vertical centering to account for wrapped line count instead of one logical paragraph line.");
     }
 
+    public static void PptxSyntheticTextBoxMiddleAnchorUsesVisibleRunFontSizes()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="4144300"/><a:ext cx="1634286" cy="699793"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr anchor="ctr"/><a:lstStyle/>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="1400"><a:latin typeface="Arial"/></a:rPr><a:t>       Data</a:t></a:r></a:p>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="900"><a:latin typeface="Arial"/></a:rPr><a:t>ERP/WMS/OMS/CRM</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.True(Math.Abs(lines[0].MaxFontSize - 14d) < 0.01d, "Expected the first line height to come from its visible 14pt run, not an unrelated 18pt fallback.");
+        TestAssert.True(Math.Abs(lines[1].MaxFontSize - 9d) < 0.01d, "Expected the second line height to come from its visible 9pt run, not an unrelated 18pt fallback.");
+        TestAssert.True(Math.Abs(lines[0].Advance - 16.8d) < 0.01d, "Expected default line advance to use the visible run font size.");
+        TestAssert.True(Math.Abs(lines[1].Advance - 10.8d) < 0.01d, "Expected default line advance to use the visible run font size.");
+    }
+
     public static void PptxSyntheticVerticalShapeAutoFitPrefersSingleLine()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
