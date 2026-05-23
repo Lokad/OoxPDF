@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "pattFill").Any())
+        if (slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedPatternFill))
         {
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
@@ -152,6 +152,11 @@ internal sealed partial class PptxRenderer
             !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUnsupportedPatternFill(XElement patternFill)
+    {
+        return !IsSupportedDiagonalPatternFill((string?)patternFill.Attribute("prst"));
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)

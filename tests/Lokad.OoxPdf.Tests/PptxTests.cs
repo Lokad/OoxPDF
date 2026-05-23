@@ -317,6 +317,16 @@ internal static class PptxTests
                           <a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>
                         </p:spPr>
                       </p:sp>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="5943600" y="3657600"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:pattFill prst="dkDnDiag">
+                            <a:fgClr><a:srgbClr val="2F856A"/></a:fgClr>
+                            <a:bgClr><a:srgbClr val="EEEEEE"/></a:bgClr>
+                          </a:pattFill>
+                        </p:spPr>
+                      </p:sp>
                     </p:spTree>
                   </p:cSld>
                 </p:sld>
@@ -336,6 +346,9 @@ internal static class PptxTests
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("72 252 m 216 180 l S", pdf);
         TestAssert.Contains("371.52 180 m", pdf);
+        TestAssert.Contains("0.933 0.933 0.933 rg", pdf);
+        TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
+        TestAssert.Contains(" re W n", pdf);
     }
 
     public static void PptxSyntheticArrowAndConnectorShapesRender()

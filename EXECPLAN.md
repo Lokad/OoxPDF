@@ -1820,6 +1820,8 @@ paths, and ExecPlan references together.
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets,
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
+- [x] Render supported DrawingML diagonal pattern fills for ordinary PPTX shapes as background plus clipped
+  hatches, and keep diagnostics only for pattern presets that still fall outside the implemented subset.
 - [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrect vertical-axis legend.
   Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
   inheritance, then reproduce with a minimal public chart-axis fixture before changing renderer logic.

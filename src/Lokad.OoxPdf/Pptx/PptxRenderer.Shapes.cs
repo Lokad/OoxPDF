@@ -122,6 +122,7 @@ internal sealed partial class PptxRenderer
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
         bool hasFill = TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fill, out double fillAlpha);
+        bool hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out ShapePatternFill patternFill);
         bool hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha);
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
@@ -344,6 +345,24 @@ internal sealed partial class PptxRenderer
             }
 
             images?.Add(new PdfImageResource(pictureFillName, pictureFillImage));
+        }
+        else if (hasPatternFill)
+        {
+            bool transparentFill = patternFill.Alpha < 0.999d;
+            if (transparentFill)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(patternFill.Alpha, 1d);
+            }
+
+            graphics.SetFillRgb(patternFill.Background.Red, patternFill.Background.Green, patternFill.Background.Blue);
+            DrawPresetFill(graphics, preset, x, y, width, height);
+            StrokeShapePatternFill(graphics, preset, x, y, width, height, patternFill);
+
+            if (transparentFill)
+            {
+                graphics.RestoreState();
+            }
         }
         else if (hasFill)
         {
@@ -1912,6 +1931,66 @@ internal sealed partial class PptxRenderer
         }
 
         return fillIndex > 0 && TryReadSolidColorWithAlpha(fillRef, theme, out color, out alpha);
+    }
+
+    private static bool TryReadShapePatternFill(XElement shapeProperties, PptxTheme theme, out ShapePatternFill fill)
+    {
+        XElement? patternFill = shapeProperties.Element(DrawingNamespace + "pattFill");
+        string? preset = (string?)patternFill?.Attribute("prst");
+        if (patternFill is null || !IsSupportedDiagonalPatternFill(preset))
+        {
+            fill = default;
+            return false;
+        }
+
+        RgbColor foreground = TryReadSolidColor(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor)
+            ? foregroundColor
+            : new RgbColor(0, 0, 0);
+        RgbColor background = TryReadSolidColor(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor)
+            ? backgroundColor
+            : new RgbColor(255, 255, 255);
+        fill = new ShapePatternFill(preset!, foreground, background, 1d);
+        return true;
+    }
+
+    private static void StrokeShapePatternFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height, ShapePatternFill fill)
+    {
+        if (width <= 0d || height <= 0d)
+        {
+            return;
+        }
+
+        graphics.SaveState();
+        ClipToPresetShape(graphics, preset, x, y, width, height);
+        graphics.SetStrokeRgb(fill.Foreground.Red, fill.Foreground.Green, fill.Foreground.Blue);
+        graphics.SetLineWidth(IsDarkDiagonalPatternFill(fill.Preset) ? 1.0d : 0.5d);
+        double spacing = IsDarkDiagonalPatternFill(fill.Preset) ? 4d : 5d;
+        bool up = fill.Preset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase);
+        for (double offset = -height; offset <= width + height; offset += spacing)
+        {
+            if (up)
+            {
+                graphics.StrokeLine(x + offset, y, x + offset + height, y + height);
+            }
+            else
+            {
+                graphics.StrokeLine(x + offset, y + height, x + offset + height, y);
+            }
+        }
+
+        graphics.RestoreState();
+    }
+
+    private static bool IsSupportedDiagonalPatternFill(string? preset)
+    {
+        return preset is not null &&
+            (preset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase) ||
+             preset.Contains("DnDiag", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsDarkDiagonalPatternFill(string preset)
+    {
+        return preset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryReadShapeLine(XElement shape, XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
