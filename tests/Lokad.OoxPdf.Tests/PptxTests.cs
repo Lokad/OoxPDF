@@ -4303,7 +4303,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea><c:valAx><c:majorGridlines/></c:valAx><c:lineChart>
+                  <c:chart><c:plotArea><c:valAx><c:majorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr></c:valAx><c:lineChart>
                     <c:ser><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>5</c:v></c:pt>
@@ -4335,6 +4335,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.851 0.851 RG", pdf);
+        TestAssert.Contains("0 0.667 0 RG", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);
         TestAssert.Contains("0 0 0.667 rg", pdf);

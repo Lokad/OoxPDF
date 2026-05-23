@@ -621,6 +621,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render simple `c:majorGridlines` inside the plot area. Remaining axis
   work is tick labels, axis scaling, axis crossing, minor gridlines, axis line styling, and exact Office
   plot-area bounds.
+- Bar and line chart fallbacks now honor `c:valAx/c:spPr/a:ln` and `c:catAx/c:spPr/a:ln` axis line
+  styling through the shared line resolver. Remaining axis work is tick labels, axis scaling, axis crossing,
+  minor gridlines, and exact Office plot-area bounds.
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.
