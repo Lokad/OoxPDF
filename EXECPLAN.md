@@ -1647,6 +1647,9 @@ paths, and ExecPlan references together.
   `pptx-ladder-04-typography-capital-spacing-probe` and
   `pptx-ladder-04-typography-boundary-invariance-probe` now enforce Office PDF text-operation parity at
   `0.05pt`; the accented probe remains a targeted gap for font fallback and combining-mark handling.
+- [x] Port the `pptx-renderer` baseline-shift rule: small PPTX `baseline` nudges keep the nominal font size,
+  while larger super/subscript shifts use the reduced font scale. The public unit coverage now locks both
+  `baseline="10000"` and `baseline="30000"` behavior without font-family-specific logic.
 - [x] Isolate the private slide-3 XML locally and keep only public-safe structural findings in the work
   log. The source text does not contain the visible parasite capital/accent spaces, so the defect is in
   renderer layout/emission rather than private document content.

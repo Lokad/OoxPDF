@@ -1648,7 +1648,7 @@ internal sealed partial class PptxRenderer
     {
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
-        double fontSize = Math.Abs(baselineOffset) > PptxTextMetricRules.TextStateTolerance
+        double fontSize = PptxTextMetricRules.ShouldScaleSuperscriptSubscript(baselineOffset, nominalFontSize)
             ? PptxTextMetricRules.SuperscriptSubscriptFontSize(nominalFontSize)
             : nominalFontSize;
         double alpha = 1d;

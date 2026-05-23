@@ -554,6 +554,7 @@ internal sealed partial class PptxRenderer
         public const double MinimumAutofitScale = 0.01d;
         public const double MaximumAutofitScale = 10d;
         public const double MaximumLineSpacingReduction = 0.99d;
+        public const double SuperscriptSubscriptMinimumBaselineRatio = 0.2d;
         public const double SmallCapsFallbackScale = 0.8d;
         public const double DefaultTextOutlineWidth = 0.75d;
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
@@ -574,6 +575,9 @@ internal sealed partial class PptxRenderer
         public static double MinimumWidth(double width) => Math.Max(MinimumDrawableDimension, width);
 
         public static double SuperscriptSubscriptFontSize(double nominalFontSize) => nominalFontSize * CssSuperscriptSubscriptScale;
+
+        public static bool ShouldScaleSuperscriptSubscript(double baselineOffset, double nominalFontSize) =>
+            Math.Abs(baselineOffset) >= nominalFontSize * SuperscriptSubscriptMinimumBaselineRatio;
 
         public static double SmallCapsFontScale() => SmallCapsFallbackScale;
 

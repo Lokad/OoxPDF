@@ -2521,6 +2521,48 @@ internal static class PptxTests
         TestAssert.Contains("15.6 Tf", pdf);
     }
 
+    public static void PptxSyntheticTextBoxKeepsFontSizeForSmallBaselineShift()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"><a:latin typeface="Arial"/></a:rPr><a:t>Base</a:t></a:r><a:r><a:rPr sz="2400" baseline="10000"><a:latin typeface="Arial"/></a:rPr><a:t>nudge</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextSpanLayoutSnapshot[] spans = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .ToArray();
+
+        TestAssert.True(Math.Abs(spans[0].FontSize - 24d) < 0.001d, $"Expected base span to remain 24pt, got {spans[0].FontSize.ToString("0.###", CultureInfo.InvariantCulture)}.");
+        TestAssert.True(Math.Abs(spans[1].FontSize - 24d) < 0.001d, $"Expected small baseline-shift span to remain 24pt, got {spans[1].FontSize.ToString("0.###", CultureInfo.InvariantCulture)}.");
+    }
+
     public static void PptxSyntheticTextBoxCentersMixedRunsTogether()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
