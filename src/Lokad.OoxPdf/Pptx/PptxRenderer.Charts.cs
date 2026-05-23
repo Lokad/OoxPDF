@@ -609,6 +609,11 @@ internal sealed partial class PptxRenderer
                 return null;
             }
 
+            if (!chartXml.Descendants(ChartNamespace + "barChart").Any())
+            {
+                return null;
+            }
+
             return chartXml
                 .Descendants(ChartNamespace + "ser")
                 .Select(ReadChartSeriesName)
