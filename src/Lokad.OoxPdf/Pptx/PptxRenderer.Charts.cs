@@ -635,7 +635,8 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XElement chartElement, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
-        if (!ShouldRenderValueDataLabels(chartElement) || values.Count == 0)
+        ChartDataLabelOptions labelOptions = ReadChartDataLabelOptions(chartElement);
+        if ((!labelOptions.ShowValue && !labelOptions.ShowPercent) || values.Count == 0)
         {
             return [];
         }
@@ -670,8 +671,11 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * radius * 0.22d : 0d;
             double labelX = centerX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = centerY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
+            string label = labelOptions.ShowPercent
+                ? FormatChartPercentageLabel(values[i] / total)
+                : FormatChartAxisLabel(values[i]);
             runs.Add(new TextRun(
-                FormatChartAxisLabel(values[i]),
+                label,
                 labelX,
                 labelY,
                 labelWidth,
@@ -846,15 +850,29 @@ internal sealed partial class PptxRenderer
 
     private static bool ShouldRenderValueDataLabels(XElement chartElement)
     {
-        XElement? labels = chartElement.Element(ChartNamespace + "dLbls");
-        if (labels is null)
-        {
-            return false;
-        }
+        return ReadChartDataLabelOptions(chartElement).ShowValue;
+    }
 
-        XElement? showValue = labels.Element(ChartNamespace + "showVal");
-        return showValue is not null &&
-            !string.Equals((string?)showValue.Attribute("val"), "0", StringComparison.Ordinal);
+    private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement)
+    {
+        XElement? labels = chartElement.Element(ChartNamespace + "dLbls");
+        return labels is null
+            ? ChartDataLabelOptions.None
+            : new ChartDataLabelOptions(
+                IsChartLabelFlagEnabled(labels, "showVal"),
+                IsChartLabelFlagEnabled(labels, "showPercent"));
+    }
+
+    private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
+    {
+        XElement? element = labels.Element(ChartNamespace + elementName);
+        return element is not null &&
+            !string.Equals((string?)element.Attribute("val"), "0", StringComparison.Ordinal);
+    }
+
+    private static string FormatChartPercentageLabel(double fraction)
+    {
+        return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<string> labels, bool horizontalBars)
@@ -2324,6 +2342,11 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartAxisUnits(double? MajorUnit, double? MinorUnit)
     {
         public static ChartAxisUnits Empty { get; } = new(null, null);
+    }
+
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent)
+    {
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false);
     }
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);

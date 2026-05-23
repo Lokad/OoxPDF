@@ -665,6 +665,9 @@ Composite oracle family map:
 - Pie and doughnut chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining data-label work is category/percentage labels, rich text, leader lines, custom positions,
   number formats, and exact Office label collision behavior.
+- Pie and doughnut chart fallbacks now render percentage data labels when `c:dLbls/c:showPercent` is enabled.
+  Remaining pie-like label work is combined value/percentage/category labels, rich text, leader lines,
+  separator handling, custom positions, and number formats.
 - Bar and line chart plot boxes now honor simple `c:plotArea/c:layout/c:manualLayout` fractional `x/y/w/h`
   values instead of always using heuristic margins. Remaining manual-layout work is `xMode/yMode/wMode/hMode`,
   target variants, title/legend interaction, and applying the same box model to other chart families.

@@ -4482,7 +4482,7 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
-                    <c:dLbls><c:showVal val="1"/></c:dLbls>
+                    <c:dLbls><c:showPercent val="1"/></c:dLbls>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)
@@ -4517,6 +4517,7 @@ internal static class PptxTests
         TestAssert.Contains("531.352 418.454 m", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
+        TestAssert.Contains("<0008>] TJ", pdf);
         TestAssert.True(collector.Diagnostics.Count(d => d.Id == "PPTX_CHART_STATIC_FALLBACK") == 2, "Expected static fallbacks for both line and pie charts.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line and pie chart fallbacks should not emit unsupported chart diagnostics.");
     }
