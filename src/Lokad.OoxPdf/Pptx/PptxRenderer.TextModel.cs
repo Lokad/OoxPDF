@@ -155,6 +155,7 @@ internal sealed partial class PptxRenderer
 
         double textX = flowX + insets.Left;
         double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
+        double textWrapWidth = ReadTextWrapWidth(textBody) ?? textWidth;
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
         bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
@@ -204,6 +205,7 @@ internal sealed partial class PptxRenderer
             lineSpacingScale,
             textX,
             textWidth,
+            textWrapWidth,
             textHeight,
             textClipY,
             textClipHeight,
@@ -219,6 +221,15 @@ internal sealed partial class PptxRenderer
             orientation,
             shapeFontColor,
             paragraphs);
+    }
+
+    private static double? ReadTextWrapWidth(XElement textBody)
+    {
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        return bodyProperties?.Attribute(OoxPdfInternalNamespace + "wrapWidth") is { } value &&
+            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double points)
+                ? Math.Max(1d, points)
+                : null;
     }
 
     private static IReadOnlyList<PptxTextParagraphModel> BuildParagraphModels(

@@ -363,6 +363,7 @@ internal sealed partial class PptxRenderer
             document.SlideHeightPoints - frame.FlowYTop - frame.Insets.Top - frame.VerticalOffset,
             frame.TextX,
             frame.TextWidth,
+            frame.TextWrapWidth,
             frame.TextHeight,
             frame.TextClipY,
             frame.TextClipHeight,
@@ -528,6 +529,9 @@ internal sealed partial class PptxRenderer
         double columnWidth = frame.ColumnCount <= 1
             ? frame.TextWidth
             : Math.Max(1d, (frame.TextWidth - totalColumnSpacing) / frame.ColumnCount);
+        double columnWrapWidth = frame.ColumnCount <= 1
+            ? frame.TextWrapWidth
+            : Math.Max(1d, (frame.TextWrapWidth - totalColumnSpacing) / frame.ColumnCount);
         double columnStartX = frame.TextX;
         int autoNumberValue = 1;
         bool hasPlacedParagraph = false;
@@ -556,7 +560,7 @@ internal sealed partial class PptxRenderer
 
             string? bulletText = ReadBulletText(paragraph.Properties, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
-            double effectiveTextWidth = columnWidth;
+            double effectiveTextWidth = columnWrapWidth;
             double bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
             double paragraphTextX = bulletText is null
                 ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
@@ -605,7 +609,7 @@ internal sealed partial class PptxRenderer
                 {
                     BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
-                    double bulletWidth = PptxTextMetricRules.MinimumWidth(columnWidth - (bulletX - columnStartX));
+                    double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
                     TextRun bulletRun = new(bulletText!, bulletX, cursorY, bulletWidth, frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, bulletStyle.FontSize, runStyle.CharacterSpacing, 0d, bulletStyle.Color, 1d, null, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, bulletStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical);
                     line.Add(modelRun, bulletRun, bulletEndX, BuildTextAtoms(bulletRun, advanceEstimator, PptxTextAtomKind.Word), BuildGlyphSpan(bulletRun, advanceEstimator));

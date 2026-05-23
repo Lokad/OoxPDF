@@ -398,6 +398,7 @@ internal sealed partial class PptxRenderer
         bodyProperties.SetAttributeValue("tIns", PointsToEmu(insets.Top).ToString(CultureInfo.InvariantCulture));
         bodyProperties.SetAttributeValue("bIns", PointsToEmu(insets.Bottom).ToString(CultureInfo.InvariantCulture));
         bodyProperties.SetAttributeValue("vertOverflow", "clip");
+        bodyProperties.SetAttributeValue(OoxPdfInternalNamespace + "wrapWidth", Math.Max(1d, width - insets.Left).ToString("R", CultureInfo.InvariantCulture));
         bodyProperties.SetAttributeValue("anchor", anchor switch
         {
             TextVerticalAnchor.Middle => "ctr",
