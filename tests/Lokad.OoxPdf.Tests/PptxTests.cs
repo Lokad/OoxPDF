@@ -4822,11 +4822,11 @@ internal static class PptxTests
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:latin typeface="+mn-lt"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart><c:plotArea><c:barChart>
-                    <c:ser><c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr><c:val><c:numLit>
+                    <c:ser><c:tx><c:v>Primary A</c:v></c:tx><c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>4</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
-                    <c:ser><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr><c:val><c:numLit>
+                    <c:ser><c:tx><c:v>Primary B</c:v></c:tx><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>1</c:v></c:pt>
                       <c:pt idx="1"><c:v>3</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
@@ -4835,10 +4835,11 @@ internal static class PptxTests
                   </c:barChart>
                   <c:barChart>
                     <c:barDir val="col"/><c:grouping val="stacked"/>
-                    <c:ser><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr><c:val><c:numLit>
+                    <c:ser><c:tx><c:v>Secondary</c:v></c:tx><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>0</c:v></c:pt>
                       <c:pt idx="1"><c:v>20</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
+                    <c:dLbls><c:showVal val="1"/></c:dLbls>
                     <c:axId val="3"/><c:axId val="4"/>
                   </c:barChart>
                   <c:valAx>
@@ -4855,7 +4856,7 @@ internal static class PptxTests
                     <c:majorUnit val="20"/>
                     <c:spPr><a:ln><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:ln></c:spPr>
                   </c:valAx>
-                  </c:plotArea></c:chart>
+                  </c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>
                 """),
             ["ppt/charts/chart2.xml"] = TestFixtures.Utf8("""
@@ -4910,6 +4911,7 @@ internal static class PptxTests
         TestAssert.Contains(" re W n", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
+        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 17, "Combo bar charts should emit text for primary and secondary labels, axes, and legend entries.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Supported bar charts should not emit unsupported chart diagnostics.");
     }

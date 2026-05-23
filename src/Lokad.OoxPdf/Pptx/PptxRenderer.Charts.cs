@@ -108,12 +108,14 @@ internal sealed partial class PptxRenderer
                 bool varyColors = ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadChartSeriesPointFills(barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadChartSeriesPointStrokes(barChart, theme);
+                var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barChart, seriesFills));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
                 RenderBarChart(graphics, document, theme, chartPalette, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, ReadChartGapWidth(barChart), ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
+                int seriesOffset = barSeries.Count;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadChartSeries(extraBarChart);
@@ -127,6 +129,9 @@ internal sealed partial class PptxRenderer
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
                     ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
+                    IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadChartSeriesFills(extraBarChart, theme);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadChartSeriesPointFills(extraBarChart, theme);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadChartSeriesPointStrokes(extraBarChart, theme);
                     if (!extraHorizontalBars && secondaryValueAxis is null && IsRightValueAxis(extraValueAxis))
                     {
                         secondaryValueAxis = extraValueAxis;
@@ -134,6 +139,7 @@ internal sealed partial class PptxRenderer
                         secondaryAxisUnits = extraAxisUnits;
                     }
 
+                    legendEntries.AddRange(BuildFillLegendEntries(theme, chartPalette, extraBarChart, extraSeriesFills, seriesOffset));
                     RenderBarChart(
                         graphics,
                         document,
@@ -144,9 +150,9 @@ internal sealed partial class PptxRenderer
                         extraSeries,
                         extraHorizontalBars,
                         extraGrouping,
-                        ReadChartSeriesFills(extraBarChart, theme),
-                        ReadChartSeriesPointFills(extraBarChart, theme),
-                        ReadChartSeriesPointStrokes(extraBarChart, theme),
+                        extraSeriesFills,
+                        extraPointFills,
+                        extraPointStrokes,
                         majorGridlines: false,
                         minorGridlines: false,
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
@@ -156,6 +162,8 @@ internal sealed partial class PptxRenderer
                         ReadChartVaryColors(extraBarChart),
                         ReadChartGapWidth(extraBarChart),
                         ReadChartOverlap(extraBarChart));
+                    fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, extraBarChart, extraSeries, extraValueExtents, extraHorizontalBars));
+                    seriesOffset += extraSeries.Count;
                 }
 
                 if (axesStyle.CategoryAxisVisible)
@@ -173,7 +181,7 @@ internal sealed partial class PptxRenderer
                             : RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
                     }
                 }
-                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(theme, chartPalette, barChart, seriesFills), ReadChartLegendLayout(chartXml)));
+                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, legendEntries, ReadChartLegendLayout(chartXml)));
                 fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barChart, barSeries, valueExtents, horizontalBars));
                 return true;
             }
@@ -664,13 +672,16 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, int paletteOffset = 0)
     {
         IReadOnlyList<string> names = ReadChartSeriesNames(chartElement);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
-            entries.Add(new ChartLegendEntry(names[i], ChartSeriesColor(theme, chartPalette, i, seriesFills), null));
+            ChartSeriesFill fill = i < seriesFills.Count && seriesFills[i] is { } explicitFill
+                ? explicitFill
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, i + paletteOffset), 1d);
+            entries.Add(new ChartLegendEntry(names[i], fill, null));
         }
 
         return entries;

@@ -708,6 +708,11 @@ Composite oracle family map:
 - Line chart renderer now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining line data-label work is label positions, rich text, number formats, per-point overrides,
   deleted/hidden points, leader lines, and collision/overflow behavior.
+- Combo bar charts now treat additional `c:barChart` nodes as part of the same chart text model for
+  legends and value data labels, instead of drawing only the first chart's labels. This mirrors the
+  `pptx-renderer` merged-option approach more closely and is locked by the public native chart synthetic
+  case with a secondary-axis stacked bar chart. Remaining combo work is exact Office layout and axis
+  interaction across mixed chart families.
 
 PPTX table style targets from the table composite port:
 
