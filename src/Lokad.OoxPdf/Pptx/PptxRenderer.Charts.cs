@@ -102,6 +102,7 @@ internal sealed partial class PptxRenderer
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(lineChart), horizontalBars: false));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars: false));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes)));
+                fonts.AddRange(RenderLineDataLabels(theme, graphics, plotBox, lineChart, lineSeries, valueExtents));
                 return true;
             }
         }
@@ -729,6 +730,45 @@ internal sealed partial class PptxRenderer
                     double y = value >= 0d ? zeroY + barHeight + 1d : zeroY - barHeight - labelHeight - 1d;
                     runs.Add(CreateChartLabelRun(FormatChartAxisLabel(value), x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center));
                 }
+            }
+        }
+
+        return RenderTextRuns(runs, graphics);
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderLineDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents)
+    {
+        if (!ShouldRenderValueDataLabels(chartElement) || series.Count == 0)
+        {
+            return [];
+        }
+
+        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        double range = Math.Max(1d, extents.Max - extents.Min);
+        double fontSize = 8.5d;
+        double labelWidth = Math.Max(18d, plotBox.Width / Math.Max(5d, pointCount * 1.5d));
+        double labelHeight = fontSize * 1.35d;
+        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        var runs = new List<TextRun>();
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            IReadOnlyList<double> values = series[seriesIndex];
+            for (int i = 0; i < values.Count; i++)
+            {
+                double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
+                double pointY = plotBox.Y + (values[i] - extents.Min) / range * plotBox.Height;
+                runs.Add(CreateChartLabelRun(
+                    FormatChartAxisLabel(values[i]),
+                    pointX - labelWidth / 2d,
+                    pointY + labelHeight * 0.35d,
+                    labelWidth,
+                    labelHeight,
+                    plotBox,
+                    fontSize,
+                    color,
+                    TextAlignment.Center));
             }
         }
 

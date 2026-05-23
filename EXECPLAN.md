@@ -679,6 +679,9 @@ Composite oracle family map:
 - Bar/column chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining bar data-label work is label positions, stacked-series totals, rich text, number formats,
   deleted/hidden points, and collision/overflow behavior.
+- Line chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
+  Remaining line data-label work is label positions, rich text, number formats, per-point overrides,
+  deleted/hidden points, leader lines, and collision/overflow behavior.
 
 PPTX table style targets from the table composite port:
 

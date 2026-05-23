@@ -4344,6 +4344,7 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>5</c:v></c:pt>
                       <c:pt idx="2"><c:v>4</c:v></c:pt>
                     </c:numLit></c:val><c:smooth val="1"/><c:marker><c:symbol val="square"/><c:size val="8"/><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="00AAAA"/></a:solidFill></a:ln></c:spPr></c:marker></c:ser>
+                    <c:dLbls><c:showVal val="1"/></c:dLbls>
                   </c:lineChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """),
@@ -4378,7 +4379,7 @@ internal static class PptxTests
         TestAssert.Contains("93.6 374.4 m 237.6 374.4 l S", pdf);
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
-        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 6, "Chart title, axes, legend, and data labels should emit chart text objects.");
+        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 7, "Chart title, axes, legend, and data labels should emit chart text objects.");
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
         TestAssert.Contains("0.851 0.851 0.851 RG", pdf);
         TestAssert.Contains("0 0.667 0 RG", pdf);
