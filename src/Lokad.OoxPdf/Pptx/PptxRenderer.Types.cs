@@ -106,7 +106,8 @@ internal sealed partial class PptxRenderer
         double RotationCenterY,
         bool FlipHorizontal,
         bool FlipVertical,
-        bool PreventCoalesce = false);
+        bool PreventCoalesce = false,
+        TextOutline? Outline = null);
 
     private sealed record TextGlyphRun(
         TextRun Source,
@@ -134,6 +135,8 @@ internal sealed partial class PptxRenderer
         ushort GlyphId,
         double Advance,
         double AdjustmentBefore);
+
+    private readonly record struct TextOutline(RgbColor Color, double Alpha, double Width);
 
     private readonly record struct TextCapsFragment(string Text, double FontScale);
 
@@ -165,6 +168,7 @@ internal sealed partial class PptxRenderer
         double BaselineOffset,
         RgbColor Color,
         double Alpha,
+        TextOutline? Outline,
         RgbColor? Highlight,
         bool Bold,
         bool Italic,
@@ -523,6 +527,7 @@ internal sealed partial class PptxRenderer
         public const double MaximumLineSpacingReduction = 0.99d;
         public const double SmallCapsFallbackScale = 0.8d;
         public const double SyntheticBoldOffsetPoints = 0.35d;
+        public const double DefaultTextOutlineWidth = 0.75d;
         public const double StrikePositionFallback = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
@@ -542,6 +547,8 @@ internal sealed partial class PptxRenderer
         public static double SmallCapsFontScale() => SmallCapsFallbackScale;
 
         public static double SyntheticBoldOffset() => SyntheticBoldOffsetPoints;
+
+        public static double TextOutlineWidth(double? width) => Math.Max(MinimumStrokeWidth, width ?? DefaultTextOutlineWidth);
 
         public static double StrikeY(double baselineY, double fontSize) => baselineY + fontSize * StrikePositionFallback;
 

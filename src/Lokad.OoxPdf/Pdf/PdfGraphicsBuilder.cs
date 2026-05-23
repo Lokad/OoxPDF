@@ -200,20 +200,72 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("S");
     }
 
-    public void DrawGlyphText(string fontResourceName, double fontSize, double x, double y, byte red, byte green, byte blue, string glyphHex, bool italic = false, double characterSpacing = 0d)
+    public void DrawGlyphText(
+        string fontResourceName,
+        double fontSize,
+        double x,
+        double y,
+        byte red,
+        byte green,
+        byte blue,
+        string glyphHex,
+        bool italic = false,
+        double characterSpacing = 0d,
+        int textRenderingMode = 0,
+        byte strokeRed = 0,
+        byte strokeGreen = 0,
+        byte strokeBlue = 0,
+        double strokeWidth = 0d)
     {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing);
+        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
     }
 
-    public void DrawGlyphPositionedText(string fontResourceName, double fontSize, double x, double y, byte red, byte green, byte blue, string glyphPositioningArray, bool italic = false, double characterSpacing = 0d)
+    public void DrawGlyphPositionedText(
+        string fontResourceName,
+        double fontSize,
+        double x,
+        double y,
+        byte red,
+        byte green,
+        byte blue,
+        string glyphPositioningArray,
+        bool italic = false,
+        double characterSpacing = 0d,
+        int textRenderingMode = 0,
+        byte strokeRed = 0,
+        byte strokeGreen = 0,
+        byte strokeBlue = 0,
+        double strokeWidth = 0d)
     {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing);
+        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth);
     }
 
-    private void DrawGlyphTextOperator(string fontResourceName, double fontSize, double x, double y, byte red, byte green, byte blue, string textOperator, bool italic, double characterSpacing)
+    private void DrawGlyphTextOperator(
+        string fontResourceName,
+        double fontSize,
+        double x,
+        double y,
+        byte red,
+        byte green,
+        byte blue,
+        string textOperator,
+        bool italic,
+        double characterSpacing,
+        int textRenderingMode,
+        byte strokeRed,
+        byte strokeGreen,
+        byte strokeBlue,
+        double strokeWidth)
     {
         builder.AppendLine("BT");
         builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+        if (textRenderingMode is 1 or 2)
+        {
+            builder.Append(C(strokeRed)).Append(' ').Append(C(strokeGreen)).Append(' ').Append(C(strokeBlue)).AppendLine(" RG");
+            builder.Append(N(strokeWidth)).AppendLine(" w");
+            builder.Append(textRenderingMode.ToString(CultureInfo.InvariantCulture)).AppendLine(" Tr");
+        }
+
         builder.Append('/').Append(PdfEmbeddedFont.SanitizeName(fontResourceName)).Append(' ').Append(N(fontSize)).AppendLine(" Tf");
         if (Math.Abs(characterSpacing) > 0.001d)
         {
@@ -223,6 +275,11 @@ internal sealed class PdfGraphicsBuilder
         double shear = italic ? 0.213d : 0d;
         builder.Append("1 0 ").Append(N(shear)).Append(" 1 ").Append(N(x)).Append(' ').Append(N(y)).AppendLine(" Tm");
         builder.AppendLine(textOperator);
+        if (textRenderingMode is 1 or 2)
+        {
+            builder.AppendLine("0 Tr");
+        }
+
         builder.AppendLine("ET");
     }
 

@@ -131,6 +131,10 @@ High-priority actions:
 - [x] Port the first EA/CS font-family fallback rule:
   run/default typeface resolution now considers `a:latin`, then `a:ea`, then `a:cs`, so runs that only
   specify East Asian or complex-script fonts do not fall back to the generic Latin default.
+- [x] Port the first `pptx-renderer` text-outline rule:
+  `a:rPr/a:ln` is now a first-class run style that flows through text layout into PDF text rendering mode,
+  so no-fill outline text is stroked while preserving its layout advance. A synthetic PPTX typography case
+  locks the solid-outline path.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases

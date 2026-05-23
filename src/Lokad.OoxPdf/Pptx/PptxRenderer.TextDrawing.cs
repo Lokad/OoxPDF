@@ -227,6 +227,7 @@ internal sealed partial class PptxRenderer
             Math.Abs(left.ClipHeight - right.ClipHeight) < PptxTextMetricRules.CoordinateTolerance &&
             left.Color.Equals(right.Color) &&
             Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
+            TextOutlinesEqual(left.Outline, right.Outline) &&
             (!compareHighlight || left.HighlightColor.Equals(right.HighlightColor)) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
@@ -424,6 +425,7 @@ internal sealed partial class PptxRenderer
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             left.Color.Equals(right.Color) &&
             NearlyEqual(left.Alpha, right.Alpha) &&
+            TextOutlinesEqual(left.Outline, right.Outline) &&
             left.HighlightColor.Equals(right.HighlightColor) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
@@ -449,6 +451,20 @@ internal sealed partial class PptxRenderer
         return Math.Abs(left - right) <= PptxTextMetricRules.TextStateTolerance;
     }
 
+    private static bool TextOutlinesEqual(TextOutline? left, TextOutline? right)
+    {
+        if (left is null || right is null)
+        {
+            return left is null && right is null;
+        }
+
+        TextOutline leftOutline = left.Value;
+        TextOutline rightOutline = right.Value;
+        return leftOutline.Color.Equals(rightOutline.Color) &&
+            NearlyEqual(leftOutline.Alpha, rightOutline.Alpha) &&
+            NearlyEqual(leftOutline.Width, rightOutline.Width);
+    }
+
     private static string FontKey(TextRun run)
     {
         string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
@@ -467,11 +483,12 @@ internal sealed partial class PptxRenderer
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
-            bool transparentText = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance;
-            if (transparentText)
+            bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+            if (needsTextAlpha)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(run.Alpha, 1d);
+                graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
             }
 
             DrawGlyphText(graphics, glyphRun);
@@ -495,7 +512,7 @@ internal sealed partial class PptxRenderer
                 graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
             }
 
-            if (transparentText)
+            if (needsTextAlpha)
             {
                 graphics.RestoreState();
             }
@@ -517,11 +534,12 @@ internal sealed partial class PptxRenderer
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
-            bool transparentText = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance;
-            if (transparentText)
+            bool needsTextAlpha = run.Alpha < 1d - PptxTextMetricRules.TextStateTolerance ||
+                (run.Outline is { } runOutline && runOutline.Alpha < 1d - PptxTextMetricRules.TextStateTolerance);
+            if (needsTextAlpha)
             {
                 graphics.SaveState();
-                graphics.SetAlpha(run.Alpha, 1d);
+                graphics.SetAlpha(run.Alpha, run.Outline?.Alpha ?? 1d);
             }
 
             DrawGlyphText(graphics, glyphRun);
@@ -545,7 +563,7 @@ internal sealed partial class PptxRenderer
                 graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
             }
 
-            if (transparentText)
+            if (needsTextAlpha)
             {
                 graphics.RestoreState();
             }
@@ -748,12 +766,50 @@ internal sealed partial class PptxRenderer
         TextRun run = glyphRun.Source;
         if (glyphRun.PositioningArray is null)
         {
-            graphics.DrawGlyphText(glyphRun.ResourceName, run.FontSize, glyphRun.X, glyphRun.BaselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphRun.GlyphHex, glyphRun.SyntheticItalic);
+            graphics.DrawGlyphText(
+                glyphRun.ResourceName,
+                run.FontSize,
+                glyphRun.X,
+                glyphRun.BaselineY,
+                run.Color.Red,
+                run.Color.Green,
+                run.Color.Blue,
+                glyphRun.GlyphHex,
+                glyphRun.SyntheticItalic,
+                textRenderingMode: TextRenderingMode(run),
+                strokeRed: run.Outline?.Color.Red ?? 0,
+                strokeGreen: run.Outline?.Color.Green ?? 0,
+                strokeBlue: run.Outline?.Color.Blue ?? 0,
+                strokeWidth: run.Outline?.Width ?? 0d);
         }
         else
         {
-            graphics.DrawGlyphPositionedText(glyphRun.ResourceName, run.FontSize, glyphRun.X, glyphRun.BaselineY, run.Color.Red, run.Color.Green, run.Color.Blue, glyphRun.PositioningArray, glyphRun.SyntheticItalic);
+            graphics.DrawGlyphPositionedText(
+                glyphRun.ResourceName,
+                run.FontSize,
+                glyphRun.X,
+                glyphRun.BaselineY,
+                run.Color.Red,
+                run.Color.Green,
+                run.Color.Blue,
+                glyphRun.PositioningArray,
+                glyphRun.SyntheticItalic,
+                textRenderingMode: TextRenderingMode(run),
+                strokeRed: run.Outline?.Color.Red ?? 0,
+                strokeGreen: run.Outline?.Color.Green ?? 0,
+                strokeBlue: run.Outline?.Color.Blue ?? 0,
+                strokeWidth: run.Outline?.Width ?? 0d);
         }
+    }
+
+    private static int TextRenderingMode(TextRun run)
+    {
+        if (run.Outline is null)
+        {
+            return 0;
+        }
+
+        return run.Alpha <= PptxTextMetricRules.TextStateTolerance ? 1 : 2;
     }
 
     private static IEnumerable<string> WrapWords(string text, double maxWidth, double fontSize, double characterSpacing, PdfEmbeddedFont embedded)
