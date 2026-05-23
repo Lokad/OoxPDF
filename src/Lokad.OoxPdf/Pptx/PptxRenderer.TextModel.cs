@@ -123,6 +123,7 @@ internal sealed partial class PptxRenderer
         PptxTextOrientation orientation = ReadTextOrientation(textBody, inheritedTextBody);
         double fontScale = ReadNormAutofitFontScale(textBody);
         double lineSpacingScale = ReadNormAutofitLineSpacingScale(textBody);
+        bool compatibleLineSpacing = HasCompatibleLineSpacing(textBody);
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double flowX = x;
@@ -189,6 +190,7 @@ internal sealed partial class PptxRenderer
             slideNumber,
             fontScale,
             lineSpacingScale,
+            compatibleLineSpacing,
             shapeFontColor);
 
         return new PptxTextFrameModel(
@@ -228,6 +230,7 @@ internal sealed partial class PptxRenderer
         int slideNumber,
         double fontScale,
         double lineSpacingScale,
+        bool compatibleLineSpacing,
         RgbColor? shapeFontColor)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
@@ -240,7 +243,7 @@ internal sealed partial class PptxRenderer
             string levelName = $"lvl{Math.Clamp(paragraphLevel + 1, 1, 9).ToString(CultureInfo.InvariantCulture)}pPr";
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
-            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale);
+            ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,

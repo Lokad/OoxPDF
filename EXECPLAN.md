@@ -1822,6 +1822,8 @@ paths, and ExecPlan references together.
   cached-image fallbacks and labels.
 - [x] Render supported DrawingML diagonal pattern fills for ordinary PPTX shapes as background plus clipped
   hatches, and keep diagnostics only for pattern presets that still fall outside the implemented subset.
+- [x] Honor `bodyPr@compatLnSpc` as Office-compatible tight default line spacing in PPTX text frames, with a
+  synthetic line-break fixture locking the reduced baseline step for multi-column/text-flow cases.
 - [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrect vertical-axis legend.
   Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
   inheritance, then reproduce with a minimal public chart-axis fixture before changing renderer logic.
