@@ -4265,7 +4265,7 @@ internal static class PptxTests
                   <c:chart><c:plotArea><c:barChart>
                     <c:varyColors val="1"/>
                     <c:ser>
-                    <c:dPt><c:idx val="2"/><c:spPr><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:idx val="2"/><c:spPr><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="00AAAA"/></a:solidFill></a:ln></c:spPr></c:dPt>
                     <c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
                       <c:pt idx="1"><c:v>4</c:v></c:pt>
@@ -4285,6 +4285,7 @@ internal static class PptxTests
         TestAssert.Contains("0.667 0 0 rg", pdf);
         TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
         TestAssert.Contains("0.667 0 0.667 rg", pdf);
+        TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_STATIC_FALLBACK" && d.Severity == OoxPdfSeverity.Info), "Rendered chart fallback should emit an informational diagnostic.");
     }

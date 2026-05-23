@@ -71,9 +71,10 @@ internal sealed partial class PptxRenderer
                 ChartAxisUnits axisUnits = ReadChartValueAxisUnits(chartXml);
                 bool varyColors = ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadChartSeriesPointFills(barChart, theme);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadChartSeriesPointStrokes(barChart, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
-                RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, pointFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors);
+                RenderBarChartFallback(graphics, document, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills)));
@@ -904,10 +905,20 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadChartSeriesPointStrokes(XElement chartElement, PptxTheme theme)
+    {
+        return chartElement
+            .Elements(ChartNamespace + "ser")
+            .Select(series => ReadChartPointStrokes(series, theme))
+            .ToArray();
+    }
+
     private static IReadOnlyDictionary<int, ChartSeriesStroke> ReadChartPointStrokes(XElement chartElement, PptxTheme theme)
     {
         var strokes = new Dictionary<int, ChartSeriesStroke>();
-        XElement? series = chartElement.Element(ChartNamespace + "ser");
+        XElement? series = chartElement.Name == ChartNamespace + "ser"
+            ? chartElement
+            : chartElement.Element(ChartNamespace + "ser");
         if (series is null)
         {
             return strokes;
@@ -1109,7 +1120,7 @@ internal sealed partial class PptxRenderer
         return palette[index % palette.Length];
     }
 
-    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, bool varyColors)
+    private static void RenderBarChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, bool varyColors)
     {
         ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
         double plotX = plotBox.X;
@@ -1161,11 +1172,11 @@ internal sealed partial class PptxRenderer
         {
             if (stacked)
             {
-                RenderStackedHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, percentStacked, seriesFills, pointFills, varyColors);
+                RenderStackedHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, percentStacked, seriesFills, pointFills, pointStrokes, varyColors);
             }
             else
             {
-                RenderClusteredHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, seriesFills, pointFills, varyColors);
+                RenderClusteredHorizontalBars(graphics, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, seriesFills, pointFills, pointStrokes, varyColors);
             }
 
             return;
@@ -1173,7 +1184,7 @@ internal sealed partial class PptxRenderer
 
         if (stacked)
         {
-            RenderStackedColumns(graphics, plotX, plotWidth, plotHeight, series, categoryCount, valueRange, zeroY, percentStacked, seriesFills, pointFills, varyColors);
+            RenderStackedColumns(graphics, plotX, plotWidth, plotHeight, series, categoryCount, valueRange, zeroY, percentStacked, seriesFills, pointFills, pointStrokes, varyColors);
             return;
         }
 
@@ -1193,7 +1204,11 @@ internal sealed partial class PptxRenderer
                 double value = values[category];
                 double barHeight = Math.Abs(value) / valueRange * plotHeight;
                 ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
-                FillChartRectangle(graphics, categoryX + seriesIndex * barSlot, value >= 0d ? zeroY : zeroY - barHeight, Math.Max(0.5d, barSlot * 0.86d), barHeight, fill);
+                double barX = categoryX + seriesIndex * barSlot;
+                double barY = value >= 0d ? zeroY : zeroY - barHeight;
+                double barWidth = Math.Max(0.5d, barSlot * 0.86d);
+                FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
+                StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);
             }
         }
     }
@@ -1334,7 +1349,7 @@ internal sealed partial class PptxRenderer
         return (minValue, maxValue);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, bool varyColors)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
@@ -1352,12 +1367,16 @@ internal sealed partial class PptxRenderer
                 double value = values[category];
                 double barWidth = Math.Abs(value) / valueRange * plotWidth;
                 ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
-                FillChartRectangle(graphics, value >= 0d ? zeroX : zeroX - barWidth, categoryY + seriesIndex * barSlot, barWidth, Math.Max(0.5d, barSlot * 0.86d), fill);
+                double barX = value >= 0d ? zeroX : zeroX - barWidth;
+                double barY = categoryY + seriesIndex * barSlot;
+                double barHeight = Math.Max(0.5d, barSlot * 0.86d);
+                FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
+                StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);
             }
         }
     }
 
-    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, double plotX, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroY, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, bool varyColors)
+    private static void RenderStackedColumns(PdfGraphicsBuilder graphics, double plotX, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroY, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors)
     {
         double categoryWidth = plotWidth / categoryCount;
         double barWidth = Math.Max(0.5d, categoryWidth * 0.58d);
@@ -1381,18 +1400,20 @@ internal sealed partial class PptxRenderer
                 if (value >= 0d)
                 {
                     FillChartRectangle(graphics, categoryX, positiveY, barWidth, segmentHeight, fill);
+                    StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, categoryX, positiveY, barWidth, segmentHeight);
                     positiveY += segmentHeight;
                 }
                 else
                 {
                     negativeY -= segmentHeight;
                     FillChartRectangle(graphics, categoryX, negativeY, barWidth, segmentHeight, fill);
+                    StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, categoryX, negativeY, barWidth, segmentHeight);
                 }
             }
         }
     }
 
-    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, bool varyColors)
+    private static void RenderStackedHorizontalBars(PdfGraphicsBuilder graphics, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = Math.Max(0.5d, categoryHeight * 0.58d);
@@ -1416,12 +1437,14 @@ internal sealed partial class PptxRenderer
                 if (value >= 0d)
                 {
                     FillChartRectangle(graphics, positiveX, categoryY, segmentWidth, barHeight, fill);
+                    StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, positiveX, categoryY, segmentWidth, barHeight);
                     positiveX += segmentWidth;
                 }
                 else
                 {
                     negativeX -= segmentWidth;
                     FillChartRectangle(graphics, negativeX, categoryY, segmentWidth, barHeight, fill);
+                    StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, negativeX, categoryY, segmentWidth, barHeight);
                 }
             }
         }
@@ -1672,6 +1695,27 @@ internal sealed partial class PptxRenderer
         }
 
         if (markerStroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static void StrokeChartPointRectangle(PdfGraphicsBuilder graphics, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height)
+    {
+        if (seriesIndex >= pointStrokes.Count || !pointStrokes[seriesIndex].TryGetValue(categoryIndex, out ChartSeriesStroke stroke))
+        {
+            return;
+        }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
+        graphics.StrokeRectangle(x, y, width, height);
+        if (stroke.Alpha < 1d)
         {
             graphics.RestoreState();
         }

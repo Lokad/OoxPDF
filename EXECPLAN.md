@@ -673,6 +673,9 @@ Composite oracle family map:
 - Bar/column chart fallbacks now honor point-level `c:dPt/c:spPr` fills, sharing the same point-style reader
   used by pie and doughnut slices. Remaining point-level bar work is point borders, inherited style defaults,
   data labels, and deleted/hidden points.
+- Bar/column chart fallbacks now honor point-level `c:dPt/c:spPr/a:ln` borders through the shared line
+  resolver. Remaining point-level bar work is inherited style defaults, data labels, deleted/hidden points,
+  and exact Office border draw order for stacked/clustered variants.
 
 PPTX table style targets from the table composite port:
 
