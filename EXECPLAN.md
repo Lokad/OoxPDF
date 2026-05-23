@@ -670,6 +670,9 @@ Composite oracle family map:
 - Bar/column chart fallbacks now honor `c:varyColors` for single-series charts without explicit series
   fills, assigning palette colors by category. Remaining palette work is Office chart style/color-style
   parts, point-level overrides for bars, and theme-derived automatic colors.
+- Bar/column chart fallbacks now honor point-level `c:dPt/c:spPr` fills, sharing the same point-style reader
+  used by pie and doughnut slices. Remaining point-level bar work is point borders, inherited style defaults,
+  data labels, and deleted/hidden points.
 
 PPTX table style targets from the table composite port:
 
