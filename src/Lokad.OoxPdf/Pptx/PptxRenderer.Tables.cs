@@ -7,15 +7,15 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<TextRun> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
     {
-        var textRuns = new List<TextRun>();
+        var textSpans = new List<PptxPositionedTextSpan>();
         foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
         {
-            textRuns.AddRange(RenderTableFrame(context, frame, graphics));
+            textSpans.AddRange(RenderTableFrame(context, frame, graphics));
         }
 
-        return textRuns;
+        return textSpans;
     }
 
     private static bool IsTableGraphicFrame(XElement frame)
@@ -26,9 +26,9 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "tbl") is not null;
     }
 
-    private static IReadOnlyList<TextRun> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
     {
-        var textRuns = new List<TextRun>();
+        var textSpans = new List<PptxPositionedTextSpan>();
         ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
         XElement? table = frame
             .Element(DrawingNamespace + "graphic")
@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "tbl");
         if (bounds is null || table is null)
         {
-            return textRuns;
+            return textSpans;
         }
 
         IReadOnlyList<double> rawColumnWidths = table
@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
-            return textRuns;
+            return textSpans;
         }
 
         double frameX = OoxUnits.EmuToPoints(bounds.Value.X);
@@ -138,7 +138,7 @@ internal sealed partial class PptxRenderer
 
                 AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
                 TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
-                AddTableCellTextRuns(context, cell, cellX, cellBottom, columnWidth, cellHeight, textRuns, tableStyleTextStyle);
+                AddTableCellTextSpans(context, cell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -156,7 +156,7 @@ internal sealed partial class PptxRenderer
             StrokeTableBorders(graphics, explicitBorders);
         }
 
-        return textRuns;
+        return textSpans;
     }
 
     private static bool IsMergedTableCellContinuation(XElement cell)
@@ -376,7 +376,7 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextRuns(PptxRenderContext context, XElement cell, double x, double y, double width, double height, List<TextRun> runs, TableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, TableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         if (textBody is null)
@@ -386,7 +386,7 @@ internal sealed partial class PptxRenderer
 
         TextInsets insets = ReadTableCellTextInsets(cell, textBody);
         XElement tableTextShape = BuildTableCellTextShape(context, textBody, x, y, width, height, insets, ReadTableCellVerticalAnchor(cell), tableStyleTextStyle);
-        runs.AddRange(ReadTextRunsForShape(tableTextShape, context, includePlaceholders: false));
+        spans.AddRange(ReadTextSpansForShape(tableTextShape, context, includePlaceholders: false));
     }
 
     private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, TableCellTextStyle tableStyleTextStyle)

@@ -61,8 +61,8 @@ internal sealed partial class PptxRenderer
                 int imageIndex = 1;
                 IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
                 IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
-                IReadOnlyList<TextRun> slideTableTextRuns = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
-                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Select(span => span.Run).Concat(slideTableTextRuns).ToArray());
+                IReadOnlyList<PptxPositionedTextSpan> slideTableTextSpans = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
+                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(slideTableTextSpans).Select(span => span.Run).ToArray());
                 DrawTextSpansWithFonts(inheritedTextSpans, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
                 {
@@ -75,15 +75,16 @@ internal sealed partial class PptxRenderer
 
             IReadOnlyList<PdfImageResource> images = RenderPictures(context, graphics);
             RenderShapes(context, context.SlideXml, graphics, renderPlaceholders: true);
-            IReadOnlyList<TextRun> tableTextRuns = context.InheritedXml
+            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = context.InheritedXml
                 .Append(context.SlideXml)
                 .SelectMany(xml => RenderTables(context, xml, graphics))
                 .ToArray();
             IReadOnlyList<PdfFontResource> chartFonts = RenderCharts(context, graphics);
             IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadInheritedTextSpans(context)
                 .Concat(ReadSlideTextSpans(context))
+                .Concat(tableTextSpans)
                 .ToArray();
-            IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, tableTextRuns, graphics);
+            IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, [], graphics);
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), chartFonts.Concat(fonts).ToArray(), images, graphics.ExtGStates.ToArray()));
         }
 

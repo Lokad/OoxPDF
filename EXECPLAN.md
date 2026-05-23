@@ -212,6 +212,9 @@ High-priority actions:
 - [x] Route highlighted PPTX text through layout-owned glyph spans:
   highlighted runs no longer fall back to legacy `TextRun` glyph remapping after the highlight background is
   drawn. This keeps text with yellow fills on the same emission path as ordinary shape text.
+- [x] Route PPTX table-cell text through positioned glyph spans:
+  table text now reuses the same text-frame and glyph-span layout path as shape text before PDF emission,
+  matching the `pptx-renderer` pattern where tables delegate cell text to the common text-body renderer.
 - [ ] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
   highlight drawing still receives legacy `TextRun`s today, while underline/strike now use glyph-run width
   from positioned spans for PPTX shape text.

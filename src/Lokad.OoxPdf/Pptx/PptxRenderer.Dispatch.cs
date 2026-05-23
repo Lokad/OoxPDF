@@ -89,8 +89,8 @@ internal sealed partial class PptxRenderer
             {
                 if (IsTableGraphicFrame(child))
                 {
-                    IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(context, child, graphics);
-                    DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
+                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, child, graphics);
+                    DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
                 }
                 else
                 {
