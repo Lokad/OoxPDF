@@ -17,16 +17,33 @@ internal sealed partial class PptxRenderer
         bool FlipHorizontal,
         bool FlipVertical);
 
-    private readonly record struct GroupTransform(long OffsetX, long OffsetY, long Width, long Height, long ChildOffsetX, long ChildOffsetY, double ScaleX, double ScaleY, double RotationDegrees)
+    private readonly record struct GroupTransform(
+        long OffsetX,
+        long OffsetY,
+        long Width,
+        long Height,
+        long ChildOffsetX,
+        long ChildOffsetY,
+        double ScaleX,
+        double ScaleY,
+        double RotationDegrees,
+        bool FlipHorizontal,
+        bool FlipVertical)
     {
-        public static GroupTransform Identity { get; } = new(0, 0, 0, 0, 0, 0, 1d, 1d, 0d);
+        public static GroupTransform Identity { get; } = new(0, 0, 0, 0, 0, 0, 1d, 1d, 0d, FlipHorizontal: false, FlipVertical: false);
 
         public ShapeBounds Apply(ShapeBounds bounds)
         {
-            long x = OffsetX + (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX);
-            long y = OffsetY + (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY);
             long width = (long)Math.Round(bounds.Width * ScaleX);
             long height = (long)Math.Round(bounds.Height * ScaleY);
+            long localX = (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX);
+            long localY = (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY);
+            long x = FlipHorizontal
+                ? OffsetX + Width - localX - width
+                : OffsetX + localX;
+            long y = FlipVertical
+                ? OffsetY + Height - localY - height
+                : OffsetY + localY;
             double rotationDegrees = NormalizeRotationDegrees(bounds.RotationDegrees + RotationDegrees);
             if (Math.Abs(RotationDegrees) > PptxTextMetricRules.TextStateTolerance && Width > 0 && Height > 0)
             {
@@ -51,8 +68,8 @@ internal sealed partial class PptxRenderer
                 width,
                 height,
                 rotationDegrees,
-                bounds.FlipHorizontal,
-                bounds.FlipVertical);
+                bounds.FlipHorizontal ^ FlipHorizontal,
+                bounds.FlipVertical ^ FlipVertical);
         }
 
         public GroupTransform Combine(GroupTransform child)
@@ -74,7 +91,9 @@ internal sealed partial class PptxRenderer
                 child.ChildOffsetY,
                 ScaleX * child.ScaleX,
                 ScaleY * child.ScaleY,
-                childBounds.RotationDegrees);
+                childBounds.RotationDegrees,
+                FlipHorizontal ^ child.FlipHorizontal,
+                FlipVertical ^ child.FlipVertical);
         }
     }
 

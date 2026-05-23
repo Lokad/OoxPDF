@@ -1883,7 +1883,9 @@ internal sealed partial class PptxRenderer
             ParseLongAttribute(extents, "cy") / (double)chHeight,
             transform!.Attribute("rot") is { } rotationAttribute
                 ? long.Parse(rotationAttribute.Value, CultureInfo.InvariantCulture) / 60000d
-                : 0d);
+                : 0d,
+            ParseBoolAttribute(transform, "flipH"),
+            ParseBoolAttribute(transform, "flipV"));
     }
 
     private static void ApplyShapeTransform(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ShapeBounds bounds)

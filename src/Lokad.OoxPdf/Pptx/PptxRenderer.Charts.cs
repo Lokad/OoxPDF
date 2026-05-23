@@ -166,17 +166,22 @@ internal sealed partial class PptxRenderer
                     seriesOffset += extraSeries.Count;
                 }
 
-                if (axesStyle.CategoryAxisVisible)
+                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, barChart);
+                if (axesStyle.CategoryAxisVisible && IsChartAxisLabelVisible(categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, ReadChartCategoryAxisForChart(chartXml, barChart), ReadChartCategoryLabels(barChart), horizontalBars));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadChartCategoryLabels(barChart), horizontalBars));
                 }
 
                 if (axesStyle.ValueAxisVisible)
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
+                    if (IsChartAxisLabelVisible(valueAxis))
+                    {
+                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
+                    }
+
                     if (!horizontalBars)
                     {
-                        if (secondaryValueAxis is not null)
+                        if (secondaryValueAxis is not null && IsChartAxisLabelVisible(secondaryValueAxis))
                         {
                             fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                         }
@@ -186,7 +191,7 @@ internal sealed partial class PptxRenderer
                         }
                     }
                 }
-                else if (!horizontalBars && secondaryValueAxis is not null && !IsChartAxisDeleted(secondaryValueAxis))
+                else if (!horizontalBars && secondaryValueAxis is not null && !IsChartAxisDeleted(secondaryValueAxis) && IsChartAxisLabelVisible(secondaryValueAxis))
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                 }
@@ -212,14 +217,16 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds, chartXml);
                 RenderLineChart(graphics, document, bounds, chartXml, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits);
-                if (axesStyle.CategoryAxisVisible)
+                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
+                if (axesStyle.CategoryAxisVisible && IsChartAxisLabelVisible(categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, ReadChartCategoryAxisForChart(chartXml, lineChart), ReadChartCategoryLabels(lineChart), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadChartCategoryLabels(lineChart), horizontalBars: false));
                 }
 
-                if (axesStyle.ValueAxisVisible)
+                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
+                if (axesStyle.ValueAxisVisible && IsChartAxisLabelVisible(valueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, ReadChartValueAxisForChart(chartXml, lineChart), valueExtents, axisUnits, horizontalBars: false));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars: false));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes), ReadChartLegendLayout(chartXml)));
@@ -1246,7 +1253,7 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
         {
-            string label = FormatChartAxisLabel(value);
+            string label = FormatChartAxisLabel(value, valueAxis);
             double offset = (value - extents.Min) / range;
             double x;
             double y;
@@ -1412,12 +1419,53 @@ internal sealed partial class PptxRenderer
         return nice * magnitude;
     }
 
-    private static string FormatChartAxisLabel(double value)
+    private static string FormatChartAxisLabel(double value, XElement? axis = null)
     {
+        string? formatCode = (string?)axis?
+            .Element(ChartNamespace + "numFmt")
+            ?.Attribute("formatCode");
+        if (!string.IsNullOrWhiteSpace(formatCode) &&
+            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
+        {
+            return FormatChartNumber(value, formatCode);
+        }
+
         double rounded = Math.Round(value);
         return Math.Abs(value - rounded) < 0.0001d
             ? rounded.ToString("0", CultureInfo.InvariantCulture)
             : value.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatChartNumber(double value, string formatCode)
+    {
+        string normalized = formatCode.Replace("\\", string.Empty, StringComparison.Ordinal);
+        bool percent = normalized.Contains('%', StringComparison.Ordinal);
+        double displayValue = percent ? value * 100d : value;
+        int decimals = 0;
+        int decimalPoint = normalized.IndexOf('.', StringComparison.Ordinal);
+        if (decimalPoint >= 0)
+        {
+            decimals = normalized
+                .Skip(decimalPoint + 1)
+                .TakeWhile(ch => ch is '0' or '#')
+                .Count();
+        }
+
+        bool thousands = normalized.Contains(',', StringComparison.Ordinal);
+        string numberFormat = (thousands ? "#,##0" : "0") +
+            (decimals > 0 ? "." + new string('0', decimals) : string.Empty);
+        string text = displayValue.ToString(numberFormat, CultureInfo.InvariantCulture);
+        if (normalized.Contains('$', StringComparison.Ordinal))
+        {
+            text = "$" + text;
+        }
+
+        if (percent)
+        {
+            text += "%";
+        }
+
+        return text;
     }
 
     private static IReadOnlyList<ChartSeriesFill?> ReadChartSeriesFills(XElement chartElement, PptxTheme theme)
@@ -1673,6 +1721,17 @@ internal sealed partial class PptxRenderer
     {
         XElement? delete = axis?.Element(ChartNamespace + "delete");
         return IsOoxmlBooleanElementEnabled(delete);
+    }
+
+    private static bool IsChartAxisLabelVisible(XElement? axis)
+    {
+        if (IsChartAxisDeleted(axis))
+        {
+            return false;
+        }
+
+        string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
+        return !string.Equals(tickLabelPosition, "none", StringComparison.Ordinal);
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)

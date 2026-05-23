@@ -1910,9 +1910,18 @@ paths, and ExecPlan references together.
     first eight imported chart gates again.
   - [x] Bind secondary right-axis label rendering to the extra bar-chart group that owns the right value axis,
     so combo charts do not use the primary series as the fallback range for secondary-axis ticks.
+  - [x] Port the `pptx-renderer` group-transform flip rule into the shared PPTX transform model:
+    group `flipH`/`flipV` now mirrors child bounds and composes child flips before shape, image, text,
+    and chart overlay rendering. A public synthetic connector case locks a flipped grouped vertical
+    stealth-arrow pattern.
+  - [x] Port the first `pptx-renderer` axis-label option slice for native charts:
+    `c:tickLblPos val="none"` hides tick labels without hiding the axis line, and value-axis `c:numFmt`
+    drives basic currency, percent, thousands, and decimal tick-label formatting. A public synthetic
+    chart case locks hidden category labels and formatted value-axis labels.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
-    referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
-    non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
+    referenced axes, honor axis crossing/orientation and high/low label positions, keep primary/secondary
+    scales independent, and place non-axis overlays such as the private slide 5 upward green arrow with
+    Office-equivalent transforms.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
   grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
   shape fill/stroke context.
