@@ -695,9 +695,7 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * radius * 0.22d : 0d;
             double labelX = centerX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = centerY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
-            string label = labelOptions.ShowPercent
-                ? FormatChartPercentageLabel(values[i] / total)
-                : FormatChartAxisLabel(values[i]);
+            string label = FormatPieDataLabel(values[i], total, labelOptions);
             runs.Add(new TextRun(
                 label,
                 labelX,
@@ -900,6 +898,18 @@ internal sealed partial class PptxRenderer
     private static string FormatChartPercentageLabel(double fraction)
     {
         return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
+    }
+
+    private static string FormatPieDataLabel(double value, double total, ChartDataLabelOptions options)
+    {
+        if (options.ShowValue && options.ShowPercent)
+        {
+            return FormatChartAxisLabel(value) + ", " + FormatChartPercentageLabel(value / total);
+        }
+
+        return options.ShowPercent
+            ? FormatChartPercentageLabel(value / total)
+            : FormatChartAxisLabel(value);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<string> labels, bool horizontalBars)

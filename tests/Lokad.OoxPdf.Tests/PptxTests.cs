@@ -4481,7 +4481,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showPercent val="1"/></c:dLbls></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)
@@ -4517,6 +4517,7 @@ internal static class PptxTests
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
+        TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
         TestAssert.True(collector.Diagnostics.Count(d => d.Id == "PPTX_CHART_STATIC_FALLBACK") == 2, "Expected static fallbacks for both line and pie charts.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line and pie chart fallbacks should not emit unsupported chart diagnostics.");
     }
