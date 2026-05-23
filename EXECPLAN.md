@@ -1829,6 +1829,8 @@ paths, and ExecPlan references together.
     stroke/label path in the static fallback.
   - [x] Render additional `barChart` groups in the same `plotArea` against their referenced value axes,
     covering combo stacked-bar charts with separate left/right scales.
+  - [x] Replace the fixed four-interval auto tick fallback with an Office-like 1/2/5/10 major-unit rule and
+    expand value-axis label clipping so zero/max labels remain visible.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, and keep primary/secondary scales independent.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
@@ -1852,6 +1854,8 @@ paths, and ExecPlan references together.
 - [ ] Private slide 19 visible remaining problem: lower-left logo rendering, paired-arrow geometry, and
   center/right font selection differ from Office. Split into public logo/image recolor or crop diagnostics,
   arrow geometry fixtures, and font fallback/style inheritance fixtures.
+  - [x] Add SVG linear-gradient support for compound path pictures by clipping to the SVG path and painting
+    sampled gradient strips; this fixes the flat-color logo fallback seen in the private deck.
 - [ ] Private slide 23 visible remaining problem: top text block formatting is off and an emphasized fragment
   overlaps the horizontal separator. Reproduce with public mixed-run typography, paragraph spacing, and
   separator/z-order fixtures.
@@ -1898,6 +1902,8 @@ paths, and ExecPlan references together.
     `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit
     fixture and route them through orientation-aware text-frame flow instead of silently treating them as
     horizontal text.
+  - [x] Fix the lower input boxes being too high by using visible run font sizes for line advance and
+    middle-anchor height estimation instead of seeding every visible line with the unrelated 18 pt fallback.
   - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
     fidelity before marking the slide-9 schema as resolved.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
