@@ -31,20 +31,30 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryReadBuiltInTableStyleTextColor(XElement table, int rowIndex, PptxTheme theme, out RgbColor color)
+    private static TableCellTextStyle ReadBuiltInTableStyleTextStyle(XElement table, int rowIndex, int columnIndex, PptxTheme theme)
     {
         XElement? tableProperties = table.Element(DrawingNamespace + "tblPr");
+        bool bold = false;
+        RgbColor? color = null;
         if (TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
             string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
             rowIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstRow") &&
-            theme.TryResolveColor("lt1", out color))
+            theme.TryResolveColor("lt1", out RgbColor firstRowColor))
         {
-            return true;
+            color = firstRowColor;
+            bold = true;
         }
 
-        color = default;
-        return false;
+        if (TryReadBuiltInTableStyle(table, out style) &&
+            string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
+            columnIndex == 0 &&
+            ParseOptionalBoolAttribute(tableProperties, "firstCol"))
+        {
+            bold = true;
+        }
+
+        return new TableCellTextStyle(color, bold);
     }
 
     private static bool TryReadBuiltInTableStyle(XElement table, out BuiltInTableStyle style)
@@ -76,4 +86,6 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct BuiltInTableStyle(string Name, string Accent);
+
+    private readonly record struct TableCellTextStyle(RgbColor? Color, bool Bold);
 }

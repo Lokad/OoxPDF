@@ -4139,7 +4139,7 @@ internal static class PptxTests
                       <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="1828800"/></p:xfrm>
                       <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
                         <a:tbl>
-                          <a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
+                          <a:tblPr firstRow="1" firstCol="1" bandRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
                           <a:tblGrid><a:gridCol w="1371600"/><a:gridCol w="1371600"/></a:tblGrid>
                           <a:tr h="914400">
                             <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>H1</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>

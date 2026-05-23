@@ -689,6 +689,8 @@ PPTX table style targets from the table composite port:
   formatting layers.
 - Medium Style 2 built-in table styles now resolve all accent variants from the `pptx-renderer` predefined
   style map, not only Accent 1. A public synthetic lock covers Accent 6 header and banded-row fills.
+- Medium Style 2 table text formatting now carries conditional first-row and first-column bold through
+  the table text-run path, alongside the existing first-row light text color.
 - Apply table style fills/borders before explicit cell overrides, matching Office draw order.
 - Add a focused synthetic table style ladder before tightening `pptx-ladder-10-composite-table-port`.
 

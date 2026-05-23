@@ -137,10 +137,8 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
-                RgbColor? tableStyleTextColor = TryReadBuiltInTableStyleTextColor(table, rowIndex, context.Theme, out RgbColor textColor)
-                    ? textColor
-                    : null;
-                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, context.Theme, textRuns, tableStyleTextColor);
+                TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
+                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, context.Theme, textRuns, tableStyleTextStyle);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -362,7 +360,7 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextRuns(XElement cell, double x, double y, double width, double height, PptxTheme theme, List<TextRun> runs, RgbColor? tableStyleTextColor = null)
+    private static void AddTableCellTextRuns(XElement cell, double x, double y, double width, double height, PptxTheme theme, List<TextRun> runs, TableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         if (textBody is null)
@@ -403,12 +401,12 @@ internal sealed partial class PptxRenderer
                 }
                 else
                 {
-                    color = tableStyleTextColor ?? new RgbColor(0, 0, 0);
+                    color = tableStyleTextStyle.Color ?? new RgbColor(0, 0, 0);
                 }
                 string? typeface = theme.ResolveTypeface((string?)runProperties?
                     .Element(DrawingNamespace + "latin")
                     ?.Attribute("typeface"));
-                bool bold = ParseOptionalBoolAttribute(runProperties, "b");
+                bool bold = tableStyleTextStyle.Bold || ParseOptionalBoolAttribute(runProperties, "b");
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i");
                 bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
                     && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
