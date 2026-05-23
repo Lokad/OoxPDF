@@ -4221,6 +4221,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
                 </Relationships>
                 """),
             ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
@@ -4233,6 +4234,10 @@ internal static class PptxTests
                     <p:graphicFrame>
                       <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
                       <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="5029200" y="914400"/><a:ext cx="2286000" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId2"/></a:graphicData></a:graphic>
                     </p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
@@ -4252,6 +4257,19 @@ internal static class PptxTests
                     </c:numLit></c:val></c:ser>
                   </c:barChart></c:plotArea></c:chart>
                 </c:chartSpace>
+                """),
+            ["ppt/charts/chart2.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:barChart>
+                    <c:varyColors val="1"/>
+                    <c:ser><c:val><c:numLit>
+                      <c:pt idx="0"><c:v>2</c:v></c:pt>
+                      <c:pt idx="1"><c:v>4</c:v></c:pt>
+                    </c:numLit></c:val></c:ser>
+                  </c:barChart></c:plotArea></c:chart>
+                </c:chartSpace>
                 """)
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -4262,6 +4280,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 rg", pdf);
+        TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_STATIC_FALLBACK" && d.Severity == OoxPdfSeverity.Info), "Rendered chart fallback should emit an informational diagnostic.");
     }
