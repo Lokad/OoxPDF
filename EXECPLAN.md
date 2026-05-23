@@ -1843,6 +1843,8 @@ paths, and ExecPlan references together.
     replacing fixed bar-width constants with the general category-band formula.
   - [x] Honor explicit chart-axis `a:ln/a:noFill` so value/category axes do not fall back to a dark default
     stroke when Office suppresses the axis line.
+  - [x] Expand category-axis label layout beyond the exact category slot so labels such as `Inventory` are
+    not visually clipped by an over-tight synthetic text box.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.

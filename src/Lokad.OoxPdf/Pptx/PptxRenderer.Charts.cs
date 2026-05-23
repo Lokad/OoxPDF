@@ -1112,9 +1112,9 @@ internal sealed partial class PptxRenderer
             else
             {
                 double slotWidth = plotBox.Width / labels.Count;
-                x = plotBox.X + slotWidth * i;
+                width = slotWidth * 1.35d;
+                x = plotBox.X + slotWidth * (i + 0.5d) - width / 2d;
                 y = plotBox.Y - height * 1.25d;
-                width = slotWidth;
                 alignment = TextAlignment.Center;
             }
 
