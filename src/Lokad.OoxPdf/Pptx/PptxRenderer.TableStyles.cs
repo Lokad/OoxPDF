@@ -37,6 +37,28 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal))
+        {
+            if (firstRow && rowIndex == 0 && theme.TryResolveColor("dk1", out RgbColor dark))
+            {
+                color = dark;
+                return true;
+            }
+
+            if ((firstCol && columnIndex == 0) ||
+                (lastCol && columnIndex == columnCount - 1))
+            {
+                color = ShadeColor(accent, 0.6d);
+                return true;
+            }
+
+            if (lastRow && rowIndex == rowCount - 1)
+            {
+                color = accent;
+                return true;
+            }
+        }
+
         bool bandRow = ParseOptionalBoolAttribute(tableProperties, "bandRow");
         int bodyRowIndex = rowIndex - (firstRow ? 1 : 0);
         if (string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal))
@@ -60,6 +82,14 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal))
+        {
+            color = bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0
+                ? ShadeColor(accent, 0.4d)
+                : ShadeColor(accent, 0.2d);
+            return true;
+        }
+
         color = default;
         return false;
     }
@@ -71,7 +101,8 @@ internal sealed partial class PptxRenderer
         RgbColor? color = null;
         if (TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
             (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
-                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal)) &&
+                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) ||
+                string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
             rowIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstRow") &&
             theme.TryResolveColor("lt1", out RgbColor firstRowColor))
@@ -82,7 +113,8 @@ internal sealed partial class PptxRenderer
 
         if (TryReadBuiltInTableStyle(table, out style) &&
             (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
-                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal)) &&
+                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) ||
+                string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
             columnIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstCol"))
         {
@@ -110,6 +142,13 @@ internal sealed partial class PptxRenderer
             ["{D27102A9-8310-4765-A935-A1911B00CA55}"] = new("Light-Style-1", "accent4"),
             ["{5FD0F851-EC5A-4D38-B0AD-8093EC10F338}"] = new("Light-Style-1", "accent5"),
             ["{68D230F3-CF80-4859-8CE7-A43EE81993B5}"] = new("Light-Style-1", "accent6"),
+            ["{E8034E78-7F5D-4C2E-B375-FC64B27BC917}"] = new("Dark-Style-1", "dk1"),
+            ["{125E5076-3810-47DD-B79F-674D7AD40C01}"] = new("Dark-Style-1", "accent1"),
+            ["{37CE84F3-28C3-443E-9E96-99CF82512B78}"] = new("Dark-Style-1", "accent2"),
+            ["{D03447BB-5D67-496B-8E87-E561075AD55C}"] = new("Dark-Style-1", "accent3"),
+            ["{E929F9F4-4A8F-4326-A1B4-22849713DDAB}"] = new("Dark-Style-1", "accent4"),
+            ["{8FD4443E-F989-4FC4-A0C8-D5A2AF1F390B}"] = new("Dark-Style-1", "accent5"),
+            ["{AF606853-7671-496A-8E4F-DF71F8EC918B}"] = new("Dark-Style-1", "accent6"),
             ["{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}"] = new("Medium-Style-2", "tx1"),
             ["{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"] = new("Medium-Style-2", "accent1"),
             ["{21E4AEA4-8DFA-4A89-87EB-49C32662AFE0}"] = new("Medium-Style-2", "accent2"),
@@ -125,6 +164,14 @@ internal sealed partial class PptxRenderer
             ToByte(color.Red + (255d - color.Red) * tint),
             ToByte(color.Green + (255d - color.Green) * tint),
             ToByte(color.Blue + (255d - color.Blue) * tint));
+    }
+
+    private static RgbColor ShadeColor(RgbColor color, double shade)
+    {
+        return new RgbColor(
+            ToByte(color.Red * shade),
+            ToByte(color.Green * shade),
+            ToByte(color.Blue * shade));
     }
 
     private readonly record struct BuiltInTableStyle(string Name, string Accent);

@@ -696,6 +696,9 @@ PPTX table style targets from the table composite port:
 - Light Style 1 built-in table styles now resolve all accent variants from the `pptx-renderer` predefined
   style map. First-row accent fills, first-row/first-column bold, light first-row text, and translucent
   banded-row fills are covered by the public table-style synthetic lock.
+- Dark Style 1 built-in table styles now resolve all accent variants from the `pptx-renderer` predefined
+  style map. Dark first-row fills, shaded accent body/band/column fills, and conditional bold/text color
+  are covered by the same public table-style synthetic lock.
 - Apply table style fills/borders before explicit cell overrides, matching Office draw order.
 - Add a focused synthetic table style ladder before tightening `pptx-ladder-10-composite-table-port`.
 
