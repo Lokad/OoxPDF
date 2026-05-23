@@ -38,6 +38,31 @@ internal sealed class PdfEmbeddedFont
         return new PdfEmbeddedFont(font, "LOKAD+" + SanitizeName(font.FamilyName) + "-" + fontHash, unicodeByCid);
     }
 
+    public static PdfEmbeddedFont Merge(IEnumerable<PdfEmbeddedFont> fonts)
+    {
+        PdfEmbeddedFont[] items = fonts.ToArray();
+        if (items.Length == 0)
+        {
+            throw new ArgumentException("At least one font is required.", nameof(fonts));
+        }
+
+        if (items.Length == 1)
+        {
+            return items[0];
+        }
+
+        var unicodeByCid = new SortedDictionary<ushort, int>();
+        foreach (PdfEmbeddedFont font in items)
+        {
+            foreach ((ushort cid, int codePoint) in font.UnicodeByCid)
+            {
+                unicodeByCid[cid] = codePoint;
+            }
+        }
+
+        return new PdfEmbeddedFont(items[0].Font, items[0].BaseFontName, unicodeByCid);
+    }
+
     public string BuildToUnicodeCMap()
     {
         var builder = new StringBuilder();

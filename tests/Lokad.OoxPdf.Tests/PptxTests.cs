@@ -4516,7 +4516,7 @@ internal static class PptxTests
         TestAssert.Contains("531.352 418.454 m", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
-        TestAssert.Contains("<0008>] TJ", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(collector.Diagnostics.Count(d => d.Id == "PPTX_CHART_STATIC_FALLBACK") == 2, "Expected static fallbacks for both line and pie charts.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line and pie chart fallbacks should not emit unsupported chart diagnostics.");
     }

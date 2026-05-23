@@ -18,7 +18,8 @@ internal sealed class PdfDocumentWriter
 
         List<PdfEmbeddedFont> fonts = pages
             .SelectMany(p => p.Fonts.Select(f => f.Font))
-            .DistinctBy(f => f.ResourceKey)
+            .GroupBy(f => f.ResourceKey, StringComparer.Ordinal)
+            .Select(PdfEmbeddedFont.Merge)
             .ToList();
         List<PdfImageXObject> images = pages
             .SelectMany(p => p.Images.Select(i => i.Image))

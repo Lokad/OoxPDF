@@ -2079,6 +2079,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - [ ] Audit current PDF generation patterns against Office reference PDFs: text grouping, text matrices,
   clipping regions, image masks, transparency state, path construction, stroke/fill order, resource
   naming/reuse, and page content stream organization.
+- [x] PDF font resource emission now merges ToUnicode coverage for repeated embedded-font resources, so
+  independently rendered chart/table/slide text cannot lose glyph mappings when they share the same base
+  font resource key.
 - [ ] Improve PPTX text-line emission toward Office-like text objects: PPTX now emits positioned `TJ` arrays
   even when a line has no explicit kerning/tracking adjustment, matching Office's common text-object pattern
   without changing raster output. Continue by reducing unnecessary run splitting around spaces when a line
