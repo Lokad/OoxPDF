@@ -1943,6 +1943,9 @@ paths, and ExecPlan references together.
     primary and secondary column groups, patterned secondary series, compact tick labels, and overlay
     connectors. The fixture generator now closes embedded Excel workbooks after editing chart data so it
     does not leave orphaned Excel instances.
+  - [x] Honor hidden chart gridline styles: `c:majorGridlines/c:spPr/a:ln/a:noFill` and the corresponding
+    minor gridline form no longer draw gridlines. This tightens the compact stacked secondary-axis probe
+    to MAE `0.905004` and changed-pixel ratio threshold 16 `0.012336`.
   - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
     label boxes from tick text instead of a fixed fraction of the plot width.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its

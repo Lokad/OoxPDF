@@ -1715,12 +1715,24 @@ internal sealed partial class PptxRenderer
 
     private static bool HasMajorGridlines(XDocument chartXml)
     {
-        return chartXml.Descendants(ChartNamespace + "majorGridlines").Any();
+        return chartXml
+            .Descendants(ChartNamespace + "majorGridlines")
+            .Any(IsChartGridlineVisible);
     }
 
     private static bool HasMinorGridlines(XDocument chartXml)
     {
-        return chartXml.Descendants(ChartNamespace + "minorGridlines").Any();
+        return chartXml
+            .Descendants(ChartNamespace + "minorGridlines")
+            .Any(IsChartGridlineVisible);
+    }
+
+    private static bool IsChartGridlineVisible(XElement gridlines)
+    {
+        XElement? line = gridlines
+            .Element(ChartNamespace + "spPr")
+            ?.Element(DrawingNamespace + "ln");
+        return line?.Element(DrawingNamespace + "noFill") is null;
     }
 
     private static bool ReadChartVaryColors(XElement chartElement)
