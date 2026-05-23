@@ -128,6 +128,9 @@ High-priority actions:
 - [x] Port the `pptx-renderer` hyperlink color precedence rule:
   hyperlink runs without an explicit fill now use the theme `hlink` color before inherited shape/default
   colors. A synthetic theme-backed PPTX case locks the behavior.
+- [x] Port the first EA/CS font-family fallback rule:
+  run/default typeface resolution now considers `a:latin`, then `a:ea`, then `a:cs`, so runs that only
+  specify East Asian or complex-script fonts do not fall back to the generic Latin default.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases

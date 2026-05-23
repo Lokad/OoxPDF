@@ -1906,6 +1906,40 @@ internal static class PptxTests
         TestAssert.Contains("/F2 18 Tf", pdf);
     }
 
+    public static void PptxSyntheticTextBoxUsesEaFontWhenLatinMissing()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:ea typeface="Courier New"/></a:rPr><a:t>East Asian fallback</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextSpanLayoutSnapshot span = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .Single(candidate => candidate.Text.StartsWith("East", StringComparison.Ordinal));
+
+        TestAssert.Equal("Courier New", span.GlyphSpan.Typeface ?? string.Empty);
+    }
+
     public static void PptxSyntheticTextBoxUsesDistinctFontResourcesForStyles()
     {
         string fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

@@ -1544,10 +1544,7 @@ internal sealed partial class PptxRenderer
             color = new RgbColor(0, 0, 0);
         }
 
-        string? typeface = theme.ResolveTypeface((string?)(runProperties?
-            .Element(DrawingNamespace + "latin") ??
-            defaultRunProperties?.Element(DrawingNamespace + "latin"))
-            ?.Attribute("typeface"));
+        string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
         bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
             (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
@@ -1579,6 +1576,19 @@ internal sealed partial class PptxRenderer
     private static bool HasHyperlinkClick(XElement? runProperties)
     {
         return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
+    }
+
+    private static string? ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)
+    {
+        return theme.ResolveTypeface(ReadTypeface(runProperties) ?? ReadTypeface(defaultRunProperties));
+    }
+
+    private static string? ReadTypeface(XElement? runProperties)
+    {
+        return (string?)(runProperties?.Element(DrawingNamespace + "latin") ??
+            runProperties?.Element(DrawingNamespace + "ea") ??
+            runProperties?.Element(DrawingNamespace + "cs"))
+            ?.Attribute("typeface");
     }
 
     private static bool IsKerningEnabled(XElement? runProperties, XElement? defaultRunProperties, double fontSize)
@@ -2277,7 +2287,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties, double textWidth)
+    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties, PptxTheme theme, double textWidth)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
@@ -2324,9 +2334,7 @@ internal sealed partial class PptxRenderer
 
                 XElement? runProperties = child.Element(DrawingNamespace + "rPr");
                 double fontSize = ReadFontSize(runProperties, defaultRunProperties);
-                string? typeface = (string?)(runProperties?.Element(DrawingNamespace + "latin") ??
-                    defaultRunProperties?.Element(DrawingNamespace + "latin"))
-                    ?.Attribute("typeface");
+                string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
                 bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
                     ParseOptionalBoolAttribute(defaultRunProperties, "b");
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
