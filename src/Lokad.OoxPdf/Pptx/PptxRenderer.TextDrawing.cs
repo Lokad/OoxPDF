@@ -43,14 +43,14 @@ internal sealed partial class PptxRenderer
         return glyphRuns;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, string resourcePrefix = "F")
     {
         if (textRuns.Count == 0)
         {
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, resourcePrefix);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }
@@ -71,7 +71,7 @@ internal sealed partial class PptxRenderer
         return renderedFonts.Resources;
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, string resourcePrefix = "F")
     {
         if (textRuns.Count == 0)
         {
@@ -95,7 +95,7 @@ internal sealed partial class PptxRenderer
 
             OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
             PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
-            string resourceName = "F" + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
+            string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
         }

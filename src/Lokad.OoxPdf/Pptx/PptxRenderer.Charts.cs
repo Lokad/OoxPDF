@@ -525,7 +525,7 @@ internal sealed partial class PptxRenderer
             RotationCenterY: 0d,
             FlipHorizontal: false,
             FlipVertical: false);
-        return RenderTextRuns([run], graphics);
+        return RenderTextRuns([run], graphics, "CT");
     }
 
     private static string? ReadChartTitleText(XDocument chartXml)
@@ -712,7 +712,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false));
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CL");
     }
 
     private static bool IsOoxmlTrue(string? value)
@@ -802,7 +802,7 @@ internal sealed partial class PptxRenderer
             angle += sweep;
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CP");
     }
 
     private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents, bool horizontalBars)
@@ -871,7 +871,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CBD");
     }
 
     private static IReadOnlyList<PdfFontResource> RenderLineDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents)
@@ -910,7 +910,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CLD");
     }
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment)
@@ -1111,7 +1111,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false));
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CCA");
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? valueAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false)
@@ -1181,7 +1181,7 @@ internal sealed partial class PptxRenderer
                 FlipVertical: false));
         }
 
-        return RenderTextRuns(runs, graphics);
+        return RenderTextRuns(runs, graphics, "CVA");
     }
 
     private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, ChartValueExtents fallback)
