@@ -1868,7 +1868,7 @@ internal sealed partial class PptxRenderer
 
         double normalAdvance = fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
         return lineSpacing.IsExplicit
-            ? normalAdvance * lineSpacing.Value
+            ? fontSize * lineSpacing.Value
             : normalAdvance;
     }
 
