@@ -1751,6 +1751,8 @@ paths, and ExecPlan references together.
   for Light Style 1, Medium Style 2, and Dark Style 1 synthetic coverage.
 - [x] Supported built-in PPTX table styles now apply last-row and last-column conditional text styling
   instead of limiting conditional bold/color handling to first rows and first columns.
+- [x] PPTX table conditional flags now resolve both attribute form (`firstRow="1"`) and child element form
+  (`<a:bandCol/>`), matching the broader flag handling observed in `pptx-renderer`.
 - [ ] Ladder 10 remaining subcases should isolate broader table style variants.
 - [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series
   styles, stacked/grouped variants, and chart diagnostics.

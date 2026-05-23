@@ -219,11 +219,27 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < rowTops.Count; i++)
         {
             bool firstRowBoundary = i == 1 &&
-                table.Element(DrawingNamespace + "tblPr")?.Attribute("firstRow")?.Value == "1" &&
+                ReadTablePropertyFlag(table.Element(DrawingNamespace + "tblPr"), "firstRow") &&
                 rows.Count > 1;
             graphics.SetLineWidth(firstRowBoundary ? 3d : 1d);
             StrokeDefaultHorizontalGridLine(graphics, x, width, rowTops[i], columnWidths, skippedHorizontalGridSegments, i);
         }
+    }
+
+    private static bool ReadTablePropertyFlag(XElement? tableProperties, string name)
+    {
+        if (tableProperties is null)
+        {
+            return false;
+        }
+
+        if (tableProperties.Attribute(name) is { } attribute)
+        {
+            return attribute.Value == "1" ||
+                attribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return tableProperties.Element(DrawingNamespace + name) is not null;
     }
 
     private static void StrokeDefaultVerticalGridLine(PdfGraphicsBuilder graphics, double x, double yTop, double height, IReadOnlyList<double> rowTops, bool[,] skippedSegments, int boundaryIndex)

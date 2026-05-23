@@ -15,11 +15,11 @@ internal sealed partial class PptxRenderer
         }
 
         XElement? tableProperties = table.Element(DrawingNamespace + "tblPr");
-        bool firstRow = ParseOptionalBoolAttribute(tableProperties, "firstRow");
-        bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow");
-        bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol");
-        bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol");
-        bool bandCol = ParseOptionalBoolAttribute(tableProperties, "bandCol");
+        bool firstRow = ReadTablePropertyFlag(tableProperties, "firstRow");
+        bool lastRow = ReadTablePropertyFlag(tableProperties, "lastRow");
+        bool firstCol = ReadTablePropertyFlag(tableProperties, "firstCol");
+        bool lastCol = ReadTablePropertyFlag(tableProperties, "lastCol");
+        bool bandCol = ReadTablePropertyFlag(tableProperties, "bandCol");
         int bodyColumnIndex = columnIndex - (firstCol ? 1 : 0);
         if (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
             ((firstRow && rowIndex == 0) ||
@@ -61,7 +61,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        bool bandRow = ParseOptionalBoolAttribute(tableProperties, "bandRow");
+        bool bandRow = ReadTablePropertyFlag(tableProperties, "bandRow");
         int bodyRowIndex = rowIndex - (firstRow ? 1 : 0);
         if (string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal))
         {
@@ -116,15 +116,15 @@ internal sealed partial class PptxRenderer
             (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
                 string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) ||
                 string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal));
-        bool firstRow = ParseOptionalBoolAttribute(tableProperties, "firstRow") && rowIndex == 0;
-        bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol") && columnIndex == 0;
-        bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow") &&
+        bool firstRow = ReadTablePropertyFlag(tableProperties, "firstRow") && rowIndex == 0;
+        bool firstCol = ReadTablePropertyFlag(tableProperties, "firstCol") && columnIndex == 0;
+        bool lastRow = ReadTablePropertyFlag(tableProperties, "lastRow") &&
             rowIndex == table.Elements(DrawingNamespace + "tr").Count() - 1;
         int columnCount = table
             .Element(DrawingNamespace + "tblGrid")
             ?.Elements(DrawingNamespace + "gridCol")
             .Count() ?? 0;
-        bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol") &&
+        bool lastCol = ReadTablePropertyFlag(tableProperties, "lastCol") &&
             columnCount > 0 &&
             columnIndex == columnCount - 1;
         if (supportedStyle &&
