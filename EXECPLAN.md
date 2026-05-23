@@ -603,6 +603,10 @@ Composite oracle family map:
 - Chart series fill resolution now uses the shared PPTX solid-color resolver, so direct `srgbClr`,
   `schemeClr`, color transforms, and fill alpha flow through the same theme-aware path as shapes/tables.
   Remaining chart color work is chart style/color-style parts and defaults inherited from Office templates.
+- A broad document-theme palette substitution for all chart families was rejected by the public
+  `pptx-charts` gates because area and bubble ports moved in the wrong direction. The next color slice
+  should be a first-class chart palette resolver that reads chart style/color parts, then falls back to
+  document theme accents or legacy Office palette defaults only when those parts are absent.
 - Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
