@@ -1841,6 +1841,8 @@ paths, and ExecPlan references together.
     grouped charts and their overlay arrows/labels keep Office-equivalent placement.
   - [x] Port the `pptx-renderer`/OOXML `gapWidth` bar-sizing rule for clustered and stacked bar charts,
     replacing fixed bar-width constants with the general category-band formula.
+  - [x] Honor explicit chart-axis `a:ln/a:noFill` so value/category axes do not fall back to a dark default
+    stroke when Office suppresses the axis line.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.

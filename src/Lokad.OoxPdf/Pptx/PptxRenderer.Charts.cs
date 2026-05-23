@@ -1562,6 +1562,11 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
     {
         XElement? shapeProperties = axis?.Element(ChartNamespace + "spPr");
+        if (shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return new ChartSeriesStroke(new RgbColor(0, 0, 0), 0d, 0d);
+        }
+
         return shapeProperties is not null &&
             TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
                 ? new ChartSeriesStroke(color, alpha, width)
@@ -1666,18 +1671,30 @@ internal sealed partial class PptxRenderer
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
         if (axesStyle.CategoryAxisVisible)
         {
-            SetChartStroke(graphics, horizontalBars ? valueAxisStroke : categoryAxisStroke);
-            graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
+            ChartSeriesStroke stroke = horizontalBars ? valueAxisStroke : categoryAxisStroke;
+            if (stroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, stroke);
+                graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
+            }
         }
 
         if (axesStyle.ValueAxisVisible)
         {
-            SetChartStroke(graphics, horizontalBars ? categoryAxisStroke : valueAxisStroke);
-            graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            ChartSeriesStroke stroke = horizontalBars ? categoryAxisStroke : valueAxisStroke;
+            if (stroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, stroke);
+                graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            }
+
             if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
             {
-                SetChartStroke(graphics, secondaryValueAxisStroke);
-                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                if (secondaryValueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, secondaryValueAxisStroke);
+                    graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                }
             }
         }
 
@@ -2065,18 +2082,28 @@ internal sealed partial class PptxRenderer
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
         if (axesStyle.CategoryAxisVisible)
         {
-            SetChartStroke(graphics, categoryAxisStroke);
-            graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+            if (categoryAxisStroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, categoryAxisStroke);
+                graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+            }
         }
 
         if (axesStyle.ValueAxisVisible)
         {
-            SetChartStroke(graphics, valueAxisStroke);
-            graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            if (valueAxisStroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, valueAxisStroke);
+                graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            }
+
             if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
             {
-                SetChartStroke(graphics, secondaryValueAxisStroke);
-                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                if (secondaryValueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, secondaryValueAxisStroke);
+                    graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                }
             }
         }
 
