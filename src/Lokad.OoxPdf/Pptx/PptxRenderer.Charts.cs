@@ -78,6 +78,7 @@ internal sealed partial class PptxRenderer
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars));
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills)));
+                fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barChart, barSeries, valueExtents, horizontalBars));
                 return true;
             }
         }
@@ -663,6 +664,107 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics);
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents, bool horizontalBars)
+    {
+        if (!ShouldRenderValueDataLabels(chartElement) || series.Count == 0)
+        {
+            return [];
+        }
+
+        int categoryCount = Math.Max(1, series.Max(values => values.Count));
+        double range = Math.Max(1d, extents.Max - extents.Min);
+        double zeroOffset = (0d - extents.Min) / range;
+        double zeroX = plotBox.X + zeroOffset * plotBox.Width;
+        double zeroY = plotBox.Y + zeroOffset * plotBox.Height;
+        double fontSize = 8.5d;
+        double labelHeight = fontSize * 1.35d;
+        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        var runs = new List<TextRun>();
+        if (horizontalBars)
+        {
+            double categoryHeight = plotBox.Height / categoryCount;
+            double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
+            double labelWidth = Math.Max(18d, plotBox.Width * 0.1d);
+            for (int category = 0; category < categoryCount; category++)
+            {
+                double categoryY = plotBox.Y + plotBox.Height - (category + 1) * categoryHeight + categoryHeight * 0.09d;
+                for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+                {
+                    IReadOnlyList<double> values = series[seriesIndex];
+                    if (category >= values.Count)
+                    {
+                        continue;
+                    }
+
+                    double value = values[category];
+                    double barWidth = Math.Abs(value) / range * plotBox.Width;
+                    double x = value >= 0d ? zeroX + barWidth + 2d : zeroX - barWidth - labelWidth - 2d;
+                    double y = categoryY + seriesIndex * barSlot + barSlot * 0.43d - labelHeight / 2d;
+                    runs.Add(CreateChartLabelRun(FormatChartAxisLabel(value), x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left));
+                }
+            }
+        }
+        else
+        {
+            double categoryWidth = plotBox.Width / categoryCount;
+            double barSlot = categoryWidth * 0.82d / Math.Max(1, series.Count);
+            for (int category = 0; category < categoryCount; category++)
+            {
+                double categoryX = plotBox.X + category * categoryWidth + categoryWidth * 0.09d;
+                for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+                {
+                    IReadOnlyList<double> values = series[seriesIndex];
+                    if (category >= values.Count)
+                    {
+                        continue;
+                    }
+
+                    double value = values[category];
+                    double barHeight = Math.Abs(value) / range * plotBox.Height;
+                    double x = categoryX + seriesIndex * barSlot;
+                    double y = value >= 0d ? zeroY + barHeight + 1d : zeroY - barHeight - labelHeight - 1d;
+                    runs.Add(CreateChartLabelRun(FormatChartAxisLabel(value), x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center));
+                }
+            }
+        }
+
+        return RenderTextRuns(runs, graphics);
+    }
+
+    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment)
+    {
+        return new TextRun(
+            text,
+            x,
+            y,
+            Math.Max(1d, width),
+            height,
+            plotBox.X,
+            plotBox.Y,
+            plotBox.Width,
+            plotBox.Height,
+            fontSize,
+            0d,
+            0d,
+            color,
+            1d,
+            null,
+            Bold: false,
+            Italic: false,
+            Underline: false,
+            Strike: false,
+            KerningEnabled: true,
+            alignment,
+            FontFamily: null,
+            RotationDegrees: 0d,
+            RotationCenterX: 0d,
+            RotationCenterY: 0d,
+            FlipHorizontal: false,
+            FlipVertical: false);
     }
 
     private static bool ShouldRenderValueDataLabels(XElement chartElement)
