@@ -1853,6 +1853,8 @@ paths, and ExecPlan references together.
     and no explicit title node is present.
   - [x] Port the `pptx-renderer` nice-axis maximum rule for axes without explicit `c:max`, so max data values
     such as `45` expand to an Office-like `50` axis cap.
+  - [x] Use document theme accent colors for default/vary-colors bar chart fills instead of a hard-coded
+    Excel palette; the public horizontal-bar rung now matches Office's category colors.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
