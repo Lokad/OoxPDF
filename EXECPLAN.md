@@ -1743,6 +1743,8 @@ paths, and ExecPlan references together.
   changed16 `0.002494`.
 - [x] Supported built-in PPTX table styles now honor `bandCol` conditional fills in addition to `bandRow`
   for Light Style 1, Medium Style 2, and Dark Style 1 synthetic coverage.
+- [x] Supported built-in PPTX table styles now apply last-row and last-column conditional text styling
+  instead of limiting conditional bold/color handling to first rows and first columns.
 - [ ] Ladder 10 remaining subcases should isolate broader table style variants.
 - [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series
   styles, stacked/grouped variants, and chart diagnostics.

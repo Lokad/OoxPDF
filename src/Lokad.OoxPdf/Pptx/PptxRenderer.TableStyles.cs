@@ -112,26 +112,39 @@ internal sealed partial class PptxRenderer
         XElement? tableProperties = table.Element(DrawingNamespace + "tblPr");
         bool bold = false;
         RgbColor? color = null;
-        if (TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
+        bool supportedStyle = TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
             (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
                 string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) ||
-                string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
-            rowIndex == 0 &&
-            ParseOptionalBoolAttribute(tableProperties, "firstRow") &&
+                string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal));
+        bool firstRow = ParseOptionalBoolAttribute(tableProperties, "firstRow") && rowIndex == 0;
+        bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol") && columnIndex == 0;
+        bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow") &&
+            rowIndex == table.Elements(DrawingNamespace + "tr").Count() - 1;
+        int columnCount = table
+            .Element(DrawingNamespace + "tblGrid")
+            ?.Elements(DrawingNamespace + "gridCol")
+            .Count() ?? 0;
+        bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol") &&
+            columnCount > 0 &&
+            columnIndex == columnCount - 1;
+        if (supportedStyle &&
+            firstRow &&
             theme.TryResolveColor("lt1", out RgbColor firstRowColor))
         {
             color = firstRowColor;
             bold = true;
         }
 
-        if (TryReadBuiltInTableStyle(table, out style) &&
-            (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
-                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) ||
-                string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
-            columnIndex == 0 &&
-            ParseOptionalBoolAttribute(tableProperties, "firstCol"))
+        if (supportedStyle && (firstCol || lastRow || lastCol))
         {
             bold = true;
+            if ((string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
+                    string.Equals(style.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
+                (lastRow || lastCol) &&
+                theme.TryResolveColor("lt1", out RgbColor conditionalColor))
+            {
+                color = conditionalColor;
+            }
         }
 
         return new TableCellTextStyle(color, bold);
