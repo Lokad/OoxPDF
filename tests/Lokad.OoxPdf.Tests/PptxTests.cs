@@ -4152,6 +4152,23 @@ internal static class PptxTests
                         </a:tbl>
                       </a:graphicData></a:graphic>
                     </p:graphicFrame>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="4114800" y="914400"/><a:ext cx="1828800" cy="1828800"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                        <a:tbl>
+                          <a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{68D230F3-CF80-4859-8CE7-A43EE81993B5}</a:tableStyleId></a:tblPr>
+                          <a:tblGrid><a:gridCol w="914400"/><a:gridCol w="914400"/></a:tblGrid>
+                          <a:tr h="914400">
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>L1</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>L2</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                          </a:tr>
+                          <a:tr h="914400">
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>L3</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                            <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1400"/><a:t>L4</a:t></a:r></a:p></a:txBody><a:tcPr/></a:tc>
+                          </a:tr>
+                        </a:tbl>
+                      </a:graphicData></a:graphic>
+                    </p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """)
@@ -4164,6 +4181,7 @@ internal static class PptxTests
         TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
         TestAssert.Contains("0.522 0.639 0.761 rg", pdf);
         TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
+        TestAssert.Contains("/GS40000F100000S gs", pdf);
     }
 
     public static void PptxSyntheticTableWrapsCellTextToColumnWidth()

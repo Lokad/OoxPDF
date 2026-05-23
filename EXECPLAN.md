@@ -693,6 +693,9 @@ PPTX table style targets from the table composite port:
   the table text-run path, alongside the existing first-row light text color.
 - Medium Style 2 table fills now honor first-column, last-column, and last-row conditional accent fills
   using row/column context, while explicit cell fills still override style fills.
+- Light Style 1 built-in table styles now resolve all accent variants from the `pptx-renderer` predefined
+  style map. First-row accent fills, first-row/first-column bold, light first-row text, and translucent
+  banded-row fills are covered by the public table-style synthetic lock.
 - Apply table style fills/borders before explicit cell overrides, matching Office draw order.
 - Add a focused synthetic table style ladder before tightening `pptx-ladder-10-composite-table-port`.
 

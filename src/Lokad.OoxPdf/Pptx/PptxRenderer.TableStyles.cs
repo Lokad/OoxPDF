@@ -8,7 +8,6 @@ internal sealed partial class PptxRenderer
     {
         alpha = 1d;
         if (!TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) ||
-            !string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
             !theme.TryResolveColor(style.Accent, out RgbColor accent))
         {
             color = default;
@@ -20,10 +19,19 @@ internal sealed partial class PptxRenderer
         bool lastRow = ParseOptionalBoolAttribute(tableProperties, "lastRow");
         bool firstCol = ParseOptionalBoolAttribute(tableProperties, "firstCol");
         bool lastCol = ParseOptionalBoolAttribute(tableProperties, "lastCol");
-        if ((firstRow && rowIndex == 0) ||
-            (lastRow && rowIndex == rowCount - 1) ||
-            (firstCol && columnIndex == 0) ||
-            (lastCol && columnIndex == columnCount - 1))
+        if (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
+            ((firstRow && rowIndex == 0) ||
+                (lastRow && rowIndex == rowCount - 1) ||
+                (firstCol && columnIndex == 0) ||
+                (lastCol && columnIndex == columnCount - 1)))
+        {
+            color = accent;
+            return true;
+        }
+
+        if (string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal) &&
+            firstRow &&
+            rowIndex == 0)
         {
             color = accent;
             return true;
@@ -31,10 +39,29 @@ internal sealed partial class PptxRenderer
 
         bool bandRow = ParseOptionalBoolAttribute(tableProperties, "bandRow");
         int bodyRowIndex = rowIndex - (firstRow ? 1 : 0);
-        color = bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0
-            ? TintColor(accent, 0.4d)
-            : TintColor(accent, 0.2d);
-        return true;
+        if (string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal))
+        {
+            if (bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0)
+            {
+                color = accent;
+                alpha = 0.4d;
+                return true;
+            }
+
+            color = default;
+            return false;
+        }
+
+        if (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal))
+        {
+            color = bandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0
+                ? TintColor(accent, 0.4d)
+                : TintColor(accent, 0.2d);
+            return true;
+        }
+
+        color = default;
+        return false;
     }
 
     private static TableCellTextStyle ReadBuiltInTableStyleTextStyle(XElement table, int rowIndex, int columnIndex, PptxTheme theme)
@@ -43,7 +70,8 @@ internal sealed partial class PptxRenderer
         bool bold = false;
         RgbColor? color = null;
         if (TryReadBuiltInTableStyle(table, out BuiltInTableStyle style) &&
-            string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
+            (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
+                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal)) &&
             rowIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstRow") &&
             theme.TryResolveColor("lt1", out RgbColor firstRowColor))
@@ -53,7 +81,8 @@ internal sealed partial class PptxRenderer
         }
 
         if (TryReadBuiltInTableStyle(table, out style) &&
-            string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) &&
+            (string.Equals(style.Name, "Medium-Style-2", StringComparison.Ordinal) ||
+                string.Equals(style.Name, "Light-Style-1", StringComparison.Ordinal)) &&
             columnIndex == 0 &&
             ParseOptionalBoolAttribute(tableProperties, "firstCol"))
         {
@@ -74,6 +103,13 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyDictionary<string, BuiltInTableStyle> BuiltInTableStyles { get; } =
         new Dictionary<string, BuiltInTableStyle>(StringComparer.OrdinalIgnoreCase)
         {
+            ["{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}"] = new("Light-Style-1", "tx1"),
+            ["{3B4B98B0-60AC-42C2-AFA5-B58CD77FA1E5}"] = new("Light-Style-1", "accent1"),
+            ["{0E3FDE45-AF77-4B5C-9715-49D594BDF05E}"] = new("Light-Style-1", "accent2"),
+            ["{C083E6E3-FA7D-4D7B-A595-EF9225AFEA82}"] = new("Light-Style-1", "accent3"),
+            ["{D27102A9-8310-4765-A935-A1911B00CA55}"] = new("Light-Style-1", "accent4"),
+            ["{5FD0F851-EC5A-4D38-B0AD-8093EC10F338}"] = new("Light-Style-1", "accent5"),
+            ["{68D230F3-CF80-4859-8CE7-A43EE81993B5}"] = new("Light-Style-1", "accent6"),
             ["{073A0DAA-6AF3-43AB-8588-CEC1D06C72B9}"] = new("Medium-Style-2", "tx1"),
             ["{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"] = new("Medium-Style-2", "accent1"),
             ["{21E4AEA4-8DFA-4A89-87EB-49C32662AFE0}"] = new("Medium-Style-2", "accent2"),
