@@ -11,47 +11,78 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderCharts(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
         var fonts = new List<PdfFontResource>();
-        foreach (XElement frame in context.SlideXml.Descendants(PresentationNamespace + "graphicFrame"))
+        foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            XElement? graphicData = frame
-                .Element(DrawingNamespace + "graphic")
-                ?.Element(DrawingNamespace + "graphicData");
-            if (graphicData?.Attribute("uri") is not { } uri ||
-                !uri.Value.Contains("drawingml/2006/chart", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
-            string? relationshipId = (string?)graphicData
-                .Element(ChartNamespace + "chart")
-                ?.Attribute(RelationshipsNamespace + "id");
-            if (bounds is null || relationshipId is null || !context.SlideRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
-            {
-                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
-                continue;
-            }
-
-            OoxPart? chartPart = context.Package.GetPart(relationship.ResolvedTarget);
-            if (chartPart is null)
-            {
-                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", relationship.ResolvedTarget, context.SlideNumber, "Ignored");
-                continue;
-            }
-
-            using Stream chartStream = chartPart.OpenRead();
-            XDocument chartXml = SafeXml.Load(chartStream);
-            if (TryRenderChartFallback(graphics, context.Document, context.Theme, bounds.Value, chartXml, fonts))
-            {
-                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, chartXml));
-                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_STATIC_FALLBACK", OoxPdfSeverity.Info, "PPTX chart was rendered with an approximate static chart fallback.", chartPart.Name, context.SlideNumber, "Static chart fallback");
-                continue;
-            }
-
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut chart cached numeric values have a static fallback.", chartPart.Name, context.SlideNumber, "Ignored");
+            RenderChartContainer(context, graphics, fonts, shapeTree, GroupTransform.Identity);
         }
 
         return fonts;
+    }
+
+    private static bool IsChartGraphicFrame(XElement frame)
+    {
+        XElement? graphicData = frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData");
+        return graphicData?.Attribute("uri") is { } uri &&
+            uri.Value.Contains("drawingml/2006/chart", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void RenderChartContainer(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PdfFontResource> fonts, XElement container, GroupTransform transform)
+    {
+        foreach (XElement child in container.Elements())
+        {
+            if (child.Name == PresentationNamespace + "graphicFrame")
+            {
+                RenderChartFrame(context, graphics, fonts, child, transform);
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "grpSp")
+            {
+                RenderChartContainer(context, graphics, fonts, child, transform.Combine(ReadGroupTransform(child)));
+            }
+        }
+    }
+
+    private static void RenderChartFrame(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PdfFontResource> fonts, XElement frame, GroupTransform transform)
+    {
+        ShapeBounds? rawBounds = ReadGraphicFrameBounds(frame);
+        ShapeBounds? bounds = rawBounds is { } value ? transform.Apply(value) : null;
+        XElement? graphicData = frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData");
+        if (graphicData?.Attribute("uri") is not { } uri ||
+            !uri.Value.Contains("drawingml/2006/chart", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        string? relationshipId = (string?)graphicData
+            .Element(ChartNamespace + "chart")
+            ?.Attribute(RelationshipsNamespace + "id");
+        if (bounds is null || relationshipId is null || !context.SlideRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        {
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
+            return;
+        }
+
+        OoxPart? chartPart = context.Package.GetPart(relationship.ResolvedTarget);
+        if (chartPart is null)
+        {
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", relationship.ResolvedTarget, context.SlideNumber, "Ignored");
+            return;
+        }
+
+        using Stream chartStream = chartPart.OpenRead();
+        XDocument chartXml = SafeXml.Load(chartStream);
+        if (TryRenderChartFallback(graphics, context.Document, context.Theme, bounds.Value, chartXml, fonts))
+        {
+            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, chartXml));
+            return;
+        }
+
+        EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPart.Name, context.SlideNumber, "Ignored");
     }
 
     private static bool TryRenderChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, List<PdfFontResource> fonts)

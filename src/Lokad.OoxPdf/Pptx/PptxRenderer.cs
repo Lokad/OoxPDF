@@ -56,6 +56,7 @@ internal sealed partial class PptxRenderer
             if (CanRenderSlideInOrder(context.SlideXml))
             {
                 var orderedImages = new List<PdfImageResource>();
+                var orderedChartFonts = new List<PdfFontResource>();
                 int imageIndex = 1;
                 IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
                 IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
@@ -64,10 +65,10 @@ internal sealed partial class PptxRenderer
                 DrawTextSpansWithFonts(inheritedTextSpans, graphics, renderedFonts.Fonts);
                 foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
                 {
-                    RenderOrderedShapeTextContainer(shapeTree, context, graphics, renderedFonts.Fonts, orderedImages, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
+                    RenderOrderedShapeTextContainer(shapeTree, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
                 }
 
-                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources, orderedImages, graphics.ExtGStates.ToArray()));
+                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray()));
                 continue;
             }
 

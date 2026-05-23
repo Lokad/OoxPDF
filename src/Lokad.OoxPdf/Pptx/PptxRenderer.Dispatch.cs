@@ -10,7 +10,7 @@ internal sealed partial class PptxRenderer
     {
         return !slideXml
             .Descendants(PresentationNamespace + "graphicFrame")
-            .Any(frame => !IsTableGraphicFrame(frame));
+            .Any(frame => !IsTableGraphicFrame(frame) && !IsChartGraphicFrame(frame));
     }
 
     private static void RenderOrderedShapeTextContainer(
@@ -19,6 +19,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         IReadOnlyDictionary<string, RenderedFont> fonts,
         List<PdfImageResource> images,
+        List<PdfFontResource> chartFonts,
         ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders)
@@ -86,8 +87,16 @@ internal sealed partial class PptxRenderer
 
             if (child.Name == PresentationNamespace + "graphicFrame")
             {
-                IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(context, child, graphics);
-                DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
+                if (IsTableGraphicFrame(child))
+                {
+                    IReadOnlyList<TextRun> tableTextRuns = RenderTableFrame(context, child, graphics);
+                    DrawTextRunsWithFonts(tableTextRuns, graphics, fonts);
+                }
+                else
+                {
+                    RenderChartFrame(context, graphics, chartFonts, child, transform);
+                }
+
                 continue;
             }
 
@@ -99,6 +108,7 @@ internal sealed partial class PptxRenderer
                     graphics,
                     fonts,
                     images,
+                    chartFonts,
                     ref imageIndex,
                     transform.Combine(ReadGroupTransform(child)),
                     renderPlaceholders);

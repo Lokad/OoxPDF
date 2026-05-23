@@ -420,8 +420,9 @@ High-priority actions:
   group transforms, connectors, arrows, dash/cap/join, and picture-fill clipping.
 - [ ] Port `pptx-renderer` image behavior: relationship resolution, crop/fill/stretch, alpha/soft masks,
   SVG or unsupported-image diagnostics, media caching, and reuse across slides.
-- [ ] Port `pptx-renderer` chart/SmartArt behavior as diagnostics-first features: prefer cached images when
-  present, report missing static fallbacks, and only add native chart drawing case by case.
+- [ ] Port `pptx-renderer` chart behavior as a first-class native renderer: parse a typed chart model for
+  series, axes, legends, labels, styles, and layouts; emit diagnostics only for unsupported chart features.
+- [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
 - [ ] Port `pptx-renderer` generated public visual-suite organization: normalized case names, grouped
@@ -469,9 +470,9 @@ Porting priorities:
 - [ ] Port broader shape/preset oracle families next, preserving Office-authored/generated public fixtures
   and adding PDF/raster inspection notes for every accepted gate.
 - [ ] Port layout-composition cases: master/layout placeholders, grouped transforms, z-order, image crop,
-  table placement, chart fallback, SmartArt fallback/diagnostics, and mixed slide content.
+  table placement, native chart rendering, SmartArt fallback/diagnostics, and mixed slide content.
 - [x] Add focused unit locks for PPTX shape stroke dash/cap/join, RGBA PNG soft masks, merged-table interior
-  grid suppression, and area/scatter/radar/doughnut chart static fallback recognition.
+  grid suppression, and area/scatter/radar/doughnut native chart recognition.
 - [x] Port the first test organization pattern: visual cases now have capability-family manifests and a
   family runner, matching the `pptx-renderer` idea of generated/oracle cases grouped by feature area.
 - [x] Port the first unit-runner organization pattern: unit tests now come from a capability catalog and can
@@ -546,8 +547,8 @@ Current `pptx-renderer` parity tracking:
     `pptx-ladder-11-chart-radar-2series-port`, `pptx-ladder-11-chart-radar-filled-port`, and
     `pptx-ladder-11-chart-bubble-port`.
   - Gate type: public visual family `pptx-charts`.
-  - Status: first bottom-up chart ports are gated with loose static fallbacks; remaining chart families
-    should be ported incrementally while chart rendering is separated from fallback behavior.
+  - Status: first bottom-up chart ports are gated with a loose native chart renderer; remaining chart
+    families should be ported incrementally while chart rendering is promoted to a first-class model.
 
 Composite oracle family map:
 
@@ -560,16 +561,15 @@ Composite oracle family map:
   and header text color, but remains visually poor because full Office table styles are not resolved from
   all table style ids, banding flags, border layers, and cell text layout details.
 - Chart composite `0006` is represented by `pptx-ladder-11-composite-chart-port` as an Office-authored
-  default clustered-column chart baseline. It currently allows `PPTX_CHART_STATIC_FALLBACK` and should be
-  tightened only after the chart renderer/fallback boundary is separated.
+  default clustered-column chart baseline. It should be tightened after the chart renderer is driven by a
+  typed model instead of ad hoc chart-family branches.
 - Chart composites `0008` and `0010` are now ported as public fixtures
   `pptx-ladder-11-composite-two-charts-port` and `pptx-ladder-11-dashboard-table-chart-port`.
   They are intentionally loose chart/composition gates until chart fallback/rendering is separated.
-- Cached numeric line and pie chart static fallbacks are now covered by a synthetic unit test and by
+- Cached numeric line and pie chart rendering is now covered by a synthetic unit test and by
   `pptx-ladder-11-composite-two-charts-port`. The port improved from MAE `21.305318`, changed16
-  `0.223965` with unsupported-chart diagnostics to MAE `16.063279`, changed16 `0.202201` with two
-  `PPTX_CHART_STATIC_FALLBACK` diagnostics. The dashboard table/chart port currently gates at MAE
-  `18.630753`, changed16 `0.246106`.
+  `0.223965` with unsupported-chart diagnostics to MAE `16.063279`, changed16 `0.202201`. The dashboard
+  table/chart port currently gates at MAE `18.630753`, changed16 `0.246106`.
 - First standalone chart-family ports are now gated from `pptx-renderer`: clustered column MAE
   `16.371853`, changed16 `0.218999`; clustered horizontal bar MAE `15.860384`, changed16 `0.185180`;
   3-series line MAE `3.515034`, changed16 `0.032532`; and 5-category pie MAE `10.866346`,
@@ -583,8 +583,8 @@ Composite oracle family map:
   Office chart templates, and cached chart-image fallback.
 - Additional chart ports are gated: line with markers MAE `2.864938`, changed16 `0.026264`;
   stacked line MAE `3.087048`, changed16 `0.026508`; exploded pie MAE `13.159580`, changed16
-  `0.165800`; and doughnut MAE `12.345606`, changed16 `0.139337`. Doughnut charts now get a simple
-  static fallback instead of an unsupported-chart diagnostic. Remaining gaps are marker shapes, stacked-line
+  `0.165800`; and doughnut MAE `12.345606`, changed16 `0.139337`. Doughnut charts now render natively
+  instead of emitting an unsupported-chart diagnostic. Remaining gaps are marker shapes, stacked-line
   scaling semantics, exploded-slice offsets, doughnut hole size, labels, and legends.
 - Area/long-line chart ports are now gated: exploded doughnut MAE `10.484783`, changed16 `0.123386`;
   2-series area MAE `14.977591`, changed16 `0.304524`; stacked area MAE `17.576610`, changed16
@@ -1263,7 +1263,7 @@ document-specific business content into public notes.
   - 84 visual comparison entries were produced for local assessment.
   - Mean absolute error average: `13.278538`; max mean absolute error: `30.864359`.
   - Mean changed-pixel ratio at threshold 16: `0.155895`; max changed-pixel ratio: `0.468661`.
-  - Diagnostics remain public-safe feature categories: chart static fallbacks plus unsupported effects,
+  - Diagnostics remain public-safe feature categories: chart rendering gaps plus unsupported effects,
     custom geometry, and transparency.
   - This run is assessment evidence only; the implementation track remains public bottom-up PPTX typography
     and feature fixtures before private-slide tuning.
@@ -1337,7 +1337,7 @@ document-specific business content into public notes.
   - Slide 3 metrics improved to MAE `10.224075`, RMSE `40.503589`, changed16 `0.121273`,
     changed32 `0.104931`.
   - The previous slide-3 text-autofit diagnostic is gone. Remaining diagnostics are public-safe categories:
-    chart static fallbacks plus unsupported effects, custom geometry, vertical text, transparency,
+    chart rendering gaps plus unsupported effects, custom geometry, vertical text, transparency,
     multi-column text, and image recolor.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260516-123248` after restricting GPOS
   pair positioning to the active `kern` feature:
@@ -1399,10 +1399,9 @@ document-specific business content into public notes.
 - [x] Implement Adam7 interlaced PNG decoding so embedded interlaced images render instead of being skipped.
 - [x] Make omitted embedded image content release-blocking: render supported JPEG/PNG, otherwise emit
   explicit high-severity diagnostics.
-- [x] Improve PPTX chart fallback rendering for cached numeric bar-chart XML with an approximate static
-  grouped-bar fallback.
-- [ ] Extend PPTX chart rendering beyond current static fallbacks: cached image fallbacks when present,
-  labels, legends, axes, marker styles, theme/chart style colors, and tighter plot-area layout fidelity.
+- [x] Improve PPTX chart rendering for cached numeric bar-chart XML with an approximate grouped-bar path.
+- [ ] Extend PPTX chart rendering beyond the current loose native renderer: labels, legends, axes,
+  marker styles, theme/chart style colors, and tighter plot-area layout fidelity.
 - [ ] Fix DOCX page geometry and pagination fidelity: section page size/margins, paragraph spacing, manual
   page/column breaks, and keep/widow page-break decisions.
 - [x] Add diagnostics when DOCX reference-like pagination risks are detected: multi-section layout,
@@ -1824,21 +1823,25 @@ paths, and ExecPlan references together.
   hatches, and keep diagnostics only for pattern presets that still fall outside the implemented subset.
 - [x] Honor `bodyPr@compatLnSpc` as Office-compatible tight default line spacing in PPTX text frames, with a
   synthetic line-break fixture locking the reduced baseline step for multi-column/text-flow cases.
-- [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrect vertical-axis legend.
+- [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrectly placed secondary
+  value axis and an incorrectly placed upward green arrow.
   Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
   inheritance, then reproduce with a minimal public chart-axis fixture before changing renderer logic.
   - [x] Inspect the chart XML shape: this case uses a multi-axis bar-chart pattern with a right-side value
     axis rather than a standalone rotated axis title.
   - [x] Add a public synthetic bar-chart fixture with a secondary right value axis and lock the right-axis
-    stroke/label path in the static fallback.
+    stroke/label path in the native chart renderer.
   - [x] Render additional `barChart` groups in the same `plotArea` against their referenced value axes,
     covering combo stacked-bar charts with separate left/right scales.
   - [x] Replace the fixed four-interval auto tick fallback with an Office-like 1/2/5/10 major-unit rule and
     expand value-axis label clipping so zero/max labels remain visible.
   - [x] Render chart `a:pattFill` series/point fills as background plus clipped diagonal hatches instead of
     collapsing patterned Office fills to a solid palette color. The public chart fixture now locks this path.
+  - [x] Route chart graphic frames through the same group-transform and z-order dispatcher as shapes, so
+    grouped charts and their overlay arrows/labels keep Office-equivalent placement.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
-    referenced axes, honor axis tick-label formatting, and keep primary/secondary scales independent.
+    referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
+    non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
   grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
   shape fill/stroke context.
