@@ -62,6 +62,7 @@ internal sealed partial class PptxRenderer
                 string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderBarChartFallback(graphics, document, bounds, barSeries, horizontalBars, grouping, seriesFills, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle);
                 return true;
             }
@@ -77,6 +78,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle);
                 return true;
             }
@@ -93,6 +95,7 @@ internal sealed partial class PptxRenderer
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(areaChart, theme);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderAreaChartFallback(graphics, document, bounds, areaSeries, stacked, seriesFills, seriesStrokes);
                 return true;
             }
@@ -109,6 +112,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(scatterChart);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries);
                 return true;
             }
@@ -122,6 +126,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(bubbleChart, theme);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
                 return true;
             }
@@ -135,6 +140,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(radarChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(radarChart, theme);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderRadarChartFallback(graphics, document, bounds, radarSeries, seriesFills, seriesStrokes);
                 return true;
             }
@@ -149,6 +155,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(pieChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(pieChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(pieChart);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderPieChartFallback(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
                 return true;
             }
@@ -164,6 +171,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(doughnutChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(doughnutChart);
                 double holeSize = ReadDoughnutHoleSize(doughnutChart);
+                RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderDoughnutChartFallback(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
                 return true;
             }
@@ -198,6 +206,53 @@ internal sealed partial class PptxRenderer
         }
 
         return series;
+    }
+
+    private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxTheme theme)
+    {
+        XElement? shapeProperties = chartXml.Root?.Element(ChartNamespace + "spPr");
+        if (shapeProperties is null)
+        {
+            return;
+        }
+
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        double y = document.SlideHeightPoints - yTop - height;
+        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fill, out double fillAlpha))
+        {
+            if (fillAlpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fillAlpha, 1d);
+            }
+
+            graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
+            graphics.FillRectangle(x, y, width, height);
+            if (fillAlpha < 1d)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        if (TryReadLineWithAlpha(shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha))
+        {
+            if (strokeAlpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(1d, strokeAlpha);
+            }
+
+            graphics.SetStrokeRgb(stroke.Red, stroke.Green, stroke.Blue);
+            graphics.SetLineWidth(lineWidth);
+            graphics.StrokeRectangle(x, y, width, height);
+            if (strokeAlpha < 1d)
+            {
+                graphics.RestoreState();
+            }
+        }
     }
 
     private static IReadOnlyList<ChartSeriesFill?> ReadChartSeriesFills(XElement chartElement, PptxTheme theme)

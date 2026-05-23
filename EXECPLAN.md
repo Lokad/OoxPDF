@@ -627,6 +627,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render simple `c:minorGridlines` separately from major gridlines with
   lighter intermediate lines. Remaining gridline work is Office style inheritance, non-default intervals,
   and exact plot-area bounds.
+- Supported chart fallbacks now render simple `c:chartSpace/c:spPr` chart-area fills and borders before
+  the plot content. Remaining chart-area work is rounded corners, effects, plot-area fills/borders, and
+  exact Office chart layout.
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.
