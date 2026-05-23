@@ -97,6 +97,16 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private readonly record struct BezierSegment(
+        double StartX,
+        double StartY,
+        double Control1X,
+        double Control1Y,
+        double Control2X,
+        double Control2Y,
+        double EndX,
+        double EndY);
+
     private readonly record struct TextRun(
         string Text,
         double X,

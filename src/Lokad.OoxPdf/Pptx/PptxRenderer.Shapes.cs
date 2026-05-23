@@ -295,7 +295,19 @@ internal sealed partial class PptxRenderer
 
                 bool hasHeadArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "headEnd"));
                 bool hasTailArrow = IsFilledTriangleArrow(ReadLineEnd(shapeProperties, "tailEnd"));
-                DrawCurvedConnector3(graphics, x, yTop, width, height, document.SlideHeightPoints, stroke, lineWidth, hasHeadArrow, hasTailArrow);
+                DrawCurvedConnectorPreset(
+                    graphics,
+                    shapeProperties,
+                    preset,
+                    x,
+                    yTop,
+                    width,
+                    height,
+                    document.SlideHeightPoints,
+                    stroke,
+                    lineWidth,
+                    hasHeadArrow,
+                    hasTailArrow);
 
                 if (hasDash)
                 {
@@ -1329,8 +1341,10 @@ internal sealed partial class PptxRenderer
         graphics.ClosePath();
     }
 
-    private static void DrawCurvedConnector3(
+    private static void DrawCurvedConnectorPreset(
         PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
         double x,
         double yTop,
         double width,
@@ -1341,30 +1355,112 @@ internal sealed partial class PptxRenderer
         bool headArrow,
         bool tailArrow)
     {
-        double x1 = x;
-        double y1 = slideHeight - yTop;
-        double x2 = x + width;
-        double y2 = slideHeight - yTop - height;
-        double c1x = x2;
-        double c1y = y1;
-        double c2x = x2;
-        double c2y = y2;
+        List<BezierSegment> segments = preset switch
+        {
+            "curvedConnector2" => CreateCurvedConnector2Segments(x, yTop, width, height, slideHeight),
+            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, x, yTop, width, height, slideHeight),
+            _ => []
+        };
+        if (segments.Count == 0)
+        {
+            return;
+        }
 
-        graphics.MoveTo(x1, y1);
-        graphics.CurveTo(c1x, c1y, c2x, c2y, x2, y2);
+        BezierSegment first = segments[0];
+        BezierSegment last = segments[^1];
+        graphics.MoveTo(first.StartX, first.StartY);
+        foreach (BezierSegment segment in segments)
+        {
+            graphics.CurveTo(segment.Control1X, segment.Control1Y, segment.Control2X, segment.Control2Y, segment.EndX, segment.EndY);
+        }
         graphics.StrokeCurrentPath();
 
         if (headArrow)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(graphics, x1, y1, ResolveEndpointDirection(x1, y1, c1x, c1y, c2x, c2y), lineWidth);
+            FillLineArrowhead(
+                graphics,
+                first.StartX,
+                first.StartY,
+                ResolveEndpointDirection(first.StartX, first.StartY, first.Control1X, first.Control1Y, first.Control2X, first.Control2Y),
+                lineWidth);
         }
 
         if (tailArrow)
         {
             graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
-            FillLineArrowhead(graphics, x2, y2, ResolveEndpointDirection(x2, y2, c2x, c2y, c1x, c1y), lineWidth);
+            FillLineArrowhead(
+                graphics,
+                last.EndX,
+                last.EndY,
+                ResolveEndpointDirection(last.EndX, last.EndY, last.Control2X, last.Control2Y, last.Control1X, last.Control1Y),
+                lineWidth);
         }
+    }
+
+    private static List<BezierSegment> CreateCurvedConnector2Segments(double x, double yTop, double width, double height, double slideHeight)
+    {
+        double y0 = slideHeight - yTop;
+        double y1 = slideHeight - yTop - height;
+        return
+        [
+            new(
+                x,
+                y0,
+                x + width,
+                y0,
+                x,
+                y1,
+                x + width,
+                y1)
+        ];
+    }
+
+    private static List<BezierSegment> CreateCurvedConnector3Segments(
+        XElement shapeProperties,
+        double x,
+        double yTop,
+        double width,
+        double height,
+        double slideHeight)
+    {
+        double adj1 = ReadPresetGeometryGuide(shapeProperties, "adj1", 50000d) / 100000d;
+        double x2 = width * adj1;
+        double x1 = x2 / 2d;
+        double x3 = (width + x2) / 2d;
+        double vc = height / 2d;
+        double hd4 = height / 4d;
+        double y3 = height * 3d / 4d;
+        return
+        [
+            ToSlideBezier(x, yTop, slideHeight, 0d, 0d, x1, 0d, x2, hd4, x2, vc),
+            ToSlideBezier(x, yTop, slideHeight, x2, vc, x2, y3, x3, height, width, height)
+        ];
+    }
+
+    private static BezierSegment ToSlideBezier(
+        double x,
+        double yTop,
+        double slideHeight,
+        double startX,
+        double startY,
+        double control1X,
+        double control1Y,
+        double control2X,
+        double control2Y,
+        double endX,
+        double endY)
+    {
+        double MapY(double localY) => slideHeight - yTop - localY;
+        return new BezierSegment(
+            x + startX,
+            MapY(startY),
+            x + control1X,
+            MapY(control1Y),
+            x + control2X,
+            MapY(control2Y),
+            x + endX,
+            MapY(endY));
     }
 
     private static (double X, double Y) ResolveEndpointDirection(double tipX, double tipY, double nearestControlX, double nearestControlY, double fallbackControlX, double fallbackControlY)

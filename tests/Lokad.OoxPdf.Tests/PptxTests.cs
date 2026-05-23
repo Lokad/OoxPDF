@@ -485,7 +485,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.4 0.4 0.4 RG", pdf);
         TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("216 468 216 324 216 324 c", pdf);
+        TestAssert.Contains("108 468 144 432 144 396 c", pdf);
+        TestAssert.Contains("144 360 180 324 216 324 c", pdf);
         TestAssert.Contains("S", pdf);
     }
 
@@ -521,11 +522,11 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.867 0.867 0.867 RG", pdf);
         TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("144 468 144 396 144 396 c", pdf);
+        TestAssert.Contains("144 468 72 396 144 396 c", pdf);
         TestAssert.Contains("S", pdf);
         TestAssert.Contains("144 396 m", pdf);
-        TestAssert.Contains("147.15 403 l", pdf);
-        TestAssert.Contains("140.85 403 l", pdf);
+        TestAssert.Contains("137 399.15 l", pdf);
+        TestAssert.Contains("137 392.85 l", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()

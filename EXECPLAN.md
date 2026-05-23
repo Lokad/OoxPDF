@@ -2046,6 +2046,9 @@ paths, and ExecPlan references together.
       unwrapped extent before accepting word wrapping.
   - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
     obvious rectangular/straight connector artifacts in the slide-9 schema.
+  - [x] Replace the approximate one-cubic curved connector path with the OOXML preset formulas used by
+    `pptx-renderer`: `curvedConnector2` is one cubic with distinct controls, while `curvedConnector3`
+    is two cubic segments joined at the vertical midpoint and honoring `adj1`.
   - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,
     `vert270`, `eaVert`, `mongolianVert`, `wordArtVert`, `wordArtVertRtl`) through a public synthetic unit
     fixture and route them through orientation-aware text-frame flow instead of silently treating them as
@@ -2057,7 +2060,9 @@ paths, and ExecPlan references together.
     `27.17pt`. Breakable spaces are now owned by the following word and line fitting has an Office-like
     tolerance, so slide 9 and the duplicate slide 66 diagnostics end at `41.57pt`.
   - [ ] Continue with public fixtures for vertical label text and curved connector arrowhead/control-point
-    fidelity before marking the slide-9 schema as resolved.
+    fidelity before marking the slide-9 schema as resolved. Latest private rerun
+    `artifacts/private-visual/lokad-value-based/20260524-001402` shows the straight-line connector fallback
+    is gone, but top-left schema text overlap and connector endpoint/arrow parity remain visible.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
   issues on the right, especially around the bottom-right content, and map them to public image/layout
   fixtures.

@@ -8,6 +8,12 @@ function Rgb($r, $g, $b) {
     return $r + ($g * 256) + ($b * 65536)
 }
 
+function Release-ComObject($value) {
+    if ($null -ne $value -and [System.Runtime.InteropServices.Marshal]::IsComObject($value)) {
+        [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($value)
+    }
+}
+
 $powerPoint = $null
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
@@ -211,6 +217,9 @@ finally {
     if ($powerPoint -ne $null) {
         $powerPoint.Quit()
     }
+    Release-ComObject $powerPoint
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
 }
 
 $word = $null
@@ -432,6 +441,9 @@ finally {
     if ($word -ne $null) {
         $word.Quit()
     }
+    Release-ComObject $word
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
 }
 
 Get-ChildItem -LiteralPath $cases -Include "*.pptx", "*.docx" -Recurse | Select-Object FullName, Length

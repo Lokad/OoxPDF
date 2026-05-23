@@ -10,6 +10,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Release-ComObject($value) {
+    if ($null -ne $value -and [System.Runtime.InteropServices.Marshal]::IsComObject($value)) {
+        [void][System.Runtime.InteropServices.Marshal]::FinalReleaseComObject($value)
+    }
+}
+
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
@@ -27,6 +33,10 @@ if ($extension -eq ".pptx") {
     finally {
         if ($presentation -ne $null) { $presentation.Close() }
         if ($powerPoint -ne $null) { $powerPoint.Quit() }
+        Release-ComObject $presentation
+        Release-ComObject $powerPoint
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
 
     & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $outputFull -Dpi $Dpi
@@ -46,6 +56,10 @@ if ($extension -eq ".docx") {
     finally {
         if ($document -ne $null) { $document.Close($false) }
         if ($word -ne $null) { $word.Quit() }
+        Release-ComObject $document
+        Release-ComObject $word
+        [GC]::Collect()
+        [GC]::WaitForPendingFinalizers()
     }
 
     & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $outputFull -Dpi $Dpi
