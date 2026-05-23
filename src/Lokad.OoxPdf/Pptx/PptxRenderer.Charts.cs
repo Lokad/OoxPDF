@@ -74,7 +74,8 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
-                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles);
+                IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
+                RenderLineChartFallback(graphics, document, bounds, lineSeries, seriesStrokes, markerStyles, smoothSeries);
                 return true;
             }
         }
@@ -105,7 +106,8 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart, theme);
-                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles);
+                IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(scatterChart);
+                RenderScatterChartFallback(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries);
                 return true;
             }
         }
@@ -118,7 +120,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(bubbleChart, theme);
-                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, []);
+                RenderScatterChartFallback(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
                 return true;
             }
         }
@@ -341,6 +343,18 @@ internal sealed partial class PptxRenderer
         }
 
         return styles;
+    }
+
+    private static IReadOnlyList<bool> ReadChartSeriesSmooth(XElement chartElement)
+    {
+        var smooth = new List<bool>();
+        foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
+        {
+            string? value = (string?)element.Element(ChartNamespace + "smooth")?.Attribute("val");
+            smooth.Add(value is "1" or "true");
+        }
+
+        return smooth;
     }
 
     private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
@@ -643,7 +657,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles)
+    private static void RenderLineChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -680,21 +694,27 @@ internal sealed partial class PptxRenderer
             }
 
             SetChartStroke(graphics, stroke);
-            double previousX = 0d;
-            double previousY = 0d;
+            var points = new List<(double X, double Y)>(values.Count);
             for (int i = 0; i < values.Count; i++)
             {
                 double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
                 double pointY = plotY + (values[i] - minValue) / valueRange * plotHeight;
-                if (i > 0)
-                {
-                    graphics.StrokeLine(previousX, previousY, pointX, pointY);
-                }
+                points.Add((pointX, pointY));
+            }
 
+            if (IsSmoothSeries(seriesIndex, smoothSeries))
+            {
+                StrokeSmoothChartPath(graphics, points);
+            }
+            else
+            {
+                StrokeStraightChartPath(graphics, points);
+            }
+
+            foreach ((double pointX, double pointY) in points)
+            {
                 graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
                 DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
-                previousX = pointX;
-                previousY = pointY;
             }
 
             if (stroke.Alpha < 1d)
@@ -702,6 +722,45 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<bool> smoothSeries)
+    {
+        return seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex];
+    }
+
+    private static void StrokeStraightChartPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    {
+        for (int i = 1; i < points.Count; i++)
+        {
+            graphics.StrokeLine(points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y);
+        }
+    }
+
+    private static void StrokeSmoothChartPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        graphics.MoveTo(points[0].X, points[0].Y);
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            (double X, double Y) p0 = i == 0 ? points[i] : points[i - 1];
+            (double X, double Y) p1 = points[i];
+            (double X, double Y) p2 = points[i + 1];
+            (double X, double Y) p3 = i + 2 < points.Count ? points[i + 2] : points[i + 1];
+            graphics.CurveTo(
+                p1.X + (p2.X - p0.X) / 6d,
+                p1.Y + (p2.Y - p0.Y) / 6d,
+                p2.X - (p3.X - p1.X) / 6d,
+                p2.Y - (p3.Y - p1.Y) / 6d,
+                p2.X,
+                p2.Y);
+        }
+
+        graphics.StrokeCurrentPath();
     }
 
     private static ChartMarkerStyle ChartMarker(int seriesIndex, IReadOnlyList<ChartMarkerStyle> markerStyles)
@@ -912,7 +971,7 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
-    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles)
+    private static void RenderScatterChartFallback(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
     {
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
@@ -948,16 +1007,30 @@ internal sealed partial class PptxRenderer
 
             SetChartStroke(graphics, stroke);
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            (double X, double Y)? previous = null;
+            var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
             foreach (ScatterPoint point in series[seriesIndex].Points)
             {
                 double pointX = plotX + (point.X - minX) / xRange * plotWidth;
                 double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
-                if (connectLines && previous is { } prior)
-                {
-                    graphics.StrokeLine(prior.X, prior.Y, pointX, pointY);
-                }
+                points.Add((pointX, pointY));
+            }
 
+            if (connectLines)
+            {
+                if (IsSmoothSeries(seriesIndex, smoothSeries))
+                {
+                    StrokeSmoothChartPath(graphics, points);
+                }
+                else
+                {
+                    StrokeStraightChartPath(graphics, points);
+                }
+            }
+
+            foreach (ScatterPoint point in series[seriesIndex].Points)
+            {
+                double pointX = plotX + (point.X - minX) / xRange * plotWidth;
+                double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
                 double radius = bubble ? 3d + Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * 8d : 3d;
                 if (bubble)
                 {
@@ -968,7 +1041,6 @@ internal sealed partial class PptxRenderer
                     DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
                 }
 
-                previous = (pointX, pointY);
             }
 
             if (fill.Alpha < 1d || stroke.Alpha < 1d)

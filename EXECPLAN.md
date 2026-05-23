@@ -615,6 +615,9 @@ Composite oracle family map:
 - Line and scatter chart markers now honor marker-level `c:marker/c:spPr` solid fills and line strokes.
   Remaining marker work is Office's full marker preset set, automatic marker inheritance from chart
   style/color-style parts, and exact Office marker sizing.
+- Line and scatter chart fallbacks now honor per-series `c:smooth` by emitting cubic Bezier paths from the
+  point sequence instead of straight segments. Remaining smoothing work is exact Office spline tension and
+  interaction with missing/blank points.
 - Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.
