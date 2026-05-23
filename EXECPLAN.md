@@ -1820,6 +1820,32 @@ paths, and ExecPlan references together.
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets,
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
+- [ ] Private slide 5 visible remaining problem: the right-side chart has an incorrect vertical-axis legend.
+  Inspect whether this is a value-axis title, rotated axis label text, tick-label formatting, or chart-style
+  inheritance, then reproduce with a minimal public chart-axis fixture before changing renderer logic.
+  - [x] Inspect the chart XML shape: this case uses a multi-axis bar-chart pattern with a right-side value
+    axis rather than a standalone rotated axis title.
+  - [x] Add a public synthetic bar-chart fixture with a secondary right value axis and lock the right-axis
+    stroke/label path in the static fallback.
+  - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
+    referenced axes, honor axis tick-label formatting, and keep primary/secondary scales independent.
+- [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
+  grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
+  shape fill/stroke context.
+- [ ] Private slide 10 visible remaining problem: one headline line is positioned too high. Map it to public
+  typography baselines, paragraph spacing, inherited bodyPr insets, or placeholder geometry before fixing.
+- [ ] Private slide 11 visible remaining problem: a lower-left image overlaps preceding text, and adjacent
+  left-side title text formatting mismatches Office. Reproduce as public picture/text z-order and inherited
+  text-style fixtures.
+- [ ] Private slide 19 visible remaining problem: lower-left logo rendering, paired-arrow geometry, and
+  center/right font selection differ from Office. Split into public logo/image recolor or crop diagnostics,
+  arrow geometry fixtures, and font fallback/style inheritance fixtures.
+- [ ] Private slide 23 visible remaining problem: top text block formatting is off and an emphasized fragment
+  overlaps the horizontal separator. Reproduce with public mixed-run typography, paragraph spacing, and
+  separator/z-order fixtures.
+- [ ] Private slide 30 visible remaining problem: the lower center/right date schema is badly off, likely a
+  geometry or grouped-transform issue. Inventory shapes/connectors/transforms and isolate public geometry
+  fixtures before changing renderer logic.
 - [x] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
   text runs have no direct fill, including a no-fill shape with a visible line and centered text.
 - [x] Slide 2 public ladder: lock highlighted centered mixed-run title-sized text using Cambria/Cambria Math
@@ -1843,6 +1869,9 @@ paths, and ExecPlan references together.
 - [ ] Private slide 9 visible remaining problem: left-side schema geometry is visibly broken. Survey the
   involved shapes/connectors/group transforms on public-safe diagnostics, then reproduce with minimal public
   geometry fixtures before changing renderer logic.
+  - [ ] New review note: right-side text expands enough to overlap the lower boxing line, and a one-line
+    label wraps into two lines. Map this to text metrics, autofit, body insets, and shape bounds with public
+    text-fit fixtures.
   - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
     obvious rectangular/straight connector artifacts in the slide-9 schema.
   - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,
@@ -1854,6 +1883,9 @@ paths, and ExecPlan references together.
 - [ ] Private slide 12 visible remaining problem: overlapping image on the left. Also inspect miscellaneous
   issues on the right, especially around the bottom-right content, and map them to public image/layout
   fixtures.
+  - [ ] New review note: the lower-right column text has increasing vertical-position drift from top to
+    bottom. Isolate public fixtures for repeated column items with inherited paragraph spacing, vertical
+    anchor, and cumulative line-height rounding.
   - [x] Fix the dominant right-side table text overflow: PPTX table-cell text now wraps words to the cell
     text width instead of emitting one horizontal run per paragraph. Public synthetic unit
     `PptxSyntheticTableWrapsCellTextToColumnWidth` locks the generic behavior, and private page 12 now

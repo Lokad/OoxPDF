@@ -83,6 +83,10 @@ internal sealed partial class PptxRenderer
                 if (axesStyle.ValueAxisVisible)
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars));
+                    if (!horizontalBars)
+                    {
+                        fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
+                    }
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills), ReadChartLegendLayout(chartXml)));
                 fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barChart, barSeries, valueExtents, horizontalBars));
@@ -114,6 +118,7 @@ internal sealed partial class PptxRenderer
                 if (axesStyle.ValueAxisVisible)
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars: false));
+                    fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes), ReadChartLegendLayout(chartXml)));
                 fonts.AddRange(RenderLineDataLabels(theme, graphics, plotBox, lineChart, lineSeries, valueExtents));
@@ -306,10 +311,14 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents ReadChartValueAxisExtents(XDocument chartXml, ChartValueExtents fallback)
     {
-        XElement? scaling = chartXml
+        return ReadChartValueAxisExtents(chartXml
             .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "scaling");
+            .FirstOrDefault(), fallback);
+    }
+
+    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
+    {
+        XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
         if (scaling is null)
         {
             return fallback;
@@ -332,9 +341,13 @@ internal sealed partial class PptxRenderer
 
     private static ChartAxisUnits ReadChartValueAxisUnits(XDocument chartXml)
     {
-        XElement? valueAxis = chartXml
+        return ReadChartValueAxisUnits(chartXml
             .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault();
+            .FirstOrDefault());
+    }
+
+    private static ChartAxisUnits ReadChartValueAxisUnits(XElement? valueAxis)
+    {
         if (valueAxis is null)
         {
             return ChartAxisUnits.Empty;
@@ -981,7 +994,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars)
+    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
         double fontSize = 8.5d;
@@ -1009,21 +1022,26 @@ internal sealed partial class PptxRenderer
             else
             {
                 width = plotBox.Width * 0.12d;
-                x = Math.Max(0d, plotBox.X - width - 3d);
+                x = rightSide
+                    ? plotBox.X + plotBox.Width + 3d
+                    : Math.Max(0d, plotBox.X - width - 3d);
                 y = plotBox.Y + plotBox.Height * offset - height * 0.45d;
-                alignment = TextAlignment.Right;
+                alignment = rightSide ? TextAlignment.Left : TextAlignment.Right;
             }
 
+            double labelWidth = Math.Max(1d, width);
+            double clipY = horizontalBars ? y : plotBox.Y;
+            double clipHeight = horizontalBars ? height : plotBox.Height;
             runs.Add(new TextRun(
                 label,
                 x,
                 y,
-                Math.Max(1d, width),
+                labelWidth,
                 height,
-                plotBox.X,
-                plotBox.Y,
-                plotBox.Width,
-                plotBox.Height,
+                x,
+                clipY,
+                labelWidth,
+                clipHeight,
                 fontSize,
                 0d,
                 0d,
@@ -1045,6 +1063,27 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics);
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, ChartValueExtents fallback)
+    {
+        XElement? rightValueAxis = ReadSecondaryRightValueAxis(chartXml);
+        if (rightValueAxis is null)
+        {
+            return Array.Empty<PdfFontResource>();
+        }
+
+        ChartValueExtents extents = ReadChartValueAxisExtents(rightValueAxis, fallback);
+        ChartAxisUnits axisUnits = ReadChartValueAxisUnits(rightValueAxis);
+        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, extents, axisUnits, horizontalBars: false, rightSide: true);
+    }
+
+    private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
+    {
+        return chartXml
+            .Descendants(ChartNamespace + "valAx")
+            .Where(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal))
+            .FirstOrDefault(axis => !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete")));
     }
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints)
@@ -1288,6 +1327,10 @@ internal sealed partial class PptxRenderer
         ChartSeriesStroke? categoryAxis = ReadChartAxisStroke(chartXml, "catAx", theme);
         return new ChartAxesStyle(
             valueAxis,
+            ReadChartAxisStroke(chartXml
+                .Descendants(ChartNamespace + "valAx")
+                .FirstOrDefault(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal)),
+                theme),
             categoryAxis,
             !IsChartAxisDeleted(chartXml, "valAx"),
             !IsChartAxisDeleted(chartXml, "catAx"));
@@ -1304,10 +1347,14 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)
     {
-        XElement? shapeProperties = chartXml
+        return ReadChartAxisStroke(chartXml
             .Descendants(ChartNamespace + axisName)
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "spPr");
+            .FirstOrDefault(), theme);
+    }
+
+    private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
+    {
+        XElement? shapeProperties = axis?.Element(ChartNamespace + "spPr");
         return shapeProperties is not null &&
             TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
                 ? new ChartSeriesStroke(color, alpha, width)
@@ -1420,6 +1467,11 @@ internal sealed partial class PptxRenderer
         {
             SetChartStroke(graphics, horizontalBars ? categoryAxisStroke : valueAxisStroke);
             graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+            {
+                SetChartStroke(graphics, secondaryValueAxisStroke);
+                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+            }
         }
 
         if (horizontalBars)
@@ -1757,6 +1809,11 @@ internal sealed partial class PptxRenderer
         {
             SetChartStroke(graphics, valueAxisStroke);
             graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+            if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+            {
+                SetChartStroke(graphics, secondaryValueAxisStroke);
+                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+            }
         }
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
@@ -2397,7 +2454,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
-    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisVisible, bool CategoryAxisVisible);
+    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisVisible, bool CategoryAxisVisible);
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
 
