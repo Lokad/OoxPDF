@@ -138,7 +138,7 @@ internal sealed partial class PptxRenderer
 
                 AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
                 TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
-                AddTableCellTextRuns(cell, cellX, cellBottom, columnWidth, cellHeight, context.Theme, textRuns, tableStyleTextStyle);
+                AddTableCellTextRuns(context, cell, cellX, cellBottom, columnWidth, cellHeight, textRuns, tableStyleTextStyle);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -376,7 +376,7 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextRuns(XElement cell, double x, double y, double width, double height, PptxTheme theme, List<TextRun> runs, TableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextRuns(PptxRenderContext context, XElement cell, double x, double y, double width, double height, List<TextRun> runs, TableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         if (textBody is null)
@@ -385,83 +385,91 @@ internal sealed partial class PptxRenderer
         }
 
         TextInsets insets = ReadTableCellTextInsets(cell, textBody);
-        double textAreaHeight = Math.Max(0d, height - insets.Top - insets.Bottom);
-        double estimatedTextHeight = EstimateTableCellTextHeight(textBody, Math.Max(1d, width - insets.Left - insets.Right), theme, tableStyleTextStyle);
-        double verticalOffset = ReadTableCellVerticalAnchor(cell) switch
+        XElement tableTextShape = BuildTableCellTextShape(context, textBody, x, y, width, height, insets, ReadTableCellVerticalAnchor(cell), tableStyleTextStyle);
+        runs.AddRange(ReadTextRunsForShape(tableTextShape, context, includePlaceholders: false));
+    }
+
+    private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, TableCellTextStyle tableStyleTextStyle)
+    {
+        var textBodyCopy = new XElement(PresentationNamespace + "txBody", textBody.Elements().Select(element => new XElement(element)));
+        XElement bodyProperties = textBodyCopy.Element(DrawingNamespace + "bodyPr") ?? new XElement(DrawingNamespace + "bodyPr");
+        bodyProperties.SetAttributeValue("lIns", PointsToEmu(insets.Left).ToString(CultureInfo.InvariantCulture));
+        bodyProperties.SetAttributeValue("rIns", PointsToEmu(insets.Right).ToString(CultureInfo.InvariantCulture));
+        bodyProperties.SetAttributeValue("tIns", PointsToEmu(insets.Top).ToString(CultureInfo.InvariantCulture));
+        bodyProperties.SetAttributeValue("bIns", PointsToEmu(insets.Bottom).ToString(CultureInfo.InvariantCulture));
+        bodyProperties.SetAttributeValue("vertOverflow", "clip");
+        bodyProperties.SetAttributeValue("anchor", anchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textAreaHeight - estimatedTextHeight) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textAreaHeight - estimatedTextHeight),
-            _ => 0d
-        };
-        double firstFontSize = ReadFirstTableCellFontSize(textBody);
-        double cursorY = y + height - insets.Top - firstFontSize + 0.54d - verticalOffset;
-        var advanceEstimator = new TextAdvanceEstimator();
-        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+            TextVerticalAnchor.Middle => "ctr",
+            TextVerticalAnchor.Bottom => "b",
+            _ => "t"
+        });
+        if (bodyProperties.Parent is null)
         {
-            TextAlignment alignment = ReadAlignment(paragraph, null);
-            double textX = x + insets.Left;
-            double textWidth = Math.Max(1d, width - insets.Left - insets.Right);
-            double cursorX = textX;
-            double maxFontSize = 12d;
-            foreach (XElement run in paragraph.Elements().Where(IsTextRunElement))
+            textBodyCopy.AddFirst(bodyProperties);
+        }
+
+        ApplyTableStyleTextDefaults(textBodyCopy, tableStyleTextStyle);
+        long shapeX = PointsToEmu(x);
+        long shapeY = PointsToEmu(context.Document.SlideHeightPoints - y - height);
+        long shapeWidth = PointsToEmu(width);
+        long shapeHeight = PointsToEmu(height);
+        return new XElement(PresentationNamespace + "sp",
+            new XElement(PresentationNamespace + "nvSpPr",
+                new XElement(PresentationNamespace + "cNvPr",
+                    new XAttribute("id", "0"),
+                    new XAttribute("name", "TableCellText")),
+                new XElement(PresentationNamespace + "cNvSpPr",
+                    new XAttribute("txBox", "1")),
+                new XElement(PresentationNamespace + "nvPr")),
+            new XElement(PresentationNamespace + "spPr",
+                new XElement(DrawingNamespace + "xfrm",
+                    new XElement(DrawingNamespace + "off",
+                        new XAttribute("x", shapeX.ToString(CultureInfo.InvariantCulture)),
+                        new XAttribute("y", shapeY.ToString(CultureInfo.InvariantCulture))),
+                    new XElement(DrawingNamespace + "ext",
+                        new XAttribute("cx", shapeWidth.ToString(CultureInfo.InvariantCulture)),
+                        new XAttribute("cy", shapeHeight.ToString(CultureInfo.InvariantCulture)))),
+                new XElement(DrawingNamespace + "prstGeom",
+                    new XAttribute("prst", "rect"),
+                    new XElement(DrawingNamespace + "avLst"))),
+            textBodyCopy);
+    }
+
+    private static void ApplyTableStyleTextDefaults(XElement textBody, TableCellTextStyle style)
+    {
+        if (style == default)
+        {
+            return;
+        }
+
+        foreach (XElement runProperties in textBody.Descendants(DrawingNamespace + "rPr").Concat(textBody.Descendants(DrawingNamespace + "endParaRPr")))
+        {
+            if (style.Bold && runProperties.Attribute("b") is null)
             {
-                XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-                double fontSize = runProperties?.Attribute("sz") is { } size
-                    ? int.Parse(size.Value, CultureInfo.InvariantCulture) / 100d
-                    : 12d;
-                double alpha = 1d;
-                RgbColor color;
-                if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
-                {
-                    color = runColor;
-                    alpha = runAlpha;
-                }
-                else
-                {
-                    color = tableStyleTextStyle.Color ?? new RgbColor(0, 0, 0);
-                }
-                string? typeface = theme.ResolveTypeface((string?)runProperties?
-                    .Element(DrawingNamespace + "latin")
-                    ?.Attribute("typeface"));
-                bool bold = tableStyleTextStyle.Bold || ParseOptionalBoolAttribute(runProperties, "b");
-                bool italic = ParseOptionalBoolAttribute(runProperties, "i");
-                bool underline = ((string?)runProperties?.Attribute("u")) is { } underlineValue
-                    && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-                bool strike = IsStrikeEnabled(runProperties, null);
-                foreach (TextCapsFragment fragment in ApplyTextCaps(ReadTextElementText(run, slideNumber: 0), runProperties, null))
-                {
-                    foreach (string token in SplitTableTextWrapTokens(fragment.Text))
-                    {
-                        if (token.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        double fragmentFontSize = fontSize * fragment.FontScale;
-                        maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
-                        double advance = advanceEstimator.Measure(token, fragmentFontSize, typeface, bold, italic, characterSpacing: 0d);
-                        if (!string.IsNullOrWhiteSpace(token) &&
-                            cursorX > textX + PptxTextMetricRules.TextStateTolerance &&
-                            cursorX + advance > textX + textWidth)
-                        {
-                            cursorY -= maxFontSize * 1.2d;
-                            cursorX = textX;
-                            maxFontSize = fragmentFontSize;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(token) && cursorX <= textX + PptxTextMetricRules.TextStateTolerance)
-                        {
-                            continue;
-                        }
-
-                        runs.Add(new TextRun(token, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, textX, y + insets.Bottom, textWidth, textAreaHeight, fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d, false, false));
-                        cursorX += advance;
-                    }
-                }
+                runProperties.SetAttributeValue("b", "1");
             }
 
-            cursorY -= maxFontSize * 1.2d;
+            if (style.Color is { } color && !HasTextFill(runProperties))
+            {
+                runProperties.AddFirst(
+                        new XElement(DrawingNamespace + "solidFill",
+                            new XElement(DrawingNamespace + "srgbClr",
+                            new XAttribute("val", string.Create(CultureInfo.InvariantCulture, $"{color.Red:X2}{color.Green:X2}{color.Blue:X2}")))));
+            }
         }
+    }
+
+    private static bool HasTextFill(XElement runProperties)
+    {
+        return runProperties.Element(DrawingNamespace + "solidFill") is not null ||
+            runProperties.Element(DrawingNamespace + "noFill") is not null ||
+            runProperties.Element(DrawingNamespace + "gradFill") is not null;
+    }
+
+    private static long PointsToEmu(double points)
+    {
+        return (long)Math.Round(points / OoxUnits.PointsPerInch * OoxUnits.EmusPerInch);
     }
 
     private static TextInsets ReadTableCellTextInsets(XElement cell, XElement textBody)

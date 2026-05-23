@@ -1878,6 +1878,12 @@ paths, and ExecPlan references together.
   shape fill/stroke context.
   - [x] Check `pptx-renderer` handling: table cells apply `a:tcPr` margins as padding and map
     `a:tcPr@anchor` to content-box vertical alignment with top as the Office default.
+  - [x] Route PPTX table-cell text through the shared first-class text layout pipeline by synthesizing a
+    bounded text shape per cell, preserving `tcPr` margins, vertical anchor, clipping, and table-style text
+    defaults. This removes the table-only text estimator before pursuing tighter Office wrap/metric parity.
+  - [ ] Tighten PPTX table text wrapping against Office output. Slide 6 still wraps the first header cell
+    differently from Office, so the next bottom-up table case should isolate table-cell font metrics,
+    default wrapping, and whether Office permits header text to overflow into adjacent cells.
   - [x] Apply the same model to OOXPDF table-cell text placement: tcPr margins override bodyPr defaults,
     middle/bottom anchors account for estimated wrapped content height, and the behavior is locked by
     `PptxSyntheticTableCentersTextByContentHeight`.

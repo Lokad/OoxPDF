@@ -4609,7 +4609,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 72 499\.74 Tm"), "Centered table-cell text should account for its line height before vertical anchoring.");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 72 500\.337 Tm"), "Centered table-cell text should account for its line height before vertical anchoring.");
     }
 
     public static void PptxSyntheticTableMergedCellsSuppressInteriorGrid()
