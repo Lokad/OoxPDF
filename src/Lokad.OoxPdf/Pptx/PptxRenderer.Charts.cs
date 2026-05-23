@@ -112,12 +112,12 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.CategoryAxisVisible)
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, ReadChartCategoryAxisForChart(chartXml, barChart), ReadChartCategoryLabels(barChart), horizontalBars));
                 }
 
                 if (axesStyle.ValueAxisVisible)
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
                     if (!horizontalBars)
                     {
                         fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
@@ -147,12 +147,12 @@ internal sealed partial class PptxRenderer
                 RenderLineChartFallback(graphics, document, bounds, chartXml, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits);
                 if (axesStyle.CategoryAxisVisible)
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(lineChart), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, ReadChartCategoryAxisForChart(chartXml, lineChart), ReadChartCategoryLabels(lineChart), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible)
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, valueExtents, axisUnits, horizontalBars: false));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, ReadChartValueAxisForChart(chartXml, lineChart), valueExtents, axisUnits, horizontalBars: false));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes), ReadChartLegendLayout(chartXml)));
@@ -362,6 +362,20 @@ internal sealed partial class PptxRenderer
         return chartXml
             .Descendants(ChartNamespace + "valAx")
             .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty));
+    }
+
+    private static XElement? ReadChartCategoryAxisForChart(XDocument chartXml, XElement chartElement)
+    {
+        HashSet<string> axisIds = chartElement
+            .Elements(ChartNamespace + "axId")
+            .Select(axis => (string?)axis.Attribute("val"))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToHashSet(StringComparer.Ordinal);
+        return chartXml
+            .Descendants(ChartNamespace + "catAx")
+            .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty)) ??
+            chartXml.Descendants(ChartNamespace + "catAx").FirstOrDefault();
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
@@ -936,6 +950,64 @@ internal sealed partial class PptxRenderer
         return ReadChartDataLabelOptions(chartElement).ShowValue;
     }
 
+    private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
+    {
+        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor);
+        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme));
+        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme));
+        return style;
+    }
+
+    private static string? ResolveChartThemeFontFamily(PptxTheme theme)
+    {
+        return theme.ResolveTypeface("+mn-lt") ??
+            theme.ResolveTypeface("+mj-lt");
+    }
+
+    private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme)
+    {
+        XElement? defRunProperties = parent?
+            .Element(ChartNamespace + "txPr")?
+            .Elements(DrawingNamespace + "p")
+            .Select(paragraph => paragraph.Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr"))
+            .FirstOrDefault(element => element is not null);
+        if (defRunProperties is null)
+        {
+            return ChartTextStyleOverride.Empty;
+        }
+
+        string? typeface = (string?)defRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
+            (string?)defRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
+            (string?)defRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
+            ? null
+            : theme.ResolveTypeface(typeface);
+
+        double? fontSize = null;
+        if (defRunProperties.Attribute("sz") is { } sizeAttribute &&
+            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
+            sizeHundredths > 0)
+        {
+            fontSize = sizeHundredths / 100d;
+        }
+
+        RgbColor? color = TryReadSolidColor(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor)
+            ? parsedColor
+            : null;
+        return new ChartTextStyleOverride(fontFamily, fontSize, color);
+    }
+
+    private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
+    {
+        return new ChartTextStyle(
+            next.FontFamily ?? style.FontFamily,
+            next.FontSize ?? style.FontSize,
+            next.Color ?? style.Color);
+    }
+
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement)
     {
         XElement? labels = chartElement.Element(ChartNamespace + "dLbls") ??
@@ -973,17 +1045,16 @@ internal sealed partial class PptxRenderer
             : FormatChartAxisLabel(value);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<string> labels, bool horizontalBars)
+    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? categoryAxis, IReadOnlyList<string> labels, bool horizontalBars)
     {
         if (labels.Count == 0)
         {
             return [];
         }
 
-        double fontSize = 9d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        ChartTextStyle style = ReadChartTextStyle(theme, chartXml, categoryAxis, fallbackFontSize: 9d);
+        double fontSize = style.FontSize;
+        RgbColor color = style.Color;
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
@@ -1009,16 +1080,17 @@ internal sealed partial class PptxRenderer
                 alignment = TextAlignment.Center;
             }
 
+            double labelWidth = Math.Max(1d, width);
             runs.Add(new TextRun(
                 labels[i],
                 x,
                 y,
-                Math.Max(1d, width),
+                labelWidth,
                 height,
-                plotBox.X,
-                plotBox.Y,
-                plotBox.Width,
-                plotBox.Height,
+                x,
+                y,
+                labelWidth,
+                height,
                 fontSize,
                 0d,
                 0d,
@@ -1031,7 +1103,7 @@ internal sealed partial class PptxRenderer
                 Strike: false,
                 KerningEnabled: true,
                 alignment,
-                FontFamily: null,
+                FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
@@ -1042,14 +1114,13 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false)
+    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? valueAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
-        double fontSize = 8.5d;
+        ChartTextStyle style = ReadChartTextStyle(theme, chartXml, valueAxis, fallbackFontSize: 8.5d);
+        double fontSize = style.FontSize;
         double height = fontSize * 1.35d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        RgbColor color = style.Color;
         IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true);
         var runs = new List<TextRun>(tickValues.Count);
         foreach (double value in tickValues)
@@ -1102,7 +1173,7 @@ internal sealed partial class PptxRenderer
                 Strike: false,
                 KerningEnabled: true,
                 alignment,
-                FontFamily: null,
+                FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
@@ -1123,7 +1194,7 @@ internal sealed partial class PptxRenderer
 
         ChartValueExtents extents = ReadChartValueAxisExtents(rightValueAxis, fallback);
         ChartAxisUnits axisUnits = ReadChartValueAxisUnits(rightValueAxis);
-        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, extents, axisUnits, horizontalBars: false, rightSide: true);
+        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, rightValueAxis, extents, axisUnits, horizontalBars: false, rightSide: true);
     }
 
     private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
@@ -2511,6 +2582,13 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartAxisUnits(double? MajorUnit, double? MinorUnit)
     {
         public static ChartAxisUnits Empty { get; } = new(null, null);
+    }
+
+    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color);
+
+    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color)
+    {
+        public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
     }
 
     private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent)

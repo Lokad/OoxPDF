@@ -4449,7 +4449,7 @@ internal static class PptxTests
                       <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
                       <a:accent1><a:srgbClr val="00AA00"/></a:accent1>
                     </a:clrScheme>
-                    <a:fontScheme name="ChartTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                    <a:fontScheme name="ChartTheme"><a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme>
                   </a:themeElements>
                 </a:theme>
                 """),
@@ -4482,6 +4482,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:latin typeface="+mn-lt"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart><c:plotArea><c:barChart>
                     <c:ser><c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr><c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
@@ -4507,6 +4508,7 @@ internal static class PptxTests
                     <c:axPos val="l"/>
                     <c:scaling><c:min val="0"/><c:max val="4"/></c:scaling>
                     <c:majorUnit val="2"/>
+                    <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200"><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:latin typeface="+mj-lt"/></a:defRPr></a:pPr></a:p></c:txPr>
                   </c:valAx>
                   <c:valAx>
                     <c:axId val="4"/>
@@ -4548,6 +4550,7 @@ internal static class PptxTests
         TestAssert.Contains("0.667 0 0.667 rg", pdf);
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
+        TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.Contains(" re f", pdf);
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_STATIC_FALLBACK" && d.Severity == OoxPdfSeverity.Info), "Rendered chart fallback should emit an informational diagnostic.");
