@@ -1773,6 +1773,9 @@ internal sealed partial class PptxRenderer
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             switch (marker.Symbol)
             {
+                case "dot":
+                    graphics.FillEllipse(x - size / 4d, y - size / 4d, size / 2d, size / 2d);
+                    break;
                 case "square":
                     graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
                     break;
@@ -1790,6 +1793,9 @@ internal sealed partial class PptxRenderer
                         (x + size / 2d, y - size / 2d),
                         (x - size / 2d, y - size / 2d)
                     ]);
+                    break;
+                case "star":
+                    graphics.FillPolygon(BuildChartStarMarker(x, y, size));
                     break;
                 default:
                     graphics.FillEllipse(x - size / 2d, y - size / 2d, size, size);
@@ -1816,6 +1822,9 @@ internal sealed partial class PptxRenderer
         SetChartStroke(graphics, markerStroke);
         switch (marker.Symbol)
         {
+            case "dash":
+                graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
+                break;
             case "plus":
                 graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
                 graphics.StrokeLine(x, y - size / 2d, x, y + size / 2d);
@@ -1842,6 +1851,9 @@ internal sealed partial class PptxRenderer
                     (x - size / 2d, y - size / 2d)
                 ]);
                 break;
+            case "star":
+                graphics.StrokePolygon(BuildChartStarMarker(x, y, size));
+                break;
             default:
                 graphics.StrokeEllipse(x - size / 2d, y - size / 2d, size, size);
                 break;
@@ -1856,7 +1868,23 @@ internal sealed partial class PptxRenderer
     private static bool IsLineOnlyChartMarker(string symbol)
     {
         return string.Equals(symbol, "plus", StringComparison.Ordinal) ||
-            string.Equals(symbol, "x", StringComparison.Ordinal);
+            string.Equals(symbol, "x", StringComparison.Ordinal) ||
+            string.Equals(symbol, "dash", StringComparison.Ordinal);
+    }
+
+    private static (double X, double Y)[] BuildChartStarMarker(double x, double y, double size)
+    {
+        var points = new List<(double X, double Y)>(10);
+        double outer = size / 2d;
+        double inner = outer * 0.42d;
+        for (int i = 0; i < 10; i++)
+        {
+            double radius = i % 2 == 0 ? outer : inner;
+            double angle = -Math.PI / 2d + i * Math.PI / 5d;
+            points.Add((x + Math.Cos(angle) * radius, y + Math.Sin(angle) * radius));
+        }
+
+        return points.ToArray();
     }
 
     private static void StrokeChartPointRectangle(PdfGraphicsBuilder graphics, int seriesIndex, int categoryIndex, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, double x, double y, double width, double height)

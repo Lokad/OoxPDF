@@ -4454,6 +4454,11 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>3</c:v></c:pt>
                       <c:pt idx="2"><c:v>2</c:v></c:pt>
                     </c:numLit></c:val><c:marker><c:symbol val="plus"/><c:size val="9"/></c:marker></c:ser>
+                    <c:ser><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="555555"/></a:solidFill></a:ln></c:spPr><c:val><c:numLit>
+                      <c:pt idx="0"><c:v>3</c:v></c:pt>
+                      <c:pt idx="1"><c:v>2</c:v></c:pt>
+                      <c:pt idx="2"><c:v>1</c:v></c:pt>
+                    </c:numLit></c:val><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
                     <c:dLbls><c:showVal val="1"/></c:dLbls>
                   </c:lineChart></c:plotArea></c:chart>
                 </c:chartSpace>
@@ -4496,6 +4501,7 @@ internal static class PptxTests
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);
         TestAssert.Contains("0.667 0.333 0 RG", pdf);
+        TestAssert.Contains("0.333 0.333 0.333 RG", pdf);
         TestAssert.Contains("0 0 0.667 rg", pdf);
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains(" c", pdf);
