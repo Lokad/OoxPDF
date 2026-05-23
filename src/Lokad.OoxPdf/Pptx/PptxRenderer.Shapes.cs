@@ -1767,10 +1767,15 @@ internal sealed partial class PptxRenderer
         return new GroupTransform(
             ParseLongAttribute(offset, "x"),
             ParseLongAttribute(offset, "y"),
+            ParseLongAttribute(extents, "cx"),
+            ParseLongAttribute(extents, "cy"),
             ParseLongAttribute(childOffset, "x"),
             ParseLongAttribute(childOffset, "y"),
             ParseLongAttribute(extents, "cx") / (double)chWidth,
-            ParseLongAttribute(extents, "cy") / (double)chHeight);
+            ParseLongAttribute(extents, "cy") / (double)chHeight,
+            transform!.Attribute("rot") is { } rotationAttribute
+                ? long.Parse(rotationAttribute.Value, CultureInfo.InvariantCulture) / 60000d
+                : 0d);
     }
 
     private static void ApplyShapeTransform(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ShapeBounds bounds)

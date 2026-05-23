@@ -1856,6 +1856,10 @@ paths, and ExecPlan references together.
 - [ ] Private slide 30 visible remaining problem: the lower center/right date schema is badly off, likely a
   geometry or grouped-transform issue. Inventory shapes/connectors/transforms and isolate public geometry
   fixtures before changing renderer logic.
+  - [x] Inspect the broken date schema: the timeline cluster includes a rotated group whose child coordinate
+    space was scaled but not rotated by OOXPDF.
+  - [x] Add public coverage for rotated grouped shapes and propagate group rotation into child bounds before
+    rendering.
 - [x] Slide 2 public ladder: lock a minimal shape-text fixture for `fontRef`/theme color inheritance when
   text runs have no direct fill, including a no-fill shape with a visible line and centered text.
 - [x] Slide 2 public ladder: lock highlighted centered mixed-run title-sized text using Cambria/Cambria Math

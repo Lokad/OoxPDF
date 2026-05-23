@@ -3934,6 +3934,46 @@ internal static class PptxTests
         TestAssert.Contains("72 396 72 72 re f", pdf);
     }
 
+    public static void PptxSyntheticRotatedGroupRotatesChildShape()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:grpSp>
+                      <p:grpSpPr>
+                        <a:xfrm rot="5400000">
+                          <a:off x="914400" y="914400"/><a:ext cx="1828800" cy="1828800"/>
+                          <a:chOff x="0" y="0"/><a:chExt cx="1828800" cy="1828800"/>
+                        </a:xfrm>
+                      </p:grpSpPr>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="685800" y="228600"/><a:ext cx="457200" cy="1371600"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:solidFill><a:srgbClr val="C0C0C0"/></a:solidFill>
+                        </p:spPr>
+                      </p:sp>
+                    </p:grpSp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 -1 1 0", pdf);
+        TestAssert.Contains("36 108 re f", pdf);
+    }
+
     public static void PptxSyntheticGroupedPictureAppliesTransform()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

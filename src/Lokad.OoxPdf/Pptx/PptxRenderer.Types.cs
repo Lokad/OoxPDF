@@ -17,31 +17,64 @@ internal sealed partial class PptxRenderer
         bool FlipHorizontal,
         bool FlipVertical);
 
-    private readonly record struct GroupTransform(long OffsetX, long OffsetY, long ChildOffsetX, long ChildOffsetY, double ScaleX, double ScaleY)
+    private readonly record struct GroupTransform(long OffsetX, long OffsetY, long Width, long Height, long ChildOffsetX, long ChildOffsetY, double ScaleX, double ScaleY, double RotationDegrees)
     {
-        public static GroupTransform Identity { get; } = new(0, 0, 0, 0, 1d, 1d);
+        public static GroupTransform Identity { get; } = new(0, 0, 0, 0, 0, 0, 1d, 1d, 0d);
 
         public ShapeBounds Apply(ShapeBounds bounds)
         {
+            long x = OffsetX + (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX);
+            long y = OffsetY + (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY);
+            long width = (long)Math.Round(bounds.Width * ScaleX);
+            long height = (long)Math.Round(bounds.Height * ScaleY);
+            double rotationDegrees = NormalizeRotationDegrees(bounds.RotationDegrees + RotationDegrees);
+            if (Math.Abs(RotationDegrees) > PptxTextMetricRules.TextStateTolerance && Width > 0 && Height > 0)
+            {
+                double groupCenterX = OffsetX + Width / 2d;
+                double groupCenterY = OffsetY + Height / 2d;
+                double boundsCenterX = x + width / 2d;
+                double boundsCenterY = y + height / 2d;
+                double radians = RotationDegrees * Math.PI / 180d;
+                double cos = Math.Cos(radians);
+                double sin = Math.Sin(radians);
+                double dx = boundsCenterX - groupCenterX;
+                double dy = boundsCenterY - groupCenterY;
+                double rotatedCenterX = groupCenterX + dx * cos - dy * sin;
+                double rotatedCenterY = groupCenterY + dx * sin + dy * cos;
+                x = (long)Math.Round(rotatedCenterX - width / 2d);
+                y = (long)Math.Round(rotatedCenterY - height / 2d);
+            }
+
             return new ShapeBounds(
-                OffsetX + (long)Math.Round((bounds.X - ChildOffsetX) * ScaleX),
-                OffsetY + (long)Math.Round((bounds.Y - ChildOffsetY) * ScaleY),
-                (long)Math.Round(bounds.Width * ScaleX),
-                (long)Math.Round(bounds.Height * ScaleY),
-                bounds.RotationDegrees,
+                x,
+                y,
+                width,
+                height,
+                rotationDegrees,
                 bounds.FlipHorizontal,
                 bounds.FlipVertical);
         }
 
         public GroupTransform Combine(GroupTransform child)
         {
+            ShapeBounds childBounds = Apply(new ShapeBounds(
+                child.OffsetX,
+                child.OffsetY,
+                child.Width,
+                child.Height,
+                child.RotationDegrees,
+                FlipHorizontal: false,
+                FlipVertical: false));
             return new GroupTransform(
-                OffsetX + (long)Math.Round((child.OffsetX - ChildOffsetX) * ScaleX),
-                OffsetY + (long)Math.Round((child.OffsetY - ChildOffsetY) * ScaleY),
+                childBounds.X,
+                childBounds.Y,
+                childBounds.Width,
+                childBounds.Height,
                 child.ChildOffsetX,
                 child.ChildOffsetY,
                 ScaleX * child.ScaleX,
-                ScaleY * child.ScaleY);
+                ScaleY * child.ScaleY,
+                childBounds.RotationDegrees);
         }
     }
 
