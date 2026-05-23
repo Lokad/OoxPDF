@@ -1868,6 +1868,8 @@ paths, and ExecPlan references together.
   - [x] Restrict implicit chart-title fallback to bar charts. Applying the first-series-name fallback to every
     chart family created false titles in area/bubble cases; the public `pptx-charts` family now passes the
     first eight imported chart gates again.
+  - [x] Bind secondary right-axis label rendering to the extra bar-chart group that owns the right value axis,
+    so combo charts do not use the primary series as the fallback range for secondary-axis ticks.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
     referenced axes, honor axis tick-label formatting, keep primary/secondary scales independent, and place
     non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.

@@ -111,6 +111,9 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds, chartXml);
                 RenderBarChart(graphics, document, theme, chartPalette, bounds, chartXml, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, ReadChartGapWidth(barChart), ReadChartOverlap(barChart));
+                XElement? secondaryValueAxis = null;
+                ChartValueExtents secondaryValueExtents = default;
+                ChartAxisUnits secondaryAxisUnits = default;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadChartSeries(extraBarChart);
@@ -124,6 +127,13 @@ internal sealed partial class PptxRenderer
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
                     ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
+                    if (!extraHorizontalBars && secondaryValueAxis is null && IsRightValueAxis(extraValueAxis))
+                    {
+                        secondaryValueAxis = extraValueAxis;
+                        secondaryValueExtents = extraValueExtents;
+                        secondaryAxisUnits = extraAxisUnits;
+                    }
+
                     RenderBarChart(
                         graphics,
                         document,
@@ -158,7 +168,9 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars));
                     if (!horizontalBars)
                     {
-                        fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
+                        fonts.AddRange(secondaryValueAxis is not null
+                            ? RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true)
+                            : RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
                     }
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(theme, chartPalette, barChart, seriesFills), ReadChartLegendLayout(chartXml)));
@@ -1290,8 +1302,15 @@ internal sealed partial class PptxRenderer
     {
         return chartXml
             .Descendants(ChartNamespace + "valAx")
-            .Where(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal))
-            .FirstOrDefault(axis => !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete")));
+            .Where(IsRightValueAxis)
+            .FirstOrDefault();
+    }
+
+    private static bool IsRightValueAxis(XElement? axis)
+    {
+        return axis is not null &&
+            string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal) &&
+            !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints)
