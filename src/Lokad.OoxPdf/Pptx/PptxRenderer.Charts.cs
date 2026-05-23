@@ -2188,6 +2188,13 @@ internal sealed partial class PptxRenderer
         graphics.ClipRectangle(x, y, width, height);
         graphics.SetStrokeRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
         string patternPreset = fill.PatternPreset ?? "pct50";
+        if (TryReadPercentageChartPattern(patternPreset, out int densityPercent))
+        {
+            FillChartDotPattern(graphics, x, y, width, height, fill.Color, densityPercent);
+            graphics.RestoreState();
+            return;
+        }
+
         graphics.SetLineWidth(IsDarkChartPattern(patternPreset) ? 1.0d : 0.5d);
         double spacing = IsDarkChartPattern(patternPreset) ? 4d : 5d;
         bool up = patternPreset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase);
@@ -2204,6 +2211,35 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.RestoreState();
+    }
+
+    private static void FillChartDotPattern(PdfGraphicsBuilder graphics, double x, double y, double width, double height, RgbColor color, int densityPercent)
+    {
+        double spacing = 4d;
+        double dotDiameter = densityPercent >= 60
+            ? 2.5d
+            : densityPercent >= 30
+                ? 1.5d
+                : 1.0d;
+        graphics.SetFillRgb(color.Red, color.Green, color.Blue);
+        for (double dotY = y + spacing / 2d; dotY <= y + height; dotY += spacing)
+        {
+            for (double dotX = x + spacing / 2d; dotX <= x + width; dotX += spacing)
+            {
+                graphics.FillEllipse(dotX - dotDiameter / 2d, dotY - dotDiameter / 2d, dotDiameter, dotDiameter);
+            }
+        }
+    }
+
+    private static bool TryReadPercentageChartPattern(string patternPreset, out int densityPercent)
+    {
+        densityPercent = 0;
+        if (!patternPreset.StartsWith("pct", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return int.TryParse(patternPreset.AsSpan(3), NumberStyles.Integer, CultureInfo.InvariantCulture, out densityPercent);
     }
 
     private static bool IsDarkChartPattern(string patternPreset)

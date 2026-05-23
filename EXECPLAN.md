@@ -1946,6 +1946,9 @@ paths, and ExecPlan references together.
   - [x] Honor hidden chart gridline styles: `c:majorGridlines/c:spPr/a:ln/a:noFill` and the corresponding
     minor gridline form no longer draw gridlines. This tightens the compact stacked secondary-axis probe
     to MAE `0.905004` and changed-pixel ratio threshold 16 `0.012336`.
+  - [x] Render chart percentage pattern fills (`pct*`) as tiled dot fields instead of diagonal hatches,
+    following the `pptx-renderer` distinction between percentage and diagonal presets. This tightens the
+    compact stacked secondary-axis probe to MAE `0.885312` and changed-pixel ratio threshold 16 `0.011982`.
   - [x] Place multiple value-axis label columns on the same side instead of overlaying them, and size the
     label boxes from tick text instead of a fixed fraction of the plot width.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
