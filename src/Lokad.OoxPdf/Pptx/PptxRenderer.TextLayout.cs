@@ -1511,7 +1511,12 @@ internal sealed partial class PptxRenderer
             : nominalFontSize;
         double alpha = 1d;
         RgbColor color;
-        if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+        if (HasTextNoFill(runProperties))
+        {
+            color = new RgbColor(0, 0, 0);
+            alpha = 0d;
+        }
+        else if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             alpha = runAlpha;
@@ -1519,6 +1524,11 @@ internal sealed partial class PptxRenderer
         else if (shapeFontColor is { } fontRefColor)
         {
             color = fontRefColor;
+        }
+        else if (HasTextNoFill(defaultRunProperties))
+        {
+            color = new RgbColor(0, 0, 0);
+            alpha = 0d;
         }
         else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
         {
@@ -1555,6 +1565,11 @@ internal sealed partial class PptxRenderer
             IsStrikeEnabled(runProperties, defaultRunProperties),
             IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
             typeface);
+    }
+
+    private static bool HasTextNoFill(XElement? runProperties)
+    {
+        return runProperties?.Element(DrawingNamespace + "noFill") is not null;
     }
 
     private static bool IsKerningEnabled(XElement? runProperties, XElement? defaultRunProperties, double fontSize)

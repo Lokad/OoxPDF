@@ -122,6 +122,9 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text renderer unit coverage as clean `ooxpdf` tests for line spacing, paragraph
   spacing, character spacing, kerning thresholds, font fallback, EA/CS font fallback, bullets, baseline
   shifts, tabs, highlights, and no-fill/outline text where PDF support exists.
+- [x] Port the first `pptx-renderer` no-fill text rule:
+  `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
+  through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
