@@ -550,8 +550,7 @@ internal sealed partial class PptxRenderer
         XElement? legend = chartXml
             .Descendants(ChartNamespace + "legend")
             .FirstOrDefault();
-        if (legend?.Element(ChartNamespace + "delete")?.Attribute("val") is { } delete &&
-            IsOoxmlTrue(delete.Value))
+        if (IsOoxmlBooleanElementEnabled(legend?.Element(ChartNamespace + "delete")))
         {
             return ChartLegendLayout.Hidden;
         }
@@ -645,6 +644,17 @@ internal sealed partial class PptxRenderer
     {
         return value is not null &&
             (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsOoxmlBooleanElementEnabled(XElement? element)
+    {
+        if (element is null)
+        {
+            return false;
+        }
+
+        string? value = (string?)element.Attribute("val");
+        return value is null || IsOoxmlTrue(value);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XElement chartElement, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
@@ -1279,7 +1289,7 @@ internal sealed partial class PptxRenderer
             .Descendants(ChartNamespace + axisName)
             .FirstOrDefault()
             ?.Element(ChartNamespace + "delete");
-        return IsOoxmlTrue((string?)delete?.Attribute("val"));
+        return IsOoxmlBooleanElementEnabled(delete);
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)

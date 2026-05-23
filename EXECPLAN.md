@@ -662,6 +662,8 @@ Composite oracle family map:
 - Bar and line chart fallbacks now honor `c:valAx/c:delete` and `c:catAx/c:delete` by suppressing the
   deleted axis line and labels while keeping plot geometry and gridlines intact. Remaining hidden-axis work
   is interaction with crossings, tick marks, and chart-style inherited axis visibility.
+- Chart boolean delete flags now treat both `val="1"` and element-only forms such as `<c:delete/>` as
+  enabled for axis and legend visibility handling.
 - Bar and line chart fallbacks now render simple legends from cached series names, using the same fill or
   stroke styles as the plotted series. Remaining legend work is Office layout positions, overlay behavior,
   rich text, hidden/deleted entries, and chart style inheritance.
