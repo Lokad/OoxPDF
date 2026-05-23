@@ -2307,6 +2307,76 @@ internal static class PptxTests
             $"Expected Office-compatible first-line wrap. Lines: {string.Join(" | ", texts.Take(4))}. Widths: {string.Join(" | ", lines.Take(4).Select(line => (line.EndX - line.StartX).ToString("0.###", CultureInfo.InvariantCulture)))}");
     }
 
+    public static void PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Aptos">
+                  <a:themeElements>
+                    <a:clrScheme name="Aptos">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                    </a:clrScheme>
+                    <a:fontScheme name="Aptos"><a:majorFont><a:latin typeface="Aptos Display"/></a:majorFont><a:minorFont><a:latin typeface="Aptos"/></a:minorFont></a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3350712" cy="1847589"/></a:xfrm>
+                      <a:prstGeom prst="rect"/>
+                      <a:noFill/>
+                      <a:ln><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln>
+                    </p:spPr>
+                    <p:style><a:fontRef idx="minor"><a:srgbClr val="FFFFFF"/></a:fontRef></p:style>
+                    <p:txBody>
+                      <a:bodyPr rtlCol="0" anchor="ctr"/><a:lstStyle/>
+                      <a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="en-US" sz="4000"/><a:t>Customer Logo</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+        string[] texts = lines.Select(line => string.Concat(line.Spans.Select(span => span.Text)).Trim()).ToArray();
+
+        TestAssert.Equal(2, texts.Length);
+        TestAssert.Equal("Customer", texts[0]);
+        TestAssert.Equal("Logo", texts[1]);
+    }
+
     public static void PptxSyntheticTextBoxHonorsKerningThreshold()
     {
         string times = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "times.ttf");

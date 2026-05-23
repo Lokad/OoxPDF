@@ -565,7 +565,7 @@ internal sealed partial class PptxRenderer
         public const double AdjacentTextCoalesceGapFontScale = 0.2d;
         public const double AdjacentUnderlineCoalesceGapFontScale = 0.08d;
         public const double WrapFitToleranceFontScale = 0.16d;
-        public const double FinalWordWrapToleranceFontScale = 0.5d;
+        public const double FinalWordWrapToleranceWidthScale = 0.02d;
         public const double FallbackAdvanceWidthScale = 0.42d;
         public const int ShapeAutoFitSearchIterations = 10;
 
@@ -603,7 +603,7 @@ internal sealed partial class PptxRenderer
 
         public static double WrapFitTolerance(double fontSize) => Math.Max(CoordinateTolerance, fontSize * WrapFitToleranceFontScale);
 
-        public static double FinalWordWrapTolerance(double fontSize) => Math.Max(WrapFitTolerance(fontSize), fontSize * FinalWordWrapToleranceFontScale);
+        public static double FinalWordWrapTolerance(double fontSize, double availableWidth) => Math.Max(WrapFitTolerance(fontSize), availableWidth * FinalWordWrapToleranceWidthScale);
 
         public static double FallbackAdvanceWidth(int codeUnitCount, int runeCount, double fontSize, double characterSpacing)
         {

@@ -698,7 +698,7 @@ internal sealed partial class PptxRenderer
                         : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
                     if (isFinalShortWordSegment)
                     {
-                        wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize);
+                        wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }
 
                     bool overflowsLine = allowWrapping &&

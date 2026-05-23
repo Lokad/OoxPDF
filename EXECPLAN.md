@@ -1630,8 +1630,12 @@ paths, and ExecPlan references together.
   not font-by-font aliases.
 - [x] Add `pptx-ladder-04-cambria-math-dense-wrap-probe` for the private slide-11 class of issues:
   dense Cambria Math paragraphs, mixed bold spans, an empty paragraph, and a narrow public text frame. OOXPDF
-  now keeps the short final heading word on the first line through a named final-word wrap rule instead of a
-  broad wrap tolerance, and the visual gate is at MAE `2.769287`, changed16 `0.025235`.
+  now keeps the short final heading word on the first line through a width-relative final-word wrap rule
+  instead of a broad font-size-only tolerance, and the visual gate is at MAE `2.769287`, changed16
+  `0.025235`.
+- [x] Add a public Aptos-theme centered logo-box probe from the private slide-2 pattern: a 40pt default
+  minor-font run in a narrow centered frame must wrap into two centered lines. This prevents the
+  width-relative final-word tolerance from letting large overflows remain clipped on one line.
 - [ ] Continue tightening `pptx-ladder-04-typography-run-boundaries` toward near-pixel parity by comparing
   Office and candidate `TJ` arrays, baseline `Tm` values, and highlight geometry line by line.
 - [ ] Add normalized typography rungs for accented Latin and punctuation-adjacent words: French accents,
