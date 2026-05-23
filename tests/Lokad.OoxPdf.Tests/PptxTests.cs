@@ -4310,6 +4310,7 @@ internal static class PptxTests
                   <c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
                   <c:valAx><c:majorGridlines/><c:minorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr></c:valAx><c:lineChart>
                     <c:ser><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr>
+                    <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Forecast</c:v></c:pt></c:strCache></c:strRef></c:tx>
                     <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt><c:pt idx="2"><c:v>Q3</c:v></c:pt></c:strLit></c:cat>
                     <c:val><c:numLit>
                       <c:pt idx="0"><c:v>2</c:v></c:pt>
@@ -4346,7 +4347,7 @@ internal static class PptxTests
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
-        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 4, "Chart title plus category and value labels should emit chart text objects.");
+        TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 5, "Chart title, labels, and legend should emit chart text objects.");
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
         TestAssert.Contains("0.851 0.851 0.851 RG", pdf);
         TestAssert.Contains("0 0.667 0 RG", pdf);

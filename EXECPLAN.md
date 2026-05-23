@@ -652,6 +652,9 @@ Composite oracle family map:
 - Bar and line chart fallbacks now render basic value-axis tick labels from the same numeric extents used
   by the plotted series. Remaining tick-label work is explicit axis scaling/units, number formats, hidden
   axes, label positions, and exact Office chart text styling.
+- Bar and line chart fallbacks now render simple legends from cached series names, using the same fill or
+  stroke styles as the plotted series. Remaining legend work is Office layout positions, overlay behavior,
+  rich text, hidden/deleted entries, and chart style inheritance.
 
 PPTX table style targets from the table composite port:
 

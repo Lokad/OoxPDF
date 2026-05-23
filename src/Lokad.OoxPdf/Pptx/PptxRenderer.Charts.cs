@@ -72,6 +72,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetBarChartPlotBox(document, bounds);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(barChart), horizontalBars));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetBarChartValueExtents(barSeries, grouping), horizontalBars));
+                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildFillLegendEntries(barChart, seriesFills)));
                 return true;
             }
         }
@@ -92,6 +93,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetLineChartPlotBox(document, bounds);
                 fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, ReadChartCategoryLabels(lineChart), horizontalBars: false));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, GetLineChartValueExtents(lineSeries), horizontalBars: false));
+                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes)));
                 return true;
             }
         }
@@ -377,6 +379,123 @@ internal sealed partial class PptxRenderer
             .Where(value => !string.IsNullOrEmpty(value))
             .Cast<string>()
             .ToArray();
+    }
+
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills)
+    {
+        IReadOnlyList<string> names = ReadChartSeriesNames(chartElement);
+        var entries = new List<ChartLegendEntry>(names.Count);
+        for (int i = 0; i < names.Count; i++)
+        {
+            entries.Add(new ChartLegendEntry(names[i], ChartSeriesColor(i, seriesFills), null));
+        }
+
+        return entries;
+    }
+
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    {
+        IReadOnlyList<string> names = ReadChartSeriesNames(chartElement);
+        var entries = new List<ChartLegendEntry>(names.Count);
+        for (int i = 0; i < names.Count; i++)
+        {
+            entries.Add(new ChartLegendEntry(names[i], null, ChartSeriesStrokeColor(i, seriesStrokes, 1.5d)));
+        }
+
+        return entries;
+    }
+
+    private static IReadOnlyList<string> ReadChartSeriesNames(XElement chartElement)
+    {
+        return chartElement
+            .Elements(ChartNamespace + "ser")
+            .Select((series, index) => ReadChartSeriesName(series) ?? $"Series {index + 1}")
+            .ToArray();
+    }
+
+    private static string? ReadChartSeriesName(XElement series)
+    {
+        XElement? text = series.Element(ChartNamespace + "tx");
+        if (text is null)
+        {
+            return null;
+        }
+
+        string? direct = (string?)text.Element(ChartNamespace + "v");
+        if (!string.IsNullOrWhiteSpace(direct))
+        {
+            return direct.Trim();
+        }
+
+        return text
+            .Descendants(ChartNamespace + "pt")
+            .Select(point => ((string?)point.Element(ChartNamespace + "v"))?.Trim())
+            .FirstOrDefault(value => !string.IsNullOrEmpty(value));
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return [];
+        }
+
+        double fontSize = 9d;
+        double lineHeight = fontSize * 1.45d;
+        double markerSize = fontSize * 0.65d;
+        double x = plotBox.X + plotBox.Width + 8d;
+        double width = Math.Max(36d, plotBox.Width * 0.22d);
+        double firstY = plotBox.Y + plotBox.Height - lineHeight;
+        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        var runs = new List<TextRun>(entries.Count);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            ChartLegendEntry entry = entries[i];
+            double y = firstY - i * lineHeight;
+            double markerY = y + lineHeight * 0.35d;
+            if (entry.Fill is { } fill)
+            {
+                FillChartRectangle(graphics, x, markerY, markerSize, markerSize, fill);
+            }
+            else if (entry.Stroke is { } stroke)
+            {
+                SetChartStroke(graphics, stroke);
+                graphics.StrokeLine(x, markerY + markerSize / 2d, x + markerSize, markerY + markerSize / 2d);
+            }
+
+            runs.Add(new TextRun(
+                entry.Name,
+                x + markerSize + 4d,
+                y,
+                width,
+                lineHeight,
+                plotBox.X,
+                plotBox.Y,
+                plotBox.Width,
+                plotBox.Height,
+                fontSize,
+                0d,
+                0d,
+                color,
+                1d,
+                null,
+                Bold: false,
+                Italic: false,
+                Underline: false,
+                Strike: false,
+                KerningEnabled: true,
+                TextAlignment.Left,
+                FontFamily: null,
+                RotationDegrees: 0d,
+                RotationCenterX: 0d,
+                RotationCenterY: 0d,
+                FlipHorizontal: false,
+                FlipVertical: false));
+        }
+
+        return RenderTextRuns(runs, graphics);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<string> labels, bool horizontalBars)
@@ -1690,6 +1809,8 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartValueExtents(double Min, double Max);
+
+    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 
     private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
     {
