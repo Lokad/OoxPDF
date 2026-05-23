@@ -454,7 +454,7 @@ internal sealed partial class PptxRenderer
                             continue;
                         }
 
-                        runs.Add(new TextRun(token, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, x, y - height * 0.75d, Math.Max(1d, width), Math.Max(1d, height * 2.1d), fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d, false, false));
+                        runs.Add(new TextRun(token, cursorX, cursorY, Math.Max(1d, advance), textAreaHeight, textX, y + insets.Bottom, textWidth, textAreaHeight, fragmentFontSize, 0d, 0d, color, alpha, null, bold, italic, underline, strike, true, alignment, typeface, 0d, 0d, 0d, false, false));
                         cursorX += advance;
                     }
                 }
