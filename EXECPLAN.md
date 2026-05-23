@@ -1877,6 +1877,10 @@ paths, and ExecPlan references together.
   - [ ] New review note: right-side text expands enough to overlap the lower boxing line, and a one-line
     label wraps into two lines. Map this to text metrics, autofit, body insets, and shape bounds with public
     text-fit fixtures.
+    - [x] Inspect the wrapping label: the source uses `bodyPr vert="vert270"` with `spAutoFit`.
+      OOXPDF was wrapping before fitting, while Office keeps the rotated label as one fitted line.
+    - [x] Add public coverage for vertical `spAutoFit` text and update shape autofit to evaluate the
+      unwrapped extent before accepting word wrapping.
   - [x] Add minimal public coverage and renderer support for `curvedConnector3`; this removes the most
     obvious rectangular/straight connector artifacts in the slide-9 schema.
   - [x] Add first-class `PptxTextOrientation` coverage for known `a:bodyPr @vert` variants (`vert`,

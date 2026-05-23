@@ -306,9 +306,22 @@ internal sealed partial class PptxRenderer
         {
             PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
             PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
-            if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflows(layout, flowFrame.Box))
+            if (HasShapeAutoFit(frameModel.TextBody) && frameModel.Orientation != PptxTextOrientation.Horizontal)
             {
-                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator);
+                PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
+                if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
+                {
+                    PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
+                    layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false);
+                }
+                else
+                {
+                    layout = unwrappedLayout;
+                }
+            }
+            else if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflows(layout, flowFrame.Box))
+            {
+                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
                 layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
             }
 
@@ -368,7 +381,8 @@ internal sealed partial class PptxRenderer
     private static PptxTextFrameModel FitShapeAutoFitFrame(
         PptxTextFrameModel frame,
         PptxDocument document,
-        TextAdvanceEstimator advanceEstimator)
+        TextAdvanceEstimator advanceEstimator,
+        bool allowWrapping)
     {
         double high = frame.FontScale;
         double low = PptxTextMetricRules.MinimumAutofitScale;
@@ -378,7 +392,7 @@ internal sealed partial class PptxRenderer
             double candidateScale = (low + high) / 2d;
             PptxTextFrameModel candidate = ScaleTextFrameModel(frame, candidateScale);
             PptxTextFlowFrame candidateFlow = BuildTextFlowFrame(candidate, document);
-            PptxTextFrameLayout candidateLayout = BuildTextFrameLayout(candidateFlow, document, advanceEstimator);
+            PptxTextFrameLayout candidateLayout = BuildTextFrameLayout(candidateFlow, document, advanceEstimator, allowWrapping);
             if (TextLayoutOverflows(candidateLayout, candidateFlow.Box))
             {
                 high = candidateScale;
@@ -396,9 +410,12 @@ internal sealed partial class PptxRenderer
     private static bool TextLayoutOverflows(PptxTextFrameLayout layout, PptxTextFlowBox box)
     {
         double bottom = box.CursorTop - box.TextHeight;
+        double right = box.TextX + box.TextWidth;
         return layout.Paragraphs
             .SelectMany(paragraph => paragraph.Lines)
-            .Any(line => line.Box.TopY - line.Box.Advance < bottom - PptxTextMetricRules.TextStateTolerance);
+            .Any(line =>
+                line.Box.TopY - line.Box.Advance < bottom - PptxTextMetricRules.TextStateTolerance ||
+                line.EndX > right + PptxTextMetricRules.TextStateTolerance);
     }
 
     private static PptxTextFrameModel ScaleTextFrameModel(PptxTextFrameModel frame, double fontScale)
@@ -502,7 +519,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator)
+    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping = true)
     {
         PptxTextFrameModel frame = flowFrame.Model;
         double cursorLineTop = flowFrame.Box.CursorTop;
@@ -640,7 +657,8 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    bool overflowsLine = cursorX > paragraphTextX &&
+                    bool overflowsLine = allowWrapping &&
+                        cursorX > paragraphTextX &&
                         (cursorX + segmentWidth > columnStartX + effectiveTextWidth ||
                             (runStyle.CharacterSpacing > 0d && cursorX + segmentWidth > columnStartX + effectiveTextWidth - fragmentFontSize));
                     if (overflowsLine)
