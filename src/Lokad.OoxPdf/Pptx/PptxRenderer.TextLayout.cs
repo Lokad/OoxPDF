@@ -319,7 +319,7 @@ internal sealed partial class PptxRenderer
                     layout = unwrappedLayout;
                 }
             }
-            else if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflows(layout, flowFrame.Box))
+            else if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflowsHorizontally(layout, flowFrame.Box))
             {
                 PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
                 layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
@@ -425,6 +425,14 @@ internal sealed partial class PptxRenderer
             .Any(line =>
                 line.Box.TopY - line.Box.Advance < bottom - PptxTextMetricRules.TextStateTolerance ||
                 line.EndX > right + PptxTextMetricRules.TextStateTolerance);
+    }
+
+    private static bool TextLayoutOverflowsHorizontally(PptxTextFrameLayout layout, PptxTextFlowBox box)
+    {
+        double right = box.TextX + box.TextWidth;
+        return layout.Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .Any(line => line.EndX > right + PptxTextMetricRules.TextStateTolerance);
     }
 
     private static PptxTextFrameModel ScaleTextFrameModel(PptxTextFrameModel frame, double fontScale)

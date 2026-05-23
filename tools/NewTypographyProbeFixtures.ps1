@@ -296,4 +296,13 @@ New-TypographyProbe `
           <a:p><a:pPr algn="l"><a:spcAft><a:spcPts val="300"/></a:spcAft></a:pPr><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>SpAutoFit highlighted </a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight><a:latin typeface="Cambria Math"/></a:rPr><a:t>AI</a:t></a:r><a:r><a:rPr sz="1200" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t> boundary keeps neighboring words stable.</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-spautofit-headline-wrap-probe" `
+    -Transform '<a:xfrm><a:off x="822960" y="685800"/><a:ext cx="4876800" cy="914400"/></a:xfrm>' `
+    -BodyPr '<a:bodyPr wrap="square"><a:spAutoFit/></a:bodyPr>' `
+    -TextBody @'
+          <a:p><a:r><a:rPr sz="1800" kern="1200"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Operational planning is decisions and execution. Execute better, and you have a better operating model. Make decisions better and you have a better company.</a:t></a:r></a:p>
+          <a:p><a:endParaRPr lang="en-US" sz="400"><a:latin typeface="Cambria Math"/></a:endParaRPr></a:p>
+'@
+
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

@@ -1648,6 +1648,11 @@ paths, and ExecPlan references together.
 - [ ] Reverse-engineer Office's `spAutoFit` text fitting for narrow PPTX columns. The refined probe shows
   Office applying about `-0.036pt` character spacing to 12pt body lines, which changes wraps around short
   highlighted runs; candidate currently emits `Tc=0`.
+- [x] Fix horizontal `spAutoFit` height-overflow semantics against Office PDF output:
+  `pptx-ladder-04-typography-spautofit-headline-wrap-probe` reproduces the slide-9/66 dense-heading
+  wrapping pattern with public text. Office keeps the run at `18pt` and wraps into four text operations;
+  OOXPDF no longer shrinks horizontal `spAutoFit` merely because the text is taller than the original
+  box. The case is gated with PDF text-operation parity at `0.02pt` position tolerance.
 - [x] Add stress probes for highlight tracking across no-autofit, wide `spAutoFit`, and narrow `spAutoFit`
   variants. Office evidence shows plain `spAutoFit` text keeps `Tc=0`; compact tracking starts on the
   highlighted run and carries through following runs in the same paragraph.

@@ -3028,6 +3028,30 @@ internal static class PptxTests
         TestAssert.True(lines[0].EndX - lines[0].StartX <= 150d, "Fitted vertical text should stay inside the rotated text width.");
     }
 
+    public static void PptxSyntheticHorizontalShapeAutoFitPreservesFontSizeWhenHeightOverflows()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-spautofit-headline-wrap-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(4, lines.Length);
+        TestAssert.True(lines.All(line => Math.Abs(line.MaxFontSize - 18d) < 0.01d), "Horizontal spAutoFit should preserve Office's run font size when only vertical text height overflows.");
+        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 21.6d) < 0.01d), "Horizontal spAutoFit should keep the normal 1.2 line advance instead of shrinking text.");
+    }
+
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
