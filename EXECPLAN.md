@@ -1839,9 +1839,14 @@ paths, and ExecPlan references together.
     `PptxSyntheticTableCentersTextByContentHeight`.
 - [ ] Private slide 10 visible remaining problem: one headline line is positioned too high. Map it to public
   typography baselines, paragraph spacing, inherited bodyPr insets, or placeholder geometry before fixing.
+  - [x] Latest private regen `20260523-121550` no longer shows the headline-position issue at manual
+    inspection scale; keep open only if manual review finds a remaining delta.
 - [ ] Private slide 11 visible remaining problem: a lower-left image overlaps preceding text, and adjacent
   left-side title text formatting mismatches Office. Reproduce as public picture/text z-order and inherited
   text-style fixtures.
+  - [ ] Latest inspection suggests the overlap is caused by preceding text wrapping/flowing too tall, not by
+    the timeline graphic being placed too high. Isolate with public typography fixtures for requested-font
+    metrics, mixed bold/regular run widths, and default line advance before moving the graphic.
 - [ ] Private slide 19 visible remaining problem: lower-left logo rendering, paired-arrow geometry, and
   center/right font selection differ from Office. Split into public logo/image recolor or crop diagnostics,
   arrow geometry fixtures, and font fallback/style inheritance fixtures.
@@ -1895,6 +1900,9 @@ paths, and ExecPlan references together.
   - [ ] New review note: the lower-right column text has increasing vertical-position drift from top to
     bottom. Isolate public fixtures for repeated column items with inherited paragraph spacing, vertical
     anchor, and cumulative line-height rounding.
+    - [ ] Latest inspection shows the affected cells use `tcPr anchor="ctr"` with explicit small margins.
+      Build public table fixtures for centered cells containing wrapped and multi-paragraph text; replace
+      the current rough table-cell content-height estimate with a layout result that matches Office.
   - [x] Fix the dominant right-side table text overflow: PPTX table-cell text now wraps words to the cell
     text width instead of emitting one horizontal run per paragraph. Public synthetic unit
     `PptxSyntheticTableWrapsCellTextToColumnWidth` locks the generic behavior, and private page 12 now
