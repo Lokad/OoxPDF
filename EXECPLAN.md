@@ -1939,6 +1939,10 @@ paths, and ExecPlan references together.
   - [x] Apply the same model to OOXPDF table-cell text placement: tcPr margins override bodyPr defaults,
     middle/bottom anchors account for estimated wrapped content height, and the behavior is locked by
     `PptxSyntheticTableCentersTextByContentHeight`.
+  - [x] Align table-cell vertical anchoring with the actual text-flow wrap width instead of the clipped text
+    width. `PptxSyntheticTableKeepsSlide6HeaderOnOneLine` now locks both one-line wrapping and the centered
+    baseline for the slide-6-derived header, and private regen `20260523-210035` places the three header
+    baselines at the Office reference y-position.
 - [ ] Private slide 10 visible remaining problem: one headline line is positioned too high. Map it to public
   typography baselines, paragraph spacing, inherited bodyPr insets, or placeholder geometry before fixing.
   - [x] Latest private regen `20260523-121550` no longer shows the headline-position issue at manual

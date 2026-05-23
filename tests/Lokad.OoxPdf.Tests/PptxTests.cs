@@ -4954,6 +4954,7 @@ internal static class PptxTests
             .Distinct(StringComparer.Ordinal)
             .Count();
         TestAssert.True(lineBaselines == 1, $"Expected one rendered baseline for the table header; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 435\.945 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
     }
 
     public static void PptxSyntheticTableIgnoresLeadingEmptyCellParagraph()
