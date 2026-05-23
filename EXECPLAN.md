@@ -497,7 +497,7 @@ Unit-test capability inventory from `pptx-renderer`:
 - Parser/model tests map to `OoxPackage`, relationships, units, `PptxDocument`, `PptxTheme`,
   `PptxSlide`, `PptxScene`, and typed scene nodes.
 - Renderer boundary tests map to future `PptxRenderContext`, background/slide/group/image/shape/text/table
-  renderer partials, style resolver, color resolver, and chart fallback renderer.
+  renderer partials, style resolver, color resolver, and chart renderer.
 - Shape utility tests map to preset path generation, adjustment handling, custom geometry, and arc geometry.
 - Utility tests map to visual metrics, media path safety, EMF/WMF diagnostics or fallback, PDF inspection,
   and preview/raster scaling.
@@ -507,7 +507,7 @@ Generated Office-oracle family inventory from `pptx-renderer`:
 - Text `oracle-pypptx-text-0001..0038`: ported as public Ladder 4 typography visual cases.
 - Shape adjustments `oracle-pypptx-shape-adj-0001..0031`: ported as public Ladder 6 shape-adjustment cases.
 - Composite `oracle-pypptx-composite-0001..0010`: next visual-port target after shape adjustments.
-- Charts `oracle-pypptx-chart-0001..0021`: later visual-port target, after chart fallback architecture is
+- Charts `oracle-pypptx-chart-0001..0021`: later visual-port target, after native chart architecture is
   separated from the main PPTX renderer.
 
 Current `pptx-renderer` parity tracking:
@@ -565,7 +565,7 @@ Composite oracle family map:
   typed model instead of ad hoc chart-family branches.
 - Chart composites `0008` and `0010` are now ported as public fixtures
   `pptx-ladder-11-composite-two-charts-port` and `pptx-ladder-11-dashboard-table-chart-port`.
-  They are intentionally loose chart/composition gates until chart fallback/rendering is separated.
+  They are intentionally loose chart/composition gates until native chart rendering is separated.
 - Cached numeric line and pie chart rendering is now covered by a synthetic unit test and by
   `pptx-ladder-11-composite-two-charts-port`. The port improved from MAE `21.305318`, changed16
   `0.223965` with unsupported-chart diagnostics to MAE `16.063279`, changed16 `0.202201`. The dashboard
@@ -597,19 +597,19 @@ Composite oracle family map:
   changed16 `0.106274`; and bubble MAE `5.392324`, changed16 `0.051635`. Remaining work is full Office
   chart styling/layout rather than chart-type recognition: axes/ticks, titles, legends, labels, marker
   shapes, bubble scaling, radar grid rings, smoothing, cached chart images, and theme/style colors.
-- Cached bar/column chart fallback now honors simple per-series `c:spPr/a:solidFill/a:srgbClr` fills for
+- Cached bar/column chart rendering now honors simple per-series `c:spPr/a:solidFill/a:srgbClr` fills for
   clustered, stacked, 100% stacked, horizontal, and vertical bars. The next chart styling slice should
   generalize series color resolution through theme/chart style parts instead of only direct RGB fills.
 - Chart series fill resolution now uses the shared PPTX solid-color resolver, so direct `srgbClr`,
   `schemeClr`, color transforms, and fill alpha flow through the same theme-aware path as shapes/tables.
   Remaining chart color work is chart style/color-style parts and defaults inherited from Office templates.
-- Line chart fallback now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
+- Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
-- Area, scatter, bubble, and radar chart fallbacks now share the same explicit series fill/stroke style
+- Area, scatter, bubble, and radar chart renderer now share the same explicit series fill/stroke style
   plumbing as bars and lines. Remaining chart styling work is mostly inherited chart style/color-style
   defaults, point-level overrides, marker shapes, axes/ticks, labels, legends, and exact plot-area layout.
-- Line and scatter chart fallbacks now read basic series marker symbols and sizes, with first-pass support
+- Line and scatter chart renderer now read basic series marker symbols and sizes, with first-pass support
   for `circle`, `square`, `diamond`, `triangle`, and `none`. Remaining marker work is Office's full marker
   preset set, marker fill/line overrides, and exact marker sizing from the chart style parts.
 - Line and scatter chart markers now honor marker-level `c:marker/c:spPr` solid fills and line strokes.
@@ -619,86 +619,86 @@ Composite oracle family map:
   `dot`/`star` presets with default stroke fallback when no marker stroke override is present. Remaining
   marker work is automatic marker inheritance from chart style/color-style parts and exact Office marker
   sizing.
-- Line and scatter chart fallbacks now honor per-series `c:smooth` by emitting cubic Bezier paths from the
+- Line and scatter chart renderer now honor per-series `c:smooth` by emitting cubic Bezier paths from the
   point sequence instead of straight segments. Remaining smoothing work is exact Office spline tension and
   interaction with missing/blank points.
-- Bar and line chart fallbacks now render simple `c:majorGridlines` inside the plot area. Remaining axis
+- Bar and line chart renderer now render simple `c:majorGridlines` inside the plot area. Remaining axis
   work is tick labels, axis scaling, axis crossing, minor gridlines, axis line styling, and exact Office
   plot-area bounds.
-- Bar and line chart fallbacks now honor `c:valAx/c:spPr/a:ln` and `c:catAx/c:spPr/a:ln` axis line
+- Bar and line chart renderer now honor `c:valAx/c:spPr/a:ln` and `c:catAx/c:spPr/a:ln` axis line
   styling through the shared line resolver. Remaining axis work is tick labels, axis scaling, axis crossing,
   minor gridlines, and exact Office plot-area bounds.
-- Bar and line chart fallbacks now render simple `c:minorGridlines` separately from major gridlines with
+- Bar and line chart renderer now render simple `c:minorGridlines` separately from major gridlines with
   lighter intermediate lines. Remaining gridline work is Office style inheritance, non-default intervals,
   and exact plot-area bounds.
 - Bar and line chart legends now read `c:legend/c:legendPos` for basic top, bottom, left, and right
   placement and honor deleted legends instead of always emitting a right-side legend. Remaining legend work
   is overlay semantics, manual layout, text styling, entry order/filtering, and exact Office spacing.
-- Supported chart fallbacks now render simple `c:chartSpace/c:spPr` chart-area fills and borders before
+- Supported chart renderer now render simple `c:chartSpace/c:spPr` chart-area fills and borders before
   the plot content. Remaining chart-area work is rounded corners, effects, plot-area fills/borders, and
   exact Office chart layout.
-- Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr` solid fills for individual slices
+- Pie and doughnut chart renderer now honor point-level `c:dPt/c:spPr` solid fills for individual slices
   through the shared theme-aware color resolver. Remaining point-level chart work is exploded offsets,
   slice borders, data labels, and inherited chart style/color-style defaults.
-- Doughnut chart fallback now reads `c:holeSize` and uses it for the inner cutout instead of a fixed ratio.
+- Doughnut chart renderer now reads `c:holeSize` and uses it for the inner cutout instead of a fixed ratio.
   Remaining doughnut work is exploded slices, slice border styling, data labels, and Office chart layout.
-- Pie and doughnut chart fallbacks now honor point-level `c:explosion` by offsetting slices along their
+- Pie and doughnut chart renderer now honor point-level `c:explosion` by offsetting slices along their
   midpoint angle. Remaining slice work is border styling, exact Office explosion scaling, and data labels.
-- Pie and doughnut chart fallbacks now honor point-level `c:dPt/c:spPr/a:ln` slice borders through the
+- Pie and doughnut chart renderer now honor point-level `c:dPt/c:spPr/a:ln` slice borders through the
   shared line resolver. Remaining slice work is data labels, exact Office explosion scaling, and chart
   style/color-style inherited defaults.
-- Supported chart fallbacks now render simple chart titles through the shared PPTX text/font pipeline.
+- Supported chart renderer now render simple chart titles through the shared PPTX text/font pipeline.
   Remaining title work is exact Office title layout, rich text styling, overlay/manual layout, and inherited
   chart style defaults.
-- Bar and line chart fallbacks now honor `c:plotArea/c:spPr` fill and border styling through the shared
+- Bar and line chart renderer now honor `c:plotArea/c:spPr` fill and border styling through the shared
   chart shape-style helper. Remaining plot-area work is manual layout, rounded corners/effects, and extending
   exact plot bounds to area/scatter/radar/pie/doughnut families.
-- Bar and line chart fallbacks now render first-series cached category labels through the shared PPTX text
+- Bar and line chart renderer now render first-series cached category labels through the shared PPTX text
   pipeline. Remaining axis-label work is tick values, rich text, label rotation, multi-level categories,
   manual positioning, and Office chart font/style inheritance.
-- Bar and line chart fallbacks now render basic value-axis tick labels from the same numeric extents used
+- Bar and line chart renderer now render basic value-axis tick labels from the same numeric extents used
   by the plotted series. Remaining tick-label work is explicit axis scaling/units, number formats, hidden
   axes, label positions, and exact Office chart text styling.
-- Bar and line chart fallbacks now honor `c:valAx/c:delete` and `c:catAx/c:delete` by suppressing the
+- Bar and line chart renderer now honor `c:valAx/c:delete` and `c:catAx/c:delete` by suppressing the
   deleted axis line and labels while keeping plot geometry and gridlines intact. Remaining hidden-axis work
   is interaction with crossings, tick marks, and chart-style inherited axis visibility.
 - Chart boolean delete flags now treat both `val="1"` and element-only forms such as `<c:delete/>` as
   enabled for axis and legend visibility handling.
-- Bar and line chart fallbacks now render simple legends from cached series names, using the same fill or
+- Bar and line chart renderer now render simple legends from cached series names, using the same fill or
   stroke styles as the plotted series. Remaining legend work is Office layout positions, overlay behavior,
   rich text, hidden/deleted entries, and chart style inheritance.
-- Pie and doughnut chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
+- Pie and doughnut chart renderer now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining data-label work is category/percentage labels, rich text, leader lines, custom positions,
   number formats, and exact Office label collision behavior.
-- Pie and doughnut chart fallbacks now render percentage data labels when `c:dLbls/c:showPercent` is enabled.
+- Pie and doughnut chart renderer now render percentage data labels when `c:dLbls/c:showPercent` is enabled.
   Remaining pie-like label work is combined value/percentage/category labels, rich text, leader lines,
   separator handling, custom positions, and number formats.
-- Pie and doughnut chart fallbacks now combine value and percentage labels when both `showVal` and
+- Pie and doughnut chart renderer now combine value and percentage labels when both `showVal` and
   `showPercent` are enabled, using a comma separator until explicit `c:separator` handling is added.
 - Chart data-label options now resolve both chart-level `c:dLbls` and first-series `c:ser/c:dLbls`, covering
   another common Office emission shape before richer per-point/per-series label overrides are implemented.
 - Bar and line chart plot boxes now honor simple `c:plotArea/c:layout/c:manualLayout` fractional `x/y/w/h`
   values instead of always using heuristic margins. Remaining manual-layout work is `xMode/yMode/wMode/hMode`,
   target variants, title/legend interaction, and applying the same box model to other chart families.
-- Bar and line chart fallbacks now honor explicit `c:valAx/c:scaling` min/max values for both plotted
+- Bar and line chart renderer now honor explicit `c:valAx/c:scaling` min/max values for both plotted
   geometry and value-axis tick labels. Remaining axis-scaling work is orientation, logarithmic scales,
   major/minor units, crossing rules, and date/category axis semantics.
-- Bar and line chart fallbacks now honor explicit `c:valAx/c:majorUnit` and `c:minorUnit` for value-axis
+- Bar and line chart renderer now honor explicit `c:valAx/c:majorUnit` and `c:minorUnit` for value-axis
   labels and gridline placement. Remaining unit work is automatic Office unit selection, logarithmic/date
   units, label skip rules, and exact major/minor tick mark rendering.
-- Bar/column chart fallbacks now honor `c:varyColors` for single-series charts without explicit series
+- Bar/column chart renderer now honor `c:varyColors` for single-series charts without explicit series
   fills, assigning palette colors by category. Remaining palette work is Office chart style/color-style
   parts, point-level overrides for bars, and theme-derived automatic colors.
-- Bar/column chart fallbacks now honor point-level `c:dPt/c:spPr` fills, sharing the same point-style reader
+- Bar/column chart renderer now honor point-level `c:dPt/c:spPr` fills, sharing the same point-style reader
   used by pie and doughnut slices. Remaining point-level bar work is point borders, inherited style defaults,
   data labels, and deleted/hidden points.
-- Bar/column chart fallbacks now honor point-level `c:dPt/c:spPr/a:ln` borders through the shared line
+- Bar/column chart renderer now honor point-level `c:dPt/c:spPr/a:ln` borders through the shared line
   resolver. Remaining point-level bar work is inherited style defaults, data labels, deleted/hidden points,
   and exact Office border draw order for stacked/clustered variants.
-- Bar/column chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
+- Bar/column chart renderer now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining bar data-label work is label positions, stacked-series totals, rich text, number formats,
   deleted/hidden points, and collision/overflow behavior.
-- Line chart fallbacks now render basic value data labels when `c:dLbls/c:showVal` is enabled.
+- Line chart renderer now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining line data-label work is label positions, rich text, number formats, per-point overrides,
   deleted/hidden points, leader lines, and collision/overflow behavior.
 
@@ -834,7 +834,7 @@ High-priority actions:
 - [x] PPTX parser/renderer supports JPEG/PNG pictures and basic crop clipping.
 - [x] PPTX parser/renderer supports grouped shape and picture transforms.
 - [x] PPTX parser/renderer supports fixed-grid tables with fills and explicit borders.
-- [x] PPTX parser/renderer supports static bar-chart fallback and unsupported-feature diagnostics.
+- [x] PPTX parser/renderer supports native bar-chart rendering and unsupported-feature diagnostics.
 - [x] DOCX parser/renderer supports page setup, margins, document defaults, paragraph styles, and character
   styles.
 - [x] DOCX parser/renderer supports paragraphs/runs, basic styled text, greedy wrapping, simple page
@@ -873,7 +873,7 @@ document-specific business content into public notes.
   - Max mean absolute error: `76.6187287808642`.
   - Mean changed-pixel ratio at threshold 16: `0.1864059055335096`.
   - Diagnostics: 9 unsupported charts, 2 unsupported interlaced PNG image occurrences.
-  - Manual private inspection identified gaps in chart fallback, interlaced embedded images, dense
+  - Manual private inspection identified gaps in chart rendering, interlaced embedded images, dense
     image/group placement, text spacing, text-frame anchoring/clipping, and transparent overlays.
 - Private PPTX conversion-only run `artifacts/private-visual/lokad-value-based/manual-20260514-165850`:
   - Conversion completed.
@@ -881,19 +881,19 @@ document-specific business content into public notes.
   - Remaining diagnostics: 9 unsupported charts.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-171646`:
   - 84 candidate pages, all dimensions matched reference pages.
-  - Unsupported chart diagnostics dropped to zero after static bar-chart fallback.
-  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Unsupported chart diagnostics dropped to zero after native bar-chart rendering.
+  - Diagnostics: 9 legacy chart-rendering informational diagnostics.
   - Mean absolute error: `17.430568`; max mean absolute error: `76.618729`; mean changed-pixel ratio at
     threshold 16: `0.187419`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-172019`:
   - 84 candidate pages, all dimensions matched reference pages.
-  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Diagnostics: 9 legacy chart-rendering informational diagnostics.
   - Text-frame body insets are now honored.
   - Mean absolute error: `17.525889`; max mean absolute error: `76.657147`; mean changed-pixel ratio at
     threshold 16: `0.188083`.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-175356`:
   - 84 candidate pages, all dimensions matched reference pages.
-  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Diagnostics: 9 legacy chart-rendering informational diagnostics.
   - Grouped picture transforms and text clipping are now honored.
   - Mean absolute error: `16.223412`; max mean absolute error: `75.220066`; mean changed-pixel ratio at
     threshold 16: `0.176527`.
@@ -1040,7 +1040,7 @@ document-specific business content into public notes.
   - Clipped PPTX text frames now suppress lines that cannot fit inside the clip box.
 - Private PPTX acceptance rerun `artifacts/private-visual/lokad-value-based/20260514-223939`:
   - 84 candidate pages, all dimensions matched reference pages.
-  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Diagnostics: 9 legacy chart-rendering informational diagnostics.
   - Slide 1 mean absolute error: `18.001507`; changed-pixel ratio at threshold 16: `0.147195`.
   - Slide-1 public-safe gaps map to styled text/list fixtures: large centered serif title placement, white
     text over dark image background, underlined run bounds, and multi-paragraph bullet list wrapping/line
@@ -1254,7 +1254,7 @@ document-specific business content into public notes.
     horizontal segment covered by a vertical merge.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260514-232256`:
   - 84 candidate pages, all dimensions matched reference pages.
-  - Diagnostics: 9 chart static fallback informational diagnostics.
+  - Diagnostics: 9 legacy chart-rendering informational diagnostics.
   - Slide 1 mean absolute error: `15.366243`; changed-pixel ratio at threshold 16: `0.130552`.
   - The formatted-empty-paragraph fix materially improved slide-1 title/body separation. Remaining slide-1
     generic gaps are fine font metrics, exact title/body baseline placement, underline bounds, and dense
@@ -1815,7 +1815,7 @@ paths, and ExecPlan references together.
   placeholders, text/body placeholders, footer/date/slide-number placeholders, theme variants, and background
   styles.
 - [ ] Build slide-level diagnostics for unsupported or approximated visible content: effects, transparent
-  fills, complex shapes, chart fallbacks, SmartArt, media/OLE, unsupported images, and placeholder fallbacks.
+  fills, complex shapes, chart renderings, SmartArt, media/OLE, unsupported images, and placeholder fallbacks.
 - [ ] Address dominant primitives after ordering/inheritance are under control: text autofit/shrink, bullets,
   font fallback; image placeholder crop/fit and rotation/flip; table styles and merged cells; chart
   cached-image fallbacks and labels.
@@ -2009,7 +2009,7 @@ paths, and ExecPlan references together.
   and for each visible problem add a minimal synthetic public case before implementing the generic fix.
   - [x] After custom arc geometry support, the private deck no longer has unsupported custom-geometry
     diagnostics. Remaining private diagnostics are now concentrated in broader public-feature families:
-    approximate chart fallbacks, `outerShdw`/`glow` effects, image recolor (`lum`, `duotone`), and alpha
+    approximate chart renderings, `outerShdw`/`glow` effects, image recolor (`lum`, `duotone`), and alpha
     values inside effect definitions.
   - [ ] Add public synthetic effect rungs for `outerShdw` and `glow` before attempting private-slide shadow
     parity. Start with no-blur/low-blur cases, then add blur/alpha/direction/distance variants only when

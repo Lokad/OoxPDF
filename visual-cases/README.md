@@ -29,7 +29,7 @@ PPTX families:
 - `pptx-images`: pictures, crops, alpha, rotation, flips, picture fills.
 - `pptx-composition`: groups, z-order, placeholders, inheritance, mixed slides.
 - `pptx-tables`: grid layout, merges, borders, fills, text, margins, styles.
-- `pptx-charts`: chart fallback and future chart rendering.
+- `pptx-charts`: native chart rendering and parity targets.
 - `pptx-effects`: transparency, advanced fills, shadows, diagnostics.
 
 Keep private-document findings out of this tree. Convert them into minimal public synthetic cases first.

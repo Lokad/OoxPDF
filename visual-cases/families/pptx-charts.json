@@ -1,7 +1,7 @@
 {
   "id": "pptx-charts",
   "kind": "pptx",
-  "description": "Chart fallback and future chart rendering cases.",
+  "description": "Native chart rendering cases and parity targets.",
   "support": {
     "minStructuralSimilarity": 0.995,
     "minForegroundColorHistogramCorrelation": 0.98
