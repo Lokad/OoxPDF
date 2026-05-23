@@ -5352,6 +5352,7 @@ internal static class PptxTests
                   </c:catAx>
                   <c:valAx>
                     <c:axId val="2"/><c:axPos val="l"/>
+                    <c:tickLblPos val="high"/>
                     <c:scaling><c:min val="0"/><c:max val="2000"/></c:scaling><c:majorUnit val="1000"/>
                     <c:numFmt formatCode="$#,##0"/>
                     <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
@@ -5368,6 +5369,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
+        TestAssert.Contains("339.96", pdf);
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()

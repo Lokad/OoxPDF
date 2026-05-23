@@ -1918,10 +1918,11 @@ paths, and ExecPlan references together.
     `c:tickLblPos val="none"` hides tick labels without hiding the axis line, and value-axis `c:numFmt`
     drives basic currency, percent, thousands, and decimal tick-label formatting. A public synthetic
     chart case locks hidden category labels and formatted value-axis labels.
+  - [x] Extend the native chart axis-label slice to `tickLblPos high/low` for value axes:
+    labels can now be placed on the high or low side independently of the physical axis line.
   - [ ] Extend combo/multi-axis chart support beyond the first bottom-up slice: bind each chart group to its
-    referenced axes, honor axis crossing/orientation and high/low label positions, keep primary/secondary
-    scales independent, and place non-axis overlays such as the private slide 5 upward green arrow with
-    Office-equivalent transforms.
+    referenced axes, honor axis crossing/orientation, keep primary/secondary scales independent, and place
+    non-axis overlays such as the private slide 5 upward green arrow with Office-equivalent transforms.
 - [ ] Private slide 6 visible remaining problem: a centered line of text is vertically misaligned inside its
   grey box. Reproduce with a public text-box fixture covering vertical anchor, body insets, line height, and
   shape fill/stroke context.

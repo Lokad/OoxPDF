@@ -1268,12 +1268,13 @@ internal sealed partial class PptxRenderer
             }
             else
             {
+                bool labelsRightSide = ResolveValueAxisLabelsRightSide(valueAxis, rightSide);
                 width = plotBox.Width * 0.12d;
-                x = rightSide
+                x = labelsRightSide
                     ? plotBox.X + plotBox.Width + 3d
                     : Math.Max(0d, plotBox.X - width - 3d);
                 y = plotBox.Y + plotBox.Height * offset - height * 0.45d;
-                alignment = rightSide ? TextAlignment.Left : TextAlignment.Right;
+                alignment = labelsRightSide ? TextAlignment.Left : TextAlignment.Right;
             }
 
             double labelWidth = Math.Max(1d, width);
@@ -1732,6 +1733,17 @@ internal sealed partial class PptxRenderer
 
         string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
         return !string.Equals(tickLabelPosition, "none", StringComparison.Ordinal);
+    }
+
+    private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
+    {
+        string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
+        return tickLabelPosition switch
+        {
+            "high" => true,
+            "low" => false,
+            _ => defaultRightSide
+        };
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)
