@@ -441,10 +441,10 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
 
 internal readonly record struct PptxSceneChartManualLayout(
     bool HasLayout,
-    double X,
-    double Y,
-    double Width,
-    double Height,
+    double? X,
+    double? Y,
+    double? Width,
+    double? Height,
     string LayoutTarget,
     string XMode,
     string YMode,
@@ -1513,19 +1513,17 @@ internal sealed class PptxSceneBuilder
         double? y = ReadChartManualLayoutFactor(manualLayout, "y");
         double? width = ReadChartManualLayoutFactor(manualLayout, "w");
         double? height = ReadChartManualLayoutFactor(manualLayout, "h");
-        return x is null || y is null || width is null || height is null
-            ? default
-            : new PptxSceneChartManualLayout(
-                true,
-                x.Value,
-                y.Value,
-                width.Value,
-                height.Value,
-                ReadChartElementValue(manualLayout, "layoutTarget"),
-                ReadChartElementValue(manualLayout, "xMode"),
-                ReadChartElementValue(manualLayout, "yMode"),
-                ReadChartElementValue(manualLayout, "wMode"),
-                ReadChartElementValue(manualLayout, "hMode"));
+        return new PptxSceneChartManualLayout(
+            true,
+            x,
+            y,
+            width,
+            height,
+            ReadChartElementValue(manualLayout, "layoutTarget"),
+            ReadChartElementValue(manualLayout, "xMode"),
+            ReadChartElementValue(manualLayout, "yMode"),
+            ReadChartElementValue(manualLayout, "wMode"),
+            ReadChartElementValue(manualLayout, "hMode"));
     }
 
     private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)

@@ -3945,6 +3945,15 @@ locks the PDF plot-area rectangle for this case. The `pptx-model` non-slow group
 203 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: partial manual layouts still need
 optional-value scene-model preservation before missing children can be resolved safely against the same default
 plot-box anchor.
+
+chart partial manual-layout preservation / 2026-05-24:
+`PptxSceneChartManualLayout` now preserves optional `x`, `y`, `w`, and `h` children independently instead of
+dropping the whole `manualLayout` unless all four are present. Manual plot-box resolution fills omitted values
+from the default plot-box ratios, while still applying explicit `factor` and `edge` modes when present.
+`PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox` locks the case where `w`/`h` are explicit but
+`x`/`y` are omitted: the plot area keeps the default position and only changes size. The `pptx-model` non-slow
+group passed with 13 passed, 0 failed, 1 skipped; the `pptx-charts` non-slow group passed with 8 passed, 0 failed,
+0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

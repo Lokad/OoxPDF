@@ -825,6 +825,13 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);
 
+    private readonly record struct ChartPlotBoxRatios(double Left, double Top, double Width, double Height)
+    {
+        public double Right => Left + Width;
+
+        public double Bottom => Top + Height;
+    }
+
     private enum TextVerticalAnchor
     {
         Top,

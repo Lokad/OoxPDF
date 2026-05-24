@@ -825,21 +825,12 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double? x = ReadManualLayoutFactor(manualLayout, "x");
-        double? y = ReadManualLayoutFactor(manualLayout, "y");
-        double? width = ReadManualLayoutFactor(manualLayout, "w");
-        double? height = ReadManualLayoutFactor(manualLayout, "h");
-        if (x is null || y is null || width is null || height is null)
-        {
-            return false;
-        }
-
         return TryBuildManualPlotBox(new PptxSceneChartManualLayout(
             true,
-            x.Value,
-            y.Value,
-            width.Value,
-            height.Value,
+            ReadManualLayoutFactor(manualLayout, "x"),
+            ReadManualLayoutFactor(manualLayout, "y"),
+            ReadManualLayoutFactor(manualLayout, "w"),
+            ReadManualLayoutFactor(manualLayout, "h"),
             ReadManualLayoutValue(manualLayout, "layoutTarget"),
             ReadManualLayoutValue(manualLayout, "xMode"),
             ReadManualLayoutValue(manualLayout, "yMode"),
@@ -855,15 +846,24 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double left = Math.Clamp(ResolveManualLayoutStartRatio(layout.X, layout.XMode, defaultPlotBox.X, frame.X, frame.Width), 0d, 1d);
-        double top = Math.Clamp(ResolveManualLayoutStartRatio(layout.Y, layout.YMode, frame.Y + frame.Height - defaultPlotBox.Y - defaultPlotBox.Height, 0d, frame.Height), 0d, 1d);
-        double width = Math.Clamp(layout.Width, 0.02d, 1d);
-        double height = Math.Clamp(layout.Height, 0.02d, 1d);
+        ChartPlotBoxRatios defaults = GetPlotBoxRatios(frame, defaultPlotBox);
+        double left = layout.X is { } x
+            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XMode, defaultPlotBox.X, frame.X, frame.Width), 0d, 1d)
+            : defaults.Left;
+        double top = layout.Y is { } y
+            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YMode, frame.Y + frame.Height - defaultPlotBox.Y - defaultPlotBox.Height, 0d, frame.Height), 0d, 1d)
+            : defaults.Top;
+        double width = layout.Width is { } layoutWidth
+            ? Math.Clamp(layoutWidth, 0.02d, 1d)
+            : defaults.Width;
+        double height = layout.Height is { } layoutHeight
+            ? Math.Clamp(layoutHeight, 0.02d, 1d)
+            : defaults.Height;
         double right = IsManualLayoutEdgeMode(layout.WidthMode)
-            ? Math.Clamp(layout.Width, left, 1d)
+            ? Math.Clamp(layout.Width ?? defaults.Right, left, 1d)
             : left + width;
         double bottom = IsManualLayoutEdgeMode(layout.HeightMode)
-            ? Math.Clamp(layout.Height, top, 1d)
+            ? Math.Clamp(layout.Height ?? defaults.Bottom, top, 1d)
             : top + height;
         double plotWidth = Math.Max(0d, right - left) * frame.Width;
         double plotHeight = Math.Max(0d, bottom - top) * frame.Height;
@@ -871,6 +871,20 @@ internal sealed partial class PptxRenderer
         double plotY = frame.Y + frame.Height - bottom * frame.Height;
         plotBox = new ChartPlotBox(plotX, plotY, plotWidth, plotHeight);
         return plotWidth > 0d && plotHeight > 0d;
+    }
+
+    private static ChartPlotBoxRatios GetPlotBoxRatios(ChartFrameBox frame, ChartPlotBox plotBox)
+    {
+        if (frame.Width <= 0d || frame.Height <= 0d)
+        {
+            return new ChartPlotBoxRatios(0d, 0d, 1d, 1d);
+        }
+
+        double left = (plotBox.X - frame.X) / frame.Width;
+        double top = (frame.Y + frame.Height - plotBox.Y - plotBox.Height) / frame.Height;
+        double width = plotBox.Width / frame.Width;
+        double height = plotBox.Height / frame.Height;
+        return new ChartPlotBoxRatios(left, top, width, height);
     }
 
     private static double ResolveManualLayoutStartRatio(double value, string mode, double defaultStart, double frameStart, double frameLength)
