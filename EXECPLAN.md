@@ -826,9 +826,19 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Continue data-label rendering alignment with Office: leader lines, per-label overrides, rich text, and
-  per-label shape/text overrides are still unconsumed; the next structural slice should model `c:dLbl`
-  overrides without hard-coding label geometry.
+- [x] 2026-05-24: Preserve and consume indexed `c:dLbl` per-label overrides for supported chart labels.
+  `PptxSceneChartDataLabels` now owns an indexed override list carrying visibility flags, position,
+  separator, number format, text style, and shape style. Supported bar/line/pie/doughnut label rendering
+  merges those overrides by point index before formatting, positioning, drawing label boxes, and emitting
+  text. Public scene tests lock the override model, and the line-chart PDF test locks a point-specific label
+  box fill, font size, text color, and centered text matrix. Focused model/chart tests passed after the known
+  transient parallel build lock was rerun serially, the full runner passed 186/186, `dotnet pack` succeeded,
+  and private run `artifacts/private-visual/lokad-value-based/20260524-174557` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Continue data-label rendering alignment with Office: leader lines, rich text runs inside labels,
+  label layout/auto-fit, and exact Office label-box geometry remain approximate.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
   `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
@@ -3065,7 +3075,7 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
    chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
    chart plot attributes, chart series summaries including scatter/bubble data channels, chart series and
-   point styles, chart data-label metadata/text/shape styles, chart axis catalogs with
+   point styles, chart data-label metadata/text/shape/per-label overrides, chart axis catalogs with
    scaling/units/gridlines/label options, titles, and legends, while
    `PptxRenderContext` owns package, theme, inheritance, relationships, image cache, and diagnostics. Keep
    retiring XML fallbacks family by family: next slices should promote
@@ -3207,7 +3217,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-173836: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-174557: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

@@ -354,6 +354,20 @@ internal sealed record PptxSceneChartDataLabels(
     string Separator,
     string NumberFormat,
     PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartShapeStyle ShapeStyle,
+    IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides);
+
+internal sealed record PptxSceneChartDataLabelOverride(
+    int Index,
+    bool? ShowValue,
+    bool? ShowPercent,
+    bool? ShowCategoryName,
+    bool? ShowSeriesName,
+    bool? ShowLeaderLines,
+    string Position,
+    string Separator,
+    string NumberFormat,
+    PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
 
 internal sealed record PptxSceneChartShapeStyle(
@@ -1012,7 +1026,8 @@ internal sealed class PptxSceneBuilder
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null),
-                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default))
+                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default),
+                Overrides: [])
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
@@ -1023,7 +1038,42 @@ internal sealed class PptxSceneBuilder
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ReadChartTextStyleOverride(labels, theme),
-                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme));
+                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
+                ReadChartDataLabelOverrides(labels, theme));
+    }
+
+    private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
+    {
+        var overrides = new List<PptxSceneChartDataLabelOverride>();
+        foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
+        {
+            if (!int.TryParse(label.Element(ChartNamespace + "idx")?.Attribute("val")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
+                index < 0)
+            {
+                continue;
+            }
+
+            overrides.Add(new PptxSceneChartDataLabelOverride(
+                index,
+                ReadOptionalOoxmlBooleanElement(label, "showVal"),
+                ReadOptionalOoxmlBooleanElement(label, "showPercent"),
+                ReadOptionalOoxmlBooleanElement(label, "showCatName"),
+                ReadOptionalOoxmlBooleanElement(label, "showSerName"),
+                ReadOptionalOoxmlBooleanElement(label, "showLeaderLines"),
+                ReadChartElementValue(label, "dLblPos"),
+                label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
+                label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                ReadChartTextStyleOverride(label, theme),
+                ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme)));
+        }
+
+        return overrides;
+    }
+
+    private static bool? ReadOptionalOoxmlBooleanElement(XElement parent, string elementName)
+    {
+        XElement? element = parent.Element(ChartNamespace + elementName);
+        return element is null ? null : IsOoxmlBooleanElementEnabled(element);
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
