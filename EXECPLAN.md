@@ -4401,6 +4401,18 @@ with 1 passed, 0 failed, 0 skipped; the `pptx-charts` non-slow group passed with
 0 skipped; the clustered-column public visual gate passed at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014345`; the full suite passed with
 206 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart gridline axis-scope fallback / 2026-05-25:
+Gridline visibility fallback now checks the specific value-axis XML element being rendered instead of scanning
+the whole chart for any `majorGridlines` or `minorGridlines`. This prevents category-axis gridline metadata
+from enabling value-axis gridline strokes when the scene model is unavailable or incomplete. A synthetic
+render test puts `c:majorGridlines` only on `c:catAx` and verifies the default value-gridline stroke is not
+emitted. This is a structural cleanup toward axis-owned rendering; exact category-axis gridline rendering, if
+needed, remains separate evidence work. The focused render test passed with 1 passed, 0 failed, 0 skipped.
+The `pptx-charts` non-slow group passed with 11 passed, 0 failed, 0 skipped after keeping the existing
+line-chart first-value-axis fallback scoped to that resolved axis; the clustered-column public visual gate
+passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014718`; the full suite
+passed with 207 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

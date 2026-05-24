@@ -395,7 +395,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -538,7 +538,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits);
+                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -2686,28 +2686,24 @@ internal sealed partial class PptxRenderer
         return smooth;
     }
 
-    private static bool HasMajorGridlines(XDocument chartXml)
+    private static bool HasMajorGridlines(XElement? axis)
     {
-        return chartXml
-            .Descendants(ChartNamespace + "majorGridlines")
-            .Any(IsChartGridlineVisible);
+        return IsChartGridlineVisible(axis?.Element(ChartNamespace + "majorGridlines"));
     }
 
-    private static bool HasMinorGridlines(XDocument chartXml)
+    private static bool HasMinorGridlines(XElement? axis)
     {
-        return chartXml
-            .Descendants(ChartNamespace + "minorGridlines")
-            .Any(IsChartGridlineVisible);
+        return IsChartGridlineVisible(axis?.Element(ChartNamespace + "minorGridlines"));
     }
 
-    private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? axis, XDocument chartXml)
+    private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        return axis?.HasMajorGridlines ?? HasMajorGridlines(chartXml);
+        return sceneAxis?.HasMajorGridlines ?? HasMajorGridlines(axis);
     }
 
-    private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? axis, XDocument chartXml)
+    private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        return axis?.HasMinorGridlines ?? HasMinorGridlines(chartXml);
+        return sceneAxis?.HasMinorGridlines ?? HasMinorGridlines(axis);
     }
 
     private static ChartGridlineStyle ReadSceneOrXmlChartGridlineStyle(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
@@ -2741,8 +2737,13 @@ internal sealed partial class PptxRenderer
                 : null;
     }
 
-    private static bool IsChartGridlineVisible(XElement gridlines)
+    private static bool IsChartGridlineVisible(XElement? gridlines)
     {
+        if (gridlines is null)
+        {
+            return false;
+        }
+
         XElement? line = gridlines
             .Element(ChartNamespace + "spPr")
             ?.Element(DrawingNamespace + "ln");
