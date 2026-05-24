@@ -1314,7 +1314,7 @@ internal sealed partial class PptxRenderer
         }
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
-        bool overlay = IsOoxmlTrue((string?)legend.Element(ChartNamespace + "overlay")?.Attribute("val"));
+        bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
         return new ChartLegendLayout(position, overlay, Visible: true);
     }
 

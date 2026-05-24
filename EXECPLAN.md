@@ -853,6 +853,14 @@ High-priority actions:
   dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Normalize raw chart legend overlay parsing to the shared OOXML boolean-element rule.
+  The raw fallback now treats `<c:overlay/>` like `val="1"`, matching the scene-owned legend metadata and
+  removing another chart-path discrepancy between typed parsing and direct XML rendering. The public overlay
+  legend layout test now uses the element-only form, the full runner passed 188/188, `dotnet pack` succeeded,
+  and private run `artifacts/private-visual/lokad-value-based/20260524-190742` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
@@ -1729,8 +1737,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-190422` after the chart
-  data-label boolean normalization slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-190742` after the chart legend
+  overlay boolean normalization slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.

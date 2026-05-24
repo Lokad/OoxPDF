@@ -6385,7 +6385,7 @@ internal static class PptxTests
                     <c:barChart>
                       <c:ser><c:tx><c:v>Series</c:v></c:tx><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
                     </c:barChart>
-                  </c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend></c:chart>
+                  </c:plotArea><c:legend><c:legendPos val="b"/><c:overlay/></c:legend></c:chart>
                 </c:chartSpace>
                 """)
         });
