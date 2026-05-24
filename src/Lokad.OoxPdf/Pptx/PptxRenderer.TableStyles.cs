@@ -1,15 +1,14 @@
 namespace Lokad.OoxPdf.Pptx;
 
-internal sealed partial class PptxRenderer
+internal static class PptxTableStyleResolver
 {
-    private static bool TryReadBuiltInTableStyleCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, out RgbColor color, out double alpha)
+    public static PptxSceneFillStyle ReadCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
     {
-        alpha = 1d;
+        double alpha = 1d;
         if (!tableStyle.IsSupported ||
             !theme.TryResolveColor(tableStyle.Accent, out RgbColor accent))
         {
-            color = default;
-            return false;
+            return default;
         }
 
         int bodyColumnIndex = columnIndex - (tableStyle.FirstColumn ? 1 : 0);
@@ -19,37 +18,32 @@ internal sealed partial class PptxRenderer
                 (tableStyle.FirstColumn && columnIndex == 0) ||
                 (tableStyle.LastColumn && columnIndex == columnCount - 1)))
         {
-            color = accent;
-            return true;
+            return new PptxSceneFillStyle(true, accent, alpha);
         }
 
         if (string.Equals(tableStyle.Name, "Light-Style-1", StringComparison.Ordinal) &&
             tableStyle.FirstRow &&
             rowIndex == 0)
         {
-            color = accent;
-            return true;
+            return new PptxSceneFillStyle(true, accent, alpha);
         }
 
         if (string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal))
         {
             if (tableStyle.FirstRow && rowIndex == 0 && theme.TryResolveColor("dk1", out RgbColor dark))
             {
-                color = dark;
-                return true;
+                return new PptxSceneFillStyle(true, dark, alpha);
             }
 
             if ((tableStyle.FirstColumn && columnIndex == 0) ||
                 (tableStyle.LastColumn && columnIndex == columnCount - 1))
             {
-                color = ShadeColor(accent, 0.6d);
-                return true;
+                return new PptxSceneFillStyle(true, ShadeColor(accent, 0.6d), alpha);
             }
 
             if (tableStyle.LastRow && rowIndex == rowCount - 1)
             {
-                color = accent;
-                return true;
+                return new PptxSceneFillStyle(true, accent, alpha);
             }
         }
 
@@ -58,47 +52,41 @@ internal sealed partial class PptxRenderer
         {
             if (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0)
             {
-                color = accent;
-                alpha = 0.4d;
-                return true;
+                return new PptxSceneFillStyle(true, accent, 0.4d);
             }
 
             if (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0)
             {
-                color = accent;
-                alpha = 0.4d;
-                return true;
+                return new PptxSceneFillStyle(true, accent, 0.4d);
             }
 
-            color = default;
-            return false;
+            return default;
         }
 
         if (string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal))
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
-            color = banded
+            RgbColor color = banded
                 ? TintColor(accent, 0.4d)
                 : TintColor(accent, 0.2d);
-            return true;
+            return new PptxSceneFillStyle(true, color, alpha);
         }
 
         if (string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal))
         {
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
-            color = banded
+            RgbColor color = banded
                 ? ShadeColor(accent, 0.4d)
                 : ShadeColor(accent, 0.2d);
-            return true;
+            return new PptxSceneFillStyle(true, color, alpha);
         }
 
-        color = default;
-        return false;
+        return default;
     }
 
-    private static TableCellTextStyle ReadBuiltInTableStyleTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
+    public static PptxSceneTableCellTextStyle ReadCellTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
     {
         bool bold = false;
         RgbColor? color = null;
@@ -133,7 +121,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return new TableCellTextStyle(color, bold);
+        return new PptxSceneTableCellTextStyle(color, bold);
     }
     private static RgbColor TintColor(RgbColor color, double tint)
     {
@@ -151,5 +139,8 @@ internal sealed partial class PptxRenderer
             ToByte(color.Blue * shade));
     }
 
-    private readonly record struct TableCellTextStyle(RgbColor? Color, bool Bold);
+    private static byte ToByte(double value)
+    {
+        return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
+    }
 }

@@ -108,7 +108,7 @@ internal sealed partial class PptxRenderer
                     break;
                 }
 
-                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, cell, context.Theme);
+                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, columnIndex, cell, context.Theme, tableStyle, rows.Count, rawColumnWidths.Count);
                 if (sceneCell.IsMergedContinuation)
                 {
                     cellX += rawColumnWidths[columnIndex] * columnScale;
@@ -147,7 +147,9 @@ internal sealed partial class PptxRenderer
                 double fillAlpha = sceneCell.Fill.Alpha;
                 if (!hasCellFill)
                 {
-                    hasCellFill = TryReadBuiltInTableStyleCellFill(tableStyle, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
+                    hasCellFill = sceneCell.StyleFill.HasFill;
+                    fill = sceneCell.StyleFill.Color;
+                    fillAlpha = sceneCell.StyleFill.Alpha;
                 }
                 if (hasCellFill)
                 {
@@ -167,8 +169,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
-                TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(tableStyle, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme);
-                AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
+                AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, sceneCell.StyleText);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -189,7 +190,16 @@ internal sealed partial class PptxRenderer
         return textSpans;
     }
 
-    private static PptxSceneTableCell ReadSceneTableCell(PptxSceneTable? sceneTable, int rowIndex, int cellIndex, XElement cell, PptxTheme theme)
+    private static PptxSceneTableCell ReadSceneTableCell(
+        PptxSceneTable? sceneTable,
+        int rowIndex,
+        int cellIndex,
+        int columnIndex,
+        XElement cell,
+        PptxTheme theme,
+        PptxSceneTableStyle tableStyle,
+        int rowCount,
+        int columnCount)
     {
         if (sceneTable is not null &&
             rowIndex < sceneTable.Rows.Count &&
@@ -198,14 +208,7 @@ internal sealed partial class PptxRenderer
             return sceneTable.Rows[rowIndex].Cells[cellIndex];
         }
 
-        return new PptxSceneTableCell(
-            PptxSceneBuilder.ReadTableCellColumnSpan(cell),
-            PptxSceneBuilder.ReadTableCellRowSpan(cell),
-            PptxSceneBuilder.IsMergedTableCellContinuation(cell),
-            PptxSceneBuilder.ReadTableCellTextInsets(cell),
-            PptxSceneBuilder.ReadTableCellVerticalAnchor(cell),
-            PptxSceneBuilder.ReadTableCellFill(cell, theme),
-            PptxSceneBuilder.ReadTableCellBorders(cell, theme));
+        return PptxSceneBuilder.ReadTableCell(cell, theme, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
     }
 
     private static bool TableHasExplicitBorders(PptxSceneTable? sceneTable, XElement table)
@@ -387,7 +390,7 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, TableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         if (textBody is null)
@@ -414,7 +417,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, TableCellTextStyle tableStyleTextStyle)
+    private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         var textBodyCopy = new XElement(PresentationNamespace + "txBody", textBody.Elements().Select(element => new XElement(element)));
         XElement bodyProperties = textBodyCopy.Element(DrawingNamespace + "bodyPr") ?? new XElement(DrawingNamespace + "bodyPr");
@@ -482,7 +485,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void ApplyTableStyleTextDefaults(XElement textBody, TableCellTextStyle style)
+    private static void ApplyTableStyleTextDefaults(XElement textBody, PptxSceneTableCellTextStyle style)
     {
         if (style == default)
         {
@@ -518,7 +521,7 @@ internal sealed partial class PptxRenderer
         return (long)Math.Round(points / OoxUnits.PointsPerInch * OoxUnits.EmusPerInch);
     }
 
-    private static double EstimateTableCellTextHeight(XElement textBody, double textWidth, PptxTheme theme, TableCellTextStyle tableStyleTextStyle)
+    private static double EstimateTableCellTextHeight(XElement textBody, double textWidth, PptxTheme theme, PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();

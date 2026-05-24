@@ -115,6 +115,7 @@ internal static class PptxTests
                     <a:clrScheme name="Test">
                       <a:dk1><a:srgbClr val="111111"/></a:dk1>
                       <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent6><a:srgbClr val="336699"/></a:accent6>
                     </a:clrScheme>
                     <a:fontScheme name="Test">
                       <a:majorFont><a:latin typeface="Arial"/></a:majorFont>
@@ -219,6 +220,10 @@ internal static class PptxTests
         TestAssert.Equal("accent6", slide.SlideNodes[2].Table?.Style.Accent ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.FirstRow == true, "Expected table first-row flag in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Style.BandRow == true, "Expected table band-row flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.HasFill == true, "Expected resolved table-style fill in the scene model.");
+        TestAssert.Equal(new RgbColor(51, 102, 153), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.Color ?? default);
+        TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleText.Bold == true, "Expected resolved table-style text bold in the scene model.");
+        TestAssert.Equal(new RgbColor(255, 255, 255), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleText.Color ?? default);
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.Rows[0].Cells[0].ColumnSpan ?? 0);
         TestAssert.Equal(1, slide.SlideNodes[2].Table?.Rows[0].Cells[0].RowSpan ?? 0);
         TestAssert.Equal(14.4d, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsets.Left ?? 0d);

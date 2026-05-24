@@ -384,7 +384,11 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneTextInsets TextInsets,
     PptxSceneTableCellVerticalAnchor VerticalAnchor,
     PptxSceneFillStyle Fill,
-    PptxSceneTableCellBorders Borders);
+    PptxSceneTableCellBorders Borders,
+    PptxSceneFillStyle StyleFill,
+    PptxSceneTableCellTextStyle StyleText);
+
+internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
 
 internal readonly record struct PptxSceneTableCellBorders(
     PptxSceneTableCellBorder Left,
@@ -793,11 +797,14 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)
     {
         XElement? table = ReadTableElement(frame);
+        IReadOnlyList<double> columnWidths = ReadTableColumnWidths(table);
+        IReadOnlyList<double> rowHeights = ReadTableRowHeights(table);
+        PptxSceneTableStyle style = ReadTableStyle(table);
         return new PptxSceneTable(
-            ReadTableColumnWidths(table),
-            ReadTableRowHeights(table),
-            ReadTableRows(table, theme),
-            ReadTableStyle(table));
+            columnWidths,
+            rowHeights,
+            ReadTableRows(table, theme, style, rowHeights.Count, columnWidths.Count),
+            style);
     }
 
     internal static XElement? ReadTableElement(XElement frame)
@@ -825,15 +832,31 @@ internal sealed class PptxSceneBuilder
             .ToArray() ?? [];
     }
 
-    internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme)
+    internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowCount, int columnCount)
     {
-        return table
-            ?.Elements(DrawingNamespace + "tr")
-            .Select(row => new PptxSceneTableRow(row
-                .Elements(DrawingNamespace + "tc")
-                .Select(cell => ReadTableCell(cell, theme))
-                .ToArray()))
-            .ToArray() ?? [];
+        if (table is null)
+        {
+            return [];
+        }
+
+        var rows = new List<PptxSceneTableRow>();
+        int rowIndex = 0;
+        foreach (XElement row in table.Elements(DrawingNamespace + "tr"))
+        {
+            var cells = new List<PptxSceneTableCell>();
+            int columnIndex = 0;
+            foreach (XElement cell in row.Elements(DrawingNamespace + "tc"))
+            {
+                PptxSceneTableCell sceneCell = ReadTableCell(cell, theme, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
+                cells.Add(sceneCell);
+                columnIndex += sceneCell.IsMergedContinuation ? 1 : sceneCell.ColumnSpan;
+            }
+
+            rows.Add(new PptxSceneTableRow(cells));
+            rowIndex++;
+        }
+
+        return rows;
     }
 
     internal static PptxSceneTableStyle ReadTableStyle(XElement? table)
@@ -870,7 +893,7 @@ internal sealed class PptxSceneBuilder
         return tableProperties.Element(DrawingNamespace + name) is not null;
     }
 
-    private static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme)
+    internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
     {
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
@@ -879,7 +902,9 @@ internal sealed class PptxSceneBuilder
             ReadTableCellTextInsets(cell),
             ReadTableCellVerticalAnchor(cell),
             ReadTableCellFill(cell, theme),
-            ReadTableCellBorders(cell, theme));
+            ReadTableCellBorders(cell, theme),
+            PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
+            PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme));
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)
