@@ -515,6 +515,7 @@ internal sealed partial class PptxRenderer
                         extraValueExtents,
                         extraHorizontalBars,
                         ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
+                        ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabels(extraBarPlot, extraBarChart),
                         ReadSceneOrXmlChartSeriesNames(extraBarPlot, extraBarChart)));
                     seriesOffset += extraSeries.Count;
@@ -565,6 +566,7 @@ internal sealed partial class PptxRenderer
                     valueExtents,
                     horizontalBars,
                     ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabels(barPlot, barChart),
                     ReadSceneOrXmlChartSeriesNames(barPlot, barChart)));
                 return true;
@@ -613,6 +615,7 @@ internal sealed partial class PptxRenderer
                     lineSeries,
                     valueExtents,
                     ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlCategoryLabels(linePlot, lineChart),
                     ReadSceneOrXmlChartSeriesNames(linePlot, lineChart)));
                 return true;
@@ -1395,7 +1398,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
     {
-        if ((!labelOptions.ShowValue && !labelOptions.ShowPercent) || values.Count == 0)
+        if (!labelOptions.HasVisibleText || values.Count == 0)
         {
             return [];
         }
@@ -1479,10 +1482,11 @@ internal sealed partial class PptxRenderer
         ChartValueExtents extents,
         bool horizontalBars,
         ChartDataLabelOptions labelOptions,
+        IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<string> categoryLabels,
         IReadOnlyList<string> seriesNames)
     {
-        if (!labelOptions.HasVisibleText || series.Count == 0)
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return [];
         }
@@ -1513,7 +1517,7 @@ internal sealed partial class PptxRenderer
                     double barWidth = Math.Abs(value) / range * plotBox.Width;
                     double barStart = value >= 0d ? zeroX : zeroX - barWidth;
                     double barEnd = value >= 0d ? zeroX + barWidth : zeroX;
-                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, category);
+                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * 1.35d;
@@ -1548,7 +1552,7 @@ internal sealed partial class PptxRenderer
                     double x = categoryX + seriesIndex * barSlot;
                     double barBase = value >= 0d ? zeroY : zeroY - barHeight;
                     double barEnd = value >= 0d ? zeroY + barHeight : zeroY;
-                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, category);
+                    ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * 1.35d;
@@ -1574,10 +1578,11 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<double>> series,
         ChartValueExtents extents,
         ChartDataLabelOptions labelOptions,
+        IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<string> categoryLabels,
         IReadOnlyList<string> seriesNames)
     {
-        if (!labelOptions.HasVisibleText || series.Count == 0)
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
             return [];
         }
@@ -1593,7 +1598,7 @@ internal sealed partial class PptxRenderer
             {
                 double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
                 double pointY = plotBox.Y + (values[i] - extents.Min) / range * plotBox.Height;
-                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(labelOptions, i);
+                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * 1.35d;
@@ -1693,6 +1698,13 @@ internal sealed partial class PptxRenderer
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
             Overrides = EmptyChartDataLabelOverrides
         };
+    }
+
+    private static ChartDataLabelOptions ResolveChartDataLabelOptionsForSeries(ChartDataLabelOptions plotOptions, IReadOnlyList<ChartDataLabelOptions> seriesOptions, int seriesIndex)
+    {
+        return seriesIndex < seriesOptions.Count && seriesOptions[seriesIndex].IsDefined
+            ? seriesOptions[seriesIndex]
+            : plotOptions;
     }
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment, string? fontFamily)
@@ -1827,7 +1839,8 @@ internal sealed partial class PptxRenderer
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ReadChartTextStyleFromTxPr(labels, theme),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
-                ReadChartDataLabelOverrides(labels, theme));
+                ReadChartDataLabelOverrides(labels, theme),
+                IsDefined: true);
     }
 
     private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
@@ -1845,7 +1858,40 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.NumberFormat,
                 ToChartTextStyleOverride(plot.DataLabels.TextStyle),
                 ToChartShapeStyle(plot.DataLabels.ShapeStyle),
-                ToChartDataLabelOverrides(plot.DataLabels.Overrides));
+                ToChartDataLabelOverrides(plot.DataLabels.Overrides),
+                plot.DataLabels.IsDefined);
+    }
+
+    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => ToChartDataLabelOptions(series.DataLabels))
+                .ToArray();
+        }
+
+        return chartElement
+            .Elements(ChartNamespace + "ser")
+            .Select(series => ReadChartDataLabelOptions(series, theme))
+            .ToArray();
+    }
+
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels)
+    {
+        return new ChartDataLabelOptions(
+            labels.ShowValue,
+            labels.ShowPercent,
+            labels.ShowCategoryName,
+            labels.ShowSeriesName,
+            string.Empty,
+            labels.Position,
+            labels.Separator,
+            labels.NumberFormat,
+            ToChartTextStyleOverride(labels.TextStyle),
+            ToChartShapeStyle(labels.ShapeStyle),
+            ToChartDataLabelOverrides(labels.Overrides),
+            labels.IsDefined);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
@@ -4116,9 +4162,9 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, CustomText: string.Empty, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, CustomText: string.Empty, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName ||
             !string.IsNullOrWhiteSpace(CustomText) ||

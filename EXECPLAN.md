@@ -846,6 +846,15 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Preserve series-level chart data-label definitions separately from plot-level labels.
+  `PptxSceneChartSeries.DataLabels` now owns `c:ser/c:dLbls` with an explicit `IsDefined` bit, and supported
+  bar/line renderers prefer series-owned label options only for series that actually define them. This
+  removes the previous first-series collapse for multi-series labels while preserving plot-level fallback for
+  ordinary charts. Focused scene/chart tests passed, the full runner passed 186/186, `dotnet pack` succeeded,
+  and private run `artifacts/private-visual/lokad-value-based/20260524-175927` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.043246`, changed16 `0.116409`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Continue data-label rendering alignment with Office: leader lines, rich text runs inside labels,
   label layout/auto-fit, and exact Office label-box geometry remain approximate.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
@@ -3227,8 +3236,8 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-175407: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-175927: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.043246, changed16 0.116409, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 

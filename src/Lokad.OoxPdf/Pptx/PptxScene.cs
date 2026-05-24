@@ -355,7 +355,8 @@ internal sealed record PptxSceneChartDataLabels(
     string NumberFormat,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle,
-    IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides);
+    IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
+    bool IsDefined);
 
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
@@ -406,7 +407,8 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
-    bool Smooth);
+    bool Smooth,
+    PptxSceneChartDataLabels DataLabels);
 
 internal sealed record PptxSceneChartMarker(
     string Symbol,
@@ -1028,7 +1030,8 @@ internal sealed class PptxSceneBuilder
                 NumberFormat: string.Empty,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null),
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default),
-                Overrides: [])
+                Overrides: [],
+                IsDefined: false)
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
@@ -1040,7 +1043,8 @@ internal sealed class PptxSceneBuilder
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
                 ReadChartTextStyleOverride(labels, theme),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
-                ReadChartDataLabelOverrides(labels, theme));
+                ReadChartDataLabelOverrides(labels, theme),
+                IsDefined: true);
     }
 
     private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
@@ -1126,7 +1130,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme),
                 ReadChartPointStyles(seriesElement, theme),
-                ReadChartSeriesSmooth(seriesElement)));
+                ReadChartSeriesSmooth(seriesElement),
+                ReadChartDataLabels(seriesElement, theme)));
         }
 
         return series;
