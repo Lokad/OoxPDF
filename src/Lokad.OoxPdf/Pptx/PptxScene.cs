@@ -330,7 +330,14 @@ internal sealed record PptxSceneChartPlot(
     string Kind,
     int SeriesCount,
     IReadOnlyList<string> AxisIds,
-    IReadOnlyList<PptxSceneChartSeries> Series);
+    IReadOnlyList<PptxSceneChartSeries> Series,
+    string Grouping,
+    string BarDirection,
+    string ScatterStyle,
+    bool VaryColors,
+    double? GapWidth,
+    double? Overlap,
+    double? HoleSize);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -895,10 +902,35 @@ internal sealed class PptxSceneBuilder
                 plot.Name.LocalName,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
-                ReadChartSeries(plot)));
+                ReadChartSeries(plot),
+                ReadChartElementValue(plot, "grouping"),
+                ReadChartElementValue(plot, "barDir"),
+                ReadChartElementValue(plot, "scatterStyle"),
+                ReadChartPlotVaryColors(plot),
+                ReadChartElementDouble(plot, "gapWidth"),
+                ReadChartElementDouble(plot, "overlap"),
+                ReadChartElementDouble(plot, "holeSize")));
         }
 
         return plots;
+    }
+
+    private static string ReadChartElementValue(XElement element, string childName)
+    {
+        return (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
+    }
+
+    private static double? ReadChartElementDouble(XElement element, string childName)
+    {
+        string? value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
+    }
+
+    private static bool ReadChartPlotVaryColors(XElement plot)
+    {
+        return !string.Equals(ReadChartElementValue(plot, "varyColors"), "0", StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot)

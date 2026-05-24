@@ -138,6 +138,11 @@ internal static class PptxTests
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
                   <c:plotArea><c:barChart>
+                    <c:barDir val="bar"/>
+                    <c:grouping val="stacked"/>
+                    <c:varyColors val="0"/>
+                    <c:gapWidth val="175"/>
+                    <c:overlap val="25"/>
                     <c:ser>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:cat><c:strLit><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt></c:strLit></c:cat>
@@ -306,6 +311,11 @@ internal static class PptxTests
         TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Plots[0].AxisIds[1] ?? string.Empty);
+        TestAssert.Equal("stacked", slide.SlideNodes[4].Chart?.Plots[0].Grouping ?? string.Empty);
+        TestAssert.Equal("bar", slide.SlideNodes[4].Chart?.Plots[0].BarDirection ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].VaryColors == false, "Expected chart plot varyColors in the scene model.");
+        TestAssert.Equal(175d, slide.SlideNodes[4].Chart?.Plots[0].GapWidth ?? 0d);
+        TestAssert.Equal(25d, slide.SlideNodes[4].Chart?.Plots[0].Overlap ?? 0d);
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);
