@@ -763,6 +763,19 @@ High-priority actions:
 - [ ] Continue data-label rendering alignment with Office: category-name/series-name composition, label
   position semantics, leader lines, per-label overrides, rich text, and shape styles are still unconsumed
   despite now being partly preserved in the scene model.
+- [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
+  now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
+  `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
+  semantics instead of treating all manual layouts as anonymous factors. Rendering still uses the previous
+  geometry until those semantics are implemented. Focused model/chart tests passed after a transient parallel
+  build lock was rerun serially, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-163057` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Consume plot-area manual-layout target and mode semantics in geometry: `layoutTarget=inner`,
+  edge/factor modes, title/legend overlay interactions, and non-bar/line chart-family plot boxes still need
+  Office-evidenced rendering rules.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -929,8 +942,9 @@ High-priority actions:
   - [ ] Model and consume cross-axis IDs, crossing behavior, label-side slots, and Office spacing for
     secondary axes instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
+  - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [ ] Extend chart plot-area layout records to cover `layoutTarget`, factor modes, inner/outer plot
-    semantics, title/legend overlay effects, and non-bar/line chart-family consumers.
+    semantics, title/legend overlay effects, and non-bar/line chart-family consumers in rendered geometry.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -3115,7 +3129,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-162638: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-163057: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

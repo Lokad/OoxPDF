@@ -368,7 +368,12 @@ internal readonly record struct PptxSceneChartManualLayout(
     double X,
     double Y,
     double Width,
-    double Height);
+    double Height,
+    string LayoutTarget,
+    string XMode,
+    string YMode,
+    string WidthMode,
+    string HeightMode);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -1335,7 +1340,17 @@ internal sealed class PptxSceneBuilder
         double? height = ReadChartManualLayoutFactor(manualLayout, "h");
         return x is null || y is null || width is null || height is null
             ? default
-            : new PptxSceneChartManualLayout(true, x.Value, y.Value, width.Value, height.Value);
+            : new PptxSceneChartManualLayout(
+                true,
+                x.Value,
+                y.Value,
+                width.Value,
+                height.Value,
+                ReadChartElementValue(manualLayout, "layoutTarget"),
+                ReadChartElementValue(manualLayout, "xMode"),
+                ReadChartElementValue(manualLayout, "yMode"),
+                ReadChartElementValue(manualLayout, "wMode"),
+                ReadChartElementValue(manualLayout, "hMode"));
     }
 
     private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)

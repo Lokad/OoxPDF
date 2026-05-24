@@ -830,7 +830,17 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        return TryBuildManualPlotBox(new PptxSceneChartManualLayout(true, x.Value, y.Value, width.Value, height.Value), frame, out plotBox);
+        return TryBuildManualPlotBox(new PptxSceneChartManualLayout(
+            true,
+            x.Value,
+            y.Value,
+            width.Value,
+            height.Value,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            string.Empty), frame, out plotBox);
     }
 
     private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, out ChartPlotBox plotBox)
