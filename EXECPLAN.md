@@ -922,6 +922,10 @@ High-priority actions:
   produced 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
   and only one remaining diagnostic (`PPTX_UNSUPPORTED_IMAGE_RECOLOR`). Slide 17 stayed stable at MAE
   `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
+- [ ] JPEG recolor strategy: the remaining private warning is a three-component JPEG with duotone plus alpha.
+  Do not special-case the private slide. Choose between a dependency-free JPEG pixel decoder, a principled PDF
+  color-transform approach that matches Office output, or an explicit documented limitation with a public
+  Office-authored rung that keeps the diagnostic stable.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
