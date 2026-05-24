@@ -3837,6 +3837,14 @@ with `manualLayout` edge modes. This protects the area/scatter/bubble layout-own
 falling back to frame-relative default geometry. The `pptx-charts` non-slow group passed with 6 passed, 0
 failed, 0 skipped; the non-slow suite passed with 191 passed, 0 failed, 7 skipped; `dotnet pack` succeeded;
 and the full suite passed with 198 passed, 0 failed, 0 skipped.
+
+radar chart manual plot-box public lock / 2026-05-24:
+Radar chart rendering now consumes the shared `ChartPlotBox` path instead of computing its polar center and
+radius directly from the chart frame. `PptxSyntheticRadarChartManualPlotBoxUsesSharedPath` locks the first
+spoke against a `manualLayout` edge-mode plot box. Pie and doughnut still use frame-derived polar geometry
+and remain the next explicit chart-layout gap. The `pptx-charts` non-slow group passed with 7 passed, 0
+failed, 0 skipped; the non-slow suite passed with 192 passed, 0 failed, 7 skipped; `dotnet pack` succeeded;
+and the full suite passed with 199 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -622,8 +622,9 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(radarPlot, radarChart, theme);
+                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderRadarChart(graphics, document, bounds, radarSeries, seriesFills, seriesStrokes);
+                RenderRadarChart(graphics, chartLayout.PlotBox, radarSeries, seriesFills, seriesStrokes);
                 return true;
             }
         }
@@ -3967,16 +3968,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        double centerX = x + width * 0.5d;
-        double centerY = y + height * 0.52d;
-        double radius = Math.Min(width, height) * 0.32d;
+        double centerX = plotBox.X + plotBox.Width * 0.5d;
+        double centerY = plotBox.Y + plotBox.Height * 0.52d;
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.32d;
         int pointCount = Math.Max(3, series.Max(values => values.Count));
         double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
 
