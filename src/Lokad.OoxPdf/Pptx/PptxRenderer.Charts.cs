@@ -243,9 +243,9 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<bool> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
     {
-        bool[]? smooth = plot?.Series.Select(series => series.Smooth).ToArray();
-        return smooth is { Length: > 0 } && smooth.Any(value => value)
-            ? smooth
+        bool?[]? smooth = plot?.Series.Select(series => series.Smooth).ToArray();
+        return smooth is { Length: > 0 } && smooth.Any(value => value.HasValue)
+            ? smooth.Select(value => value ?? false).ToArray()
             : ReadChartSeriesSmooth(chartElement);
     }
 

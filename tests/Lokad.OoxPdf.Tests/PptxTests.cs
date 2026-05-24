@@ -173,6 +173,18 @@ internal static class PptxTests
                       <c:bubbleSize><c:numLit><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
                     </c:ser>
                   </c:bubbleChart>
+                  <c:lineChart>
+                    <c:ser>
+                      <c:idx val="9"/>
+                      <c:order val="5"/>
+                      <c:tx><c:strLit><c:pt idx="0"><c:v>Trend</c:v></c:pt></c:strLit></c:tx>
+                      <c:smooth val="0"/>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>8</c:v></c:pt><c:pt idx="1"><c:v>11</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:axId val="10"/>
+                    <c:axId val="20"/>
+                  </c:lineChart>
                   <c:catAx><c:axId val="10"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Categories</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"><a:solidFill><a:srgbClr val="224488"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title><c:axPos val="b"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/><c:minorTickMark val="in"/><c:lblOffset val="100"/><c:tickLblSkip val="2"/><c:tickMarkSkip val="3"/><c:noMultiLvlLbl val="1"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
                   <c:valAx><c:axId val="20"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Value</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:x val="0.02"/><c:y val="0.2"/><c:w val="0.1"/><c:h val="0.5"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill></c:spPr></c:title><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="20"/></c:scaling><c:crossAx val="10"/><c:crosses val="max"/><c:crossesAt val="2.5"/><c:crossBetween val="between"/><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
@@ -268,7 +280,7 @@ internal static class PptxTests
         TestAssert.Equal(1, slideSnapshot.SlideNodes[2].TableRowCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableCellCount);
         TestAssert.Equal("Chart", slideSnapshot.SlideNodes[4].Kind);
-        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartPlotCount);
+        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartPlotCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartAxisCount);
         TestAssert.Equal("Group", slideSnapshot.SlideNodes[5].Kind);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[5].Children.Count);
@@ -453,6 +465,8 @@ internal static class PptxTests
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);
         TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
         TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
+        TestAssert.Equal("lineChart", slide.SlideNodes[4].Chart?.Plots[2].Kind ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Axes[0].CrossAxisId ?? string.Empty);

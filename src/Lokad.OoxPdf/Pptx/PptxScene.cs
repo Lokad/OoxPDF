@@ -468,7 +468,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
-    bool Smooth,
+    bool? Smooth,
     PptxSceneChartDataLabels DataLabels);
 
 internal sealed record PptxSceneChartMarker(
@@ -1362,10 +1362,10 @@ internal sealed class PptxSceneBuilder
                 : default;
     }
 
-    private static bool ReadChartSeriesSmooth(XElement series)
+    private static bool? ReadChartSeriesSmooth(XElement series)
     {
-        string? value = (string?)series.Element(ChartNamespace + "smooth")?.Attribute("val");
-        return value is "1" or "true";
+        XElement? smooth = series.Element(ChartNamespace + "smooth");
+        return smooth is null ? null : IsOoxmlBooleanElementEnabled(smooth);
     }
 
     private static string? ReadChartSeriesName(XElement series)

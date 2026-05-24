@@ -4257,6 +4257,14 @@ chart data-label override layout preservation / 2026-05-25:
 placement. This is a model-first preservation step; rendering does not consume the label layout until public
 Office-PDF evidence defines the label-box placement rule. The focused scene test passed with 1 passed,
 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart series smooth-flag scene ownership / 2026-05-25:
+`PptxSceneChartSeries.Smooth` is now nullable so the scene model distinguishes a missing `c:smooth` element
+from explicit Office-authored `val="0"` and `val="1"` values. `ReadSceneOrXmlSmoothSeries` now trusts the
+typed scene vector when any series in the plot carries an explicit smooth value, instead of falling back to
+a broad chart-XML rescan whenever every scene value was `false`. The scene fixture includes a valid line-chart
+series with explicit smooth disable. The focused scene test passed with 1 passed, 0 failed, 0 skipped; the
+full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
