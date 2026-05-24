@@ -316,7 +316,11 @@ internal sealed record PptxScenePicture(
     double Alpha,
     PptxSceneImageRecolor Recolor);
 
-internal sealed record PptxSceneChart(string? RelationshipId, string? TargetPartName);
+internal sealed record PptxSceneChart(
+    string? RelationshipId,
+    string? TargetPartName,
+    XDocument? ChartXml,
+    IReadOnlyList<RgbColor>? PaletteColors);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -566,6 +570,7 @@ internal sealed class PptxSceneBuilder
     private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
+    private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
 
     public PptxScene Build(PptxDocument document, OoxPackage package)
     {
@@ -601,9 +606,9 @@ internal sealed class PptxSceneBuilder
                 ReadBackground(masterXml, theme),
                 ReadBackground(layoutXml, theme),
                 ReadBackground(slideXml, theme),
-                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterRelationships),
-                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutRelationships),
-                ReadNodes(slideXml, slideSources, theme, slideRelationships)));
+                masterXml is null ? [] : ReadNodes(masterXml, [], theme, package, masterRelationships),
+                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, package, layoutRelationships),
+                ReadNodes(slideXml, slideSources, theme, package, slideRelationships)));
         }
 
         return new PptxScene(document, theme, slides);
@@ -633,12 +638,13 @@ internal sealed class PptxSceneBuilder
         XDocument xml,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
+        OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, relationships));
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, package, relationships));
         }
 
         return nodes;
@@ -659,6 +665,7 @@ internal sealed class PptxSceneBuilder
         XElement container,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
+        OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var nodes = new List<PptxSceneNode>();
@@ -681,9 +688,9 @@ internal sealed class PptxSceneBuilder
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
-                kind == PptxSceneNodeKind.Chart ? ReadChart(child, relationships) : null,
+                kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
-                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, relationships) : [],
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, package, relationships) : [],
                 child));
         }
 
@@ -803,7 +810,11 @@ internal sealed class PptxSceneBuilder
             ReadImageRecolor(picture, theme));
     }
 
-    private static PptxSceneChart ReadChart(XElement frame, IReadOnlyDictionary<string, OoxRelationship> relationships)
+    private static PptxSceneChart ReadChart(
+        XElement frame,
+        OoxPackage package,
+        PptxTheme theme,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? graphicData = frame
             .Element(DrawingNamespace + "graphic")
@@ -815,7 +826,41 @@ internal sealed class PptxSceneBuilder
             relationships.TryGetValue(relationshipId, out OoxRelationship? relationship)
             ? relationship.ResolvedTarget
             : null;
-        return new PptxSceneChart(relationshipId, targetPartName);
+        OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
+        XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
+        IReadOnlyList<RgbColor>? paletteColors = chartPart is null ? null : ReadChartPaletteColors(package, chartPart.Name, theme);
+        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors);
+    }
+
+    private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, string chartPartName, PptxTheme theme)
+    {
+        OoxRelationship? colorRelationship = package.GetRelationships(chartPartName)
+            .FirstOrDefault(relationship => !relationship.IsExternal &&
+                relationship.Type == ChartColorStyleRelationshipType &&
+                relationship.ResolvedTarget is not null);
+        if (colorRelationship?.ResolvedTarget is null)
+        {
+            return null;
+        }
+
+        OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
+        if (colorPart is null)
+        {
+            return null;
+        }
+
+        XDocument document = LoadXml(colorPart);
+        var colors = new List<RgbColor>();
+        foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
+        {
+            var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
+            if (TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out _))
+            {
+                colors.Add(color);
+            }
+        }
+
+        return colors.Count == 0 ? null : colors;
     }
 
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)

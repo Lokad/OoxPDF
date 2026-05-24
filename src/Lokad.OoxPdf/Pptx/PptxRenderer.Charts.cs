@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        RenderChartFrame(context, graphics, fonts, bounds, node.Chart?.RelationshipId, node.Chart?.TargetPartName, relationships);
+        RenderChartFrame(context, graphics, fonts, bounds, node.Chart, relationships);
     }
 
     private static void RenderChartFrame(
@@ -82,8 +82,42 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
+        PptxSceneChart? chart,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        RenderChartFrame(
+            context,
+            graphics,
+            fonts,
+            bounds,
+            chart?.RelationshipId,
+            chart?.TargetPartName,
+            chart?.ChartXml,
+            chart?.PaletteColors,
+            relationships);
+    }
+
+    private static void RenderChartFrame(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        ShapeBounds? bounds,
         string? relationshipId,
         string? targetPartName,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, targetPartName, null, null, relationships);
+    }
+
+    private static void RenderChartFrame(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        ShapeBounds? bounds,
+        string? relationshipId,
+        string? targetPartName,
+        XDocument? chartXml,
+        IReadOnlyList<RgbColor>? chartPalette,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? chartPartName = targetPartName;
@@ -100,23 +134,30 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        OoxPart? chartPart = context.Package.GetPart(chartPartName);
-        if (chartPart is null)
+        XDocument? resolvedChartXml = chartXml;
+        IReadOnlyList<RgbColor>? resolvedChartPalette = chartPalette;
+        OoxPart? chartPart = null;
+        if (resolvedChartXml is null)
         {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", chartPartName, context.SlideNumber, "Ignored");
+            chartPart = context.Package.GetPart(chartPartName);
+            if (chartPart is null)
+            {
+                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", chartPartName, context.SlideNumber, "Ignored");
+                return;
+            }
+
+            using Stream chartStream = chartPart.OpenRead();
+            resolvedChartXml = SafeXml.Load(chartStream);
+            resolvedChartPalette = ReadChartPaletteColors(context.Package, chartPart, context.Theme);
+        }
+
+        if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, fonts))
+        {
+            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml));
             return;
         }
 
-        using Stream chartStream = chartPart.OpenRead();
-        XDocument chartXml = SafeXml.Load(chartStream);
-        IReadOnlyList<RgbColor>? chartPalette = ReadChartPaletteColors(context.Package, chartPart, context.Theme);
-        if (TryRenderChart(graphics, context.Document, context.Theme, chartPalette, bounds.Value, chartXml, fonts))
-        {
-            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, chartXml));
-            return;
-        }
-
-        EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPart.Name, context.SlideNumber, "Ignored");
+        EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
     }
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, List<PdfFontResource> fonts)

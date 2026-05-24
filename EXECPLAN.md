@@ -525,6 +525,13 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran model/chart-focused tests, the full test suite, package, and private PPTX acceptance
+  after moving chart XML and color-style palette ownership into `PptxSceneChart`. Focused tests passed, the
+  full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-135452` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -618,6 +625,9 @@ High-priority actions:
   - [x] Resolve chart relationship targets during scene construction: `PptxSceneChart.TargetPartName` now carries
     the package-resolved chart part for slide/layout/master relationship scopes, and ordered scene chart rendering
     consumes that target directly while keeping relationship-map fallback for raw XML rendering.
+  - [x] Move chart-part XML and chart color-style palette ownership into `PptxSceneChart`: ordered scene chart
+    rendering now consumes scene-owned `ChartXml` and `PaletteColors`, while the raw XML path still opens chart
+    parts directly as a compatibility fallback.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -2659,7 +2669,7 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    cannot be explained structurally.
 2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` now models
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
-   chart relationship ids and resolved chart part targets, while `PptxRenderContext` owns package, theme, inheritance, relationships,
+   chart relationship ids, resolved chart part targets, chart XML, and chart palettes, while `PptxRenderContext` owns package, theme, inheritance, relationships,
    image cache, and diagnostics. Keep retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
    models while preserving source XML only as an escape hatch for unported features.

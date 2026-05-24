@@ -98,6 +98,12 @@ internal static class PptxTests
                   <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """,
+            ["ppt/charts/_rels/chart1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                </Relationships>
+                """,
             ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -129,6 +135,14 @@ internal static class PptxTests
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>
+                """,
+            ["ppt/charts/colors1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:colorStyle xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                               meth="cycle" id="10">
+                  <a:srgbClr val="010203"/>
+                </cs:colorStyle>
                 """,
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -262,6 +276,8 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
+        TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
         TestAssert.Equal(2743200L, slide.SlideNodes[5].GroupTransform.OffsetX);
         TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleX);
