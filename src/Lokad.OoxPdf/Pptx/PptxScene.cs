@@ -331,7 +331,19 @@ internal readonly record struct PptxSceneTableCell(
     bool IsMergedContinuation,
     PptxSceneTextInsets TextInsets,
     PptxSceneTableCellVerticalAnchor VerticalAnchor,
-    PptxSceneFillStyle Fill);
+    PptxSceneFillStyle Fill,
+    PptxSceneTableCellBorders Borders);
+
+internal readonly record struct PptxSceneTableCellBorders(
+    PptxSceneTableCellBorder Left,
+    PptxSceneTableCellBorder Right,
+    PptxSceneTableCellBorder Top,
+    PptxSceneTableCellBorder Bottom)
+{
+    public bool HasExplicitBorder => Left.IsSpecified || Right.IsSpecified || Top.IsSpecified || Bottom.IsSpecified;
+}
+
+internal readonly record struct PptxSceneTableCellBorder(bool IsSpecified, PptxSceneLineStyle Line);
 
 internal readonly record struct PptxSceneTextInsets(double Left, double Right, double Top, double Bottom);
 
@@ -779,7 +791,8 @@ internal sealed class PptxSceneBuilder
             IsMergedTableCellContinuation(cell),
             ReadTableCellTextInsets(cell),
             ReadTableCellVerticalAnchor(cell),
-            ReadTableCellFill(cell, theme));
+            ReadTableCellFill(cell, theme),
+            ReadTableCellBorders(cell, theme));
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)
@@ -857,6 +870,37 @@ internal sealed class PptxSceneBuilder
         return TryReadSolidColorWithAlpha(cellProperties, theme, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
+    }
+
+    internal static PptxSceneTableCellBorders ReadTableCellBorders(XElement cell, PptxTheme theme)
+    {
+        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+        return new PptxSceneTableCellBorders(
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnL"), theme),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnR"), theme),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnT"), theme),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnB"), theme));
+    }
+
+    private static PptxSceneTableCellBorder ReadTableCellBorder(XElement? line, PptxTheme theme)
+    {
+        if (line is null)
+        {
+            return default;
+        }
+
+        if (line.Element(DrawingNamespace + "noFill") is not null ||
+            !TryReadSolidColorWithAlpha(line, theme, out RgbColor color, out double alpha))
+        {
+            return new PptxSceneTableCellBorder(IsSpecified: true, default);
+        }
+
+        double lineWidth = line.Attribute("w") is { } widthAttribute
+            ? Math.Max(1d, OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d)
+            : 0.75d;
+        return new PptxSceneTableCellBorder(
+            IsSpecified: true,
+            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null));
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)

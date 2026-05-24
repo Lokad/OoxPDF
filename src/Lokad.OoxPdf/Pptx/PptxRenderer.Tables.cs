@@ -140,7 +140,6 @@ internal sealed partial class PptxRenderer
                         .Sum() * rowScale;
                 double cellTop = yTop;
                 double cellBottom = cellTop - cellHeight;
-                XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
                 bool hasCellFill = sceneCell.Fill.HasFill;
                 RgbColor fill = sceneCell.Fill.Color;
@@ -166,7 +165,7 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
+                AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
                 TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
                 AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
                 cellX += columnWidth;
@@ -177,7 +176,7 @@ internal sealed partial class PptxRenderer
             rowTops[rowIndex + 1] = yTop;
         }
 
-        if (!TableHasExplicitBorders(table))
+        if (!TableHasExplicitBorders(sceneTable, table))
         {
             StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments, skippedHorizontalGridSegments);
         }
@@ -204,11 +203,19 @@ internal sealed partial class PptxRenderer
             PptxSceneBuilder.IsMergedTableCellContinuation(cell),
             PptxSceneBuilder.ReadTableCellTextInsets(cell),
             PptxSceneBuilder.ReadTableCellVerticalAnchor(cell),
-            PptxSceneBuilder.ReadTableCellFill(cell, theme));
+            PptxSceneBuilder.ReadTableCellFill(cell, theme),
+            PptxSceneBuilder.ReadTableCellBorders(cell, theme));
     }
 
-    private static bool TableHasExplicitBorders(XElement table)
+    private static bool TableHasExplicitBorders(PptxSceneTable? sceneTable, XElement table)
     {
+        if (sceneTable is not null)
+        {
+            return sceneTable.Rows
+                .SelectMany(row => row.Cells)
+                .Any(cell => cell.Borders.HasExplicitBorder);
+        }
+
         return table
             .Descendants(DrawingNamespace + "tcPr")
             .Any(cellProperties =>
@@ -339,25 +346,22 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void AddTableCellBorders(List<TableBorderLine> borders, XElement? cellProperties, PptxTheme theme, double x, double y, double width, double height)
+    private static void AddTableCellBorders(List<TableBorderLine> borders, PptxSceneTableCellBorders cellBorders, double x, double y, double width, double height)
     {
-        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnL"), theme, x, y, x, y + height);
-        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnR"), theme, x + width, y, x + width, y + height);
-        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnT"), theme, x, y + height, x + width, y + height);
-        AddTableBorder(borders, cellProperties?.Element(DrawingNamespace + "lnB"), theme, x, y, x + width, y);
+        AddTableBorder(borders, cellBorders.Left, x, y, x, y + height);
+        AddTableBorder(borders, cellBorders.Right, x + width, y, x + width, y + height);
+        AddTableBorder(borders, cellBorders.Top, x, y + height, x + width, y + height);
+        AddTableBorder(borders, cellBorders.Bottom, x, y, x + width, y);
     }
 
-    private static void AddTableBorder(List<TableBorderLine> borders, XElement? line, PptxTheme theme, double x1, double y1, double x2, double y2)
+    private static void AddTableBorder(List<TableBorderLine> borders, PptxSceneTableCellBorder border, double x1, double y1, double x2, double y2)
     {
-        if (line is null || line.Element(DrawingNamespace + "noFill") is not null || !TryReadSolidColorWithAlpha(line, theme, out RgbColor color, out double alpha))
+        if (!border.Line.HasLine)
         {
             return;
         }
 
-        double lineWidth = line.Attribute("w") is { } widthAttribute
-            ? Math.Max(1d, OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d)
-            : 0.75d;
-        borders.Add(new TableBorderLine(x1, y1, x2, y2, lineWidth, color, alpha));
+        borders.Add(new TableBorderLine(x1, y1, x2, y2, border.Line.Width, border.Line.Color, border.Line.Alpha));
     }
 
     private static void StrokeTableBorders(PdfGraphicsBuilder graphics, List<TableBorderLine> borders)
