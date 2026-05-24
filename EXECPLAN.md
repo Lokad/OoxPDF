@@ -539,6 +539,10 @@ High-priority actions:
   ordered rendering no longer calls the raw XML `RenderTables(..., new PdfGraphicsBuilder())` traversal just
   to discover table text fonts. `ReadSceneTableTextSpans` now walks master, layout, and slide scene nodes with
   the same group transforms as ordered dispatch, and obsolete XML table-frame overloads were removed.
+- [x] Move PPTX shape text font prepass onto typed scene nodes:
+  ordered rendering now gathers shape text fonts from master, layout, and slide `PptxSceneNode` lists with the
+  same placeholder rules as ordered dispatch, instead of running whole-part inherited/slide XML text scans
+  before rendering.
 - [x] 2026-05-24: Re-ran private PPTX acceptance after adding the generic unknown graphic-frame diagnostic.
   Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
   dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
@@ -3681,6 +3685,14 @@ font prepass with a typed scene-node traversal. The non-slow suite passed with 1
 7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed, 0 failed, 0 skipped.
 Private run `artifacts/private-visual/lokad-value-based/20260524-223120` stayed stable: 84/84 compared pages,
 zero dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`, and slide 17 MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
+
+typed scene shape text font prepass / 2026-05-24:
+`PptxSyntheticTextAndShapesUseSiblingOrder` and `PptxSyntheticGroupedTextAppliesTransform` passed after
+replacing whole-part XML shape text font discovery with `ReadSceneShapeTextSpans`. The non-slow suite passed
+with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed,
+0 failed, 0 skipped. Private run `artifacts/private-visual/lokad-value-based/20260524-223511` stayed stable:
+84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, only
 `PPTX_UNSUPPORTED_IMAGE_RECOLOR`, and slide 17 MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
 ```
 

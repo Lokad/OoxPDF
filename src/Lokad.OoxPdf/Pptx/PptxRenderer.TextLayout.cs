@@ -256,6 +256,40 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context)
+    {
+        var textSpans = new List<PptxPositionedTextSpan>();
+        AddSceneShapeTextSpans(context.SceneSlide?.MasterNodes ?? [], context, textSpans, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, textSpans, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide?.SlideNodes ?? [], context, textSpans, renderPlaceholders: true);
+        return textSpans;
+    }
+
+    private static void AddSceneShapeTextSpans(
+        IReadOnlyList<PptxSceneNode> nodes,
+        PptxRenderContext context,
+        List<PptxPositionedTextSpan> textSpans,
+        bool renderPlaceholders)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.Kind == PptxSceneNodeKind.Shape)
+            {
+                if ((renderPlaceholders || !node.IsPlaceholder) && node.TextBody is not null)
+                {
+                    textSpans.AddRange(ReadTextSpansForShape(node.Source, context, renderPlaceholders));
+                }
+
+                continue;
+            }
+
+            if (node.Kind == PptxSceneNodeKind.Group)
+            {
+                AddSceneShapeTextSpans(node.Children, context, textSpans, renderPlaceholders);
+            }
+        }
+    }
+
     private static IReadOnlyList<TextRun> ReadSlideTextRuns(PptxRenderContext context)
     {
         return ReadSlideTextSpans(context).Select(span => span.Run).ToArray();
