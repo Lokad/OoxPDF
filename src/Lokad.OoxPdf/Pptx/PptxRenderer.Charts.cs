@@ -94,6 +94,7 @@ internal sealed partial class PptxRenderer
             chart?.TargetPartName,
             chart?.ChartXml,
             chart?.PaletteColors,
+            chart,
             relationships);
     }
 
@@ -106,7 +107,7 @@ internal sealed partial class PptxRenderer
         string? targetPartName,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
-        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, targetPartName, null, null, relationships);
+        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, targetPartName, null, null, null, relationships);
     }
 
     private static void RenderChartFrame(
@@ -118,6 +119,7 @@ internal sealed partial class PptxRenderer
         string? targetPartName,
         XDocument? chartXml,
         IReadOnlyList<RgbColor>? chartPalette,
+        PptxSceneChart? sceneChart,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? chartPartName = targetPartName;
@@ -151,7 +153,7 @@ internal sealed partial class PptxRenderer
             resolvedChartPalette = ReadChartPaletteColors(context.Package, chartPart, context.Theme);
         }
 
-        if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, fonts))
+        if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, fonts))
         {
             fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml));
             return;
@@ -160,7 +162,30 @@ internal sealed partial class PptxRenderer
         EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
     }
 
-    private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, List<PdfFontResource> fonts)
+    private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, string kind, int index = 0)
+    {
+        return chart?
+            .Plots
+            .Where(plot => string.Equals(plot.Kind, kind, StringComparison.Ordinal))
+            .Skip(index)
+            .FirstOrDefault();
+    }
+
+    private static string ReadSceneOrXmlChartValue(string? sceneValue, XElement element, string childName, string defaultValue = "")
+    {
+        return !string.IsNullOrEmpty(sceneValue)
+            ? sceneValue
+            : (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? defaultValue;
+    }
+
+    private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
+    {
+        return plot?.HoleSize is { } rawHoleSize
+            ? Math.Clamp(rawHoleSize / 100d, 0.1d, 0.9d)
+            : ReadDoughnutHoleSize(doughnutChart);
+    }
+
+    private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
     {
         IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
         XElement? barChart = barCharts.FirstOrDefault();
@@ -169,36 +194,40 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> barSeries = ReadChartSeries(barChart);
             if (barSeries.Count != 0)
             {
-                bool horizontalBars = string.Equals((string?)barChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
-                string grouping = (string?)barChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
+                PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, "barChart");
+                bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
+                string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
                 ChartValueExtents valueExtents = ReadChartValueAxisExtents(valueAxis, GetBarChartValueExtents(barSeries, grouping));
                 ChartAxisUnits axisUnits = ReadChartValueAxisUnits(valueAxis);
-                bool varyColors = ReadChartVaryColors(barChart);
+                bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadChartSeriesPointFills(barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadChartSeriesPointStrokes(barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barChart, seriesFills));
                 ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, ReadChartGapWidth(barChart), ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
                 int seriesOffset = barSeries.Count;
+                int barChartIndex = 1;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadChartSeries(extraBarChart);
                     if (extraSeries.Count == 0)
                     {
+                        barChartIndex++;
                         continue;
                     }
 
-                    string extraGrouping = (string?)extraBarChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "clustered";
-                    bool extraHorizontalBars = string.Equals((string?)extraBarChart.Element(ChartNamespace + "barDir")?.Attribute("val"), "bar", StringComparison.Ordinal);
+                    PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, "barChart", barChartIndex);
+                    string extraGrouping = ReadSceneOrXmlChartValue(extraBarPlot?.Grouping, extraBarChart, "grouping", "clustered");
+                    bool extraHorizontalBars = string.Equals(ReadSceneOrXmlChartValue(extraBarPlot?.BarDirection, extraBarChart, "barDir"), "bar", StringComparison.Ordinal);
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
                     ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
@@ -230,11 +259,12 @@ internal sealed partial class PptxRenderer
                         ChartShapeStyle.Empty,
                         extraValueExtents,
                         extraAxisUnits,
-                        ReadChartVaryColors(extraBarChart),
-                        ReadChartGapWidth(extraBarChart),
-                        ReadChartOverlap(extraBarChart));
+                        extraBarPlot?.VaryColors ?? ReadChartVaryColors(extraBarChart),
+                        extraBarPlot?.GapWidth ?? ReadChartGapWidth(extraBarChart),
+                        extraBarPlot?.Overlap ?? ReadChartOverlap(extraBarChart));
                     fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, extraBarChart, extraSeries, extraValueExtents, extraHorizontalBars));
                     seriesOffset += extraSeries.Count;
+                    barChartIndex++;
                 }
 
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, barChart);
@@ -319,6 +349,8 @@ internal sealed partial class PptxRenderer
             if (areaSeries.Count != 0)
             {
                 string grouping = (string?)areaChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "standard";
+                PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, "areaChart");
+                grouping = string.IsNullOrEmpty(areaPlot?.Grouping) ? grouping : areaPlot.Grouping;
                 bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(areaChart, theme);
@@ -335,7 +367,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> scatterSeries = ReadScatterSeries(scatterChart, readBubbleSize: false);
             if (scatterSeries.Count != 0)
             {
-                bool connectLines = ((string?)scatterChart.Element(ChartNamespace + "scatterStyle")?.Attribute("val"))?.Contains("Line", StringComparison.OrdinalIgnoreCase) == true;
+                PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, "scatterChart");
+                string scatterStyle = ReadSceneOrXmlChartValue(scatterPlot?.ScatterStyle, scatterChart, "scatterStyle");
+                bool connectLines = scatterStyle.Contains("Line", StringComparison.OrdinalIgnoreCase);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart, theme);
@@ -399,7 +433,8 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(doughnutChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(doughnutChart);
-                double holeSize = ReadDoughnutHoleSize(doughnutChart);
+                PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, "doughnutChart");
+                double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderDoughnutChart(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
                 fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutChart, doughnutSeries[0], pointExplosions, holeSize));

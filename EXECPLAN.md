@@ -576,6 +576,13 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran chart/model-focused tests, the full test suite, package, and private PPTX acceptance
+  after wiring ordered chart rendering to prefer scene-owned plot attributes before falling back to raw plot
+  XML. Focused tests passed, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-144548` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -687,6 +694,9 @@ High-priority actions:
   - [x] Add typed chart plot attributes to `PptxSceneChartPlot`: grouping, bar direction, scatter style,
     vary-colors, gap width, overlap, and doughnut hole size now have a scene-model owner before renderer
     consumption is migrated away from raw plot XML.
+  - [x] Make ordered chart rendering consume scene-owned plot attributes first for bar grouping/direction,
+    vary-colors, gap/overlap, area grouping, scatter line style, and doughnut hole size, retaining raw XML
+    fallback only for legacy chart paths.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
