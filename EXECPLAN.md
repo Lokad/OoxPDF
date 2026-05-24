@@ -3888,6 +3888,14 @@ empty-paragraph anchor-estimate fix: 84/84 compared pages, zero dimension mismat
 changed16 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 stayed at MAE `2.880739`, RMSE
 `19.298084`, changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, and foreground histogram
 correlation `0.999858`.
+
+cartesian chart data-label metric ownership / 2026-05-24:
+Bar and line chart data-label placement still uses fallback ratios, but the slot fill, category inset,
+horizontal label width, vertical label width, label-height, and line-label point-span values now live under
+`PptxChartMetricRules` instead of anonymous literals inside the rendering loops. This is behavior-neutral
+inventory work: the named rules remain approximations until replaced by Office-PDF-observed cartesian chart
+layout behavior. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite
+passed with 202 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

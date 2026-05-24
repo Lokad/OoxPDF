@@ -773,6 +773,15 @@ internal sealed partial class PptxRenderer
         public const double RadarCenterXRatio = 0.5d;
         public const double RadarCenterYRatio = 0.52d;
         public const double RadarRadiusRatio = 0.32d;
+        public const double CartesianDataLabelHeightFactor = 1.35d;
+        public const double CartesianDataLabelMinimumWidth = 18d;
+        public const double BarDataLabelSlotFillRatio = 0.82d;
+        public const double BarDataLabelCategoryInsetRatio = 0.09d;
+        public const double HorizontalBarDataLabelWidthRatio = 0.1d;
+        public const double HorizontalBarDataLabelSlotCenterRatio = 0.43d;
+        public const double VerticalBarDataLabelWidthRatio = 0.86d;
+        public const double LineDataLabelMinimumPointSpan = 5d;
+        public const double LineDataLabelPointWidthFactor = 1.5d;
     }
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);

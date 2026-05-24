@@ -1505,11 +1505,11 @@ internal sealed partial class PptxRenderer
         if (horizontalBars)
         {
             double categoryHeight = plotBox.Height / categoryCount;
-            double barSlot = categoryHeight * 0.82d / Math.Max(1, series.Count);
-            double labelWidth = Math.Max(18d, plotBox.Width * 0.1d);
+            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, series.Count);
+            double labelWidth = Math.Max(PptxChartMetricRules.CartesianDataLabelMinimumWidth, plotBox.Width * PptxChartMetricRules.HorizontalBarDataLabelWidthRatio);
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * 0.09d;
+                double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
                 for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
                 {
                     IReadOnlyList<double> values = series[seriesIndex];
@@ -1525,9 +1525,9 @@ internal sealed partial class PptxRenderer
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
-                    double labelHeight = fontSize * 1.35d;
+                    double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                     double x = ResolveHorizontalBarDataLabelX(effectiveOptions.Position, value, barStart, barEnd, labelWidth);
-                    double y = categoryY + seriesIndex * barSlot + barSlot * 0.43d - labelHeight / 2d;
+                    double y = categoryY + seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
@@ -1540,10 +1540,10 @@ internal sealed partial class PptxRenderer
         else
         {
             double categoryWidth = plotBox.Width / categoryCount;
-            double barSlot = categoryWidth * 0.82d / Math.Max(1, series.Count);
+            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, series.Count);
             for (int category = 0; category < categoryCount; category++)
             {
-                double categoryX = plotBox.X + category * categoryWidth + categoryWidth * 0.09d;
+                double categoryX = plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
                 for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
                 {
                     IReadOnlyList<double> values = series[seriesIndex];
@@ -1560,12 +1560,12 @@ internal sealed partial class PptxRenderer
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
-                    double labelHeight = fontSize * 1.35d;
+                    double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                     double y = ResolveVerticalBarDataLabelY(effectiveOptions.Position, value, barBase, barEnd, labelHeight);
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
-                        double labelWidth = Math.Max(1d, barSlot * 0.86d);
+                        double labelWidth = Math.Max(1d, barSlot * PptxChartMetricRules.VerticalBarDataLabelWidthRatio);
                         RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
                         runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Center));
                     }
@@ -1594,7 +1594,9 @@ internal sealed partial class PptxRenderer
 
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double range = Math.Max(1d, extents.Max - extents.Min);
-        double labelWidth = Math.Max(18d, plotBox.Width / Math.Max(5d, pointCount * 1.5d));
+        double labelWidth = Math.Max(
+            PptxChartMetricRules.CartesianDataLabelMinimumWidth,
+            plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
         var runs = new List<TextRun>();
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
