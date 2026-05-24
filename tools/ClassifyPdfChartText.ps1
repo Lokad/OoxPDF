@@ -56,6 +56,10 @@ function TextY($op) {
     return [double]$op.Y
 }
 
+function StructureWidth($structure) { return [double]$structure.MaxX - [double]$structure.MinX }
+function StructureHeight($structure) { return [double]$structure.MaxY - [double]$structure.MinY }
+function StructureCenterY($structure) { return ([double]$structure.MinY + [double]$structure.MaxY) / 2d }
+
 function StableTextHash([string]$text) {
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($text)
     $hash = [System.Security.Cryptography.SHA256]::HashData($bytes)
@@ -79,7 +83,81 @@ function Find-PlotBox($structures) {
     return $null
 }
 
-function Classify-Text($op, $plotBox, [double]$tolerance) {
+function Has-LegendSwatch($op, $structures, $plotBox) {
+    if ($null -eq $plotBox) {
+        return $false
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    $verticalTolerance = [Math]::Max(8d, $fontSize * 0.75d)
+    $horizontalTolerance = [Math]::Max(36d, $fontSize * 4d)
+    $plotRight = [double]$plotBox.MaxX
+
+    foreach ($structure in $structures) {
+        $kind = [string]$structure.Kind
+        $width = StructureWidth $structure
+        $height = StructureHeight $structure
+        $isMarker = $kind -eq "MarkerCandidate" -and $width -le 24d -and $height -le 24d
+        $isShortLine = $kind -eq "HorizontalLine" -and $width -le 100d
+        if (-not ($isMarker -or $isShortLine)) {
+            continue
+        }
+
+        $gap = $x - [double]$structure.MaxX
+        if ($gap -lt 0d -or $gap -gt $horizontalTolerance) {
+            continue
+        }
+
+        if ([double]$structure.CenterX -lt ($plotRight - 30d)) {
+            continue
+        }
+
+        if ([Math]::Abs((StructureCenterY $structure) - $y) -le $verticalTolerance) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Has-LegendContainer($op, $structures, $plotBox, [double]$tolerance) {
+    if ($null -eq $plotBox) {
+        return $false
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $plotRight = [double]$plotBox.MaxX
+
+    foreach ($structure in $structures) {
+        if ([string]$structure.Kind -ne "ClipBox") {
+            continue
+        }
+
+        $width = StructureWidth $structure
+        $height = StructureHeight $structure
+        if ($width -lt 40d -or $height -lt 12d -or $width -gt 260d -or $height -gt 160d) {
+            continue
+        }
+
+        if ([double]$structure.MinX -lt ($plotRight - $tolerance)) {
+            continue
+        }
+
+        if ($x -ge ([double]$structure.MinX - $tolerance) -and
+            $x -le ([double]$structure.MaxX + $tolerance) -and
+            $y -ge ([double]$structure.MinY - $tolerance) -and
+            $y -le ([double]$structure.MaxY + $tolerance)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     if ($null -eq $plotBox) {
         return "ChartText"
     }
@@ -102,6 +180,10 @@ function Classify-Text($op, $plotBox, [double]$tolerance) {
     }
 
     if ($x -gt ($maxX + $tolerance) -and $insideY) {
+        if ((Has-LegendSwatch $op $structures $plotBox) -or (Has-LegendContainer $op $structures $plotBox $tolerance)) {
+            return "LegendText"
+        }
+
         return "RightSideText"
     }
 
@@ -138,7 +220,7 @@ foreach ($op in $textOps) {
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
     $classified.Add([pscustomobject]@{
-        Kind = Classify-Text $op $plotBox $PlotTolerance
+        Kind = Classify-Text $op $plotBox $structures $PlotTolerance
         PageNumber = $op.PageNumber
         SourceKind = "Text"
         SourceOperator = $op.Operator

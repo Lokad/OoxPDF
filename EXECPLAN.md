@@ -1793,9 +1793,16 @@ High-priority actions:
   reference and one candidate axis-pair plot box with zero reported structure deltas. This is deliberately
   narrower than the remaining fallback-geometry work: it guards one observable plot-box structure while
   leaving the broader `PptxChartMetricRules` replacement item open.
+- [x] 2026-05-25: Promote chart legend labels from a generic right-side text bucket to a structural
+  `LegendText` role when PDF text is supported by an adjacent marker/short-line swatch or by a right-side
+  legend clipping container. The ignored line-marker probe at
+  `artifacts/visual/tmp-chart-legend-gate-line-markers/20260525-003459` exercises the harness path with two
+  reference and two candidate `LegendText` records. The probe intentionally uses a loose position tolerance:
+  it proves semantic presence/count, while also recording that the current candidate legend placement is still
+  materially lower than Office's placement.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
-  oracle distinguishes plot-relative regions but does not yet separate title, value-axis ticks, category-axis
-  ticks, legend labels, data labels, and annotations as explicit Office-aligned roles.
+  oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
+  ticks, data labels, and annotations as explicit Office-aligned roles.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
