@@ -192,6 +192,11 @@ High-priority actions:
   `pptx-ladder-04-bold-face-single`, `pptx-ladder-04-italic-face-single`,
   `pptx-ladder-04-underline-single`, `pptx-ladder-04-strikethrough-single`, and
   `pptx-ladder-04-line-spacing-points`.
+- [x] Add decoded-text gates to simple locked typography cases:
+  `pptx-ladder-04-all-caps`, `pptx-ladder-04-bold-face-single`,
+  `pptx-ladder-04-italic-face-single`, `pptx-ladder-04-underline-single`, and
+  `pptx-ladder-04-strikethrough-single` now require matching decoded PDF text content as well as position
+  and font-size tolerances.
 - [x] Tighten near-miss simple typography cases before locking:
   `pptx-ladder-04-highlight-single` now passes its tight visual gate after the display-size baseline fix,
   and `pptx-ladder-04-mixed-font-size-line` now has a PDF text-operation gate with the remaining second-run
