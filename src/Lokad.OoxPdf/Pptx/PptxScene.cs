@@ -175,7 +175,25 @@ internal sealed record PptxSceneNode(
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
 
-internal sealed record PptxSceneShape(string Preset);
+internal sealed record PptxSceneShape(
+    string Preset,
+    PptxSceneLineEnd HeadEnd,
+    PptxSceneLineEnd TailEnd);
+
+internal enum PptxSceneLineEndKind
+{
+    None,
+    Triangle,
+    Arrow,
+    Stealth,
+    Diamond,
+    Oval
+}
+
+internal readonly record struct PptxSceneLineEnd(PptxSceneLineEndKind Kind, double WidthScale, double LengthScale)
+{
+    public bool IsNone => Kind == PptxSceneLineEndKind.None;
+}
 
 internal sealed record PptxScenePicture(
     string? RelationshipId,
@@ -522,7 +540,10 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneShape ReadShape(XElement shape)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-        return new PptxSceneShape(ReadShapePreset(shapeProperties));
+        return new PptxSceneShape(
+            ReadShapePreset(shapeProperties),
+            ReadLineEnd(shapeProperties, "headEnd"),
+            ReadLineEnd(shapeProperties, "tailEnd"));
     }
 
     private static string ReadShapePreset(XElement? shapeProperties)
@@ -530,6 +551,40 @@ internal sealed class PptxSceneBuilder
         return (string?)shapeProperties
             ?.Element(DrawingNamespace + "prstGeom")
             ?.Attribute("prst") ?? "rect";
+    }
+
+    private static PptxSceneLineEnd ReadLineEnd(XElement? shapeProperties, string elementName)
+    {
+        XElement? end = shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + elementName);
+        return new PptxSceneLineEnd(
+            ReadLineEndKind((string?)end?.Attribute("type")),
+            ReadLineEndScale((string?)end?.Attribute("w")),
+            ReadLineEndScale((string?)end?.Attribute("len")));
+    }
+
+    private static PptxSceneLineEndKind ReadLineEndKind(string? type)
+    {
+        return type switch
+        {
+            "triangle" => PptxSceneLineEndKind.Triangle,
+            "arrow" => PptxSceneLineEndKind.Arrow,
+            "stealth" => PptxSceneLineEndKind.Stealth,
+            "diamond" => PptxSceneLineEndKind.Diamond,
+            "oval" => PptxSceneLineEndKind.Oval,
+            _ => PptxSceneLineEndKind.None
+        };
+    }
+
+    private static double ReadLineEndScale(string? value)
+    {
+        return value switch
+        {
+            "sm" => 0.5d,
+            "lg" => 1.5d,
+            _ => 1d
+        };
     }
 
     private static PptxSceneRect ReadPictureCrop(XElement picture)

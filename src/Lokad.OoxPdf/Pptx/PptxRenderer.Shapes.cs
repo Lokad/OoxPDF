@@ -118,7 +118,9 @@ internal sealed partial class PptxRenderer
             imageCache,
             ref imageIndex,
             ToShapeBounds(shape.Bounds),
-            shape.Shape.Preset);
+            shape.Shape.Preset,
+            ToLineEndStyle(shape.Shape.HeadEnd),
+            ToLineEndStyle(shape.Shape.TailEnd));
     }
 
     private static void RenderShape(
@@ -161,7 +163,9 @@ internal sealed partial class PptxRenderer
             imageCache,
             ref imageIndex,
             rawBounds.Value,
-            ReadPreset(shapeProperties));
+            ReadPreset(shapeProperties),
+            null,
+            null);
     }
 
     private static void RenderShape(
@@ -178,7 +182,9 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex,
         ShapeBounds rawBounds,
-        string preset)
+        string preset,
+        LineEndStyle? headEndOverride,
+        LineEndStyle? tailEndOverride)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         if (shapeProperties is null)
@@ -281,8 +287,8 @@ internal sealed partial class PptxRenderer
                 double y1 = document.SlideHeightPoints - yTop;
                 double x2 = x + width;
                 double y2 = document.SlideHeightPoints - yTop - height;
-                LineEndStyle headEnd = ReadLineEnd(shapeProperties, "headEnd");
-                LineEndStyle tailEnd = ReadLineEnd(shapeProperties, "tailEnd");
+                LineEndStyle headEnd = headEndOverride ?? ReadLineEnd(shapeProperties, "headEnd");
+                LineEndStyle tailEnd = tailEndOverride ?? ReadLineEnd(shapeProperties, "tailEnd");
                 bool hasHeadArrow = IsFilledTriangleArrow(headEnd);
                 bool hasTailArrow = IsFilledTriangleArrow(tailEnd);
                 if ((hasHeadArrow || hasTailArrow) && headEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && tailEnd.Kind is LineEndKind.None or LineEndKind.Triangle or LineEndKind.Arrow && !hasDash && lineCap is null)
@@ -367,8 +373,8 @@ internal sealed partial class PptxRenderer
                     graphics.SetLineJoin(1);
                 }
 
-                LineEndStyle headEnd = ReadLineEnd(shapeProperties, "headEnd");
-                LineEndStyle tailEnd = ReadLineEnd(shapeProperties, "tailEnd");
+                LineEndStyle headEnd = headEndOverride ?? ReadLineEnd(shapeProperties, "headEnd");
+                LineEndStyle tailEnd = tailEndOverride ?? ReadLineEnd(shapeProperties, "tailEnd");
                 DrawCurvedConnectorPreset(
                     graphics,
                     shapeProperties,
@@ -1600,6 +1606,22 @@ internal sealed partial class PptxRenderer
             kind,
             ReadLineEndScale((string?)end?.Attribute("w")),
             ReadLineEndScale((string?)end?.Attribute("len")));
+    }
+
+    private static LineEndStyle ToLineEndStyle(PptxSceneLineEnd lineEnd)
+    {
+        return new LineEndStyle(
+            lineEnd.Kind switch
+            {
+                PptxSceneLineEndKind.Triangle => LineEndKind.Triangle,
+                PptxSceneLineEndKind.Arrow => LineEndKind.Arrow,
+                PptxSceneLineEndKind.Stealth => LineEndKind.Stealth,
+                PptxSceneLineEndKind.Diamond => LineEndKind.Diamond,
+                PptxSceneLineEndKind.Oval => LineEndKind.Oval,
+                _ => LineEndKind.None
+            },
+            lineEnd.WidthScale,
+            lineEnd.LengthScale);
     }
 
     private static LineEndKind ReadLineEndKind(string? type)

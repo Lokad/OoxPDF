@@ -887,7 +887,10 @@ High-priority actions:
 - [x] Move the first ordered shape/connector leaf inputs toward typed scene data: `PptxSceneShape` now owns
   preset geometry names, and ordered shape/connector rendering takes preset and EMU bounds from scene nodes
   before falling back to XML for fills, strokes, effects, custom geometry, and picture fills.
-- [ ] Continue typed shape/connector migration by resolving line style, line ends, dash/cap/join, custom
+- [x] Move connector line-end intent into `PptxSceneShape`: head/tail marker kind and width/length scale are
+  now scene-level data and ordered straight/curved connector rendering consumes them through a renderer
+  conversion boundary.
+- [ ] Continue typed shape/connector migration by resolving line color/width/alpha, dash/cap/join, custom
   geometry presence, and fill/effect styles into typed scene records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after scene-backed ordered rendering and typed
   picture/shape leaf inputs. `dotnet pack` succeeded and private run
