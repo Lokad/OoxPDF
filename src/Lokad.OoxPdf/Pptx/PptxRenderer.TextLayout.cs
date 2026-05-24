@@ -607,6 +607,7 @@ internal sealed partial class PptxRenderer
             double cursorX = paragraphTextX;
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
+            int? previousAdvanceCodePoint = null;
             int remainingDrawableSegments = CountDrawableTextSegments(flowParagraph);
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
@@ -621,6 +622,7 @@ internal sealed partial class PptxRenderer
                     cursorX = paragraphTextX;
                     line.Reset(paragraphTextX);
                     maxFontSize = 0d;
+                    previousAdvanceCodePoint = null;
                     continue;
                 }
 
@@ -653,6 +655,7 @@ internal sealed partial class PptxRenderer
                         line.Add(modelRun, tabRun, cursorX + tabSpaceWidth, BuildTextAtoms(tabRun, advanceEstimator, PptxTextAtomKind.Tab), BuildGlyphSpan(tabRun, advanceEstimator));
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
+                        previousAdvanceCodePoint = null;
                         continue;
                     }
 
@@ -664,7 +667,9 @@ internal sealed partial class PptxRenderer
                         remainingDrawableSegments == 1 &&
                         lineLayouts.Count == 0 &&
                         IsShortWordSegment(currentAdvanceText);
-                    double segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    double segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    double segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                    double segmentWidth = Math.Max(0d, segmentIntrinsicWidth + segmentBoundaryAdjustment);
                     if (frame.Orientation != PptxTextOrientation.Horizontal &&
                         flowSegment.Kind == PptxTextFlowSegmentKind.Text &&
                         flowSegment.Draw &&
@@ -677,10 +682,15 @@ internal sealed partial class PptxRenderer
                         {
                             string chunk = chunks[chunkIndex];
                             double chunkWidth = advanceEstimator.Measure(chunk, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                            double chunkBoundaryAdjustment = chunkIndex == 0
+                                ? MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, chunk, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled)
+                                : 0d;
+                            double chunkTotalWidth = Math.Max(0d, chunkWidth + chunkBoundaryAdjustment);
                             maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
-                            TextRun textRun = new(chunk, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
-                            line.Add(modelRun, textRun, cursorX + chunkWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
-                            cursorX += chunkWidth;
+                            double chunkX = cursorX + chunkBoundaryAdjustment;
+                            TextRun textRun = new(chunk, chunkX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
+                            line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
+                            cursorX += chunkTotalWidth;
                             line.AdvanceTo(cursorX);
                             if (chunkIndex < chunks.Length - 1)
                             {
@@ -691,9 +701,11 @@ internal sealed partial class PptxRenderer
                                 cursorX = paragraphTextX;
                                 line.Reset(paragraphTextX);
                                 maxFontSize = 0d;
+                                previousAdvanceCodePoint = null;
                             }
                         }
 
+                        previousAdvanceCodePoint = LastCodePoint(currentAdvanceText);
                         if (isDrawableTextSegment)
                         {
                             remainingDrawableSegments--;
@@ -728,9 +740,12 @@ internal sealed partial class PptxRenderer
                         cursorX = paragraphTextX;
                         line.Reset(paragraphTextX);
                         maxFontSize = 0d;
+                        previousAdvanceCodePoint = null;
                         currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
-                        segmentWidth = MeasureFlowSegmentAdvance(advanceEstimator, flowSegment, currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        segmentBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(advanceEstimator, currentAdvanceText, previousAdvanceCodePoint, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                        segmentWidth = Math.Max(0d, segmentIntrinsicWidth + segmentBoundaryAdjustment);
                     }
 
                     if (currentAdvanceText.Length == 0)
@@ -741,12 +756,14 @@ internal sealed partial class PptxRenderer
                     if (flowSegment.Draw && currentSegment.Length != 0)
                     {
                         maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
-                        TextRun textRun = new(currentSegment, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(segmentWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
+                        double textRunX = cursorX + segmentBoundaryAdjustment;
+                        TextRun textRun = new(currentSegment, textRunX, cursorY, PptxTextMetricRules.MinimumWidth(segmentIntrinsicWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
                         line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
                     }
 
                     cursorX += segmentWidth;
                     line.AdvanceTo(cursorX);
+                    previousAdvanceCodePoint = LastCodePoint(currentAdvanceText);
                     if (isDrawableTextSegment)
                     {
                         remainingDrawableSegments--;
@@ -1159,9 +1176,35 @@ internal sealed partial class PptxRenderer
         return value is '-' or '\u2010' or '\u2011' or '\u2012' or '\u2013';
     }
 
-    private static double MeasureFlowSegmentAdvance(TextAdvanceEstimator advanceEstimator, PptxTextFlowSegment segment, string advanceText, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
+    private static double MeasureFlowSegmentBoundaryAdjustment(TextAdvanceEstimator advanceEstimator, string advanceText, int? previousCodePoint, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
     {
-        return advanceEstimator.Measure(advanceText, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
+        if (previousCodePoint is int previous && FirstCodePoint(advanceText) is int first)
+        {
+            return advanceEstimator.MeasureBoundaryAdvance(previous, first, fontSize, typeface, bold, italic, characterSpacing, kerningEnabled);
+        }
+
+        return 0d;
+    }
+
+    private static int? FirstCodePoint(string text)
+    {
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            return rune.Value;
+        }
+
+        return null;
+    }
+
+    private static int? LastCodePoint(string text)
+    {
+        int? last = null;
+        foreach (Rune rune in text.EnumerateRunes())
+        {
+            last = rune.Value;
+        }
+
+        return last;
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> BuildTextAtoms(TextRun run, TextAdvanceEstimator advanceEstimator, PptxTextAtomKind? forcedKind = null)

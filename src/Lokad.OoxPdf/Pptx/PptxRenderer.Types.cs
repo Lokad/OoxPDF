@@ -497,6 +497,22 @@ internal sealed partial class PptxRenderer
             return Math.Max(0d, units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing);
         }
 
+        public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
+        {
+            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
+            if (font is null)
+            {
+                return characterSpacing;
+            }
+
+            ushort previousGlyph = font.MapCodePoint(previousCodePoint);
+            ushort nextGlyph = font.MapCodePoint(nextCodePoint);
+            double units = kerningEnabled && previousGlyph != 0 && nextGlyph != 0
+                ? font.GetKerning(previousGlyph, nextGlyph)
+                : 0d;
+            return units * fontSize / font.UnitsPerEm + characterSpacing;
+        }
+
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
         {
             return ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);

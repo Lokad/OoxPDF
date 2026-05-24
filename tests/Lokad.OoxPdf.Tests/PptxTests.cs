@@ -2295,6 +2295,46 @@ internal static class PptxTests
         TestAssert.True(hiddenAdvance > 5d, "Expected no-break space to advance like a regular hidden space, not a narrow spacer.");
     }
 
+    public static void PptxSyntheticTextBoxNoBreakSpaceKeepsBoundaryKerning()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400" kern="1200"><a:latin typeface="Arial"/></a:rPr><a:t>A&#xA0;B</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single();
+
+        PptxTextSpanLayoutSnapshot first = line.Spans.Single(span => span.Text == "A");
+        PptxTextSpanLayoutSnapshot second = line.Spans.Single(span => span.Text == "B");
+        double totalAdvance = second.X - first.X;
+
+        TestAssert.True(totalAdvance > 21d, $"Expected no-break space to keep a visible regular-space class advance, got {totalAdvance}.");
+        TestAssert.True(totalAdvance < 22d, $"Expected no-break space to preserve Office's kerning from the preceding glyph, got {totalAdvance}.");
+    }
+
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

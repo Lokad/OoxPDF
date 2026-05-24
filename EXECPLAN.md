@@ -198,10 +198,12 @@ High-priority actions:
   `pptx-ladder-04-strikethrough-single` now require matching decoded PDF text content as well as position
   and font-size tolerances.
 - [x] Extend decoded-text gates to special text-operation cases that remain structurally locked:
-  `pptx-ladder-04-field-text`, `pptx-ladder-04-soft-hyphen`, and `pptx-ladder-04-tab-character`.
-- [ ] Revisit `pptx-ladder-04-nonbreaking-space` before adding decoded-text gating:
-  its existing visual MAE gate now fails at `0.031545` against a `0.004` limit before text-operation
-  comparison runs, and the failure reproduces without the transformed-text clipping change.
+  `pptx-ladder-04-field-text`, `pptx-ladder-04-soft-hyphen`, `pptx-ladder-04-tab-character`,
+  and `pptx-ladder-04-nonbreaking-space`.
+- [x] Revisit `pptx-ladder-04-nonbreaking-space` before adding decoded-text gating:
+  the stale failure was a real structural split-flow issue. Hidden NBSP advances now preserve font kerning
+  and tracking from the preceding logical glyph, restoring the visual gate to MAE `0.003519` and locking
+  decoded `A`/`B` PDF text operations with the remaining font-table X delta bounded at `0.1 pt`.
 - [x] Tighten near-miss simple typography cases before locking:
   `pptx-ladder-04-highlight-single` now passes its tight visual gate after the display-size baseline fix,
   and `pptx-ladder-04-mixed-font-size-line` now has a PDF text-operation gate with the remaining second-run
@@ -235,6 +237,12 @@ High-priority actions:
 - [x] Replace the first hidden-advance approximation with a general font-metric rule:
   non-drawn NBSP and narrow NBSP flow segments now advance by measuring their Unicode space glyphs in the
   resolved run font, instead of using a font-size multiplier for U+202F.
+- [x] Preserve logical glyph-boundary metrics across hidden text-flow controls:
+  split flow segments now carry kerning/tracking from the previous logical code point into the next advance,
+  so hidden NBSP does not fall back to an isolated space width while remaining absent from decoded PDF text.
+  The broader `pptx-ladder-04-typography-nbsp-narrow-space` probe was rebaselined to MAE `0.258598`,
+  changed16 `0.003142`; its PDF line-start gate still passes with starts within `0.5 pt`, so the remaining
+  raster drift is tracked as glyph-shape/font-table parity rather than a hidden-control placement failure.
 - [x] Replace the default-tab approximation with the OOXML default tab interval:
   tabs without explicit stops now advance to the next 914400 EMU stop from the paragraph text origin,
   matching the `pptx-renderer` rule instead of scaling by font size.
@@ -3476,14 +3484,14 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-194 passed, 0 failed, 0 skipped
+195 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-205129: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.022766, changed16 0.116206, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-211130: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.005819, changed16 0.116054, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
 ```
 

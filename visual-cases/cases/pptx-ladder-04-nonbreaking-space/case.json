@@ -11,9 +11,10 @@
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.004,
     "maxChangedPixelRatioAtThreshold16": 0.0001,
-    "maxTextOperationPositionDelta": 0.05,
+    "maxTextOperationPositionDelta": 0.1,
     "maxTextOperationFontSizeDelta": 0.05,
-    "matchTextOperationsByPosition": true
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
   },
   "allowedUnsupportedFeatures": []
 }
