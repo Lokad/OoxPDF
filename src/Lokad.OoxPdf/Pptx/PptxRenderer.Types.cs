@@ -757,6 +757,12 @@ internal sealed partial class PptxRenderer
         public const double ValueAxisFallbackFontSize = 8.5d;
         public const double DataLabelFallbackFontSize = 8.5d;
         public const double AxisSingleValueHeadroomFactor = 1.2d;
+        public const double AxisValueEpsilon = 0.0001d;
+        public const double AxisNiceTickTargetCount = 10d;
+        public const double AxisNiceTickStepSmall = 1d;
+        public const double AxisNiceTickStepMedium = 2d;
+        public const double AxisNiceTickStepLarge = 5d;
+        public const double AxisNiceTickStepMaximum = 10d;
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;

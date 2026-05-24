@@ -3969,6 +3969,13 @@ height rule. This is behavior-neutral ownership: the ratios remain fallback defa
 Office/PDF-observed chart layout behavior. The `pptx-charts` non-slow group passed with 8 passed, 0 failed,
 0 skipped; the `pptx-model` non-slow group passed with 13 passed, 0 failed, 1 skipped; the full suite passed with
 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart axis numeric-rule ownership / 2026-05-24:
+Axis epsilon, nice-tick target count, and the `1/2/5/10` fallback tick ladder now live under
+`PptxChartMetricRules` instead of being embedded in tick/gridline loops. This keeps numeric fallbacks auditable
+for later Office/PDF replacement without changing the current formula. The `pptx-charts` non-slow group passed
+with 8 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack`
+succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

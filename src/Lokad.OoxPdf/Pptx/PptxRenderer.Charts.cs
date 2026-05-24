@@ -2334,9 +2334,9 @@ internal sealed partial class PptxRenderer
         }
 
         double first = Math.Ceiling(extents.Min / unit) * unit;
-        for (double value = first; value < extents.Max - 0.0001d; value += unit)
+        for (double value = first; value < extents.Max - PptxChartMetricRules.AxisValueEpsilon; value += unit)
         {
-            if (value > extents.Min + 0.0001d)
+            if (value > extents.Min + PptxChartMetricRules.AxisValueEpsilon)
             {
                 values.Add(value);
             }
@@ -2352,16 +2352,16 @@ internal sealed partial class PptxRenderer
 
     private static double ChooseChartAxisMajorUnit(double range)
     {
-        double target = Math.Max(range / 10d, double.Epsilon);
-        double magnitude = Math.Pow(10d, Math.Floor(Math.Log10(target)));
+        double target = Math.Max(range / PptxChartMetricRules.AxisNiceTickTargetCount, double.Epsilon);
+        double magnitude = Math.Pow(PptxChartMetricRules.AxisNiceTickStepMaximum, Math.Floor(Math.Log10(target)));
         double normalized = target / magnitude;
-        double nice = normalized <= 1d
-            ? 1d
-            : normalized <= 2d
-                ? 2d
-                : normalized <= 5d
-                    ? 5d
-                    : 10d;
+        double nice = normalized <= PptxChartMetricRules.AxisNiceTickStepSmall
+            ? PptxChartMetricRules.AxisNiceTickStepSmall
+            : normalized <= PptxChartMetricRules.AxisNiceTickStepMedium
+                ? PptxChartMetricRules.AxisNiceTickStepMedium
+                : normalized <= PptxChartMetricRules.AxisNiceTickStepLarge
+                    ? PptxChartMetricRules.AxisNiceTickStepLarge
+                    : PptxChartMetricRules.AxisNiceTickStepMaximum;
         return nice * magnitude;
     }
 
@@ -2374,27 +2374,27 @@ internal sealed partial class PptxRenderer
 
     private static double GetNiceChartAxisInterval(double dataMax, double dataMin, int desiredTicks)
     {
-        if (Math.Abs(dataMax) < 0.0001d && Math.Abs(dataMin) < 0.0001d)
+        if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
             return 1d;
         }
 
         double range = dataMax - Math.Min(0d, dataMin);
-        if (Math.Abs(range) < 0.0001d)
+        if (Math.Abs(range) < PptxChartMetricRules.AxisValueEpsilon)
         {
             return dataMax > 0d ? dataMax * PptxChartMetricRules.AxisSingleValueHeadroomFactor : 1d;
         }
 
         double rawInterval = Math.Max(range / Math.Max(1, desiredTicks), double.Epsilon);
-        double magnitude = Math.Pow(10d, Math.Floor(Math.Log10(rawInterval)));
+        double magnitude = Math.Pow(PptxChartMetricRules.AxisNiceTickStepMaximum, Math.Floor(Math.Log10(rawInterval)));
         double normalized = rawInterval / magnitude;
-        double nice = normalized <= 1d
-            ? 1d
-            : normalized <= 2d
-                ? 2d
-                : normalized <= 5d
-                    ? 5d
-                    : 10d;
+        double nice = normalized <= PptxChartMetricRules.AxisNiceTickStepSmall
+            ? PptxChartMetricRules.AxisNiceTickStepSmall
+            : normalized <= PptxChartMetricRules.AxisNiceTickStepMedium
+                ? PptxChartMetricRules.AxisNiceTickStepMedium
+                : normalized <= PptxChartMetricRules.AxisNiceTickStepLarge
+                    ? PptxChartMetricRules.AxisNiceTickStepLarge
+                    : PptxChartMetricRules.AxisNiceTickStepMaximum;
         return nice * magnitude;
     }
 
@@ -2410,7 +2410,7 @@ internal sealed partial class PptxRenderer
         }
 
         double rounded = Math.Round(value);
-        return Math.Abs(value - rounded) < 0.0001d
+        return Math.Abs(value - rounded) < PptxChartMetricRules.AxisValueEpsilon
             ? rounded.ToString("0", CultureInfo.InvariantCulture)
             : value.ToString("0.##", CultureInfo.InvariantCulture);
     }
