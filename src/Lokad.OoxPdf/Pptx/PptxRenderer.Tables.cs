@@ -64,6 +64,7 @@ internal sealed partial class PptxRenderer
         }
 
         IReadOnlyList<double> rawColumnWidths = sceneTable?.ColumnWidths ?? PptxSceneBuilder.ReadTableColumnWidths(table);
+        PptxSceneTableStyle tableStyle = sceneTable?.Style ?? PptxSceneBuilder.ReadTableStyle(table);
         IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
@@ -146,7 +147,7 @@ internal sealed partial class PptxRenderer
                 double fillAlpha = sceneCell.Fill.Alpha;
                 if (!hasCellFill)
                 {
-                    hasCellFill = TryReadBuiltInTableStyleCellFill(table, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
+                    hasCellFill = TryReadBuiltInTableStyleCellFill(tableStyle, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
                 }
                 if (hasCellFill)
                 {
@@ -166,7 +167,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
-                TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
+                TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(tableStyle, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme);
                 AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
@@ -178,7 +179,7 @@ internal sealed partial class PptxRenderer
 
         if (!TableHasExplicitBorders(sceneTable, table))
         {
-            StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, table, skippedVerticalGridSegments, skippedHorizontalGridSegments);
+            StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, tableStyle, rows.Count, skippedVerticalGridSegments, skippedHorizontalGridSegments);
         }
         else
         {
@@ -225,12 +226,9 @@ internal sealed partial class PptxRenderer
                 cellProperties.Element(DrawingNamespace + "lnB") is not null);
     }
 
-    private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, XElement table, bool[,] skippedVerticalGridSegments, bool[,] skippedHorizontalGridSegments)
+    private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, PptxSceneTableStyle tableStyle, int rowCount, bool[,] skippedVerticalGridSegments, bool[,] skippedHorizontalGridSegments)
     {
-        bool hasTableStyle = table
-            .Element(DrawingNamespace + "tblPr")
-            ?.Element(DrawingNamespace + "tableStyleId") is not null;
-        if (hasTableStyle)
+        if (tableStyle.HasStyle)
         {
             graphics.SetStrokeRgb(255, 255, 255);
         }
@@ -248,31 +246,14 @@ internal sealed partial class PptxRenderer
             StrokeDefaultVerticalGridLine(graphics, cursorX, yTop, height, rowTops, skippedVerticalGridSegments, columnIndex + 1);
         }
 
-        IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
         for (int i = 0; i < rowTops.Count; i++)
         {
             bool firstRowBoundary = i == 1 &&
-                ReadTablePropertyFlag(table.Element(DrawingNamespace + "tblPr"), "firstRow") &&
-                rows.Count > 1;
+                tableStyle.FirstRow &&
+                rowCount > 1;
             graphics.SetLineWidth(firstRowBoundary ? 3d : 1d);
             StrokeDefaultHorizontalGridLine(graphics, x, width, rowTops[i], columnWidths, skippedHorizontalGridSegments, i);
         }
-    }
-
-    private static bool ReadTablePropertyFlag(XElement? tableProperties, string name)
-    {
-        if (tableProperties is null)
-        {
-            return false;
-        }
-
-        if (tableProperties.Attribute(name) is { } attribute)
-        {
-            return attribute.Value == "1" ||
-                attribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return tableProperties.Element(DrawingNamespace + name) is not null;
     }
 
     private static void StrokeDefaultVerticalGridLine(PdfGraphicsBuilder graphics, double x, double yTop, double height, IReadOnlyList<double> rowTops, bool[,] skippedSegments, int boundaryIndex)
