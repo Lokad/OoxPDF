@@ -1781,6 +1781,14 @@ High-priority actions:
   and polar/radar shape semantics. The new derived candidates improve the structural oracle surface, but they
   still do not classify chart text matrices, legend entries, leader lines, or Office radar polygon strokes as
   first-class chart structures.
+- [x] 2026-05-25: Add a chart text-structure oracle slice. `ClassifyPdfChartText.ps1` now classifies inspected
+  PDF text operations relative to derived chart plot boxes as `AbovePlotText`, `BelowPlotText`,
+  `InsidePlotText`, `LeftAxisText`, `RightSideText`, `OuterChartText`, or generic `ChartText`; it records
+  stable text hashes and effective text matrices without exposing private text content. `CheckVisualCase.ps1`
+  can opt public manifests into this structural gate through `expected.maxChartTextStructurePositionDelta`.
+- [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
+  oracle distinguishes plot-relative regions but does not yet separate title, value-axis ticks, category-axis
+  ticks, legend labels, data labels, and annotations as explicit Office-aligned roles.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
@@ -3764,6 +3772,11 @@ Classifier family probe: inspected and classified Office/candidate PDFs from pub
 scatter-cluster, and line-marker chart cases under ignored `artifacts/tmp-chart-family-inspect/`. The updated
 classifier emits `PlotAreaClipBoxCandidate`, `AxisPairPlotBoxCandidate`, and `PolarPlotBoxCandidate`; strict
 reference-vs-reference comparison of those derived kinds passed for all five sampled families.
+Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
+and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
+the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
+`artifacts/tmp-chart-text-gate/case.json` exercised the new `maxChartTextStructurePositionDelta` harness path
+successfully at `artifacts/visual/tmp-chart-text-gate-line-markers/20260525-002824`.
 ```
 
 Latest public vertical text probes:

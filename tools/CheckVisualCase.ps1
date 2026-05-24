@@ -367,6 +367,125 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     }
 }
 
+if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
+    $textInspectRoot = Join-Path $comparisonDir "pdf-text"
+    $referenceTextInspect = Join-Path $textInspectRoot "reference"
+    $candidateTextInspect = Join-Path $textInspectRoot "candidate"
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceTextInspect, $candidateTextInspect, $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceTextOperations = Join-Path $referenceTextInspect "text-operations.json"
+    $candidateTextOperations = Join-Path $candidateTextInspect "text-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateTextOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateTextInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceTextOperations) -or -not (Test-Path -LiteralPath $candidateTextOperations)) {
+        throw "PDF chart text structure gate failed because one inspected PDF had no text operations."
+    }
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF chart text structure gate failed because one inspected PDF had no graphics operations for plot-box classification."
+    }
+
+    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
+    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
+    $classifyReferenceGraphicsArgs = @{
+        InputPath = $referenceGraphicsOperations
+        Output = $referenceChartStructures
+    }
+    $classifyCandidateGraphicsArgs = @{
+        InputPath = $candidateGraphicsOperations
+        Output = $candidateChartStructures
+    }
+    if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
+        $classifyReferenceGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+        $classifyCandidateGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying reference graphics."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying candidate graphics."
+    }
+
+    $referenceChartTextStructures = Join-Path $referenceTextInspect "chart-text-structures.json"
+    $candidateChartTextStructures = Join-Path $candidateTextInspect "chart-text-structures.json"
+    $classifyReferenceTextArgs = @{
+        InputPath = $referenceTextOperations
+        ChartStructures = $referenceChartStructures
+        Output = $referenceChartTextStructures
+    }
+    $classifyCandidateTextArgs = @{
+        InputPath = $candidateTextOperations
+        ChartStructures = $candidateChartStructures
+        Output = $candidateChartTextStructures
+    }
+    if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
+        $classifyReferenceTextArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+        $classifyCandidateTextArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+    }
+    if ($manifest.expected.chartTextPlotTolerance -ne $null) {
+        $classifyReferenceTextArgs.PlotTolerance = [double]$manifest.expected.chartTextPlotTolerance
+        $classifyCandidateTextArgs.PlotTolerance = [double]$manifest.expected.chartTextPlotTolerance
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") @classifyReferenceTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying reference text."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartText.ps1") @classifyCandidateTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed while classifying candidate text."
+    }
+
+    $compareChartTextArgs = @{
+        Reference = $referenceChartTextStructures
+        Candidate = $candidateChartTextStructures
+        BoundsTolerance = [double]$manifest.expected.maxChartTextStructurePositionDelta
+        LineWidthTolerance = 0
+        MatchByBounds = $true
+    }
+    if ($manifest.expected.compareChartTextStructureKinds -ne $null) {
+        $compareChartTextArgs.Kinds = @($manifest.expected.compareChartTextStructureKinds)
+    }
+    else {
+        $compareChartTextArgs.Kinds = @("AbovePlotText", "BelowPlotText", "InsidePlotText", "LeftAxisText", "RightSideText", "OuterChartText", "ChartText")
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart text structure gate failed."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()
