@@ -738,6 +738,15 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Preserve and consume simple chart title/legend `txPr/a:defRPr` overrides through the
+  typed chart scene model. `PptxSceneChartTitle` and `PptxSceneChartLegend` now carry nullable text-style
+  overrides, and supported title/legend rendering merges chart-level defaults with title/legend font family,
+  font size, solid color, bold, and italic instead of using fixed renderer-local text styles. Public scene and
+  PDF tests lock title and legend font/color consumption, the full runner passed 186/186, `dotnet pack`
+  succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-181800` stayed stable:
+  84/84 compared pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size and default-run bold/italic:
   rich text runs, rotation, tick-label offsets, multi-level category labels, and chart-style inherited text
   defaults still need structural modeling before axis and data-label text can match Office without renderer
@@ -1037,8 +1046,8 @@ High-priority actions:
     gridlines, axes, series, markers, points, and chart/plot-area borders.
   - [ ] Extend scene-owned gridline style records to cover compound lines, theme style references, and
     chart-style inherited defaults.
-  - [x] Add scene-owned chart-level and axis-level text-style overrides for the supported `txPr/defRPr`
-    subset: font family, font size, and solid color.
+  - [x] Add scene-owned chart-level, axis-level, title, and legend text-style overrides for the supported
+    `txPr/defRPr` subset: font family, font size, solid color, bold, and italic.
   - [ ] Extend chart text-style records to cover rich text runs, rotation, tick-label offsets, multi-level
     category labels, per-run data-label styles, and chart-style inherited defaults.
   - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
@@ -1646,11 +1655,11 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-180853` after the chart
-  text-style bold/italic slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-181800` after the chart
+  title/legend text-style slice:
   - 84/84 pages compared with zero dimension mismatches.
-  - Mean absolute error: `9.043266`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
-    threshold 16: `0.116409`.
+  - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
+    threshold 16: `0.116405`.
   - Diagnostics remain limited to one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
   - Page 17 remained dimension-matched at MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - Private PPTX run `artifacts/private-visual/lokad-value-based/20260514-154018`:
@@ -3251,8 +3260,8 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-180853: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.043266, changed16 0.116409, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-181800: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 

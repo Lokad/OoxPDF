@@ -446,12 +446,14 @@ internal sealed record PptxSceneChartAxis(
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
-    bool IsAutoDeleted);
+    bool IsAutoDeleted,
+    PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartLegend(
     string Position,
     bool Overlay,
-    bool IsVisible);
+    bool IsVisible,
+    PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -967,8 +969,8 @@ internal sealed class PptxSceneBuilder
             paletteColors,
             ReadChartPlots(chartXml, theme),
             ReadChartAxes(chartXml, theme),
-            ReadChartTitle(chartXml),
-            ReadChartLegend(chartXml),
+            ReadChartTitle(chartXml, theme),
+            ReadChartLegend(chartXml, theme),
             ReadChartTextStyleOverride(chartXml?.Root, theme),
             ReadChartPlotAreaManualLayout(chartXml),
             ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme),
@@ -1484,14 +1486,14 @@ internal sealed class PptxSceneBuilder
         return string.IsNullOrWhiteSpace(format) ? null : format;
     }
 
-    private static PptxSceneChartTitle ReadChartTitle(XDocument? chartXml)
+    private static PptxSceneChartTitle ReadChartTitle(XDocument? chartXml, PptxTheme theme)
     {
         XElement? chart = chartXml?
             .Descendants(ChartNamespace + "chart")
             .FirstOrDefault();
         if (chart is null)
         {
-            return new PptxSceneChartTitle(null, IsAutoDeleted: false);
+            return new PptxSceneChartTitle(null, IsAutoDeleted: false, default);
         }
 
         bool isAutoDeleted = IsOoxmlBooleanElementEnabled(chart.Element(ChartNamespace + "autoTitleDeleted"));
@@ -1506,23 +1508,24 @@ internal sealed class PptxSceneBuilder
                 .FirstOrDefault();
         }
 
-        return new PptxSceneChartTitle(string.IsNullOrWhiteSpace(text) ? null : text, isAutoDeleted);
+        return new PptxSceneChartTitle(string.IsNullOrWhiteSpace(text) ? null : text, isAutoDeleted, ReadChartTextStyleOverride(title, theme));
     }
 
-    private static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml)
+    private static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml, PptxTheme theme)
     {
         XElement? legend = chartXml?
             .Descendants(ChartNamespace + "legend")
             .FirstOrDefault();
         if (legend is null)
         {
-            return new PptxSceneChartLegend("r", Overlay: false, IsVisible: false);
+            return new PptxSceneChartLegend("r", Overlay: false, IsVisible: false, default);
         }
 
         return new PptxSceneChartLegend(
             (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
             IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay")),
-            !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")));
+            !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")),
+            ReadChartTextStyleOverride(legend, theme));
     }
 
     private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, string chartPartName, PptxTheme theme)

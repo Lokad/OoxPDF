@@ -557,7 +557,7 @@ internal sealed partial class PptxRenderer
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                 }
-                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, legendEntries, chartLayout.Legend));
+                fonts.AddRange(RenderChartLegend(graphics, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderBarDataLabels(
                     theme,
                     graphics,
@@ -607,7 +607,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars: false));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries)));
                 }
-                fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(linePlot, lineChart, seriesStrokes), chartLayout.Legend));
+                fonts.AddRange(RenderChartLegend(graphics, plotBox, BuildStrokeLegendEntries(linePlot, lineChart, seriesStrokes), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderLineDataLabels(
                     theme,
                     graphics,
@@ -1089,10 +1089,8 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        double fontSize = 12d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        ChartTextStyle style = ReadSceneOrXmlChartTitleTextStyle(theme, sceneChart, chartXml);
+        double fontSize = style.FontSize;
         var run = new TextRun(
             title.Trim(),
             x + width * 0.08d,
@@ -1106,22 +1104,35 @@ internal sealed partial class PptxRenderer
             fontSize,
             0d,
             0d,
-            color,
+            style.Color,
             1d,
             null,
-            Bold: false,
-            Italic: false,
+            Bold: style.Bold,
+            Italic: style.Italic,
             Underline: false,
             Strike: false,
             KerningEnabled: true,
             TextAlignment.Center,
-            FontFamily: null,
+            FontFamily: style.FontFamily,
             RotationDegrees: 0d,
             RotationCenterX: 0d,
             RotationCenterY: 0d,
             FlipHorizontal: false,
             FlipVertical: false);
         return RenderTextRuns([run], graphics, "CT");
+    }
+
+    private static ChartTextStyle ReadSceneOrXmlChartTitleTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
+        if (sceneChart is null)
+        {
+            return ReadChartTextStyle(theme, chartXml, title, fallbackFontSize: 12d);
+        }
+
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: 12d);
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+        return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Title.TextStyle));
     }
 
     private static string? ReadSceneOrXmlChartTitleText(PptxSceneChart? sceneChart, XDocument chartXml)
@@ -1299,14 +1310,27 @@ internal sealed partial class PptxRenderer
             : ChartLegendLayout.Hidden;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout)
+    private static ChartTextStyle ReadSceneOrXmlChartLegendTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        XElement? legend = chartXml.Descendants(ChartNamespace + "legend").FirstOrDefault();
+        if (sceneChart is null)
+        {
+            return ReadChartTextStyle(theme, chartXml, legend, fallbackFontSize: 9d);
+        }
+
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: 9d);
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+        return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style)
     {
         if (!layout.Visible || entries.Count == 0)
         {
             return [];
         }
 
-        double fontSize = 9d;
+        double fontSize = style.FontSize;
         double lineHeight = fontSize * 1.45d;
         double markerSize = fontSize * 0.65d;
         bool horizontal = string.Equals(layout.Position, "b", StringComparison.Ordinal) ||
@@ -1325,9 +1349,6 @@ internal sealed partial class PptxRenderer
             _ => plotBox.Y + plotBox.Height - lineHeight
         };
         double clipHeight = horizontal ? lineHeight * 1.25d : Math.Max(lineHeight, entries.Count * lineHeight);
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
         var runs = new List<TextRun>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
         {
@@ -1359,16 +1380,16 @@ internal sealed partial class PptxRenderer
                 fontSize,
                 0d,
                 0d,
-                color,
+                style.Color,
                 1d,
                 null,
-                Bold: false,
-                Italic: false,
+                Bold: style.Bold,
+                Italic: style.Italic,
                 Underline: false,
                 Strike: false,
                 KerningEnabled: true,
                 TextAlignment.Left,
-                FontFamily: null,
+                FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
@@ -1740,10 +1761,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
     {
-        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize);
         style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme));
         style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme));
         return style;
@@ -1756,15 +1774,20 @@ internal sealed partial class PptxRenderer
             return ReadChartTextStyle(theme, chartXml, element, fallbackFontSize);
         }
 
-        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
         style = sceneAxis is null
             ? MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme))
             : MergeChartTextStyle(style, ToChartTextStyleOverride(sceneAxis.TextStyle));
         return style;
+    }
+
+    private static ChartTextStyle CreateDefaultChartTextStyle(PptxTheme theme, double fallbackFontSize)
+    {
+        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        return new ChartTextStyle(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
     }
 
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
