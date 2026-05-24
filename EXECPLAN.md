@@ -914,6 +914,12 @@ High-priority actions:
   ordered shape rendering.
 - [ ] Continue reducing renderer XML fallbacks by turning remaining preset adjustment formulas, curved
   connector adjustment values, gradients, and richer effect families into scene-owned structures.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after completing the scene migration for
+  shape fills, pattern fills, picture fills, effects, line styles, line ends, and renderable custom geometry.
+  `dotnet pack` succeeded and private run `artifacts/private-visual/lokad-value-based/20260524-110413`
+  produced 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
+  and only one remaining diagnostic (`PPTX_UNSUPPORTED_IMAGE_RECOLOR`). Slide 17 stayed stable at MAE
+  `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
