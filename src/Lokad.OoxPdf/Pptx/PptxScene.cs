@@ -99,6 +99,7 @@ internal sealed record PptxTextLineLayoutSnapshot(
     PptxTextBaselineMetricSnapshot BaselineMetric,
     double StartX,
     double EndX,
+    double NaturalEndX,
     string Alignment,
     IReadOnlyList<PptxTextSpanLayoutSnapshot> Spans);
 

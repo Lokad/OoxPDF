@@ -185,6 +185,7 @@ internal sealed partial class PptxRenderer
             ToSnapshot(line.Box.BaselineMetric),
             line.StartX,
             line.EndX,
+            line.NaturalEndX,
             line.Alignment.ToString(),
             line.Spans.Select(ToSnapshot).ToArray());
     }
@@ -1411,7 +1412,7 @@ internal sealed partial class PptxRenderer
             spans = spans.SelectMany(span => SplitJustifiedWordSpans(span, advanceEstimator));
         }
 
-        lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, alignment, spans.ToArray()));
+        lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, line.EndX + offset, alignment, spans.ToArray()));
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)
@@ -1471,7 +1472,7 @@ internal sealed partial class PptxRenderer
             shift += spanExtra;
         }
 
-        return new PptxTextLineLayout(box, textX, textX + textWidth, TextAlignment.Justify, spans);
+        return new PptxTextLineLayout(box, textX, textX + textWidth, line.EndX, TextAlignment.Justify, spans);
     }
 
     private static PptxTextLineLayout? TryDistributeLine(TextLayoutLine line, PptxTextLineBoxLayout box, double textX, double textWidth)
@@ -1541,7 +1542,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return new PptxTextLineLayout(box, textX, textX + textWidth, TextAlignment.Distributed, spans);
+        return new PptxTextLineLayout(box, textX, textX + textWidth, line.EndX, TextAlignment.Distributed, spans);
     }
 
     private static IEnumerable<PptxTextSpanLayout> SplitJustifiedWordSpans(PptxTextSpanLayout span, TextAdvanceEstimator advanceEstimator)

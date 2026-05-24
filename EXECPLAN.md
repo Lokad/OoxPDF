@@ -473,6 +473,11 @@ High-priority actions:
   `like` one line later than Office and remains the next line-break metric target. Validation: typography
   `66 passed, 0 failed, 2 skipped`; public justify visual `20260524-214947` passed with MAE `4.187326`
   and PDF text-operation parity for the first five lines; skip-slow/full suites and packing passed.
+- [x] Expose natural pre-expansion text-line width in PPTX layout inspection:
+  justified line snapshots now keep both `EndX` and `NaturalEndX`, and the private-safe layout diagnostic
+  reports natural width plus alignment expansion. This confirms the remaining public justify paragraph-3
+  wrap mismatch is a narrow metric/tolerance gap: adding `like` would exceed the frame by about `1.1pt`
+  under current Calibri measurements, while Office keeps it on the previous justified line.
 - [x] Re-run public spacing probes after the atom/glyph architecture slice:
   `inventory-opti`, `accent-spacing`, and `boundary-invariance` still render without diagnostics; boundary
   invariance remains structurally close while inventory/accent remain acceptance probes for later glyph

@@ -4172,6 +4172,7 @@ internal static class PptxTests
 
         TestAssert.True(justifiedLine.Spans.Count > 1, "Expected justified lines to keep word spans separate before PDF emission.");
         TestAssert.True(justifiedLine.EndX - justifiedLine.StartX > 500d, "Expected justified line to stretch to the text frame width.");
+        TestAssert.True(justifiedLine.NaturalEndX < justifiedLine.EndX, "Expected justified line inspection to expose the natural pre-expansion end for Office wrap comparisons.");
         TestAssert.True(justifiedLine.BaselineMetric.Ratio > 0d, "Expected line boxes to expose the generic baseline metric ratio used for Office comparison.");
         TestAssert.True(!string.IsNullOrWhiteSpace(justifiedLine.BaselineMetric.Source), "Expected line boxes to expose baseline metric provenance.");
         TestAssert.True(justifiedLine.BaselineMetric.UnitsPerEm > 0, "Expected resolved-font line boxes to expose OpenType units-per-em diagnostics.");
@@ -4407,6 +4408,9 @@ internal static class PptxTests
                     },
                     line.StartX,
                     line.EndX,
+                    line.NaturalEndX,
+                    naturalWidth = line.NaturalEndX - line.StartX,
+                    alignmentExpansion = line.EndX - line.NaturalEndX,
                     line.MaxFontSize,
                     spanCount = line.Spans.Count,
                     glyphCount = line.Spans.Sum(span => span.GlyphSpan.GlyphCount),

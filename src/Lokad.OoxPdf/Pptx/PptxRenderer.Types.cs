@@ -311,6 +311,7 @@ internal sealed partial class PptxRenderer
         PptxTextLineBoxLayout Box,
         double StartX,
         double EndX,
+        double NaturalEndX,
         TextAlignment Alignment,
         IReadOnlyList<PptxTextSpanLayout> Spans);
 
