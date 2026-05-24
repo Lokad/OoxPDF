@@ -89,7 +89,8 @@ internal sealed partial class PptxRenderer
             ToShapeBounds(picture.Bounds),
             ToCropRect(picture.Picture.Crop),
             ToFillRect(picture.Picture.Fill),
-            picture.Picture.Alpha);
+            picture.Picture.Alpha,
+            ToImageRecolor(picture.Picture.Recolor));
     }
 
     private static void RenderPicture(
@@ -131,7 +132,8 @@ internal sealed partial class PptxRenderer
             bounds.Value,
             ReadCrop(picture),
             ReadFillRect(picture),
-            ReadPictureAlpha(picture));
+            ReadPictureAlpha(picture),
+            ReadImageRecolor(picture, theme));
     }
 
     private static void RenderPicture(
@@ -151,7 +153,8 @@ internal sealed partial class PptxRenderer
         ShapeBounds rawBounds,
         CropRect crop,
         FillRect fillRect,
-        double alpha)
+        double alpha,
+        ImageRecolor recolor)
     {
         if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
         {
@@ -179,7 +182,6 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ImageRecolor recolor = ReadImageRecolor(picture, theme);
         PdfImageXObject? image = GetOrCreateImage(imagePart, recolor, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
@@ -252,6 +254,18 @@ internal sealed partial class PptxRenderer
     private static FillRect ToFillRect(PptxSceneRect rect)
     {
         return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
+    }
+
+    private static ImageRecolor ToImageRecolor(PptxSceneImageRecolor recolor)
+    {
+        return recolor.Kind switch
+        {
+            PptxSceneImageRecolorKind.Luminance => ImageRecolor.Luminance(recolor.Brightness, recolor.Contrast),
+            PptxSceneImageRecolorKind.Duotone => ImageRecolor.Duotone(recolor.Dark, recolor.Light),
+            PptxSceneImageRecolorKind.Grayscale => ImageRecolor.Grayscale(),
+            PptxSceneImageRecolorKind.BiLevel => ImageRecolor.BiLevel(recolor.Threshold),
+            _ => ImageRecolor.None
+        };
     }
 
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes)

@@ -181,11 +181,58 @@ internal sealed record PptxScenePicture(
     string? RelationshipId,
     PptxSceneRect Crop,
     PptxSceneRect Fill,
-    double Alpha);
+    double Alpha,
+    PptxSceneImageRecolor Recolor);
 
 internal readonly record struct PptxSceneRect(double Left, double Top, double Right, double Bottom)
 {
     public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
+}
+
+internal enum PptxSceneImageRecolorKind
+{
+    None,
+    Luminance,
+    Duotone,
+    Grayscale,
+    BiLevel
+}
+
+internal readonly record struct PptxSceneImageRecolor(
+    PptxSceneImageRecolorKind Kind,
+    double Brightness,
+    double Contrast,
+    RgbColor Dark,
+    RgbColor Light,
+    double Threshold)
+{
+    public static PptxSceneImageRecolor None { get; } = new(PptxSceneImageRecolorKind.None, 0d, 0d, default, default, 0d);
+
+    public static PptxSceneImageRecolor Luminance(double brightness, double contrast)
+    {
+        return new PptxSceneImageRecolor(
+            PptxSceneImageRecolorKind.Luminance,
+            Math.Clamp(brightness, -1d, 1d),
+            Math.Clamp(contrast, -1d, 1d),
+            default,
+            default,
+            0d);
+    }
+
+    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light)
+    {
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d);
+    }
+
+    public static PptxSceneImageRecolor Grayscale()
+    {
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d);
+    }
+
+    public static PptxSceneImageRecolor BiLevel(double threshold)
+    {
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d));
+    }
 }
 
 internal sealed record PptxSceneTextBody(
@@ -351,7 +398,7 @@ internal sealed class PptxSceneBuilder
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child) : null,
                 ReadTextBody(child, placeholderSources, theme),
-                kind == PptxSceneNodeKind.Picture ? ReadPicture(child) : null,
+                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
                 child));
         }
@@ -462,13 +509,14 @@ internal sealed class PptxSceneBuilder
                 ?.Value;
     }
 
-    private static PptxScenePicture ReadPicture(XElement picture)
+    private static PptxScenePicture ReadPicture(XElement picture, PptxTheme theme)
     {
         return new PptxScenePicture(
             ReadPictureRelationshipId(picture),
             ReadPictureCrop(picture),
             ReadPictureFill(picture),
-            ReadPictureAlpha(picture));
+            ReadPictureAlpha(picture),
+            ReadImageRecolor(picture, theme));
     }
 
     private static PptxSceneShape ReadShape(XElement shape)
@@ -527,6 +575,75 @@ internal sealed class PptxSceneBuilder
         }
 
         return 1d;
+    }
+
+    private static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
+    {
+        XElement? blip = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        if (blip is null)
+        {
+            return PptxSceneImageRecolor.None;
+        }
+
+        if (blip.Element(DrawingNamespace + "grayscl") is not null)
+        {
+            return PptxSceneImageRecolor.Grayscale();
+        }
+
+        XElement? biLevel = blip.Element(DrawingNamespace + "biLevel");
+        if (biLevel is not null)
+        {
+            double threshold = biLevel.Attribute("thresh") is { } thresholdAttribute
+                ? Math.Clamp(int.Parse(thresholdAttribute.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
+                : 0.5d;
+            return PptxSceneImageRecolor.BiLevel(threshold);
+        }
+
+        XElement? luminance = blip.Element(DrawingNamespace + "lum");
+        if (luminance is not null)
+        {
+            double brightness = luminance.Attribute("bright") is { } brightnessAttribute
+                ? Math.Clamp(int.Parse(brightnessAttribute.Value, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+                : 0d;
+            double contrast = luminance.Attribute("contrast") is { } contrastAttribute
+                ? Math.Clamp(int.Parse(contrastAttribute.Value, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+                : 0d;
+            return PptxSceneImageRecolor.Luminance(brightness, contrast);
+        }
+
+        XElement? duotone = blip.Element(DrawingNamespace + "duotone");
+        if (duotone is not null)
+        {
+            XElement[] colors = duotone.Elements().Take(2).ToArray();
+            if (colors.Length == 2 &&
+                TryReadImageRecolorColor(colors[0], theme, out RgbColor dark) &&
+                TryReadImageRecolorColor(colors[1], theme, out RgbColor light))
+            {
+                return PptxSceneImageRecolor.Duotone(dark, light);
+            }
+        }
+
+        return PptxSceneImageRecolor.None;
+    }
+
+    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
+    {
+        if (colorElement.Name == DrawingNamespace + "prstClr")
+        {
+            string? preset = (string?)colorElement.Attribute("val");
+            color = preset switch
+            {
+                "black" => new RgbColor(0, 0, 0),
+                "white" => new RgbColor(255, 255, 255),
+                _ => default
+            };
+            return preset is "black" or "white";
+        }
+
+        XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
+        return TryReadSolidColorWithAlpha(wrapper, theme, out color, out _);
     }
 
     private static double ParsePercentage(XElement element, string attribute)

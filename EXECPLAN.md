@@ -879,13 +879,22 @@ High-priority actions:
   crop/recolor/svg details that still need typed models.
 - [x] Resolve simple picture properties into `PptxScenePicture`: crop rectangle, stretch fill rectangle, and
   alpha are now parsed by the scene model and consumed by ordered picture rendering.
-- [ ] Continue typed picture migration by moving recolor and SVG-specific placement/crop decisions into
+- [x] Move picture recolor intent into `PptxScenePicture`: grayscale, bi-level, luminance, and duotone OOXML
+  recolor instructions are now scene-level data and ordered picture rendering converts that intent at the
+  image-render boundary.
+- [ ] Continue typed picture migration by moving SVG-specific placement/crop decisions into
   `PptxScenePicture`, then repeat the same pattern for connector geometry and line-end styles.
 - [x] Move the first ordered shape/connector leaf inputs toward typed scene data: `PptxSceneShape` now owns
   preset geometry names, and ordered shape/connector rendering takes preset and EMU bounds from scene nodes
   before falling back to XML for fills, strokes, effects, custom geometry, and picture fills.
 - [ ] Continue typed shape/connector migration by resolving line style, line ends, dash/cap/join, custom
   geometry presence, and fill/effect styles into typed scene records.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after scene-backed ordered rendering and typed
+  picture/shape leaf inputs. `dotnet pack` succeeded and private run
+  `artifacts/private-visual/lokad-value-based/20260524-101919` produced 84/84 compared pages, zero dimension
+  mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
+  diagnostic. Page 17 stayed at MAE `2.945717`, changed16 `0.045530`, confirming the architecture migration
+  did not disturb the slide-17 connector fix.
 - [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
