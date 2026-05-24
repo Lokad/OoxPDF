@@ -523,6 +523,13 @@ High-priority actions:
   unsupported non-chart, non-table, non-SmartArt `graphicFrame` nodes now emit
   `PPTX_UNSUPPORTED_GRAPHIC_FRAME` instead of being indistinguishable from intentionally ignored content.
   Ordered scene rendering also has an explicit `UnknownGraphicFrame` branch for inherited scene nodes.
+- [x] Keep ordered scene rendering active when unknown graphic frames are present:
+  slide-level unknown `graphicFrame` nodes no longer force the legacy fallback path, so known sibling
+  shapes/text/tables/charts still follow scene order while the unknown node is ignored with diagnostics.
+  `PptxSyntheticUnknownGraphicFrameDoesNotDisableSiblingOrder` locks the text-before-covering-shape order
+  across an intervening unknown frame and avoids duplicate slide-level diagnostics from ordered dispatch.
+  The old ordered-render eligibility branch was removed from `RenderPages`; all slides now flow through the
+  typed ordered scene dispatcher.
 - [x] 2026-05-24: Re-ran private PPTX acceptance after adding the generic unknown graphic-frame diagnostic.
   Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
   dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
@@ -3644,6 +3651,13 @@ One parallel targeted-test attempt hit a SourceLink file lock; the same tests pa
 Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
 dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and only
 `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; slide 17 measured MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
+
+ordered rendering with unknown graphic frames / 2026-05-24:
+`PptxSyntheticUnknownGraphicFrameDoesNotDisableSiblingOrder` now locks that slide-level unknown graphic
+frames do not disable ordered scene rendering for known siblings, while `PptxUnsupportedFeaturesEmitDiagnostics`
+continues to lock a single slide-scoped `PPTX_UNSUPPORTED_GRAPHIC_FRAME` diagnostic. The non-slow suite passed
+with 190 passed, 0 failed, 7 skipped. After removing the old ordered-render eligibility branch, `dotnet pack`
+succeeded and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

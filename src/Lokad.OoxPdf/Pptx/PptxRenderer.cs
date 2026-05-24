@@ -48,57 +48,30 @@ internal sealed partial class PptxRenderer
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
-            bool canRenderInOrder = CanRenderSlideInOrder(sceneSlide);
 
             if (context.Inheritance.MasterXml is not null)
             {
                 RenderBackground(context, context.SceneSlide?.MasterBackground, context.Inheritance.MasterXml, graphics);
-                if (!canRenderInOrder)
-                {
-                    RenderShapes(context, context.Inheritance.MasterXml, graphics, renderPlaceholders: false);
-                }
             }
 
             if (context.Inheritance.LayoutXml is not null)
             {
                 RenderBackground(context, context.SceneSlide?.LayoutBackground, context.Inheritance.LayoutXml, graphics);
-                if (!canRenderInOrder)
-                {
-                    RenderShapes(context, context.Inheritance.LayoutXml, graphics, renderPlaceholders: false);
-                }
             }
 
             RenderBackground(context, context.SceneSlide?.SlideBackground, context.SlideXml, graphics);
-            if (canRenderInOrder)
-            {
-                var orderedImages = new List<PdfImageResource>();
-                var orderedChartFonts = new List<PdfFontResource>();
-                int imageIndex = 1;
-                IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
-                IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
-                IReadOnlyList<PptxPositionedTextSpan> slideTableTextSpans = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
-                RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(slideTableTextSpans).Select(span => span.Run).ToArray());
-                RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.MasterPartName), context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-                RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.LayoutPartName), context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-                RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
+            var orderedImages = new List<PdfImageResource>();
+            var orderedChartFonts = new List<PdfFontResource>();
+            int imageIndex = 1;
+            IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
+            IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
+            IReadOnlyList<PptxPositionedTextSpan> slideTableTextSpans = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
+            RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(slideTableTextSpans).Select(span => span.Run).ToArray());
+            RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.MasterPartName), context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.LayoutPartName), context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
-                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
-                continue;
-            }
-
-            IReadOnlyList<PdfImageResource> images = RenderPictures(context, graphics);
-            RenderShapes(context, context.SlideXml, graphics, renderPlaceholders: true);
-            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = context.InheritedXml
-                .Append(context.SlideXml)
-                .SelectMany(xml => RenderTables(context, xml, graphics))
-                .ToArray();
-            IReadOnlyList<PdfFontResource> chartFonts = RenderCharts(context, graphics);
-            IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadInheritedTextSpans(context)
-                .Concat(ReadSlideTextSpans(context))
-                .Concat(tableTextSpans)
-                .ToArray();
-            IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, [], graphics);
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), chartFonts.Concat(fonts).ToArray(), images, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
         }
 
         return pages;

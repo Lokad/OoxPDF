@@ -6,17 +6,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool CanRenderSlideInOrder(PptxSceneSlide sceneSlide)
-    {
-        return !sceneSlide.SlideNodes.Any(ContainsUnknownGraphicFrame);
-    }
-
-    private static bool ContainsUnknownGraphicFrame(PptxSceneNode node)
-    {
-        return node.Kind == PptxSceneNodeKind.UnknownGraphicFrame ||
-            node.Children.Any(ContainsUnknownGraphicFrame);
-    }
-
     private static void RenderOrderedSceneNodes(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
@@ -147,7 +136,8 @@ internal sealed partial class PptxRenderer
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
     {
-        if (context.DiagnosticSink is null || IsSmartArtGraphicFrame(node.Source))
+        string effectivePartName = sourcePartName ?? context.Slide.PartName;
+        if (context.DiagnosticSink is null || effectivePartName == context.Slide.PartName || IsSmartArtGraphicFrame(node.Source))
         {
             return;
         }
@@ -156,7 +146,7 @@ internal sealed partial class PptxRenderer
             "PPTX_UNSUPPORTED_GRAPHIC_FRAME",
             OoxPdfSeverity.Warning,
             "Unsupported PPTX graphic frame was detected and ignored.",
-            sourcePartName ?? context.Slide.PartName,
+            effectivePartName,
             SlideIndex: context.SlideNumber,
             Feature: "graphic frame",
             Fallback: "Ignored"));
