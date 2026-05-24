@@ -883,6 +883,11 @@ High-priority actions:
   as bold and italic, matching the existing element-only, `1`/`0`, and `true`/`false` handling. A public
   model-level unit test covers both forms; full runner passed 189/189 and `dotnet pack` succeeded. No private
   PPTX rerun was taken for this DOCX-only parser slice.
+- [x] 2026-05-24: Centralize OOXML boolean parsing behind `OoxBoolean` in the shared OOXML layer.
+  PPTX chart flags, PPTX custom geometry/table-style booleans, PPTX transform flags, and DOCX `w:onOff`
+  parsing now flow through one helper for attribute, optional-attribute, and element-with-`val` forms. This
+  reduces format-local boolean drift after the recent normalization slices; full runner passed 189/189 and
+  `dotnet pack` succeeded.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.

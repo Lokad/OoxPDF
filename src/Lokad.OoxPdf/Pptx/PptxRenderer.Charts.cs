@@ -1422,24 +1422,17 @@ internal sealed partial class PptxRenderer
 
     private static bool IsOoxmlTrue(string? value)
     {
-        return value is not null &&
-            (value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase));
+        return OoxBoolean.IsTrue(value);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
-        return IsOoxmlBooleanElementEnabled(element, defaultValue: false);
+        return OoxBoolean.ParseElement(element);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
     {
-        if (element is null)
-        {
-            return defaultValue;
-        }
-
-        string? value = (string?)element.Attribute("val");
-        return value is null || IsOoxmlTrue(value);
+        return OoxBoolean.ParseElement(element, defaultValue);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)

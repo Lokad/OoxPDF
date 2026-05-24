@@ -762,11 +762,7 @@ internal sealed class DocxReader
             return null;
         }
 
-        string? value = (string?)element.Attribute(WordprocessingNamespace + "val");
-        return value is null ||
-            value == "1" ||
-            value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-            value.Equals("on", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.ParseElement(element, valueAttributeName: WordprocessingNamespace + "val");
     }
 
     private static double? ReadTwipsAttribute(XElement? element, XName name)

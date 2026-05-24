@@ -1596,32 +1596,17 @@ internal sealed class PptxSceneBuilder
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
-        return IsOoxmlBooleanElementEnabled(element, defaultValue: false);
+        return OoxBoolean.ParseElement(element);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
     {
-        if (element is null)
-        {
-            return defaultValue;
-        }
-
-        string? value = (string?)element.Attribute("val");
-        return value is null ||
-            value == "1" ||
-            value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.ParseElement(element, defaultValue);
     }
 
     private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
     {
-        XAttribute? attribute = element.Attribute(attributeName);
-        if (attribute is null)
-        {
-            return null;
-        }
-
-        return attribute.Value == "1" ||
-            attribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.ParseOptionalAttribute(element, attributeName);
     }
 
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)
@@ -1717,8 +1702,7 @@ internal sealed class PptxSceneBuilder
 
         if (tableProperties.Attribute(name) is { } attribute)
         {
-            return attribute.Value == "1" ||
-                attribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
+            return OoxBoolean.IsTrue(attribute.Value);
         }
 
         return tableProperties.Element(DrawingNamespace + name) is not null;
@@ -2814,10 +2798,7 @@ internal sealed class PptxSceneBuilder
 
     private static bool ParseBoolAttribute(XElement? element, string attributeName, bool defaultValue)
     {
-        string? value = (string?)element?.Attribute(attributeName);
-        return value is null
-            ? defaultValue
-            : value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.ParseAttribute(element, attributeName, defaultValue);
     }
 
     private static int ParseOptionalIntAttribute(XElement? element, string attributeName, int defaultValue)

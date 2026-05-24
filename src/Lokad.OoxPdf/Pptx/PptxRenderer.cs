@@ -256,10 +256,7 @@ internal sealed partial class PptxRenderer
 
     private static bool ParseBoolAttribute(XElement element, string name, bool defaultValue)
     {
-        string? value = (string?)element.Attribute(name);
-        return value is null
-            ? defaultValue
-            : value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        return OoxBoolean.ParseAttribute(element, name, defaultValue);
     }
 
     private static bool ParseOptionalBoolAttribute(XElement? element, string name)
