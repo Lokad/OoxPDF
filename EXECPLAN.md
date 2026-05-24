@@ -739,6 +739,18 @@ High-priority actions:
 - [ ] Extend data-label rendering to consume the richer scene metadata: Office label position, separator,
   category/series-name composition, number formats, leader lines, per-label overrides, and text/shape styles
   still need renderer support and visual cases.
+- [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
+  Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
+  visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
+  on those label paths. Focused model/chart tests passed after a transient parallel build lock was rerun
+  serially, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-162216` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
+  paths: axis crossing, label-side slotting from scene metadata, cross-axis IDs, and exact Office spacing still
+  need explicit model-to-renderer plumbing.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -899,6 +911,10 @@ High-priority actions:
     subset: font family, font size, and solid color.
   - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
     multi-level category labels, data-label text styles, and chart-style inherited defaults.
+  - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
+    text-style decisions for supported bar/line chart paths.
+  - [ ] Model and consume cross-axis IDs, crossing behavior, label-side slots, and Office spacing for
+    secondary axes instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [ ] Extend chart plot-area layout records to cover `layoutTarget`, factor modes, inner/outer plot
     semantics, title/legend overlay effects, and non-bar/line chart-family consumers.
@@ -3086,7 +3102,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-161747: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-162216: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
