@@ -726,6 +726,19 @@ High-priority actions:
   `wMode`, `hMode`, inner-vs-outer plot area semantics, title/legend overlay interactions, and reuse across
   area/scatter/radar/pie/doughnut chart families still need structural modeling before plot bounds can be
   treated as Office-aligned instead of approximate geometry.
+- [x] 2026-05-24: Extend scene-owned chart data-label metadata beyond value/percent visibility. The scene
+  model now preserves category-name, series-name, and leader-line flags plus label position, separator, and
+  number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
+  value/percent subset, but the richer Office label contract is no longer discarded at scene build time.
+  Focused model/chart tests passed after a transient parallel build lock was rerun serially, the full runner
+  passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-161747` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend data-label rendering to consume the richer scene metadata: Office label position, separator,
+  category/series-name composition, number formats, leader lines, per-label overrides, and text/shape styles
+  still need renderer support and visual cases.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -863,9 +876,11 @@ High-priority actions:
   - [x] Add and consume typed chart data-label visibility options: `PptxSceneChartPlot.DataLabels` preserves
     plot/series fallback `showVal` and `showPercent` flags, and bar, line, pie, and doughnut rendering now
     consume those options before raw `c:dLbls` fallback.
+  - [x] Extend chart data-label scene metadata to preserve category-name, series-name, leader-line,
+    position, separator, and number-format options.
   - [ ] Extend chart data-label modeling to cover label position, separators, category/series-name flags,
-    leader lines, number formats, and label text/shape styles before attempting finer Office-aligned
-    data-label layout.
+    leader lines, number formats, per-label overrides, and label text/shape styles in rendering before
+    attempting finer Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
     now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
   - [x] Add and consume scene-owned chart area and plot area solid fill/line styles, so supported chart
@@ -3071,7 +3086,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-161346: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-161747: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

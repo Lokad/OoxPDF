@@ -346,7 +346,13 @@ internal sealed record PptxSceneChartPlot(
 
 internal sealed record PptxSceneChartDataLabels(
     bool ShowValue,
-    bool ShowPercent);
+    bool ShowPercent,
+    bool ShowCategoryName,
+    bool ShowSeriesName,
+    bool ShowLeaderLines,
+    string Position,
+    string Separator,
+    string NumberFormat);
 
 internal sealed record PptxSceneChartShapeStyle(
     PptxSceneFillStyle Fill,
@@ -987,10 +993,24 @@ internal sealed class PptxSceneBuilder
                 .Select(series => series.Element(ChartNamespace + "dLbls"))
                 .FirstOrDefault(element => element is not null);
         return labels is null
-            ? new PptxSceneChartDataLabels(ShowValue: false, ShowPercent: false)
+            ? new PptxSceneChartDataLabels(
+                ShowValue: false,
+                ShowPercent: false,
+                ShowCategoryName: false,
+                ShowSeriesName: false,
+                ShowLeaderLines: false,
+                Position: string.Empty,
+                Separator: string.Empty,
+                NumberFormat: string.Empty)
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")));
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showCatName")),
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showSerName")),
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showLeaderLines")),
+                ReadChartElementValue(labels, "dLblPos"),
+                labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
+                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty);
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
