@@ -139,7 +139,7 @@ internal static class PptxTests
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
-                  <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
+                  <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:noFill/><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
                     <c:barDir val="bar"/>
                     <c:grouping val="stacked"/>
                     <c:varyColors val="0"/>
@@ -329,14 +329,15 @@ internal static class PptxTests
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.YMode ?? string.Empty);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.WidthMode ?? string.Empty);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightMode ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.NoFill == false, "Expected chart area noFill to be absent in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.HasFill == true, "Expected chart area fill in the scene model.");
         TestAssert.Equal(new RgbColor(241, 226, 211), slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Color ?? default);
         TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Alpha ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.HasLine == true, "Expected chart area line in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Color ?? default);
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Width ?? 0d);
-        TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.HasFill == true, "Expected plot area fill in the scene model.");
-        TestAssert.Equal(new RgbColor(221, 238, 255), slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.NoFill == true, "Expected plot area explicit noFill in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.HasFill == false, "Expected plot area noFill to suppress solid fill in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.HasLine == true, "Expected plot area line in the scene model.");
         TestAssert.Equal(new RgbColor(17, 34, 68), slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Color ?? default);
         TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Width ?? 0d);

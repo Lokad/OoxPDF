@@ -421,7 +421,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartShapeStyle ToChartShapeStyle(PptxSceneChartShapeStyle style)
     {
-        return new ChartShapeStyle(ToChartSeriesFill(style.Fill, default), ToChartSeriesStroke(style.Line));
+        return new ChartShapeStyle(style.NoFill ? null : ToChartSeriesFill(style.Fill, default), ToChartSeriesStroke(style.Line));
     }
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)

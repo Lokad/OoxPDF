@@ -355,6 +355,7 @@ internal sealed record PptxSceneChartDataLabels(
     string NumberFormat);
 
 internal sealed record PptxSceneChartShapeStyle(
+    bool NoFill,
     PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line);
 
@@ -1020,10 +1021,11 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
     {
-        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+        bool noFill = shapeProperties?.Element(DrawingNamespace + "noFill") is not null;
+        PptxSceneFillStyle fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartShapeStyle(fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartShapeStyle(noFill, fill, ReadChartLine(shapeProperties, theme));
     }
 
     private static string ReadChartElementValue(XElement element, string childName)
