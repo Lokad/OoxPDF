@@ -3807,6 +3807,14 @@ under `PptxChartMetricRules`. This is only an inventory and ownership step: the 
 until replaced by Office-PDF-observed chart layout behavior or a richer scene chart model. The `pptx-charts`
 non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed,
 7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+shared default chart plot box / 2026-05-24:
+The repeated line/area/scatter default plot-box ratios now flow through `GetDefaultChartPlotBox` and
+`PptxChartMetricRules` instead of being duplicated in each renderer. Bar-chart title/legend-specific plot
+boxes remain separate because they are different fallback behavior and need Office-PDF evidence before being
+merged. The `pptx-charts` non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed
+with 190 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0
+failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

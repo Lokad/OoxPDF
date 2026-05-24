@@ -733,6 +733,15 @@ internal sealed partial class PptxRenderer
         return new ChartFrameBox(x, y, width, height);
     }
 
+    private static ChartPlotBox GetDefaultChartPlotBox(ChartFrameBox frame)
+    {
+        return new ChartPlotBox(
+            frame.X + frame.Width * PptxChartMetricRules.DefaultPlotBoxXRatio,
+            frame.Y + frame.Height * PptxChartMetricRules.DefaultPlotBoxYRatio,
+            frame.Width * PptxChartMetricRules.DefaultPlotBoxWidthRatio,
+            frame.Height * PptxChartMetricRules.DefaultPlotBoxHeightRatio);
+    }
+
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
@@ -3552,11 +3561,7 @@ internal sealed partial class PptxRenderer
             return manualPlotBox;
         }
 
-        return new ChartPlotBox(
-            frame.X + frame.Width * 0.12d,
-            frame.Y + frame.Height * 0.16d,
-            frame.Width * 0.76d,
-            frame.Height * 0.68d);
+        return GetDefaultChartPlotBox(frame);
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
@@ -3797,10 +3802,11 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        double plotX = x + width * 0.12d;
-        double plotY = y + height * 0.16d;
-        double plotWidth = width * 0.76d;
-        double plotHeight = height * 0.68d;
+        ChartPlotBox plotBox = GetDefaultChartPlotBox(new ChartFrameBox(x, y, width, height));
+        double plotX = plotBox.X;
+        double plotY = plotBox.Y;
+        double plotWidth = plotBox.Width;
+        double plotHeight = plotBox.Height;
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double maxValue = stacked ? GetMaxStackedLineValue(series, pointCount) : Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
         double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
@@ -3897,10 +3903,11 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        double plotX = x + width * 0.12d;
-        double plotY = y + height * 0.16d;
-        double plotWidth = width * 0.76d;
-        double plotHeight = height * 0.68d;
+        ChartPlotBox plotBox = GetDefaultChartPlotBox(new ChartFrameBox(x, y, width, height));
+        double plotX = plotBox.X;
+        double plotY = plotBox.Y;
+        double plotWidth = plotBox.Width;
+        double plotHeight = plotBox.Height;
         double minX = series.SelectMany(item => item.Points).Min(point => point.X);
         double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
         double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));

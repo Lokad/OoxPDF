@@ -760,6 +760,10 @@ internal sealed partial class PptxRenderer
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;
+        public const double DefaultPlotBoxXRatio = 0.12d;
+        public const double DefaultPlotBoxYRatio = 0.16d;
+        public const double DefaultPlotBoxWidthRatio = 0.76d;
+        public const double DefaultPlotBoxHeightRatio = 0.68d;
     }
 
     private enum TextVerticalAnchor
