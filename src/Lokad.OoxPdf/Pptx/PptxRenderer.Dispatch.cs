@@ -80,7 +80,7 @@ internal sealed partial class PptxRenderer
                         ref imageIndex);
                     break;
                 case PptxSceneNodeKind.Table:
-                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, source, graphics);
+                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform);
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
                     break;
                 case PptxSceneNodeKind.Chart:

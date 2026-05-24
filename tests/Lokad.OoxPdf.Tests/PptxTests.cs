@@ -5340,6 +5340,45 @@ internal static class PptxTests
         TestAssert.Contains(" TJ", pdf);
     }
 
+    public static void PptxSyntheticGroupedTableUsesGroupTransform()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:grpSp>
+                      <p:nvGrpSpPr><p:cNvPr id="1" name="Table group"/><p:nvPr/></p:nvGrpSpPr>
+                      <p:grpSpPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="1828800" cy="914400"/></a:xfrm></p:grpSpPr>
+                      <p:graphicFrame>
+                        <p:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+                        <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                          <a:tbl>
+                            <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                            <a:tr h="914400">
+                              <a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr></a:tc>
+                            </a:tr>
+                          </a:tbl>
+                        </a:graphicData></a:graphic>
+                      </p:graphicFrame>
+                    </p:grpSp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 396 144 72 re f", pdf);
+    }
+
     public static void PptxSyntheticTableStyleMediumStyle2Accent6RendersFills()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

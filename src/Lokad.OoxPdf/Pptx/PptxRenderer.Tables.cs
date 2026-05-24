@@ -18,22 +18,30 @@ internal sealed partial class PptxRenderer
         return textSpans;
     }
 
-    private static bool IsTableGraphicFrame(XElement frame)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
     {
-        return frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData")
-            ?.Element(DrawingNamespace + "tbl") is not null;
+        ShapeBounds? bounds = node.Bounds is { } rawBounds
+            ? transform.Apply(ToShapeBounds(rawBounds))
+            : null;
+        return RenderTableFrame(context, bounds, ReadTableElement(node.Source), graphics);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
     {
-        var textSpans = new List<PptxPositionedTextSpan>();
-        ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
-        XElement? table = frame
+        return RenderTableFrame(context, ReadGraphicFrameBounds(frame), ReadTableElement(frame), graphics);
+    }
+
+    private static XElement? ReadTableElement(XElement frame)
+    {
+        return frame
             .Element(DrawingNamespace + "graphic")
             ?.Element(DrawingNamespace + "graphicData")
             ?.Element(DrawingNamespace + "tbl");
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PdfGraphicsBuilder graphics)
+    {
+        var textSpans = new List<PptxPositionedTextSpan>();
         if (bounds is null || table is null)
         {
             return textSpans;
