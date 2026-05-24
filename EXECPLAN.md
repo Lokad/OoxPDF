@@ -144,8 +144,8 @@ High-priority actions:
 - [x] Resolve the first small-label middle-anchor vertical delta structurally:
   the vertical anchor estimator now uses the resolved font's OpenType typographic line box for default
   line spacing instead of assuming a CSS `1.2x` line box for text-height centering. The public small-label
-  origin probe now locks Office/candidate text-op position within `0.35 pt`, with Y delta reduced from
-  `1.27 pt` to `0.27 pt`.
+  origin probe now locks Office/candidate text-op position within `0.35 pt` and decoded text content, with Y
+  delta reduced from `1.27 pt` to `0.27 pt`.
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
@@ -3475,8 +3475,9 @@ Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
 Latest public small-label origin probe:
 
 ```text
-pptx-ladder-04-typography-small-label-origin-probe / 20260524-202124:
-MAE 0.005514, changed16 0.000073; PDF text-op X delta 0.03 pt, Y delta 0.27 pt.
+pptx-ladder-04-typography-small-label-origin-probe / 20260524-204739:
+MAE 0.005514, changed16 0.000073; PDF text-op X delta 0.03 pt, Y delta 0.27 pt;
+decoded text gate enabled.
 ```
 
 Latest public vertical text probes:
