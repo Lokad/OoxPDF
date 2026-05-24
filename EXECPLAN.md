@@ -660,6 +660,14 @@ High-priority actions:
   category/series-name flags, leader lines, number format, and text/style (`c:txPr`, `c:spPr`) still need
   typed ownership before data-label layout can be aligned structurally with Office instead of renderer
   heuristics.
+- [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
+  now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
+  `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
+  parallel build lock was rerun serially, the full runner passed 186/186, `dotnet pack` succeeded, and
+  private run `artifacts/private-visual/lokad-value-based/20260524-154412` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -800,6 +808,8 @@ High-priority actions:
   - [ ] Extend chart data-label modeling to cover label position, separators, category/series-name flags,
     leader lines, number formats, and label text/shape styles before attempting finer Office-aligned
     data-label layout.
+  - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
+    now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -2984,7 +2994,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-153953: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-154412: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
