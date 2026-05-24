@@ -38,6 +38,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
 - `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/ComparePdfGraphicsOperations.ps1`: compare inspected PDF path/clip/stroke/fill geometry.
+- `tools/ClassifyPdfChartGraphics.ps1`: classify inspected PDF graphics operations into chart-like structures.
 - `tools/NewOfficeVisualFixtures.ps1`: regenerate Office-authored public fixtures.
 - `tools/NewSyntheticFixtures.ps1`: regenerate synthetic fixtures.
 - `tools/NewVisualCase.ps1`: scaffold a visual case.

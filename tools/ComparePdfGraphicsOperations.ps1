@@ -32,7 +32,8 @@ function Read-JsonArray($path) {
 }
 
 function Select-Ops($items) {
-    $selected = @($items | Where-Object { $Kinds -contains $_.Kind })
+    $selectedKinds = @($Kinds | ForEach-Object { [string]$_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+    $selected = @($items | Where-Object { $selectedKinds -contains $_.Kind })
     if ($PageNumber -gt 0) {
         $selected = @($selected | Where-Object { [int]$_.PageNumber -eq $PageNumber })
     }
@@ -62,7 +63,9 @@ if ($MatchByBounds) {
         $bestScore = [double]::PositiveInfinity
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $ref = $unmatched[$j]
-            $score = [Math]::Abs((CenterX $cand) - (CenterX $ref)) +
+            $kindPenalty = if ([string]$cand.Kind -eq [string]$ref.Kind) { 0d } else { 1000000d }
+            $score = $kindPenalty +
+                [Math]::Abs((CenterX $cand) - (CenterX $ref)) +
                 [Math]::Abs((CenterY $cand) - (CenterY $ref)) +
                 [Math]::Abs((Width $cand) - (Width $ref)) +
                 [Math]::Abs((Height $cand) - (Height $ref))

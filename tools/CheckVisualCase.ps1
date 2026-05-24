@@ -285,6 +285,88 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     }
 }
 
+if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF chart graphics structure gate failed because one inspected PDF had no graphics operations."
+    }
+
+    $referenceChartStructures = Join-Path $referenceGraphicsInspect "chart-structures.json"
+    $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
+    $classifyReferenceArgs = @{
+        InputPath = $referenceGraphicsOperations
+        Output = $referenceChartStructures
+    }
+    $classifyCandidateArgs = @{
+        InputPath = $candidateGraphicsOperations
+        Output = $candidateChartStructures
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePageNumber -ne $null) {
+        $classifyReferenceArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
+        $classifyCandidateArgs.PageNumber = [int]$manifest.expected.compareChartGraphicsStructurePageNumber
+    }
+    if ($manifest.expected.chartGraphicsLineTolerance -ne $null) {
+        $classifyReferenceArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
+        $classifyCandidateArgs.LineTolerance = [double]$manifest.expected.chartGraphicsLineTolerance
+    }
+    if ($manifest.expected.chartGraphicsMinLineLength -ne $null) {
+        $classifyReferenceArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
+        $classifyCandidateArgs.MinLineLength = [double]$manifest.expected.chartGraphicsMinLineLength
+    }
+    if ($manifest.expected.chartGraphicsMarkerMaxSize -ne $null) {
+        $classifyReferenceArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
+        $classifyCandidateArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
+    }
+
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed while classifying the reference PDF."
+    }
+    & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyCandidateArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed while classifying the candidate PDF."
+    }
+
+    $compareChartArgs = @{
+        Reference = $referenceChartStructures
+        Candidate = $candidateChartStructures
+        BoundsTolerance = [double]$manifest.expected.maxChartGraphicsStructureBoundsDelta
+        MatchByBounds = $true
+    }
+    if ($manifest.expected.maxChartGraphicsStructureLineWidthDelta -ne $null) {
+        $compareChartArgs.LineWidthTolerance = [double]$manifest.expected.maxChartGraphicsStructureLineWidthDelta
+    }
+    if ($manifest.expected.compareChartGraphicsStructureKinds -ne $null) {
+        $compareChartArgs.Kinds = @($manifest.expected.compareChartGraphicsStructureKinds)
+    }
+    else {
+        $compareChartArgs.Kinds = @("HorizontalLine", "VerticalLine", "PlotBoxCandidate", "FilledRegion", "MarkerCandidate", "ClipBox")
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF chart graphics structure gate failed."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()
