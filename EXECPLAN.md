@@ -433,6 +433,11 @@ High-priority actions:
   private run `artifacts/private-visual/lokad-value-based/20260524-120726` stayed stable: 84/84 compared
   pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`, and slide 17 MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran the image-focused tests, full test suite, package, and private PPTX acceptance after
+  centralizing picture crop/fill/alpha/recolor parsing on the scene builder. The test runner passed 184/184,
+  `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-121521`
+  stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
+  `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -912,6 +917,9 @@ High-priority actions:
   image-render boundary.
 - [x] Move SVG picture placement/crop handoff onto `PptxScenePicture`: ordered SVG picture rendering now
   receives the scene-parsed crop and stretch fill rectangles instead of rereading them from source XML.
+- [x] Centralize the legacy XML picture fallback on the same scene-builder readers for crop, stretch fill,
+  alpha, and recolor intent. This keeps old and scene-backed picture paths structurally aligned while the
+  leaf PDF/image emission boundary remains shared.
 - [ ] Continue typed picture migration by moving any remaining SVG-specific paint/path decisions that belong
   to OOXML interpretation into `PptxScenePicture` or a dedicated SVG picture model.
 - [x] Move the first ordered shape/connector leaf inputs toward typed scene data: `PptxSceneShape` now owns

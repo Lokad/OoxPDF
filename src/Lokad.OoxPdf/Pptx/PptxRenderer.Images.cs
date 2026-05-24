@@ -842,47 +842,7 @@ internal sealed partial class PptxRenderer
 
     private static ImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
     {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
-        if (blip is null)
-        {
-            return ImageRecolor.None;
-        }
-
-        if (blip.Element(DrawingNamespace + "grayscl") is not null)
-        {
-            return ImageRecolor.Grayscale();
-        }
-
-        XElement? biLevel = blip.Element(DrawingNamespace + "biLevel");
-        if (biLevel is not null)
-        {
-            double threshold = ParseOptionalLongAttribute(biLevel, "thresh", 50000) / 100000d;
-            return ImageRecolor.BiLevel(threshold);
-        }
-
-        XElement? luminance = blip.Element(DrawingNamespace + "lum");
-        if (luminance is not null)
-        {
-            double brightness = ParseOptionalLongAttribute(luminance, "bright", 0) / 100000d;
-            double contrast = ParseOptionalLongAttribute(luminance, "contrast", 0) / 100000d;
-            return ImageRecolor.Luminance(brightness, contrast);
-        }
-
-        XElement? duotone = blip.Element(DrawingNamespace + "duotone");
-        if (duotone is not null)
-        {
-            XElement[] colors = duotone.Elements().Take(2).ToArray();
-            if (colors.Length == 2 &&
-                TryReadImageRecolorColor(colors[0], theme, out RgbColor dark) &&
-                TryReadImageRecolorColor(colors[1], theme, out RgbColor light))
-            {
-                return ImageRecolor.Duotone(dark, light);
-            }
-        }
-
-        return ImageRecolor.None;
+        return ToImageRecolor(PptxSceneBuilder.ReadImageRecolor(picture, theme));
     }
 
     private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
@@ -968,60 +928,17 @@ internal sealed partial class PptxRenderer
 
     private static CropRect ReadCrop(XElement picture)
     {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        XElement? sourceRectangle = blipFill?.Element(DrawingNamespace + "srcRect");
-        if (sourceRectangle is null)
-        {
-            return default;
-        }
-
-        return new CropRect(
-            ParsePercentage(sourceRectangle, "l"),
-            ParsePercentage(sourceRectangle, "t"),
-            ParsePercentage(sourceRectangle, "r"),
-            ParsePercentage(sourceRectangle, "b"));
+        return ToCropRect(PptxSceneBuilder.ReadPictureCrop(picture));
     }
 
     private static FillRect ReadFillRect(XElement picture)
     {
-        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
-            picture.Element(DrawingNamespace + "blipFill");
-        XElement? fillRectangle = blipFill
-            ?.Element(DrawingNamespace + "stretch")
-            ?.Element(DrawingNamespace + "fillRect");
-        if (fillRectangle is null)
-        {
-            return default;
-        }
-
-        return new FillRect(
-            ParsePercentage(fillRectangle, "l"),
-            ParsePercentage(fillRectangle, "t"),
-            ParsePercentage(fillRectangle, "r"),
-            ParsePercentage(fillRectangle, "b"));
+        return ToFillRect(PptxSceneBuilder.ReadPictureFill(picture));
     }
 
     private static double ReadPictureAlpha(XElement picture)
     {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
-        XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
-        if (alphaModFix?.Attribute("amt") is { } amount &&
-            int.TryParse(amount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedAmount))
-        {
-            return Math.Clamp(parsedAmount / 100000d, 0d, 1d);
-        }
-
-        return 1d;
-    }
-
-    private static double ParsePercentage(XElement element, string attribute)
-    {
-        return element.Attribute(attribute) is { } value
-            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
-            : 0d;
+        return PptxSceneBuilder.ReadPictureAlpha(picture);
     }
 
     private enum ImageRecolorKind

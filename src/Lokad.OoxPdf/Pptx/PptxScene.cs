@@ -1146,7 +1146,7 @@ internal sealed class PptxSceneBuilder
         };
     }
 
-    private static PptxSceneRect ReadPictureCrop(XElement picture)
+    internal static PptxSceneRect ReadPictureCrop(XElement picture)
     {
         XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
             picture.Element(DrawingNamespace + "blipFill");
@@ -1160,7 +1160,7 @@ internal sealed class PptxSceneBuilder
                 ParsePercentage(sourceRectangle, "b"));
     }
 
-    private static PptxSceneRect ReadPictureFill(XElement picture)
+    internal static PptxSceneRect ReadPictureFill(XElement picture)
     {
         XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
             picture.Element(DrawingNamespace + "blipFill");
@@ -1176,7 +1176,7 @@ internal sealed class PptxSceneBuilder
                 ParsePercentage(fillRectangle, "b"));
     }
 
-    private static double ReadPictureAlpha(XElement picture)
+    internal static double ReadPictureAlpha(XElement picture)
     {
         XElement? blip = picture
             .Element(PresentationNamespace + "blipFill")
@@ -1191,7 +1191,7 @@ internal sealed class PptxSceneBuilder
         return 1d;
     }
 
-    private static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
+    internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
     {
         XElement? blip = picture
             .Element(PresentationNamespace + "blipFill")
