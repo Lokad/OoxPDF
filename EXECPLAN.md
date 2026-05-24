@@ -3911,6 +3911,14 @@ line-height, marker-size, side-gap, and clip-height factors now live under `Pptx
 chart text placement approximations visible and replaceable, rather than scattered as local literals in the
 rendering path. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite
 passed with 202 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart data-label offset metric ownership / 2026-05-24:
+Pie data-label minimum width and height, bar data-label point gaps, and line data-label side/above/below
+offsets now live under `PptxChartMetricRules` instead of being embedded in individual label placement
+branches. This is another inventory step, not evidence that the offsets match Office exactly; it keeps the
+remaining chart text-placement heuristics explicit for later replacement by PDF-observed chart layout behavior.
+The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202
+passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

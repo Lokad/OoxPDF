@@ -1424,7 +1424,7 @@ internal sealed partial class PptxRenderer
 
         ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
         double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieDataLabelRadiusRatio);
-        double labelWidth = Math.Max(18d, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
+        double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(values.Count);
         double angle = -90d;
         for (int i = 0; i < values.Count; i++)
@@ -1437,7 +1437,7 @@ internal sealed partial class PptxRenderer
 
             ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
             double fontSize = style.FontSize;
-            double labelHeight = fontSize * 1.35d;
+            double labelHeight = fontSize * PptxChartMetricRules.PieDataLabelHeightFactor;
             double sweep = values[i] / total * 360d;
             double mid = (angle + sweep / 2d) * Math.PI / 180d;
             double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
@@ -1640,9 +1640,9 @@ internal sealed partial class PptxRenderer
         return position switch
         {
             "ctr" or "bestFit" => (barStart + barEnd - labelWidth) / 2d,
-            "inBase" => value >= 0d ? barStart + 2d : barEnd - labelWidth - 2d,
-            "inEnd" or "l" or "r" => value >= 0d ? barEnd - labelWidth - 2d : barStart + 2d,
-            "outEnd" or _ => value >= 0d ? barEnd + 2d : barStart - labelWidth - 2d
+            "inBase" => value >= 0d ? barStart + PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap,
+            "inEnd" or "l" or "r" => value >= 0d ? barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap : barStart + PptxChartMetricRules.BarDataLabelHorizontalGap,
+            "outEnd" or _ => value >= 0d ? barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap : barStart - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap
         };
     }
 
@@ -1651,9 +1651,9 @@ internal sealed partial class PptxRenderer
         return position switch
         {
             "ctr" or "bestFit" => (barBase + barEnd - labelHeight) / 2d,
-            "inBase" => value >= 0d ? barBase + 1d : barEnd - labelHeight - 1d,
-            "inEnd" or "t" or "b" => value >= 0d ? barEnd - labelHeight - 1d : barBase + 1d,
-            "outEnd" or _ => value >= 0d ? barEnd + 1d : barBase - labelHeight - 1d
+            "inBase" => value >= 0d ? barBase + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap,
+            "inEnd" or "t" or "b" => value >= 0d ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barBase + PptxChartMetricRules.BarDataLabelVerticalGap,
+            "outEnd" or _ => value >= 0d ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barBase - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
         };
     }
 
@@ -1661,11 +1661,11 @@ internal sealed partial class PptxRenderer
     {
         return position switch
         {
-            "b" => (pointX - labelWidth / 2d, pointY - labelHeight * 1.25d, TextAlignment.Center),
-            "l" => (pointX - labelWidth - 2d, pointY - labelHeight / 2d, TextAlignment.Right),
-            "r" => (pointX + 2d, pointY - labelHeight / 2d, TextAlignment.Left),
+            "b" => (pointX - labelWidth / 2d, pointY - labelHeight * PptxChartMetricRules.LineDataLabelBelowOffsetFactor, TextAlignment.Center),
+            "l" => (pointX - labelWidth - PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Right),
+            "r" => (pointX + PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Left),
             "ctr" or "bestFit" => (pointX - labelWidth / 2d, pointY - labelHeight / 2d, TextAlignment.Center),
-            "t" or "outEnd" or _ => (pointX - labelWidth / 2d, pointY + labelHeight * 0.35d, TextAlignment.Center)
+            "t" or "outEnd" or _ => (pointX - labelWidth / 2d, pointY + labelHeight * PptxChartMetricRules.LineDataLabelAboveOffsetFactor, TextAlignment.Center)
         };
     }
 

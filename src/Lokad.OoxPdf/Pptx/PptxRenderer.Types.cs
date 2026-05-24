@@ -769,12 +769,16 @@ internal sealed partial class PptxRenderer
         public const double PieRadiusRatio = 0.34d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         public const double PieDataLabelWidthRatio = 0.55d;
+        public const double PieDataLabelMinimumWidth = 18d;
+        public const double PieDataLabelHeightFactor = 1.35d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
         public const double RadarCenterXRatio = 0.5d;
         public const double RadarCenterYRatio = 0.52d;
         public const double RadarRadiusRatio = 0.32d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;
+        public const double BarDataLabelHorizontalGap = 2d;
+        public const double BarDataLabelVerticalGap = 1d;
         public const double BarDataLabelSlotFillRatio = 0.82d;
         public const double BarDataLabelCategoryInsetRatio = 0.09d;
         public const double HorizontalBarDataLabelWidthRatio = 0.1d;
@@ -782,6 +786,9 @@ internal sealed partial class PptxRenderer
         public const double VerticalBarDataLabelWidthRatio = 0.86d;
         public const double LineDataLabelMinimumPointSpan = 5d;
         public const double LineDataLabelPointWidthFactor = 1.5d;
+        public const double LineDataLabelSideGap = 2d;
+        public const double LineDataLabelBelowOffsetFactor = 1.25d;
+        public const double LineDataLabelAboveOffsetFactor = 0.35d;
         public const double AxisLabelHeightFactor = 1.35d;
         public const double CategoryAxisHorizontalLeftOffsetRatio = 0.18d;
         public const double CategoryAxisHorizontalWidthRatio = 0.16d;
