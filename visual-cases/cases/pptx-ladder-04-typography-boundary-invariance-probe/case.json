@@ -13,7 +13,8 @@
     "maxTextOperationFontSizeDelta": 0.05,
     "maxTextLineStartDelta": 0.1,
     "matchTextLineStartsByPosition": true,
-    "matchTextOperationsByPosition": true
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
   },
   "allowedUnsupportedFeatures": []
 }

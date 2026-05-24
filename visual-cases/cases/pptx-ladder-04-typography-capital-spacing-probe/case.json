@@ -11,7 +11,8 @@
     "diagnosticsMustBeEmpty": true,
     "maxTextOperationPositionDelta": 0.05,
     "maxTextOperationFontSizeDelta": 0.05,
-    "matchTextOperationsByPosition": true
+    "matchTextOperationsByPosition": true,
+    "compareDecodedTextOperations": true
   },
   "allowedUnsupportedFeatures": []
 }
