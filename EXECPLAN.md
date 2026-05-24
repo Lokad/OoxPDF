@@ -288,6 +288,10 @@ High-priority actions:
   visible glyph spans now expose a `LeadingAdjustment` carrying pending kerning/tracking adjustments from
   preceding hidden advances such as no-break spaces. PDF output remains behavior-compatible, but the
   intermediate model no longer loses the structural adjustment needed before future `TJ` construction work.
+- [x] Expose resolved typeface at the layout glyph level:
+  `PptxTextGlyphLayout` now carries the resolved typeface per glyph, not only on the containing span. This is
+  still behavior-neutral, but it removes a one-font-per-span assumption from the inspection model and prepares
+  the next accented-Latin/font-fallback slice where a visible run may need multiple Office-like font groups.
 - [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
   `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
   flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
@@ -3544,7 +3548,7 @@ Latest public typography structural probes:
 pptx-ladder-04-nonbreaking-space / 20260524-212024:
 decoded PDF text gate passed; 2 reference and 2 candidate text operations; B x delta 0.09 pt.
 
-pptx-ladder-04-typography-accent-spacing-probe / 20260524-212038:
+pptx-ladder-04-typography-accent-spacing-probe / 20260524-212800:
 visual gate passed; MAE 0.799624, changed16 0.009473, SSIM 0.913024. Text-line inspection remains
 open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line; `-ShowText` confirms the
 first-line extra candidate operation is a space and later deltas are accent/fallback grouping splits.

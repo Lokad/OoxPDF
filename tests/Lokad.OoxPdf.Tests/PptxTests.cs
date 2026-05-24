@@ -4143,6 +4143,7 @@ internal static class PptxTests
         PptxTextSpanLayoutSnapshot paragraphSpan = justifiedLine.Spans.First(span => span.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphSpan.GlyphSpan.GlyphCount > 0, "Expected layout spans to own glyph ids before PDF emission.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected layout glyph spans to expose mapped glyph ids.");
+        TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => string.Equals(glyph.Typeface, paragraphSpan.GlyphSpan.Typeface, StringComparison.OrdinalIgnoreCase)), "Expected layout glyph spans to expose the resolved typeface for each glyph before font fallback splitting.");
         TestAssert.True(paragraphSpan.GlyphSpan.Glyphs.All(glyph => glyph.Advance > 0d), "Expected layout glyph spans to expose positive glyph advances.");
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.LayoutWidth - paragraphSpan.GlyphSpan.NaturalWidth) < 0.01d, "Expected justified word glyph spans to keep natural width while line positioning owns distributed spacing.");
 

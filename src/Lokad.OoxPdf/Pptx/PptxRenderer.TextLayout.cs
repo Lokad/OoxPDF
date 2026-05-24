@@ -240,7 +240,7 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextGlyphLayoutSnapshot ToSnapshot(PptxTextGlyphLayout glyph)
     {
-        return new PptxTextGlyphLayoutSnapshot(glyph.CodePoint, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore);
+        return new PptxTextGlyphLayoutSnapshot(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore);
     }
 
     private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
@@ -1293,7 +1293,7 @@ internal sealed partial class PptxRenderer
             }
 
             double advance = font.GetAdvanceWidth(glyph) * run.FontSize / font.UnitsPerEm;
-            glyphs.Add(new PptxTextGlyphLayout(rune.Value, glyph, advance, adjustmentBefore));
+            glyphs.Add(new PptxTextGlyphLayout(rune.Value, run.FontFamily, glyph, advance, adjustmentBefore));
             previousGlyph = glyph;
         }
 

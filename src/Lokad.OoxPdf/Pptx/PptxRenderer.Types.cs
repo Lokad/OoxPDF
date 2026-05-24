@@ -369,6 +369,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record PptxTextGlyphLayout(
         int CodePoint,
+        string? Typeface,
         ushort GlyphId,
         double Advance,
         double AdjustmentBefore);

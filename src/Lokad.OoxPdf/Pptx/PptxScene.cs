@@ -139,6 +139,7 @@ internal sealed record PptxTextGlyphSpanLayoutSnapshot(
 
 internal sealed record PptxTextGlyphLayoutSnapshot(
     int CodePoint,
+    string? Typeface,
     ushort GlyphId,
     double Advance,
     double AdjustmentBefore);
