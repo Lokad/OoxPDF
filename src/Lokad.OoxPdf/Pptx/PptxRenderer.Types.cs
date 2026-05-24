@@ -431,7 +431,12 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom);
+    private readonly record struct TextInsets(double Left, double Right, double Top, double Bottom)
+    {
+        public static TextInsets Empty { get; } = new(0d, 0d, 0d, 0d);
+
+        public bool IsEmpty => Left == 0d && Right == 0d && Top == 0d && Bottom == 0d;
+    }
 
     private readonly record struct ParagraphIndent(double MarginLeft, double Hanging);
 
@@ -568,6 +573,7 @@ internal sealed partial class PptxRenderer
         public const double WrapFitToleranceFontScale = 0.16d;
         public const double FinalWordWrapToleranceWidthScale = 0.02d;
         public const double FallbackAdvanceWidthScale = 0.42d;
+        public const double EllipseTextRectInsetRatio = 0.1464466094067262d;
         public const int ShapeAutoFitSearchIterations = 10;
 
         public static double ClampNonNegative(double value) => Math.Max(0d, value);

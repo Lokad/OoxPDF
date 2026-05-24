@@ -86,8 +86,18 @@ function New-TypographyProbe {
 
         [string] $Transform = '<a:xfrm><a:off x="822960" y="685800"/><a:ext cx="7498080" cy="5486400"/></a:xfrm>',
 
-        [string] $BodyPr = '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>'
+        [string] $BodyPr = '<a:bodyPr lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>',
+
+        [bool] $TextBox = $true,
+
+        [string] $PresetGeometry = 'rect',
+
+        [string] $FillXml = '<a:noFill/>',
+
+        [string] $LineXml = '<a:ln><a:noFill/></a:ln>'
     )
+
+    $textBoxAttribute = if ($TextBox) { ' txBox="1"' } else { '' }
 
     $slide = @"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -98,12 +108,12 @@ function New-TypographyProbe {
       <p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
       <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
       <p:sp>
-        <p:nvSpPr><p:cNvPr id="2" name="$Id"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+        <p:nvSpPr><p:cNvPr id="2" name="$Id"/><p:cNvSpPr$textBoxAttribute/><p:nvPr/></p:nvSpPr>
         <p:spPr>
           $Transform
-          <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
-          <a:noFill/>
-          <a:ln><a:noFill/></a:ln>
+          <a:prstGeom prst="$PresetGeometry"><a:avLst/></a:prstGeom>
+          $FillXml
+          $LineXml
         </p:spPr>
         <p:txBody>
           $BodyPr
@@ -311,6 +321,18 @@ New-TypographyProbe `
     -BodyPr '<a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr>' `
     -TextBody @'
           <a:p><a:r><a:rPr sz="1400" kern="1200" b="1"><a:latin typeface="Cambria Math"/></a:rPr><a:t>Quality decisions depend on careful operational planning and reliable daily execution.</a:t></a:r></a:p>
+'@
+
+New-TypographyProbe `
+    -Id "pptx-ladder-04-typography-small-label-origin-probe" `
+    -Transform '<a:xfrm><a:off x="2218943" y="2019309"/><a:ext cx="384048" cy="384048"/></a:xfrm>' `
+    -TextBox $false `
+    -PresetGeometry 'ellipse' `
+    -FillXml '<a:solidFill><a:srgbClr val="F2F2F2"/></a:solidFill>' `
+    -LineXml '<a:ln w="12700"><a:solidFill><a:srgbClr val="666666"/></a:solidFill></a:ln>' `
+    -BodyPr '<a:bodyPr vertOverflow="clip" horzOverflow="clip" wrap="none" rtlCol="0" anchor="ctr" anchorCtr="0"/>' `
+    -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr lang="en-US" sz="1800" kern="1200"><a:latin typeface="Arial"/></a:rPr><a:t>7</a:t></a:r></a:p>
 '@
 
 Get-ChildItem -LiteralPath $cases -Filter "pptx-ladder-04-typography-*-probe.pptx"

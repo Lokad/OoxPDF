@@ -135,6 +135,12 @@ High-priority actions:
   direct text layout now falls back from local `a:pPr` to the default/cascaded paragraph properties for
   `marL` and `indent`, and text-frame snapshots expose resolved margin and hanging-indent values. A synthetic
   PPTX test locks emitted span placement from inherited `a:lvl1pPr` indentation.
+- [x] Resolve ellipse auto-shape text origins structurally:
+  PPTX text frames now apply the DrawingML ellipse preset horizontal text-rectangle inset before bodyPr
+  insets for non-text-box shapes, and clipped glyph emission no longer drops glyphs merely because the
+  baseline is just outside the clip. Public
+  `pptx-ladder-04-typography-small-label-origin-probe` locks the Office/candidate text-op X delta at
+  `0.03 pt`; vertical baseline parity remains open at about `1.27 pt`.
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
@@ -3018,6 +3024,14 @@ paths, and ExecPlan references together.
     `artifacts/private-visual/lokad-value-based/20260524-091728` improved slide 17 from MAE `3.031757`,
     changed16 `0.049716` to MAE `2.945717`, changed16 `0.045530`; remaining visible drift is now dominated
     by text placement/typography around the schema, not connector geometry.
+  - [x] Isolate the remaining node-label X offset as preset-shape text-rectangle behavior, not paragraph
+    indentation or glyph origin. A public ellipse small-label probe reproduced the candidate-left X delta,
+    while an equivalent text-box probe did not. Applying the ellipse horizontal text-rectangle inset improved
+    private slide 17 from MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662` to MAE `2.880535`,
+    changed16 `0.044913`, SSIM `0.920176` on run
+    `artifacts/private-visual/lokad-value-based/20260524-201042`.
+  - [ ] Continue slide-17 typography with baseline/vertical anchoring: public small-label probe still has
+    candidate Y about `1.27 pt` above Office while X is aligned.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
@@ -3302,6 +3316,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   inherited-indent support shows the same four labels resolving `MarginLeft=0` and `HangingIndent=0`, with
   emitted span X at shape X plus the default text inset. Continue with glyph-origin/font-metric/PDF text
   operation alignment instead of another paragraph-margin patch.
+- Observation: The slide-17 small-label X delta comes from auto-shape preset text rectangles.
+  Evidence: a public text-box small-label probe did not reproduce the X delta, but the same label in an
+  ellipse auto-shape reproduced the candidate-left offset. Applying the ellipse horizontal text-rectangle
+  inset reduced the public text-op X delta to `0.03 pt` and improved private slide 17. Symmetric vertical
+  ellipse insets worsened the public baseline, so vertical preset text-rectangle/baseline behavior remains
+  open and must be solved from Office PDF evidence rather than a paired inset assumption.
 - Observation: The historical private evidence block should not be aggressively trimmed without first
   preserving its facts elsewhere.
   Evidence: a local check on 2026-05-24 found that most older `artifacts/private-visual/lokad-value-based`
@@ -3358,10 +3378,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   move renderer behavior toward explicit intermediate models, and use private decks only to discover generic
   gaps.
 - The latest slide-17 schema work resolved the connector-geometry portion of that private issue. Current
-  page-aware PDF evidence keeps the next target on typography/text placement: text wrapping is now structurally
-  modeled for `wrap="none"` and inherited paragraph indentation is now structurally modeled, but slide 17's
-  private metrics did not move. The current evidence points next toward Office-compatible font advances, glyph
-  origins, and PDF text-operation placement.
+  page-aware PDF evidence keeps the next target on typography/text placement: text wrapping, inherited
+  paragraph indentation, and ellipse auto-shape horizontal text rectangles are now structurally modeled.
+  Slide 17 improved on run `20260524-201042`; remaining evidence points to vertical baseline/anchoring and
+  broader text metrics rather than connector geometry or paragraph margins.
 
 ## Concrete Steps
 
@@ -3403,15 +3423,22 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-191 passed, 0 failed, 0 skipped
+192 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-195744: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.035307, changed16 0.116364, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
-Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
+lokad-value-based / 20260524-201042: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.034585, changed16 0.116363, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+Page 17: MAE 2.880535, changed16 0.044913, SSIM 0.920176.
+```
+
+Latest public small-label origin probe:
+
+```text
+pptx-ladder-04-typography-small-label-origin-probe / 20260524-201013:
+MAE 0.011770, changed16 0.000109; PDF text-op X delta 0.03 pt, Y delta 1.27 pt.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

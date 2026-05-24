@@ -1,0 +1,19 @@
+{
+  "id": "pptx-ladder-04-typography-small-label-origin-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-small-label-origin-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "typography", "small-label", "no-wrap", "text-origin", "locked-text-ops", "probe"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.02,
+    "maxChangedPixelRatioAtThreshold16": 0.0002,
+    "maxTextOperationPositionDelta": 1.5,
+    "maxTextOperationFontSizeDelta": 0.05,
+    "matchTextOperationsByPosition": true
+  },
+  "allowedUnsupportedFeatures": []
+}

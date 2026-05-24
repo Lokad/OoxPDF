@@ -727,7 +727,8 @@ internal sealed partial class PptxRenderer
 
     private static bool BaselineIntersectsClip(TextRun run, double baselineY)
     {
-        return baselineY >= run.ClipY && baselineY <= run.ClipY + run.ClipHeight + run.FontSize;
+        return baselineY + run.FontSize >= run.ClipY &&
+            baselineY - run.FontSize <= run.ClipY + run.ClipHeight;
     }
 
     private static bool HasTextTransform(TextRun run)

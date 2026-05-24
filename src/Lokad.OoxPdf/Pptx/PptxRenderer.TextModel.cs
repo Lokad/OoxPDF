@@ -132,6 +132,15 @@ internal sealed partial class PptxRenderer
         double flowYTop = yTop;
         double flowWidth = width;
         double flowHeight = height;
+        TextInsets presetTextInsets = ReadPresetTextRectInsets(shape, width, height);
+        if (!presetTextInsets.IsEmpty)
+        {
+            flowX += presetTextInsets.Left;
+            flowYTop += presetTextInsets.Top;
+            flowWidth = Math.Max(1d, flowWidth - presetTextInsets.Left - presetTextInsets.Right);
+            flowHeight = Math.Max(1d, flowHeight - presetTextInsets.Top - presetTextInsets.Bottom);
+        }
+
         double? explicitTextRotationDegrees = ReadTextBodyRotationDegrees(textBody);
         double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
         if (explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal != bounds.Value.FlipVertical)
@@ -232,6 +241,41 @@ internal sealed partial class PptxRenderer
             double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double points)
                 ? Math.Max(1d, points)
                 : null;
+    }
+
+    private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)
+    {
+        if (IsTextBoxShape(shape))
+        {
+            return TextInsets.Empty;
+        }
+
+        string? preset = shape
+            .Element(PresentationNamespace + "spPr")
+            ?.Element(DrawingNamespace + "prstGeom")
+            ?.Attribute("prst")
+            ?.Value;
+
+        return preset switch
+        {
+            "ellipse" => new TextInsets(
+                width * PptxTextMetricRules.EllipseTextRectInsetRatio,
+                width * PptxTextMetricRules.EllipseTextRectInsetRatio,
+                0d,
+                0d),
+            _ => TextInsets.Empty
+        };
+    }
+
+    private static bool IsTextBoxShape(XElement shape)
+    {
+        return string.Equals(
+            (string?)shape
+                .Element(PresentationNamespace + "nvSpPr")
+                ?.Element(PresentationNamespace + "cNvSpPr")
+                ?.Attribute("txBox"),
+            "1",
+            StringComparison.Ordinal);
     }
 
     private static IReadOnlyList<PptxTextParagraphModel> BuildParagraphModels(
