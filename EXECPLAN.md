@@ -909,8 +909,11 @@ High-priority actions:
 - [x] Move shape picture-fill structure into `PptxSceneShape`: relationship id, source crop, and stretch fill
   rectangle are now scene-level data while the renderer still resolves image resources from the package at
   draw time.
-- [ ] Continue typed shape/connector migration by resolving custom geometry path commands into typed scene
-  records.
+- [x] Move renderable custom geometry into `PptxSceneShape`: guide formulas, path dimensions, fill/stroke
+  gates, and move/line/cubic/quadratic/arc/close commands are now typed scene records consumed directly by
+  ordered shape rendering.
+- [ ] Continue reducing renderer XML fallbacks by turning remaining preset adjustment formulas, curved
+  connector adjustment values, gradients, and richer effect families into scene-owned structures.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension

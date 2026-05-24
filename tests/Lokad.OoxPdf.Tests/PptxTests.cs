@@ -146,7 +146,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="LayoutDecoration"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="2" name="LayoutDecoration"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:custGeom><a:gdLst><a:gd name="xMid" fmla="*/ w 1 2"/></a:gdLst><a:pathLst><a:path w="21600" h="21600"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="xMid" y="21600"/></a:lnTo><a:close/></a:path></a:pathLst></a:custGeom></p:spPr></p:sp>
                     <p:sp><p:nvSpPr><p:cNvPr id="3" name="Title Placeholder"/><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm></p:spPr></p:sp>
                     <p:sp><p:nvSpPr><p:cNvPr id="7" name="Body Placeholder"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl2pPr><a:defRPr sz="2600" i="1"/></a:lvl2pPr></a:lstStyle><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
@@ -231,6 +231,10 @@ internal static class PptxTests
         TestAssert.Equal(0.2d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Bottom ?? 0d);
         TestAssert.Equal(0.025d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.Left ?? 0d);
         TestAssert.Equal(0.075d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.Right ?? 0d);
+        TestAssert.True(slide.LayoutNodes[0].Shape?.CustomGeometry.HasGeometry == true, "Expected layout custom geometry in the scene model.");
+        TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Guides[0].Name ?? string.Empty);
+        TestAssert.Equal(PptxSceneCustomCommandKind.LineTo, slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Kind);
+        TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Points[0].X);
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
         TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
         PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);

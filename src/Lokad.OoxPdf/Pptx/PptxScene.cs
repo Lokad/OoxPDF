@@ -178,6 +178,7 @@ internal sealed record PptxSceneNode(
 internal sealed record PptxSceneShape(
     string Preset,
     bool HasCustomGeometry,
+    PptxSceneCustomGeometry CustomGeometry,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneShapePictureFill PictureFill,
@@ -186,6 +187,44 @@ internal sealed record PptxSceneShape(
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
+
+internal sealed record PptxSceneCustomGeometry(
+    bool HasGeometry,
+    IReadOnlyList<PptxSceneCustomGuide> Guides,
+    IReadOnlyList<PptxSceneCustomPath> Paths);
+
+internal sealed record PptxSceneCustomGuide(
+    string Name,
+    string Formula);
+
+internal sealed record PptxSceneCustomPath(
+    double Width,
+    double Height,
+    bool AllowsFill,
+    bool AllowsStroke,
+    IReadOnlyList<PptxSceneCustomCommand> Commands);
+
+internal sealed record PptxSceneCustomCommand(
+    PptxSceneCustomCommandKind Kind,
+    IReadOnlyList<PptxSceneCustomPoint> Points,
+    string RadiusX,
+    string RadiusY,
+    string StartAngle,
+    string SweepAngle);
+
+internal enum PptxSceneCustomCommandKind
+{
+    MoveTo,
+    LineTo,
+    CubicBezierTo,
+    QuadraticBezierTo,
+    ArcTo,
+    Close
+}
+
+internal readonly record struct PptxSceneCustomPoint(
+    string X,
+    string Y);
 
 internal readonly record struct PptxSceneFillStyle(
     bool HasFill,
@@ -610,6 +649,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
+            ReadCustomGeometry(shapeProperties),
             TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
@@ -620,6 +660,116 @@ internal sealed class PptxSceneBuilder
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static PptxSceneCustomGeometry ReadCustomGeometry(XElement? shapeProperties)
+    {
+        XElement? customGeometry = shapeProperties?.Element(DrawingNamespace + "custGeom");
+        if (customGeometry is null)
+        {
+            return new PptxSceneCustomGeometry(false, [], []);
+        }
+
+        IReadOnlyList<PptxSceneCustomGuide> guides = customGeometry
+            .Element(DrawingNamespace + "gdLst")
+            ?.Elements(DrawingNamespace + "gd")
+            .Select(guide => new PptxSceneCustomGuide(
+                (string?)guide.Attribute("name") ?? string.Empty,
+                (string?)guide.Attribute("fmla") ?? string.Empty))
+            .Where(guide => !string.IsNullOrWhiteSpace(guide.Name) && !string.IsNullOrWhiteSpace(guide.Formula))
+            .ToArray() ?? [];
+
+        IReadOnlyList<PptxSceneCustomPath> paths = customGeometry
+            .Element(DrawingNamespace + "pathLst")
+            ?.Elements(DrawingNamespace + "path")
+            .Select(ReadCustomPath)
+            .Where(path => path.Commands.Count > 0)
+            .ToArray() ?? [];
+
+        return new PptxSceneCustomGeometry(paths.Count > 0, guides, paths);
+    }
+
+    private static PptxSceneCustomPath ReadCustomPath(XElement path)
+    {
+        PptxSceneCustomCommand?[] commands = path.Elements().Select(ReadCustomCommand).ToArray();
+        if (commands.Any(command => command is null))
+        {
+            return new PptxSceneCustomPath(0d, 0d, false, false, []);
+        }
+
+        return new PptxSceneCustomPath(
+            ParseOptionalDoubleAttribute(path, "w", 21600d),
+            ParseOptionalDoubleAttribute(path, "h", 21600d),
+            !string.Equals((string?)path.Attribute("fill"), "none", StringComparison.Ordinal),
+            !string.Equals((string?)path.Attribute("stroke"), "false", StringComparison.Ordinal),
+            commands
+                .Cast<PptxSceneCustomCommand>()
+                .ToArray());
+    }
+
+    private static PptxSceneCustomCommand? ReadCustomCommand(XElement command)
+    {
+        return command.Name.LocalName switch
+        {
+            "moveTo" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.MoveTo,
+                ReadCustomPoints(command).Take(1).ToArray(),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty),
+            "lnTo" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.LineTo,
+                ReadCustomPoints(command).Take(1).ToArray(),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty),
+            "cubicBezTo" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.CubicBezierTo,
+                ReadCustomPoints(command).Take(3).ToArray(),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty),
+            "quadBezTo" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.QuadraticBezierTo,
+                ReadCustomPoints(command).Take(2).ToArray(),
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty),
+            "arcTo" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.ArcTo,
+                [],
+                (string?)command.Attribute("wR") ?? string.Empty,
+                (string?)command.Attribute("hR") ?? string.Empty,
+                (string?)command.Attribute("stAng") ?? string.Empty,
+                (string?)command.Attribute("swAng") ?? string.Empty),
+            "close" => new PptxSceneCustomCommand(
+                PptxSceneCustomCommandKind.Close,
+                [],
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty),
+            _ => null
+        };
+    }
+
+    private static IReadOnlyList<PptxSceneCustomPoint> ReadCustomPoints(XElement command)
+    {
+        XElement[] points = command.Elements(DrawingNamespace + "pt").ToArray();
+        if (points.Length == 0 && command.Name.LocalName is "moveTo" or "lnTo")
+        {
+            points = [command];
+        }
+
+        return points
+            .Select(point => new PptxSceneCustomPoint(
+                (string?)point.Attribute("x") ?? string.Empty,
+                (string?)point.Attribute("y") ?? string.Empty))
+            .ToArray();
     }
 
     private static PptxSceneShapePictureFill ReadShapePictureFill(XElement? shapeProperties)
@@ -1343,6 +1493,14 @@ internal sealed class PptxSceneBuilder
     {
         return element?.Attribute(attributeName) is { } attribute &&
             int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
+            ? value
+            : defaultValue;
+    }
+
+    private static double ParseOptionalDoubleAttribute(XElement element, string attributeName, double defaultValue)
+    {
+        return element.Attribute(attributeName) is { } attribute &&
+            double.TryParse(attribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
             ? value
             : defaultValue;
     }
