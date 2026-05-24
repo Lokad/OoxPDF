@@ -368,6 +368,8 @@ internal static class PptxTests
         TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Width ?? 0d);
         TestAssert.Equal(0.6d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Alpha ?? 0d);
         TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
+        TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[0].PlotAreaIndex ?? -1);
+        TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[0].KindIndex ?? -1);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Plots[0].AxisIds[1] ?? string.Empty);
         TestAssert.Equal("stacked", slide.SlideNodes[4].Chart?.Plots[0].Grouping ?? string.Empty);
@@ -429,6 +431,8 @@ internal static class PptxTests
         TestAssert.Equal(18d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Explosion ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
+        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[1].PlotAreaIndex ?? -1);
+        TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[1].KindIndex ?? -1);
         TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);
         TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Preset ?? string.Empty);
         TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Foreground ?? default);

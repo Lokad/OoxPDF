@@ -101,9 +101,17 @@ internal sealed partial class PptxRenderer
     {
         return chart?
             .Plots
-            .Where(plot => string.Equals(plot.Kind, kind, StringComparison.Ordinal))
-            .Skip(index)
+            .Where(plot => string.Equals(plot.Kind, kind, StringComparison.Ordinal) && plot.KindIndex == index)
             .FirstOrDefault();
+    }
+
+    private static IReadOnlyList<XElement> ReadChartPlotElements(XDocument chartXml, string kind)
+    {
+        return chartXml
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault()?
+            .Elements(ChartNamespace + kind)
+            .ToArray() ?? [];
     }
 
     private static PptxSceneChartAxis? ReadSceneChartAxis(PptxSceneChart? chart, PptxSceneChartPlot? plot, string kind)
@@ -361,7 +369,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
     {
-        IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
+        IReadOnlyList<XElement> barCharts = ReadChartPlotElements(chartXml, "barChart");
         XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
@@ -508,7 +516,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? lineChart = chartXml.Descendants(ChartNamespace + "lineChart").FirstOrDefault();
+        XElement? lineChart = ReadChartPlotElements(chartXml, "lineChart").FirstOrDefault();
         if (lineChart is not null)
         {
             PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, "lineChart");
@@ -557,7 +565,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? areaChart = chartXml.Descendants(ChartNamespace + "areaChart").FirstOrDefault();
+        XElement? areaChart = ReadChartPlotElements(chartXml, "areaChart").FirstOrDefault();
         if (areaChart is not null)
         {
             PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, "areaChart");
@@ -577,7 +585,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? scatterChart = chartXml.Descendants(ChartNamespace + "scatterChart").FirstOrDefault();
+        XElement? scatterChart = ReadChartPlotElements(chartXml, "scatterChart").FirstOrDefault();
         if (scatterChart is not null)
         {
             PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, "scatterChart");
@@ -597,7 +605,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? bubbleChart = chartXml.Descendants(ChartNamespace + "bubbleChart").FirstOrDefault();
+        XElement? bubbleChart = ReadChartPlotElements(chartXml, "bubbleChart").FirstOrDefault();
         if (bubbleChart is not null)
         {
             PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, "bubbleChart");
@@ -613,7 +621,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? radarChart = chartXml.Descendants(ChartNamespace + "radarChart").FirstOrDefault();
+        XElement? radarChart = ReadChartPlotElements(chartXml, "radarChart").FirstOrDefault();
         if (radarChart is not null)
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, "radarChart");
@@ -629,7 +637,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? pieChart = chartXml.Descendants(ChartNamespace + "pieChart").FirstOrDefault();
+        XElement? pieChart = ReadChartPlotElements(chartXml, "pieChart").FirstOrDefault();
         if (pieChart is not null)
         {
             PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, "pieChart");
@@ -647,7 +655,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? doughnutChart = chartXml.Descendants(ChartNamespace + "doughnutChart").FirstOrDefault();
+        XElement? doughnutChart = ReadChartPlotElements(chartXml, "doughnutChart").FirstOrDefault();
         if (doughnutChart is not null)
         {
             PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, "doughnutChart");

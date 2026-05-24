@@ -1763,6 +1763,11 @@ High-priority actions:
   `HorizontalLine`, `VerticalLine`, `FilledRegion`, `MarkerCandidate`, and derived `PlotBoxCandidate`
   records, and `CheckVisualCase.ps1` can opt manifests into chart-structure gates through
   `expected.maxChartGraphicsStructureBoundsDelta`.
+- [x] 2026-05-25: Add explicit plot-order metadata to the typed chart scene model. `PptxSceneChartPlot`
+  now preserves both the direct `plotArea` order and the per-kind index, and the chart renderer now
+  resolves chart plot XML through direct `plotArea` child elements instead of broad `Descendants()` scans.
+  This does not complete the chart model track, but it removes one structural ambiguity that matters for
+  Office-aligned combo charts and future scene-owned rendering.
 - [ ] 2026-05-25: Improve chart-structure classification with Office-PDF evidence from several public chart
   families. The first classifier intentionally exposes raw semantic buckets; it still needs per-family
   review for pie/doughnut/radar polar plots, legend swatches, and Office's common use of clipping boxes and
@@ -3742,6 +3747,10 @@ Full console suite: 204 passed, 0 failed, 0 skipped.
 dotnet pack: created artifacts/nuget/Lokad.OoxPdf.0.1.0.nupkg.
 Public visual case `pptx-ladder-11-chart-column-clustered-port` passed through the updated harness at
 artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-001549.
+Chart scene-order slice: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-model --skip-slow`
+passed with 13 passed, 0 failed, 1 skipped; `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 8 passed, 0 failed, 0 skipped; full console suite passed with 204 passed, 0 failed, 0 skipped;
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
 ```
 
 Latest public vertical text probes:

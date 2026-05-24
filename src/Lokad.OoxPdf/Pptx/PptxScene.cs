@@ -386,6 +386,8 @@ internal sealed record PptxSceneChart(
 
 internal sealed record PptxSceneChartPlot(
     string Kind,
+    int PlotAreaIndex,
+    int KindIndex,
     int SeriesCount,
     IReadOnlyList<string> AxisIds,
     IReadOnlyList<PptxSceneChartSeries> Series,
@@ -1066,15 +1068,21 @@ internal sealed class PptxSceneBuilder
         }
 
         var plots = new List<PptxSceneChartPlot>();
+        var kindIndexes = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement plot in plotArea.Elements().Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Chart", StringComparison.Ordinal)))
         {
+            string kind = plot.Name.LocalName;
+            int kindIndex = kindIndexes.TryGetValue(kind, out int nextKindIndex) ? nextKindIndex : 0;
+            kindIndexes[kind] = kindIndex + 1;
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
                 .Where(value => value.Length != 0)
                 .ToArray();
             plots.Add(new PptxSceneChartPlot(
-                plot.Name.LocalName,
+                kind,
+                plots.Count,
+                kindIndex,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
                 ReadChartSeries(plot, theme),
