@@ -377,7 +377,9 @@ internal sealed record PptxSceneChartAxis(
     double? MajorUnit,
     double? MinorUnit,
     bool HasMajorGridlines,
-    bool HasMinorGridlines);
+    bool HasMinorGridlines,
+    string TickLabelPosition,
+    string? NumberFormat);
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
@@ -1184,7 +1186,9 @@ internal sealed class PptxSceneBuilder
                 ReadChartAxisUnitValue(axis, "majorUnit"),
                 ReadChartAxisUnitValue(axis, "minorUnit"),
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
-                IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines"))));
+                IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines")),
+                (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
+                ReadChartAxisNumberFormat(axis)));
         }
 
         return axes;
@@ -1215,6 +1219,14 @@ internal sealed class PptxSceneBuilder
             .Element(ChartNamespace + "spPr")
             ?.Element(DrawingNamespace + "ln");
         return gridlines is not null && line?.Element(DrawingNamespace + "noFill") is null;
+    }
+
+    private static string? ReadChartAxisNumberFormat(XElement axis)
+    {
+        string? format = (string?)axis
+            .Element(ChartNamespace + "numFmt")
+            ?.Attribute("formatCode");
+        return string.IsNullOrWhiteSpace(format) ? null : format;
     }
 
     private static PptxSceneChartTitle ReadChartTitle(XDocument? chartXml)
