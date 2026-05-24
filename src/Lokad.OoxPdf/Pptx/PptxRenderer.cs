@@ -48,7 +48,7 @@ internal sealed partial class PptxRenderer
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
-            bool canRenderInOrder = CanRenderSlideInOrder(context.SlideXml);
+            bool canRenderInOrder = CanRenderSlideInOrder(sceneSlide);
 
             if (context.Inheritance.MasterXml is not null)
             {

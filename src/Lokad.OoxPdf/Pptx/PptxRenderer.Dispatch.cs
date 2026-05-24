@@ -6,11 +6,15 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static bool CanRenderSlideInOrder(XDocument slideXml)
+    private static bool CanRenderSlideInOrder(PptxSceneSlide sceneSlide)
     {
-        return !slideXml
-            .Descendants(PresentationNamespace + "graphicFrame")
-            .Any(frame => PptxSceneBuilder.ReadNodeKind(frame) == PptxSceneNodeKind.UnknownGraphicFrame);
+        return !sceneSlide.SlideNodes.Any(ContainsUnknownGraphicFrame);
+    }
+
+    private static bool ContainsUnknownGraphicFrame(PptxSceneNode node)
+    {
+        return node.Kind == PptxSceneNodeKind.UnknownGraphicFrame ||
+            node.Children.Any(ContainsUnknownGraphicFrame);
     }
 
     private static void RenderOrderedSceneNodes(
