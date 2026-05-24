@@ -812,6 +812,14 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Preserve chart axis tick and label-placement metadata in the scene model. `PptxSceneChartAxis`
+  now owns major/minor tick mark choices, label offset, tick-label skip, tick-mark skip, and the multi-level
+  category-label suppression flag so future axis layout can use Office-authored structure instead of fixed
+  label offsets. The scene fixture locks the metadata, the full runner passed 187/187, `dotnet pack`
+  succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-183351` stayed stable:
+  84/84 compared pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
@@ -1079,6 +1087,8 @@ High-priority actions:
     `PptxSceneChartAxis`.
   - [x] Consume scene-owned tick-label side metadata for same-side secondary value-axis label slotting on
     supported bar/combo paths.
+  - [x] Preserve chart-axis tick mark, label offset, tick skip, and multi-level label metadata in
+    `PptxSceneChartAxis`.
   - [ ] Consume axis crossing metadata and Office spacing for secondary axes instead of relying on right-side
     XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
@@ -1684,8 +1694,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-183014` after the chart
-  secondary-axis side-slot scene-consumption slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-183351` after the chart
+  axis tick/label metadata slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.
@@ -3289,7 +3299,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-183014: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-183351: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

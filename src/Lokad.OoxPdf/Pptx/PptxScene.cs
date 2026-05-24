@@ -447,6 +447,12 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneLineStyle MinorGridlineLine,
     PptxSceneChartTextStyleOverride TextStyle,
     string TickLabelPosition,
+    string MajorTickMark,
+    string MinorTickMark,
+    int? LabelOffset,
+    int? TickLabelSkip,
+    int? TickMarkSkip,
+    bool NoMultiLevelLabels,
     string? NumberFormat);
 
 internal sealed record PptxSceneChartTitle(
@@ -1117,6 +1123,14 @@ internal sealed class PptxSceneBuilder
             : null;
     }
 
+    private static int? ReadChartElementInt(XElement element, string childName)
+    {
+        string? value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val");
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? parsed
+            : null;
+    }
+
     private static bool ReadChartPlotVaryColors(XElement plot)
     {
         return !string.Equals(ReadChartElementValue(plot, "varyColors"), "0", StringComparison.Ordinal);
@@ -1364,6 +1378,12 @@ internal sealed class PptxSceneBuilder
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
                 ReadChartTextStyleOverride(axis, theme),
                 (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
+                ReadChartElementValue(axis, "majorTickMark"),
+                ReadChartElementValue(axis, "minorTickMark"),
+                ReadChartElementInt(axis, "lblOffset"),
+                ReadChartElementInt(axis, "tickLblSkip"),
+                ReadChartElementInt(axis, "tickMarkSkip"),
+                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "noMultiLvlLbl")),
                 ReadChartAxisNumberFormat(axis)));
         }
 
