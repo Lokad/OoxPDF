@@ -145,7 +145,7 @@ internal static class PptxTests
                     <c:varyColors val="0"/>
                     <c:gapWidth val="175"/>
                     <c:overlap val="25"/>
-                    <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showLeaderLines val="1"/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showLeaderLines val="1"/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
                     <c:ser>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
@@ -362,6 +362,9 @@ internal static class PptxTests
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(10d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(10, 11, 12), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(255, 234, 204), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Fill.Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Line.Color ?? default);
+        TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Line.Width ?? 0d);
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);
@@ -6037,7 +6040,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>1</c:v></c:pt>
                       <c:pt idx="1"><c:v>3</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:barChart>
                   <c:barChart>
@@ -6305,7 +6308,7 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>2</c:v></c:pt>
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
                     </c:numLit></c:val><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls>
                   </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>
                 """),
@@ -6356,6 +6359,9 @@ internal static class PptxTests
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");
+        TestAssert.Contains("1 0.918 0.8 rg", pdf);
+        TestAssert.Contains("0.067 0.133 0.2 RG", pdf);
+        TestAssert.Contains("79.2 357.525 28.8 13.5 re f", pdf);
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 10 Tf", pdf);
         TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);

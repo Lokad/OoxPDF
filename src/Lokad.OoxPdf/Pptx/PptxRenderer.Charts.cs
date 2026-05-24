@@ -1456,6 +1456,7 @@ internal sealed partial class PptxRenderer
                 RotationCenterY: 0d,
                 FlipHorizontal: false,
                 FlipVertical: false));
+            RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, labelOptions.ShapeStyle);
             angle += sweep;
         }
 
@@ -1514,6 +1515,7 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
+                        RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, labelOptions.ShapeStyle);
                         runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left, fontFamily));
                     }
                 }
@@ -1543,7 +1545,9 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
-                        runs.Add(CreateChartLabelRun(label, x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center, fontFamily));
+                        double labelWidth = Math.Max(1d, barSlot * 0.86d);
+                        RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, labelOptions.ShapeStyle);
+                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Center, fontFamily));
                     }
                 }
             }
@@ -1592,6 +1596,7 @@ internal sealed partial class PptxRenderer
                         pointY,
                         labelWidth,
                         labelHeight);
+                    RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, labelOptions.ShapeStyle);
                     runs.Add(CreateChartLabelRun(
                         label,
                         labelX,
@@ -1782,7 +1787,8 @@ internal sealed partial class PptxRenderer
                 labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ReadChartTextStyleFromTxPr(labels, theme));
+                ReadChartTextStyleFromTxPr(labels, theme),
+                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
@@ -1797,7 +1803,8 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.Position,
                 plot.DataLabels.Separator,
                 plot.DataLabels.NumberFormat,
-                ToChartTextStyleOverride(plot.DataLabels.TextStyle));
+                ToChartTextStyleOverride(plot.DataLabels.TextStyle),
+                ToChartShapeStyle(plot.DataLabels.ShapeStyle));
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
@@ -3997,9 +4004,9 @@ internal sealed partial class PptxRenderer
         public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
     }
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName;
     }

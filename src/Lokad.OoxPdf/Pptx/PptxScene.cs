@@ -353,7 +353,8 @@ internal sealed record PptxSceneChartDataLabels(
     string Position,
     string Separator,
     string NumberFormat,
-    PptxSceneChartTextStyleOverride TextStyle);
+    PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartShapeStyle ShapeStyle);
 
 internal sealed record PptxSceneChartShapeStyle(
     bool NoFill,
@@ -1010,7 +1011,8 @@ internal sealed class PptxSceneBuilder
                 Position: string.Empty,
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
-                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null))
+                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null),
+                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default))
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
@@ -1020,7 +1022,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ReadChartTextStyleOverride(labels, theme));
+                ReadChartTextStyleOverride(labels, theme),
+                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
