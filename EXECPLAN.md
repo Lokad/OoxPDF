@@ -837,6 +837,14 @@ High-priority actions:
   dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Honor chart legend overlay semantics in supported bar-chart plot-box sizing. A visible
+  legend with `overlay=true` now draws as an overlay instead of reserving plot space, while non-overlay
+  legends keep the existing reserved layout. A public synthetic bar-chart test locks the plot-area rectangle
+  for an overlaid bottom legend, the full runner passed 188/188, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-190019` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
@@ -1333,7 +1341,8 @@ Composite oracle family map:
   and exact plot-area bounds.
 - Bar and line chart legends now read `c:legend/c:legendPos` for basic top, bottom, left, and right
   placement and honor deleted legends instead of always emitting a right-side legend. Remaining legend work
-  is overlay semantics, manual layout, text styling, entry order/filtering, and exact Office spacing.
+  is exact overlay placement beyond bar plot-box reservation, manual layout, text styling, entry
+  order/filtering, and exact Office spacing.
 - Supported chart renderer now render simple `c:chartSpace/c:spPr` chart-area fills and borders before
   the plot content. Remaining chart-area work is rounded corners, effects, plot-area fills/borders, and
   exact Office chart layout.
@@ -1365,8 +1374,8 @@ Composite oracle family map:
 - Chart boolean delete flags now treat both `val="1"` and element-only forms such as `<c:delete/>` as
   enabled for axis and legend visibility handling.
 - Bar and line chart renderer now render simple legends from cached series names, using the same fill or
-  stroke styles as the plotted series. Remaining legend work is Office layout positions, overlay behavior,
-  rich text, hidden/deleted entries, and chart style inheritance.
+  stroke styles as the plotted series. Remaining legend work is exact Office layout positions, overlay
+  placement beyond bar plot-box reservation, rich text, hidden/deleted entries, and chart style inheritance.
 - Pie and doughnut chart renderer now render basic value data labels when `c:dLbls/c:showVal` is enabled.
   Remaining data-label work is category/percentage labels, rich text, leader lines, custom positions,
   number formats, and exact Office label collision behavior.
@@ -1712,8 +1721,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-185426` after the chart
-  data-label leader-line option bridge:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-190019` after the chart
+  legend overlay layout slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.

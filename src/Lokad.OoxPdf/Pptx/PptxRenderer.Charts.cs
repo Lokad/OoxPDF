@@ -3039,7 +3039,7 @@ internal sealed partial class PptxRenderer
         }
 
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
-        bool hasLegend = legend.Visible;
+        bool hasLegend = legend.Visible && !legend.Overlay;
         if (!hasTitle && !hasLegend)
         {
             return new ChartPlotBox(
