@@ -10,10 +10,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        var graphics = new PdfGraphicsBuilder();
-        AddSceneTableTextSpans(context.SceneSlide?.MasterNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide?.SlideNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide?.MasterNodes ?? [], context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide?.SlideNodes ?? [], context, textSpans, GroupTransform.Identity);
 
         return textSpans;
     }
@@ -21,7 +20,6 @@ internal sealed partial class PptxRenderer
     private static void AddSceneTableTextSpans(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
         List<PptxPositionedTextSpan> textSpans,
         GroupTransform transform)
     {
@@ -29,15 +27,23 @@ internal sealed partial class PptxRenderer
         {
             if (node.Kind == PptxSceneNodeKind.Table)
             {
-                textSpans.AddRange(RenderTableFrame(context, node, graphics, transform));
+                textSpans.AddRange(ReadTableFrameTextSpans(context, node, transform));
                 continue;
             }
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneTableTextSpans(node.Children, context, graphics, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)));
+                AddSceneTableTextSpans(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)));
             }
         }
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTableFrameTextSpans(PptxRenderContext context, PptxSceneNode node, GroupTransform transform)
+    {
+        ShapeBounds? bounds = node.Bounds is { } rawBounds
+            ? transform.Apply(ToShapeBounds(rawBounds))
+            : null;
+        return ProcessTableFrame(context, bounds, node.Table?.Source, node.Table, graphics: null);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
@@ -45,10 +51,10 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return RenderTableFrame(context, bounds, node.Table?.Source, node.Table, graphics);
+        return ProcessTableFrame(context, bounds, node.Table?.Source, node.Table, graphics);
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PptxPositionedTextSpan> ProcessTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable, PdfGraphicsBuilder? graphics)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         if (bounds is null || table is null)
@@ -144,7 +150,7 @@ internal sealed partial class PptxRenderer
                     fill = sceneCell.StyleFill.Color;
                     fillAlpha = sceneCell.StyleFill.Alpha;
                 }
-                if (hasCellFill)
+                if (hasCellFill && graphics is not null)
                 {
                     bool transparentFill = fillAlpha < 0.999d;
                     if (transparentFill)
@@ -169,6 +175,11 @@ internal sealed partial class PptxRenderer
 
             yTop -= rowHeight;
             rowTops[rowIndex + 1] = yTop;
+        }
+
+        if (graphics is null)
+        {
+            return textSpans;
         }
 
         if (!TableHasExplicitBorders(sceneTable, table))

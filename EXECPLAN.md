@@ -3704,6 +3704,17 @@ lower-level `ReadTextSpans` pipeline and `ReadSlideTextSpansForInspection` remai
 still intentionally compare inherited and slide text at the XML level. `PptxSyntheticTextAndShapesUseSiblingOrder`
 passed, the non-slow suite passed with 190 passed, 0 failed, 7 skipped, `dotnet pack` succeeded, and the full
 suite passed with 197 passed, 0 failed, 0 skipped.
+
+table prepass dummy-PDF removal / 2026-05-24:
+`ReadSceneTableTextSpans` no longer creates a disposable `PdfGraphicsBuilder` just to collect table text for
+font discovery. The table walk now has separate text-only and drawing entry points over the same geometry and
+merge-handling loop, so the prepass cannot accidentally write discarded PDF operators. This is a useful
+intermediate step, not the final table architecture: the next long-term split should promote table layout to a
+small data model containing cell rectangles, effective fills, border segments, and text boxes, with PDF drawing
+as a consumer of that model. `PptxSyntheticTableRendersGridAndText`, the `pptx-tables` non-slow group, and
+`PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed. The non-slow suite passed with
+190 passed, 0 failed, 7 skipped, `dotnet pack` succeeded, and the full suite passed with 197 passed,
+0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
