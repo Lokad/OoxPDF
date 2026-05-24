@@ -350,6 +350,7 @@ internal sealed record PptxSceneChartSeries(
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
+    IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
     bool Smooth);
 
 internal sealed record PptxSceneChartMarker(
@@ -357,6 +358,13 @@ internal sealed record PptxSceneChartMarker(
     double Size,
     PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line);
+
+internal sealed record PptxSceneChartPointStyle(
+    int Index,
+    PptxSceneFillStyle Fill,
+    PptxScenePatternFill PatternFill,
+    PptxSceneLineStyle Line,
+    double? Explosion);
 
 internal sealed record PptxSceneChartAxis(
     string Id,
@@ -960,6 +968,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesPatternFill(seriesElement, theme),
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme),
+                ReadChartPointStyles(seriesElement, theme),
                 ReadChartSeriesSmooth(seriesElement)));
         }
 
@@ -1016,6 +1025,66 @@ internal sealed class PptxSceneBuilder
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
         return new PptxSceneChartMarker(symbol, size, fill, ReadChartLine(shapeProperties, theme));
+    }
+
+    private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
+    {
+        var styles = new List<PptxSceneChartPointStyle>();
+        foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
+        {
+            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
+                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            {
+                continue;
+            }
+
+            XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
+            styles.Add(new PptxSceneChartPointStyle(
+                index,
+                ReadChartPointFill(shapeProperties, theme),
+                ReadChartPointPatternFill(shapeProperties, theme),
+                ReadChartLine(shapeProperties, theme),
+                ReadChartPointExplosion(point)));
+        }
+
+        return styles;
+    }
+
+    private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme)
+    {
+        return TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
+            ? new PptxSceneFillStyle(true, color, alpha)
+            : default;
+    }
+
+    private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme)
+    {
+        XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
+        if (patternFill is null)
+        {
+            return default;
+        }
+
+        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor, out _)
+            ? foregroundColor
+            : new RgbColor(0, 0, 0);
+        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor, out _)
+            ? backgroundColor
+            : new RgbColor(255, 255, 255);
+        return new PptxScenePatternFill(
+            HasPattern: true,
+            (string?)patternFill.Attribute("prst") ?? "pct50",
+            foreground,
+            background,
+            Alpha: 1d);
+    }
+
+    private static double? ReadChartPointExplosion(XElement point)
+    {
+        return point.Element(ChartNamespace + "explosion")?.Attribute("val") is { } explosionAttribute &&
+            double.TryParse(explosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double explosion)
+                ? explosion
+                : null;
     }
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)

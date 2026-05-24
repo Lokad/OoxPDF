@@ -241,17 +241,7 @@ internal sealed partial class PptxRenderer
     {
         ChartSeriesFill?[]? fills = plot?
             .Series
-            .Select(series =>
-            {
-                if (series.Fill.HasFill)
-                {
-                    return new ChartSeriesFill(series.Fill.Color, series.Fill.Alpha);
-                }
-
-                return series.PatternFill.HasPattern
-                    ? new ChartSeriesFill(series.PatternFill.Foreground, series.PatternFill.Alpha, series.PatternFill.Preset, series.PatternFill.Background)
-                    : (ChartSeriesFill?)null;
-            })
+            .Select(series => ToChartSeriesFill(series.Fill, series.PatternFill))
             .ToArray();
         return fills is { Length: > 0 } && fills.Any(fill => fill is not null)
             ? fills
@@ -292,6 +282,112 @@ internal sealed partial class PptxRenderer
             : ReadChartSeriesSmooth(chartElement);
     }
 
+    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        IReadOnlyDictionary<int, ChartSeriesFill>[]? fills = plot?
+            .Series
+            .Select(ReadSceneChartPointFills)
+            .ToArray();
+        return fills is { Length: > 0 } && fills.Any(fill => fill.Count != 0)
+            ? fills
+            : ReadChartSeriesPointFills(chartElement, theme);
+    }
+
+    private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadSceneOrXmlSeriesPointStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        IReadOnlyDictionary<int, ChartSeriesStroke>[]? strokes = plot?
+            .Series
+            .Select(ReadSceneChartPointStrokes)
+            .ToArray();
+        return strokes is { Length: > 0 } && strokes.Any(stroke => stroke.Count != 0)
+            ? strokes
+            : ReadChartSeriesPointStrokes(chartElement, theme);
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneOrXmlChartPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        IReadOnlyDictionary<int, ChartSeriesFill>? fills = plot?.Series.Count > 0
+            ? ReadSceneChartPointFills(plot.Series[0])
+            : null;
+        return fills is { Count: > 0 }
+            ? fills
+            : ReadChartPointFills(chartElement, theme);
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesStroke> ReadSceneOrXmlChartPointStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        IReadOnlyDictionary<int, ChartSeriesStroke>? strokes = plot?.Series.Count > 0
+            ? ReadSceneChartPointStrokes(plot.Series[0])
+            : null;
+        return strokes is { Count: > 0 }
+            ? strokes
+            : ReadChartPointStrokes(chartElement, theme);
+    }
+
+    private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        IReadOnlyDictionary<int, double>? explosions = plot?.Series.Count > 0
+            ? ReadSceneChartPointExplosions(plot.Series[0])
+            : null;
+        return explosions is { Count: > 0 }
+            ? explosions
+            : ReadChartPointExplosions(chartElement);
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneChartPointFills(PptxSceneChartSeries series)
+    {
+        var fills = new Dictionary<int, ChartSeriesFill>();
+        foreach (PptxSceneChartPointStyle point in series.PointStyles)
+        {
+            if (ToChartSeriesFill(point.Fill, point.PatternFill) is { } fill)
+            {
+                fills[point.Index] = fill;
+            }
+        }
+
+        return fills;
+    }
+
+    private static IReadOnlyDictionary<int, ChartSeriesStroke> ReadSceneChartPointStrokes(PptxSceneChartSeries series)
+    {
+        var strokes = new Dictionary<int, ChartSeriesStroke>();
+        foreach (PptxSceneChartPointStyle point in series.PointStyles)
+        {
+            if (point.Line.HasLine)
+            {
+                strokes[point.Index] = new ChartSeriesStroke(point.Line.Color, point.Line.Alpha, point.Line.Width);
+            }
+        }
+
+        return strokes;
+    }
+
+    private static IReadOnlyDictionary<int, double> ReadSceneChartPointExplosions(PptxSceneChartSeries series)
+    {
+        var explosions = new Dictionary<int, double>();
+        foreach (PptxSceneChartPointStyle point in series.PointStyles)
+        {
+            if (point.Explosion is { } explosion)
+            {
+                explosions[point.Index] = Math.Clamp(explosion / 100d, 0d, 1d);
+            }
+        }
+
+        return explosions;
+    }
+
+    private static ChartSeriesFill? ToChartSeriesFill(PptxSceneFillStyle fill, PptxScenePatternFill patternFill)
+    {
+        if (fill.HasFill)
+        {
+            return new ChartSeriesFill(fill.Color, fill.Alpha);
+        }
+
+        return patternFill.HasPattern
+            ? new ChartSeriesFill(patternFill.Foreground, patternFill.Alpha, patternFill.Preset, patternFill.Background)
+            : null;
+    }
+
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
     {
         IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
@@ -311,8 +407,8 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadChartValueAxisExtents(valueAxis, GetBarChartValueExtents(barSeries, grouping));
                 ChartAxisUnits axisUnits = ReadChartValueAxisUnits(valueAxis);
                 bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadChartSeriesPointFills(barChart, theme);
-                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadChartSeriesPointStrokes(barChart, theme);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
+                IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barChart, seriesFills));
                 ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
@@ -339,8 +435,8 @@ internal sealed partial class PptxRenderer
                     ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
                     ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
-                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadChartSeriesPointFills(extraBarChart, theme);
-                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadChartSeriesPointStrokes(extraBarChart, theme);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme);
+                    IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme);
                     if (!extraHorizontalBars && secondaryValueAxis is null && IsRightValueAxis(extraValueAxis))
                     {
                         secondaryValueAxis = extraValueAxis;
@@ -525,9 +621,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadSceneOrXmlChartSeries(piePlot, pieChart);
             if (pieSeries.Count != 0)
             {
-                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(pieChart, theme);
-                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(pieChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(pieChart);
+                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
+                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderPieChart(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
                 fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieChart, pieSeries[0], pointExplosions, holeSize: 0d));
@@ -542,9 +638,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadSceneOrXmlChartSeries(doughnutPlot, doughnutChart);
             if (doughnutSeries.Count != 0)
             {
-                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadChartPointFills(doughnutChart, theme);
-                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadChartPointStrokes(doughnutChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadChartPointExplosions(doughnutChart);
+                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
+                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart);
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderDoughnutChart(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);

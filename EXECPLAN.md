@@ -613,6 +613,15 @@ High-priority actions:
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
   `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE
   `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Move chart per-point style overrides into `PptxSceneChartPointStyle`: `c:dPt` index,
+  direct fill, pattern fill, line, and raw explosion values are now owned by the scene, while renderer
+  helpers normalize percentages at the PDF boundary and retain XML fallback when scene point styles are
+  absent. Focused model/chart tests passed after a transient parallel build file lock was rerun serially,
+  the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-151352` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
