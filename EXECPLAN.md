@@ -3595,7 +3595,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-196 passed, 0 failed, 0 skipped
+197 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -3694,6 +3694,16 @@ with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded and the full suite
 0 failed, 0 skipped. Private run `artifacts/private-visual/lokad-value-based/20260524-223511` stayed stable:
 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, only
 `PPTX_UNSUPPORTED_IMAGE_RECOLOR`, and slide 17 MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
+
+obsolete PPTX text prepass wrapper removal / 2026-05-24:
+After the shape text font prepass moved onto typed scene nodes, the former whole-part text helper wrappers
+(`ReadInheritedTextRuns`, `ReadInheritedTextSpans`, `ReadSlideTextRuns`, `ReadSlideTextSpans`, and the
+whole-part `ReadTextRuns` overload) had no remaining production or inspection callers. They were deleted so
+the supported PPTX render path no longer retains a misleading whole-slide XML text prepass entry point. The
+lower-level `ReadTextSpans` pipeline and `ReadSlideTextSpansForInspection` remain because inspection snapshots
+still intentionally compare inherited and slide text at the XML level. `PptxSyntheticTextAndShapesUseSiblingOrder`
+passed, the non-slow suite passed with 190 passed, 0 failed, 7 skipped, `dotnet pack` succeeded, and the full
+suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

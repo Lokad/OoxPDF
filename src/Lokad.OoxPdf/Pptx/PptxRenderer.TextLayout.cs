@@ -244,18 +244,6 @@ internal sealed partial class PptxRenderer
         return new PptxTextGlyphLayoutSnapshot(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore);
     }
 
-    private static IReadOnlyList<TextRun> ReadInheritedTextRuns(PptxRenderContext context)
-    {
-        return ReadInheritedTextSpans(context).Select(span => span.Run).ToArray();
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadInheritedTextSpans(PptxRenderContext context)
-    {
-        return context.InheritedXml
-            .SelectMany(xml => ReadTextSpans(context, xml, includePlaceholders: false, placeholderSources: []))
-            .ToArray();
-    }
-
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
@@ -288,25 +276,6 @@ internal sealed partial class PptxRenderer
                 AddSceneShapeTextSpans(node.Children, context, textSpans, renderPlaceholders);
             }
         }
-    }
-
-    private static IReadOnlyList<TextRun> ReadSlideTextRuns(PptxRenderContext context)
-    {
-        return ReadSlideTextSpans(context).Select(span => span.Run).ToArray();
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpans(PptxRenderContext context)
-    {
-        return ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
-    }
-
-    private static IReadOnlyList<TextRun> ReadTextRuns(
-        PptxRenderContext context,
-        XDocument slideXml,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        return ReadTextSpans(context, slideXml, includePlaceholders, placeholderSources).Select(span => span.Run).ToArray();
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpans(
