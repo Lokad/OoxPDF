@@ -892,8 +892,10 @@ High-priority actions:
 - [x] Move connector line-end intent into `PptxSceneShape`: head/tail marker kind and width/length scale are
   now scene-level data and ordered straight/curved connector rendering consumes them through a renderer
   conversion boundary.
-- [ ] Continue typed shape/connector migration by resolving line color/width/alpha, dash/cap/join, custom
-  geometry presence, and fill/effect styles into typed scene records.
+- [x] Move shape/connector line style into `PptxSceneShape`: line color, width, and alpha are now resolved in
+  the scene model and consumed by ordered shape/connector rendering through a renderer conversion boundary.
+- [ ] Continue typed shape/connector migration by resolving dash/cap/join, custom geometry presence, and
+  fill/effect styles into typed scene records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after scene-backed ordered rendering and typed
   picture/shape leaf inputs. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-101919` produced 84/84 compared pages, zero dimension

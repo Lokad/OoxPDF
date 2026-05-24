@@ -119,6 +119,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             ToShapeBounds(shape.Bounds),
             shape.Shape.Preset,
+            ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
             ToLineEndStyle(shape.Shape.TailEnd));
     }
@@ -165,6 +166,7 @@ internal sealed partial class PptxRenderer
             rawBounds.Value,
             ReadPreset(shapeProperties),
             null,
+            null,
             null);
     }
 
@@ -183,6 +185,7 @@ internal sealed partial class PptxRenderer
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,
+        LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
         LineEndStyle? tailEndOverride)
     {
@@ -203,7 +206,21 @@ internal sealed partial class PptxRenderer
 
         bool hasFill = TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fill, out double fillAlpha);
         bool hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out ShapePatternFill patternFill);
-        bool hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor stroke, out double lineWidth, out double strokeAlpha);
+        RgbColor stroke;
+        double lineWidth;
+        double strokeAlpha;
+        bool hasStroke;
+        if (lineOverride is { HasLine: true } line)
+        {
+            stroke = line.Color;
+            lineWidth = line.Width;
+            strokeAlpha = line.Alpha;
+            hasStroke = true;
+        }
+        else
+        {
+            hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out stroke, out lineWidth, out strokeAlpha);
+        }
         bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
         int? lineCap = ReadLineCap(shapeProperties) switch
         {
@@ -1622,6 +1639,11 @@ internal sealed partial class PptxRenderer
             },
             lineEnd.WidthScale,
             lineEnd.LengthScale);
+    }
+
+    private static LineStyle ToLineStyle(PptxSceneLineStyle line)
+    {
+        return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha);
     }
 
     private static LineEndKind ReadLineEndKind(string? type)

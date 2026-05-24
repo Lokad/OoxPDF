@@ -648,6 +648,8 @@ internal sealed partial class PptxRenderer
         public bool IsNone => Kind == LineEndKind.None;
     }
 
+    private readonly record struct LineStyle(bool HasLine, RgbColor Color, double Width, double Alpha);
+
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;

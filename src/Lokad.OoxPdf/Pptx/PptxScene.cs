@@ -177,8 +177,15 @@ internal sealed record PptxSceneNode(
 
 internal sealed record PptxSceneShape(
     string Preset,
+    PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
+
+internal readonly record struct PptxSceneLineStyle(
+    bool HasLine,
+    RgbColor Color,
+    double Width,
+    double Alpha);
 
 internal enum PptxSceneLineEndKind
 {
@@ -414,7 +421,7 @@ internal sealed class PptxSceneBuilder
                 name,
                 IsPlaceholder(child),
                 ReadBounds(child),
-                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child) : null,
+                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme) : null,
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
@@ -537,13 +544,60 @@ internal sealed class PptxSceneBuilder
             ReadImageRecolor(picture, theme));
     }
 
-    private static PptxSceneShape ReadShape(XElement shape)
+    private static PptxSceneShape ReadShape(XElement shape, PptxTheme theme)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        PptxSceneLineStyle line = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
+            ? new PptxSceneLineStyle(true, lineColor, lineWidth, lineAlpha)
+            : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
+            line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    {
+        XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            color = default;
+            lineWidth = 0d;
+            alpha = 1d;
+            return false;
+        }
+
+        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha))
+        {
+            return true;
+        }
+
+        XElement? lineRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "lnRef");
+        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
+        if (lineIndex <= 0 || !theme.TryGetLineStyle(lineIndex, out XElement lineStyle))
+        {
+            color = default;
+            lineWidth = 0d;
+            alpha = 1d;
+            return false;
+        }
+
+        lineWidth = lineStyle.Attribute("w") is { } widthAttribute
+            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
+            : 1d;
+        return TryReadSolidColorWithAlpha(lineStyle, theme, lineRef, out color, out alpha);
+    }
+
+    private static bool TryReadLineWithAlpha(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    {
+        XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
+        lineWidth = line?.Attribute("w") is { } widthAttribute
+            ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
+            : 1d;
+        return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
     }
 
     private static string ReadShapePreset(XElement? shapeProperties)
@@ -1041,6 +1095,14 @@ internal sealed class PptxSceneBuilder
         return value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static int ParseOptionalIntAttribute(XElement? element, string attributeName, int defaultValue)
+    {
+        return element?.Attribute(attributeName) is { } attribute &&
+            int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
+            ? value
+            : defaultValue;
+    }
+
     private static bool TryReadHighlightColor(XElement? runProperties, out RgbColor color)
     {
         XElement? highlight = runProperties?.Element(DrawingNamespace + "highlight");
@@ -1058,8 +1120,15 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
     {
+        return TryReadSolidColorWithAlpha(element, theme, placeholderColorContainer: null, out color, out alpha);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
+    {
         XElement? solidFill = element?.Element(DrawingNamespace + "solidFill");
-        XElement? colorContainer = solidFill ?? element;
+        XElement? colorContainer = element?.Name == DrawingNamespace + "solidFill"
+            ? element
+            : solidFill ?? element;
         alpha = ReadAlpha(colorContainer);
         XElement? srgbColor = colorContainer?.Element(DrawingNamespace + "srgbClr");
         if (RgbColor.TryParse((string?)srgbColor?.Attribute("val"), out color))
@@ -1070,6 +1139,15 @@ internal sealed class PptxSceneBuilder
 
         XElement? schemeColorElement = colorContainer?.Element(DrawingNamespace + "schemeClr");
         string? schemeColor = (string?)schemeColorElement?.Attribute("val");
+        if (schemeColor == "phClr" &&
+            placeholderColorContainer is not null &&
+            TryReadSolidColorWithAlpha(placeholderColorContainer, theme, placeholderColorContainer: null, out color, out double placeholderAlpha))
+        {
+            color = ApplyColorTransforms(schemeColorElement, color);
+            alpha *= placeholderAlpha;
+            return true;
+        }
+
         if (schemeColor is not null && theme.TryResolveColor(schemeColor, out color))
         {
             color = ApplyColorTransforms(schemeColorElement, color);
