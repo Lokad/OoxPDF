@@ -4354,6 +4354,17 @@ and chart tick-label positions from `50 pt` to `10 pt`, passing at
 tick labels are still about `1.7 pt` below Office, and value-axis labels remain about `8.6 pt` right and
 `5.7 pt` below Office; those are now isolated text-box/baseline/width placement gaps rather than plot-box
 geometry drift.
+
+chart value-axis side-gap Office rule / 2026-05-25:
+The public clustered-column gate isolated value-axis tick-label X drift after the plot-box fix: the whole
+vertical value-axis label column was about `8.6 pt` right of Office while the axis-pair plot box already
+matched within `0.02 pt`. The renderer now separates label-width padding from the side gap between a vertical
+value axis and its tick-label box, using the Office-PDF-observed side-gap rule instead of reusing the internal
+text-width padding factor. The same public case passes with value-axis tick-label X deltas within `0.04 pt`
+at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-013246`. Remaining gap: value-axis
+tick labels are still about `5.7 pt` below Office and category-axis labels about `1.7 pt` below Office, so the
+next Office-alignment slice should target chart text-box vertical placement and baseline semantics rather than
+axis scale or plot-box geometry.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

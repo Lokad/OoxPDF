@@ -2218,7 +2218,7 @@ internal sealed partial class PptxRenderer
             {
                 bool labelsRightSide = ResolveSceneOrXmlValueAxisLabelsRightSide(sceneAxis, valueAxis, rightSide);
                 width = useTextSizedWidth ? valueAxisLabelWidth : plotBox.Width * PptxChartMetricRules.VerticalValueAxisWidthRatio;
-                double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+                double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
                 x = labelsRightSide
                     ? plotBox.X + plotBox.Width + sideGap + axisSideSlot * (width + sideGap)
                     : Math.Max(0d, plotBox.X - (axisSideSlot + 1) * (width + sideGap));

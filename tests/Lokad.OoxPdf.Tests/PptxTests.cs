@@ -6914,7 +6914,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        TestAssert.Contains("360.122", pdf);
+        TestAssert.Contains("364.922", pdf);
     }
 
     public static void PptxSyntheticChartManualLayoutEdgeModesRender()

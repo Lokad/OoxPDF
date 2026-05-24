@@ -813,6 +813,7 @@ internal sealed partial class PptxRenderer
         public const double AxisLabelClipHeightFactor = 1.6d;
         public const double ValueAxisMinimumLabelWidthFactor = 1.6d;
         public const double ValueAxisLabelPaddingFactor = 0.45d;
+        public const double ValueAxisLabelSideGapFactor = 0.93d;
         public const double ValueAxisLabelWhitespaceWidthFactor = 0.32d;
         public const double ValueAxisLabelDigitWidthFactor = 0.55d;
         public const double ValueAxisLabelCharacterWidthFactor = 0.58d;
