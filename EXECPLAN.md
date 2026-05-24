@@ -919,6 +919,11 @@ High-priority actions:
 - [ ] Continue reducing renderer XML fallbacks by expanding gradient coverage beyond two-stop linear fills,
   moving richer effect families into scene-owned structures, and deciding the JPEG recolor strategy without
   adding format-specific shortcuts.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after adding PDF axial shading and scene-owned
+  two-stop linear shape gradients. `dotnet pack` succeeded and private run
+  `artifacts/private-visual/lokad-value-based/20260524-114141` remained stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`,
+  and slide 17 MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after completing the scene migration for
   shape fills, pattern fills, picture fills, effects, line styles, line ends, and renderable custom geometry.
   `dotnet pack` succeeded and private run `artifacts/private-visual/lokad-value-based/20260524-110413`
