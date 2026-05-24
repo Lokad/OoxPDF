@@ -465,6 +465,11 @@ High-priority actions:
   `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-130135`
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
   `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-24: Re-ran model/table-focused tests, the full test suite, package, and private PPTX acceptance
+  after moving table cell span/continuation metadata into `PptxSceneTable`. The test runner passed 186/186,
+  `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-130519`
+  stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
+  `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -513,6 +518,8 @@ High-priority actions:
   - [x] Add the first table scene record: `PptxSceneTable` now carries raw grid column widths and row heights,
     and ordered table rendering consumes those typed layout primitives instead of parsing grid/row dimensions
     inside the renderer.
+  - [x] Extend `PptxSceneTable` to row/cell layout metadata: column spans, row spans, and horizontal/vertical
+    merge continuations are now parsed into scene records and consumed by ordered table rendering.
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.

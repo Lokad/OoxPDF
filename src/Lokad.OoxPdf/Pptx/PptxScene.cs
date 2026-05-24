@@ -320,7 +320,15 @@ internal sealed record PptxSceneChart(string? RelationshipId);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
-    IReadOnlyList<double> RowHeights);
+    IReadOnlyList<double> RowHeights,
+    IReadOnlyList<PptxSceneTableRow> Rows);
+
+internal sealed record PptxSceneTableRow(IReadOnlyList<PptxSceneTableCell> Cells);
+
+internal readonly record struct PptxSceneTableCell(
+    int ColumnSpan,
+    int RowSpan,
+    bool IsMergedContinuation);
 
 internal readonly record struct PptxSceneGroupTransform(
     long OffsetX,
@@ -711,7 +719,8 @@ internal sealed class PptxSceneBuilder
         XElement? table = ReadTableElement(frame);
         return new PptxSceneTable(
             ReadTableColumnWidths(table),
-            ReadTableRowHeights(table));
+            ReadTableRowHeights(table),
+            ReadTableRows(table));
     }
 
     internal static XElement? ReadTableElement(XElement frame)
@@ -737,6 +746,48 @@ internal sealed class PptxSceneBuilder
             ?.Elements(DrawingNamespace + "tr")
             .Select(row => Math.Max(1d, ReadLong(row, "h", 1)))
             .ToArray() ?? [];
+    }
+
+    internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table)
+    {
+        return table
+            ?.Elements(DrawingNamespace + "tr")
+            .Select(row => new PptxSceneTableRow(row
+                .Elements(DrawingNamespace + "tc")
+                .Select(ReadTableCell)
+                .ToArray()))
+            .ToArray() ?? [];
+    }
+
+    private static PptxSceneTableCell ReadTableCell(XElement cell)
+    {
+        return new PptxSceneTableCell(
+            ReadTableCellColumnSpan(cell),
+            ReadTableCellRowSpan(cell),
+            IsMergedTableCellContinuation(cell));
+    }
+
+    internal static bool IsMergedTableCellContinuation(XElement cell)
+    {
+        return ReadBool(cell, "hMerge") || ReadBool(cell, "vMerge");
+    }
+
+    internal static int ReadTableCellColumnSpan(XElement cell)
+    {
+        return ReadTableCellSpan(cell, "gridSpan");
+    }
+
+    internal static int ReadTableCellRowSpan(XElement cell)
+    {
+        return ReadTableCellSpan(cell, "rowSpan");
+    }
+
+    private static int ReadTableCellSpan(XElement cell, string attributeName)
+    {
+        return cell.Attribute(attributeName) is { } spanAttribute &&
+            int.TryParse(spanAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span)
+            ? Math.Max(1, span)
+            : 1;
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)

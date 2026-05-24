@@ -99,22 +99,24 @@ internal sealed partial class PptxRenderer
 
             double cellX = frameX;
             int columnIndex = 0;
-            foreach (XElement cell in cells)
+            for (int cellIndex = 0; cellIndex < cells.Count; cellIndex++)
             {
+                XElement cell = cells[cellIndex];
                 if (columnIndex >= rawColumnWidths.Count)
                 {
                     break;
                 }
 
-                if (IsMergedTableCellContinuation(cell))
+                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, cell);
+                if (sceneCell.IsMergedContinuation)
                 {
                     cellX += rawColumnWidths[columnIndex] * columnScale;
                     columnIndex++;
                     continue;
                 }
 
-                int columnSpan = Math.Min(ReadTableCellColumnSpan(cell), rawColumnWidths.Count - columnIndex);
-                int rowSpan = Math.Min(ReadTableCellRowSpan(cell), rows.Count - rowIndex);
+                int columnSpan = Math.Min(sceneCell.ColumnSpan, rawColumnWidths.Count - columnIndex);
+                int rowSpan = Math.Min(sceneCell.RowSpan, rows.Count - rowIndex);
                 for (int boundary = columnIndex + 1; boundary < columnIndex + columnSpan; boundary++)
                 {
                     skippedVerticalGridSegments[boundary, rowIndex] = true;
@@ -182,26 +184,19 @@ internal sealed partial class PptxRenderer
         return textSpans;
     }
 
-    private static bool IsMergedTableCellContinuation(XElement cell)
+    private static PptxSceneTableCell ReadSceneTableCell(PptxSceneTable? sceneTable, int rowIndex, int cellIndex, XElement cell)
     {
-        return ParseOptionalBoolAttribute(cell, "hMerge") ||
-            ParseOptionalBoolAttribute(cell, "vMerge");
-    }
+        if (sceneTable is not null &&
+            rowIndex < sceneTable.Rows.Count &&
+            cellIndex < sceneTable.Rows[rowIndex].Cells.Count)
+        {
+            return sceneTable.Rows[rowIndex].Cells[cellIndex];
+        }
 
-    private static int ReadTableCellColumnSpan(XElement cell)
-    {
-        return cell.Attribute("gridSpan") is { } spanAttribute &&
-            int.TryParse(spanAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span)
-            ? Math.Max(1, span)
-            : 1;
-    }
-
-    private static int ReadTableCellRowSpan(XElement cell)
-    {
-        return cell.Attribute("rowSpan") is { } spanAttribute &&
-            int.TryParse(spanAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span)
-            ? Math.Max(1, span)
-            : 1;
+        return new PptxSceneTableCell(
+            PptxSceneBuilder.ReadTableCellColumnSpan(cell),
+            PptxSceneBuilder.ReadTableCellRowSpan(cell),
+            PptxSceneBuilder.IsMergedTableCellContinuation(cell));
     }
 
     private static bool TableHasExplicitBorders(XElement table)
