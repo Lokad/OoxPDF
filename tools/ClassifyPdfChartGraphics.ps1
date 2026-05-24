@@ -58,6 +58,47 @@ function New-Structure($kind, $op) {
     }
 }
 
+function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount, $minX, $minY, $maxX, $maxY) {
+    [pscustomobject]@{
+        Kind = $kind
+        PageNumber = $pageNumber
+        SourceKind = "Derived"
+        SourceOperator = $sourceOperator
+        SegmentCount = $segmentCount
+        MinX = Round $minX
+        MinY = Round $minY
+        MaxX = Round $maxX
+        MaxY = Round $maxY
+        Width = Round ($maxX - $minX)
+        Height = Round ($maxY - $minY)
+        CenterX = Round (($minX + $maxX) / 2d)
+        CenterY = Round (($minY + $maxY) / 2d)
+        LineWidth = 0d
+        StrokeColor = ""
+        FillColor = ""
+        Dash = ""
+        LineCap = 0
+        LineJoin = 0
+    }
+}
+
+function Get-UnionBounds($items) {
+    if ($items.Count -eq 0) {
+        return $null
+    }
+
+    $minX = ($items | Measure-Object -Property MinX -Minimum).Minimum
+    $maxX = ($items | Measure-Object -Property MaxX -Maximum).Maximum
+    $minY = ($items | Measure-Object -Property MinY -Minimum).Minimum
+    $maxY = ($items | Measure-Object -Property MaxY -Maximum).Maximum
+    [pscustomobject]@{
+        MinX = [double]$minX
+        MinY = [double]$minY
+        MaxX = [double]$maxX
+        MaxY = [double]$maxY
+    }
+}
+
 $ops = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
     $ops = @($ops | Where-Object { [int]$_.PageNumber -eq $PageNumber })
@@ -91,31 +132,57 @@ foreach ($op in $ops) {
 
 $horizontalLines = @($structures | Where-Object { $_.Kind -eq "HorizontalLine" })
 if ($horizontalLines.Count -ge 2) {
-    $minX = ($horizontalLines | Measure-Object -Property MinX -Minimum).Minimum
-    $maxX = ($horizontalLines | Measure-Object -Property MaxX -Maximum).Maximum
-    $minY = ($horizontalLines | Measure-Object -Property MinY -Minimum).Minimum
-    $maxY = ($horizontalLines | Measure-Object -Property MaxY -Maximum).Maximum
-    $structures.Add([pscustomobject]@{
-        Kind = "PlotBoxCandidate"
-        PageNumber = if ($PageNumber -gt 0) { $PageNumber } else { $horizontalLines[0].PageNumber }
-        SourceKind = "Derived"
-        SourceOperator = "HorizontalLineBounds"
-        SegmentCount = $horizontalLines.Count
-        MinX = Round $minX
-        MinY = Round $minY
-        MaxX = Round $maxX
-        MaxY = Round $maxY
-        Width = Round ($maxX - $minX)
-        Height = Round ($maxY - $minY)
-        CenterX = Round (($minX + $maxX) / 2d)
-        CenterY = Round (($minY + $maxY) / 2d)
-        LineWidth = 0d
-        StrokeColor = ""
-        FillColor = ""
-        Dash = ""
-        LineCap = 0
-        LineJoin = 0
+    $bounds = Get-UnionBounds $horizontalLines
+    $page = if ($PageNumber -gt 0) { $PageNumber } else { $horizontalLines[0].PageNumber }
+    $structures.Add((New-DerivedStructure "PlotBoxCandidate" $page "HorizontalLineBounds" $horizontalLines.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+}
+
+$verticalLines = @($structures | Where-Object { $_.Kind -eq "VerticalLine" })
+if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
+    $leftAxis = @($verticalLines | Sort-Object -Property MinX | Select-Object -First 1)[0]
+    $topAxis = @($horizontalLines | Sort-Object -Property MinY | Select-Object -First 1)[0]
+    $minX = [double]$leftAxis.MinX
+    $minY = [double]$topAxis.MinY
+    $maxX = [double]$topAxis.MaxX
+    $maxY = [double]$leftAxis.MaxY
+    if ($maxX -gt $minX -and $maxY -gt $minY) {
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+        $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
+    }
+}
+
+$clipBoxes = @($structures | Where-Object { $_.Kind -eq "ClipBox" })
+if ($clipBoxes.Count -gt 0) {
+    $largestWidth = ($clipBoxes | Measure-Object -Property Width -Maximum).Maximum
+    $largestHeight = ($clipBoxes | Measure-Object -Property Height -Maximum).Maximum
+    $nonPageClipBoxes = @($clipBoxes | Where-Object {
+        $_.Width -gt 40 -and $_.Height -gt 40 -and
+        -not ([Math]::Abs([double]$_.Width - [double]$largestWidth) -le 0.01 -and [Math]::Abs([double]$_.Height - [double]$largestHeight) -le 0.01)
     })
+    if ($nonPageClipBoxes.Count -gt 0) {
+        $dominantGroup = $nonPageClipBoxes |
+            Group-Object -Property MinX, MinY, MaxX, MaxY |
+            Sort-Object -Property Count -Descending |
+            Select-Object -First 1
+        $clip = @($dominantGroup.Group)[0]
+        $structures.Add((New-DerivedStructure "PlotAreaClipBoxCandidate" $clip.PageNumber "DominantClipBox" $dominantGroup.Count $clip.MinX $clip.MinY $clip.MaxX $clip.MaxY))
+    }
+}
+
+$polarRegions = @($structures | Where-Object {
+    $_.Kind -eq "FilledRegion" -and $_.Width -gt $MarkerMaxSize -and $_.Height -gt $MarkerMaxSize
+})
+if ($polarRegions.Count -gt 1) {
+    $largestWidth = ($polarRegions | Measure-Object -Property Width -Maximum).Maximum
+    $largestHeight = ($polarRegions | Measure-Object -Property Height -Maximum).Maximum
+    $nonPageRegions = @($polarRegions | Where-Object {
+        -not ([Math]::Abs([double]$_.Width - [double]$largestWidth) -le 0.01 -and [Math]::Abs([double]$_.Height - [double]$largestHeight) -le 0.01)
+    })
+    if ($nonPageRegions.Count -ge 2) {
+        $bounds = Get-UnionBounds $nonPageRegions
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
+        $structures.Add((New-DerivedStructure "PolarPlotBoxCandidate" $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+    }
 }
 
 $ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)

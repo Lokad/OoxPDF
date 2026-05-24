@@ -1768,10 +1768,19 @@ High-priority actions:
   resolves chart plot XML through direct `plotArea` child elements instead of broad `Descendants()` scans.
   This does not complete the chart model track, but it removes one structural ambiguity that matters for
   Office-aligned combo charts and future scene-owned rendering.
-- [ ] 2026-05-25: Improve chart-structure classification with Office-PDF evidence from several public chart
+- [x] 2026-05-25: Improve chart-structure classification with Office-PDF evidence from several public chart
   families. The first classifier intentionally exposes raw semantic buckets; it still needs per-family
   review for pie/doughnut/radar polar plots, legend swatches, and Office's common use of clipping boxes and
   Bezier paths where naive rectangle/line classification is incomplete.
+- [x] 2026-05-25: Extend chart-structure classification across multiple public chart families. Public
+  Office/candidate PDFs for pie, doughnut, radar, scatter, and line-marker cases show that Office often
+  exposes charts through repeated clip boxes, filled Bezier regions, and sparse axis lines rather than only
+  gridline rectangles. `ClassifyPdfChartGraphics.ps1` now derives `PlotAreaClipBoxCandidate`,
+  `AxisPairPlotBoxCandidate`, and `PolarPlotBoxCandidate` structures in addition to the earlier raw buckets.
+- [ ] 2026-05-25: Continue chart-structure classification toward legend swatches, data-label text positions,
+  and polar/radar shape semantics. The new derived candidates improve the structural oracle surface, but they
+  still do not classify chart text matrices, legend entries, leader lines, or Office radar polygon strokes as
+  first-class chart structures.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
@@ -3751,6 +3760,10 @@ Chart scene-order slice: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off
 passed with 13 passed, 0 failed, 1 skipped; `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
 passed with 8 passed, 0 failed, 0 skipped; full console suite passed with 204 passed, 0 failed, 0 skipped;
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Classifier family probe: inspected and classified Office/candidate PDFs from public pie, doughnut, radar,
+scatter-cluster, and line-marker chart cases under ignored `artifacts/tmp-chart-family-inspect/`. The updated
+classifier emits `PlotAreaClipBoxCandidate`, `AxisPairPlotBoxCandidate`, and `PolarPlotBoxCandidate`; strict
+reference-vs-reference comparison of those derived kinds passed for all five sampled families.
 ```
 
 Latest public vertical text probes:
