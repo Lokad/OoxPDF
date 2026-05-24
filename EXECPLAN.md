@@ -900,6 +900,11 @@ High-priority actions:
   decide whether the node is custom geometry before handing source XML to the existing path interpreter.
 - [ ] Continue typed shape/connector migration by resolving fill/effect styles and then custom geometry path
   commands into typed scene records.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving shape line style, dash/cap/join, and
+  custom geometry presence into the scene model. `dotnet pack` succeeded and private run
+  `artifacts/private-visual/lokad-value-based/20260524-104147` produced 84/84 compared pages, zero dimension
+  mismatches, deck MAE `9.043369`, changed16 `0.116418`, and one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
+  diagnostic. Page 17 remained stable at MAE `2.945717`, changed16 `0.045530`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after scene-backed ordered rendering and typed
   picture/shape leaf inputs. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-101919` produced 84/84 compared pages, zero dimension
