@@ -6848,8 +6848,9 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        TestAssert.Contains("160.128 326.52 123.84 63.72 re f", pdf);
-        TestAssert.Contains("206.568 326.52 30.96 63.72 re f", pdf);
+        TestAssert.Contains("152.294 330.653 133.517 62.683 re f", pdf);
+        TestAssert.Contains("202.363 330.653 33.379 62.683 re f", pdf);
+        TestAssert.DoesNotContain("160.128 326.52 123.84 63.72 re f", pdf);
         TestAssert.DoesNotContain("86.4 406.08 118.08 51.84 re f", pdf);
     }
 
@@ -6913,7 +6914,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.DoesNotContain("1 0 0 rg", pdf);
         TestAssert.Contains("<0024>", pdf);
-        TestAssert.Contains("356.436", pdf);
+        TestAssert.Contains("360.122", pdf);
     }
 
     public static void PptxSyntheticChartManualLayoutEdgeModesRender()
@@ -7267,7 +7268,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 1 1 rg", pdf);
-        TestAssert.Contains("104.256 259.56 247.68 191.16 re f", pdf);
+        TestAssert.Contains("88.589 271.958 267.034 188.05 re f", pdf);
+        TestAssert.DoesNotContain("104.256 259.56 247.68 191.16 re f", pdf);
         TestAssert.DoesNotContain("100.8 282.24 236.16 174.96 re f", pdf);
     }
 

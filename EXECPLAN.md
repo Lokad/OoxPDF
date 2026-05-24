@@ -4342,6 +4342,18 @@ rule instead of two competing approximations. The clustered-column visual manife
 label X positions are still about `48 pt` right of Office and category labels about `26 pt` low, so the
 public gate keeps a broad `50 pt` chart-text tolerance until the Office-PDF plot-box and axis-label placement
 rules replace the current fallback geometry.
+
+bar chart no-title plot-box Office rule / 2026-05-25:
+The same public clustered-column fixture has a 720 pt by 432 pt chart frame at `(72, 72)` and no visible chart
+title or legend. Office's observable PDF axis pair is `(113.45, 111.90)` to `(781.00, 488.01)`, which gives
+frame-relative ratios about `0.0576`, `0.0924`, `0.9272`, and `0.8706`. The no-title/no-legend bar chart
+fallback plot-box ratios now use those Office-PDF-observed values instead of the prior approximate overlay-only
+ratios. The public clustered-column gate tightened `AxisPairPlotBoxCandidate` bounds from `100 pt` to `1 pt`
+and chart tick-label positions from `50 pt` to `10 pt`, passing at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-012613`. Remaining gap: category-axis
+tick labels are still about `1.7 pt` below Office, and value-axis labels remain about `8.6 pt` right and
+`5.7 pt` below Office; those are now isolated text-box/baseline/width placement gaps rather than plot-box
+geometry drift.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

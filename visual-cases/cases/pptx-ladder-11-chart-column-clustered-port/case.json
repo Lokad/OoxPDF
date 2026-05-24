@@ -11,10 +11,10 @@
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 16.4,
     "maxChangedPixelRatioAtThreshold16": 0.220,
-    "maxChartGraphicsStructureBoundsDelta": 100,
+    "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 10,
     "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate"],
-    "maxChartTextStructurePositionDelta": 50,
+    "maxChartTextStructurePositionDelta": 10,
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]
   },
