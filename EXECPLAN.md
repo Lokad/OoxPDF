@@ -141,6 +141,11 @@ High-priority actions:
   baseline is just outside the clip. Public
   `pptx-ladder-04-typography-small-label-origin-probe` locks the Office/candidate text-op X delta at
   `0.03 pt`; vertical baseline parity remains open at about `1.27 pt`.
+- [x] Resolve the first small-label middle-anchor vertical delta structurally:
+  the vertical anchor estimator now uses the resolved font's OpenType typographic line box for default
+  line spacing instead of assuming a CSS `1.2x` line box for text-height centering. The public small-label
+  origin probe now locks Office/candidate text-op position within `0.35 pt`, with Y delta reduced from
+  `1.27 pt` to `0.27 pt`.
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
@@ -3030,8 +3035,13 @@ paths, and ExecPlan references together.
     private slide 17 from MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662` to MAE `2.880535`,
     changed16 `0.044913`, SSIM `0.920176` on run
     `artifacts/private-visual/lokad-value-based/20260524-201042`.
-  - [ ] Continue slide-17 typography with baseline/vertical anchoring: public small-label probe still has
-    candidate Y about `1.27 pt` above Office while X is aligned.
+  - [x] Continue slide-17 typography with baseline/vertical anchoring: default-line middle-anchor text-height
+    estimation now uses resolved OpenType typographic line boxes instead of a CSS fallback line box. Public
+    small-label text-op Y delta fell from `1.27 pt` to `0.27 pt`, and private run
+    `artifacts/private-visual/lokad-value-based/20260524-202138` improved slide 17 to MAE `2.876335`,
+    changed16 `0.044819`, SSIM `0.920246`.
+  - [ ] Continue residual slide-17 text parity from public PDF evidence: the small-label probe is now tightly
+    bounded, but remaining page drift still includes broader text metrics and non-label typography.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
@@ -3322,6 +3332,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   inset reduced the public text-op X delta to `0.03 pt` and improved private slide 17. Symmetric vertical
   ellipse insets worsened the public baseline, so vertical preset text-rectangle/baseline behavior remains
   open and must be solved from Office PDF evidence rather than a paired inset assumption.
+- Observation: The same slide-17 public small-label probe showed that vertical centering was overestimating
+  a one-line default-spaced label as a CSS `1.2x` line box.
+  Evidence: switching only the middle-anchor text-height estimator to the resolved font's OpenType
+  typographic line box reduced the public text-op Y delta from `1.27 pt` to `0.27 pt` and improved the
+  private deck/page metrics. Line layout advances remain unchanged; this is an anchoring estimate fix, not
+  a global line-height rewrite.
 - Observation: The historical private evidence block should not be aggressively trimmed without first
   preserving its facts elsewhere.
   Evidence: a local check on 2026-05-24 found that most older `artifacts/private-visual/lokad-value-based`
@@ -3379,9 +3395,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   gaps.
 - The latest slide-17 schema work resolved the connector-geometry portion of that private issue. Current
   page-aware PDF evidence keeps the next target on typography/text placement: text wrapping, inherited
-  paragraph indentation, and ellipse auto-shape horizontal text rectangles are now structurally modeled.
-  Slide 17 improved on run `20260524-201042`; remaining evidence points to vertical baseline/anchoring and
-  broader text metrics rather than connector geometry or paragraph margins.
+  paragraph indentation, ellipse auto-shape horizontal text rectangles, and font-metric middle anchoring are
+  now structurally modeled. Slide 17 improved on runs `20260524-201042` and `20260524-202138`; remaining
+  evidence points to broader text metrics rather than connector geometry, paragraph margins, or small-label
+  preset-shape origins.
 
 ## Concrete Steps
 
@@ -3429,16 +3446,16 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-201042: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.034585, changed16 0.116363, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
-Page 17: MAE 2.880535, changed16 0.044913, SSIM 0.920176.
+lokad-value-based / 20260524-202138: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.022766, changed16 0.116206, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
 ```
 
 Latest public small-label origin probe:
 
 ```text
-pptx-ladder-04-typography-small-label-origin-probe / 20260524-201013:
-MAE 0.011770, changed16 0.000109; PDF text-op X delta 0.03 pt, Y delta 1.27 pt.
+pptx-ladder-04-typography-small-label-origin-probe / 20260524-202124:
+MAE 0.005514, changed16 0.000073; PDF text-op X delta 0.03 pt, Y delta 0.27 pt.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -6003,7 +6003,7 @@ internal static class PptxTests
             .Distinct(StringComparer.Ordinal)
             .Count();
         TestAssert.True(lineBaselines == 1, $"Expected one rendered baseline for the table header; got {lineBaselines}. Matrices: {string.Join(" | ", matrices)}");
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 436\.231 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 75\.684 436\.065 Tm"), $"The centered table header should measure and render with the same table wrap width. Matrices: {string.Join(" | ", matrices)}");
     }
 
     public static void PptxSyntheticTableIgnoresLeadingEmptyCellParagraph()
@@ -6095,7 +6095,10 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 72 500\.337 Tm"), "Centered table-cell text should account for its line height before vertical anchoring.");
+        string[] matrices = Regex.Matches(pdf, @"1 0 0 1 [0-9.]+ [0-9.]+ Tm")
+            .Select(match => match.Value)
+            .ToArray();
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 72 499\.667 Tm"), $"Centered table-cell text should account for its line height before vertical anchoring. Matrices: {string.Join(" | ", matrices)}");
     }
 
     public static void PptxSyntheticTableMergedCellsSuppressInteriorGrid()

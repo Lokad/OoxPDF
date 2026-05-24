@@ -552,6 +552,8 @@ internal sealed partial class PptxRenderer
         public const double OfficeBaselineFallback = 0.974d;
         public const double MinimumBaselineMetricRatio = 0.75d;
         public const double MaximumBaselineMetricRatio = 1.05d;
+        public const double MinimumFontLineBoxMetricRatio = 0.75d;
+        public const double MaximumFontLineBoxMetricRatio = 1.5d;
         public const double LargeTextBaselineMinimumFontSize = 24d;
         public const double AbsoluteLineBaselineGapFallback = 0.374d;
         public const double ExplicitLineBaselineGapFallback = 0.234d;

@@ -2507,8 +2507,8 @@ internal sealed partial class PptxRenderer
                 if (ParagraphHasLayoutContent(paragraph))
                 {
                     XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                    height += ReadParagraphAdvance(lineSpacing, ReadFontSize(endRunProperties, defaultRunProperties));
                     double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
+                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, emptyFontSize, null, bold: false, italic: false, advanceEstimator);
                     height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", emptyFontSize);
                 }
 
@@ -2516,14 +2516,20 @@ internal sealed partial class PptxRenderer
             }
 
             double maxFontSize = 0d;
+            string? lineTypeface = null;
+            bool lineBold = false;
+            bool lineItalic = false;
             double lineWidth = 0d;
             bool hasLineContent = false;
             foreach (XElement child in paragraph.Elements())
             {
                 if (child.Name == DrawingNamespace + "br")
                 {
-                    height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
+                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
                     maxFontSize = 0d;
+                    lineTypeface = null;
+                    lineBold = false;
+                    lineItalic = false;
                     lineWidth = 0d;
                     hasLineContent = false;
                     continue;
@@ -2554,8 +2560,11 @@ internal sealed partial class PptxRenderer
                         lineWidth > PptxTextMetricRules.TextStateTolerance &&
                         lineWidth + advance > textWidth)
                     {
-                        height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
+                        height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
                         maxFontSize = fontSize;
+                        lineTypeface = typeface;
+                        lineBold = bold;
+                        lineItalic = italic;
                         lineWidth = 0d;
                         hasLineContent = false;
                     }
@@ -2565,7 +2574,13 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    maxFontSize = Math.Max(maxFontSize, fontSize);
+                    if (fontSize >= maxFontSize)
+                    {
+                        maxFontSize = fontSize;
+                        lineTypeface = typeface;
+                        lineBold = bold;
+                        lineItalic = italic;
+                    }
                     lineWidth += advance;
                     hasLineContent = true;
                 }
@@ -2573,13 +2588,43 @@ internal sealed partial class PptxRenderer
 
             if (hasLineContent || maxFontSize > PptxTextMetricRules.TextStateTolerance)
             {
-                height += ReadLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize));
+                height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
             }
 
             height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", paragraphFontSize);
         }
 
         return height;
+    }
+
+    private static double ReadEstimatedAnchorLineAdvance(
+        LineSpacing lineSpacing,
+        double fontSize,
+        string? typeface,
+        bool bold,
+        bool italic,
+        TextAdvanceEstimator advanceEstimator)
+    {
+        if (lineSpacing.IsExplicit)
+        {
+            return ReadLineAdvance(lineSpacing, fontSize);
+        }
+
+        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(typeface, bold, italic);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return ReadLineAdvance(lineSpacing, fontSize);
+        }
+
+        double metricUnits = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
+        double metricRatio = metricUnits / font.UnitsPerEm;
+        if (metricRatio <= PptxTextMetricRules.MinimumFontLineBoxMetricRatio ||
+            metricRatio > PptxTextMetricRules.MaximumFontLineBoxMetricRatio)
+        {
+            return ReadLineAdvance(lineSpacing, fontSize);
+        }
+
+        return fontSize * metricRatio;
     }
 
 }
