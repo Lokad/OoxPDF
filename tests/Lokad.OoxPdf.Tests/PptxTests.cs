@@ -240,15 +240,34 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
 
         PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSnapshot sceneSnapshot = PptxRenderer.InspectScene(document, package);
 
         TestAssert.Equal(1, scene.Slides.Count);
+        TestAssert.Equal(1, sceneSnapshot.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
+        PptxSceneSlideSnapshot slideSnapshot = sceneSnapshot.Slides[0];
         TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
+        TestAssert.True(slideSnapshot.HasSlideBackground, "Expected scene inspection to expose slide background ownership.");
         TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);
         TestAssert.Equal(0.8d, slide.SlideBackground.Alpha);
         TestAssert.Equal(1, slide.MasterNodes.Count);
         TestAssert.Equal(3, slide.LayoutNodes.Count);
         TestAssert.Equal(6, slide.SlideNodes.Count);
+        TestAssert.Equal(1, slideSnapshot.MasterNodes.Count);
+        TestAssert.Equal(3, slideSnapshot.LayoutNodes.Count);
+        TestAssert.Equal(6, slideSnapshot.SlideNodes.Count);
+        TestAssert.Equal("Shape", slideSnapshot.SlideNodes[0].Kind);
+        TestAssert.True(slideSnapshot.SlideNodes[0].HasTextBody, "Expected private-safe scene inspection to expose text-body ownership without text content.");
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[0].TextParagraphCount);
+        TestAssert.Equal(3, slideSnapshot.SlideNodes[0].TextRunCount);
+        TestAssert.Equal("Table", slideSnapshot.SlideNodes[2].Kind);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[2].TableRowCount);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableCellCount);
+        TestAssert.Equal("Chart", slideSnapshot.SlideNodes[4].Kind);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartPlotCount);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartAxisCount);
+        TestAssert.Equal("Group", slideSnapshot.SlideNodes[5].Kind);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[5].Children.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
         TestAssert.Equal("rect", slide.SlideNodes[0].Shape?.Preset ?? string.Empty);
         TestAssert.True(slide.SlideNodes[0].Shape?.HasCustomGeometry == false, "Expected preset geometry in the scene model.");
@@ -4316,8 +4335,72 @@ internal static class PptxTests
         PptxTextFlowSnapshot flow = PptxRenderer.InspectTextFlow(document, package, slideIndex);
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, slideIndex).ToArray();
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, slideIndex);
+        PptxSceneSnapshot scene = PptxRenderer.InspectScene(document, package);
+        PptxSceneSlideSnapshot? sceneSlide = scene.Slides.FirstOrDefault(slide => slide.Index == slideIndex + 1);
 
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+        object[] FlattenSceneNodes(IReadOnlyList<PptxSceneNodeSnapshot> nodes, string source)
+        {
+            return nodes
+                .SelectMany(node => FlattenSceneNode(node, source))
+                .ToArray();
+        }
+
+        IEnumerable<object> FlattenSceneNode(PptxSceneNodeSnapshot node, string source)
+        {
+            yield return new
+            {
+                source,
+                node.Kind,
+                node.IsPlaceholder,
+                node.HasBounds,
+                node.RotationDegrees,
+                node.FlipHorizontal,
+                node.FlipVertical,
+                node.ShapePreset,
+                node.HasTextBody,
+                node.TextParagraphCount,
+                node.TextRunCount,
+                node.HasPicture,
+                node.PictureRecolorKind,
+                node.HasTable,
+                node.TableRowCount,
+                node.TableCellCount,
+                node.HasChart,
+                node.ChartPlotCount,
+                node.ChartAxisCount,
+                node.HasGroupTransform
+            };
+
+            foreach (PptxSceneNodeSnapshot child in node.Children)
+            {
+                foreach (object descendant in FlattenSceneNode(child, source))
+                {
+                    yield return descendant;
+                }
+            }
+        }
+
+        object? sceneSummary = sceneSlide is null
+            ? null
+            : new
+            {
+                sceneSlide.Index,
+                sceneSlide.PartName,
+                sceneSlide.MasterPartName,
+                sceneSlide.LayoutPartName,
+                sceneSlide.HasMasterBackground,
+                sceneSlide.HasLayoutBackground,
+                sceneSlide.HasSlideBackground,
+                masterNodeCount = sceneSlide.MasterNodes.Count,
+                layoutNodeCount = sceneSlide.LayoutNodes.Count,
+                slideNodeCount = sceneSlide.SlideNodes.Count,
+                nodes = FlattenSceneNodes(sceneSlide.MasterNodes, "master")
+                    .Concat(FlattenSceneNodes(sceneSlide.LayoutNodes, "layout"))
+                    .Concat(FlattenSceneNodes(sceneSlide.SlideNodes, "slide"))
+                    .ToArray()
+            };
+
         var frames = layout.Frames.Select((frame, frameIndex) => new
         {
             frameIndex,
@@ -4441,6 +4524,7 @@ internal static class PptxTests
             input = Path.GetFileName(input),
             slideIndex,
             frameCount = layout.Frames.Count,
+            scene = sceneSummary,
             glyphRuns = glyphRuns.Select(run => new
             {
                 length = run.Text.Length,

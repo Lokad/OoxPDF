@@ -6,6 +6,43 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed record PptxScene(PptxDocument Document, PptxTheme Theme, IReadOnlyList<PptxSceneSlide> Slides);
 
+internal sealed record PptxSceneSnapshot(IReadOnlyList<PptxSceneSlideSnapshot> Slides);
+
+internal sealed record PptxSceneSlideSnapshot(
+    int Index,
+    string PartName,
+    string? MasterPartName,
+    string? LayoutPartName,
+    bool HasMasterBackground,
+    bool HasLayoutBackground,
+    bool HasSlideBackground,
+    IReadOnlyList<PptxSceneNodeSnapshot> MasterNodes,
+    IReadOnlyList<PptxSceneNodeSnapshot> LayoutNodes,
+    IReadOnlyList<PptxSceneNodeSnapshot> SlideNodes);
+
+internal sealed record PptxSceneNodeSnapshot(
+    string Kind,
+    bool IsPlaceholder,
+    bool HasBounds,
+    double RotationDegrees,
+    bool FlipHorizontal,
+    bool FlipVertical,
+    bool HasShape,
+    string ShapePreset,
+    bool HasTextBody,
+    int TextParagraphCount,
+    int TextRunCount,
+    bool HasPicture,
+    string PictureRecolorKind,
+    bool HasTable,
+    int TableRowCount,
+    int TableCellCount,
+    bool HasChart,
+    int ChartPlotCount,
+    int ChartAxisCount,
+    bool HasGroupTransform,
+    IReadOnlyList<PptxSceneNodeSnapshot> Children);
+
 internal sealed record PptxTextRunSnapshot(
     string Text,
     double X,

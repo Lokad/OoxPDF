@@ -509,6 +509,11 @@ High-priority actions:
   context-lifetime model and reducing repeated parsing for large decks.
 - [x] Move PPTX shape/preset rendering, arrowheads, dash/cap/join handling, picture-fill clipping, group
   transforms, and shape theme fill/line lookup into the shape renderer partial.
+- [x] Add private-safe PPTX scene inspection snapshots:
+  `PptxRenderer.InspectScene` now exposes slide/master/layout node counts, node kinds, transform flags,
+  text-body paragraph/run counts, picture/table/chart ownership, and group children without exposing text
+  content. The private-safe layout diagnostic now includes these scene counts so future slide-level schema
+  work can distinguish typed-model coverage gaps from text-layout/PDF-emission gaps.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
@@ -3117,8 +3122,15 @@ paths, and ExecPlan references together.
     small-label text-op Y delta fell from `1.27 pt` to `0.27 pt`, and private run
     `artifacts/private-visual/lokad-value-based/20260524-202138` improved slide 17 to MAE `2.876335`,
     changed16 `0.044819`, SSIM `0.920246`.
+  - [x] Add private-safe scene-schema diagnostics for slide 17. The 2026-05-24 diagnostic reports 5 master
+    nodes, 4 layout nodes, and 14 top-level slide nodes; flattened scene nodes include 4 slide connectors,
+    1 slide group, 3 slide pictures, 8 slide shapes, 17 text-body nodes, 31 text paragraphs, 76 text runs,
+    4 flipped nodes, 1 rotated node, no tables, and no charts. This corrects the next investigation target:
+    slide 17 is not only a typography case; it still includes connector/group/picture transform structure
+    that must remain observable while residual text parity is improved.
   - [ ] Continue residual slide-17 text parity from public PDF evidence: the small-label probe is now tightly
-    bounded, but remaining page drift still includes broader text metrics and non-label typography.
+    bounded, but remaining page drift still includes broader text metrics, non-label typography, and the
+    typed scene structure now exposed by the private-safe diagnostic.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
@@ -3460,6 +3472,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   point into multiple emitted resources while preserving decoded glyph order. The next refinement should make
   script-aware fallback preference explicit and compare it against Office PDFs before treating accented/CJK
   grouping as locked.
+- Observation: The previous slide-17 private inventory was too coarse for schema work.
+  Evidence: the new private-safe scene snapshot for slide 17 reports top-level slide connectors, a group,
+  pictures, and flattened shape/text counts that were not explicit in the older inventory summary. Future
+  slide-17 work should use scene snapshots plus PDF text-operation evidence before concluding that a remaining
+  difference is purely typography.
 
 ## Decision Log
 
@@ -3544,7 +3561,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-195 passed, 0 failed, 0 skipped
+196 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -3592,6 +3609,11 @@ passed with 66 passed, 0 failed, 2 skipped after adding per-glyph fallback font 
 typeface/resource snapshots to glyph-run inspection.
 Non-slow tests passed with 189 passed, 0 failed, 7 skipped; package build succeeded; full tests passed with
 196 passed, 0 failed, 0 skipped.
+
+scene-inspection slice / 2026-05-24:
+`PptxSceneBuilderBuildsResolvedNodeLists` passed after adding private-safe scene snapshots; non-slow tests
+passed with 189 passed, 0 failed, 7 skipped; `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off
+--nologo -v minimal --no-restore` succeeded; full tests passed with 196 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
