@@ -831,6 +831,12 @@ High-priority actions:
   explicit deletion to hidden axes, preserving existing output while preventing the scene model from erasing
   OOXML schema intent before later Office-alignment work. Focused scene tests passed, the full runner passed
   204/204, and `dotnet pack` succeeded.
+- [x] 2026-05-25: Preserve chart title and legend boolean source presence.
+  `PptxSceneChartTitle.IsAutoDeleted` now keeps missing `c:autoTitleDeleted` distinct from explicit false,
+  and `PptxSceneChartLegend` now separates legend element presence from nullable `c:delete` metadata. The
+  renderer still treats only explicit title auto-delete and legend delete as hidden, preserving current output
+  while retaining the OOXML state needed for later Office-aligned title/legend layout decisions. Focused
+  scene tests passed, the full runner passed 204/204, and `dotnet pack` succeeded.
 - [x] 2026-05-24: Move chart data-label value/percent flags into `PptxSceneChartPlot.DataLabels` and make
   bar, line, pie, and doughnut data-label rendering consume the typed scene options before raw XML fallback.
   This preserves the existing plot-level then first-series `c:dLbls` precedence while removing another

@@ -518,7 +518,7 @@ internal sealed record PptxSceneChartAxis(
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
-    bool IsAutoDeleted,
+    bool? IsAutoDeleted,
     bool? Overlay,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
@@ -527,7 +527,8 @@ internal sealed record PptxSceneChartTitle(
 internal sealed record PptxSceneChartLegend(
     string Position,
     bool? Overlay,
-    bool IsVisible,
+    bool IsDefined,
+    bool? IsDeleted,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextStyleOverride TextStyle);
@@ -1619,14 +1620,14 @@ internal sealed class PptxSceneBuilder
             .FirstOrDefault();
         if (chart is null)
         {
-            return EmptyChartTitle(IsAutoDeleted: false);
+            return EmptyChartTitle(IsAutoDeleted: null);
         }
 
-        bool isAutoDeleted = IsOoxmlBooleanElementEnabled(chart.Element(ChartNamespace + "autoTitleDeleted"));
+        bool? isAutoDeleted = ReadOptionalOoxmlBooleanElement(chart, "autoTitleDeleted");
         return ReadChartTitleElement(chart.Element(ChartNamespace + "title"), theme, isAutoDeleted);
     }
 
-    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool isAutoDeleted = false)
+    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool? isAutoDeleted = null)
     {
         if (title is null)
         {
@@ -1653,7 +1654,7 @@ internal sealed class PptxSceneBuilder
             ReadChartTextStyleOverride(title, theme));
     }
 
-    private static PptxSceneChartTitle EmptyChartTitle(bool IsAutoDeleted)
+    private static PptxSceneChartTitle EmptyChartTitle(bool? IsAutoDeleted)
     {
         return new PptxSceneChartTitle(
             null,
@@ -1674,7 +1675,8 @@ internal sealed class PptxSceneBuilder
             return new PptxSceneChartLegend(
                 "r",
                 Overlay: null,
-                IsVisible: false,
+                IsDefined: false,
+                IsDeleted: null,
                 default,
                 new PptxSceneChartShapeStyle(false, default, default, default),
                 default);
@@ -1683,7 +1685,8 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneChartLegend(
             (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
             ReadOptionalOoxmlBooleanElement(legend, "overlay"),
-            !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")),
+            IsDefined: true,
+            ReadOptionalOoxmlBooleanElement(legend, "delete"),
             ReadChartManualLayout(legend),
             ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme),
             ReadChartTextStyleOverride(legend, theme));

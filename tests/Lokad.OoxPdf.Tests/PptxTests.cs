@@ -532,6 +532,7 @@ internal static class PptxTests
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Axes[1].Title.Layout.Height ?? 0d);
         TestAssert.Equal(new RgbColor(221, 238, 255), slide.SlideNodes[4].Chart?.Axes[1].Title.ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Title.IsAutoDeleted is null, "Expected missing chart auto-title-delete metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.Overlay == true, "Expected chart title overlay flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.Layout.HasLayout == true, "Expected chart title manual layout in the scene model.");
         TestAssert.Equal(0.08d, slide.SlideNodes[4].Chart?.Title.Layout.X ?? 0d);
@@ -548,6 +549,8 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Bold == true, "Expected chart title bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Italic == false, "Expected explicit chart title italic disable in the scene model.");
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDefined == true, "Expected chart legend presence in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDeleted is null, "Expected missing chart legend delete metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Layout.HasLayout == true, "Expected chart legend manual layout in the scene model.");
         TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Legend.Layout.X ?? 0d);

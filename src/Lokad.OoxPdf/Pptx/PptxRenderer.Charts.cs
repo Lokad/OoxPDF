@@ -1172,7 +1172,7 @@ internal sealed partial class PptxRenderer
     {
         if (sceneChart is not null)
         {
-            if (sceneChart.Title.IsAutoDeleted)
+            if (sceneChart.Title.IsAutoDeleted == true)
             {
                 return null;
             }
@@ -1338,7 +1338,7 @@ internal sealed partial class PptxRenderer
             return ReadChartLegendLayout(chartXml);
         }
 
-        return sceneChart.Legend.IsVisible
+        return sceneChart.Legend.IsDefined && sceneChart.Legend.IsDeleted != true
             ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true)
             : ChartLegendLayout.Hidden;
     }
