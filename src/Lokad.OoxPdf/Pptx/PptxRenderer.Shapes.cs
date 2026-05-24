@@ -221,14 +221,28 @@ internal sealed partial class PptxRenderer
         {
             hasStroke = TryReadShapeLine(shape, shapeProperties, theme, out stroke, out lineWidth, out strokeAlpha);
         }
-        bool hasDash = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern);
-        int? lineCap = ReadLineCap(shapeProperties) switch
+        bool hasDash;
+        IReadOnlyList<double> dashPattern;
+        int? lineCap;
+        int? lineJoin;
+        if (lineOverride is { HasLine: true } resolvedLine)
+        {
+            hasDash = resolvedLine.HasDash;
+            dashPattern = resolvedLine.DashPattern;
+            lineCap = resolvedLine.Cap;
+            lineJoin = resolvedLine.Join;
+        }
+        else
+        {
+            hasDash = TryReadPresetDash(shapeProperties, lineWidth, out dashPattern);
+            lineCap = ReadLineCap(shapeProperties) switch
         {
             "rnd" => 1,
             "sq" => 2,
             _ => null
         };
-        int? lineJoin = ReadLineJoin(shapeProperties);
+            lineJoin = ReadLineJoin(shapeProperties);
+        }
         bool hasPictureFill = TryReadShapePictureFill(
             shapeProperties,
             relationships,
@@ -1643,7 +1657,7 @@ internal sealed partial class PptxRenderer
 
     private static LineStyle ToLineStyle(PptxSceneLineStyle line)
     {
-        return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha);
+        return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha, line.DashPattern ?? [], line.Cap, line.Join);
     }
 
     private static LineEndKind ReadLineEndKind(string? type)

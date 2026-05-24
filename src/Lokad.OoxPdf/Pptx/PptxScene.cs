@@ -185,7 +185,13 @@ internal readonly record struct PptxSceneLineStyle(
     bool HasLine,
     RgbColor Color,
     double Width,
-    double Alpha);
+    double Alpha,
+    IReadOnlyList<double> DashPattern,
+    int? Cap,
+    int? Join)
+{
+    public bool HasDash => DashPattern is { Count: > 0 };
+}
 
 internal enum PptxSceneLineEndKind
 {
@@ -342,6 +348,7 @@ internal sealed class PptxSceneBuilder
     private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private const double MinimumStrokeWidth = 0.1d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
@@ -548,7 +555,19 @@ internal sealed class PptxSceneBuilder
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
         PptxSceneLineStyle line = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
-            ? new PptxSceneLineStyle(true, lineColor, lineWidth, lineAlpha)
+            ? new PptxSceneLineStyle(
+                true,
+                lineColor,
+                lineWidth,
+                lineAlpha,
+                TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                ReadLineCap(shapeProperties) switch
+                {
+                    "rnd" => 1,
+                    "sq" => 2,
+                    _ => null
+                },
+                ReadLineJoin(shapeProperties))
             : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
@@ -598,6 +617,54 @@ internal sealed class PptxSceneBuilder
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
         return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
+    }
+
+    private static bool TryReadPresetDash(XElement? shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
+    {
+        string? presetDash = (string?)shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + "prstDash")
+            ?.Attribute("val");
+        double w = Math.Max(lineWidth, MinimumStrokeWidth);
+        dashPattern = presetDash switch
+        {
+            "dot" or "sysDot" => [w, w * 2d],
+            "dash" or "sysDash" => [w * 4d, w * 3d],
+            "lgDash" => [w * 8d, w * 3d],
+            "dashDot" or "sysDashDot" => [w * 4d, w * 3d, w, w * 3d],
+            "lgDashDot" => [w * 8d, w * 3d, w, w * 3d],
+            "lgDashDotDot" or "sysDashDotDot" => [w * 8d, w * 3d, w, w * 3d, w, w * 3d],
+            _ => []
+        };
+        return dashPattern.Count > 0;
+    }
+
+    private static string? ReadLineCap(XElement? shapeProperties)
+    {
+        return (string?)shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Attribute("cap");
+    }
+
+    private static int? ReadLineJoin(XElement? shapeProperties)
+    {
+        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "round") is not null)
+        {
+            return 1;
+        }
+
+        if (line?.Element(DrawingNamespace + "bevel") is not null)
+        {
+            return 2;
+        }
+
+        if (line?.Element(DrawingNamespace + "miter") is not null)
+        {
+            return 0;
+        }
+
+        return null;
     }
 
     private static string ReadShapePreset(XElement? shapeProperties)
