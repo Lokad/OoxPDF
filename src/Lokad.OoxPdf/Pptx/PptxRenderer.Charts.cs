@@ -171,6 +171,30 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault();
     }
 
+    private static PptxSceneChartAxis? ReadSceneChartAxis(PptxSceneChart? chart, PptxSceneChartPlot? plot, string kind)
+    {
+        if (chart is null)
+        {
+            return null;
+        }
+
+        if (plot is not null && plot.AxisIds.Count != 0)
+        {
+            foreach (string axisId in plot.AxisIds)
+            {
+                PptxSceneChartAxis? axis = chart.Axes.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
+                    string.Equals(candidate.Kind, kind, StringComparison.Ordinal));
+                if (axis is not null)
+                {
+                    return axis;
+                }
+            }
+        }
+
+        return chart.Axes.FirstOrDefault(axis => string.Equals(axis.Kind, kind, StringComparison.Ordinal));
+    }
+
     private static string ReadSceneOrXmlChartValue(string? sceneValue, XElement element, string childName, string defaultValue = "")
     {
         return !string.IsNullOrEmpty(sceneValue)
@@ -404,8 +428,9 @@ internal sealed partial class PptxRenderer
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
-                ChartValueExtents valueExtents = ReadChartValueAxisExtents(valueAxis, GetBarChartValueExtents(barSeries, grouping));
-                ChartAxisUnits axisUnits = ReadChartValueAxisUnits(valueAxis);
+                PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeries, grouping));
+                ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
                 bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
@@ -413,7 +438,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
@@ -432,8 +457,9 @@ internal sealed partial class PptxRenderer
                     string extraGrouping = ReadSceneOrXmlChartValue(extraBarPlot?.Grouping, extraBarChart, "grouping", "clustered");
                     bool extraHorizontalBars = string.Equals(ReadSceneOrXmlChartValue(extraBarPlot?.BarDirection, extraBarChart, "barDir"), "bar", StringComparison.Ordinal);
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
-                    ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
-                    ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
+                    PptxSceneChartAxis? extraValueSceneAxis = ReadSceneChartAxis(sceneChart, extraBarPlot, "valAx");
+                    ChartValueExtents extraValueExtents = ReadSceneOrXmlChartValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
+                    ChartAxisUnits extraAxisUnits = ReadSceneOrXmlChartValueAxisUnits(extraValueSceneAxis, extraValueAxis);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme);
@@ -522,19 +548,21 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(linePlot, lineChart);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
-                ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetLineChartValueExtents(lineSeries));
-                ChartAxisUnits axisUnits = ReadChartValueAxisUnits(chartXml);
+                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
+                XElement? valueAxisForScale = valueAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+                PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries));
+                ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, HasMajorGridlines(chartXml), HasMinorGridlines(chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits);
+                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsChartAxisLabelVisible(categoryAxis))
                 {
                     fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadSceneOrXmlCategoryLabels(linePlot, lineChart), horizontalBars: false));
                 }
 
-                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
                 if (axesStyle.ValueAxisVisible && IsChartAxisLabelVisible(valueAxis))
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueExtents, axisUnits, horizontalBars: false));
@@ -824,6 +852,25 @@ internal sealed partial class PptxRenderer
             : fallback;
     }
 
+    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback)
+    {
+        if (axis is null)
+        {
+            return ReadChartValueAxisExtents(valueAxis, fallback);
+        }
+
+        if (!axis.HasScaling)
+        {
+            return fallback;
+        }
+
+        double min = axis.Minimum ?? fallback.Min;
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, fallback.Min);
+        return max > min
+            ? new ChartValueExtents(min, max)
+            : fallback;
+    }
+
     private static double? ReadAxisScalingValue(XElement scaling, string elementName)
     {
         string? value = (string?)scaling.Element(ChartNamespace + elementName)?.Attribute("val");
@@ -849,6 +896,13 @@ internal sealed partial class PptxRenderer
         return new ChartAxisUnits(
             ReadAxisUnitValue(valueAxis, "majorUnit"),
             ReadAxisUnitValue(valueAxis, "minorUnit"));
+    }
+
+    private static ChartAxisUnits ReadSceneOrXmlChartValueAxisUnits(PptxSceneChartAxis? axis, XElement? valueAxis)
+    {
+        return axis is null
+            ? ReadChartValueAxisUnits(valueAxis)
+            : new ChartAxisUnits(axis.MajorUnit, axis.MinorUnit);
     }
 
     private static double? ReadAxisUnitValue(XElement valueAxis, string elementName)
@@ -2069,6 +2123,16 @@ internal sealed partial class PptxRenderer
         return chartXml
             .Descendants(ChartNamespace + "minorGridlines")
             .Any(IsChartGridlineVisible);
+    }
+
+    private static bool ReadSceneOrXmlMajorGridlines(PptxSceneChartAxis? axis, XDocument chartXml)
+    {
+        return axis?.HasMajorGridlines ?? HasMajorGridlines(chartXml);
+    }
+
+    private static bool ReadSceneOrXmlMinorGridlines(PptxSceneChartAxis? axis, XDocument chartXml)
+    {
+        return axis?.HasMinorGridlines ?? HasMinorGridlines(chartXml);
     }
 
     private static bool IsChartGridlineVisible(XElement gridlines)

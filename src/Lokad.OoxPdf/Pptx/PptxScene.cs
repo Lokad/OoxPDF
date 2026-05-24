@@ -370,7 +370,14 @@ internal sealed record PptxSceneChartAxis(
     string Id,
     string Kind,
     string Position,
-    bool IsDeleted);
+    bool IsDeleted,
+    bool HasScaling,
+    double? Minimum,
+    double? Maximum,
+    double? MajorUnit,
+    double? MinorUnit,
+    bool HasMajorGridlines,
+    bool HasMinorGridlines);
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
@@ -1170,10 +1177,44 @@ internal sealed class PptxSceneBuilder
                 id,
                 axis.Name.LocalName,
                 (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty,
-                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"))));
+                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete")),
+                axis.Element(ChartNamespace + "scaling") is not null,
+                ReadChartAxisScalingValue(axis, "min"),
+                ReadChartAxisScalingValue(axis, "max"),
+                ReadChartAxisUnitValue(axis, "majorUnit"),
+                ReadChartAxisUnitValue(axis, "minorUnit"),
+                IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
+                IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines"))));
         }
 
         return axes;
+    }
+
+    private static double? ReadChartAxisScalingValue(XElement axis, string elementName)
+    {
+        string? value = (string?)axis
+            .Element(ChartNamespace + "scaling")
+            ?.Element(ChartNamespace + elementName)
+            ?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
+    }
+
+    private static double? ReadChartAxisUnitValue(XElement axis, string elementName)
+    {
+        string? value = (string?)axis.Element(ChartNamespace + elementName)?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
+            ? parsed
+            : null;
+    }
+
+    private static bool IsChartGridlineVisible(XElement? gridlines)
+    {
+        XElement? line = gridlines?
+            .Element(ChartNamespace + "spPr")
+            ?.Element(DrawingNamespace + "ln");
+        return gridlines is not null && line?.Element(DrawingNamespace + "noFill") is null;
     }
 
     private static PptxSceneChartTitle ReadChartTitle(XDocument? chartXml)

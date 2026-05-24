@@ -630,6 +630,15 @@ High-priority actions:
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
   and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`,
   changed16 `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Extend `PptxSceneChartAxis` beyond the initial id/kind catalog to preserve value-axis
+  scaling, major/minor units, and major/minor gridline visibility. Bar and line chart rendering now consumes
+  those scene axis records first for value extents, tick/gridline units, and gridline visibility while
+  preserving XML fallback for legacy/raw chart paths and richer label formatting. Focused model/chart tests
+  passed, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-152728` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -731,6 +740,8 @@ High-priority actions:
     without repeated loose descendant scans.
   - [x] Add the first typed chart-axis catalog: `PptxSceneChart.Axes` records OOXML axis kind, id, position,
     and delete state so plot-to-axis binding can become structural instead of repeatedly searching raw XML.
+  - [x] Extend the chart-axis scene model with value-axis scaling, major/minor units, and gridline
+    visibility, and consume those records first in bar/line chart rendering.
   - [x] Add typed explicit chart title and legend metadata to `PptxSceneChart`; this keeps OOXML title/legend
     state distinct from renderer fallback heuristics and prepares title/legend layout to become scene-driven.
   - [x] Add the first typed chart-series summaries to `PptxSceneChart.Plots`: series names, cached numeric
@@ -2803,9 +2814,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
    chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
    chart plot attributes, chart series summaries including scatter/bubble data channels, chart series and
-   point styles, chart axis catalogs, titles, and legends, while `PptxRenderContext` owns package, theme,
-   inheritance, relationships,
-   image cache, and diagnostics. Keep retiring XML fallbacks family by family: next slices should promote
+   point styles, chart axis catalogs with scaling/units/gridlines, titles, and legends, while
+   `PptxRenderContext` owns package, theme, inheritance, relationships, image cache, and diagnostics. Keep
+   retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
    models while preserving source XML only as an escape hatch for unported features.
 3. Systematically retire heuristics. When a magic constant, special-case branch, or private-slide coordinate

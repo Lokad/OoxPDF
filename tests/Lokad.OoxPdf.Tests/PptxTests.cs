@@ -165,7 +165,7 @@ internal static class PptxTests
                     </c:ser>
                   </c:bubbleChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/></c:catAx>
-                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/></c:valAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines/><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
                   </c:chart>
@@ -351,6 +351,13 @@ internal static class PptxTests
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasScaling == true, "Expected chart axis scaling ownership in the scene model.");
+        TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].Minimum ?? -1d);
+        TestAssert.Equal(20d, slide.SlideNodes[4].Chart?.Axes[1].Maximum ?? 0d);
+        TestAssert.Equal(5d, slide.SlideNodes[4].Chart?.Axes[1].MajorUnit ?? 0d);
+        TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Axes[1].MinorUnit ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMajorGridlines == true, "Expected chart major gridline visibility in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMinorGridlines == false, "Expected hidden chart minor gridline visibility in the scene model.");
         TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
