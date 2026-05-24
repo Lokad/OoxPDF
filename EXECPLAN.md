@@ -3961,6 +3961,14 @@ mode and optional-value handling: 84/84 compared pages, zero dimension mismatche
 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained at MAE `2.880739`, RMSE `19.298084`,
 changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, foreground histogram correlation `0.999858`, with
 matching dimensions.
+
+bar chart default plot-box metric ownership / 2026-05-24:
+Bar-chart default plot-box ratios for the no-title/no-legend case and the title/legend-reserved case now live
+under `PptxChartMetricRules`, and the remaining line data-label height literal reuses the cartesian data-label
+height rule. This is behavior-neutral ownership: the ratios remain fallback defaults until replaced by
+Office/PDF-observed chart layout behavior. The `pptx-charts` non-slow group passed with 8 passed, 0 failed,
+0 skipped; the `pptx-model` non-slow group passed with 13 passed, 0 failed, 1 skipped; the full suite passed with
+204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

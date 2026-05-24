@@ -1638,7 +1638,7 @@ internal sealed partial class PptxRenderer
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                 double fontSize = style.FontSize;
-                double labelHeight = fontSize * 1.35d;
+                double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 string label = FormatCartesianDataLabel(values[i], seriesIndex, i, effectiveOptions, categoryLabels, seriesNames);
                 if (!string.IsNullOrEmpty(label))
                 {
@@ -3069,18 +3069,18 @@ internal sealed partial class PptxRenderer
         if (!hasTitle && !hasLegend)
         {
             defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * 0.112d,
-                frame.Y + frame.Height * 0.035d,
-                frame.Width * 0.86d,
-                frame.Height * 0.885d);
+                frame.X + frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxXRatio,
+                frame.Y + frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxYRatio,
+                frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxWidthRatio,
+                frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxHeightRatio);
         }
         else
         {
             defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * 0.1d,
-                frame.Y + frame.Height * 0.14d,
-                frame.Width * 0.82d,
-                frame.Height * 0.81d);
+                frame.X + frame.Width * PptxChartMetricRules.BarDefaultPlotBoxXRatio,
+                frame.Y + frame.Height * PptxChartMetricRules.BarDefaultPlotBoxYRatio,
+                frame.Width * PptxChartMetricRules.BarDefaultPlotBoxWidthRatio,
+                frame.Height * PptxChartMetricRules.BarDefaultPlotBoxHeightRatio);
         }
 
         return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
