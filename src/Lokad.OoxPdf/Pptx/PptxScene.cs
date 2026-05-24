@@ -381,7 +381,9 @@ internal sealed record PptxSceneChartShapeStyle(
 internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
     double? FontSize,
-    RgbColor? Color);
+    RgbColor? Color,
+    bool? Bold,
+    bool? Italic);
 
 internal readonly record struct PptxSceneChartManualLayout(
     bool HasLayout,
@@ -1028,7 +1030,7 @@ internal sealed class PptxSceneBuilder
                 Position: string.Empty,
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
-                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null),
+                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null),
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default),
                 Overrides: [],
                 IsDefined: false)
@@ -1391,7 +1393,9 @@ internal sealed class PptxSceneBuilder
         RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out _)
             ? parsedColor
             : null;
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color);
+        bool? bold = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
+        bool? italic = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
     }
 
     private static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
@@ -1563,6 +1567,18 @@ internal sealed class PptxSceneBuilder
         return value is null ||
             value == "1" ||
             value.Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool? ReadOptionalOoxmlBooleanAttribute(XElement element, string attributeName)
+    {
+        XAttribute? attribute = element.Attribute(attributeName);
+        if (attribute is null)
+        {
+            return null;
+        }
+
+        return attribute.Value == "1" ||
+            attribute.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)

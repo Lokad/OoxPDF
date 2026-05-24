@@ -136,7 +136,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
-                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
                   <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:noFill/><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
@@ -145,7 +145,7 @@ internal static class PptxTests
                     <c:varyColors val="0"/>
                     <c:gapWidth val="175"/>
                     <c:overlap val="25"/>
-                    <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showLeaderLines val="1"/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName val="1"/><c:dLblPos val="ctr"/><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showLeaderLines val="1"/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName val="1"/><c:dLblPos val="ctr"/><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                     <c:ser>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:dLblPos val="t"/><c:separator> + </c:separator></c:dLbls>
@@ -169,7 +169,7 @@ internal static class PptxTests
                     </c:ser>
                   </c:bubbleChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
-                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
                   </c:chart>
@@ -320,6 +320,8 @@ internal static class PptxTests
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(16, 17, 18), slide.SlideNodes[4].Chart?.TextStyle.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Bold == true, "Expected chart-level default run bold style in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Italic == true, "Expected chart-level default run italic style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaLayout.HasLayout == true, "Expected chart plot-area manual layout in the scene model.");
         TestAssert.Equal(0.12d, slide.SlideNodes[4].Chart?.PlotAreaLayout.X ?? 0d);
         TestAssert.Equal(0.18d, slide.SlideNodes[4].Chart?.PlotAreaLayout.Y ?? 0d);
@@ -363,6 +365,8 @@ internal static class PptxTests
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(10d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(10, 11, 12), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Bold == true, "Expected plot-level data-label bold style in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Italic == false, "Expected explicit plot-level data-label italic disable in the scene model.");
         TestAssert.Equal(new RgbColor(255, 234, 204), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Line.Color ?? default);
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShapeStyle.Line.Width ?? 0d);
@@ -377,6 +381,8 @@ internal static class PptxTests
         TestAssert.Equal("Calibri", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(9d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(51, 68, 85), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Bold == false, "Expected explicit per-label bold disable in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Italic == true, "Expected per-label italic style in the scene model.");
         TestAssert.Equal(new RgbColor(204, 238, 255), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.IsDefined == true, "Expected series-level data-label options to be preserved separately from plot-level labels.");
@@ -439,6 +445,8 @@ internal static class PptxTests
         TestAssert.Equal("Aptos", slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(9d, slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(101, 67, 33), slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Bold == true, "Expected axis bold style in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Italic == true, "Expected axis italic style in the scene model.");
         TestAssert.Equal("high", slide.SlideNodes[4].Chart?.Axes[1].TickLabelPosition ?? string.Empty);
         TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
         TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);
@@ -6324,7 +6332,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>3</c:v></c:pt>
                       <c:pt idx="1"><c:v>2</c:v></c:pt>
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:dLblPos val="t"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"><a:solidFill><a:srgbClr val="0066AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:dLblPos val="t"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800" b="1" i="1"><a:solidFill><a:srgbClr val="0066AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
                     <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="6600CC"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                   </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>
@@ -6390,6 +6398,7 @@ internal static class PptxTests
             "Expected per-label custom rich text to be emitted in the chart data label ToUnicode map.");
         TestAssert.Contains("0 0.4 0.667 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8 Tf"), "Expected second-series data labels to consume the series-level font size.");
+        TestAssert.Contains("/ItalicAngle -12", pdf);
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 10 Tf", pdf);
         TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);

@@ -1432,7 +1432,6 @@ internal sealed partial class PptxRenderer
             ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
             double fontSize = style.FontSize;
             double labelHeight = fontSize * 1.35d;
-            RgbColor color = style.Color;
             double sweep = values[i] / total * 360d;
             double mid = (angle + sweep / 2d) * Math.PI / 180d;
             double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * radius * 0.22d : 0d;
@@ -1452,11 +1451,11 @@ internal sealed partial class PptxRenderer
                 fontSize,
                 0d,
                 0d,
-                color,
+                style.Color,
                 1d,
                 null,
-                Bold: false,
-                Italic: false,
+                Bold: style.Bold,
+                Italic: style.Italic,
                 Underline: false,
                 Strike: false,
                 KerningEnabled: true,
@@ -1527,7 +1526,7 @@ internal sealed partial class PptxRenderer
                     if (!string.IsNullOrEmpty(label))
                     {
                         RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, style.Color, TextAlignment.Left, style.FontFamily));
+                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Left));
                     }
                 }
             }
@@ -1562,7 +1561,7 @@ internal sealed partial class PptxRenderer
                     {
                         double labelWidth = Math.Max(1d, barSlot * 0.86d);
                         RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, style.Color, TextAlignment.Center, style.FontFamily));
+                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Center));
                     }
                 }
             }
@@ -1619,10 +1618,8 @@ internal sealed partial class PptxRenderer
                         labelWidth,
                         labelHeight,
                         plotBox,
-                        fontSize,
-                        style.Color,
-                        alignment,
-                        style.FontFamily));
+                        style,
+                        alignment));
                 }
             }
         }
@@ -1669,7 +1666,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), 8.5d, fallbackColor);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), 8.5d, fallbackColor, Bold: false, Italic: false);
         return MergeChartTextStyle(style, options.TextStyle);
     }
 
@@ -1683,7 +1680,9 @@ internal sealed partial class PptxRenderer
         ChartTextStyleOverride textStyle = new(
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
-            dataLabel.TextStyle.Color ?? options.TextStyle.Color);
+            dataLabel.TextStyle.Color ?? options.TextStyle.Color,
+            dataLabel.TextStyle.Bold ?? options.TextStyle.Bold,
+            dataLabel.TextStyle.Italic ?? options.TextStyle.Italic);
         return options with
         {
             ShowValue = dataLabel.ShowValue ?? options.ShowValue,
@@ -1707,7 +1706,7 @@ internal sealed partial class PptxRenderer
             : plotOptions;
     }
 
-    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment, string? fontFamily)
+    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
     {
         return new TextRun(
             text,
@@ -1719,19 +1718,19 @@ internal sealed partial class PptxRenderer
             plotBox.Y,
             plotBox.Width,
             plotBox.Height,
-            fontSize,
+            style.FontSize,
             0d,
             0d,
-            color,
+            style.Color,
             1d,
             null,
-            Bold: false,
-            Italic: false,
+            Bold: style.Bold,
+            Italic: style.Italic,
             Underline: false,
             Strike: false,
             KerningEnabled: true,
             alignment,
-            FontFamily: fontFamily,
+            FontFamily: style.FontFamily,
             RotationDegrees: 0d,
             RotationCenterX: 0d,
             RotationCenterY: 0d,
@@ -1744,7 +1743,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
         style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme));
         style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme));
         return style;
@@ -1760,7 +1759,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
         style = sceneAxis is null
             ? MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme))
@@ -1770,7 +1769,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
     {
-        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color);
+        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color, style.Bold, style.Italic);
     }
 
     private static string? ResolveChartThemeFontFamily(PptxTheme theme)
@@ -1809,7 +1808,13 @@ internal sealed partial class PptxRenderer
         RgbColor? color = TryReadSolidColor(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor)
             ? parsedColor
             : null;
-        return new ChartTextStyleOverride(fontFamily, fontSize, color);
+        bool? bold = defRunProperties.Attribute("b") is { } boldAttribute
+            ? IsOoxmlTrue(boldAttribute.Value)
+            : null;
+        bool? italic = defRunProperties.Attribute("i") is { } italicAttribute
+            ? IsOoxmlTrue(italicAttribute.Value)
+            : null;
+        return new ChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
     }
 
     private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
@@ -1817,7 +1822,9 @@ internal sealed partial class PptxRenderer
         return new ChartTextStyle(
             next.FontFamily ?? style.FontFamily,
             next.FontSize ?? style.FontSize,
-            next.Color ?? style.Color);
+            next.Color ?? style.Color,
+            next.Bold ?? style.Bold,
+            next.Italic ?? style.Italic);
     }
 
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme)
@@ -2079,8 +2086,8 @@ internal sealed partial class PptxRenderer
                 color,
                 1d,
                 null,
-                Bold: false,
-                Italic: false,
+                Bold: style.Bold,
+                Italic: style.Italic,
                 Underline: false,
                 Strike: false,
                 KerningEnabled: true,
@@ -2156,8 +2163,8 @@ internal sealed partial class PptxRenderer
                 color,
                 1d,
                 null,
-                Bold: false,
-                Italic: false,
+                Bold: style.Bold,
+                Italic: style.Italic,
                 Underline: false,
                 Strike: false,
                 KerningEnabled: true,
@@ -4153,11 +4160,11 @@ internal sealed partial class PptxRenderer
         public static ChartAxisUnits Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color);
+    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color, bool Bold, bool Italic);
 
-    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color)
+    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color, bool? Bold, bool? Italic)
     {
-        public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
+        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();

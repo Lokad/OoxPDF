@@ -738,9 +738,10 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size: rich text runs, bold/italic,
-  rotation, tick-label offsets, multi-level category labels, and chart-style inherited text defaults still
-  need structural modeling before axis and data-label text can match Office without renderer heuristics.
+- [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size and default-run bold/italic:
+  rich text runs, rotation, tick-label offsets, multi-level category labels, and chart-style inherited text
+  defaults still need structural modeling before axis and data-label text can match Office without renderer
+  heuristics.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
@@ -767,8 +768,9 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader lines, per-label
-  overrides, and text/shape styles still need renderer support and visual cases.
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader lines, rich text
+  runs inside custom labels, exact label-box geometry/auto-fit, and richer position semantics still need
+  renderer support and visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
   Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
   visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
@@ -1037,8 +1039,8 @@ High-priority actions:
     chart-style inherited defaults.
   - [x] Add scene-owned chart-level and axis-level text-style overrides for the supported `txPr/defRPr`
     subset: font family, font size, and solid color.
-  - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
-    multi-level category labels, per-run data-label styles, and chart-style inherited defaults.
+  - [ ] Extend chart text-style records to cover rich text runs, rotation, tick-label offsets, multi-level
+    category labels, per-run data-label styles, and chart-style inherited defaults.
   - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
     text-style decisions for supported bar/line chart paths.
   - [ ] Model and consume cross-axis IDs, crossing behavior, label-side slots, and Office spacing for
@@ -1443,6 +1445,12 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-24: Preserved chart `txPr/a:defRPr` bold/italic as structural chart text-style data instead
+  of a render-time heuristic. `PptxSceneChartTextStyleOverride` and the chart renderer `ChartTextStyle`
+  now carry nullable bold/italic through chart defaults, axes, plot/series data labels, and per-label
+  overrides; bar/line/pie data labels and axis tick labels now pass those flags into `TextRun`. Scene tests
+  lock explicit true and false values, and the line/pie chart render test locks styled data-label font
+  emission with a PDF font-descriptor check.
 - [x] 2026-05-24: Restored the long-form ExecPlan after an over-aggressive compaction lost useful open
   planning context. Future trimming must preserve open progress items unless a duplicate or obsolete item is
   proven from checked-in code, tests, tools, or validation artifacts.
@@ -1638,6 +1646,13 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-180853` after the chart
+  text-style bold/italic slice:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `9.043266`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
+    threshold 16: `0.116409`.
+  - Diagnostics remain limited to one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - Page 17 remained dimension-matched at MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - Private PPTX run `artifacts/private-visual/lokad-value-based/20260514-154018`:
   - 84 candidate pages, all dimensions matched reference pages.
   - Mean absolute error: `17.34937080899104`.
@@ -3094,8 +3109,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
    chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
    chart plot attributes, chart series summaries including scatter/bubble data channels, chart series and
-   point styles, chart data-label metadata/text/shape/per-label overrides, chart axis catalogs with
-   scaling/units/gridlines/label options, titles, and legends, while
+   point styles, chart data-label metadata/text/shape/per-label overrides including default-run bold/italic
+   style flags, chart axis catalogs with scaling/units/gridlines/label options, titles, and legends, while
    `PptxRenderContext` owns package, theme, inheritance, relationships, image cache, and diagnostics. Keep
    retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
@@ -3236,8 +3251,8 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-175927: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.043246, changed16 0.116409, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-180853: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.043266, changed16 0.116409, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 
