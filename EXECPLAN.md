@@ -656,10 +656,9 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend the chart data-label scene model beyond value/percent toggles: label position, separator,
-  category/series-name flags, leader lines, number format, and text/style (`c:txPr`, `c:spPr`) still need
-  typed ownership before data-label layout can be aligned structurally with Office instead of renderer
-  heuristics.
+- [ ] Extend the chart data-label scene model beyond the current metadata subset: per-label overrides,
+  label text/style (`c:txPr`, `c:spPr`), and richer position/leader-line semantics still need typed
+  ownership before data-label layout can be aligned structurally with Office instead of renderer heuristics.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
@@ -736,9 +735,9 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the richer scene metadata: Office label position, separator,
-  category/series-name composition, number formats, leader lines, per-label overrides, and text/shape styles
-  still need renderer support and visual cases.
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: Office label position,
+  category/series-name composition, leader lines, per-label overrides, and text/shape styles still need
+  renderer support and visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
   Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
   visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
