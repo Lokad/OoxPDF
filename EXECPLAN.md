@@ -3735,6 +3735,12 @@ models from `PptxSceneNode` plus typed `PptxSceneTextBody`, then leave XML only 
 unmodeled OOXML edges. The unused `ReadTextRunsForShape` wrappers were removed. `PptxSyntheticTextAndShapesUseSiblingOrder`,
 `PptxSyntheticGroupedTextAppliesTransform`, and the non-slow suite passed with 190 passed, 0 failed, 7 skipped;
 `dotnet pack` succeeded, and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+post table/text refactor private validation / 2026-05-24:
+Private run `artifacts/private-visual/lokad-value-based/20260524-224755` stayed stable after the table layout
+model split and text adapter cleanup: 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`,
+changed16 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide 17 stayed at MAE `2.880739`,
+changed16 `0.044888`, SSIM `0.920083`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
