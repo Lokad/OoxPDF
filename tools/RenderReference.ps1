@@ -16,27 +16,61 @@ function Release-ComObject($value) {
     }
 }
 
+function Get-OfficeProcessIds([string] $Name) {
+    @(Get-Process -Name $Name -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
+}
+
+function Stop-NewOfficeProcesses([string] $Name, [int[]] $BeforeIds) {
+    $known = @{}
+    foreach ($id in $BeforeIds) {
+        $known[$id] = $true
+    }
+
+    Get-Process -Name $Name -ErrorAction SilentlyContinue |
+        Where-Object { -not $known.ContainsKey($_.Id) } |
+        ForEach-Object {
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+}
+
+function Complete-ComCleanup() {
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+    [GC]::Collect()
+    [GC]::WaitForPendingFinalizers()
+}
+
 $inputFull = (Resolve-Path -LiteralPath $InputPath).Path
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $outputFull = (Resolve-Path -LiteralPath $OutputDirectory).Path
 $extension = [System.IO.Path]::GetExtension($inputFull).ToLowerInvariant()
 
 if ($extension -eq ".pptx") {
+    $beforePowerPointIds = Get-OfficeProcessIds "POWERPNT"
     $powerPoint = $null
     $presentation = $null
     $referencePdf = Join-Path $outputFull "reference.pdf"
     try {
         $powerPoint = New-Object -ComObject PowerPoint.Application
+        $powerPoint.DisplayAlerts = 1
         $presentation = $powerPoint.Presentations.Open($inputFull, $true, $true, $false)
         $presentation.SaveAs($referencePdf, 32)
     }
     finally {
-        if ($presentation -ne $null) { $presentation.Close() }
-        if ($powerPoint -ne $null) { $powerPoint.Quit() }
-        Release-ComObject $presentation
-        Release-ComObject $powerPoint
-        [GC]::Collect()
-        [GC]::WaitForPendingFinalizers()
+        try {
+            if ($presentation -ne $null) { $presentation.Close() }
+        }
+        finally {
+            try {
+                if ($powerPoint -ne $null) { $powerPoint.Quit() }
+            }
+            finally {
+                Release-ComObject $presentation
+                Release-ComObject $powerPoint
+                Complete-ComCleanup
+                Stop-NewOfficeProcesses "POWERPNT" $beforePowerPointIds
+            }
+        }
     }
 
     & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $outputFull -Dpi $Dpi
@@ -44,22 +78,32 @@ if ($extension -eq ".pptx") {
 }
 
 if ($extension -eq ".docx") {
+    $beforeWordIds = Get-OfficeProcessIds "WINWORD"
     $word = $null
     $document = $null
     $referencePdf = Join-Path $outputFull "reference.pdf"
     try {
         $word = New-Object -ComObject Word.Application
         $word.Visible = $false
-        $document = $word.Documents.Open($inputFull, $false, $true)
-        $document.ExportAsFixedFormat($referencePdf, 17)
+        $word.DisplayAlerts = 0
+        $document = $word.Documents.OpenNoRepairDialog($inputFull, $false, $true, $false)
+        $document.SaveAs2($referencePdf, 17)
     }
     finally {
-        if ($document -ne $null) { $document.Close($false) }
-        if ($word -ne $null) { $word.Quit() }
-        Release-ComObject $document
-        Release-ComObject $word
-        [GC]::Collect()
-        [GC]::WaitForPendingFinalizers()
+        try {
+            if ($document -ne $null) { $document.Close($false) }
+        }
+        finally {
+            try {
+                if ($word -ne $null) { $word.Quit() }
+            }
+            finally {
+                Release-ComObject $document
+                Release-ComObject $word
+                Complete-ComCleanup
+                Stop-NewOfficeProcesses "WINWORD" $beforeWordIds
+            }
+        }
     }
 
     & (Join-Path $PSScriptRoot "RasterizePdf.ps1") -InputPdf $referencePdf -OutputDirectory $outputFull -Dpi $Dpi
