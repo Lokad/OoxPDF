@@ -329,7 +329,13 @@ internal sealed record PptxSceneChart(
 internal sealed record PptxSceneChartPlot(
     string Kind,
     int SeriesCount,
-    IReadOnlyList<string> AxisIds);
+    IReadOnlyList<string> AxisIds,
+    IReadOnlyList<PptxSceneChartSeries> Series);
+
+internal sealed record PptxSceneChartSeries(
+    string? Name,
+    IReadOnlyList<double> Values,
+    IReadOnlyList<string> Categories);
 
 internal sealed record PptxSceneChartAxis(
     string Id,
@@ -885,10 +891,66 @@ internal sealed class PptxSceneBuilder
             plots.Add(new PptxSceneChartPlot(
                 plot.Name.LocalName,
                 plot.Elements(ChartNamespace + "ser").Count(),
-                axisIds));
+                axisIds,
+                ReadChartSeries(plot)));
         }
 
         return plots;
+    }
+
+    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot)
+    {
+        var series = new List<PptxSceneChartSeries>();
+        foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
+        {
+            series.Add(new PptxSceneChartSeries(
+                ReadChartSeriesName(seriesElement),
+                ReadChartSeriesValues(seriesElement),
+                ReadChartSeriesCategories(seriesElement)));
+        }
+
+        return series;
+    }
+
+    private static string? ReadChartSeriesName(XElement series)
+    {
+        XElement? text = series.Element(ChartNamespace + "tx");
+        string? literal = text?
+            .Descendants(ChartNamespace + "v")
+            .Select(value => value.Value)
+            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        if (!string.IsNullOrWhiteSpace(literal))
+        {
+            return literal;
+        }
+
+        string? richText = text?
+            .Descendants(DrawingNamespace + "t")
+            .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
+        return string.IsNullOrWhiteSpace(richText) ? null : richText;
+    }
+
+    private static IReadOnlyList<double> ReadChartSeriesValues(XElement series)
+    {
+        return series
+            .Elements(ChartNamespace + "val")
+            .Descendants(ChartNamespace + "pt")
+            .Select(point => (string?)point.Element(ChartNamespace + "v"))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? parsed : double.NaN)
+            .Where(value => !double.IsNaN(value))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadChartSeriesCategories(XElement series)
+    {
+        return series
+            .Elements(ChartNamespace + "cat")
+            .Descendants(ChartNamespace + "pt")
+            .Select(point => (string?)point.Element(ChartNamespace + "v"))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!)
+            .ToArray();
     }
 
     private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml)
