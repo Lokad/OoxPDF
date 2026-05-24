@@ -322,7 +322,8 @@ internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
     IReadOnlyList<double> RowHeights,
     IReadOnlyList<PptxSceneTableRow> Rows,
-    PptxSceneTableStyle Style);
+    PptxSceneTableStyle Style,
+    XElement? Source);
 
 internal readonly record struct PptxSceneTableStyle(
     string? StyleId,
@@ -805,7 +806,8 @@ internal sealed class PptxSceneBuilder
             columnWidths,
             rowHeights,
             ReadTableRows(table, theme, style, rowHeights.Count, columnWidths.Count),
-            style);
+            style,
+            table);
     }
 
     internal static XElement? ReadTableElement(XElement frame)

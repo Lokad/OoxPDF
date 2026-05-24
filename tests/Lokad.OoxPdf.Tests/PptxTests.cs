@@ -220,6 +220,7 @@ internal static class PptxTests
         TestAssert.Equal("accent6", slide.SlideNodes[2].Table?.Style.Accent ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Style.FirstRow == true, "Expected table first-row flag in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Style.BandRow == true, "Expected table band-row flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[2].Table?.Source is not null, "Expected table source element ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.HasFill == true, "Expected resolved table-style fill in the scene model.");
         TestAssert.Equal(new RgbColor(51, 102, 153), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.Color ?? default);
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleText.Bold == true, "Expected resolved table-style text bold in the scene model.");

@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return RenderTableFrame(context, bounds, PptxSceneBuilder.ReadTableElement(node.Source), node.Table, graphics);
+        return RenderTableFrame(context, bounds, node.Table?.Source, node.Table, graphics);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
