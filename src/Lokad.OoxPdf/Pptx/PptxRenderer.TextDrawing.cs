@@ -37,7 +37,16 @@ internal sealed partial class PptxRenderer
                 glyphRun.BaselineY,
                 glyphRun.Width,
                 glyphRun.Glyphs.Count,
-                glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d));
+                glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
+                glyphRun.Glyphs
+                    .Select(glyph => new PptxTextGlyphRunAtomSnapshot(
+                        glyph.CodePoint,
+                        glyph.Typeface,
+                        glyphRun.ResourceName,
+                        glyph.GlyphId,
+                        glyph.Advance,
+                        glyph.AdjustmentBefore))
+                    .ToArray()));
         }
 
         return glyphRuns;
@@ -603,7 +612,7 @@ internal sealed partial class PptxRenderer
         };
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
-            .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
+            .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
     }
@@ -671,7 +680,7 @@ internal sealed partial class PptxRenderer
             }
 
             double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
-            atoms.Add(new TextGlyphAtom(rune.Value, glyph, advance, adjustmentBefore));
+            atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, glyph, advance, adjustmentBefore));
             previousGlyph = glyph;
         }
 

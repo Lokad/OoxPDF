@@ -157,7 +157,16 @@ internal sealed record PptxTextGlyphRunSnapshot(
     double BaselineY,
     double Width,
     int GlyphCount,
-    double FirstAdjustmentAfterOrigin);
+    double FirstAdjustmentAfterOrigin,
+    IReadOnlyList<PptxTextGlyphRunAtomSnapshot> Glyphs);
+
+internal sealed record PptxTextGlyphRunAtomSnapshot(
+    int CodePoint,
+    string? Typeface,
+    string ResourceName,
+    ushort GlyphId,
+    double Advance,
+    double AdjustmentBefore);
 
 internal sealed record PptxSceneSlide(
     int Index,

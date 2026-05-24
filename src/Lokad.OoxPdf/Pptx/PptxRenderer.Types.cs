@@ -161,6 +161,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record TextGlyphAtom(
         int CodePoint,
+        string? Typeface,
         ushort GlyphId,
         double Advance,
         double AdjustmentBefore);

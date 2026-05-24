@@ -4150,6 +4150,10 @@ internal static class PptxTests
         IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
         PptxTextGlyphRunSnapshot paragraphGlyphRun = glyphRuns.First(run => run.Text.StartsWith("Paragraph", StringComparison.Ordinal));
         TestAssert.True(paragraphGlyphRun.GlyphCount > 0, "Expected glyph-run inspection to expose glyph ids before PDF text emission.");
+        TestAssert.Equal(paragraphGlyphRun.GlyphCount, paragraphGlyphRun.Glyphs.Count);
+        TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected glyph-run inspection to expose each emitted glyph id.");
+        TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => string.Equals(glyph.Typeface, paragraphSpan.GlyphSpan.Typeface, StringComparison.OrdinalIgnoreCase)), "Expected glyph-run inspection to preserve current glyph typeface ownership before fallback splits it.");
+        TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => !string.IsNullOrWhiteSpace(glyph.ResourceName)), "Expected glyph-run inspection to expose the PDF font resource that currently owns each glyph.");
         TestAssert.True(paragraphGlyphRun.Width > 0d, "Expected glyph-run inspection to expose measured glyph advance.");
         TestAssert.Equal(paragraphSpan.GlyphSpan.GlyphCount, paragraphGlyphRun.GlyphCount);
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");
@@ -4397,7 +4401,15 @@ internal static class PptxTests
                 run.BaselineY,
                 run.Width,
                 run.GlyphCount,
-                run.FirstAdjustmentAfterOrigin
+                run.FirstAdjustmentAfterOrigin,
+                distinctTypefaces = run.Glyphs
+                    .Select(glyph => glyph.Typeface ?? string.Empty)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count(),
+                distinctResources = run.Glyphs
+                    .Select(glyph => glyph.ResourceName)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Count()
             }),
             frames
         }, new JsonSerializerOptions { WriteIndented = true }));

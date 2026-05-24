@@ -292,6 +292,11 @@ High-priority actions:
   `PptxTextGlyphLayout` now carries the resolved typeface per glyph, not only on the containing span. This is
   still behavior-neutral, but it removes a one-font-per-span assumption from the inspection model and prepares
   the next accented-Latin/font-fallback slice where a visible run may need multiple Office-like font groups.
+- [x] Preserve current font ownership through glyph-run inspection:
+  downstream `TextGlyphRun` atoms and `PptxTextGlyphRunSnapshot` now carry each glyph's current resolved
+  typeface plus the PDF font resource that emits it. This is behavior-neutral and intentionally still reports
+  one resource for each current glyph run; the point is to make the future Office-like font fallback split
+  observable at the PDF-emission boundary instead of hiding it behind raster drift.
 - [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
   `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
   flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
@@ -3427,6 +3432,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   accent-heavy lines point to unresolved font fallback/glyph grouping parity rather than a simple position
   threshold issue. The new `ComparePdfTextLineStarts.ps1 -ShowText` mode exposes those splits directly:
   Office separates accent/fallback fragments that the candidate currently keeps merged.
+- Observation: The current glyph-run emission boundary still owns only one PDF font resource per run even
+  though layout glyphs now expose per-glyph typeface metadata.
+  Evidence: `PptxTextGlyphRunSnapshot` now reports per-glyph typeface and resource names, and current
+  inspected runs still have a single distinct resource. The next real fallback slice should split glyph runs
+  by resolved font/resource before PDF `TJ` construction instead of patching accent probe thresholds.
 
 ## Decision Log
 
@@ -3548,10 +3558,17 @@ Latest public typography structural probes:
 pptx-ladder-04-nonbreaking-space / 20260524-212024:
 decoded PDF text gate passed; 2 reference and 2 candidate text operations; B x delta 0.09 pt.
 
-pptx-ladder-04-typography-accent-spacing-probe / 20260524-212800:
+pptx-ladder-04-typography-accent-spacing-probe / 20260524-213258:
 visual gate passed; MAE 0.799624, changed16 0.009473, SSIM 0.913024. Text-line inspection remains
 open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line; `-ShowText` confirms the
 first-line extra candidate operation is a space and later deltas are accent/fallback grouping splits.
+
+glyph-run ownership slice / 2026-05-24:
+`dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
+passed with 65 passed, 0 failed, 2 skipped after adding per-glyph typeface/resource snapshots to glyph-run
+inspection.
+Non-slow tests passed with 188 passed, 0 failed, 7 skipped; package build succeeded; full tests passed with
+195 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
