@@ -865,11 +865,11 @@ internal sealed partial class PptxRenderer
             y.Value,
             width.Value,
             height.Value,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty), frame, out plotBox);
+            ReadManualLayoutValue(manualLayout, "layoutTarget"),
+            ReadManualLayoutValue(manualLayout, "xMode"),
+            ReadManualLayoutValue(manualLayout, "yMode"),
+            ReadManualLayoutValue(manualLayout, "wMode"),
+            ReadManualLayoutValue(manualLayout, "hMode")), frame, out plotBox);
     }
 
     private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, out ChartPlotBox plotBox)
@@ -880,12 +880,27 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double plotWidth = Math.Clamp(layout.Width, 0.02d, 1d) * frame.Width;
-        double plotHeight = Math.Clamp(layout.Height, 0.02d, 1d) * frame.Height;
-        double plotX = frame.X + Math.Clamp(layout.X, 0d, 1d) * frame.Width;
-        double plotY = frame.Y + frame.Height - Math.Clamp(layout.Y, 0d, 1d) * frame.Height - plotHeight;
+        double left = Math.Clamp(layout.X, 0d, 1d);
+        double top = Math.Clamp(layout.Y, 0d, 1d);
+        double width = Math.Clamp(layout.Width, 0.02d, 1d);
+        double height = Math.Clamp(layout.Height, 0.02d, 1d);
+        double right = IsManualLayoutEdgeMode(layout.WidthMode)
+            ? Math.Clamp(layout.Width, left, 1d)
+            : left + width;
+        double bottom = IsManualLayoutEdgeMode(layout.HeightMode)
+            ? Math.Clamp(layout.Height, top, 1d)
+            : top + height;
+        double plotWidth = Math.Max(0d, right - left) * frame.Width;
+        double plotHeight = Math.Max(0d, bottom - top) * frame.Height;
+        double plotX = frame.X + left * frame.Width;
+        double plotY = frame.Y + frame.Height - bottom * frame.Height;
         plotBox = new ChartPlotBox(plotX, plotY, plotWidth, plotHeight);
         return plotWidth > 0d && plotHeight > 0d;
+    }
+
+    private static bool IsManualLayoutEdgeMode(string mode)
+    {
+        return string.Equals(mode, "edge", StringComparison.Ordinal);
     }
 
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
@@ -894,6 +909,11 @@ internal sealed partial class PptxRenderer
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? parsed
             : null;
+    }
+
+    private static string ReadManualLayoutValue(XElement manualLayout, string elementName)
+    {
+        return (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XDocument chartXml, ChartValueExtents fallback)

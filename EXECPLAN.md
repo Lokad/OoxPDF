@@ -760,10 +760,18 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend plot-area layout ownership beyond bare `x/y/w/h` factors: `layoutTarget`, `xMode`, `yMode`,
-  `wMode`, `hMode`, inner-vs-outer plot area semantics, title/legend overlay interactions, and reuse across
-  area/scatter/radar/pie/doughnut chart families still need structural modeling before plot bounds can be
-  treated as Office-aligned instead of approximate geometry.
+- [x] 2026-05-24: Consume manual plot-area edge modes for right/bottom coordinates. The renderer now carries
+  preserved `wMode="edge"` and `hMode="edge"` through scene and XML fallback paths so right/bottom layout
+  edges are not mistaken for width/height factors. A public PDF test locks the edge-mode rectangle, the full
+  runner passed 187/187, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-182312` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend plot-area layout ownership beyond current `x/y/w/h` factor and right/bottom edge support:
+  `layoutTarget`, x/y edge semantics, inner-vs-outer plot area semantics, title/legend overlay interactions,
+  and reuse across area/scatter/radar/pie/doughnut chart families still need structural modeling before plot
+  bounds can be treated as Office-aligned instead of approximate geometry.
 - [x] 2026-05-24: Extend scene-owned chart data-label metadata beyond value/percent visibility. The scene
   model now preserves category-name, series-name, and leader-line flags plus label position, separator, and
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
@@ -1056,7 +1064,9 @@ High-priority actions:
     secondary axes instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
-  - [ ] Extend chart plot-area layout records to cover `layoutTarget`, factor modes, inner/outer plot
+  - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
+    edges.
+  - [ ] Extend chart plot-area layout records to cover `layoutTarget`, x/y edge semantics, inner/outer plot
     semantics, title/legend overlay effects, and non-bar/line chart-family consumers in rendered geometry.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
@@ -1655,8 +1665,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-181800` after the chart
-  title/legend text-style slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-182312` after the chart
+  manual-layout edge-mode slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.
@@ -3254,13 +3264,13 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-186 passed, 0 failed
+187 passed, 0 failed
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-181800: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-182312: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
