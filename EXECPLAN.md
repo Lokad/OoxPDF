@@ -930,9 +930,17 @@ High-priority actions:
   through the scene model and feed arc and curved-connector geometry instead of being re-read at draw time.
 - [x] Add a PDF-level axial shading primitive and route supported two-stop linear shape gradients through
   `PptxSceneShape` into `/Shading` resources instead of sampled rectangle approximations.
-- [ ] Continue reducing renderer XML fallbacks by expanding gradient coverage beyond two-stop linear fills,
-  moving richer effect families into scene-owned structures, and deciding the JPEG recolor strategy without
-  adding format-specific shortcuts.
+- [x] Expand linear shape gradient coverage beyond two-stop fills: `PptxSceneShape` now keeps arbitrary
+  non-alpha linear gradient stops and the PDF writer emits a Type 3 stitched function over the axial shading
+  instead of flattening intermediate stops.
+- [ ] Continue reducing renderer XML fallbacks by adding non-linear/path gradient support, gradient alpha
+  handling, richer scene-owned effect families, and a JPEG recolor strategy without format-specific shortcuts.
+- [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after multi-stop linear
+  gradient support. `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal` passed
+  183/183, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-115834` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`,
+  and slide 17 MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after adding PDF axial shading and scene-owned
   two-stop linear shape gradients. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-114141` remained stable: 84/84 compared pages, zero

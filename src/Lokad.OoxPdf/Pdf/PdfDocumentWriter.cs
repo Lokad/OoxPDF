@@ -222,7 +222,53 @@ internal sealed class PdfDocumentWriter
     private static void WriteAxialShadingObject(PdfObjectWriter writer, PdfAxialShading shading, int objectNumber)
     {
         writer.WriteObject(objectNumber, FormattableString.Invariant(
-            $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function << /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(shading.StartRed)} {FormatColor(shading.StartGreen)} {FormatColor(shading.StartBlue)}] /C1 [{FormatColor(shading.EndRed)} {FormatColor(shading.EndGreen)} {FormatColor(shading.EndBlue)}] /N 1 >> /Extend [true true] >>\n"));
+            $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function {BuildAxialShadingFunction(shading.Stops)} /Extend [true true] >>\n"));
+    }
+
+    private static string BuildAxialShadingFunction(IReadOnlyList<PdfShadingStop> stops)
+    {
+        if (stops.Count == 2)
+        {
+            return BuildExponentialInterpolationFunction(stops[0], stops[1]);
+        }
+
+        var builder = new StringBuilder();
+        builder.Append("<< /FunctionType 3 /Domain [0 1] /Functions [");
+        for (int i = 0; i < stops.Count - 1; i++)
+        {
+            builder.Append(' ').Append(BuildExponentialInterpolationFunction(stops[i], stops[i + 1]));
+        }
+
+        builder.Append(" ] /Bounds [");
+        for (int i = 1; i < stops.Count - 1; i++)
+        {
+            if (i > 1)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(FormatNumber(stops[i].Offset));
+        }
+
+        builder.Append("] /Encode [");
+        for (int i = 0; i < stops.Count - 1; i++)
+        {
+            if (i > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append("0 1");
+        }
+
+        builder.Append("] >>");
+        return builder.ToString();
+    }
+
+    private static string BuildExponentialInterpolationFunction(PdfShadingStop start, PdfShadingStop end)
+    {
+        return FormattableString.Invariant(
+            $"<< /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(start.Red)} {FormatColor(start.Green)} {FormatColor(start.Blue)}] /C1 [{FormatColor(end.Red)} {FormatColor(end.Green)} {FormatColor(end.Blue)}] /N 1 >>");
     }
 
     private static byte[] Compress(ReadOnlySpan<byte> bytes)

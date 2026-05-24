@@ -130,7 +130,7 @@ internal sealed partial class PptxRenderer
             .Element(DrawingNamespace + "gsLst")
             ?.Elements(DrawingNamespace + "gs")
             .ToArray() ?? [];
-        return stops.Length != 2 ||
+        return stops.Length < 2 ||
             stops.Any(stop => stop.Elements().FirstOrDefault(color => color.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr" or "sysClr" or "scrgbClr" or "hslClr") is null) ||
             stops.Descendants(DrawingNamespace + "alpha").Any(alpha =>
                 alpha.Attribute("val") is { } value &&

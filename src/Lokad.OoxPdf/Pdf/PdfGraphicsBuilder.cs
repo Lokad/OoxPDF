@@ -100,7 +100,12 @@ internal sealed class PdfGraphicsBuilder
 
     public void PaintAxialShading(double x0, double y0, double x1, double y1, byte startRed, byte startGreen, byte startBlue, byte endRed, byte endGreen, byte endBlue)
     {
-        var shading = new PdfAxialShading(x0, y0, x1, y1, startRed, startGreen, startBlue, endRed, endGreen, endBlue);
+        PaintAxialShading(x0, y0, x1, y1, [new PdfShadingStop(0d, startRed, startGreen, startBlue), new PdfShadingStop(1d, endRed, endGreen, endBlue)]);
+    }
+
+    public void PaintAxialShading(double x0, double y0, double x1, double y1, IReadOnlyList<PdfShadingStop> stops)
+    {
+        var shading = new PdfAxialShading(x0, y0, x1, y1, stops);
         string resourceName = "Sh" + (shadings.Count + 1).ToString(CultureInfo.InvariantCulture);
         PdfShadingResource? existing = shadings.FirstOrDefault(resource => resource.Shading.ResourceKey == shading.ResourceKey);
         if (existing is null)

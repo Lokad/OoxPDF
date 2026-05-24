@@ -821,8 +821,6 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        GradientStop first = gradient.Stops[0];
-        GradientStop last = gradient.Stops[^1];
         double radians = DegreesToRadians(gradient.AngleDegrees);
         double dx = Math.Cos(radians);
         double dy = Math.Sin(radians);
@@ -834,12 +832,7 @@ internal sealed partial class PptxRenderer
             centerY - dy * half,
             centerX + dx * half,
             centerY + dy * half,
-            first.Color.Red,
-            first.Color.Green,
-            first.Color.Blue,
-            last.Color.Red,
-            last.Color.Green,
-            last.Color.Blue);
+            gradient.Stops.Select(stop => new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
     }
 
     private static void DrawPresetArcStroke(

@@ -93,6 +93,26 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Sh1 sh", pdf);
     }
 
+    public static void WritesStitchedAxialShadingFunctionForMultipleStops()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.PaintAxialShading(0, 0, 100, 0, [
+            new PdfShadingStop(0d, 255, 0, 0),
+            new PdfShadingStop(0.5d, 0, 255, 0),
+            new PdfShadingStop(1d, 0, 0, 255)
+        ]);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/FunctionType 3", pdf);
+        TestAssert.Contains("/Bounds [0.5]", pdf);
+        TestAssert.Contains("/Encode [0 1 0 1]", pdf);
+        TestAssert.Contains("/C0 [1 0 0]", pdf);
+        TestAssert.Contains("/C1 [0 1 0]", pdf);
+        TestAssert.Contains("/C1 [0 0 1]", pdf);
+    }
+
     private static string WritePdfText(IReadOnlyList<PdfPage> pages)
     {
         using var stream = new MemoryStream();

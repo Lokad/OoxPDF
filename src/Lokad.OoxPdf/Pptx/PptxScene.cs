@@ -697,7 +697,7 @@ internal sealed class PptxSceneBuilder
             .Select(stop => stop!.Value)
             .OrderBy(stop => stop.Offset)
             .ToArray();
-        if (stops.Length != 2 ||
+        if (stops.Length < 2 ||
             stops.Any(stop => stop.Alpha < 0.999d) ||
             gradientFill.Element(DrawingNamespace + "lin") is not { } linear)
         {
