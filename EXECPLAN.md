@@ -4272,6 +4272,13 @@ forward from both typed scene data and raw XML fallback parsing. Effective per-p
 preserves an override layout when one is present, but rendering still does not consume it until public
 Office-PDF evidence defines the label-box placement rule. The focused scene test passed with 1 passed,
 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart stroke-marker structural oracle / 2026-05-25:
+`ClassifyPdfChartGraphics.ps1` now emits `StrokeMarkerCandidate` for compact stroked chart paths whose bounds
+look like marker outlines rather than axis/gridline segments. This is an opt-in structural oracle kind for
+future marker geometry gates; default chart graphics comparisons remain unchanged. The clustered-column public
+visual case still passed with the existing `AxisPairPlotBoxCandidate` and `CategoryAxisTickLabel` structural
+gates at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-010512`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

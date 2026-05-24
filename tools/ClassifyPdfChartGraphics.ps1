@@ -119,6 +119,10 @@ foreach ($op in $ops) {
     elseif ($op.Kind -eq "Stroke" -and $width -le $LineTolerance -and $height -ge $MinLineLength) {
         $structures.Add((New-Structure "VerticalLine" $op))
     }
+    elseif ($op.Kind -eq "Stroke" -and $width -gt $LineTolerance -and $height -gt $LineTolerance -and
+        $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
+        $structures.Add((New-Structure "StrokeMarkerCandidate" $op))
+    }
 
     if (($op.Kind -eq "Fill" -or $op.Kind -eq "FillStroke") -and $width -gt 0 -and $height -gt 0) {
         if ($width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
