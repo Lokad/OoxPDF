@@ -178,7 +178,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
         if (imagePart.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, picture, transformedBounds, imagePart.Bytes);
+            RenderSvgPicture(graphics, document, picture, transformedBounds, imagePart.Bytes, crop, fillRect);
             return;
         }
 
@@ -268,7 +268,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect)
     {
         XDocument svg;
         using (var stream = new MemoryStream(bytes))
@@ -288,12 +288,10 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(bounds.Width);
         double height = OoxUnits.EmuToPoints(bounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        FillRect fillRect = ReadFillRect(picture);
         double imageX = x + fillRect.Left * width;
         double imageY = y + fillRect.Bottom * height;
         double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
         double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
-        CropRect crop = ReadCrop(picture);
 
         graphics.SaveState();
         if (!crop.IsEmpty || Math.Abs(bounds.RotationDegrees) > 0.001d || bounds.FlipHorizontal || bounds.FlipVertical)

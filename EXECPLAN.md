@@ -882,8 +882,10 @@ High-priority actions:
 - [x] Move picture recolor intent into `PptxScenePicture`: grayscale, bi-level, luminance, and duotone OOXML
   recolor instructions are now scene-level data and ordered picture rendering converts that intent at the
   image-render boundary.
-- [ ] Continue typed picture migration by moving SVG-specific placement/crop decisions into
-  `PptxScenePicture`, then repeat the same pattern for connector geometry and line-end styles.
+- [x] Move SVG picture placement/crop handoff onto `PptxScenePicture`: ordered SVG picture rendering now
+  receives the scene-parsed crop and stretch fill rectangles instead of rereading them from source XML.
+- [ ] Continue typed picture migration by moving any remaining SVG-specific paint/path decisions that belong
+  to OOXML interpretation into `PptxScenePicture` or a dedicated SVG picture model.
 - [x] Move the first ordered shape/connector leaf inputs toward typed scene data: `PptxSceneShape` now owns
   preset geometry names, and ordered shape/connector rendering takes preset and EMU bounds from scene nodes
   before falling back to XML for fills, strokes, effects, custom geometry, and picture fills.
