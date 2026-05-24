@@ -2006,14 +2006,13 @@ internal sealed partial class PptxRenderer
     private static bool? ReadOptionalChartLabelFlagEnabled(XElement labels, string elementName)
     {
         XElement? element = labels.Element(ChartNamespace + elementName);
-        return element is null ? null : IsOoxmlTrue(element.Attribute("val")?.Value);
+        return element is null ? null : IsOoxmlBooleanElementEnabled(element);
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
     {
         XElement? element = labels.Element(ChartNamespace + elementName);
-        return element is not null &&
-            !string.Equals((string?)element.Attribute("val"), "0", StringComparison.Ordinal);
+        return IsOoxmlBooleanElementEnabled(element);
     }
 
     private static string FormatChartPercentageLabel(double fraction)
