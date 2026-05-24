@@ -2124,6 +2124,7 @@ internal sealed partial class PptxRenderer
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
+        double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(sceneAxis, categoryAxis);
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
@@ -2135,7 +2136,7 @@ internal sealed partial class PptxRenderer
             if (horizontalBars)
             {
                 double slotHeight = plotBox.Height / labels.Count;
-                x = Math.Max(0d, plotBox.X - plotBox.Width * PptxChartMetricRules.CategoryAxisHorizontalLeftOffsetRatio);
+                x = Math.Max(0d, plotBox.X - plotBox.Width * PptxChartMetricRules.CategoryAxisHorizontalLeftOffsetRatio * labelOffsetScale);
                 y = plotBox.Y + slotHeight * (i + 0.5d) - height * PptxChartMetricRules.CategoryAxisHorizontalBaselineRatio;
                 width = plotBox.Width * PptxChartMetricRules.CategoryAxisHorizontalWidthRatio;
                 alignment = TextAlignment.Right;
@@ -2145,7 +2146,7 @@ internal sealed partial class PptxRenderer
                 double slotWidth = plotBox.Width / labels.Count;
                 width = slotWidth * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
                 x = plotBox.X + slotWidth * (i + 0.5d) - width / 2d;
-                y = plotBox.Y - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor;
+                y = plotBox.Y - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
                 alignment = TextAlignment.Center;
             }
 
@@ -2859,6 +2860,31 @@ internal sealed partial class PptxRenderer
             "low" => false,
             _ => defaultRightSide
         };
+    }
+
+    private static double ResolveSceneOrXmlCategoryAxisLabelOffsetScale(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    {
+        int offset = sceneAxis?.LabelOffset ??
+            ReadChartElementInt(axis, "lblOffset") ??
+            PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
+
+        offset = Math.Clamp(
+            offset,
+            PptxChartMetricRules.CategoryAxisMinimumLabelOffset,
+            PptxChartMetricRules.CategoryAxisMaximumLabelOffset);
+
+        return offset / (double)PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
+    }
+
+    private static int? ReadChartElementInt(XElement? chartElement, string elementName)
+    {
+        if (chartElement?.Element(ChartNamespace + elementName)?.Attribute("val") is not { } value ||
+            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+        {
+            return null;
+        }
+
+        return parsed;
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)

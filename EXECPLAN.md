@@ -938,9 +938,9 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
 - [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size and default-run bold/italic:
-  rich text runs, rotation, tick-label offsets, multi-level category labels, and chart-style inherited text
-  defaults still need structural modeling before axis and data-label text can match Office without renderer
-  heuristics.
+  rich text runs, rotation, full non-default tick-label offset ladders, multi-level category labels, and
+  chart-style inherited text defaults still need structural modeling before axis and data-label text can
+  match Office without renderer heuristics.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
@@ -1347,8 +1347,8 @@ High-priority actions:
     chart-style inherited defaults.
   - [x] Add scene-owned chart-level, axis-level, title, and legend text-style overrides for the supported
     `txPr/defRPr` subset: font family, font size, solid color, bold, and italic.
-  - [ ] Extend chart text-style records to cover rich text runs, rotation, tick-label offsets, multi-level
-    category labels, per-run data-label styles, and chart-style inherited defaults.
+  - [ ] Extend chart text-style records to cover rich text runs, rotation, full non-default tick-label offset
+    ladders, multi-level category labels, per-run data-label styles, and chart-style inherited defaults.
   - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
     text-style decisions for supported bar/line chart paths.
   - [x] Preserve cross-axis IDs, crossing behavior, cross-between, and reversed orientation metadata in
@@ -4374,8 +4374,21 @@ label placement factors for category-axis top offset and vertical value-axis bas
 tightened from `10 pt` to `1 pt` for chart text structures and passes at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-013507`, with category-axis Y deltas
 around `0.01 pt` and value-axis Y deltas within `0.06 pt`. Remaining chart text work: these are still metric
-rules for simple unrotated tick labels; rich text runs, rotation, tick-label offset, multi-level categories,
-and chart-style inherited defaults remain open under the chart text-style ownership track.
+rules for simple unrotated tick labels; rich text runs, rotation, full non-default tick-label offset ladders,
+multi-level categories, and chart-style inherited defaults remain open under the chart text-style ownership
+track.
+
+chart category-axis label-offset consumption / 2026-05-25:
+The renderer now consumes scene/XML `c:catAx/c:lblOffset` for supported category tick labels as a
+default-preserving scale on the label distance from the plot area. A new synthetic render test compares the
+single text baseline from `lblOffset=100` and `lblOffset=200`, with value-axis labels hidden, so the stored
+OOXML metadata now has observable PDF geometry instead of only scene-model preservation. This is still a
+structural first pass: public Office-PDF evidence for non-default offsets, rotated labels, and multi-level
+categories remains needed before this can be considered a complete Office rule. The focused render test
+passed with 1 passed, 0 failed, 0 skipped; the `pptx-charts` non-slow group passed with 9 passed, 0 failed,
+0 skipped; the clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014112`; the full suite passed with
+205 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

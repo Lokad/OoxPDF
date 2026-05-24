@@ -804,6 +804,9 @@ internal sealed partial class PptxRenderer
         public const double LineDataLabelBelowOffsetFactor = 1.25d;
         public const double LineDataLabelAboveOffsetFactor = 0.35d;
         public const double AxisLabelHeightFactor = 1.35d;
+        public const int CategoryAxisDefaultLabelOffset = 100;
+        public const int CategoryAxisMinimumLabelOffset = 0;
+        public const int CategoryAxisMaximumLabelOffset = 1000;
         public const double CategoryAxisHorizontalLeftOffsetRatio = 0.18d;
         public const double CategoryAxisHorizontalWidthRatio = 0.16d;
         public const double CategoryAxisHorizontalBaselineRatio = 0.45d;
