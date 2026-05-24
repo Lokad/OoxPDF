@@ -63,6 +63,47 @@ Private PPTX/DOCX documents remain acceptance and feature-discovery corpora. The
 inspected locally to identify generic gaps, but renderer changes should be driven by public synthetic
 fixtures unless a safety or diagnostics issue is involved.
 
+## Long-Term Architecture Track
+
+The long-term goal is pixel-perfect visual outcome through structural alignment with Office's observable
+PDF output. "Structural alignment" means that when Office represents a feature as text matrices, clipping
+paths, line strokes, filled rectangles, transparency groups, form XObjects, image masks, or reusable PDF
+resources, `ooxpdf` should move toward the same kind of PDF structure instead of compensating with
+feature-specific coordinates or raster-only nudges. The renderer still does not need byte-for-byte Office
+PDFs, and it must remain dependency-free at runtime, but Office-exported PDFs should define the behavior.
+
+The next architecture push is seven linked work tracks:
+
+1. Build chart structural oracle tooling. The current PDF inspection tools are strong for text; charts need
+   comparable public tooling that extracts and compares plot-area rectangles, axis/gridline line coordinates,
+   legend/title/data-label text positions, marker geometry, and clipping/resource structure from Office and
+   candidate PDFs. This should start with public synthetic chart fixtures and should not depend on private
+   deck content.
+2. Complete the chart scene model. Chart XML reads should move into typed scene/layout records for chart
+   kinds, plot areas, axes, series, data labels, markers, title, legend, fills, strokes, and text styles.
+   Raw XML may remain attached as source evidence while an OOXML surface is incomplete, but production
+   rendering should increasingly consume typed chart data.
+3. Replace chart fallback geometry. Named constants under `PptxChartMetricRules` are useful inventory, not
+   the destination. Each chart ratio, offset, and text metric should either be replaced by an Office-PDF
+   observed rule or explicitly classified as a temporary approximation with a public case that demonstrates
+   the remaining gap.
+4. Continue the slide-17 typography path through public evidence. The current private evidence suggests the
+   remaining issue is broader text placement, not connector geometry or chart manual layout. Use private
+   slide evidence only to identify generic missing text behavior, then lock that behavior with public
+   synthetic Office-PDF-backed fixtures.
+5. Migrate text frames to the model-first path. PPTX text should keep its four observable stages explicit:
+   style cascade, line layout, glyph positioning, and PDF emission. Shared text-frame layout should become
+   the source for shape text, chart text, and table text instead of each surface estimating height and
+   baselines independently.
+6. Converge table text with the common text model. Table-cell text should stop using table-local height and
+   vertical-alignment estimates where the shared PPTX text-frame model can provide the same observable
+   Office behavior. The long-term target is one text layout engine with surface-specific frame geometry.
+7. Replace one-off OOXML enum handling with explicit ladders. Whenever an incomplete enum family is touched,
+   survey the full family, record unsupported values, and add public fixtures or diagnostics in a ladder.
+   Priority families remain text orientation and autofit, line dash/cap/join and arrows, preset geometry and
+   adjustments, fills/color transforms, picture crop/tile/recolor, table borders/anchors, chart types and
+   markers, and DOCX layout enums.
+
 ## External Renderer Survey
 
 `C:\Users\JoannesVermorel\code\pptx-renderer` is a local TypeScript PPTX renderer that is reportedly much
@@ -1710,6 +1751,27 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-25: Added the seven-part long-term architecture track to this ExecPlan without removing
+  existing open progress or private-safe evidence. The track makes structural Office-PDF alignment the
+  mechanism for pixel-perfect output and sets chart structural oracle tooling as the next concrete slice.
+- [ ] 2026-05-25: Build chart structural oracle tooling that can compare public Office and candidate PDFs
+  for chart plot boxes, axis/gridline lines, title/legend/data-label text positions, marker geometry, and
+  clipping/resource structure before more chart layout changes are made.
+- [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
+  markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
+- [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
+  approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
+  visual case.
+- [ ] 2026-05-25: Continue the private slide-17 typography investigation through public fixtures: use private
+  evidence only to identify generic missing text behavior, then lock the behavior with synthetic
+  Office-backed cases.
+- [ ] 2026-05-25: Migrate PPTX text frames fully to the model-first path where style cascade, line layout,
+  glyph positioning, and PDF emission are separate observable stages.
+- [ ] 2026-05-25: Converge table-cell text on the common PPTX text-frame layout model so table-local height
+  and vertical-alignment estimates are retired when shared layout can express the same Office behavior.
+- [ ] 2026-05-25: Replace one-off OOXML enum handling with explicit ladders for touched enum families,
+  including unsupported-value inventory, public fixtures where visible, and diagnostics where rendering is
+  intentionally incomplete.
 - [x] 2026-05-24: Preserved chart `txPr/a:defRPr` bold/italic as structural chart text-style data instead
   of a render-time heuristic. `PptxSceneChartTextStyleOverride` and the chart renderer `ChartTextStyle`
   now carry nullable bold/italic through chart defaults, axes, plot/series data labels, and per-label
@@ -3539,6 +3601,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - Long-term PPTX work should optimize for structural PDF alignment with Office, not isolated raster nudges.
   Pixel-perfect output remains the outcome target, but the mechanism should be typed OOXML resolution and
   Office-like PDF operators wherever the structure is observable.
+- Decision: Execute the next long-term push as seven linked architecture tracks, starting with chart
+  structural oracle tooling before deeper chart layout changes.
+  Rationale: The chart renderer now has many named fallback metrics, but naming heuristics is only inventory.
+  A chart-specific Office/PDF structural comparison path is the evidence layer needed to delete those
+  heuristics safely and move chart output toward Office-like plot, axis, label, and resource structure.
+  Date/Author: 2026-05-25 / Codex.
 
 ## Outcomes & Retrospective
 
@@ -3595,15 +3663,16 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-197 passed, 0 failed, 0 skipped
+204 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-211130: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.005819, changed16 0.116054, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
-Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
+lokad-value-based / 20260524-235547: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.005915, changed16 0.116052, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+Page 17: MAE 2.880739, RMSE 19.298084, changed16 0.044888, changed32 0.035257,
+SSIM 0.920083, foreground histogram correlation 0.999858.
 ```
 
 Latest public small-label origin probe:
