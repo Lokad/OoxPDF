@@ -1339,7 +1339,7 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsVisible
-            ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay, Visible: true)
+            ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true)
             : ChartLegendLayout.Hidden;
     }
 

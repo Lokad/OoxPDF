@@ -519,14 +519,14 @@ internal sealed record PptxSceneChartAxis(
 internal sealed record PptxSceneChartTitle(
     string? Text,
     bool IsAutoDeleted,
-    bool Overlay,
+    bool? Overlay,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartLegend(
     string Position,
-    bool Overlay,
+    bool? Overlay,
     bool IsVisible,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
@@ -1633,7 +1633,7 @@ internal sealed class PptxSceneBuilder
             return EmptyChartTitle(isAutoDeleted);
         }
 
-        bool overlay = IsOoxmlBooleanElementEnabled(title?.Element(ChartNamespace + "overlay"));
+        bool? overlay = ReadOptionalOoxmlBooleanElement(title, "overlay");
         string? text = title?
             .Descendants(DrawingNamespace + "t")
             .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
@@ -1658,7 +1658,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneChartTitle(
             null,
             IsAutoDeleted,
-            Overlay: false,
+            Overlay: null,
             default,
             new PptxSceneChartShapeStyle(false, default, default, default),
             default);
@@ -1673,7 +1673,7 @@ internal sealed class PptxSceneBuilder
         {
             return new PptxSceneChartLegend(
                 "r",
-                Overlay: false,
+                Overlay: null,
                 IsVisible: false,
                 default,
                 new PptxSceneChartShapeStyle(false, default, default, default),
@@ -1682,7 +1682,7 @@ internal sealed class PptxSceneBuilder
 
         return new PptxSceneChartLegend(
             (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
-            IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay")),
+            ReadOptionalOoxmlBooleanElement(legend, "overlay"),
             !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")),
             ReadChartManualLayout(legend),
             ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme),

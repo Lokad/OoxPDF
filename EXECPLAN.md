@@ -4303,6 +4303,13 @@ flags from explicit Office-authored true/false values in the scene model while t
 coalesces to the current effective booleans at the last responsible point. The focused scene test passed with
 1 passed, 0 failed, 0 skipped.
 The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart title/legend overlay presence ownership / 2026-05-25:
+Chart title and legend overlay flags are now nullable in the scene model, so a missing `c:overlay` element is
+not confused with explicit `val="0"`. The renderer still coalesces missing overlay metadata to the existing
+effective false behavior when computing legend layout, while scene inspection can now distinguish source
+presence. The focused scene test passed with 1 passed, 0 failed, 0 skipped.
+The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

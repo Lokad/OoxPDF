@@ -524,6 +524,7 @@ internal static class PptxTests
         TestAssert.Equal("high", slide.SlideNodes[4].Chart?.Axes[1].TickLabelPosition ?? string.Empty);
         TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
         TestAssert.Equal("Value", slide.SlideNodes[4].Chart?.Axes[1].Title.Text ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Title.Overlay is null, "Expected missing chart axis-title overlay metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Title.Layout.HasLayout == true, "Expected chart value-axis title layout in the scene model.");
         TestAssert.Equal(0.02d, slide.SlideNodes[4].Chart?.Axes[1].Title.Layout.X ?? 0d);
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Axes[1].Title.Layout.Height ?? 0d);
