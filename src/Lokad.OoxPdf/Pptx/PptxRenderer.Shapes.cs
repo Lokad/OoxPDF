@@ -120,6 +120,7 @@ internal sealed partial class PptxRenderer
             ToShapeBounds(shape.Bounds),
             shape.Shape.Preset,
             shape.Shape.HasCustomGeometry,
+            ToFillStyle(shape.Shape.Fill),
             ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
             ToLineEndStyle(shape.Shape.TailEnd));
@@ -169,6 +170,7 @@ internal sealed partial class PptxRenderer
             shapeProperties.Element(DrawingNamespace + "custGeom") is not null,
             null,
             null,
+            null,
             null);
     }
 
@@ -188,6 +190,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds rawBounds,
         string preset,
         bool hasCustomGeometry,
+        FillStyle? fillOverride,
         LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
         LineEndStyle? tailEndOverride)
@@ -207,7 +210,19 @@ internal sealed partial class PptxRenderer
         double y = document.SlideHeightPoints - yTop - height;
         bool transformed = bounds.RotationDegrees != 0d || bounds.FlipHorizontal || bounds.FlipVertical;
 
-        bool hasFill = TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fill, out double fillAlpha);
+        RgbColor fill;
+        double fillAlpha;
+        bool hasFill;
+        if (fillOverride is { HasFill: true } resolvedFill)
+        {
+            fill = resolvedFill.Color;
+            fillAlpha = resolvedFill.Alpha;
+            hasFill = true;
+        }
+        else
+        {
+            hasFill = TryReadShapeFill(shape, shapeProperties, theme, out fill, out fillAlpha);
+        }
         bool hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out ShapePatternFill patternFill);
         RgbColor stroke;
         double lineWidth;
@@ -1661,6 +1676,11 @@ internal sealed partial class PptxRenderer
     private static LineStyle ToLineStyle(PptxSceneLineStyle line)
     {
         return new LineStyle(line.HasLine, line.Color, line.Width, line.Alpha, line.DashPattern ?? [], line.Cap, line.Join);
+    }
+
+    private static FillStyle ToFillStyle(PptxSceneFillStyle fill)
+    {
+        return new FillStyle(fill.HasFill, fill.Color, fill.Alpha);
     }
 
     private static LineEndKind ReadLineEndKind(string? type)

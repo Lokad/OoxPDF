@@ -653,6 +653,8 @@ internal sealed partial class PptxRenderer
         public bool HasDash => DashPattern is { Count: > 0 };
     }
 
+    private readonly record struct FillStyle(bool HasFill, RgbColor Color, double Alpha);
+
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;

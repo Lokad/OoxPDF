@@ -898,8 +898,10 @@ High-priority actions:
   join are now resolved in the scene model and consumed by ordered shape/connector rendering.
 - [x] Move custom geometry presence into `PptxSceneShape`; ordered shape rendering now uses the scene model to
   decide whether the node is custom geometry before handing source XML to the existing path interpreter.
-- [ ] Continue typed shape/connector migration by resolving fill/effect styles and then custom geometry path
-  commands into typed scene records.
+- [x] Move solid shape fill into `PptxSceneShape`: resolved fill color and alpha are now scene-level data and
+  ordered shape rendering consumes them through a renderer conversion boundary.
+- [ ] Continue typed shape/connector migration by resolving pattern/picture fills, effect styles, and then
+  custom geometry path commands into typed scene records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving shape line style, dash/cap/join, and
   custom geometry presence into the scene model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104147` produced 84/84 compared pages, zero dimension

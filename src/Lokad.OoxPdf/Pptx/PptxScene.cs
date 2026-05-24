@@ -178,9 +178,15 @@ internal sealed record PptxSceneNode(
 internal sealed record PptxSceneShape(
     string Preset,
     bool HasCustomGeometry,
+    PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
+
+internal readonly record struct PptxSceneFillStyle(
+    bool HasFill,
+    RgbColor Color,
+    double Alpha);
 
 internal readonly record struct PptxSceneLineStyle(
     bool HasLine,
@@ -573,9 +579,40 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
+            TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+                ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
+                : default,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static bool TryReadShapeFill(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double alpha)
+    {
+        if (shapeProperties?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            color = default;
+            alpha = 1d;
+            return false;
+        }
+
+        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out color, out alpha))
+        {
+            return true;
+        }
+
+        XElement? fillRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "fillRef");
+        int fillIndex = ParseOptionalIntAttribute(fillRef, "idx", 0);
+        if (fillIndex > 0 &&
+            theme.TryGetFillStyle(fillIndex, out XElement fillStyle) &&
+            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha))
+        {
+            return true;
+        }
+
+        return fillIndex > 0 && TryReadSolidColorWithAlpha(fillRef, theme, out color, out alpha);
     }
 
     private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
