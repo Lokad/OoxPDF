@@ -379,11 +379,12 @@ High-priority actions:
   NBSP is now modeled as a hidden advance instead of a visible glyph, with a unit test locking the split
   word spans. After the NBSP/narrow-space tightening, the probe passes approximate gates at MAE `0.583445`,
   changed16 `0.007705`; Office still emits more granular accent text operations than the candidate.
-- [ ] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
+- [x] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
   spacing-control cases, using Office PDF text operations to separate fallback-font splits from positioning.
   Punctuation-adjacent hyphen boundaries are now represented as separate layout spans and locked by
-  `pptx-ladder-04-typography-punctuation-boundaries` with line-start parity within `0.25pt`. Accented
-  Latin remains open because Office still splits accent-heavy text into additional PDF operations.
+  `pptx-ladder-04-typography-punctuation-boundaries` with line-start parity within `0.25pt`. The accented
+  Latin probe was regenerated from the correct UTF-8 generator source and now locks decoded text plus
+  line-start parity; remaining drift is glyph raster/font parity, not a fallback/positioning blocker.
 - [ ] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run
   sizing, superscript/subscript baseline, no-fill/outline text, hyperlink color, and table text overrides.
 - [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
@@ -461,9 +462,10 @@ High-priority actions:
 - [x] Split highlighted-run decoration from text emission for PPTX text drawing. This matches Office's
   pattern where highlight rectangles are painted separately while unchanged font metrics can still emit
   a single continuous text operation across run boundaries.
-- [ ] Tighten `pptx-ladder-04-typography-accent-spacing-probe`: Office splits accented Latin into several
-  font/text operations for missing glyph fallback and combining marks, while the candidate currently emits
-  fewer operations and has large x/y mismatches on Calibri and Arial accent rows.
+- [x] Tighten `pptx-ladder-04-typography-accent-spacing-probe` structurally:
+  the apparent Office/candidate operation split was caused by a mojibake fixture, not true accented Latin.
+  The corrected fixture now emits one decoded text operation per line on both sides and passes line-start
+  parity at `0.1pt`; raster metrics remain approximate for later font-rendering parity work.
 - [x] Re-run public spacing probes after the atom/glyph architecture slice:
   `inventory-opti`, `accent-spacing`, and `boundary-invariance` still render without diagnostics; boundary
   invariance remains structurally close while inventory/accent remain acceptance probes for later glyph
@@ -2592,7 +2594,8 @@ paths, and ExecPlan references together.
 - [x] Add diagnostic public rungs for capital spacing, accented Latin spacing, and run-boundary invariance.
   `pptx-ladder-04-typography-capital-spacing-probe` and
   `pptx-ladder-04-typography-boundary-invariance-probe` now enforce Office PDF text-operation parity at
-  `0.05pt`; the accented probe remains a targeted gap for font fallback and combining-mark handling.
+  `0.05pt`; the corrected accented probe now enforces decoded text and line-start parity while remaining
+  a raster/font-shape probe.
 - [x] Port the `pptx-renderer` baseline-shift rule: small PPTX `baseline` nudges keep the nominal font size,
   while larger super/subscript shifts use the reduced font scale. The public unit coverage now locks both
   `baseline="10000"` and `baseline="30000"` behavior without font-family-specific logic.
