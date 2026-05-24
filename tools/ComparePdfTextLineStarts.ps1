@@ -9,7 +9,9 @@ param(
 
     [double] $StartTolerance = 0.1,
 
-    [switch] $MatchByPosition
+    [switch] $MatchByPosition,
+
+    [switch] $ShowText
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,18 +56,50 @@ function New-LineGroups($operations) {
 
     $index = 0
     foreach ($line in $groups | Sort-Object -Property @{ Expression = { [double]$_.Y }; Descending = $true }) {
-        $starts = @($line.Operations | Sort-Object -Property X | ForEach-Object { [double]$_.X })
+        $orderedOps = @($line.Operations | Sort-Object -Property X)
+        $starts = @($orderedOps | ForEach-Object { [double]$_.X })
         [pscustomobject]@{
             Index = $index++
             Y = [Math]::Round([double]$line.Y, 6)
             Count = $starts.Count
             Starts = $starts
+            Texts = @($orderedOps | ForEach-Object { TextContent $_ })
         }
     }
 }
 
 function Delta([double] $left, [double] $right) {
     return [Math]::Round($right - $left, 6)
+}
+
+function TextContent($op) {
+    if ($op.DecodedText -ne $null) {
+        return [string]$op.DecodedText
+    }
+
+    return [string]$op.Payload
+}
+
+function Format-LineText($line) {
+    if ($null -eq $line) {
+        return $null
+    }
+
+    $parts = @($line.Texts | ForEach-Object { ShortText $_ })
+    return $parts -join " | "
+}
+
+function ShortText([string] $text) {
+    if ($null -eq $text) {
+        return ""
+    }
+
+    $normalized = $text.Replace("`r", "\r").Replace("`n", "\n").Replace("`t", "\t")
+    if ($normalized.Length -le 80) {
+        return $normalized
+    }
+
+    return $normalized.Substring(0, 77) + "..."
 }
 
 $referenceLines = @(New-LineGroups (Read-JsonArray $Reference))
@@ -129,6 +163,8 @@ foreach ($pair in $pairs) {
             MaxDeltaX = $null
             RefStarts = if ($null -eq $ref) { $null } else { ($ref.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", " }
             CandStarts = if ($null -eq $cand) { $null } else { ($cand.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", " }
+            RefText = if ($ShowText) { Format-LineText $ref } else { $null }
+            CandText = if ($ShowText) { Format-LineText $cand } else { $null }
         })
         continue
     }
@@ -161,10 +197,25 @@ foreach ($pair in $pairs) {
         MaxDeltaX = [Math]::Round($maxDelta, 6)
         RefStarts = ($ref.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", "
         CandStarts = ($cand.Starts | ForEach-Object { [Math]::Round($_, 6) }) -join ", "
+        RefText = if ($ShowText) { Format-LineText $ref } else { $null }
+        CandText = if ($ShowText) { Format-LineText $cand } else { $null }
     })
 }
 
-$rows | Format-Table -AutoSize
+if ($ShowText) {
+    $rows |
+        Select-Object Line, Status, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Format-Table -AutoSize
+    foreach ($row in $rows) {
+        Write-Host "Line $($row.Line) reference text: $($row.RefText)"
+        Write-Host "Line $($row.Line) candidate text: $($row.CandText)"
+    }
+}
+else {
+    $rows |
+        Select-Object Line, Status, RefY, CandY, RefCount, CandCount, MaxDeltaX, RefStarts, CandStarts |
+        Format-Table -AutoSize
+}
 Write-Host "Text line starts: reference=$($referenceLines.Count), candidate=$($candidateLines.Count), deltas=$failures"
 if ($MatchByPosition) {
     Write-Host "Matching: nearest line position"

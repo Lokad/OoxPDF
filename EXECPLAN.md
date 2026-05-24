@@ -182,6 +182,10 @@ High-priority actions:
 - [x] Add an optional decoded-text gate to PDF text-operation comparison:
   visual manifests can set `expected.compareDecodedTextOperations` to require matching decoded text content
   in addition to matrix, position, font-size, and tracking tolerances.
+- [x] Add opt-in decoded text summaries to PDF text-line comparison:
+  `ComparePdfTextLineStarts.ps1 -ShowText` now prints per-line reference/candidate decoded operation text
+  after the coordinate table. This keeps default output compact while making operation grouping mismatches
+  diagnosable without opening `text-operations.json` by hand.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
@@ -3417,7 +3421,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   on three of four lines. Office emits 2/3/1/4 text operations across the lines while the candidate emits
   3/1/1/1; the first line has matching starts except for a separate candidate space operation, while later
   accent-heavy lines point to unresolved font fallback/glyph grouping parity rather than a simple position
-  threshold issue.
+  threshold issue. The new `ComparePdfTextLineStarts.ps1 -ShowText` mode exposes those splits directly:
+  Office separates accent/fallback fragments that the candidate currently keeps merged.
 
 ## Decision Log
 
@@ -3541,7 +3546,8 @@ decoded PDF text gate passed; 2 reference and 2 candidate text operations; B x d
 
 pptx-ladder-04-typography-accent-spacing-probe / 20260524-212038:
 visual gate passed; MAE 0.799624, changed16 0.009473, SSIM 0.913024. Text-line inspection remains
-open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line.
+open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line; `-ShowText` confirms the
+first-line extra candidate operation is a space and later deltas are accent/fallback grouping splits.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
