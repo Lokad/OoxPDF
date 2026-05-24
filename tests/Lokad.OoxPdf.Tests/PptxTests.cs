@@ -166,8 +166,8 @@ internal static class PptxTests
                       <c:bubbleSize><c:numLit><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
                     </c:ser>
                   </c:bubbleChart>
-                  <c:catAx><c:axId val="10"/><c:axPos val="b"/></c:catAx>
-                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines/><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
+                  <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines/><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
                   </c:chart>
@@ -374,6 +374,13 @@ internal static class PptxTests
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Axes[1].MinorUnit ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMajorGridlines == true, "Expected chart major gridline visibility in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMinorGridlines == false, "Expected hidden chart minor gridline visibility in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].Line.HasLine == true, "Expected hidden chart axis line ownership in the scene model.");
+        TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[0].Line.Width ?? -1d);
+        TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[0].Line.Alpha ?? -1d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].Line.HasLine == true, "Expected chart axis line style in the scene model.");
+        TestAssert.Equal(new RgbColor(51, 102, 153), slide.SlideNodes[4].Chart?.Axes[1].Line.Color ?? default);
+        TestAssert.Equal(1.5d, slide.SlideNodes[4].Chart?.Axes[1].Line.Width ?? 0d);
+        TestAssert.Equal(0.75d, slide.SlideNodes[4].Chart?.Axes[1].Line.Alpha ?? 0d);
         TestAssert.Equal("high", slide.SlideNodes[4].Chart?.Axes[1].TickLabelPosition ?? string.Empty);
         TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
         TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);

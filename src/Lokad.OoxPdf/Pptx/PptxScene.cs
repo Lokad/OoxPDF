@@ -389,6 +389,7 @@ internal sealed record PptxSceneChartAxis(
     double? MinorUnit,
     bool HasMajorGridlines,
     bool HasMinorGridlines,
+    PptxSceneLineStyle Line,
     string TickLabelPosition,
     string? NumberFormat);
 
@@ -914,7 +915,7 @@ internal sealed class PptxSceneBuilder
             chartXml,
             paletteColors,
             ReadChartPlots(chartXml, theme),
-            ReadChartAxes(chartXml),
+            ReadChartAxes(chartXml, theme),
             ReadChartTitle(chartXml),
             ReadChartLegend(chartXml),
             ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme),
@@ -1194,7 +1195,7 @@ internal sealed class PptxSceneBuilder
             .ToArray();
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -1225,11 +1226,24 @@ internal sealed class PptxSceneBuilder
                 ReadChartAxisUnitValue(axis, "minorUnit"),
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines")),
+                ReadChartAxisLine(axis, theme),
                 (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
                 ReadChartAxisNumberFormat(axis)));
         }
 
         return axes;
+    }
+
+    private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
+    {
+        XElement? shapeProperties = axis.Element(ChartNamespace + "spPr");
+        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null);
+        }
+
+        return ReadChartLine(shapeProperties, theme);
     }
 
     private static double? ReadChartAxisScalingValue(XElement axis, string elementName)

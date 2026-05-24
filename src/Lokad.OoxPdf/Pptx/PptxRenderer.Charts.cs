@@ -437,7 +437,7 @@ internal sealed partial class PptxRenderer
                 bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
                 string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme);
-                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, barChart);
+                ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
@@ -559,7 +559,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, lineChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(linePlot, lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(linePlot, lineChart);
-                ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, lineChart);
+                ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
                 XElement? valueAxisForScale = valueAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
@@ -2230,6 +2230,34 @@ internal sealed partial class PptxRenderer
             categoryAxis,
             !IsChartAxisDeleted(valueAxisElement),
             !IsChartAxisDeleted(categoryAxisElement));
+    }
+
+    private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
+    {
+        XElement? valueAxisElement = ReadChartValueAxisForChart(chartXml, chartElement) ??
+            chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+        XElement? categoryAxisElement = ReadChartCategoryAxisForChart(chartXml, chartElement);
+        XElement? secondaryValueAxisElement = chartXml
+            .Descendants(ChartNamespace + "valAx")
+            .FirstOrDefault(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal));
+        PptxSceneChartAxis? valueAxis = ReadSceneChartAxis(sceneChart, plot, "valAx");
+        PptxSceneChartAxis? categoryAxis = ReadSceneChartAxis(sceneChart, plot, "catAx");
+        PptxSceneChartAxis? secondaryValueAxis = sceneChart?.Axes.FirstOrDefault(axis =>
+            string.Equals(axis.Kind, "valAx", StringComparison.Ordinal) &&
+            string.Equals(axis.Position, "r", StringComparison.Ordinal));
+        return new ChartAxesStyle(
+            ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
+            ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),
+            ReadSceneOrXmlChartAxisStroke(categoryAxis, categoryAxisElement, theme),
+            valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : !valueAxis.IsDeleted,
+            categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : !categoryAxis.IsDeleted);
+    }
+
+    private static ChartSeriesStroke? ReadSceneOrXmlChartAxisStroke(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
+    {
+        return sceneAxis is not null && sceneAxis.Line.HasLine
+            ? ToChartSeriesStroke(sceneAxis.Line)
+            : ReadChartAxisStroke(xmlAxis, theme);
     }
 
     private static bool IsChartAxisDeleted(XElement? axis)
