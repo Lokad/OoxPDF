@@ -3830,6 +3830,13 @@ plot-box ownership cleanup: 84/84 compared pages, zero dimension mismatches, dec
 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained at MAE `2.880739`, RMSE `19.298084`,
 changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, foreground histogram correlation `0.999858`,
 with matching dimensions.
+
+area chart manual plot-box public lock / 2026-05-24:
+`PptxSyntheticAreaChartManualPlotBoxUsesSharedPath` now locks the shared chart plot-box path for an area chart
+with `manualLayout` edge modes. This protects the area/scatter/bubble layout-owner change from silently
+falling back to frame-relative default geometry. The `pptx-charts` non-slow group passed with 6 passed, 0
+failed, 0 skipped; the non-slow suite passed with 191 passed, 0 failed, 7 skipped; `dotnet pack` succeeded;
+and the full suite passed with 198 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
