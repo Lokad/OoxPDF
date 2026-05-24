@@ -352,7 +352,8 @@ internal sealed record PptxSceneChartDataLabels(
     bool ShowLeaderLines,
     string Position,
     string Separator,
-    string NumberFormat);
+    string NumberFormat,
+    PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartShapeStyle(
     bool NoFill,
@@ -987,13 +988,13 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),
                 ReadChartElementDouble(plot, "holeSize"),
-                ReadChartDataLabels(plot)));
+                ReadChartDataLabels(plot, theme)));
         }
 
         return plots;
     }
 
-    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot)
+    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme)
     {
         XElement? labels = plot.Element(ChartNamespace + "dLbls") ??
             plot.Elements(ChartNamespace + "ser")
@@ -1008,7 +1009,8 @@ internal sealed class PptxSceneBuilder
                 ShowLeaderLines: false,
                 Position: string.Empty,
                 Separator: string.Empty,
-                NumberFormat: string.Empty)
+                NumberFormat: string.Empty,
+                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null))
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
@@ -1017,7 +1019,8 @@ internal sealed class PptxSceneBuilder
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showLeaderLines")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty);
+                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                ReadChartTextStyleOverride(labels, theme));
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)

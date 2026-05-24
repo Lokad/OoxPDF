@@ -806,8 +806,19 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Preserve and consume plot/series data-label `txPr` text style in supported chart labels.
+  `PptxSceneChartDataLabels` now carries font family, font size, and solid text color from `c:dLbls/c:txPr`,
+  and bar/line/pie/doughnut label rendering merges that typed style into the label text runs instead of using
+  a fixed 8.5pt theme-text default. Public scene tests lock the typed model fields, and the line-chart PDF
+  test locks the resulting label font size, RGB fill operator, and shifted text matrix. Focused model/chart
+  tests passed, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-173244` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Continue data-label rendering alignment with Office: leader lines, per-label overrides, rich text, and
-  shape styles are still unconsumed despite now being partly preserved in the scene model.
+  shape styles are still unconsumed; the next structural slice should model and consume `c:dLbl` overrides
+  and `c:dLbls/c:spPr` without hard-coding label geometry.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
   `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
@@ -3044,7 +3055,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
    chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
    chart plot attributes, chart series summaries including scatter/bubble data channels, chart series and
-   point styles, chart axis catalogs with scaling/units/gridlines/label options, titles, and legends, while
+   point styles, chart data-label metadata/text styles, chart axis catalogs with scaling/units/gridlines/label
+   options, titles, and legends, while
    `PptxRenderContext` owns package, theme, inheritance, relationships, image cache, and diagnostics. Keep
    retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
@@ -3185,7 +3197,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-172435: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-173244: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

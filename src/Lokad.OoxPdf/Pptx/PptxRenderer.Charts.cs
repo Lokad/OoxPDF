@@ -514,7 +514,7 @@ internal sealed partial class PptxRenderer
                         extraSeries,
                         extraValueExtents,
                         extraHorizontalBars,
-                        ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart),
+                        ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabels(extraBarPlot, extraBarChart),
                         ReadSceneOrXmlChartSeriesNames(extraBarPlot, extraBarChart)));
                     seriesOffset += extraSeries.Count;
@@ -564,7 +564,7 @@ internal sealed partial class PptxRenderer
                     barSeries,
                     valueExtents,
                     horizontalBars,
-                    ReadSceneOrXmlDataLabelOptions(barPlot, barChart),
+                    ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabels(barPlot, barChart),
                     ReadSceneOrXmlChartSeriesNames(barPlot, barChart)));
                 return true;
@@ -612,7 +612,7 @@ internal sealed partial class PptxRenderer
                     plotBox,
                     lineSeries,
                     valueExtents,
-                    ReadSceneOrXmlDataLabelOptions(linePlot, lineChart),
+                    ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlCategoryLabels(linePlot, lineChart),
                     ReadSceneOrXmlChartSeriesNames(linePlot, lineChart)));
                 return true;
@@ -699,7 +699,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderPieChart(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart)));
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 return true;
             }
         }
@@ -717,7 +717,7 @@ internal sealed partial class PptxRenderer
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderDoughnutChart(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart)));
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 return true;
             }
         }
@@ -1413,12 +1413,11 @@ internal sealed partial class PptxRenderer
         double centerX = x + width * 0.46d;
         double centerY = y + height * 0.52d;
         double labelRadius = radius * (holeSize > 0d ? Math.Max(0.62d, (1d + holeSize) / 2d) : 0.62d);
-        double fontSize = 8.5d;
+        ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, labelOptions);
+        double fontSize = style.FontSize;
         double labelWidth = Math.Max(18d, radius * 0.55d);
         double labelHeight = fontSize * 1.35d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        RgbColor color = style.Color;
         var runs = new List<TextRun>(values.Count);
         double angle = -90d;
         for (int i = 0; i < values.Count; i++)
@@ -1451,7 +1450,7 @@ internal sealed partial class PptxRenderer
                 Strike: false,
                 KerningEnabled: true,
                 TextAlignment.Center,
-                FontFamily: null,
+                FontFamily: style.FontFamily,
                 RotationDegrees: 0d,
                 RotationCenterX: 0d,
                 RotationCenterY: 0d,
@@ -1484,11 +1483,11 @@ internal sealed partial class PptxRenderer
         double zeroOffset = (0d - extents.Min) / range;
         double zeroX = plotBox.X + zeroOffset * plotBox.Width;
         double zeroY = plotBox.Y + zeroOffset * plotBox.Height;
-        double fontSize = 8.5d;
+        ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, labelOptions);
+        double fontSize = style.FontSize;
         double labelHeight = fontSize * 1.35d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        RgbColor color = style.Color;
+        string? fontFamily = style.FontFamily;
         var runs = new List<TextRun>();
         if (horizontalBars)
         {
@@ -1515,7 +1514,7 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
-                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left));
+                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left, fontFamily));
                     }
                 }
             }
@@ -1544,7 +1543,7 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
-                        runs.Add(CreateChartLabelRun(label, x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center));
+                        runs.Add(CreateChartLabelRun(label, x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center, fontFamily));
                     }
                 }
             }
@@ -1570,12 +1569,12 @@ internal sealed partial class PptxRenderer
 
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double range = Math.Max(1d, extents.Max - extents.Min);
-        double fontSize = 8.5d;
+        ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, labelOptions);
+        double fontSize = style.FontSize;
         double labelWidth = Math.Max(18d, plotBox.Width / Math.Max(5d, pointCount * 1.5d));
         double labelHeight = fontSize * 1.35d;
-        RgbColor color = theme.TryResolveColor("tx1", out RgbColor themeText)
-            ? themeText
-            : new RgbColor(0, 0, 0);
+        RgbColor color = style.Color;
+        string? fontFamily = style.FontFamily;
         var runs = new List<TextRun>();
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
@@ -1602,7 +1601,8 @@ internal sealed partial class PptxRenderer
                         plotBox,
                         fontSize,
                         color,
-                        alignment));
+                        alignment,
+                        fontFamily));
                 }
             }
         }
@@ -1644,7 +1644,16 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment)
+    private static ChartTextStyle ResolveChartDataLabelTextStyle(PptxTheme theme, ChartDataLabelOptions options)
+    {
+        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), 8.5d, fallbackColor);
+        return MergeChartTextStyle(style, options.TextStyle);
+    }
+
+    private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment, string? fontFamily)
     {
         return new TextRun(
             text,
@@ -1668,7 +1677,7 @@ internal sealed partial class PptxRenderer
             Strike: false,
             KerningEnabled: true,
             alignment,
-            FontFamily: null,
+            FontFamily: fontFamily,
             RotationDegrees: 0d,
             RotationCenterX: 0d,
             RotationCenterY: 0d,
@@ -1757,7 +1766,7 @@ internal sealed partial class PptxRenderer
             next.Color ?? style.Color);
     }
 
-    private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement)
+    private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme)
     {
         XElement? labels = chartElement.Element(ChartNamespace + "dLbls") ??
             chartElement.Elements(ChartNamespace + "ser")
@@ -1772,13 +1781,14 @@ internal sealed partial class PptxRenderer
                 IsChartLabelFlagEnabled(labels, "showSerName"),
                 labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty);
+                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                ReadChartTextStyleFromTxPr(labels, theme));
     }
 
-    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement)
+    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
         return plot is null
-            ? ReadChartDataLabelOptions(chartElement)
+            ? ReadChartDataLabelOptions(chartElement, theme)
             : new ChartDataLabelOptions(
                 plot.DataLabels.ShowValue,
                 plot.DataLabels.ShowPercent,
@@ -1786,7 +1796,8 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.ShowSeriesName,
                 plot.DataLabels.Position,
                 plot.DataLabels.Separator,
-                plot.DataLabels.NumberFormat);
+                plot.DataLabels.NumberFormat,
+                ToChartTextStyleOverride(plot.DataLabels.TextStyle));
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
@@ -3986,9 +3997,9 @@ internal sealed partial class PptxRenderer
         public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
     }
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Position, string Separator, string NumberFormat)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName;
     }
