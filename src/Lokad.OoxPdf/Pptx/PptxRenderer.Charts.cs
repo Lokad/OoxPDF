@@ -751,9 +751,10 @@ internal sealed partial class PptxRenderer
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
-        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox)
+        ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
+        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
             ? manualPlotBox
-            : new ChartPlotBox(frame.X, frame.Y, frame.Width, frame.Height);
+            : defaultPlotBox;
     }
 
     private static ChartPolarGeometry GetPieChartGeometry(ChartPlotBox plotBox)
@@ -801,17 +802,17 @@ internal sealed partial class PptxRenderer
         return ReadChartShapeStyle(shapeProperties, theme);
     }
 
-    private static bool TryReadSceneOrXmlManualPlotBox(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, out ChartPlotBox plotBox)
+    private static bool TryReadSceneOrXmlManualPlotBox(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
     {
         if (sceneChart is not null)
         {
-            return TryBuildManualPlotBox(sceneChart.PlotAreaLayout, frame, out plotBox);
+            return TryBuildManualPlotBox(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out plotBox);
         }
 
-        return TryReadManualPlotBox(chartXml, frame, out plotBox);
+        return TryReadManualPlotBox(chartXml, frame, defaultPlotBox, out plotBox);
     }
 
-    private static bool TryReadManualPlotBox(XDocument chartXml, ChartFrameBox frame, out ChartPlotBox plotBox)
+    private static bool TryReadManualPlotBox(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
     {
         plotBox = default;
         XElement? manualLayout = chartXml
@@ -843,10 +844,10 @@ internal sealed partial class PptxRenderer
             ReadManualLayoutValue(manualLayout, "xMode"),
             ReadManualLayoutValue(manualLayout, "yMode"),
             ReadManualLayoutValue(manualLayout, "wMode"),
-            ReadManualLayoutValue(manualLayout, "hMode")), frame, out plotBox);
+            ReadManualLayoutValue(manualLayout, "hMode")), frame, defaultPlotBox, out plotBox);
     }
 
-    private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, out ChartPlotBox plotBox)
+    private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
     {
         plotBox = default;
         if (!layout.HasLayout)
@@ -854,8 +855,8 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double left = Math.Clamp(layout.X, 0d, 1d);
-        double top = Math.Clamp(layout.Y, 0d, 1d);
+        double left = Math.Clamp(ResolveManualLayoutStartRatio(layout.X, layout.XMode, defaultPlotBox.X, frame.X, frame.Width), 0d, 1d);
+        double top = Math.Clamp(ResolveManualLayoutStartRatio(layout.Y, layout.YMode, frame.Y + frame.Height - defaultPlotBox.Y - defaultPlotBox.Height, 0d, frame.Height), 0d, 1d);
         double width = Math.Clamp(layout.Width, 0.02d, 1d);
         double height = Math.Clamp(layout.Height, 0.02d, 1d);
         double right = IsManualLayoutEdgeMode(layout.WidthMode)
@@ -872,9 +873,24 @@ internal sealed partial class PptxRenderer
         return plotWidth > 0d && plotHeight > 0d;
     }
 
+    private static double ResolveManualLayoutStartRatio(double value, string mode, double defaultStart, double frameStart, double frameLength)
+    {
+        if (IsManualLayoutFactorMode(mode) && frameLength > 0d)
+        {
+            return (defaultStart - frameStart) / frameLength + value;
+        }
+
+        return value;
+    }
+
     private static bool IsManualLayoutEdgeMode(string mode)
     {
         return string.Equals(mode, "edge", StringComparison.Ordinal);
+    }
+
+    private static bool IsManualLayoutFactorMode(string mode)
+    {
+        return string.Equals(mode, "factor", StringComparison.Ordinal);
     }
 
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
@@ -3033,27 +3049,29 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
     {
-        if (TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox))
-        {
-            return manualPlotBox;
-        }
-
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
+        ChartPlotBox defaultPlotBox;
         if (!hasTitle && !hasLegend)
         {
-            return new ChartPlotBox(
+            defaultPlotBox = new ChartPlotBox(
                 frame.X + frame.Width * 0.112d,
                 frame.Y + frame.Height * 0.035d,
                 frame.Width * 0.86d,
                 frame.Height * 0.885d);
         }
+        else
+        {
+            defaultPlotBox = new ChartPlotBox(
+                frame.X + frame.Width * 0.1d,
+                frame.Y + frame.Height * 0.14d,
+                frame.Width * 0.82d,
+                frame.Height * 0.81d);
+        }
 
-        return new ChartPlotBox(
-            frame.X + frame.Width * 0.1d,
-            frame.Y + frame.Height * 0.14d,
-            frame.Width * 0.82d,
-            frame.Height * 0.81d);
+        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
+            ? manualPlotBox
+            : defaultPlotBox;
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, string grouping)
@@ -3583,12 +3601,10 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetLineChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
     {
-        if (TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox))
-        {
-            return manualPlotBox;
-        }
-
-        return GetDefaultChartPlotBox(frame);
+        ChartPlotBox defaultPlotBox = GetDefaultChartPlotBox(frame);
+        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
+            ? manualPlotBox
+            : defaultPlotBox;
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)

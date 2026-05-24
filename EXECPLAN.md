@@ -3934,6 +3934,17 @@ digit, non-digit, and extra-clip factors now live under `PptxChartMetricRules`. 
 measurement approximation visible beside the rest of the chart layout rules. The `pptx-charts` non-slow group
 passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202 passed, 0 failed, 0 skipped; and
 `dotnet pack` succeeded.
+
+chart manual-layout factor x/y semantics / 2026-05-24:
+Manual plot-box construction now distinguishes `xMode`/`yMode` `factor` from `edge`: factor-positioned `x` and
+`y` values are resolved from the default plot-box position, while edge-positioned values remain chart-frame
+relative. This follows the Office behavior note in MS-OI29500 for `ST_LayoutMode` and removes a structural
+layout-mode collapse without introducing chart-specific coordinates. `PptxSyntheticChartManualLayoutFactorPositionUsesDefaultPlotBox`
+locks the PDF plot-area rectangle for this case. The `pptx-model` non-slow group passed with 12 passed, 0 failed,
+1 skipped; the `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with
+203 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: partial manual layouts still need
+optional-value scene-model preservation before missing children can be resolved safely against the same default
+plot-box anchor.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
