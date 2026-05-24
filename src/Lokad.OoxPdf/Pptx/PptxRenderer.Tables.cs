@@ -7,30 +7,35 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
-        {
-            RenderTableContainer(context, graphics, textSpans, shapeTree, GroupTransform.Identity);
-        }
+        var graphics = new PdfGraphicsBuilder();
+        AddSceneTableTextSpans(context.SceneSlide?.MasterNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide?.SlideNodes ?? [], context, graphics, textSpans, GroupTransform.Identity);
 
         return textSpans;
     }
 
-    private static void RenderTableContainer(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PptxPositionedTextSpan> textSpans, XElement container, GroupTransform transform)
+    private static void AddSceneTableTextSpans(
+        IReadOnlyList<PptxSceneNode> nodes,
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PptxPositionedTextSpan> textSpans,
+        GroupTransform transform)
     {
-        foreach (XElement child in container.Elements())
+        foreach (PptxSceneNode node in nodes)
         {
-            if (child.Name == PresentationNamespace + "graphicFrame")
+            if (node.Kind == PptxSceneNodeKind.Table)
             {
-                textSpans.AddRange(RenderTableFrame(context, child, graphics, transform));
+                textSpans.AddRange(RenderTableFrame(context, node, graphics, transform));
                 continue;
             }
 
-            if (child.Name == PresentationNamespace + "grpSp")
+            if (node.Kind == PptxSceneNodeKind.Group)
             {
-                RenderTableContainer(context, graphics, textSpans, child, transform.Combine(ReadGroupTransform(child)));
+                AddSceneTableTextSpans(node.Children, context, graphics, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)));
             }
         }
     }
@@ -41,18 +46,6 @@ internal sealed partial class PptxRenderer
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
         return RenderTableFrame(context, bounds, node.Table?.Source, node.Table, graphics);
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
-    {
-        return RenderTableFrame(context, frame, graphics, GroupTransform.Identity);
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics, GroupTransform transform)
-    {
-        ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
-        XElement? table = PptxSceneBuilder.ReadTableElement(frame);
-        return RenderTableFrame(context, bounds is { } rawBounds ? transform.Apply(rawBounds) : null, table, null, graphics);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable, PdfGraphicsBuilder graphics)
@@ -382,12 +375,6 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
-    }
-
-    private static ShapeBounds? ReadGraphicFrameBounds(XElement frame)
-    {
-        XElement? transform = frame.Element(PresentationNamespace + "xfrm");
-        return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
     private static void AddTableCellTextSpans(PptxRenderContext context, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)

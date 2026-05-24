@@ -65,8 +65,8 @@ internal sealed partial class PptxRenderer
             int imageIndex = 1;
             IReadOnlyList<PptxPositionedTextSpan> inheritedTextSpans = ReadInheritedTextSpans(context);
             IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
-            IReadOnlyList<PptxPositionedTextSpan> slideTableTextSpans = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
-            RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(slideTableTextSpans).Select(span => span.Run).ToArray());
+            IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
+            RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(tableTextSpans).Select(span => span.Run).ToArray());
             RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.MasterPartName), context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
             RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.LayoutPartName), context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
             RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);

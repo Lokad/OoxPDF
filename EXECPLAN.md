@@ -535,6 +535,10 @@ High-priority actions:
   walkers, were deleted after all slides moved to typed ordered scene dispatch. The grouped-table unknown
   frame test was renamed to `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` so the test
   catalog no longer describes a fallback renderer path that no longer exists.
+- [x] Move PPTX table font prepass onto typed scene nodes:
+  ordered rendering no longer calls the raw XML `RenderTables(..., new PdfGraphicsBuilder())` traversal just
+  to discover table text fonts. `ReadSceneTableTextSpans` now walks master, layout, and slide scene nodes with
+  the same group transforms as ordered dispatch, and obsolete XML table-frame overloads were removed.
 - [x] 2026-05-24: Re-ran private PPTX acceptance after adding the generic unknown graphic-frame diagnostic.
   Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
   dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
@@ -3669,6 +3673,12 @@ After deleting the private XML-wide picture, shape, and chart traversal entry po
 `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed and the non-slow suite passed
 with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed,
 0 failed, 0 skipped.
+
+typed scene table font prepass / 2026-05-24:
+`PptxSyntheticTableRendersGridAndText` and
+`PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed after replacing the raw XML table
+font prepass with a typed scene-node traversal. The non-slow suite passed with 190 passed, 0 failed,
+7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
