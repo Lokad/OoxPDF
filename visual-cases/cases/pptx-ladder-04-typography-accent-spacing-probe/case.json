@@ -8,7 +8,10 @@
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": true
+    "diagnosticsMustBeEmpty": true,
+    "maxTextLineStartDelta": 0.1,
+    "matchTextLineStartsByPosition": true,
+    "compareDecodedTextOperations": true
   },
   "allowedUnsupportedFeatures": []
 }

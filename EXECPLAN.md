@@ -302,6 +302,10 @@ High-priority actions:
   fonts, keep primary requested typefaces for exact hits, and split positioned spans by glyph typeface before
   PDF emission so fallback glyph ids are encoded against their own font resource. A synthetic Arial/CJK test
   locks decoded glyph order plus multiple PDF font resources.
+- [x] Repair and structurally lock the accented-Latin public probe:
+  the checked-in `pptx-ladder-04-typography-accent-spacing-probe.pptx` had mojibake in `slide1.xml` even
+  though the generator source was correct UTF-8. Regenerating the fixture restored true accented text; the
+  case now gates decoded text and line starts while leaving raster metrics approximate.
 - [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
   `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
   flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
@@ -3428,15 +3432,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   it is going to feed Office-like renderer transforms.
   Evidence: `PptxSceneBounds` now keeps EMU coordinates and extents plus point conversion properties; ordered
   picture rendering uses those EMU bounds directly through the existing group transform math.
-- Observation: `pptx-ladder-04-typography-accent-spacing-probe` should stay approximate until font fallback
-  and glyph-operation grouping are modeled more explicitly.
-  Evidence: the 2026-05-24 run `20260524-212038` passed its current visual gate with MAE `0.799624`,
-  changed16 `0.009473`, and SSIM `0.913024`, but text-line inspection still reports operation-count deltas
-  on three of four lines. Office emits 2/3/1/4 text operations across the lines while the candidate emits
-  3/1/1/1; the first line has matching starts except for a separate candidate space operation, while later
-  accent-heavy lines point to unresolved font fallback/glyph grouping parity rather than a simple position
-  threshold issue. The new `ComparePdfTextLineStarts.ps1 -ShowText` mode exposes those splits directly:
-  Office separates accent/fallback fragments that the candidate currently keeps merged.
+- Observation: `pptx-ladder-04-typography-accent-spacing-probe` used to be a false structural gap because
+  the checked-in PPTX contained mojibake despite a correct UTF-8 generator source.
+  Evidence: after regenerating only that fixture, `slide1.xml` contains true accented French text. The
+  2026-05-24 run `20260524-214440` has MAE `0.516824`, changed16 `0.005876`, SSIM `0.919226`, and the new
+  text gates pass: four Office text lines and four candidate text lines, matching decoded text, and
+  max line-start delta `0.00 pt`. The remaining raster drift is glyph-shape/font-rendering parity, not text
+  grouping or placement.
 - Observation: The glyph-run emission boundary can now split one OOXML run across multiple PDF font resources
   when glyph fallback is required, but fallback selection is still a simple discovered-font search.
   Evidence: `PptxSyntheticTextBoxSplitsMissingGlyphsToFallbackFont` locks an Arial run containing a CJK code
@@ -3564,10 +3566,10 @@ Latest public typography structural probes:
 pptx-ladder-04-nonbreaking-space / 20260524-212024:
 decoded PDF text gate passed; 2 reference and 2 candidate text operations; B x delta 0.09 pt.
 
-pptx-ladder-04-typography-accent-spacing-probe / 20260524-213258:
-visual gate passed; MAE 0.799624, changed16 0.009473, SSIM 0.913024. Text-line inspection remains
-open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line; `-ShowText` confirms the
-first-line extra candidate operation is a space and later deltas are accent/fallback grouping splits.
+pptx-ladder-04-typography-accent-spacing-probe / 20260524-214440:
+corrected true-accent fixture passed; MAE 0.516824, changed16 0.005876, SSIM 0.919226. PDF text line-start
+gate passed with four reference and four candidate text lines, decoded text parity, and max start delta
+0.00 pt.
 
 glyph-run ownership slice / 2026-05-24:
 `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
