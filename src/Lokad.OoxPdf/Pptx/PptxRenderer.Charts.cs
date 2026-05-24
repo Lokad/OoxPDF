@@ -639,9 +639,10 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
+                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderPieChart(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
+                RenderPieChart(graphics, plotBox, pieSeries[0], pointFills, pointStrokes, pointExplosions);
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 return true;
             }
         }
@@ -657,9 +658,10 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart);
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
+                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderDoughnutChart(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
+                RenderDoughnutChart(graphics, plotBox, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 return true;
             }
         }
@@ -744,6 +746,14 @@ internal sealed partial class PptxRenderer
             frame.Y + frame.Height * PptxChartMetricRules.DefaultPlotBoxYRatio,
             frame.Width * PptxChartMetricRules.DefaultPlotBoxWidthRatio,
             frame.Height * PptxChartMetricRules.DefaultPlotBoxHeightRatio);
+    }
+
+    private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    {
+        ChartFrameBox frame = GetChartFrameBox(document, bounds);
+        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox)
+            ? manualPlotBox
+            : new ChartPlotBox(frame.X, frame.Y, frame.Width, frame.Height);
     }
 
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)
@@ -1383,7 +1393,7 @@ internal sealed partial class PptxRenderer
         return OoxBoolean.ParseElement(element, defaultValue);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
     {
         if (!labelOptions.HasVisibleText || values.Count == 0)
         {
@@ -1396,14 +1406,9 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        double radius = Math.Min(width, height) * 0.34d;
-        double centerX = x + width * 0.46d;
-        double centerY = y + height * 0.52d;
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
+        double centerX = plotBox.X + plotBox.Width * 0.46d;
+        double centerY = plotBox.Y + plotBox.Height * 0.52d;
         double labelRadius = radius * (holeSize > 0d ? Math.Max(0.62d, (1d + holeSize) / 2d) : 0.62d);
         double labelWidth = Math.Max(18d, radius * 0.55d);
         var runs = new List<TextRun>(values.Count);
@@ -1431,10 +1436,10 @@ internal sealed partial class PptxRenderer
                 labelY,
                 labelWidth,
                 labelHeight,
-                x,
-                y,
-                width,
-                height,
+                plotBox.X,
+                plotBox.Y,
+                plotBox.Width,
+                plotBox.Height,
                 fontSize,
                 0d,
                 0d,
@@ -4024,7 +4029,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)
+    private static void RenderPieChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -4032,14 +4037,9 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        double radius = Math.Min(width, height) * 0.34d;
-        double centerX = x + width * 0.46d;
-        double centerY = y + height * 0.52d;
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
+        double centerX = plotBox.X + plotBox.Width * 0.46d;
+        double centerY = plotBox.Y + plotBox.Height * 0.52d;
         double angle = -Math.PI / 2d;
 
         for (int i = 0; i < values.Count; i++)
@@ -4102,18 +4102,13 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
+    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
-        RenderPieChart(graphics, document, bounds, values, pointFills, pointStrokes, pointExplosions);
+        RenderPieChart(graphics, plotBox, values, pointFills, pointStrokes, pointExplosions);
 
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        double radius = Math.Min(width, height) * 0.34d;
-        double centerX = x + width * 0.46d;
-        double centerY = y + height * 0.52d;
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
+        double centerX = plotBox.X + plotBox.Width * 0.46d;
+        double centerY = plotBox.Y + plotBox.Height * 0.52d;
         double innerRadius = radius * holeSize;
         graphics.SetFillRgb(255, 255, 255);
         graphics.FillEllipse(centerX - innerRadius, centerY - innerRadius, innerRadius * 2d, innerRadius * 2d);

@@ -3845,6 +3845,15 @@ spoke against a `manualLayout` edge-mode plot box. Pie and doughnut still use fr
 and remain the next explicit chart-layout gap. The `pptx-charts` non-slow group passed with 7 passed, 0
 failed, 0 skipped; the non-slow suite passed with 192 passed, 0 failed, 7 skipped; `dotnet pack` succeeded;
 and the full suite passed with 199 passed, 0 failed, 0 skipped.
+
+pie/doughnut polar plot-box public lock / 2026-05-24:
+Pie and doughnut rendering now use a polar `ChartPlotBox`: explicit plot-area `manualLayout` drives center,
+radius, and data-label clipping, while the default remains the full chart frame to preserve existing
+frame-derived behavior until Office-PDF evidence supports a stronger default polar plot-area rule.
+`PptxSyntheticPieChartManualPlotBoxUsesPolarPath` locks a manual-layout pie slice against the old
+frame-derived geometry. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the
+non-slow suite passed with 193 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite
+passed with 200 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
