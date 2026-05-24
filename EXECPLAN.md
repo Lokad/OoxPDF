@@ -751,6 +751,19 @@ High-priority actions:
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: axis crossing, label-side slotting from scene metadata, cross-axis IDs, and exact Office spacing still
   need explicit model-to-renderer plumbing.
+- [x] 2026-05-24: Consume scene-owned data-label separator and number-format metadata in supported label
+  rendering. Bar and line value labels now format through `ChartDataLabelOptions`, and pie/doughnut
+  value-plus-percent labels use the typed separator instead of a fixed comma when the OOXML provides one;
+  raw XML fallback still parses the same metadata when no scene plot is available. Focused model/chart tests
+  passed after a transient parallel build lock was rerun serially, the full runner passed 186/186,
+  `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-162638` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Continue data-label rendering alignment with Office: category-name/series-name composition, label
+  position semantics, leader lines, per-label overrides, rich text, and shape styles are still unconsumed
+  despite now being partly preserved in the scene model.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -890,9 +903,10 @@ High-priority actions:
     consume those options before raw `c:dLbls` fallback.
   - [x] Extend chart data-label scene metadata to preserve category-name, series-name, leader-line,
     position, separator, and number-format options.
+  - [x] Consume scene/XML data-label separator and number-format metadata for supported value-label text.
   - [ ] Extend chart data-label modeling to cover label position, separators, category/series-name flags,
-    leader lines, number formats, per-label overrides, and label text/shape styles in rendering before
-    attempting finer Office-aligned data-label layout.
+    leader lines, per-label overrides, and label text/shape styles in rendering before attempting finer
+    Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
     now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
   - [x] Add and consume scene-owned chart area and plot area solid fill/line styles, so supported chart
@@ -3102,7 +3116,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-162216: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-162638: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

@@ -1447,7 +1447,7 @@ internal sealed partial class PptxRenderer
                     double barWidth = Math.Abs(value) / range * plotBox.Width;
                     double x = value >= 0d ? zeroX + barWidth + 2d : zeroX - barWidth - labelWidth - 2d;
                     double y = categoryY + seriesIndex * barSlot + barSlot * 0.43d - labelHeight / 2d;
-                    runs.Add(CreateChartLabelRun(FormatChartAxisLabel(value), x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left));
+                    runs.Add(CreateChartLabelRun(FormatChartDataLabelValue(value, labelOptions), x, y, labelWidth, labelHeight, plotBox, fontSize, color, TextAlignment.Left));
                 }
             }
         }
@@ -1470,7 +1470,7 @@ internal sealed partial class PptxRenderer
                     double barHeight = Math.Abs(value) / range * plotBox.Height;
                     double x = categoryX + seriesIndex * barSlot;
                     double y = value >= 0d ? zeroY + barHeight + 1d : zeroY - barHeight - labelHeight - 1d;
-                    runs.Add(CreateChartLabelRun(FormatChartAxisLabel(value), x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center));
+                    runs.Add(CreateChartLabelRun(FormatChartDataLabelValue(value, labelOptions), x, y, Math.Max(1d, barSlot * 0.86d), labelHeight, plotBox, fontSize, color, TextAlignment.Center));
                 }
             }
         }
@@ -1502,7 +1502,7 @@ internal sealed partial class PptxRenderer
                 double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
                 double pointY = plotBox.Y + (values[i] - extents.Min) / range * plotBox.Height;
                 runs.Add(CreateChartLabelRun(
-                    FormatChartAxisLabel(values[i]),
+                    FormatChartDataLabelValue(values[i], labelOptions),
                     pointX - labelWidth / 2d,
                     pointY + labelHeight * 0.35d,
                     labelWidth,
@@ -1640,14 +1640,20 @@ internal sealed partial class PptxRenderer
             ? ChartDataLabelOptions.None
             : new ChartDataLabelOptions(
                 IsChartLabelFlagEnabled(labels, "showVal"),
-                IsChartLabelFlagEnabled(labels, "showPercent"));
+                IsChartLabelFlagEnabled(labels, "showPercent"),
+                labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
+                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty);
     }
 
     private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is null
             ? ReadChartDataLabelOptions(chartElement)
-            : new ChartDataLabelOptions(plot.DataLabels.ShowValue, plot.DataLabels.ShowPercent);
+            : new ChartDataLabelOptions(
+                plot.DataLabels.ShowValue,
+                plot.DataLabels.ShowPercent,
+                plot.DataLabels.Separator,
+                plot.DataLabels.NumberFormat);
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
@@ -1666,12 +1672,25 @@ internal sealed partial class PptxRenderer
     {
         if (options.ShowValue && options.ShowPercent)
         {
-            return FormatChartAxisLabel(value) + ", " + FormatChartPercentageLabel(value / total);
+            return FormatChartDataLabelValue(value, options) + GetChartDataLabelSeparator(options) + FormatChartPercentageLabel(value / total);
         }
 
         return options.ShowPercent
             ? FormatChartPercentageLabel(value / total)
+            : FormatChartDataLabelValue(value, options);
+    }
+
+    private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)
+    {
+        return !string.IsNullOrWhiteSpace(options.NumberFormat) &&
+            !string.Equals(options.NumberFormat, "General", StringComparison.OrdinalIgnoreCase)
+            ? FormatChartNumber(value, options.NumberFormat)
             : FormatChartAxisLabel(value);
+    }
+
+    private static string GetChartDataLabelSeparator(ChartDataLabelOptions options)
+    {
+        return string.IsNullOrEmpty(options.Separator) ? ", " : options.Separator;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<string> labels, bool horizontalBars)
@@ -3790,9 +3809,9 @@ internal sealed partial class PptxRenderer
         public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
     }
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, string Separator, string NumberFormat)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, Separator: string.Empty, NumberFormat: string.Empty);
     }
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
