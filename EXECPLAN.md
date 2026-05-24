@@ -4329,6 +4329,19 @@ not confused with explicit `val="0"`. The renderer still coalesces missing overl
 effective false behavior when computing legend layout, while scene inspection can now distinguish source
 presence. The focused scene test passed with 1 passed, 0 failed, 0 skipped.
 The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart automatic value-axis scale unification / 2026-05-25:
+Public clustered-column Office evidence showed a chart with data max `61`, no explicit `c:max`, and no
+explicit `c:majorUnit` rendering value-axis labels `0, 10, 20, 30, 40, 50, 60, 70`. The candidate previously
+chose axis max `80` because `GetNiceChartAxisMax` used a separate five-tick heuristic while labels/gridlines
+used `ChooseChartAxisMajorUnit` with the shared ten-tick ladder. The fallback axis maximum now derives from
+the same automatic major unit used for ticks, so scale endpoint and tick sequence are one inferred numeric
+rule instead of two competing approximations. The clustered-column visual manifest now gates both
+`CategoryAxisTickLabel` and `ValueAxisTickLabel` structures; it passes at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-012351`. Remaining gap: value-axis
+label X positions are still about `48 pt` right of Office and category labels about `26 pt` low, so the
+public gate keeps a broad `50 pt` chart-text tolerance until the Office-PDF plot-box and axis-label placement
+rules replace the current fallback geometry.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

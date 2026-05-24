@@ -972,7 +972,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = ReadAxisScalingValue(scaling, "min") ?? fallback.Min;
-        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, fallback.Min);
+        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -991,7 +991,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? fallback.Min;
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, fallback.Min);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -2402,13 +2402,6 @@ internal sealed partial class PptxRenderer
 
     private static double GetNiceChartAxisMax(double dataMax, double dataMin)
     {
-        double interval = GetNiceChartAxisInterval(dataMax, dataMin, desiredTicks: 5);
-        double niceMax = Math.Ceiling(dataMax / interval) * interval;
-        return niceMax <= dataMax ? niceMax + interval : niceMax;
-    }
-
-    private static double GetNiceChartAxisInterval(double dataMax, double dataMin, int desiredTicks)
-    {
         if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
             return 1d;
@@ -2420,17 +2413,9 @@ internal sealed partial class PptxRenderer
             return dataMax > 0d ? dataMax * PptxChartMetricRules.AxisSingleValueHeadroomFactor : 1d;
         }
 
-        double rawInterval = Math.Max(range / Math.Max(1, desiredTicks), double.Epsilon);
-        double magnitude = Math.Pow(PptxChartMetricRules.AxisNiceTickStepMaximum, Math.Floor(Math.Log10(rawInterval)));
-        double normalized = rawInterval / magnitude;
-        double nice = normalized <= PptxChartMetricRules.AxisNiceTickStepSmall
-            ? PptxChartMetricRules.AxisNiceTickStepSmall
-            : normalized <= PptxChartMetricRules.AxisNiceTickStepMedium
-                ? PptxChartMetricRules.AxisNiceTickStepMedium
-                : normalized <= PptxChartMetricRules.AxisNiceTickStepLarge
-                    ? PptxChartMetricRules.AxisNiceTickStepLarge
-                    : PptxChartMetricRules.AxisNiceTickStepMaximum;
-        return nice * magnitude;
+        double unit = ChooseChartAxisMajorUnit(range);
+        double niceMax = Math.Ceiling(dataMax / unit) * unit;
+        return niceMax < dataMax + PptxChartMetricRules.AxisValueEpsilon ? niceMax + unit : niceMax;
     }
 
     private static string FormatChartAxisLabel(double value, XElement? axis = null)
