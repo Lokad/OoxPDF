@@ -123,6 +123,7 @@ internal static class PptxTableStyleResolver
 
         return new PptxSceneTableCellTextStyle(color, bold);
     }
+
     private static RgbColor TintColor(RgbColor color, double tint)
     {
         return new RgbColor(

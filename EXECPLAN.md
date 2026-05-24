@@ -569,6 +569,9 @@ High-priority actions:
     scene-owned style fills and text defaults after direct cell formatting. The current limited built-in
     formulas are isolated in `PptxTableStyleResolver`, pending replacement by a full Office table-style
     cascade model.
+  - [ ] Replace `PptxTableStyleResolver`'s supported-style formulas with a real Office table-style cascade:
+    parse table style parts/theme style matrices, conditional formatting priority, `phClr` replacement, and
+    unsupported-style diagnostics instead of expanding GUID-specific logic.
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.
