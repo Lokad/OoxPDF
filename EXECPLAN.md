@@ -1826,9 +1826,16 @@ High-priority actions:
   this structure only after public Office-PDF evidence defines the placement rule. Validation: the focused
   scene test passed `1 passed, 0 failed, 0 skipped`; the full console suite passed
   `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
-- [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
-  oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
-  ticks, data labels, and annotations as explicit Office-aligned roles.
+- [x] 2026-05-25: Promote chart text classification from broad position buckets to first semantic roles.
+  `ClassifyPdfChartText.ps1` now emits `CategoryAxisTickLabel`, `ValueAxisTickLabel`, `DataLabelText`,
+  `LegendText`, and title-candidate roles where geometry supports them, while preserving broad fallback roles
+  for ambiguous text. The clustered-column public visual case now gates the four `CategoryAxisTickLabel`
+  records structurally against Office PDF text positions. Validation:
+  `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-11-chart-column-clustered-port/case.json`
+  passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-005334`.
+- [ ] 2026-05-25: Continue chart text classification beyond the first semantic roles. Remaining gaps include
+  robust chart-title disambiguation, top/bottom legend containers, value-axis origin-label parity, data labels
+  outside the plot box, annotations, and multi-chart pages.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
@@ -3584,6 +3591,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   sibling layout and shape properties Office can use to place and frame a legend.
   Evidence: `PptxSceneChartLegend` now preserves `c:layout/c:manualLayout` and `c:spPr` fill/stroke data, and
   the scene-builder fixture locks those values before any renderer placement change consumes them.
+- Observation: Generic chart text position buckets were too coarse for long-term structural alignment, but
+  overly broad legend-container detection also misclassifies category-axis text when charts use clipping boxes
+  above the plot.
+  Evidence: `ClassifyPdfChartText.ps1` now emits explicit category/value/data/legend/title roles where
+  geometry supports them, limits container-based legend detection to right-side containers, and gates
+  `CategoryAxisTickLabel` on the public clustered-column case. A line-marker visual probe still fails its
+  pre-existing pixel MAE threshold (`3.640602` actual vs `2.9` limit) before a text gate can run, so it remains
+  a separate chart-fidelity cleanup target rather than a tolerance change hidden inside this slice.
 - Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
   support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
   connector where Office behaves like a quarter-turn loop segment.
@@ -4216,6 +4231,15 @@ overlay, visibility, and text style. This is a model-first preservation step: re
 legend placement path until public Office-PDF evidence defines the layout rule. The focused scene test passed
 with 1 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and
 `dotnet pack` succeeded.
+
+chart text semantic-role oracle / 2026-05-25:
+`ClassifyPdfChartText.ps1` now classifies obvious chart text into semantic roles (`CategoryAxisTickLabel`,
+`ValueAxisTickLabel`, `DataLabelText`, `LegendText`, and title candidates) instead of only broad relative
+position buckets. `CheckVisualCase.ps1` includes these roles in the default chart-text gate kind list while
+retaining the earlier fallback bucket names. The public clustered-column case now gates four
+`CategoryAxisTickLabel` structures, and `pwsh tools/CheckVisualCase.ps1 -Case
+visual-cases/cases/pptx-ladder-11-chart-column-clustered-port/case.json` passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-005334`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

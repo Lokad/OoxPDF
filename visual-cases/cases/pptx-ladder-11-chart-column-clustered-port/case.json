@@ -13,7 +13,10 @@
     "maxChangedPixelRatioAtThreshold16": 0.220,
     "maxChartGraphicsStructureBoundsDelta": 100,
     "maxChartGraphicsStructureLineWidthDelta": 10,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate"]
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate"],
+    "maxChartTextStructurePositionDelta": 40,
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel"]
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

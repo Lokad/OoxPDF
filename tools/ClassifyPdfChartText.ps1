@@ -84,16 +84,11 @@ function Find-PlotBox($structures) {
 }
 
 function Has-LegendSwatch($op, $structures, $plotBox) {
-    if ($null -eq $plotBox) {
-        return $false
-    }
-
     $x = TextX $op
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
     $verticalTolerance = [Math]::Max(8d, $fontSize * 0.75d)
     $horizontalTolerance = [Math]::Max(36d, $fontSize * 4d)
-    $plotRight = [double]$plotBox.MaxX
 
     foreach ($structure in $structures) {
         $kind = [string]$structure.Kind
@@ -101,16 +96,13 @@ function Has-LegendSwatch($op, $structures, $plotBox) {
         $height = StructureHeight $structure
         $isMarker = $kind -eq "MarkerCandidate" -and $width -le 24d -and $height -le 24d
         $isShortLine = $kind -eq "HorizontalLine" -and $width -le 100d
-        if (-not ($isMarker -or $isShortLine)) {
+        $isFilledSwatch = $kind -eq "FilledRegion" -and $width -le 40d -and $height -le 40d
+        if (-not ($isMarker -or $isShortLine -or $isFilledSwatch)) {
             continue
         }
 
         $gap = $x - [double]$structure.MaxX
         if ($gap -lt 0d -or $gap -gt $horizontalTolerance) {
-            continue
-        }
-
-        if ([double]$structure.CenterX -lt ($plotRight - 30d)) {
             continue
         }
 
@@ -131,6 +123,10 @@ function Has-LegendContainer($op, $structures, $plotBox, [double]$tolerance) {
     $y = TextY $op
     $plotRight = [double]$plotBox.MaxX
 
+    if ($x -lt ($plotRight - $tolerance)) {
+        return $false
+    }
+
     foreach ($structure in $structures) {
         if ([string]$structure.Kind -ne "ClipBox") {
             continue
@@ -139,10 +135,6 @@ function Has-LegendContainer($op, $structures, $plotBox, [double]$tolerance) {
         $width = StructureWidth $structure
         $height = StructureHeight $structure
         if ($width -lt 40d -or $height -lt 12d -or $width -gt 260d -or $height -gt 160d) {
-            continue
-        }
-
-        if ([double]$structure.MinX -lt ($plotRight - $tolerance)) {
             continue
         }
 
@@ -155,6 +147,23 @@ function Has-LegendContainer($op, $structures, $plotBox, [double]$tolerance) {
     }
 
     return $false
+}
+
+function Looks-LikeChartTitle($op, $plotBox) {
+    if ($null -eq $plotBox) {
+        return $false
+    }
+
+    $text = TextValue $op
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    $x = TextX $op
+    $plotCenter = ([double]$plotBox.MinX + [double]$plotBox.MaxX) / 2d
+    $plotBoxWidth = StructureWidth $plotBox
+    $plotWidth = [Math]::Max(1d, $plotBoxWidth)
+
+    return $text.Length -gt 6 -and
+        $fontSize -ge 10d -and
+        [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.35d)
 }
 
 function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
@@ -171,16 +180,21 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     $insideX = $x -ge ($minX - $tolerance) -and $x -le ($maxX + $tolerance)
     $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
 
+    if (-not ($insideX -and $insideY) -and
+        (Has-LegendSwatch $op $structures $plotBox)) {
+        return "LegendText"
+    }
+
     if ($insideX -and $insideY) {
-        return "InsidePlotText"
+        return "DataLabelText"
     }
 
     if ($x -lt ($minX - $tolerance) -and $insideY) {
-        return "LeftAxisText"
+        return "ValueAxisTickLabel"
     }
 
     if ($x -gt ($maxX + $tolerance) -and $insideY) {
-        if ((Has-LegendSwatch $op $structures $plotBox) -or (Has-LegendContainer $op $structures $plotBox $tolerance)) {
+        if (Has-LegendContainer $op $structures $plotBox $tolerance) {
             return "LegendText"
         }
 
@@ -188,11 +202,19 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     }
 
     if ($insideX -and $y -lt ($minY - $tolerance)) {
-        return "AbovePlotText"
+        if (Looks-LikeChartTitle $op $plotBox) {
+            return "ChartTitleText"
+        }
+
+        return "CategoryAxisTickLabel"
     }
 
     if ($insideX -and $y -gt ($maxY + $tolerance)) {
-        return "BelowPlotText"
+        if (Looks-LikeChartTitle $op $plotBox) {
+            return "ChartTitleText"
+        }
+
+        return "CategoryAxisTickLabel"
     }
 
     return "OuterChartText"

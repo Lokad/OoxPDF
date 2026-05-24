@@ -477,7 +477,19 @@ if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
         $compareChartTextArgs.Kinds = @($manifest.expected.compareChartTextStructureKinds)
     }
     else {
-        $compareChartTextArgs.Kinds = @("AbovePlotText", "BelowPlotText", "InsidePlotText", "LeftAxisText", "RightSideText", "LegendText", "OuterChartText", "ChartText")
+        $compareChartTextArgs.Kinds = @(
+            "ChartTitleText",
+            "CategoryAxisTickLabel",
+            "ValueAxisTickLabel",
+            "DataLabelText",
+            "LegendText",
+            "AbovePlotText",
+            "BelowPlotText",
+            "InsidePlotText",
+            "LeftAxisText",
+            "RightSideText",
+            "OuterChartText",
+            "ChartText")
     }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs
