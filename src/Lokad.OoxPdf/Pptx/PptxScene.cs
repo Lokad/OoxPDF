@@ -320,7 +320,13 @@ internal sealed record PptxSceneChart(
     string? RelationshipId,
     string? TargetPartName,
     XDocument? ChartXml,
-    IReadOnlyList<RgbColor>? PaletteColors);
+    IReadOnlyList<RgbColor>? PaletteColors,
+    IReadOnlyList<PptxSceneChartPlot> Plots);
+
+internal sealed record PptxSceneChartPlot(
+    string Kind,
+    int SeriesCount,
+    IReadOnlyList<string> AxisIds);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -829,7 +835,34 @@ internal sealed class PptxSceneBuilder
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
         XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
         IReadOnlyList<RgbColor>? paletteColors = chartPart is null ? null : ReadChartPaletteColors(package, chartPart.Name, theme);
-        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors);
+        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors, ReadChartPlots(chartXml));
+    }
+
+    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml)
+    {
+        XElement? plotArea = chartXml?
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault();
+        if (plotArea is null)
+        {
+            return [];
+        }
+
+        var plots = new List<PptxSceneChartPlot>();
+        foreach (XElement plot in plotArea.Elements().Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Chart", StringComparison.Ordinal)))
+        {
+            string[] axisIds = plot
+                .Elements(ChartNamespace + "axId")
+                .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
+                .Where(value => value.Length != 0)
+                .ToArray();
+            plots.Add(new PptxSceneChartPlot(
+                plot.Name.LocalName,
+                plot.Elements(ChartNamespace + "ser").Count(),
+                axisIds));
+        }
+
+        return plots;
     }
 
     private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, string chartPartName, PptxTheme theme)

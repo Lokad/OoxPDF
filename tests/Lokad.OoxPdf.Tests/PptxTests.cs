@@ -134,7 +134,13 @@ internal static class PptxTests
                 """,
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                  <c:chart><c:plotArea><c:barChart>
+                    <c:ser/>
+                    <c:axId val="10"/>
+                    <c:axId val="20"/>
+                  </c:barChart></c:plotArea></c:chart>
+                </c:chartSpace>
                 """,
             ["ppt/charts/colors1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -278,6 +284,9 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
+        TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
+        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
+        TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Plots[0].AxisIds[1] ?? string.Empty);
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
         TestAssert.Equal(2743200L, slide.SlideNodes[5].GroupTransform.OffsetX);
         TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleX);
