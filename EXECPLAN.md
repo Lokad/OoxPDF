@@ -898,6 +898,11 @@ High-priority actions:
   mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
   diagnostic. Page 17 stayed at MAE `2.945717`, changed16 `0.045530`, confirming the architecture migration
   did not disturb the slide-17 connector fix.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving picture recolor intent and connector
+  line ends into the scene model. `dotnet pack` succeeded and private run
+  `artifacts/private-visual/lokad-value-based/20260524-102715` again produced 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
+  diagnostic. Page 17 remained stable at MAE `2.945717`, changed16 `0.045530`.
 - [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
