@@ -3919,6 +3919,21 @@ branches. This is another inventory step, not evidence that the offsets match Of
 remaining chart text-placement heuristics explicit for later replacement by PDF-observed chart layout behavior.
 The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202
 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart manual-layout default gap / 2026-05-24:
+Inspection of the current chart layout path found that `PptxSceneChartManualLayout` and the XML fallback require
+all four `x`, `y`, `w`, and `h` children before applying a `manualLayout`. This preserves complete explicit
+layouts, including edge modes, but it still drops partial manual layouts instead of resolving missing children
+against Office's default chart layout position. Do not paper over this with per-chart constants: the next durable
+step is to preserve optional manual-layout values in the scene model and resolve them against a default plot-area
+box derived from Office/PDF evidence.
+
+chart value-axis text metric ownership / 2026-05-24:
+Value-axis label width estimation and vertical clip expansion still use fallback text metrics, but the whitespace,
+digit, non-digit, and extra-clip factors now live under `PptxChartMetricRules`. This keeps the value-axis text
+measurement approximation visible beside the rest of the chart layout rules. The `pptx-charts` non-slow group
+passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202 passed, 0 failed, 0 skipped; and
+`dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

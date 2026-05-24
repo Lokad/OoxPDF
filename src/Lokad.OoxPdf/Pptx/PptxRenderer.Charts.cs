@@ -2163,7 +2163,7 @@ internal sealed partial class PptxRenderer
 
             double labelWidth = Math.Max(1d, width);
             double clipY = horizontalBars ? y : plotBox.Y - height;
-            double clipHeight = horizontalBars ? height : plotBox.Height + height * 2d;
+            double clipHeight = horizontalBars ? height : plotBox.Height + height * PptxChartMetricRules.ValueAxisVerticalClipExtraHeightFactor;
             runs.Add(new TextRun(
                 label,
                 x,
@@ -2203,10 +2203,10 @@ internal sealed partial class PptxRenderer
         foreach (char ch in text)
         {
             width += char.IsWhiteSpace(ch)
-                ? fontSize * 0.32d
+                ? fontSize * PptxChartMetricRules.ValueAxisLabelWhitespaceWidthFactor
                 : char.IsDigit(ch)
-                    ? fontSize * 0.55d
-                    : fontSize * 0.58d;
+                    ? fontSize * PptxChartMetricRules.ValueAxisLabelDigitWidthFactor
+                    : fontSize * PptxChartMetricRules.ValueAxisLabelCharacterWidthFactor;
         }
 
         return width;
