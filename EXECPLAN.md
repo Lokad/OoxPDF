@@ -1650,6 +1650,9 @@ paths, and ExecPlan references together.
 - [x] Port the `pptx-renderer` baseline-shift rule: small PPTX `baseline` nudges keep the nominal font size,
   while larger super/subscript shifts use the reduced font scale. The public unit coverage now locks both
   `baseline="10000"` and `baseline="30000"` behavior without font-family-specific logic.
+- [x] Port the `pptx-renderer` trailing-break/end-paragraph sizing rule: a final `<a:br/>` before
+  `endParaRPr` must consume line height using the end-paragraph run size, so following paragraphs keep
+  Office-compatible vertical placement.
 - [x] Isolate the private slide-3 XML locally and keep only public-safe structural findings in the work
   log. The source text does not contain the visible parasite capital/accent spaces, so the defect is in
   renderer layout/emission rather than private document content.

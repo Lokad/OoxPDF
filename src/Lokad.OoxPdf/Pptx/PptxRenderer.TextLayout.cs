@@ -744,6 +744,18 @@ internal sealed partial class PptxRenderer
             }
 
             double paragraphLineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
+            if (afterManualLineBreak && line.Spans.Count == 0)
+            {
+                paragraphLineFontSize = ReadEndParagraphFontSize(paragraph, paragraphLineFontSize, frame.FontScale);
+            }
+
+            if (double.IsNaN(cursorY))
+            {
+                cursorY = cursorLineTop - (afterManualLineBreak
+                    ? ManualBreakBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing)
+                    : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing));
+            }
+
             AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize) + paragraphStyle.SpacingAfter;
             MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, paragraphLineFontSize);
@@ -2118,6 +2130,14 @@ internal sealed partial class PptxRenderer
     private static bool ParagraphHasManualLineBreak(XElement paragraph)
     {
         return paragraph.Elements(DrawingNamespace + "br").Any();
+    }
+
+    private static double ReadEndParagraphFontSize(PptxTextParagraphModel paragraph, double fallbackFontSize, double fontScale)
+    {
+        XElement? endRunProperties = paragraph.Source.Element(DrawingNamespace + "endParaRPr");
+        return endRunProperties is null
+            ? fallbackFontSize
+            : ReadFontSize(endRunProperties, paragraph.Style.DefaultRunProperties) * fontScale;
     }
 
     private static double ReadManualBreakLineAdvance(LineSpacing lineSpacing, double fontSize)
