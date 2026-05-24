@@ -3954,6 +3954,13 @@ from the default plot-box ratios, while still applying explicit `factor` and `ed
 `x`/`y` are omitted: the plot area keeps the default position and only changes size. The `pptx-model` non-slow
 group passed with 13 passed, 0 failed, 1 skipped; the `pptx-charts` non-slow group passed with 8 passed, 0 failed,
 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+post manual-layout private validation / 2026-05-24:
+Private run `artifacts/private-visual/lokad-value-based/20260524-235547` stayed stable after chart manual-layout
+mode and optional-value handling: 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`, changed16
+`0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained at MAE `2.880739`, RMSE `19.298084`,
+changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, foreground histogram correlation `0.999858`, with
+matching dimensions.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
