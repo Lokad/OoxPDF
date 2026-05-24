@@ -40,7 +40,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return RenderTableFrame(context, bounds, ReadTableElement(node.Source), graphics);
+        return RenderTableFrame(context, bounds, PptxSceneBuilder.ReadTableElement(node.Source), node.Table, graphics);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
@@ -51,18 +51,11 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics, GroupTransform transform)
     {
         ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
-        return RenderTableFrame(context, bounds is { } rawBounds ? transform.Apply(rawBounds) : null, ReadTableElement(frame), graphics);
+        XElement? table = PptxSceneBuilder.ReadTableElement(frame);
+        return RenderTableFrame(context, bounds is { } rawBounds ? transform.Apply(rawBounds) : null, table, null, graphics);
     }
 
-    private static XElement? ReadTableElement(XElement frame)
-    {
-        return frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData")
-            ?.Element(DrawingNamespace + "tbl");
-    }
-
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PdfGraphicsBuilder graphics)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable, PdfGraphicsBuilder graphics)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         if (bounds is null || table is null)
@@ -70,11 +63,7 @@ internal sealed partial class PptxRenderer
             return textSpans;
         }
 
-        IReadOnlyList<double> rawColumnWidths = table
-                .Element(DrawingNamespace + "tblGrid")
-                ?.Elements(DrawingNamespace + "gridCol")
-                .Select(column => Math.Max(1d, ParseOptionalLongAttribute(column, "w", 1)))
-                .ToArray() ?? [];
+        IReadOnlyList<double> rawColumnWidths = sceneTable?.ColumnWidths ?? PptxSceneBuilder.ReadTableColumnWidths(table);
         IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
@@ -88,9 +77,12 @@ internal sealed partial class PptxRenderer
         double frameTop = context.Document.SlideHeightPoints - frameYTop;
         double columnScale = frameWidth / rawColumnWidths.Sum();
 
-        IReadOnlyList<double> rawRowHeights = rows
-                .Select(row => Math.Max(1d, ParseOptionalLongAttribute(row, "h", 1)))
-                .ToArray();
+        IReadOnlyList<double> rawRowHeights = sceneTable?.RowHeights ?? PptxSceneBuilder.ReadTableRowHeights(table);
+        if (rawRowHeights.Count != rows.Count)
+        {
+            rawRowHeights = PptxSceneBuilder.ReadTableRowHeights(table);
+        }
+
         double rowScale = frameHeight / rawRowHeights.Sum();
 
         double yTop = frameTop;

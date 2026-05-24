@@ -182,6 +182,7 @@ internal sealed record PptxSceneNode(
     PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
     PptxScenePicture? Picture,
+    PptxSceneTable? Table,
     PptxSceneChart? Chart,
     PptxSceneGroupTransform GroupTransform,
     IReadOnlyList<PptxSceneNode> Children,
@@ -316,6 +317,10 @@ internal sealed record PptxScenePicture(
     PptxSceneImageRecolor Recolor);
 
 internal sealed record PptxSceneChart(string? RelationshipId);
+
+internal sealed record PptxSceneTable(
+    IReadOnlyList<double> ColumnWidths,
+    IReadOnlyList<double> RowHeights);
 
 internal readonly record struct PptxSceneGroupTransform(
     long OffsetX,
@@ -567,6 +572,7 @@ internal sealed class PptxSceneBuilder
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme) : null,
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
+                kind == PptxSceneNodeKind.Table ? ReadTable(child) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
@@ -698,6 +704,39 @@ internal sealed class PptxSceneBuilder
             ?.Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
         return new PptxSceneChart(relationshipId);
+    }
+
+    private static PptxSceneTable ReadTable(XElement frame)
+    {
+        XElement? table = ReadTableElement(frame);
+        return new PptxSceneTable(
+            ReadTableColumnWidths(table),
+            ReadTableRowHeights(table));
+    }
+
+    internal static XElement? ReadTableElement(XElement frame)
+    {
+        return frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData")
+            ?.Element(DrawingNamespace + "tbl");
+    }
+
+    internal static IReadOnlyList<double> ReadTableColumnWidths(XElement? table)
+    {
+        return table
+            ?.Element(DrawingNamespace + "tblGrid")
+            ?.Elements(DrawingNamespace + "gridCol")
+            .Select(column => Math.Max(1d, ReadLong(column, "w", 1)))
+            .ToArray() ?? [];
+    }
+
+    internal static IReadOnlyList<double> ReadTableRowHeights(XElement? table)
+    {
+        return table
+            ?.Elements(DrawingNamespace + "tr")
+            .Select(row => Math.Max(1d, ReadLong(row, "h", 1)))
+            .ToArray() ?? [];
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
