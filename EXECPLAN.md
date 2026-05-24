@@ -805,9 +805,16 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
+  The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
+  raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
+  and private run `artifacts/private-visual/lokad-value-based/20260524-183014` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
-  paths: label-side slotting and axis crossing need to consume the preserved scene metadata, and exact Office
-  spacing still needs explicit model-to-renderer plumbing.
+  paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
+  needs explicit model-to-renderer plumbing.
 - [x] 2026-05-24: Consume scene-owned data-label separator and number-format metadata in supported label
   rendering. Bar and line value labels now format through `ChartDataLabelOptions`, and pie/doughnut
   value-plus-percent labels use the typed separator instead of a fixed comma when the OOXML provides one;
@@ -1070,8 +1077,10 @@ High-priority actions:
     text-style decisions for supported bar/line chart paths.
   - [x] Preserve cross-axis IDs, crossing behavior, cross-between, and reversed orientation metadata in
     `PptxSceneChartAxis`.
-  - [ ] Consume axis crossing metadata, label-side slots, and Office spacing for secondary axes instead of
-    relying on right-side XML/layout assumptions.
+  - [x] Consume scene-owned tick-label side metadata for same-side secondary value-axis label slotting on
+    supported bar/combo paths.
+  - [ ] Consume axis crossing metadata and Office spacing for secondary axes instead of relying on right-side
+    XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -1675,8 +1684,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-182625` after the chart
-  axis-crossing scene metadata slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-183014` after the chart
+  secondary-axis side-slot scene-consumption slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.
@@ -3280,7 +3289,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-182625: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-183014: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

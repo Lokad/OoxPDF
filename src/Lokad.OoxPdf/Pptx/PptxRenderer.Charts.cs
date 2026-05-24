@@ -534,7 +534,7 @@ internal sealed partial class PptxRenderer
                     bool sameSideSecondaryValueAxis = !horizontalBars &&
                         secondaryValueAxis is not null &&
                         IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis) &&
-                        GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true) > 0;
+                        GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true) > 0;
                     if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                     {
                         fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
@@ -544,7 +544,7 @@ internal sealed partial class PptxRenderer
                     {
                         if (secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                         {
-                            int sideSlot = GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true);
+                            int sideSlot = GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true);
                             fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
                         }
                         else
@@ -2238,10 +2238,10 @@ internal sealed partial class PptxRenderer
         return width;
     }
 
-    private static int GetValueAxisSideSlot(XElement? primaryAxis, XElement secondaryAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
+    private static int GetValueAxisSideSlot(PptxSceneChartAxis? primarySceneAxis, XElement? primaryAxis, PptxSceneChartAxis? secondarySceneAxis, XElement secondaryAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
     {
-        bool primaryRight = ResolveValueAxisLabelsRightSide(primaryAxis, defaultPrimaryRightSide);
-        bool secondaryRight = ResolveValueAxisLabelsRightSide(secondaryAxis, defaultSecondaryRightSide);
+        bool primaryRight = ResolveSceneOrXmlValueAxisLabelsRightSide(primarySceneAxis, primaryAxis, defaultPrimaryRightSide);
+        bool secondaryRight = ResolveSceneOrXmlValueAxisLabelsRightSide(secondarySceneAxis, secondaryAxis, defaultSecondaryRightSide);
         return primaryRight == secondaryRight ? 1 : 0;
     }
 
