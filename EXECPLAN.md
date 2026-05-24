@@ -413,8 +413,12 @@ High-priority actions:
   transforms, and shape theme fill/line lookup into the shape renderer partial.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
-- [ ] Move master/layout rendering into the scene/model pipeline: non-placeholder template nodes render in
-  Office order, placeholders provide inherited geometry/body/style only, and show/hide flags are explicit.
+- [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
+  layout scene nodes now render through `RenderOrderedSceneNodes` before slide nodes instead of the old XML
+  shape-container pass.
+- [ ] Finish relationship-aware inherited scene rendering for master/layout pictures and charts: scene nodes
+  need source-part relationship maps before inherited media can be rendered without falling back to slide
+  relationships.
 - [ ] Keep raw XML on scene nodes until typed coverage is complete, but make new renderer code prefer typed
   fields and resolver outputs instead of repeated ad hoc descendant queries.
 - [ ] Decide whether `ooxpdf` needs an intermediate presentation scene/model between OOXML parsing and PDF
