@@ -4365,6 +4365,17 @@ at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-013246`
 tick labels are still about `5.7 pt` below Office and category-axis labels about `1.7 pt` below Office, so the
 next Office-alignment slice should target chart text-box vertical placement and baseline semantics rather than
 axis scale or plot-box geometry.
+
+chart axis tick-label vertical placement Office rule / 2026-05-25:
+The same clustered-column Office-PDF structural gate showed that, after X placement and plot-box geometry were
+aligned, the remaining tick-label drift was purely vertical: category-axis labels were about `1.7 pt` low and
+vertical value-axis labels about `5.7 pt` low. `PptxChartMetricRules` now uses Office-PDF-observed vertical
+label placement factors for category-axis top offset and vertical value-axis baseline ratio. The public gate is
+tightened from `10 pt` to `1 pt` for chart text structures and passes at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-013507`, with category-axis Y deltas
+around `0.01 pt` and value-axis Y deltas within `0.06 pt`. Remaining chart text work: these are still metric
+rules for simple unrotated tick labels; rich text runs, rotation, tick-label offset, multi-level categories,
+and chart-style inherited defaults remain open under the chart text-style ownership track.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

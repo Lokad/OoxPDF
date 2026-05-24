@@ -14,7 +14,7 @@
     "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 10,
     "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate"],
-    "maxChartTextStructurePositionDelta": 10,
+    "maxChartTextStructurePositionDelta": 1,
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]
   },

@@ -808,7 +808,7 @@ internal sealed partial class PptxRenderer
         public const double CategoryAxisHorizontalWidthRatio = 0.16d;
         public const double CategoryAxisHorizontalBaselineRatio = 0.45d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
-        public const double CategoryAxisVerticalTopOffsetFactor = 1.25d;
+        public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
         public const double AxisLabelClipTopOffsetFactor = 0.25d;
         public const double AxisLabelClipHeightFactor = 1.6d;
         public const double ValueAxisMinimumLabelWidthFactor = 1.6d;
@@ -821,7 +821,7 @@ internal sealed partial class PptxRenderer
         public const double HorizontalValueAxisSlotCount = 5d;
         public const double HorizontalValueAxisTopOffsetFactor = 1.35d;
         public const double VerticalValueAxisWidthRatio = 0.12d;
-        public const double VerticalValueAxisBaselineRatio = 0.45d;
+        public const double VerticalValueAxisBaselineRatio = 0.215d;
         public const double TitleXInsetRatio = 0.08d;
         public const double TitleBaselineYRatio = 0.88d;
         public const double TitleWidthRatio = 0.84d;
