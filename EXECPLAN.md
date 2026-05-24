@@ -3896,6 +3896,14 @@ horizontal label width, vertical label width, label-height, and line-label point
 inventory work: the named rules remain approximations until replaced by Office-PDF-observed cartesian chart
 layout behavior. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite
 passed with 202 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart axis-label metric ownership / 2026-05-24:
+Category and value axis label placement still uses fallback sizing and offset rules, but the horizontal/vertical
+axis label height, width, clip, side-gap, and baseline-offset factors now live under `PptxChartMetricRules`
+instead of anonymous literals inside axis rendering. This does not make the defaults Office-perfect; it makes
+the remaining approximations explicit and replaceable with PDF-observed chart layout rules. The `pptx-charts`
+non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202 passed, 0 failed,
+0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
