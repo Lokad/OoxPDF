@@ -387,6 +387,14 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "noAutofit") is not null;
     }
 
+    private static bool TextBodyAllowsWrapping(XElement textBody)
+    {
+        string? wrap = (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("wrap");
+        return !string.Equals(wrap, "none", StringComparison.Ordinal);
+    }
+
     private static PptxTextFrameModel FitShapeAutoFitFrame(
         PptxTextFrameModel frame,
         PptxDocument document,
@@ -539,6 +547,7 @@ internal sealed partial class PptxRenderer
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping = true)
     {
         PptxTextFrameModel frame = flowFrame.Model;
+        allowWrapping &= TextBodyAllowsWrapping(frame.TextBody);
         double cursorLineTop = flowFrame.Box.CursorTop;
         int columnIndex = 0;
         double totalColumnSpacing = frame.ColumnSpacing * (frame.ColumnCount - 1);
@@ -2482,6 +2491,7 @@ internal sealed partial class PptxRenderer
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
         bool compatibleLineSpacing = HasCompatibleLineSpacing(textBody);
+        bool allowWrapping = TextBodyAllowsWrapping(textBody);
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
@@ -2537,7 +2547,8 @@ internal sealed partial class PptxRenderer
                     }
 
                     double advance = advanceEstimator.Measure(token, fontSize, typeface, bold, italic, characterSpacing: 0d);
-                    if (!string.IsNullOrWhiteSpace(token) &&
+                    if (allowWrapping &&
+                        !string.IsNullOrWhiteSpace(token) &&
                         lineWidth > PptxTextMetricRules.TextStateTolerance &&
                         lineWidth + advance > textWidth)
                     {

@@ -5,14 +5,18 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-if (args.Length is < 1 or > 2)
+if (args.Length is < 1 or > 3)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory]");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only]");
     return 2;
 }
 
 string inputPath = Path.GetFullPath(args[0]);
-string? outputDirectory = args.Length == 2 ? Path.GetFullPath(args[1]) : null;
+bool textOnly = args.Any(arg => string.Equals(arg, "--text-only", StringComparison.Ordinal));
+string? outputDirectory = args
+    .Skip(1)
+    .FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
+outputDirectory = outputDirectory is null ? null : Path.GetFullPath(outputDirectory);
 if (outputDirectory is not null)
 {
     Directory.CreateDirectory(outputDirectory);
@@ -20,7 +24,8 @@ if (outputDirectory is not null)
 
 byte[] bytes = File.ReadAllBytes(inputPath);
 string pdf = Encoding.Latin1.GetString(bytes);
-var objects = PdfObject.ParseAll(pdf, bytes);
+var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
+Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 var textOperations = new List<PdfTextOperation>();
 
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
@@ -39,14 +44,23 @@ foreach (PdfObject item in objects)
     }
 
     string prefix = Path.Combine(outputDirectory, FormattableString.Invariant($"obj-{item.Number:0000}-{item.Generation}"));
-    File.WriteAllText(prefix + ".dict.txt", item.Dictionary, Encoding.UTF8);
+    if (!textOnly)
+    {
+        File.WriteAllText(prefix + ".dict.txt", item.Dictionary, Encoding.UTF8);
+    }
+
     if (LooksTextual(item.Stream.Decoded))
     {
         string text = Encoding.Latin1.GetString(item.Stream.Decoded);
-        File.WriteAllText(prefix + ".stream.txt", text, Encoding.UTF8);
-        textOperations.AddRange(PdfTextOperation.Extract(item.Number, item.Generation, text));
+        if (!textOnly)
+        {
+            File.WriteAllText(prefix + ".stream.txt", text, Encoding.UTF8);
+        }
+
+        int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
+        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text));
     }
-    else
+    else if (!textOnly)
     {
         File.WriteAllBytes(prefix + ".stream.bin", item.Stream.Decoded);
     }
@@ -67,7 +81,7 @@ return 0;
 
 static string Classify(string body)
 {
-    if (body.Contains("/Type /Page", StringComparison.Ordinal))
+    if (IsPageObject(body))
     {
         return "page";
     }
@@ -95,6 +109,49 @@ static string Classify(string body)
     return "object";
 }
 
+static bool IsPageObject(string body)
+{
+    return Regex.IsMatch(body, @"/Type\s*/Page\b", RegexOptions.CultureInvariant) &&
+        !Regex.IsMatch(body, @"/Type\s*/Pages\b", RegexOptions.CultureInvariant);
+}
+
+static Dictionary<int, int> BuildContentPageMap(IReadOnlyList<PdfObject> objects)
+{
+    var pageByContentObject = new Dictionary<int, int>();
+    int pageNumber = 0;
+    foreach (PdfObject item in objects)
+    {
+        if (!IsPageObject(item.Body))
+        {
+            continue;
+        }
+
+        pageNumber++;
+        foreach (int contentObjectNumber in ReadContentObjectNumbers(item.Body))
+        {
+            pageByContentObject[contentObjectNumber] = pageNumber;
+        }
+    }
+
+    return pageByContentObject;
+}
+
+static IReadOnlyList<int> ReadContentObjectNumbers(string body)
+{
+    Match contents = Regex.Match(body, @"(?s)/Contents\s*(?<value>\[(?<array>.*?)\]|(?<single>\d+\s+\d+\s+R))", RegexOptions.CultureInvariant);
+    if (!contents.Success)
+    {
+        return Array.Empty<int>();
+    }
+
+    string value = contents.Groups["array"].Success
+        ? contents.Groups["array"].Value
+        : contents.Groups["single"].Value;
+    return Regex.Matches(value, @"(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant)
+        .Select(match => int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture))
+        .ToArray();
+}
+
 static bool LooksTextual(byte[] bytes)
 {
     if (bytes.Length == 0)
@@ -120,7 +177,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
         @"(?s)(?<number>\d+)\s+(?<generation>\d+)\s+obj(?<body>.*?)endobj",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes)
+    public static IReadOnlyList<PdfObject> ParseAll(string pdf, byte[] bytes, bool skipImageDecode = false)
     {
         var objects = new List<PdfObject>();
         foreach (Match match in ObjectRegex.Matches(pdf))
@@ -130,7 +187,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
             string rawBody = match.Groups["body"].Value;
             string body = rawBody.Trim();
             string dictionary = ReadDictionary(body);
-            PdfStream? stream = TryReadStream(match, rawBody, bytes, dictionary);
+            PdfStream? stream = TryReadStream(match, rawBody, bytes, dictionary, skipImageDecode);
             objects.Add(new PdfObject(number, generation, body, dictionary, stream));
         }
 
@@ -149,7 +206,7 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
             : string.Empty;
     }
 
-    private static PdfStream? TryReadStream(Match match, string body, byte[] bytes, string dictionary)
+    private static PdfStream? TryReadStream(Match match, string body, byte[] bytes, string dictionary, bool skipImageDecode)
     {
         int bodyStream = body.IndexOf("stream", StringComparison.Ordinal);
         int bodyEndStream = body.LastIndexOf("endstream", StringComparison.Ordinal);
@@ -177,6 +234,11 @@ internal sealed record PdfObject(int Number, int Generation, string Body, string
 
         byte[] raw = bytes[streamStart..streamEnd];
         string filters = ReadFilters(dictionary);
+        if (skipImageDecode && dictionary.Contains("/Subtype /Image", StringComparison.Ordinal))
+        {
+            return new PdfStream(raw.Length, 0, filters, "skipped image", Array.Empty<byte>());
+        }
+
         DecodeResult decoded = filters.Contains("FlateDecode", StringComparison.Ordinal)
             ? TryInflate(raw)
             : new DecodeResult(raw, "not decoded");
@@ -222,6 +284,7 @@ internal sealed record DecodeResult(byte[] Bytes, string Status);
 internal sealed record PdfStream(int RawLength, int DecodedLength, string Filters, string DecodeStatus, byte[] Decoded);
 
 internal sealed record PdfTextOperation(
+    int? PageNumber,
     int ObjectNumber,
     int Generation,
     string Font,
@@ -252,7 +315,7 @@ internal sealed record PdfTextOperation(
         @"(?<payload>\[(?:[^\[\]]|\([^)]*\)|<[^>]*>)*\]|\([^)]*\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static IReadOnlyList<PdfTextOperation> Extract(int objectNumber, int generation, string stream)
+    public static IReadOnlyList<PdfTextOperation> Extract(int? pageNumber, int objectNumber, int generation, string stream)
     {
         var operations = new List<PdfTextOperation>();
         string font = string.Empty;
@@ -291,6 +354,7 @@ internal sealed record PdfTextOperation(
             foreach (Match match in ShowRegex.Matches(line))
             {
                 operations.Add(new PdfTextOperation(
+                    pageNumber,
                     objectNumber,
                     generation,
                     font,

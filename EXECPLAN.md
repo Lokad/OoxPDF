@@ -127,6 +127,10 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text renderer unit coverage as clean `ooxpdf` tests for line spacing, paragraph
   spacing, character spacing, kerning thresholds, font fallback, EA/CS font fallback, bullets, baseline
   shifts, tabs, highlights, and no-fill/outline text where PDF support exists.
+- [x] Respect the DrawingML text-body wrap mode in line layout:
+  `a:bodyPr @wrap="none"` now disables automatic word wrapping in both text placement and the text-height
+  estimate used by vertical anchoring, while manual line breaks remain explicit content. A synthetic PPTX
+  typography test locks the no-wrap behavior.
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
@@ -148,6 +152,9 @@ High-priority actions:
   locks the solid-outline path.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
+- [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
+  `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
+  slide/page-level PDF text structure can be compared without dumping large private image streams.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
@@ -3276,6 +3283,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   out and produce excessive intermediate output.
   Evidence: a full `tools/InspectPdf.ps1` run against those PDFs exceeded the local command timeout. Prefer
   focused public synthetic PDFs or already extracted page/operator evidence for hot loops.
+- Observation: The remaining slide-17 schema delta is typography/text placement, not chart or connector
+  geometry.
+  Evidence: private-safe slide inventory shows no charts, tables, or groups on the page, but many text bodies
+  and a few rotated/flipped transforms. Page-aware PDF text inspection shows Office and candidate differ in
+  text-operation count on the page, with the candidate still emitting 41 text operations after the no-wrap
+  fix. The four small no-wrap node labels are left-aligned in OOXML with default insets, so the residual
+  horizontal offset should be investigated as Office font advance/glyph origin/paragraph metric behavior, not
+  as a hard-coded center-alignment correction.
 - Observation: The historical private evidence block should not be aggressively trimmed without first
   preserving its facts elsewhere.
   Evidence: a local check on 2026-05-24 found that most older `artifacts/private-visual/lokad-value-based`
@@ -3331,9 +3346,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - The active PPTX direction is bottom-up and `pptx-renderer`-informed: preserve public Office-backed fixtures,
   move renderer behavior toward explicit intermediate models, and use private decks only to discover generic
   gaps.
-- The latest slide-17 schema work resolved the connector-geometry portion of that private issue. If slide 17
-  is revisited, next work should target typography/text placement around the schema rather than another
-  private-coordinate connector patch.
+- The latest slide-17 schema work resolved the connector-geometry portion of that private issue. Current
+  page-aware PDF evidence keeps the next target on typography/text placement: text wrapping is now structurally
+  modeled for `wrap="none"`, but slide 17's private metrics and candidate text-operation count did not move,
+  pointing next toward Office-compatible font advances, glyph origins, and paragraph metrics.
 
 ## Concrete Steps
 
@@ -3375,13 +3391,13 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-187 passed, 0 failed
+190 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-183716: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-194704: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

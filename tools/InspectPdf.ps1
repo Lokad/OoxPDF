@@ -2,7 +2,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $InputPdf,
 
-    [string] $OutputDirectory
+    [string] $OutputDirectory,
+
+    [switch] $TextOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,11 +23,20 @@ if (-not (Test-Path -LiteralPath $dll) -or $sourceNewest.LastWriteTimeUtc -gt (G
     }
 }
 
+$arguments = @((Resolve-Path -LiteralPath $InputPdf).Path)
+if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $arguments += $OutputDirectory
+}
+
+if ($TextOnly) {
+    $arguments += "--text-only"
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    dotnet $dll (Resolve-Path -LiteralPath $InputPdf).Path
+    dotnet $dll @arguments
 }
 else {
-    dotnet $dll (Resolve-Path -LiteralPath $InputPdf).Path $OutputDirectory
+    dotnet $dll @arguments
 }
 
 if ($LASTEXITCODE -ne 0) {
