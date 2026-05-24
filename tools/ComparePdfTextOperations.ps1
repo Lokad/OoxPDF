@@ -13,7 +13,9 @@ param(
 
     [switch] $MatchByPosition,
 
-    [switch] $UseEffectiveMatrix
+    [switch] $UseEffectiveMatrix,
+
+    [switch] $CompareDecodedText
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,6 +51,14 @@ function TextY($op) {
     }
 
     return [double]$op.Y
+}
+
+function TextContent($op) {
+    if ($op.DecodedText -ne $null) {
+        return [string]$op.DecodedText
+    }
+
+    return [string]$op.Payload
 }
 
 $referenceOps = Read-JsonArray $Reference
@@ -114,6 +124,8 @@ foreach ($pair in $pairs) {
         $candTc = if ($null -eq $cand) { $null } else { $cand.CharacterSpacing }
         $refPayload = if ($null -eq $ref) { $null } else { $ref.Payload }
         $candPayload = if ($null -eq $cand) { $null } else { $cand.Payload }
+        $refText = if ($null -eq $ref -or -not $CompareDecodedText) { $null } else { TextContent $ref }
+        $candText = if ($null -eq $cand -or -not $CompareDecodedText) { $null } else { TextContent $cand }
         $rows.Add([pscustomobject]@{
             Index = $i
             Status = "missing"
@@ -128,6 +140,8 @@ foreach ($pair in $pairs) {
             DeltaTc = $null
             RefPayload = $refPayload
             CandPayload = $candPayload
+            RefText = $refText
+            CandText = $candText
         })
         continue
     }
@@ -143,7 +157,8 @@ foreach ($pair in $pairs) {
     $positionOk = [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
     $fontSizeOk = [Math]::Abs($deltaSize) -le $FontSizeTolerance
     $tcOk = [Math]::Abs($deltaTc) -le $CharacterSpacingTolerance
-    $status = if ($positionOk -and $fontSizeOk -and $tcOk) { "ok" } else { "delta" }
+    $decodedTextOk = -not $CompareDecodedText -or (TextContent $ref) -eq (TextContent $cand)
+    $status = if ($positionOk -and $fontSizeOk -and $tcOk -and $decodedTextOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -162,6 +177,8 @@ foreach ($pair in $pairs) {
         DeltaTc = $deltaTc
         RefPayload = $ref.Payload
         CandPayload = $cand.Payload
+        RefText = if ($CompareDecodedText) { TextContent $ref } else { $null }
+        CandText = if ($CompareDecodedText) { TextContent $cand } else { $null }
     })
 }
 
@@ -172,6 +189,9 @@ if ($MatchByPosition) {
 }
 if ($UseEffectiveMatrix) {
     Write-Host "Coordinates: effective text matrix"
+}
+if ($CompareDecodedText) {
+    Write-Host "Text content: decoded text"
 }
 
 if ($failures -ne 0) {

@@ -179,6 +179,9 @@ High-priority actions:
   `PdfInspect` now emits `DecodedText` beside the raw `Tj`/`TJ` payload, so Office literal strings and
   candidate embedded-font hex strings can be compared structurally before changing glyph grouping or
   vertical layout.
+- [x] Add an optional decoded-text gate to PDF text-operation comparison:
+  visual manifests can set `expected.compareDecodedTextOperations` to require matching decoded text content
+  in addition to matrix, position, font-size, and tracking tolerances.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:

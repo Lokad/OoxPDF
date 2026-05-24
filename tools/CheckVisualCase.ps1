@@ -174,6 +174,9 @@ if ($manifest.expected.maxTextOperationPositionDelta -ne $null) {
     if ($manifest.expected.compareTextOperationsWithEffectiveMatrix -eq $true) {
         $compareTextArgs.UseEffectiveMatrix = $true
     }
+    if ($manifest.expected.compareDecodedTextOperations -eq $true) {
+        $compareTextArgs.CompareDecodedText = $true
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfTextOperations.ps1") @compareTextArgs
     if ($LASTEXITCODE -ne 0) {
