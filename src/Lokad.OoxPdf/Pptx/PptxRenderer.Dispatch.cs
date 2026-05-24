@@ -131,7 +131,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        DrawTextSpansWithFonts(ReadTextSpansForShape(node.Source, context, renderPlaceholders), graphics, fonts);
+        DrawTextSpansWithFonts(ReadTextSpansForSceneNode(node, context, renderPlaceholders), graphics, fonts);
     }
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)

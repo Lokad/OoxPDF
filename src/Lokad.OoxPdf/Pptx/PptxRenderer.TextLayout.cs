@@ -263,9 +263,9 @@ internal sealed partial class PptxRenderer
         {
             if (node.Kind == PptxSceneNodeKind.Shape)
             {
-                if ((renderPlaceholders || !node.IsPlaceholder) && node.TextBody is not null)
+                if (renderPlaceholders || !node.IsPlaceholder)
                 {
-                    textSpans.AddRange(ReadTextSpansForShape(node.Source, context, renderPlaceholders));
+                    textSpans.AddRange(ReadTextSpansForSceneNode(node, context, renderPlaceholders));
                 }
 
                 continue;
@@ -906,12 +906,11 @@ internal sealed partial class PptxRenderer
         return transform;
     }
 
-    private static IReadOnlyList<TextRun> ReadTextRunsForShape(
-        XElement shape,
-        PptxRenderContext context,
-        bool includePlaceholders)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, bool includePlaceholders)
     {
-        return ReadTextSpansForShape(shape, context, includePlaceholders).Select(span => span.Run).ToArray();
+        return node.TextBody is null
+            ? []
+            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
@@ -920,19 +919,6 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders)
     {
         return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
-    }
-
-    private static IReadOnlyList<TextRun> ReadTextRunsForShape(
-        XElement shape,
-        PptxDocument document,
-        PptxTheme theme,
-        int slideNumber,
-        bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
-    {
-        return ReadTextSpansForShape(shape, document, theme, slideNumber, includePlaceholders, placeholderSources)
-            .Select(span => span.Run)
-            .ToArray();
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(

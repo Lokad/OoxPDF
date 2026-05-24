@@ -3725,6 +3725,16 @@ pushes tables closer to the desired architecture: OOXML inheritance and geometry
 second. The `pptx-tables` non-slow group, `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame`,
 the non-slow suite, `dotnet pack`, and the full suite passed; the broad suite results stayed at 190 passed,
 0 failed, 7 skipped for non-slow and 197 passed, 0 failed, 0 skipped for full.
+
+scene-node text adapter boundary / 2026-05-24:
+Production shape-text callers now go through `ReadTextSpansForSceneNode` instead of reaching directly from
+dispatch/prepass code into `node.Source`. The adapter still delegates to the XML shape layout pipeline because
+text geometry, body properties, group ancestry, and placeholder style lookup are not yet fully represented in
+typed layout inputs. Keeping that dependency in one adapter clarifies the next migration step: build text frame
+models from `PptxSceneNode` plus typed `PptxSceneTextBody`, then leave XML only as a compatibility source for
+unmodeled OOXML edges. The unused `ReadTextRunsForShape` wrappers were removed. `PptxSyntheticTextAndShapesUseSiblingOrder`,
+`PptxSyntheticGroupedTextAppliesTransform`, and the non-slow suite passed with 190 passed, 0 failed, 7 skipped;
+`dotnet pack` succeeded, and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
