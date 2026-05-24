@@ -101,61 +101,6 @@ internal sealed partial class PptxRenderer
         GroupTransform groupTransform,
         List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
-        ref int imageIndex)
-    {
-        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-        if (shapeProperties is null)
-        {
-            return;
-        }
-
-        ShapeBounds? rawBounds = ReadBounds(shapeProperties);
-        if (rawBounds is null)
-        {
-            return;
-        }
-
-        RenderShape(
-            shape,
-            relationships,
-            package,
-            document,
-            graphics,
-            diagnosticSink,
-            slideIndex,
-            theme,
-            groupTransform,
-            images,
-            imageCache,
-            ref imageIndex,
-            rawBounds.Value,
-            ReadPreset(shapeProperties),
-            null,
-            shapeProperties.Element(DrawingNamespace + "custGeom") is not null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-    }
-
-    private static void RenderShape(
-        XElement shape,
-        IReadOnlyDictionary<string, OoxRelationship>? relationships,
-        OoxPackage? package,
-        PptxDocument document,
-        PdfGraphicsBuilder graphics,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
-        PptxTheme theme,
-        GroupTransform groupTransform,
-        List<PdfImageResource>? images,
-        Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,

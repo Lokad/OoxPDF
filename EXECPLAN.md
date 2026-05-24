@@ -3749,6 +3749,16 @@ the unused SVG renderer XML parameter was removed. This keeps raw `p:pic` XML at
 future unsupported edges, but the production image path no longer depends on it. The `pptx-images` non-slow
 group passed with 13 passed, 0 failed, 0 skipped, and the non-slow suite passed with 190 passed, 0 failed,
 7 skipped. `dotnet pack` succeeded, and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+obsolete XML-only shape render entry point / 2026-05-24:
+The unused raw-XML `RenderShape(XElement, ...)` entry point was removed after ordered scene dispatch made
+`PptxSceneNode` the required production path for shapes. The remaining scene-node adapter still passes
+`shape.Source` into the lower shape renderer on purpose because style references, custom geometry fallback,
+picture fills, and other unmodeled DrawingML edges still need the source XML until a richer typed
+`ShapeRenderModel` exists. This is therefore a cleanup of a dead fallback path, not a claim that shape
+rendering is fully model-owned. The `pptx-shapes` non-slow group passed with 14 passed, 0 failed, 0 skipped,
+and the non-slow suite passed with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded, and the full
+suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
