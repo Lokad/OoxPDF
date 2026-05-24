@@ -324,7 +324,9 @@ internal sealed record PptxSceneChart(
     IReadOnlyList<PptxSceneChartPlot> Plots,
     IReadOnlyList<PptxSceneChartAxis> Axes,
     PptxSceneChartTitle Title,
-    PptxSceneChartLegend Legend);
+    PptxSceneChartLegend Legend,
+    PptxSceneChartShapeStyle ChartAreaStyle,
+    PptxSceneChartShapeStyle PlotAreaStyle);
 
 internal sealed record PptxSceneChartPlot(
     string Kind,
@@ -343,6 +345,10 @@ internal sealed record PptxSceneChartPlot(
 internal sealed record PptxSceneChartDataLabels(
     bool ShowValue,
     bool ShowPercent);
+
+internal sealed record PptxSceneChartShapeStyle(
+    PptxSceneFillStyle Fill,
+    PptxSceneLineStyle Line);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -910,7 +916,12 @@ internal sealed class PptxSceneBuilder
             ReadChartPlots(chartXml, theme),
             ReadChartAxes(chartXml),
             ReadChartTitle(chartXml),
-            ReadChartLegend(chartXml));
+            ReadChartLegend(chartXml),
+            ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme),
+            ReadChartShapeStyle(chartXml?
+                .Descendants(ChartNamespace + "plotArea")
+                .FirstOrDefault()
+                ?.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme)
@@ -960,6 +971,14 @@ internal sealed class PptxSceneBuilder
             : new PptxSceneChartDataLabels(
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
                 IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")));
+    }
+
+    private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
+    {
+        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+            ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
+            : default;
+        return new PptxSceneChartShapeStyle(fill, ReadChartLine(shapeProperties, theme));
     }
 
     private static string ReadChartElementValue(XElement element, string childName)

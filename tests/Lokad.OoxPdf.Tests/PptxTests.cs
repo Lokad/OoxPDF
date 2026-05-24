@@ -135,9 +135,10 @@ internal static class PptxTests
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:spPr><a:solidFill><a:srgbClr val="F1E2D3"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
-                  <c:plotArea><c:barChart>
+                  <c:plotArea><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
                     <c:barDir val="bar"/>
                     <c:grouping val="stacked"/>
                     <c:varyColors val="0"/>
@@ -314,6 +315,18 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.HasFill == true, "Expected chart area fill in the scene model.");
+        TestAssert.Equal(new RgbColor(241, 226, 211), slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Color ?? default);
+        TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Alpha ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.HasLine == true, "Expected chart area line in the scene model.");
+        TestAssert.Equal(new RgbColor(68, 85, 102), slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Color ?? default);
+        TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Width ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.HasFill == true, "Expected plot area fill in the scene model.");
+        TestAssert.Equal(new RgbColor(221, 238, 255), slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.HasLine == true, "Expected plot area line in the scene model.");
+        TestAssert.Equal(new RgbColor(17, 34, 68), slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Color ?? default);
+        TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Width ?? 0d);
+        TestAssert.Equal(0.6d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Alpha ?? 0d);
         TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Plots[0].AxisIds[1] ?? string.Empty);
