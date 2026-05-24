@@ -28,6 +28,7 @@ var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
 var textOperations = new List<PdfTextOperation>();
+var graphicsOperations = new List<PdfGraphicsOperation>();
 
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Objects: {objects.Count}"));
@@ -60,6 +61,7 @@ foreach (PdfObject item in objects)
 
         int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
         textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps));
+        graphicsOperations.AddRange(PdfGraphicsOperation.Extract(pageNumber, item.Number, item.Generation, text));
     }
     else if (!textOnly)
     {
@@ -76,6 +78,17 @@ if (outputDirectory is not null && textOperations.Count != 0)
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
     File.WriteAllText(textOperationsPath, JsonSerializer.Serialize(textOperations, jsonOptions), Encoding.UTF8);
+}
+
+if (outputDirectory is not null && graphicsOperations.Count != 0)
+{
+    string graphicsOperationsPath = Path.Combine(outputDirectory, "graphics-operations.json");
+    var jsonOptions = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+    File.WriteAllText(graphicsOperationsPath, JsonSerializer.Serialize(graphicsOperations, jsonOptions), Encoding.UTF8);
 }
 
 return 0;
@@ -569,6 +582,313 @@ internal sealed record PdfTextOperation(
     }
 }
 
+internal sealed record PdfGraphicsOperation(
+    int? PageNumber,
+    int ObjectNumber,
+    int Generation,
+    string Kind,
+    string Operator,
+    int SegmentCount,
+    double MinX,
+    double MinY,
+    double MaxX,
+    double MaxY,
+    double LineWidth,
+    string StrokeColor,
+    string FillColor,
+    string Dash,
+    int LineCap,
+    int LineJoin)
+{
+    private static readonly Regex TokenRegex = new(
+        @"(?s)\[[^\]]*\]|\((?:\\.|[^\\)])*\)|<[^>]*>|/[^\s\[\]()<>{}%]+|-?(?:\d+\.?\d*|\.\d+)|[A-Za-z\*]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly HashSet<string> Operators = new(StringComparer.Ordinal)
+    {
+        "q", "Q", "cm", "w", "J", "j", "M", "d",
+        "G", "g", "RG", "rg", "K", "k",
+        "m", "l", "c", "v", "y", "h", "re",
+        "S", "s", "f", "F", "f*", "B", "B*", "b", "b*", "n", "W", "W*"
+    };
+
+    public static IReadOnlyList<PdfGraphicsOperation> Extract(int? pageNumber, int objectNumber, int generation, string stream)
+    {
+        var operations = new List<PdfGraphicsOperation>();
+        var operands = new List<string>();
+        var graphicsStack = new Stack<GraphicsState>();
+        GraphicsState state = GraphicsState.Default;
+        PdfPathBuilder path = new();
+
+        foreach (Match match in TokenRegex.Matches(stream))
+        {
+            string token = match.Value;
+            if (!Operators.Contains(token))
+            {
+                operands.Add(token);
+                continue;
+            }
+
+            switch (token)
+            {
+                case "q":
+                    graphicsStack.Push(state);
+                    break;
+                case "Q":
+                    state = graphicsStack.Count == 0 ? GraphicsState.Default : graphicsStack.Pop();
+                    break;
+                case "cm" when TryReadNumbers(operands, 6, out double[] cm):
+                    state = state with
+                    {
+                        CurrentMatrix = state.CurrentMatrix.Multiply(new PdfMatrix(cm[0], cm[1], cm[2], cm[3], cm[4], cm[5]))
+                    };
+                    break;
+                case "w" when TryReadNumbers(operands, 1, out double[] width):
+                    state = state with { LineWidth = width[0] };
+                    break;
+                case "J" when TryReadNumbers(operands, 1, out double[] cap):
+                    state = state with { LineCap = (int)Math.Round(cap[0]) };
+                    break;
+                case "j" when TryReadNumbers(operands, 1, out double[] join):
+                    state = state with { LineJoin = (int)Math.Round(join[0]) };
+                    break;
+                case "d":
+                    state = state with { Dash = string.Join(" ", operands) };
+                    break;
+                case "G" when TryReadNumbers(operands, 1, out double[] grayStroke):
+                    state = state with { StrokeColor = FormatColor("G", grayStroke) };
+                    break;
+                case "g" when TryReadNumbers(operands, 1, out double[] grayFill):
+                    state = state with { FillColor = FormatColor("g", grayFill) };
+                    break;
+                case "RG" when TryReadNumbers(operands, 3, out double[] rgbStroke):
+                    state = state with { StrokeColor = FormatColor("RG", rgbStroke) };
+                    break;
+                case "rg" when TryReadNumbers(operands, 3, out double[] rgbFill):
+                    state = state with { FillColor = FormatColor("rg", rgbFill) };
+                    break;
+                case "K" when TryReadNumbers(operands, 4, out double[] cmykStroke):
+                    state = state with { StrokeColor = FormatColor("K", cmykStroke) };
+                    break;
+                case "k" when TryReadNumbers(operands, 4, out double[] cmykFill):
+                    state = state with { FillColor = FormatColor("k", cmykFill) };
+                    break;
+                case "m" when TryReadNumbers(operands, 2, out double[] move):
+                    path.MoveTo(state.CurrentMatrix.Transform(move[0], move[1]));
+                    break;
+                case "l" when TryReadNumbers(operands, 2, out double[] line):
+                    path.LineTo(state.CurrentMatrix.Transform(line[0], line[1]));
+                    break;
+                case "c" when TryReadNumbers(operands, 6, out double[] cubic):
+                    path.CurveTo(
+                        state.CurrentMatrix.Transform(cubic[0], cubic[1]),
+                        state.CurrentMatrix.Transform(cubic[2], cubic[3]),
+                        state.CurrentMatrix.Transform(cubic[4], cubic[5]));
+                    break;
+                case "v" when TryReadNumbers(operands, 4, out double[] cubicV):
+                    path.CurveTo(
+                        state.CurrentMatrix.Transform(cubicV[0], cubicV[1]),
+                        state.CurrentMatrix.Transform(cubicV[2], cubicV[3]));
+                    break;
+                case "y" when TryReadNumbers(operands, 4, out double[] cubicY):
+                    path.CurveTo(
+                        state.CurrentMatrix.Transform(cubicY[0], cubicY[1]),
+                        state.CurrentMatrix.Transform(cubicY[2], cubicY[3]));
+                    break;
+                case "h":
+                    path.Close();
+                    break;
+                case "re" when TryReadNumbers(operands, 4, out double[] rect):
+                    path.Rectangle(state.CurrentMatrix, rect[0], rect[1], rect[2], rect[3]);
+                    break;
+                case "W":
+                case "W*":
+                    AddOperation(operations, pageNumber, objectNumber, generation, path, state, "Clip", token);
+                    break;
+                case "S":
+                case "s":
+                    AddOperation(operations, pageNumber, objectNumber, generation, path, state, "Stroke", token);
+                    path.Clear();
+                    break;
+                case "f":
+                case "F":
+                case "f*":
+                    AddOperation(operations, pageNumber, objectNumber, generation, path, state, "Fill", token);
+                    path.Clear();
+                    break;
+                case "B":
+                case "B*":
+                case "b":
+                case "b*":
+                    AddOperation(operations, pageNumber, objectNumber, generation, path, state, "FillStroke", token);
+                    path.Clear();
+                    break;
+                case "n":
+                    path.Clear();
+                    break;
+            }
+
+            operands.Clear();
+        }
+
+        return operations;
+    }
+
+    private static void AddOperation(
+        List<PdfGraphicsOperation> operations,
+        int? pageNumber,
+        int objectNumber,
+        int generation,
+        PdfPathBuilder path,
+        GraphicsState state,
+        string kind,
+        string op)
+    {
+        if (!path.TryGetBounds(out double minX, out double minY, out double maxX, out double maxY, out int segmentCount))
+        {
+            return;
+        }
+
+        operations.Add(new PdfGraphicsOperation(
+            pageNumber,
+            objectNumber,
+            generation,
+            kind,
+            op,
+            segmentCount,
+            Round(minX),
+            Round(minY),
+            Round(maxX),
+            Round(maxY),
+            Round(state.LineWidth),
+            state.StrokeColor,
+            state.FillColor,
+            state.Dash,
+            state.LineCap,
+            state.LineJoin));
+    }
+
+    private static bool TryReadNumbers(IReadOnlyList<string> operands, int count, out double[] values)
+    {
+        values = Array.Empty<double>();
+        if (operands.Count < count)
+        {
+            return false;
+        }
+
+        var parsed = new double[count];
+        int start = operands.Count - count;
+        for (int i = 0; i < count; i++)
+        {
+            if (!double.TryParse(operands[start + i], NumberStyles.Float, CultureInfo.InvariantCulture, out parsed[i]))
+            {
+                return false;
+            }
+        }
+
+        values = parsed;
+        return true;
+    }
+
+    private static string FormatColor(string colorSpace, IReadOnlyList<double> values) =>
+        colorSpace + ":" + string.Join(",", values.Select(value => Round(value).ToString("0.######", CultureInfo.InvariantCulture)));
+
+    private static double Round(double value) => Math.Round(value, 6);
+
+    private sealed record GraphicsState(
+        PdfMatrix CurrentMatrix,
+        double LineWidth,
+        string StrokeColor,
+        string FillColor,
+        string Dash,
+        int LineCap,
+        int LineJoin)
+    {
+        public static GraphicsState Default { get; } = new(PdfMatrix.Identity, 1d, string.Empty, string.Empty, string.Empty, 0, 0);
+    }
+
+    private sealed class PdfPathBuilder
+    {
+        private readonly List<PdfPoint> points = new();
+        private int segments;
+        private PdfPoint? startPoint;
+        private PdfPoint? currentPoint;
+
+        public void MoveTo(PdfPoint point)
+        {
+            points.Add(point);
+            startPoint = point;
+            currentPoint = point;
+        }
+
+        public void LineTo(PdfPoint point)
+        {
+            points.Add(point);
+            currentPoint = point;
+            segments++;
+        }
+
+        public void CurveTo(PdfPoint firstControl, PdfPoint secondControl, PdfPoint endPoint)
+        {
+            points.Add(firstControl);
+            points.Add(secondControl);
+            points.Add(endPoint);
+            currentPoint = endPoint;
+            segments++;
+        }
+
+        public void CurveTo(PdfPoint control, PdfPoint endPoint)
+        {
+            points.Add(control);
+            points.Add(endPoint);
+            currentPoint = endPoint;
+            segments++;
+        }
+
+        public void Close()
+        {
+            if (startPoint is not null)
+            {
+                currentPoint = startPoint;
+                segments++;
+            }
+        }
+
+        public void Rectangle(PdfMatrix matrix, double x, double y, double width, double height)
+        {
+            MoveTo(matrix.Transform(x, y));
+            LineTo(matrix.Transform(x + width, y));
+            LineTo(matrix.Transform(x + width, y + height));
+            LineTo(matrix.Transform(x, y + height));
+            Close();
+        }
+
+        public bool TryGetBounds(out double minX, out double minY, out double maxX, out double maxY, out int segmentCount)
+        {
+            segmentCount = segments;
+            if (points.Count == 0)
+            {
+                minX = minY = maxX = maxY = 0d;
+                return false;
+            }
+
+            minX = points.Min(point => point.X);
+            minY = points.Min(point => point.Y);
+            maxX = points.Max(point => point.X);
+            maxY = points.Max(point => point.Y);
+            return true;
+        }
+
+        public void Clear()
+        {
+            points.Clear();
+            segments = 0;
+            startPoint = null;
+            currentPoint = null;
+        }
+    }
+}
+
 internal static class PdfToUnicodeMap
 {
     private static readonly Regex BfCharRegex = new(
@@ -640,6 +960,8 @@ internal readonly record struct PdfMatrix(double A, double B, double C, double D
 {
     public static PdfMatrix Identity { get; } = new(1d, 0d, 0d, 1d, 0d, 0d);
 
+    public PdfPoint Transform(double x, double y) => new(A * x + C * y + X, B * x + D * y + Y);
+
     public PdfMatrix Multiply(PdfMatrix right)
     {
         return new PdfMatrix(
@@ -651,3 +973,5 @@ internal readonly record struct PdfMatrix(double A, double B, double C, double D
             B * right.X + D * right.Y + Y);
     }
 }
+
+internal readonly record struct PdfPoint(double X, double Y);

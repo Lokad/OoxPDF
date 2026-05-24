@@ -236,6 +236,55 @@ if ($manifest.expected.maxTextLineStartDelta -ne $null) {
     }
 }
 
+if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
+    $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
+    $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
+    $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
+    New-Item -ItemType Directory -Force -Path $referenceGraphicsInspect, $candidateGraphicsInspect | Out-Null
+
+    $referenceGraphicsOperations = Join-Path $referenceGraphicsInspect "graphics-operations.json"
+    $candidateGraphicsOperations = Join-Path $candidateGraphicsInspect "graphics-operations.json"
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf (Join-Path $referenceDir "reference.pdf") `
+            -OutputDirectory $referenceGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        & (Join-Path $PSScriptRoot "InspectPdf.ps1") `
+            -InputPdf $candidatePdf `
+            -OutputDirectory $candidateGraphicsInspect
+    }
+
+    if (-not (Test-Path -LiteralPath $referenceGraphicsOperations) -or -not (Test-Path -LiteralPath $candidateGraphicsOperations)) {
+        throw "PDF graphics operation gate failed because one inspected PDF had no graphics operations."
+    }
+
+    $compareGraphicsArgs = @{
+        Reference = $referenceGraphicsOperations
+        Candidate = $candidateGraphicsOperations
+        BoundsTolerance = [double]$manifest.expected.maxGraphicsOperationBoundsDelta
+    }
+
+    if ($manifest.expected.maxGraphicsOperationLineWidthDelta -ne $null) {
+        $compareGraphicsArgs.LineWidthTolerance = [double]$manifest.expected.maxGraphicsOperationLineWidthDelta
+    }
+    if ($manifest.expected.compareGraphicsOperationKinds -ne $null) {
+        $compareGraphicsArgs.Kinds = @($manifest.expected.compareGraphicsOperationKinds)
+    }
+    if ($manifest.expected.compareGraphicsOperationPageNumber -ne $null) {
+        $compareGraphicsArgs.PageNumber = [int]$manifest.expected.compareGraphicsOperationPageNumber
+    }
+    if ($manifest.expected.matchGraphicsOperationsByBounds -eq $true) {
+        $compareGraphicsArgs.MatchByBounds = $true
+    }
+
+    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareGraphicsArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "PDF graphics operation gate failed."
+    }
+}
+
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics
 $diagnosticItems = if ($diagnosticsJson.Trim() -eq "[]") {
     @()

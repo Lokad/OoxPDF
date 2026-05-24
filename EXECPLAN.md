@@ -1754,9 +1754,14 @@ High-priority actions:
 - [x] 2026-05-25: Added the seven-part long-term architecture track to this ExecPlan without removing
   existing open progress or private-safe evidence. The track makes structural Office-PDF alignment the
   mechanism for pixel-perfect output and sets chart structural oracle tooling as the next concrete slice.
-- [ ] 2026-05-25: Build chart structural oracle tooling that can compare public Office and candidate PDFs
-  for chart plot boxes, axis/gridline lines, title/legend/data-label text positions, marker geometry, and
-  clipping/resource structure before more chart layout changes are made.
+- [x] 2026-05-25: Build the first chart structural oracle tooling slice. `PdfInspect` now emits
+  `graphics-operations.json` with path, clip, stroke, fill, bounds, line width, color, dash, cap, and join
+  summaries; `ComparePdfGraphicsOperations.ps1` compares those structures; and `CheckVisualCase.ps1` can
+  opt visual manifests into graphics-operation gates through `expected.maxGraphicsOperationBoundsDelta`.
+- [ ] 2026-05-25: Extend chart structural oracle tooling from generic PDF path operations to semantic chart
+  structures: classify likely plot-area rectangles, major/minor gridlines, axes, series marks, legend
+  markers, and chart clipping boxes so chart layout work can target named Office structures instead of raw
+  operation indexes.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
@@ -3573,6 +3578,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   pictures, and flattened shape/text counts that were not explicit in the older inventory summary. Future
   slide-17 work should use scene snapshots plus PDF text-operation evidence before concluding that a remaining
   difference is purely typography.
+- Observation: Public chart PDFs already show large structural differences before any raster analysis.
+  Evidence: on `pptx-ladder-11-chart-column-clustered-port`, generic PDF graphics comparison reports Office
+  reference and candidate path-operation counts of `32` and `34`, with deltas in operation kind, bounds, and
+  stroke/fill sequence. This confirms that chart convergence needs PDF-structure evidence, not just tighter
+  raster thresholds.
 
 ## Decision Log
 
@@ -3606,6 +3616,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: The chart renderer now has many named fallback metrics, but naming heuristics is only inventory.
   A chart-specific Office/PDF structural comparison path is the evidence layer needed to delete those
   heuristics safely and move chart output toward Office-like plot, axis, label, and resource structure.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
+  Rationale: Plot areas, axes, gridlines, markers, and legend swatches all appear as ordinary PDF path,
+  clip, stroke, and fill operations. Capturing those primitives once in `PdfInspect` makes the tooling useful
+  beyond charts and avoids baking chart assumptions into the PDF parser.
   Date/Author: 2026-05-25 / Codex.
 
 ## Outcomes & Retrospective
@@ -3644,6 +3659,15 @@ pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/<case>/case.json
 pwsh tools/CheckVisualFamily.ps1 -Family <family>
 ```
 
+For PDF structural comparison, inspect both PDFs and compare the emitted JSON:
+
+```powershell
+pwsh tools/InspectPdf.ps1 -InputPdf <reference.pdf> -OutputDirectory artifacts/<case>-ref-inspect
+pwsh tools/InspectPdf.ps1 -InputPdf <candidate.pdf> -OutputDirectory artifacts/<case>-cand-inspect
+pwsh tools/ComparePdfTextOperations.ps1 -Reference artifacts/<case>-ref-inspect/text-operations.json -Candidate artifacts/<case>-cand-inspect/text-operations.json
+pwsh tools/ComparePdfGraphicsOperations.ps1 -Reference artifacts/<case>-ref-inspect/graphics-operations.json -Candidate artifacts/<case>-cand-inspect/graphics-operations.json -MatchByBounds
+```
+
 For private PPTX acceptance evidence after a scoped public fix, run:
 
 ```powershell
@@ -3656,7 +3680,7 @@ Latest public validation:
 
 ```powershell
 dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
-dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal
 dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
 ```
 
@@ -3681,6 +3705,21 @@ Latest public small-label origin probe:
 pptx-ladder-04-typography-small-label-origin-probe / 20260524-204739:
 MAE 0.005514, changed16 0.000073; PDF text-op X delta 0.03 pt, Y delta 0.27 pt;
 decoded text gate enabled.
+```
+
+Latest public chart structural-tooling validation:
+
+```text
+PdfInspect graphics extraction build: succeeded, 0 warnings, 0 errors.
+ComparePdfGraphicsOperations reference-vs-reference on
+pptx-ladder-11-chart-column-clustered-port / 20260523-224316: 32 reference operations,
+32 candidate operations, 0 deltas.
+ComparePdfGraphicsOperations Office-vs-ooxpdf on the same public chart: 32 reference operations,
+34 candidate operations, 34 deltas, proving the tool exposes chart PDF-structure differences.
+Full console suite: 204 passed, 0 failed, 0 skipped.
+dotnet pack: created artifacts/nuget/Lokad.OoxPdf.0.1.0.nupkg.
+Public visual case `pptx-ladder-11-chart-column-clustered-port` passed through the updated harness at
+artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-001148.
 ```
 
 Latest public vertical text probes:
