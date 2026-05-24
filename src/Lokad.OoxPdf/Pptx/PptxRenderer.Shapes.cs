@@ -122,6 +122,8 @@ internal sealed partial class PptxRenderer
             shape.Shape.HasCustomGeometry,
             ToFillStyle(shape.Shape.Fill),
             ToShapePatternFill(shape.Shape.PatternFill),
+            ToGlow(shape.Shape.Glow),
+            ToOuterShadow(shape.Shape.OuterShadow),
             ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
             ToLineEndStyle(shape.Shape.TailEnd));
@@ -173,6 +175,8 @@ internal sealed partial class PptxRenderer
             null,
             null,
             null,
+            null,
+            null,
             null);
     }
 
@@ -194,6 +198,8 @@ internal sealed partial class PptxRenderer
         bool hasCustomGeometry,
         FillStyle? fillOverride,
         ShapePatternFill? patternFillOverride,
+        Glow? glowOverride,
+        OuterShadow? outerShadowOverride,
         LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
         LineEndStyle? tailEndOverride)
@@ -293,14 +299,38 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        if (TryReadGlow(shapeProperties, theme, out Glow glow) &&
+        bool hasGlow;
+        Glow glow;
+        if (glowOverride is { } resolvedGlow)
+        {
+            glow = resolvedGlow;
+            hasGlow = true;
+        }
+        else
+        {
+            hasGlow = TryReadGlow(shapeProperties, theme, out glow);
+        }
+
+        bool hasOuterShadow;
+        OuterShadow outerShadow;
+        if (outerShadowOverride is { } resolvedOuterShadow)
+        {
+            outerShadow = resolvedOuterShadow;
+            hasOuterShadow = true;
+        }
+        else
+        {
+            hasOuterShadow = TryReadOuterShadow(shapeProperties, theme, out outerShadow);
+        }
+
+        if (hasGlow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
             customGeometry is null)
         {
             DrawGlow(graphics, preset, x, y, width, height, glow);
         }
 
-        if (TryReadOuterShadow(shapeProperties, theme, out OuterShadow outerShadow) &&
+        if (hasOuterShadow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
             customGeometry is null)
         {
@@ -1700,6 +1730,20 @@ internal sealed partial class PptxRenderer
     {
         return fill.HasPattern
             ? new ShapePatternFill(fill.Preset, fill.Foreground, fill.Background, fill.Alpha)
+            : null;
+    }
+
+    private static Glow? ToGlow(PptxSceneGlow glow)
+    {
+        return glow.HasGlow
+            ? new Glow(glow.Color, glow.Alpha, glow.Radius)
+            : null;
+    }
+
+    private static OuterShadow? ToOuterShadow(PptxSceneOuterShadow shadow)
+    {
+        return shadow.HasShadow
+            ? new OuterShadow(shadow.Color, shadow.Alpha, shadow.OffsetX, shadow.OffsetY)
             : null;
     }
 

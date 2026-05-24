@@ -180,6 +180,8 @@ internal sealed record PptxSceneShape(
     bool HasCustomGeometry,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
+    PptxSceneGlow Glow,
+    PptxSceneOuterShadow OuterShadow,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
@@ -195,6 +197,19 @@ internal readonly record struct PptxScenePatternFill(
     RgbColor Foreground,
     RgbColor Background,
     double Alpha);
+
+internal readonly record struct PptxSceneGlow(
+    bool HasGlow,
+    RgbColor Color,
+    double Alpha,
+    double Radius);
+
+internal readonly record struct PptxSceneOuterShadow(
+    bool HasShadow,
+    RgbColor Color,
+    double Alpha,
+    double OffsetX,
+    double OffsetY);
 
 internal readonly record struct PptxSceneLineStyle(
     bool HasLine,
@@ -364,6 +379,7 @@ internal sealed class PptxSceneBuilder
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private const double MinimumStrokeWidth = 0.1d;
+    private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
@@ -591,9 +607,72 @@ internal sealed class PptxSceneBuilder
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
             TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
+            TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
+            TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, out PptxSceneGlow glow)
+    {
+        XElement? glowElement = shapeProperties
+            ?.Element(DrawingNamespace + "effectLst")
+            ?.Element(DrawingNamespace + "glow");
+        if (glowElement is null)
+        {
+            glow = default;
+            return false;
+        }
+
+        XElement? colorElement = glowElement.Elements().FirstOrDefault(element =>
+            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
+        if (colorElement is not null &&
+            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+        {
+            double radius = OoxUnits.EmuToPoints(ReadLong(glowElement, "rad", 0));
+            glow = new PptxSceneGlow(
+                true,
+                color,
+                ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
+                radius);
+            return radius > SceneEffectTolerance;
+        }
+
+        glow = default;
+        return false;
+    }
+
+    private static bool TryReadOuterShadow(XElement? shapeProperties, PptxTheme theme, out PptxSceneOuterShadow shadow)
+    {
+        XElement? outerShadow = shapeProperties
+            ?.Element(DrawingNamespace + "effectLst")
+            ?.Element(DrawingNamespace + "outerShdw");
+        if (outerShadow is null)
+        {
+            shadow = default;
+            return false;
+        }
+
+        XElement? colorElement = outerShadow.Elements().FirstOrDefault(element =>
+            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
+        if (colorElement is not null &&
+            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+        {
+            double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
+            double distance = OoxUnits.EmuToPoints(ReadLong(outerShadow, "dist", 0));
+            double direction = ReadLong(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
+            shadow = new PptxSceneOuterShadow(
+                true,
+                color,
+                alpha,
+                distance * Math.Cos(direction),
+                -distance * Math.Sin(direction));
+            return true;
+        }
+
+        shadow = default;
+        return false;
     }
 
     private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, out PptxScenePatternFill fill)
