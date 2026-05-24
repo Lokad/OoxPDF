@@ -878,6 +878,11 @@ High-priority actions:
   dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Normalize DOCX `w:onOff` run-property parsing for WordprocessingML `on`/`off` values.
+  The DOCX reader now treats `w:val="on"` as enabled and `w:val="off"` as disabled for run properties such
+  as bold and italic, matching the existing element-only, `1`/`0`, and `true`/`false` handling. A public
+  model-level unit test covers both forms; full runner passed 189/189 and `dotnet pack` succeeded. No private
+  PPTX rerun was taken for this DOCX-only parser slice.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
@@ -1726,6 +1731,8 @@ High-priority actions:
   styles.
 - [x] DOCX parser/renderer supports paragraphs/runs, basic styled text, greedy wrapping, simple page
   breaking, page-break-before, and exact/at-least line heights.
+- [x] DOCX run-property parser honors WordprocessingML `w:onOff` element-only, `1`/`0`, `true`/`false`, and
+  `on`/`off` forms for supported run styles.
 - [x] DOCX parser/renderer supports bullets/decimal numbering.
 - [x] DOCX parser/renderer supports inline JPEG/PNG images.
 - [x] DOCX parser/renderer supports fixed-width tables in body order with explicit row heights and row-level
