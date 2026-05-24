@@ -135,7 +135,7 @@ internal static class PptxTests
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:spPr><a:solidFill><a:srgbClr val="F1E2D3"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
+                  <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
@@ -330,9 +330,10 @@ internal static class PptxTests
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.WidthMode ?? string.Empty);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightMode ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.NoFill == false, "Expected chart area noFill to be absent in the scene model.");
-        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.HasFill == true, "Expected chart area fill in the scene model.");
-        TestAssert.Equal(new RgbColor(241, 226, 211), slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Color ?? default);
-        TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Alpha ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.HasPattern == true, "Expected chart area pattern fill in the scene model.");
+        TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.Preset ?? string.Empty);
+        TestAssert.Equal(new RgbColor(34, 68, 102), slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.Foreground ?? default);
+        TestAssert.Equal(new RgbColor(241, 226, 211), slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.Background ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.HasLine == true, "Expected chart area line in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Color ?? default);
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Width ?? 0d);

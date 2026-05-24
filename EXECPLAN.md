@@ -685,9 +685,19 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend chart area/plot area style modeling beyond direct solid fill/no-fill and simple line: pattern
-  fill, gradient fill, theme style references, dash/cap/join, and transparency groups need typed ownership before
-  chart background and plot-box styling can be considered structurally Office-aligned.
+- [x] 2026-05-24: Move chart-area/plot-area pattern fills into `PptxSceneChartShapeStyle`.
+  Chart and plot shape styles now preserve `a:pattFill` preset, foreground, and background colors through
+  the same typed `PptxScenePatternFill` contract used by chart series and points. The chart renderer consumes
+  those pattern fills through the existing chart pattern-fill drawing path instead of treating chart/plot-area
+  backgrounds as solid-only. Focused model/chart tests passed after a transient parallel build lock was
+  rerun serially, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-170856` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend chart area/plot area style modeling beyond direct solid fill/no-fill, pattern fill, and simple
+  line: gradient fill, theme style references, transparency groups, and effect inheritance need typed
+  ownership before chart background and plot-box styling can be considered structurally Office-aligned.
 - [x] 2026-05-24: Move explicit chart-axis line style ownership into `PptxSceneChartAxis`. Supported bar
   and line chart rendering now consumes scene-owned value/category axis strokes first, including the existing
   explicit `a:ln/a:noFill` hidden-axis-line case represented as a transparent zero-width stroke, while raw
@@ -943,8 +953,10 @@ High-priority actions:
     rendering no longer re-scans chart-level and plot-area `c:spPr` for the simple style path.
   - [x] Preserve explicit chart-area/plot-area `a:noFill` state in scene shape-style records and consume it
     at the renderer boundary without changing the visible no-background output.
+  - [x] Preserve and consume chart-area/plot-area pattern fills in scene shape-style records using the same
+    chart pattern-fill renderer path as series and point fills.
   - [ ] Extend chart area and plot area style records to cover the remaining shape-style family instead of
-    only direct solid fill/no-fill and simple line.
+    only direct solid fill/no-fill, pattern fill, and simple line.
   - [x] Add and consume scene-owned chart-axis line styles for supported bar and line charts, including
     explicit `a:ln/a:noFill`, so axis stroke handling follows the typed axis catalog instead of renderer
     XML scans on the main path.
@@ -3151,7 +3163,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-170506: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-170856: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

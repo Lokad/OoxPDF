@@ -421,7 +421,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartShapeStyle ToChartShapeStyle(PptxSceneChartShapeStyle style)
     {
-        return new ChartShapeStyle(style.NoFill ? null : ToChartSeriesFill(style.Fill, default), ToChartSeriesStroke(style.Line));
+        return new ChartShapeStyle(style.NoFill ? null : ToChartSeriesFill(style.Fill, style.PatternFill), ToChartSeriesStroke(style.Line));
     }
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
@@ -997,18 +997,7 @@ internal sealed partial class PptxRenderer
     {
         if (style.Fill is { } fill)
         {
-            if (fill.Alpha < 1d)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(fill.Alpha, 1d);
-            }
-
-            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            graphics.FillRectangle(x, y, width, height);
-            if (fill.Alpha < 1d)
-            {
-                graphics.RestoreState();
-            }
+            FillChartRectangle(graphics, x, y, width, height, fill);
         }
 
         if (style.Stroke is { } stroke)

@@ -357,6 +357,7 @@ internal sealed record PptxSceneChartDataLabels(
 internal sealed record PptxSceneChartShapeStyle(
     bool NoFill,
     PptxSceneFillStyle Fill,
+    PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line);
 
 internal readonly record struct PptxSceneChartTextStyleOverride(
@@ -1025,7 +1026,11 @@ internal sealed class PptxSceneBuilder
         PptxSceneFillStyle fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartShapeStyle(noFill, fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartShapeStyle(
+            noFill,
+            fill,
+            noFill ? default : ReadChartPatternFill(shapeProperties, theme),
+            ReadChartLine(shapeProperties, theme));
     }
 
     private static string ReadChartElementValue(XElement element, string childName)
@@ -1084,9 +1089,12 @@ internal sealed class PptxSceneBuilder
 
     private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme)
     {
-        XElement? patternFill = series
-            .Element(ChartNamespace + "spPr")
-            ?.Element(DrawingNamespace + "pattFill");
+        return ReadChartPatternFill(series.Element(ChartNamespace + "spPr"), theme);
+    }
+
+    private static PptxScenePatternFill ReadChartPatternFill(XElement? shapeProperties, PptxTheme theme)
+    {
+        XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
         if (patternFill is null)
         {
             return default;
@@ -1153,24 +1161,7 @@ internal sealed class PptxSceneBuilder
 
     private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme)
     {
-        XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
-        if (patternFill is null)
-        {
-            return default;
-        }
-
-        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor, out _)
-            ? foregroundColor
-            : new RgbColor(0, 0, 0);
-        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor, out _)
-            ? backgroundColor
-            : new RgbColor(255, 255, 255);
-        return new PptxScenePatternFill(
-            HasPattern: true,
-            (string?)patternFill.Attribute("prst") ?? "pct50",
-            foreground,
-            background,
-            Alpha: 1d);
+        return ReadChartPatternFill(shapeProperties, theme);
     }
 
     private static double? ReadChartPointExplosion(XElement point)
