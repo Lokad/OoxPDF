@@ -226,6 +226,17 @@ internal sealed partial class PptxRenderer
         return series.Count != 0 ? series : ReadScatterSeries(chartElement, readBubbleSize);
     }
 
+    private static IReadOnlyList<string> ReadSceneOrXmlCategoryLabels(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        IReadOnlyList<string>? categories = plot?
+            .Series
+            .Select(series => series.Categories)
+            .FirstOrDefault(values => values.Count != 0);
+        return categories is { Count: > 0 }
+            ? categories
+            : ReadChartCategoryLabels(chartElement);
+    }
+
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
     {
         IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
@@ -311,7 +322,7 @@ internal sealed partial class PptxRenderer
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, barChart);
                 if (axesStyle.CategoryAxisVisible && IsChartAxisLabelVisible(categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadChartCategoryLabels(barChart), horizontalBars));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadSceneOrXmlCategoryLabels(barPlot, barChart), horizontalBars));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -369,7 +380,7 @@ internal sealed partial class PptxRenderer
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsChartAxisLabelVisible(categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadChartCategoryLabels(lineChart), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadSceneOrXmlCategoryLabels(linePlot, lineChart), horizontalBars: false));
                 }
 
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
