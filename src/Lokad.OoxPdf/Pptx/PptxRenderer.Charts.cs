@@ -756,6 +756,22 @@ internal sealed partial class PptxRenderer
             : new ChartPlotBox(frame.X, frame.Y, frame.Width, frame.Height);
     }
 
+    private static ChartPolarGeometry GetPieChartGeometry(ChartPlotBox plotBox)
+    {
+        return new ChartPolarGeometry(
+            plotBox.X + plotBox.Width * PptxChartMetricRules.PieCenterXRatio,
+            plotBox.Y + plotBox.Height * PptxChartMetricRules.PieCenterYRatio,
+            Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.PieRadiusRatio);
+    }
+
+    private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox)
+    {
+        return new ChartPolarGeometry(
+            plotBox.X + plotBox.Width * PptxChartMetricRules.RadarCenterXRatio,
+            plotBox.Y + plotBox.Height * PptxChartMetricRules.RadarCenterYRatio,
+            Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.RadarRadiusRatio);
+    }
+
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
@@ -1406,11 +1422,9 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
-        double centerX = plotBox.X + plotBox.Width * 0.46d;
-        double centerY = plotBox.Y + plotBox.Height * 0.52d;
-        double labelRadius = radius * (holeSize > 0d ? Math.Max(0.62d, (1d + holeSize) / 2d) : 0.62d);
-        double labelWidth = Math.Max(18d, radius * 0.55d);
+        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
+        double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieDataLabelRadiusRatio);
+        double labelWidth = Math.Max(18d, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(values.Count);
         double angle = -90d;
         for (int i = 0; i < values.Count; i++)
@@ -1426,9 +1440,9 @@ internal sealed partial class PptxRenderer
             double labelHeight = fontSize * 1.35d;
             double sweep = values[i] / total * 360d;
             double mid = (angle + sweep / 2d) * Math.PI / 180d;
-            double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * radius * 0.22d : 0d;
-            double labelX = centerX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
-            double labelY = centerY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
+            double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
+            double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
+            double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
             string label = FormatPieDataLabel(values[i], total, effectiveOptions);
             runs.Add(new TextRun(
                 label,
@@ -3975,9 +3989,7 @@ internal sealed partial class PptxRenderer
 
     private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
-        double centerX = plotBox.X + plotBox.Width * 0.5d;
-        double centerY = plotBox.Y + plotBox.Height * 0.52d;
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.32d;
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
         int pointCount = Math.Max(3, series.Max(values => values.Count));
         double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
 
@@ -3986,7 +3998,7 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < pointCount; i++)
         {
             double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
-            graphics.StrokeLine(centerX, centerY, centerX + Math.Cos(angle) * radius, centerY + Math.Sin(angle) * radius);
+            graphics.StrokeLine(geometry.CenterX, geometry.CenterY, geometry.CenterX + Math.Cos(angle) * geometry.Radius, geometry.CenterY + Math.Sin(angle) * geometry.Radius);
         }
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
@@ -3996,9 +4008,9 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < pointCount; i++)
             {
                 double value = i < values.Count ? Math.Max(0d, values[i]) : 0d;
-                double pointRadius = value / maxValue * radius;
+                double pointRadius = value / maxValue * geometry.Radius;
                 double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
-                points[i] = (centerX + Math.Cos(angle) * pointRadius, centerY + Math.Sin(angle) * pointRadius);
+                points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
             }
 
             ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
@@ -4037,9 +4049,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
-        double centerX = plotBox.X + plotBox.Width * 0.46d;
-        double centerY = plotBox.Y + plotBox.Height * 0.52d;
+        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
         double angle = -Math.PI / 2d;
 
         for (int i = 0; i < values.Count; i++)
@@ -4052,9 +4062,9 @@ internal sealed partial class PptxRenderer
 
             double sweep = value / total * Math.PI * 2d;
             double midpointAngle = angle + sweep / 2d;
-            double explosionOffset = pointExplosions.TryGetValue(i, out double explosion) ? radius * explosion : 0d;
-            double sliceCenterX = centerX + Math.Cos(midpointAngle) * explosionOffset;
-            double sliceCenterY = centerY + Math.Sin(midpointAngle) * explosionOffset;
+            double explosionOffset = pointExplosions.TryGetValue(i, out double explosion) ? geometry.Radius * explosion : 0d;
+            double sliceCenterX = geometry.CenterX + Math.Cos(midpointAngle) * explosionOffset;
+            double sliceCenterY = geometry.CenterY + Math.Sin(midpointAngle) * explosionOffset;
             int segments = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 18d)));
             var points = new (double X, double Y)[segments + 2];
             points[0] = (sliceCenterX, sliceCenterY);
@@ -4062,8 +4072,8 @@ internal sealed partial class PptxRenderer
             {
                 double segmentAngle = angle + sweep * segment / segments;
                 points[segment + 1] = (
-                    sliceCenterX + Math.Cos(segmentAngle) * radius,
-                    sliceCenterY + Math.Sin(segmentAngle) * radius);
+                    sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
+                    sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
             }
 
             ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill explicitFill)
@@ -4106,12 +4116,10 @@ internal sealed partial class PptxRenderer
     {
         RenderPieChart(graphics, plotBox, values, pointFills, pointStrokes, pointExplosions);
 
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * 0.34d;
-        double centerX = plotBox.X + plotBox.Width * 0.46d;
-        double centerY = plotBox.Y + plotBox.Height * 0.52d;
-        double innerRadius = radius * holeSize;
+        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
+        double innerRadius = geometry.Radius * holeSize;
         graphics.SetFillRgb(255, 255, 255);
-        graphics.FillEllipse(centerX - innerRadius, centerY - innerRadius, innerRadius * 2d, innerRadius * 2d);
+        graphics.FillEllipse(geometry.CenterX - innerRadius, geometry.CenterY - innerRadius, innerRadius * 2d, innerRadius * 2d);
     }
 
     private static void EmitChartDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, string id, OoxPdfSeverity severity, string message, string? partName, int slideIndex, string fallback)

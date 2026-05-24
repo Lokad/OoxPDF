@@ -3854,6 +3854,14 @@ frame-derived behavior until Office-PDF evidence supports a stronger default pol
 frame-derived geometry. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the
 non-slow suite passed with 193 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite
 passed with 200 passed, 0 failed, 0 skipped.
+
+polar chart metric ownership / 2026-05-24:
+Pie/doughnut and radar center/radius ratios now live under `PptxChartMetricRules`, and the chart renderer
+uses shared polar geometry helpers instead of repeating local formulas in slice, cutout, label, and radar
+paths. This is behavior-neutral naming and ownership, not evidence that the ratios are Office-perfect; the
+open long-term task remains replacing these approximations with Office-PDF-observed chart layout behavior.
+The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 200
+passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -764,7 +764,18 @@ internal sealed partial class PptxRenderer
         public const double DefaultPlotBoxYRatio = 0.16d;
         public const double DefaultPlotBoxWidthRatio = 0.76d;
         public const double DefaultPlotBoxHeightRatio = 0.68d;
+        public const double PieCenterXRatio = 0.46d;
+        public const double PieCenterYRatio = 0.52d;
+        public const double PieRadiusRatio = 0.34d;
+        public const double PieDataLabelRadiusRatio = 0.62d;
+        public const double PieDataLabelWidthRatio = 0.55d;
+        public const double PieExplosionLabelRadiusRatio = 0.22d;
+        public const double RadarCenterXRatio = 0.5d;
+        public const double RadarCenterYRatio = 0.52d;
+        public const double RadarRadiusRatio = 0.32d;
     }
+
+    private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);
 
     private enum TextVerticalAnchor
     {
