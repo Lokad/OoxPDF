@@ -1588,8 +1588,9 @@ Composite oracle family map:
   shared line resolver. Remaining slice work is data labels, exact Office explosion scaling, and chart
   style/color-style inherited defaults.
 - Supported chart renderer now render simple chart titles through the shared PPTX text/font pipeline.
-  Remaining title work is exact Office title layout, rich text styling, overlay/manual layout, and inherited
-  chart style defaults.
+  `PptxSceneChartTitle` preserves title overlay/manual layout and shape styling, but rendering still needs
+  Office-PDF evidence before consuming those fields for exact placement. Remaining title work is exact Office
+  title layout, rich text styling, and inherited chart style defaults.
 - Bar and line chart renderer now honor `c:plotArea/c:spPr` fill and border styling through the shared
   chart shape-style helper. Remaining plot-area work is full manual-layout mode semantics, rounded
   corners/effects, and extending exact plot bounds to area/scatter/radar/pie/doughnut families.
@@ -1806,6 +1807,12 @@ High-priority actions:
   the point is to make Office's structural series identity available before any future legend, data-label, or
   combo-chart ordering work consumes it. Validation: full console suite `204 passed, 0 failed, 0 skipped`;
   `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+- [x] 2026-05-25: Preserve chart title overlay, manual layout, fill, and stroke in the typed scene model.
+  `PptxSceneChartTitle` now carries `c:overlay`, `c:layout/c:manualLayout`, and `c:spPr` shape styling beside
+  text and `txPr` style. The scene-builder fixture locks these fields without changing rendering behavior; the
+  remaining title work is to consume the title layout structurally after public Office-PDF evidence defines the
+  exact placement rule. Validation: the focused scene test passed `1 passed, 0 failed, 0 skipped`; the full
+  console suite passed `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
   oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
   ticks, data labels, and annotations as explicit Office-aligned roles.
@@ -3552,6 +3559,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The chart title scene model preserved title text and `txPr` style, but not the sibling title
+  structure that will matter for Office-like placement: `c:overlay`, `c:layout/c:manualLayout`, and `c:spPr`.
+  Evidence: `PptxSceneChartTitle` had only `Text`, `IsAutoDeleted`, and `TextStyle`; the scene-builder test now
+  locks title overlay, manual-layout factors, fill, and stroke as model data before any renderer consumption.
 - Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
   support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
   connector where Office behaves like a quarter-turn loop segment.
@@ -3646,6 +3657,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - Public notes from private documents must be anonymized to feature gaps and metrics only.
 - Diagnostics must prefer continued conversion over crashing, but omitted visible content must not be treated
   as acceptable final behavior.
+- Newly discovered OOXML chart structure should be preserved in `PptxScene` before rendering is changed. This
+  keeps Office semantics inspectable and prevents missing title, legend, axis, or data-label behavior from
+  being replaced with narrow placement heuristics.
 - Pixel metrics are late-stage regression evidence only. Until selected private slides/pages are mostly
   visually correct, do not use MAE or changed-pixel ratios to prioritize work or judge acceptability.
 - Office-exported PDFs are the primary fidelity reference. Raster metrics are useful gates after manual/agent
@@ -4160,6 +4174,13 @@ Axis epsilon, nice-tick target count, and the `1/2/5/10` fallback tick ladder no
 `PptxChartMetricRules` instead of being embedded in tick/gridline loops. This keeps numeric fallbacks auditable
 for later Office/PDF replacement without changing the current formula. The `pptx-charts` non-slow group passed
 with 8 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack`
+succeeded.
+
+chart title scene-structure preservation / 2026-05-25:
+`PptxSceneChartTitle` now preserves title `overlay`, `manualLayout`, fill, and stroke data in addition to text
+and text style. This is an intentional model-first slice: rendering did not start consuming title layout yet,
+because exact Office title placement still needs public PDF evidence. The focused scene test passed with 1
+passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack`
 succeeded.
 ```
 
