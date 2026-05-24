@@ -200,6 +200,9 @@ High-priority actions:
 - [x] Extend decoded-text gates to special text-operation cases that remain structurally locked:
   `pptx-ladder-04-field-text`, `pptx-ladder-04-soft-hyphen`, `pptx-ladder-04-tab-character`,
   and `pptx-ladder-04-nonbreaking-space`.
+- [x] Extend decoded-text gates to the remaining simple locked text-operation cases:
+  `pptx-ladder-04-line-spacing-points` and `pptx-ladder-04-mixed-font-size-line` now require decoded
+  Office/candidate text parity in addition to their existing position and font-size gates.
 - [x] Revisit `pptx-ladder-04-nonbreaking-space` before adding decoded-text gating:
   the stale failure was a real structural split-flow issue. Hidden NBSP advances now preserve font kerning
   and tracking from the preceding logical glyph, restoring the visual gate to MAE `0.003519` and locking
