@@ -33,7 +33,7 @@ internal sealed partial class PptxRenderer
                     if (renderPlaceholders || !node.IsPlaceholder)
                     {
                         RenderShape(
-                            source,
+                            node,
                             context.SlideRelationships,
                             context.Package,
                             context.Document,
@@ -51,7 +51,7 @@ internal sealed partial class PptxRenderer
                     break;
                 case PptxSceneNodeKind.Connector:
                     RenderShape(
-                        source,
+                        node,
                         context.SlideRelationships,
                         context.Package,
                         context.Document,

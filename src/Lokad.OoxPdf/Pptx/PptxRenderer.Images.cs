@@ -86,7 +86,10 @@ internal sealed partial class PptxRenderer
             context.ImageCache,
             ref index,
             picture.Picture.RelationshipId,
-            ToShapeBounds(picture.Bounds));
+            ToShapeBounds(picture.Bounds),
+            ToCropRect(picture.Picture.Crop),
+            ToFillRect(picture.Picture.Fill),
+            picture.Picture.Alpha);
     }
 
     private static void RenderPicture(
@@ -125,7 +128,10 @@ internal sealed partial class PptxRenderer
             imageCache,
             ref index,
             relationshipId,
-            bounds.Value);
+            bounds.Value,
+            ReadCrop(picture),
+            ReadFillRect(picture),
+            ReadPictureAlpha(picture));
     }
 
     private static void RenderPicture(
@@ -142,7 +148,10 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int index,
         string? relationshipId,
-        ShapeBounds rawBounds)
+        ShapeBounds rawBounds,
+        CropRect crop,
+        FillRect fillRect,
+        double alpha)
     {
         if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
         {
@@ -183,13 +192,10 @@ internal sealed partial class PptxRenderer
         double width = OoxUnits.EmuToPoints(transformedBounds.Width);
         double height = OoxUnits.EmuToPoints(transformedBounds.Height);
         double y = document.SlideHeightPoints - yTop - height;
-        CropRect crop = ReadCrop(picture);
-        FillRect fillRect = ReadFillRect(picture);
         double imageX = x + fillRect.Left * width;
         double imageY = y + fillRect.Bottom * height;
         double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
         double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
-        double alpha = ReadPictureAlpha(picture);
         bool transparent = alpha < 0.999d;
         bool hasTransform = Math.Abs(transformedBounds.RotationDegrees) > 0.001d || transformedBounds.FlipHorizontal || transformedBounds.FlipVertical;
         if (hasTransform)
@@ -236,6 +242,16 @@ internal sealed partial class PptxRenderer
             bounds.RotationDegrees,
             bounds.FlipHorizontal,
             bounds.FlipVertical);
+    }
+
+    private static CropRect ToCropRect(PptxSceneRect rect)
+    {
+        return new CropRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
+    }
+
+    private static FillRect ToFillRect(PptxSceneRect rect)
+    {
+        return new FillRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes)

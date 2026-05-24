@@ -169,12 +169,24 @@ internal sealed record PptxSceneNode(
     string Name,
     bool IsPlaceholder,
     PptxSceneBounds? Bounds,
+    PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
     PptxScenePicture? Picture,
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
 
-internal sealed record PptxScenePicture(string? RelationshipId);
+internal sealed record PptxSceneShape(string Preset);
+
+internal sealed record PptxScenePicture(
+    string? RelationshipId,
+    PptxSceneRect Crop,
+    PptxSceneRect Fill,
+    double Alpha);
+
+internal readonly record struct PptxSceneRect(double Left, double Top, double Right, double Bottom)
+{
+    public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
+}
 
 internal sealed record PptxSceneTextBody(
     XElement? BodyProperties,
@@ -337,8 +349,9 @@ internal sealed class PptxSceneBuilder
                 name,
                 IsPlaceholder(child),
                 ReadBounds(child),
+                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child) : null,
                 ReadTextBody(child, placeholderSources, theme),
-                kind == PptxSceneNodeKind.Picture ? new PptxScenePicture(ReadPictureRelationshipId(child)) : null,
+                kind == PptxSceneNodeKind.Picture ? ReadPicture(child) : null,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
                 child));
         }
@@ -447,6 +460,80 @@ internal sealed class PptxSceneBuilder
                 .FirstOrDefault(element => element.Name.LocalName == "svgBlip")
                 ?.Attribute(RelationshipsNamespace + "embed")
                 ?.Value;
+    }
+
+    private static PptxScenePicture ReadPicture(XElement picture)
+    {
+        return new PptxScenePicture(
+            ReadPictureRelationshipId(picture),
+            ReadPictureCrop(picture),
+            ReadPictureFill(picture),
+            ReadPictureAlpha(picture));
+    }
+
+    private static PptxSceneShape ReadShape(XElement shape)
+    {
+        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        return new PptxSceneShape(ReadShapePreset(shapeProperties));
+    }
+
+    private static string ReadShapePreset(XElement? shapeProperties)
+    {
+        return (string?)shapeProperties
+            ?.Element(DrawingNamespace + "prstGeom")
+            ?.Attribute("prst") ?? "rect";
+    }
+
+    private static PptxSceneRect ReadPictureCrop(XElement picture)
+    {
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        XElement? sourceRectangle = blipFill?.Element(DrawingNamespace + "srcRect");
+        return sourceRectangle is null
+            ? default
+            : new PptxSceneRect(
+                ParsePercentage(sourceRectangle, "l"),
+                ParsePercentage(sourceRectangle, "t"),
+                ParsePercentage(sourceRectangle, "r"),
+                ParsePercentage(sourceRectangle, "b"));
+    }
+
+    private static PptxSceneRect ReadPictureFill(XElement picture)
+    {
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        XElement? fillRectangle = blipFill
+            ?.Element(DrawingNamespace + "stretch")
+            ?.Element(DrawingNamespace + "fillRect");
+        return fillRectangle is null
+            ? default
+            : new PptxSceneRect(
+                ParsePercentage(fillRectangle, "l"),
+                ParsePercentage(fillRectangle, "t"),
+                ParsePercentage(fillRectangle, "r"),
+                ParsePercentage(fillRectangle, "b"));
+    }
+
+    private static double ReadPictureAlpha(XElement picture)
+    {
+        XElement? blip = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
+        if (alphaModFix?.Attribute("amt") is { } amount &&
+            int.TryParse(amount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedAmount))
+        {
+            return Math.Clamp(parsedAmount / 100000d, 0d, 1d);
+        }
+
+        return 1d;
+    }
+
+    private static double ParsePercentage(XElement element, string attribute)
+    {
+        return element.Attribute(attribute) is { } value
+            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
+            : 0d;
     }
 
     private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)

@@ -877,8 +877,15 @@ High-priority actions:
 - [x] Move the first leaf PPTX renderer inputs toward typed scene data: ordered picture rendering now takes
   relationship id and EMU bounds from `PptxSceneNode`/`PptxScenePicture`, while keeping source XML only for
   crop/recolor/svg details that still need typed models.
-- [ ] Continue typed leaf migration by resolving picture crop/fill/alpha/recolor into `PptxScenePicture`,
-  then repeat the same pattern for connector geometry and line-end styles.
+- [x] Resolve simple picture properties into `PptxScenePicture`: crop rectangle, stretch fill rectangle, and
+  alpha are now parsed by the scene model and consumed by ordered picture rendering.
+- [ ] Continue typed picture migration by moving recolor and SVG-specific placement/crop decisions into
+  `PptxScenePicture`, then repeat the same pattern for connector geometry and line-end styles.
+- [x] Move the first ordered shape/connector leaf inputs toward typed scene data: `PptxSceneShape` now owns
+  preset geometry names, and ordered shape/connector rendering takes preset and EMU bounds from scene nodes
+  before falling back to XML for fills, strokes, effects, custom geometry, and picture fills.
+- [ ] Continue typed shape/connector migration by resolving line style, line ends, dash/cap/join, custom
+  geometry presence, and fill/effect styles into typed scene records.
 - [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is

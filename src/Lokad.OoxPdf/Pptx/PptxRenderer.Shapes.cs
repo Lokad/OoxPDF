@@ -86,6 +86,42 @@ internal sealed partial class PptxRenderer
             ref imageIndex);
     }
     private static void RenderShape(
+        PptxSceneNode shape,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships,
+        OoxPackage? package,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        PptxTheme theme,
+        GroupTransform groupTransform,
+        List<PdfImageResource>? images,
+        Dictionary<string, PdfImageXObject?>? imageCache,
+        ref int imageIndex)
+    {
+        if (shape.Shape is null || shape.Bounds is null)
+        {
+            return;
+        }
+
+        RenderShape(
+            shape.Source,
+            relationships,
+            package,
+            document,
+            graphics,
+            diagnosticSink,
+            slideIndex,
+            theme,
+            groupTransform,
+            images,
+            imageCache,
+            ref imageIndex,
+            ToShapeBounds(shape.Bounds),
+            shape.Shape.Preset);
+    }
+
+    private static void RenderShape(
         XElement shape,
         IReadOnlyDictionary<string, OoxRelationship>? relationships,
         OoxPackage? package,
@@ -111,8 +147,46 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ShapeBounds bounds = groupTransform.Apply(rawBounds.Value);
-        string preset = ReadPreset(shapeProperties);
+        RenderShape(
+            shape,
+            relationships,
+            package,
+            document,
+            graphics,
+            diagnosticSink,
+            slideIndex,
+            theme,
+            groupTransform,
+            images,
+            imageCache,
+            ref imageIndex,
+            rawBounds.Value,
+            ReadPreset(shapeProperties));
+    }
+
+    private static void RenderShape(
+        XElement shape,
+        IReadOnlyDictionary<string, OoxRelationship>? relationships,
+        OoxPackage? package,
+        PptxDocument document,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        PptxTheme theme,
+        GroupTransform groupTransform,
+        List<PdfImageResource>? images,
+        Dictionary<string, PdfImageXObject?>? imageCache,
+        ref int imageIndex,
+        ShapeBounds rawBounds,
+        string preset)
+    {
+        XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
+        if (shapeProperties is null)
+        {
+            return;
+        }
+
+        ShapeBounds bounds = groupTransform.Apply(rawBounds);
 
         double x = OoxUnits.EmuToPoints(bounds.X);
         double yTop = OoxUnits.EmuToPoints(bounds.Y);
