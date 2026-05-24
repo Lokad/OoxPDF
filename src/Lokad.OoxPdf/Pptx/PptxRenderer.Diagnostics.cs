@@ -63,6 +63,11 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
         }
 
+        if (slideXml.Descendants(PresentationNamespace + "graphicFrame").Any(IsUnsupportedGraphicFrame))
+        {
+            Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
+        }
+
         if (slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedGradientFill))
         {
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
@@ -184,6 +189,29 @@ internal sealed partial class PptxRenderer
             .Descendants(DrawingNamespace + "graphicData")
             .Select(element => (string?)element.Attribute("uri"))
             .Any(uri => uri?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static bool IsUnsupportedGraphicFrame(XElement graphicFrame)
+    {
+        XElement? graphicData = graphicFrame
+            .Descendants(DrawingNamespace + "graphicData")
+            .FirstOrDefault();
+        if (graphicData is null || IsSmartArtGraphicFrame(graphicFrame))
+        {
+            return false;
+        }
+
+        string uri = (string?)graphicData.Attribute("uri") ?? string.Empty;
+        return !uri.Contains("chart", StringComparison.OrdinalIgnoreCase) &&
+            !graphicData.Descendants(DrawingNamespace + "tbl").Any();
+    }
+
+    private static bool IsSmartArtGraphicFrame(XElement graphicFrame)
+    {
+        return graphicFrame
+            .Descendants(DrawingNamespace + "graphicData")
+            .Select(element => (string?)element.Attribute("uri"))
+            .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static bool IsUnsupportedAlpha(XElement alpha)

@@ -1,3 +1,4 @@
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
@@ -24,6 +25,7 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
+        string? sourcePartName,
         ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders)
@@ -80,6 +82,9 @@ internal sealed partial class PptxRenderer
                 case PptxSceneNodeKind.Chart:
                     RenderChartFrame(context, graphics, chartFonts, node, transform, relationships);
                     break;
+                case PptxSceneNodeKind.UnknownGraphicFrame:
+                    RenderUnsupportedGraphicFrame(node, context, sourcePartName);
+                    break;
                 case PptxSceneNodeKind.Group:
                     RenderOrderedSceneNodes(
                         node.Children,
@@ -89,6 +94,7 @@ internal sealed partial class PptxRenderer
                         images,
                         chartFonts,
                         relationships,
+                        sourcePartName,
                         ref imageIndex,
                         transform.Combine(ToGroupTransform(node.GroupTransform)),
                         renderPlaceholders);
@@ -137,5 +143,22 @@ internal sealed partial class PptxRenderer
         }
 
         DrawTextSpansWithFonts(ReadTextSpansForShape(node.Source, context, renderPlaceholders), graphics, fonts);
+    }
+
+    private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
+    {
+        if (context.DiagnosticSink is null || IsSmartArtGraphicFrame(node.Source))
+        {
+            return;
+        }
+
+        context.DiagnosticSink(new OoxPdfDiagnostic(
+            "PPTX_UNSUPPORTED_GRAPHIC_FRAME",
+            OoxPdfSeverity.Warning,
+            "Unsupported PPTX graphic frame was detected and ignored.",
+            sourcePartName ?? context.Slide.PartName,
+            SlideIndex: context.SlideNumber,
+            Feature: "graphic frame",
+            Fallback: "Ignored"));
     }
 }

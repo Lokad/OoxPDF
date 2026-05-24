@@ -519,6 +519,10 @@ High-priority actions:
   which first checks the typed scene node's `TextBody` ownership before invoking the existing text layout
   pipeline. This is behavior-neutral, but it makes text a distinct scene-node rendering phase instead of an
   inline raw-XML side effect of shape drawing.
+- [x] Add a typed unknown-graphic-frame fallback:
+  unsupported non-chart, non-table, non-SmartArt `graphicFrame` nodes now emit
+  `PPTX_UNSUPPORTED_GRAPHIC_FRAME` instead of being indistinguishable from intentionally ignored content.
+  Ordered scene rendering also has an explicit `UnknownGraphicFrame` branch for inherited scene nodes.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
@@ -3625,6 +3629,13 @@ ordered text-dispatch split / 2026-05-24:
 7 skipped. A first parallel attempt at the non-slow suite failed during build because Windows held the
 debug DLL for writing; rerunning serially passed, so this was an environment file lock rather than a code
 failure. `dotnet pack` succeeded, and the full suite passed with 196 passed, 0 failed, 0 skipped.
+
+unknown graphic-frame fallback / 2026-05-24:
+`PptxUnsupportedFeaturesEmitDiagnostics` now locks `PPTX_UNSUPPORTED_GRAPHIC_FRAME` separately from chart,
+table, and SmartArt classification. `PptxSceneBuilderBuildsResolvedNodeLists` passed after threading source
+part names through ordered scene dispatch, and the non-slow suite passed with 189 passed, 0 failed, 7 skipped.
+One parallel targeted-test attempt hit a SourceLink file lock; the same tests passed when rerun serially.
+`dotnet pack` succeeded, and the full suite passed with 196 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
