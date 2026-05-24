@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
                         chartFonts,
                         relationships,
                         ref imageIndex,
-                        transform.Combine(ReadGroupTransform(source)),
+                        transform.Combine(ToGroupTransform(node.GroupTransform)),
                         renderPlaceholders);
                     break;
             }

@@ -2644,34 +2644,23 @@ internal sealed partial class PptxRenderer
 
     private static GroupTransform ReadGroupTransform(XElement group)
     {
-        XElement? transform = group
-            .Element(PresentationNamespace + "grpSpPr")
-            ?.Element(DrawingNamespace + "xfrm");
-        XElement? offset = transform?.Element(DrawingNamespace + "off");
-        XElement? extents = transform?.Element(DrawingNamespace + "ext");
-        XElement? childOffset = transform?.Element(DrawingNamespace + "chOff");
-        XElement? childExtents = transform?.Element(DrawingNamespace + "chExt");
-        if (offset is null || extents is null || childOffset is null || childExtents is null)
-        {
-            return GroupTransform.Identity;
-        }
+        return ToGroupTransform(PptxSceneBuilder.ReadGroupTransform(group));
+    }
 
-        long chWidth = Math.Max(1, ParseLongAttribute(childExtents, "cx"));
-        long chHeight = Math.Max(1, ParseLongAttribute(childExtents, "cy"));
+    private static GroupTransform ToGroupTransform(PptxSceneGroupTransform group)
+    {
         return new GroupTransform(
-            ParseLongAttribute(offset, "x"),
-            ParseLongAttribute(offset, "y"),
-            ParseLongAttribute(extents, "cx"),
-            ParseLongAttribute(extents, "cy"),
-            ParseLongAttribute(childOffset, "x"),
-            ParseLongAttribute(childOffset, "y"),
-            ParseLongAttribute(extents, "cx") / (double)chWidth,
-            ParseLongAttribute(extents, "cy") / (double)chHeight,
-            transform!.Attribute("rot") is { } rotationAttribute
-                ? long.Parse(rotationAttribute.Value, CultureInfo.InvariantCulture) / 60000d
-                : 0d,
-            ParseBoolAttribute(transform, "flipH"),
-            ParseBoolAttribute(transform, "flipV"));
+            group.OffsetX,
+            group.OffsetY,
+            group.Width,
+            group.Height,
+            group.ChildOffsetX,
+            group.ChildOffsetY,
+            group.ScaleX,
+            group.ScaleY,
+            group.RotationDegrees,
+            group.FlipHorizontal,
+            group.FlipVertical);
     }
 
     private static void ApplyShapeTransform(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ShapeBounds bounds)

@@ -226,6 +226,9 @@ internal static class PptxTests
         TestAssert.Equal(0.5d, slide.SlideNodes[3].Shape?.TailEnd.LengthScale ?? 0d);
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
+        TestAssert.Equal(2743200L, slide.SlideNodes[5].GroupTransform.OffsetX);
+        TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleX);
+        TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleY);
         TestAssert.Equal(1, slide.SlideNodes[5].Children.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[5].Children[0].Kind);
         TestAssert.True(slide.SlideNodes[5].Children[0].Shape?.PatternFill.HasPattern == true, "Expected grouped shape pattern fill in the scene model.");

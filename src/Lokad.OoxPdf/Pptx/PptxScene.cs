@@ -182,6 +182,7 @@ internal sealed record PptxSceneNode(
     PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
     PptxScenePicture? Picture,
+    PptxSceneGroupTransform GroupTransform,
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
 
@@ -312,6 +313,22 @@ internal sealed record PptxScenePicture(
     PptxSceneRect Fill,
     double Alpha,
     PptxSceneImageRecolor Recolor);
+
+internal readonly record struct PptxSceneGroupTransform(
+    long OffsetX,
+    long OffsetY,
+    long Width,
+    long Height,
+    long ChildOffsetX,
+    long ChildOffsetY,
+    double ScaleX,
+    double ScaleY,
+    double RotationDegrees,
+    bool FlipHorizontal,
+    bool FlipVertical)
+{
+    public static PptxSceneGroupTransform Identity { get; } = new(0, 0, 0, 0, 0, 0, 1d, 1d, 0d, FlipHorizontal: false, FlipVertical: false);
+}
 
 internal readonly record struct PptxSceneRect(double Left, double Top, double Right, double Bottom)
 {
@@ -546,6 +563,7 @@ internal sealed class PptxSceneBuilder
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme) : null,
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
+                kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
                 child));
         }
@@ -664,6 +682,38 @@ internal sealed class PptxSceneBuilder
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
             ReadImageRecolor(picture, theme));
+    }
+
+    internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
+    {
+        XElement? transform = group
+            .Element(PresentationNamespace + "grpSpPr")
+            ?.Element(DrawingNamespace + "xfrm");
+        XElement? offset = transform?.Element(DrawingNamespace + "off");
+        XElement? extents = transform?.Element(DrawingNamespace + "ext");
+        XElement? childOffset = transform?.Element(DrawingNamespace + "chOff");
+        XElement? childExtents = transform?.Element(DrawingNamespace + "chExt");
+        if (offset is null || extents is null || childOffset is null || childExtents is null)
+        {
+            return PptxSceneGroupTransform.Identity;
+        }
+
+        long width = ReadLong(extents, "cx");
+        long height = ReadLong(extents, "cy");
+        long childWidth = Math.Max(1, ReadLong(childExtents, "cx"));
+        long childHeight = Math.Max(1, ReadLong(childExtents, "cy"));
+        return new PptxSceneGroupTransform(
+            ReadLong(offset, "x"),
+            ReadLong(offset, "y"),
+            width,
+            height,
+            ReadLong(childOffset, "x"),
+            ReadLong(childOffset, "y"),
+            width / (double)childWidth,
+            height / (double)childHeight,
+            transform!.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
+            ReadBool(transform, "flipH"),
+            ReadBool(transform, "flipV"));
     }
 
     private static PptxSceneShape ReadShape(XElement shape, PptxTheme theme)

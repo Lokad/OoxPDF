@@ -438,6 +438,11 @@ High-priority actions:
   `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-121521`
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
   `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-24: Re-ran model/composition-focused tests, the full test suite, package, and private PPTX
+  acceptance after moving group transforms into `PptxSceneNode`. The test runner passed 184/184,
+  `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-121950`
+  stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
+  `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -904,6 +909,9 @@ High-priority actions:
   hardened.
 - [x] Add hierarchical children to `PptxSceneNode` for grouped shapes. The scene builder now records direct
   children for group nodes and the scene-builder test locks the group -> child shape hierarchy.
+- [x] Move group coordinate mapping into the scene model: `PptxSceneNode` now carries a typed group transform
+  with child coordinate origin/extents, scale, rotation, and flips. Ordered scene dispatch consumes this
+  transform directly, and legacy XML group paths route through the same scene-builder parser.
 - [x] Replace `RenderOrderedShapeTextContainer` with scene-node iteration for the ordered slide path. Normal
   PPTX rendering now builds a `PptxScene`, carries the current `PptxSceneSlide` in `PptxRenderContext`, and
   ordered slide rendering iterates `PptxSceneNode`/`Children` while leaf renderers still consume source XML.
