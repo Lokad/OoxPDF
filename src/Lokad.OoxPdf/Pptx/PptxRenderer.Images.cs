@@ -10,56 +10,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static IReadOnlyList<PdfImageResource> RenderPictures(PptxRenderContext context, PdfGraphicsBuilder graphics)
-    {
-        var images = new List<PdfImageResource>();
-        int index = 1;
-        foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
-        {
-            RenderPictureContainer(shapeTree, context, graphics, GroupTransform.Identity, images, context.SlideRelationships, ref index);
-        }
-
-        return images;
-    }
-
-    private static void RenderPictureContainer(
-        XElement container,
-        PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
-        GroupTransform transform,
-        List<PdfImageResource> images,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        ref int index)
-    {
-        foreach (XElement child in container.Elements())
-        {
-            if (child.Name == PresentationNamespace + "pic")
-            {
-                RenderPicture(
-                    child,
-                    relationships,
-                    context.Package,
-                    context.Document,
-                    context.Theme,
-                    graphics,
-                    context.DiagnosticSink,
-                    context.SlideNumber,
-                    transform,
-                    images,
-                    context.ImageCache,
-                    ref index);
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "grpSp")
-            {
-                GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
-                RenderPictureContainer(child, context, graphics, childTransform, images, relationships, ref index);
-                continue;
-            }
-        }
-    }
-
     private static void RenderPicture(
         PptxSceneNode picture,
         PptxRenderContext context,
@@ -93,49 +43,6 @@ internal sealed partial class PptxRenderer
             ToFillRect(picture.Picture.Fill),
             picture.Picture.Alpha,
             ToImageRecolor(picture.Picture.Recolor));
-    }
-
-    private static void RenderPicture(
-        XElement picture,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        OoxPackage package,
-        PptxDocument document,
-        PptxTheme theme,
-        PdfGraphicsBuilder graphics,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
-        int slideIndex,
-        GroupTransform transform,
-        List<PdfImageResource> images,
-        Dictionary<string, PdfImageXObject?> imageCache,
-        ref int index)
-    {
-        string? relationshipId = PptxSceneBuilder.ReadPictureRelationshipId(picture);
-        XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
-        ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-        if (bounds is null)
-        {
-            return;
-        }
-
-        RenderPicture(
-            picture,
-            relationships,
-            package,
-            document,
-            theme,
-            graphics,
-            diagnosticSink,
-            slideIndex,
-            transform,
-            images,
-            imageCache,
-            ref index,
-            relationshipId,
-            bounds.Value,
-            ReadCrop(picture),
-            ReadFillRect(picture),
-            ReadPictureAlpha(picture),
-            ReadImageRecolor(picture, theme));
     }
 
     private static void RenderPicture(

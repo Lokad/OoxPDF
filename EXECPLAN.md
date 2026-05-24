@@ -530,6 +530,11 @@ High-priority actions:
   across an intervening unknown frame and avoids duplicate slide-level diagnostics from ordered dispatch.
   The old ordered-render eligibility branch was removed from `RenderPages`; all slides now flow through the
   typed ordered scene dispatcher.
+- [x] Remove the obsolete PPTX fallback traversal entry points:
+  the private XML-wide `RenderPictures`, `RenderShapes`, and `RenderCharts` passes, plus their container
+  walkers, were deleted after all slides moved to typed ordered scene dispatch. The grouped-table unknown
+  frame test was renamed to `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` so the test
+  catalog no longer describes a fallback renderer path that no longer exists.
 - [x] 2026-05-24: Re-ran private PPTX acceptance after adding the generic unknown graphic-frame diagnostic.
   Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
   dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
@@ -3658,6 +3663,12 @@ frames do not disable ordered scene rendering for known siblings, while `PptxUns
 continues to lock a single slide-scoped `PPTX_UNSUPPORTED_GRAPHIC_FRAME` diagnostic. The non-slow suite passed
 with 190 passed, 0 failed, 7 skipped. After removing the old ordered-render eligibility branch, `dotnet pack`
 succeeded and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+obsolete PPTX fallback traversal removal / 2026-05-24:
+After deleting the private XML-wide picture, shape, and chart traversal entry points, the renamed
+`PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed and the non-slow suite passed
+with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed,
+0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

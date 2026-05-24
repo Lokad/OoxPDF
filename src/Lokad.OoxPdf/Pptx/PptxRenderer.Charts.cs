@@ -10,34 +10,6 @@ internal sealed partial class PptxRenderer
 {
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
 
-    private static IReadOnlyList<PdfFontResource> RenderCharts(PptxRenderContext context, PdfGraphicsBuilder graphics)
-    {
-        var fonts = new List<PdfFontResource>();
-        foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
-        {
-            RenderChartContainer(context, graphics, fonts, shapeTree, GroupTransform.Identity);
-        }
-
-        return fonts;
-    }
-
-    private static void RenderChartContainer(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PdfFontResource> fonts, XElement container, GroupTransform transform)
-    {
-        foreach (XElement child in container.Elements())
-        {
-            if (child.Name == PresentationNamespace + "graphicFrame")
-            {
-                RenderChartFrame(context, graphics, fonts, child, transform, context.SlideRelationships);
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "grpSp")
-            {
-                RenderChartContainer(context, graphics, fonts, child, transform.Combine(ReadGroupTransform(child)));
-            }
-        }
-    }
-
     private static void RenderChartFrame(
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
@@ -50,31 +22,6 @@ internal sealed partial class PptxRenderer
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
         RenderChartFrame(context, graphics, fonts, bounds, node.Chart, relationships);
-    }
-
-    private static void RenderChartFrame(
-        PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
-        List<PdfFontResource> fonts,
-        XElement frame,
-        GroupTransform transform,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
-    {
-        ShapeBounds? rawBounds = ReadGraphicFrameBounds(frame);
-        ShapeBounds? bounds = rawBounds is { } value ? transform.Apply(value) : null;
-        XElement? graphicData = frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData");
-        if (graphicData?.Attribute("uri") is not { } uri ||
-            !uri.Value.Contains("drawingml/2006/chart", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        string? relationshipId = (string?)graphicData
-            .Element(ChartNamespace + "chart")
-            ?.Attribute(RelationshipsNamespace + "id");
-        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, null, relationships);
     }
 
     private static void RenderChartFrame(

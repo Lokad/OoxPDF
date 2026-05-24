@@ -6067,7 +6067,7 @@ internal static class PptxTests
         TestAssert.Contains("72 396 144 72 re f", pdf);
     }
 
-    public static void PptxSyntheticGroupedTableUsesGroupTransformInFallbackPath()
+    public static void PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
