@@ -424,6 +424,13 @@ High-priority actions:
   `artifacts/private-visual/lokad-value-based/20260524-115144` stayed stable: 84/84 compared pages, zero
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`,
   and slide 17 MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
+- [x] Move solid slide/master/layout background fill into `PptxSceneSlide`: background color and alpha are now
+  parsed once in the scene model and rendering consumes typed background fields before falling back to raw XML.
+- [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
+  backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`,
+  and slide 17 MAE `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving master/layout shape/text rendering
   to ordered scene dispatch. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-114540` stayed stable: 84/84 compared pages, zero

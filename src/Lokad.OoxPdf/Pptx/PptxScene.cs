@@ -161,9 +161,17 @@ internal sealed record PptxSceneSlide(
     string? MasterPartName,
     string? LayoutPartName,
     XDocument SlideXml,
+    PptxSceneBackground MasterBackground,
+    PptxSceneBackground LayoutBackground,
+    PptxSceneBackground SlideBackground,
     IReadOnlyList<PptxSceneNode> MasterNodes,
     IReadOnlyList<PptxSceneNode> LayoutNodes,
     IReadOnlyList<PptxSceneNode> SlideNodes);
+
+internal readonly record struct PptxSceneBackground(
+    bool HasFill,
+    RgbColor Color,
+    double Alpha);
 
 internal sealed record PptxSceneNode(
     PptxSceneNodeKind Kind,
@@ -452,7 +460,7 @@ internal sealed class PptxSceneBuilder
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
-                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), [], [], []));
+                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), default, default, default, [], [], []));
                 continue;
             }
 
@@ -471,6 +479,9 @@ internal sealed class PptxSceneBuilder
                 masterPart?.Name,
                 layoutPart?.Name,
                 slideXml,
+                ReadBackground(masterXml, theme),
+                ReadBackground(layoutXml, theme),
+                ReadBackground(slideXml, theme),
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme),
                 ReadNodes(slideXml, slideSources, theme)));
@@ -501,6 +512,17 @@ internal sealed class PptxSceneBuilder
         }
 
         return nodes;
+    }
+
+    private static PptxSceneBackground ReadBackground(XDocument? xml, PptxTheme theme)
+    {
+        XElement? background = xml?.Root?
+            .Element(PresentationNamespace + "cSld")?
+            .Element(PresentationNamespace + "bg")?
+            .Element(PresentationNamespace + "bgPr");
+        return TryReadSolidColorWithAlpha(background, theme, out RgbColor color, out double alpha)
+            ? new PptxSceneBackground(true, color, alpha)
+            : default;
     }
 
     private static IReadOnlyList<PptxSceneNode> ReadChildNodes(XElement container, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)

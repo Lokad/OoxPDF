@@ -50,16 +50,25 @@ internal sealed partial class PptxRenderer
             PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
             bool canRenderInOrder = CanRenderSlideInOrder(context.SlideXml);
 
-            foreach (XDocument inherited in context.InheritedXml)
+            if (context.Inheritance.MasterXml is not null)
             {
-                RenderBackground(context, inherited, graphics);
+                RenderBackground(context, context.SceneSlide?.MasterBackground, context.Inheritance.MasterXml, graphics);
                 if (!canRenderInOrder)
                 {
-                    RenderShapes(context, inherited, graphics, renderPlaceholders: false);
+                    RenderShapes(context, context.Inheritance.MasterXml, graphics, renderPlaceholders: false);
                 }
             }
 
-            RenderBackground(context, context.SlideXml, graphics);
+            if (context.Inheritance.LayoutXml is not null)
+            {
+                RenderBackground(context, context.SceneSlide?.LayoutBackground, context.Inheritance.LayoutXml, graphics);
+                if (!canRenderInOrder)
+                {
+                    RenderShapes(context, context.Inheritance.LayoutXml, graphics, renderPlaceholders: false);
+                }
+            }
+
+            RenderBackground(context, context.SceneSlide?.SlideBackground, context.SlideXml, graphics);
             if (canRenderInOrder)
             {
                 var orderedImages = new List<PdfImageResource>();

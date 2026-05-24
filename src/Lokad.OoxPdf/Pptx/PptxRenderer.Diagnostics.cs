@@ -201,6 +201,8 @@ internal sealed partial class PptxRenderer
         XElement? lineOwner = owner?.Parent;
         bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == PresentationNamespace + "spPr";
+        bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == PresentationNamespace + "bgPr";
         bool supportedShapeLine = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == DrawingNamespace + "ln" &&
             lineOwner?.Name == PresentationNamespace + "spPr";
@@ -217,6 +219,6 @@ internal sealed partial class PptxRenderer
             owner?.Name == DrawingNamespace + "effectLst";
         bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
             owner?.Name == DrawingNamespace + "effectLst";
-        return !supportedShapeFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
+        return !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
     }
 }

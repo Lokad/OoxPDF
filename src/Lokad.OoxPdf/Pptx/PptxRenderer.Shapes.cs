@@ -9,13 +9,32 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderBackground(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
+    private static void RenderBackground(PptxRenderContext context, PptxSceneBackground? sceneBackground, XDocument slideXml, PdfGraphicsBuilder graphics)
     {
-        XElement? background = slideXml.Root?
+        if (sceneBackground is { HasFill: true } background)
+        {
+            graphics.SaveState();
+            if (background.Alpha < 0.999d)
+            {
+                graphics.SetAlpha(background.Alpha, 1d);
+            }
+
+            graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
+            graphics.FillRectangle(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            graphics.RestoreState();
+            return;
+        }
+
+        if (sceneBackground is not null)
+        {
+            return;
+        }
+
+        XElement? backgroundXml = slideXml.Root?
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?
             .Element(PresentationNamespace + "bgPr");
-        if (TryReadSolidColor(background, context.Theme, out RgbColor color))
+        if (TryReadSolidColor(backgroundXml, context.Theme, out RgbColor color))
         {
             graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             graphics.FillRectangle(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);

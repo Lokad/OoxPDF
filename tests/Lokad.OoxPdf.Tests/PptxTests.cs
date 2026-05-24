@@ -155,7 +155,9 @@ internal static class PptxTests
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
+                  <p:cSld>
+                    <p:bg><p:bgPr><a:solidFill><a:srgbClr val="123456"><a:alpha val="80000"/></a:srgbClr></a:solidFill></p:bgPr></p:bg>
+                    <p:spTree>
                     <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:solidFill><a:srgbClr val="CCDD11"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow><a:outerShdw dist="91440" dir="0"><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rIdImage"><a:alphaModFix amt="50000"/><a:grayscl/></a:blip><a:srcRect l="10000" t="20000" r="30000" b="40000"/><a:stretch><a:fillRect l="5000" r="10000"/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
@@ -166,7 +168,8 @@ internal static class PptxTests
                       <p:grpSpPr><a:xfrm><a:off x="2743200" y="0"/><a:ext cx="914400" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="914400" cy="914400"/></a:xfrm></p:grpSpPr>
                       <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm><a:pattFill prst="dkDnDiag"><a:fgClr><a:srgbClr val="2F856A"/></a:fgClr><a:bgClr><a:srgbClr val="EEEEEE"/></a:bgClr></a:pattFill><a:blipFill><a:blip r:embed="rIdShapeImage"/><a:srcRect l="5000" t="10000" r="15000" b="20000"/><a:stretch><a:fillRect l="2500" r="7500"/></a:stretch></a:blipFill></p:spPr></p:sp>
                     </p:grpSp>
-                  </p:spTree></p:cSld>
+                    </p:spTree>
+                  </p:cSld>
                 </p:sld>
                 """
         });
@@ -179,6 +182,9 @@ internal static class PptxTests
 
         TestAssert.Equal(1, scene.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
+        TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
+        TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);
+        TestAssert.Equal(0.8d, slide.SlideBackground.Alpha);
         TestAssert.Equal(1, slide.MasterNodes.Count);
         TestAssert.Equal(3, slide.LayoutNodes.Count);
         TestAssert.Equal(6, slide.SlideNodes.Count);
