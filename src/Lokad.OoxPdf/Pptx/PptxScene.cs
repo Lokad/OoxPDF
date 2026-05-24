@@ -335,7 +335,10 @@ internal sealed record PptxSceneChartPlot(
 internal sealed record PptxSceneChartSeries(
     string? Name,
     IReadOnlyList<double> Values,
-    IReadOnlyList<string> Categories);
+    IReadOnlyList<string> Categories,
+    IReadOnlyList<double> XValues,
+    IReadOnlyList<double> YValues,
+    IReadOnlyList<double> BubbleSizes);
 
 internal sealed record PptxSceneChartAxis(
     string Id,
@@ -906,7 +909,10 @@ internal sealed class PptxSceneBuilder
             series.Add(new PptxSceneChartSeries(
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesValues(seriesElement),
-                ReadChartSeriesCategories(seriesElement)));
+                ReadChartSeriesCategories(seriesElement),
+                ReadChartSeriesNumbers(seriesElement, "xVal"),
+                ReadChartSeriesNumbers(seriesElement, "yVal"),
+                ReadChartSeriesNumbers(seriesElement, "bubbleSize")));
         }
 
         return series;
@@ -932,8 +938,13 @@ internal sealed class PptxSceneBuilder
 
     private static IReadOnlyList<double> ReadChartSeriesValues(XElement series)
     {
+        return ReadChartSeriesNumbers(series, "val");
+    }
+
+    private static IReadOnlyList<double> ReadChartSeriesNumbers(XElement series, string elementName)
+    {
         return series
-            .Elements(ChartNamespace + "val")
+            .Elements(ChartNamespace + elementName)
             .Descendants(ChartNamespace + "pt")
             .Select(point => (string?)point.Element(ChartNamespace + "v"))
             .Where(value => !string.IsNullOrWhiteSpace(value))

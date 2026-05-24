@@ -146,6 +146,14 @@ internal static class PptxTests
                     <c:axId val="10"/>
                     <c:axId val="20"/>
                   </c:barChart>
+                  <c:bubbleChart>
+                    <c:ser>
+                      <c:tx><c:strLit><c:pt idx="0"><c:v>Scatter</c:v></c:pt></c:strLit></c:tx>
+                      <c:xVal><c:numLit><c:pt idx="0"><c:v>1.5</c:v></c:pt><c:pt idx="1"><c:v>2.5</c:v></c:pt></c:numLit></c:xVal>
+                      <c:yVal><c:numLit><c:pt idx="0"><c:v>3.5</c:v></c:pt><c:pt idx="1"><c:v>4.5</c:v></c:pt></c:numLit></c:yVal>
+                      <c:bubbleSize><c:numLit><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
+                    </c:ser>
+                  </c:bubbleChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/></c:catAx>
                   <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/></c:valAx>
                   </c:plotArea>
@@ -301,6 +309,11 @@ internal static class PptxTests
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);
+        TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
+        TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);
+        TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);
+        TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
+        TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
