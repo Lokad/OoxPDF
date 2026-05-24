@@ -123,6 +123,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.HasCustomGeometry,
             shape.Shape.CustomGeometry,
             ToFillStyle(shape.Shape.Fill),
+            ToGradientFill(shape.Shape.GradientFill),
             ToShapePatternFill(shape.Shape.PatternFill),
             ToShapePictureFill(shape.Shape.PictureFill),
             ToGlow(shape.Shape.Glow),
@@ -183,6 +184,7 @@ internal sealed partial class PptxRenderer
             null,
             null,
             null,
+            null,
             null);
     }
 
@@ -205,6 +207,7 @@ internal sealed partial class PptxRenderer
         bool hasCustomGeometry,
         PptxSceneCustomGeometry? customGeometryOverride,
         FillStyle? fillOverride,
+        GradientFill? gradientFillOverride,
         ShapePatternFill? patternFillOverride,
         ShapePictureFill? pictureFillOverride,
         Glow? glowOverride,
@@ -241,6 +244,7 @@ internal sealed partial class PptxRenderer
         {
             hasFill = TryReadShapeFill(shape, shapeProperties, theme, out fill, out fillAlpha);
         }
+        GradientFill? gradientFill = gradientFillOverride;
         bool hasPatternFill;
         ShapePatternFill patternFill;
         if (patternFillOverride is { } resolvedPatternFill)
@@ -538,7 +542,23 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
+        if (gradientFill is not null)
+        {
+            bool clippedToShape = preset != "rect";
+            if (clippedToShape)
+            {
+                graphics.SaveState();
+                ClipToPresetShape(graphics, preset, x, y, width, height);
+            }
+
+            DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
+
+            if (clippedToShape)
+            {
+                graphics.RestoreState();
+            }
+        }
+        else if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
         {
             CropRect crop = pictureFillCrop;
             FillRect fillRect = pictureFillRect;
@@ -792,6 +812,34 @@ internal sealed partial class PptxRenderer
         {
             graphics.FillRectangle(x, y, width, height);
         }
+    }
+
+    private static void DrawLinearGradientFill(PdfGraphicsBuilder graphics, GradientFill gradient, double x, double y, double width, double height)
+    {
+        if (gradient.Stops.Count < 2)
+        {
+            return;
+        }
+
+        GradientStop first = gradient.Stops[0];
+        GradientStop last = gradient.Stops[^1];
+        double radians = DegreesToRadians(gradient.AngleDegrees);
+        double dx = Math.Cos(radians);
+        double dy = Math.Sin(radians);
+        double half = Math.Abs(dx) * width / 2d + Math.Abs(dy) * height / 2d;
+        double centerX = x + width / 2d;
+        double centerY = y + height / 2d;
+        graphics.PaintAxialShading(
+            centerX - dx * half,
+            centerY - dy * half,
+            centerX + dx * half,
+            centerY + dy * half,
+            first.Color.Red,
+            first.Color.Green,
+            first.Color.Blue,
+            last.Color.Red,
+            last.Color.Green,
+            last.Color.Blue);
     }
 
     private static void DrawPresetArcStroke(
@@ -2083,6 +2131,13 @@ internal sealed partial class PptxRenderer
     {
         return fill.HasPattern
             ? new ShapePatternFill(fill.Preset, fill.Foreground, fill.Background, fill.Alpha)
+            : null;
+    }
+
+    private static GradientFill? ToGradientFill(PptxSceneGradientFill fill)
+    {
+        return fill.HasGradient
+            ? new GradientFill(fill.AngleDegrees, fill.Stops.Select(stop => new GradientStop(stop.Offset, stop.Color)).ToArray())
             : null;
     }
 

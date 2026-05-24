@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
                 DrawTextSpansWithFonts(inheritedTextSpans, graphics, renderedFonts.Fonts);
                 RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
-                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray()));
+                pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
                 continue;
             }
 
@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
                 .Concat(tableTextSpans)
                 .ToArray();
             IReadOnlyList<PdfFontResource> fonts = RenderPositionedTextSpans(textSpans, [], graphics);
-            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), chartFonts.Concat(fonts).ToArray(), images, graphics.ExtGStates.ToArray()));
+            pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), chartFonts.Concat(fonts).ToArray(), images, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
         }
 
         return pages;

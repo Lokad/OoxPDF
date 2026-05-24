@@ -655,6 +655,10 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct FillStyle(bool HasFill, RgbColor Color, double Alpha);
 
+    private sealed record GradientFill(double AngleDegrees, IReadOnlyList<GradientStop> Stops);
+
+    private readonly record struct GradientStop(double Offset, RgbColor Color);
+
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {
         public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;

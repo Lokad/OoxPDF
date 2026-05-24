@@ -23,6 +23,11 @@ internal readonly record struct PdfPage
     }
 
     public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates)
+        : this(width, height, content, fonts, images, extGStates, [])
+    {
+    }
+
+    public PdfPage(double width, double height, string content, IReadOnlyList<PdfFontResource> fonts, IReadOnlyList<PdfImageResource> images, IReadOnlyList<PdfExtGStateResource> extGStates, IReadOnlyList<PdfShadingResource> shadings)
     {
         Width = width;
         Height = height;
@@ -30,6 +35,7 @@ internal readonly record struct PdfPage
         Fonts = fonts;
         Images = images;
         ExtGStates = extGStates;
+        Shadings = shadings;
     }
 
     public double Width { get; }
@@ -43,4 +49,6 @@ internal readonly record struct PdfPage
     public IReadOnlyList<PdfImageResource> Images { get; }
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates { get; }
+
+    public IReadOnlyList<PdfShadingResource> Shadings { get; }
 }

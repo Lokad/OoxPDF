@@ -25,6 +25,10 @@ internal sealed class PdfDocumentWriter
             .SelectMany(p => p.Images.Select(i => i.Image))
             .DistinctBy(i => i.ResourceKey)
             .ToList();
+        List<PdfAxialShading> shadings = pages
+            .SelectMany(p => p.Shadings.Select(s => s.Shading))
+            .DistinctBy(s => s.ResourceKey)
+            .ToList();
 
         int fontObjectBase = 3 + pages.Count * 2;
         var fontObjects = new Dictionary<string, FontObjectNumbers>(StringComparer.Ordinal);
@@ -49,7 +53,14 @@ internal sealed class PdfDocumentWriter
             imageObjects[image.ResourceKey] = new ImageObjectNumbers(imageObject, softMaskObject);
         }
 
-        int objectCount = nextImageObject - 1;
+        int shadingObjectBase = nextImageObject;
+        var shadingObjects = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < shadings.Count; i++)
+        {
+            shadingObjects[shadings[i].ResourceKey] = shadingObjectBase + i;
+        }
+
+        int objectCount = shadingObjectBase + shadings.Count - 1;
         writer.WriteObject(1, "<< /Type /Catalog /Pages 2 0 R >>\n");
         writer.WriteObject(2, BuildPagesObject(pages));
 
@@ -60,7 +71,7 @@ internal sealed class PdfDocumentWriter
             PdfPage page = pages[i];
 
             writer.WriteObject(pageObjectNumber, FormattableString.Invariant(
-                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects)} >>\n"));
+                $"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {FormatNumber(page.Width)} {FormatNumber(page.Height)}] /Contents {contentObjectNumber} 0 R /Resources {BuildResources(page, fontObjects, imageObjects, shadingObjects)} >>\n"));
             byte[] contentBytes = Encoding.ASCII.GetBytes(page.Content);
             writer.WriteObject(contentObjectNumber, FormattableString.Invariant(
                 $"<< /Length {contentBytes.Length} >>\nstream\n{page.Content}endstream\n"));
@@ -74,6 +85,11 @@ internal sealed class PdfDocumentWriter
         foreach (PdfImageXObject image in images)
         {
             WriteImageObjects(writer, image, imageObjects[image.ResourceKey]);
+        }
+
+        foreach (PdfAxialShading shading in shadings)
+        {
+            WriteAxialShadingObject(writer, shading, shadingObjects[shading.ResourceKey]);
         }
 
         long xrefOffset = writer.Position;
@@ -108,9 +124,13 @@ internal sealed class PdfDocumentWriter
         return builder.ToString();
     }
 
-    private static string BuildResources(PdfPage page, IReadOnlyDictionary<string, FontObjectNumbers> fontObjects, IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects)
+    private static string BuildResources(
+        PdfPage page,
+        IReadOnlyDictionary<string, FontObjectNumbers> fontObjects,
+        IReadOnlyDictionary<string, ImageObjectNumbers> imageObjects,
+        IReadOnlyDictionary<string, int> shadingObjects)
     {
-        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0)
+        if (page.Fonts.Count == 0 && page.Images.Count == 0 && page.ExtGStates.Count == 0 && page.Shadings.Count == 0)
         {
             return "<< >>";
         }
@@ -154,6 +174,18 @@ internal sealed class PdfDocumentWriter
             builder.Append(" >>");
         }
 
+        if (page.Shadings.Count != 0)
+        {
+            builder.Append(" /Shading <<");
+            foreach (PdfShadingResource shading in page.Shadings)
+            {
+                builder.Append(" /").Append(PdfEmbeddedFont.SanitizeName(shading.ResourceName));
+                builder.Append(CultureInfo.InvariantCulture, $" {shadingObjects[shading.Shading.ResourceKey]} 0 R");
+            }
+
+            builder.Append(" >>");
+        }
+
         builder.Append(" >>");
         return builder.ToString();
     }
@@ -187,6 +219,12 @@ internal sealed class PdfDocumentWriter
         }
     }
 
+    private static void WriteAxialShadingObject(PdfObjectWriter writer, PdfAxialShading shading, int objectNumber)
+    {
+        writer.WriteObject(objectNumber, FormattableString.Invariant(
+            $"<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [{FormatNumber(shading.X0)} {FormatNumber(shading.Y0)} {FormatNumber(shading.X1)} {FormatNumber(shading.Y1)}] /Function << /FunctionType 2 /Domain [0 1] /C0 [{FormatColor(shading.StartRed)} {FormatColor(shading.StartGreen)} {FormatColor(shading.StartBlue)}] /C1 [{FormatColor(shading.EndRed)} {FormatColor(shading.EndGreen)} {FormatColor(shading.EndBlue)}] /N 1 >> /Extend [true true] >>\n"));
+    }
+
     private static byte[] Compress(ReadOnlySpan<byte> bytes)
     {
         using var output = new MemoryStream();
@@ -201,6 +239,11 @@ internal sealed class PdfDocumentWriter
     private static string FormatNumber(double value)
     {
         return value.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatColor(byte value)
+    {
+        return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
     }
 
     private readonly record struct FontObjectNumbers(int Type0, int CidFont, int Descriptor, int FontFile, int ToUnicode);

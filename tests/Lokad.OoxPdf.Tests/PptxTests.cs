@@ -932,6 +932,46 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered glow alpha should not emit an unsupported-transparency diagnostic.");
     }
 
+    public static void PptxSyntheticLinearGradientShapeUsesPdfShading()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr>
+                        <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                        <a:prstGeom prst="rect"/>
+                        <a:gradFill>
+                          <a:gsLst>
+                            <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+                            <a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs>
+                          </a:gsLst>
+                          <a:lin ang="0"/>
+                        </a:gradFill>
+                      </p:spPr>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/ShadingType 2", pdf);
+        TestAssert.Contains("/Sh1 sh", pdf);
+        TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Supported linear gradient should not emit an unsupported-gradient diagnostic.");
+    }
+
     public static void PptxSyntheticLineEndPresetVariantsRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

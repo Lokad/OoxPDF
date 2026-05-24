@@ -914,8 +914,11 @@ High-priority actions:
   ordered shape rendering.
 - [x] Move preset geometry adjustment values into `PptxSceneShape`: supported `avLst` `val` guides now travel
   through the scene model and feed arc and curved-connector geometry instead of being re-read at draw time.
-- [ ] Continue reducing renderer XML fallbacks by turning gradients and richer effect families into
-  scene-owned structures, and decide the JPEG recolor strategy without adding format-specific shortcuts.
+- [x] Add a PDF-level axial shading primitive and route supported two-stop linear shape gradients through
+  `PptxSceneShape` into `/Shading` resources instead of sampled rectangle approximations.
+- [ ] Continue reducing renderer XML fallbacks by expanding gradient coverage beyond two-stop linear fills,
+  moving richer effect families into scene-owned structures, and deciding the JPEG recolor strategy without
+  adding format-specific shortcuts.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after completing the scene migration for
   shape fills, pattern fills, picture fills, effects, line styles, line ends, and renderable custom geometry.
   `dotnet pack` succeeded and private run `artifacts/private-visual/lokad-value-based/20260524-110413`

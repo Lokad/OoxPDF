@@ -76,6 +76,23 @@ internal static class PdfWriterTests
         TestAssert.Contains("/F1 ", pdf);
     }
 
+    public static void WritesAxialShadingResources()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.ClipRectangle(10, 20, 30, 40);
+        graphics.PaintAxialShading(10, 20, 40, 60, 255, 0, 0, 0, 0, 255);
+        var page = new PdfPage(100, 100, graphics.ToString(), [], [], graphics.ExtGStates, graphics.Shadings);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/Shading << /Sh1 ", pdf);
+        TestAssert.Contains("/ShadingType 2", pdf);
+        TestAssert.Contains("/Coords [10 20 40 60]", pdf);
+        TestAssert.Contains("/C0 [1 0 0]", pdf);
+        TestAssert.Contains("/C1 [0 0 1]", pdf);
+        TestAssert.Contains("/Sh1 sh", pdf);
+    }
+
     private static string WritePdfText(IReadOnlyList<PdfPage> pages)
     {
         using var stream = new MemoryStream();

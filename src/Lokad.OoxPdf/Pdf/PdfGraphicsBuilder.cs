@@ -7,8 +7,11 @@ internal sealed class PdfGraphicsBuilder
 {
     private readonly StringBuilder builder = new();
     private readonly List<PdfExtGStateResource> extGStates = [];
+    private readonly List<PdfShadingResource> shadings = [];
 
     public IReadOnlyList<PdfExtGStateResource> ExtGStates => extGStates;
+
+    public IReadOnlyList<PdfShadingResource> Shadings => shadings;
 
     public void SetFillRgb(byte red, byte green, byte blue)
     {
@@ -93,6 +96,23 @@ internal sealed class PdfGraphicsBuilder
     public void FillRectangle(double x, double y, double width, double height)
     {
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f");
+    }
+
+    public void PaintAxialShading(double x0, double y0, double x1, double y1, byte startRed, byte startGreen, byte startBlue, byte endRed, byte endGreen, byte endBlue)
+    {
+        var shading = new PdfAxialShading(x0, y0, x1, y1, startRed, startGreen, startBlue, endRed, endGreen, endBlue);
+        string resourceName = "Sh" + (shadings.Count + 1).ToString(CultureInfo.InvariantCulture);
+        PdfShadingResource? existing = shadings.FirstOrDefault(resource => resource.Shading.ResourceKey == shading.ResourceKey);
+        if (existing is null)
+        {
+            shadings.Add(new PdfShadingResource(resourceName, shading));
+        }
+        else
+        {
+            resourceName = existing.ResourceName;
+        }
+
+        builder.Append('/').Append(resourceName).AppendLine(" sh");
     }
 
     public void StrokeRectangle(double x, double y, double width, double height)

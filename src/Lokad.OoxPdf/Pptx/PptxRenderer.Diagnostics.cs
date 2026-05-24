@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "gradFill").Any())
+        if (slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedGradientFill))
         {
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
         }
@@ -117,6 +117,25 @@ internal sealed partial class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
+    }
+
+    private static bool IsUnsupportedGradientFill(XElement gradientFill)
+    {
+        if (gradientFill.Element(DrawingNamespace + "lin") is null)
+        {
+            return true;
+        }
+
+        XElement[] stops = gradientFill
+            .Element(DrawingNamespace + "gsLst")
+            ?.Elements(DrawingNamespace + "gs")
+            .ToArray() ?? [];
+        return stops.Length != 2 ||
+            stops.Any(stop => stop.Elements().FirstOrDefault(color => color.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr" or "sysClr" or "scrgbClr" or "hslClr") is null) ||
+            stops.Descendants(DrawingNamespace + "alpha").Any(alpha =>
+                alpha.Attribute("val") is { } value &&
+                int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
+                parsed < 100000);
     }
 
     private static bool IsUnsupportedEffect(XElement effect)

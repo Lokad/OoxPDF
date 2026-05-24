@@ -181,6 +181,7 @@ internal sealed record PptxSceneShape(
     bool HasCustomGeometry,
     PptxSceneCustomGeometry CustomGeometry,
     PptxSceneFillStyle Fill,
+    PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
     PptxSceneShapePictureFill PictureFill,
     PptxSceneGlow Glow,
@@ -229,6 +230,16 @@ internal readonly record struct PptxSceneCustomPoint(
 
 internal readonly record struct PptxSceneFillStyle(
     bool HasFill,
+    RgbColor Color,
+    double Alpha);
+
+internal sealed record PptxSceneGradientFill(
+    bool HasGradient,
+    double AngleDegrees,
+    IReadOnlyList<PptxSceneGradientStop> Stops);
+
+internal readonly record struct PptxSceneGradientStop(
+    double Offset,
     RgbColor Color,
     double Alpha);
 
@@ -655,6 +666,7 @@ internal sealed class PptxSceneBuilder
             TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
+            TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
             TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
             ReadShapePictureFill(shapeProperties),
             TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
@@ -662,6 +674,55 @@ internal sealed class PptxSceneBuilder
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)
+    {
+        XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
+        XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
+        if (gradientFill is null || gradientStopList is null)
+        {
+            fill = new PptxSceneGradientFill(false, 0d, []);
+            return false;
+        }
+
+        PptxSceneGradientStop[] stops = gradientStopList
+            .Elements(DrawingNamespace + "gs")
+            .Select(stop => TryReadGradientStop(stop, theme, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
+            .Where(stop => stop is not null)
+            .Select(stop => stop!.Value)
+            .OrderBy(stop => stop.Offset)
+            .ToArray();
+        if (stops.Length != 2 ||
+            stops.Any(stop => stop.Alpha < 0.999d) ||
+            gradientFill.Element(DrawingNamespace + "lin") is not { } linear)
+        {
+            fill = new PptxSceneGradientFill(false, 0d, []);
+            return false;
+        }
+
+        double angleDegrees = ReadLong(linear, "ang", 0) / 60000d;
+        fill = new PptxSceneGradientFill(true, angleDegrees, stops);
+        return true;
+    }
+
+    private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, out PptxSceneGradientStop stop)
+    {
+        if (!TryReadSolidColorWithAlpha(gradientStop, theme, out RgbColor color, out double alpha))
+        {
+            stop = default;
+            return false;
+        }
+
+        stop = new PptxSceneGradientStop(ParseGradientPercentage(gradientStop, "pos"), color, alpha);
+        return true;
+    }
+
+    private static double ParseGradientPercentage(XElement element, string attribute)
+    {
+        return element.Attribute(attribute) is { } value
+            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
+            : 0d;
     }
 
     private static IReadOnlyDictionary<string, double> ReadPresetAdjustments(XElement? shapeProperties)
