@@ -84,7 +84,7 @@ internal sealed partial class PptxRenderer
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
                     break;
                 case PptxSceneNodeKind.Chart:
-                    RenderChartFrame(context, graphics, chartFonts, source, transform, relationships);
+                    RenderChartFrame(context, graphics, chartFonts, node, transform, relationships);
                     break;
                 case PptxSceneNodeKind.Group:
                     RenderOrderedSceneNodes(

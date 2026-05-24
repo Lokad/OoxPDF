@@ -182,6 +182,7 @@ internal sealed record PptxSceneNode(
     PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
     PptxScenePicture? Picture,
+    PptxSceneChart? Chart,
     PptxSceneGroupTransform GroupTransform,
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
@@ -313,6 +314,8 @@ internal sealed record PptxScenePicture(
     PptxSceneRect Fill,
     double Alpha,
     PptxSceneImageRecolor Recolor);
+
+internal sealed record PptxSceneChart(string? RelationshipId);
 
 internal readonly record struct PptxSceneGroupTransform(
     long OffsetX,
@@ -462,6 +465,7 @@ internal sealed class PptxSceneBuilder
 {
     private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private const double MinimumStrokeWidth = 0.1d;
     private const double SceneEffectTolerance = 0.001d;
@@ -563,6 +567,7 @@ internal sealed class PptxSceneBuilder
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme) : null,
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
+                kind == PptxSceneNodeKind.Chart ? ReadChart(child) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
                 child));
@@ -682,6 +687,17 @@ internal sealed class PptxSceneBuilder
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
             ReadImageRecolor(picture, theme));
+    }
+
+    private static PptxSceneChart ReadChart(XElement frame)
+    {
+        XElement? graphicData = frame
+            .Element(DrawingNamespace + "graphic")
+            ?.Element(DrawingNamespace + "graphicData");
+        string? relationshipId = (string?)graphicData
+            ?.Element(ChartNamespace + "chart")
+            ?.Attribute(RelationshipsNamespace + "id");
+        return new PptxSceneChart(relationshipId);
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)

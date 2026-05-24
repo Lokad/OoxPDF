@@ -443,6 +443,11 @@ High-priority actions:
   `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-121950`
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
   `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-24: Re-ran chart/model-focused tests, the full test suite, package, and private PPTX acceptance
+  after adding `PptxSceneChart` relationship ids. The test runner passed 184/184, `dotnet pack` succeeded,
+  and private run `artifacts/private-visual/lokad-value-based/20260524-122341` stayed stable: 84/84
+  compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -494,6 +499,10 @@ High-priority actions:
   SVG or unsupported-image diagnostics, media caching, and reuse across slides.
 - [ ] Port `pptx-renderer` chart behavior as a first-class native renderer: parse a typed chart model for
   series, axes, legends, labels, styles, and layouts; emit diagnostics only for unsupported chart features.
+  - [x] Add the first chart scene record: `PptxSceneChart` now carries the chart relationship id, and ordered
+    scene dispatch resolves chart parts from typed scene data instead of re-reading the graphic frame source
+    XML. Chart rendering itself is still the existing XML-driven native renderer until a typed chart model is
+    introduced.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.

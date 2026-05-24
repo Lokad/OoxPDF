@@ -21,15 +21,6 @@ internal sealed partial class PptxRenderer
         return fonts;
     }
 
-    private static bool IsChartGraphicFrame(XElement frame)
-    {
-        XElement? graphicData = frame
-            .Element(DrawingNamespace + "graphic")
-            ?.Element(DrawingNamespace + "graphicData");
-        return graphicData?.Attribute("uri") is { } uri &&
-            uri.Value.Contains("drawingml/2006/chart", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static void RenderChartContainer(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PdfFontResource> fonts, XElement container, GroupTransform transform)
     {
         foreach (XElement child in container.Elements())
@@ -45,6 +36,20 @@ internal sealed partial class PptxRenderer
                 RenderChartContainer(context, graphics, fonts, child, transform.Combine(ReadGroupTransform(child)));
             }
         }
+    }
+
+    private static void RenderChartFrame(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        PptxSceneNode node,
+        GroupTransform transform,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
+        ShapeBounds? bounds = node.Bounds is { } rawBounds
+            ? transform.Apply(ToShapeBounds(rawBounds))
+            : null;
+        RenderChartFrame(context, graphics, fonts, bounds, node.Chart?.RelationshipId, relationships);
     }
 
     private static void RenderChartFrame(
@@ -69,6 +74,17 @@ internal sealed partial class PptxRenderer
         string? relationshipId = (string?)graphicData
             .Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
+        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, relationships);
+    }
+
+    private static void RenderChartFrame(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        ShapeBounds? bounds,
+        string? relationshipId,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
+    {
         if (bounds is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
