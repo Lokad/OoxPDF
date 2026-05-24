@@ -523,6 +523,11 @@ High-priority actions:
   unsupported non-chart, non-table, non-SmartArt `graphicFrame` nodes now emit
   `PPTX_UNSUPPORTED_GRAPHIC_FRAME` instead of being indistinguishable from intentionally ignored content.
   Ordered scene rendering also has an explicit `UnknownGraphicFrame` branch for inherited scene nodes.
+- [x] 2026-05-24: Re-ran private PPTX acceptance after adding the generic unknown graphic-frame diagnostic.
+  Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
+  dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; the new `PPTX_UNSUPPORTED_GRAPHIC_FRAME` diagnostic did not appear in
+  this private deck. Slide 17 measured MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
@@ -3636,6 +3641,9 @@ table, and SmartArt classification. `PptxSceneBuilderBuildsResolvedNodeLists` pa
 part names through ordered scene dispatch, and the non-slow suite passed with 189 passed, 0 failed, 7 skipped.
 One parallel targeted-test attempt hit a SourceLink file lock; the same tests passed when rerun serially.
 `dotnet pack` succeeded, and the full suite passed with 196 passed, 0 failed, 0 skipped.
+Private run `artifacts/private-visual/lokad-value-based/20260524-221657` compared 84/84 pages with zero
+dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`; slide 17 measured MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
