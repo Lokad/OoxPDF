@@ -526,6 +526,8 @@ internal sealed record PptxSceneChartLegend(
     string Position,
     bool Overlay,
     bool IsVisible,
+    PptxSceneChartManualLayout Layout,
+    PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneTable(
@@ -1663,13 +1665,21 @@ internal sealed class PptxSceneBuilder
             .FirstOrDefault();
         if (legend is null)
         {
-            return new PptxSceneChartLegend("r", Overlay: false, IsVisible: false, default);
+            return new PptxSceneChartLegend(
+                "r",
+                Overlay: false,
+                IsVisible: false,
+                default,
+                new PptxSceneChartShapeStyle(false, default, default, default),
+                default);
         }
 
         return new PptxSceneChartLegend(
             (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
             IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay")),
             !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")),
+            ReadChartManualLayout(legend),
+            ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme),
             ReadChartTextStyleOverride(legend, theme));
     }
 

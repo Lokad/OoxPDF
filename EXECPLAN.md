@@ -1819,6 +1819,13 @@ High-priority actions:
   category-axis and value-axis title metadata. Validation: the focused scene test passed
   `1 passed, 0 failed, 0 skipped`; the full console suite passed `204 passed, 0 failed, 0 skipped`; and
   `dotnet pack` succeeded.
+- [x] 2026-05-25: Preserve chart legend manual layout and shape styling in the typed scene model.
+  `PptxSceneChartLegend` now carries `c:layout/c:manualLayout` and `c:spPr` fill/stroke data beside position,
+  overlay, visibility, and text style. The scene-builder fixture locks legend layout factors, fill, stroke
+  width, and stroke color without changing rendering behavior; remaining legend placement work should consume
+  this structure only after public Office-PDF evidence defines the placement rule. Validation: the focused
+  scene test passed `1 passed, 0 failed, 0 skipped`; the full console suite passed
+  `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
   oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
   ticks, data labels, and annotations as explicit Office-aligned roles.
@@ -3573,6 +3580,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   available to rendering or inspection as axis-owned scene data.
   Evidence: `PptxSceneChartAxis` preserved tick label style and number format but had no title record; the
   scene-builder fixture now locks category-axis and value-axis titles through `PptxSceneChartAxis.Title`.
+- Observation: Chart legends already had typed position, overlay, visibility, and text style, but not the
+  sibling layout and shape properties Office can use to place and frame a legend.
+  Evidence: `PptxSceneChartLegend` now preserves `c:layout/c:manualLayout` and `c:spPr` fill/stroke data, and
+  the scene-builder fixture locks those values before any renderer placement change consumes them.
 - Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
   support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
   connector where Office behaves like a quarter-turn loop segment.
@@ -4198,6 +4209,13 @@ chart axis-title scene-structure preservation / 2026-05-25:
 OOXML axis-title text, overlay, manual layout, fill/stroke, and text-style data before rendering uses it.
 The focused scene test passed with 1 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0
 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart legend scene-structure preservation / 2026-05-25:
+`PptxSceneChartLegend` now preserves legend `manualLayout` and `spPr` fill/stroke data in addition to position,
+overlay, visibility, and text style. This is a model-first preservation step: rendering still uses the existing
+legend placement path until public Office-PDF evidence defines the layout rule. The focused scene test passed
+with 1 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and
+`dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

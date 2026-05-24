@@ -176,7 +176,7 @@ internal static class PptxTests
                   <c:catAx><c:axId val="10"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Categories</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"><a:solidFill><a:srgbClr val="224488"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title><c:axPos val="b"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/><c:minorTickMark val="in"/><c:lblOffset val="100"/><c:tickLblSkip val="2"/><c:tickMarkSkip val="3"/><c:noMultiLvlLbl val="1"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
                   <c:valAx><c:axId val="20"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Value</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:x val="0.02"/><c:y val="0.2"/><c:w val="0.1"/><c:h val="0.5"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill></c:spPr></c:title><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="20"/></c:scaling><c:crossAx val="10"/><c:crosses val="max"/><c:crossesAt val="2.5"/><c:crossBetween val="between"/><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
-                  <c:legend><c:legendPos val="b"/><c:overlay val="1"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="2211AA"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend>
+                  <c:legend><c:legendPos val="b"/><c:overlay val="1"/><c:layout><c:manualLayout><c:x val="0.7"/><c:y val="0.68"/><c:w val="0.2"/><c:h val="0.15"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="EEF7FF"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="2211AA"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend>
                   </c:chart>
                 </c:chartSpace>
                 """,
@@ -522,6 +522,15 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Italic == false, "Expected explicit chart title italic disable in the scene model.");
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Layout.HasLayout == true, "Expected chart legend manual layout in the scene model.");
+        TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Legend.Layout.X ?? 0d);
+        TestAssert.Equal(0.68d, slide.SlideNodes[4].Chart?.Legend.Layout.Y ?? 0d);
+        TestAssert.Equal(0.2d, slide.SlideNodes[4].Chart?.Legend.Layout.Width ?? 0d);
+        TestAssert.Equal(0.15d, slide.SlideNodes[4].Chart?.Legend.Layout.Height ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Fill.HasFill == true, "Expected chart legend fill in the scene model.");
+        TestAssert.Equal(new RgbColor(238, 247, 255), slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Fill.Color ?? default);
+        TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Line.Width ?? 0d);
+        TestAssert.Equal(new RgbColor(51, 68, 85), slide.SlideNodes[4].Chart?.Legend.ShapeStyle.Line.Color);
         TestAssert.Equal("Calibri", slide.SlideNodes[4].Chart?.Legend.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(7d, slide.SlideNodes[4].Chart?.Legend.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(34, 17, 170), slide.SlideNodes[4].Chart?.Legend.TextStyle.Color ?? default);
