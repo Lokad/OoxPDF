@@ -2560,12 +2560,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    should first ask what Office emitted: text matrices, glyph advances, clipping, image XObjects, paths,
    transparency groups, resources, and drawing order. Extend `PdfInspect`/comparison tooling when a mismatch
    cannot be explained structurally.
-2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` already models
-   slides, nodes, bounds, and text bodies, while `PptxRenderContext` owns package, theme, inheritance,
-   relationships, image cache, and diagnostics. The next implementation path is to route one node family at a
-   time through typed scene/layout models while preserving the existing XML renderer as the bridge.
-   Immediate slice: introduce a scene-backed ordered-dispatch path for one low-risk family, likely connectors
-   or pictures, prove it emits the same PDF operators as the current XML path, then repeat by family.
+2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` now models
+   slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
+   and chart relationship ids, while `PptxRenderContext` owns package, theme, inheritance, relationships,
+   image cache, and diagnostics. Keep retiring XML fallbacks family by family: next slices should promote
+   table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
+   models while preserving source XML only as an escape hatch for unported features.
 3. Systematically retire heuristics. When a magic constant, special-case branch, or private-slide coordinate
    rule is touched, either replace it with an OOXML/Office-derived rule or write down why the approximation is
    temporary. Prefer named geometry/style/text models over narrow `if this preset/slide shape` logic.
