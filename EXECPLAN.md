@@ -689,9 +689,18 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend chart gridline styling beyond visibility: major/minor gridline color, width, alpha, dash,
-  cap/join, and chart-style inherited defaults are still hard-coded at the drawing layer. This should become
-  scene-owned axis/gridline style data before gridlines can be considered structurally aligned with Office.
+- [x] 2026-05-24: Move direct major/minor chart-gridline stroke ownership into `PptxSceneChartAxis`.
+  Supported bar and line chart renderers now consume scene-owned gridline color, width, alpha, and explicit
+  `a:ln/a:noFill` for the main value-axis gridline path, preserving the previous gray defaults when no
+  explicit gridline style is present. Focused model/chart tests passed after a transient parallel build lock
+  was rerun serially, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-160202` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend chart gridline styling beyond direct solid/noFill lines: dash, cap/join, compound lines,
+  theme style references, and chart-style inherited defaults still need typed ownership before gridlines can
+  be considered fully structurally aligned with Office.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -841,9 +850,11 @@ High-priority actions:
   - [x] Add and consume scene-owned chart-axis line styles for supported bar and line charts, including
     explicit `a:ln/a:noFill`, so axis stroke handling follows the typed axis catalog instead of renderer
     XML scans on the main path.
-  - [ ] Add scene-owned major/minor gridline style records and consume them for stroke color, width, alpha,
-    dash/cap/join, and chart-style inherited defaults; current gridline drawing still uses hard-coded gray
-    strokes after scene-owned visibility resolution.
+  - [x] Add scene-owned major/minor gridline style records and consume direct solid/noFill strokes for
+    color, width, and alpha; hard-coded gray strokes are now defaults only when no explicit gridline style
+    is present.
+  - [ ] Extend scene-owned gridline style records to cover dash/cap/join, compound lines, theme style
+    references, and chart-style inherited defaults.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -3028,7 +3039,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-155508: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-160202: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

@@ -441,6 +441,7 @@ internal sealed partial class PptxRenderer
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
+                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeries, grouping));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
                 bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
@@ -450,7 +451,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
@@ -496,6 +497,7 @@ internal sealed partial class PptxRenderer
                         extraPointStrokes,
                         majorGridlines: false,
                         minorGridlines: false,
+                        ChartGridlineStyle.Empty,
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         extraValueExtents,
@@ -564,12 +566,13 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart);
                 XElement? valueAxisForScale = valueAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
+                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxisForScale, theme);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), axesStyle, plotAreaStyle, valueExtents, axisUnits);
+                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, chartXml), ReadSceneOrXmlMinorGridlines(valueSceneAxis, chartXml), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -2185,6 +2188,37 @@ internal sealed partial class PptxRenderer
         return axis?.HasMinorGridlines ?? HasMinorGridlines(chartXml);
     }
 
+    private static ChartGridlineStyle ReadSceneOrXmlChartGridlineStyle(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
+    {
+        return new ChartGridlineStyle(
+            ReadSceneOrXmlChartGridlineStroke(sceneAxis?.MajorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "majorGridlines"), theme),
+            ReadSceneOrXmlChartGridlineStroke(sceneAxis?.MinorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "minorGridlines"), theme));
+    }
+
+    private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneLineStyle sceneLine, XElement? gridlines, PptxTheme theme)
+    {
+        if (sceneLine.HasLine)
+        {
+            return ToChartSeriesStroke(sceneLine);
+        }
+
+        return ReadChartGridlineStroke(gridlines, theme);
+    }
+
+    private static ChartSeriesStroke? ReadChartGridlineStroke(XElement? gridlines, PptxTheme theme)
+    {
+        XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
+        if (shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return new ChartSeriesStroke(new RgbColor(0, 0, 0), 0d, 0d);
+        }
+
+        return shapeProperties is not null &&
+            TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
+                ? new ChartSeriesStroke(color, alpha, width)
+                : null;
+    }
+
     private static bool IsChartGridlineVisible(XElement gridlines)
     {
         XElement? line = gridlines
@@ -2408,7 +2442,7 @@ internal sealed partial class PptxRenderer
         return ChartPalette(null, theme, index);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -2428,11 +2462,11 @@ internal sealed partial class PptxRenderer
         {
             if (horizontalBars)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false);
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false, gridlineStyle.Minor);
             }
             else
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false);
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false, gridlineStyle.Minor);
             }
         }
 
@@ -2440,11 +2474,11 @@ internal sealed partial class PptxRenderer
         {
             if (horizontalBars)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true);
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true, gridlineStyle.Major);
             }
             else
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true);
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true, gridlineStyle.Major);
             }
         }
 
@@ -2571,28 +2605,67 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(min, max);
     }
 
-    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, bool major)
+    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, bool major, ChartSeriesStroke? gridlineStroke)
     {
-        graphics.SetStrokeRgb(major ? (byte)217 : (byte)235, major ? (byte)217 : (byte)235, major ? (byte)217 : (byte)235);
-        graphics.SetLineWidth(major ? 0.5d : 0.25d);
+        ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
+        if (stroke.Alpha <= 0.001d)
+        {
+            return;
+        }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
         double range = Math.Max(1d, extents.Max - extents.Min);
         foreach (double value in GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: false))
         {
             double y = plotY + plotHeight * (value - extents.Min) / range;
             graphics.StrokeLine(plotX, y, plotX + plotWidth, y);
         }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
     }
 
-    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, bool major)
+    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, bool major, ChartSeriesStroke? gridlineStroke)
     {
-        graphics.SetStrokeRgb(major ? (byte)217 : (byte)235, major ? (byte)217 : (byte)235, major ? (byte)217 : (byte)235);
-        graphics.SetLineWidth(major ? 0.5d : 0.25d);
+        ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
+        if (stroke.Alpha <= 0.001d)
+        {
+            return;
+        }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
         double range = Math.Max(1d, extents.Max - extents.Min);
         foreach (double value in GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: false))
         {
             double x = plotX + plotWidth * (value - extents.Min) / range;
             graphics.StrokeLine(x, plotY, x, plotY + plotHeight);
         }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static ChartSeriesStroke DefaultChartGridlineStroke(bool major)
+    {
+        return major
+            ? new ChartSeriesStroke(new RgbColor(217, 217, 217), 1d, 0.5d)
+            : new ChartSeriesStroke(new RgbColor(235, 235, 235), 1d, 0.25d);
     }
 
     private static ChartSeriesFill ChartSeriesColor(int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, double defaultAlpha = 1d)
@@ -2939,7 +3012,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -2953,12 +3026,12 @@ internal sealed partial class PptxRenderer
 
         if (minorGridlines)
         {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false);
+            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, major: false, gridlineStyle.Minor);
         }
 
         if (majorGridlines)
         {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true);
+            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, major: true, gridlineStyle.Major);
         }
 
         ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
@@ -3637,6 +3710,11 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
     private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisVisible, bool CategoryAxisVisible);
+
+    private readonly record struct ChartGridlineStyle(ChartSeriesStroke? Major, ChartSeriesStroke? Minor)
+    {
+        public static ChartGridlineStyle Empty { get; } = new(null, null);
+    }
 
     private readonly record struct ChartLayout(ChartFrameBox Frame, ChartPlotBox PlotBox, string? Title, ChartLegendLayout Legend);
 

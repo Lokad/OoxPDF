@@ -390,6 +390,8 @@ internal sealed record PptxSceneChartAxis(
     bool HasMajorGridlines,
     bool HasMinorGridlines,
     PptxSceneLineStyle Line,
+    PptxSceneLineStyle MajorGridlineLine,
+    PptxSceneLineStyle MinorGridlineLine,
     string TickLabelPosition,
     string? NumberFormat);
 
@@ -1227,6 +1229,8 @@ internal sealed class PptxSceneBuilder
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines")),
                 ReadChartAxisLine(axis, theme),
+                ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
+                ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
                 (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
                 ReadChartAxisNumberFormat(axis)));
         }
@@ -1237,6 +1241,18 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
     {
         XElement? shapeProperties = axis.Element(ChartNamespace + "spPr");
+        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "noFill") is not null)
+        {
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null);
+        }
+
+        return ReadChartLine(shapeProperties, theme);
+    }
+
+    private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
+    {
+        XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
