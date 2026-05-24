@@ -1800,6 +1800,12 @@ High-priority actions:
   reference and two candidate `LegendText` records. The probe intentionally uses a loose position tolerance:
   it proves semantic presence/count, while also recording that the current candidate legend placement is still
   materially lower than Office's placement.
+- [x] 2026-05-25: Preserve chart series identity/order in the typed scene model. `PptxSceneChartSeries` now
+  carries nullable OOXML `c:idx` and `c:order` values separately from XML list position, and the scene-builder
+  fixture locks both values on bar and bubble plots. Rendering order is intentionally unchanged in this slice;
+  the point is to make Office's structural series identity available before any future legend, data-label, or
+  combo-chart ordering work consumes it. Validation: full console suite `204 passed, 0 failed, 0 skipped`;
+  `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
   oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
   ticks, data labels, and annotations as explicit Office-aligned roles.

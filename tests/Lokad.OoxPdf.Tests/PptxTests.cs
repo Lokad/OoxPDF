@@ -148,6 +148,8 @@ internal static class PptxTests
                     <c:overlap val="25"/>
                     <c:dLbls><c:showVal/><c:showPercent val="false"/><c:showCatName/><c:showSerName val="0"/><c:showLeaderLines/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName/><c:dLblPos val="ctr"/><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                     <c:ser>
+                      <c:idx val="7"/>
+                      <c:order val="3"/>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:dLblPos val="t"/><c:separator> + </c:separator></c:dLbls>
                       <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
@@ -162,6 +164,8 @@ internal static class PptxTests
                   </c:barChart>
                   <c:bubbleChart>
                     <c:ser>
+                      <c:idx val="8"/>
+                      <c:order val="4"/>
                       <c:tx><c:strLit><c:pt idx="0"><c:v>Scatter</c:v></c:pt></c:strLit></c:tx>
                       <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="112233"/></a:fgClr><a:bgClr><a:srgbClr val="F0E0D0"/></a:bgClr></a:pattFill></c:spPr>
                       <c:xVal><c:numLit><c:pt idx="0"><c:v>1.5</c:v></c:pt><c:pt idx="1"><c:v>2.5</c:v></c:pt></c:numLit></c:xVal>
@@ -407,6 +411,8 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Bold == false, "Expected explicit per-label bold disable in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.Italic == true, "Expected per-label italic style in the scene model.");
         TestAssert.Equal(new RgbColor(204, 238, 255), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShapeStyle.Fill.Color ?? default);
+        TestAssert.Equal(7, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Index ?? -1);
+        TestAssert.Equal(3, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Order ?? -1);
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.IsDefined == true, "Expected series-level data-label options to be preserved separately from plot-level labels.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowValue == true, "Expected series-level show-value flag in the scene model.");
@@ -433,6 +439,8 @@ internal static class PptxTests
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[1].PlotAreaIndex ?? -1);
         TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[1].KindIndex ?? -1);
+        TestAssert.Equal(8, slide.SlideNodes[4].Chart?.Plots[1].Series[0].Index ?? -1);
+        TestAssert.Equal(4, slide.SlideNodes[4].Chart?.Plots[1].Series[0].Order ?? -1);
         TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);
         TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Preset ?? string.Empty);
         TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Foreground ?? default);

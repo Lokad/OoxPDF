@@ -454,6 +454,8 @@ internal readonly record struct PptxSceneChartManualLayout(
     string HeightMode);
 
 internal sealed record PptxSceneChartSeries(
+    int? Index,
+    int? Order,
     string? Name,
     IReadOnlyList<double> Values,
     IReadOnlyList<string> Categories,
@@ -1214,6 +1216,8 @@ internal sealed class PptxSceneBuilder
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
         {
             series.Add(new PptxSceneChartSeries(
+                ReadChartElementInt(seriesElement, "idx"),
+                ReadChartElementInt(seriesElement, "order"),
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesValues(seriesElement),
                 ReadChartSeriesCategories(seriesElement),
