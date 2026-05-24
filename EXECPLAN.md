@@ -131,6 +131,10 @@ High-priority actions:
   `a:bodyPr @wrap="none"` now disables automatic word wrapping in both text placement and the text-height
   estimate used by vertical anchoring, while manual line breaks remain explicit content. A synthetic PPTX
   typography test locks the no-wrap behavior.
+- [x] Resolve inherited DrawingML paragraph indentation before line layout:
+  direct text layout now falls back from local `a:pPr` to the default/cascaded paragraph properties for
+  `marL` and `indent`, and text-frame snapshots expose resolved margin and hanging-indent values. A synthetic
+  PPTX test locks emitted span placement from inherited `a:lvl1pPr` indentation.
 - [x] Port the first `pptx-renderer` no-fill text rule:
   `a:rPr/a:noFill` now makes the run transparent while preserving its layout advance, instead of falling
   through to inherited or black text color. A synthetic PPTX typography case locks the behavior.
@@ -3291,6 +3295,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   fix. The four small no-wrap node labels are left-aligned in OOXML with default insets, so the residual
   horizontal offset should be investigated as Office font advance/glyph origin/paragraph metric behavior, not
   as a hard-coded center-alignment correction.
+- Observation: Slide 17's remaining small-label horizontal offset is not caused by local or inherited
+  paragraph indentation.
+  Evidence: private-safe slide XML inspection found only `algn="l"` on the four small node-label paragraphs,
+  no local `marL` or `indent`, and no shape-level list-style defaults. A 2026-05-24 layout diagnostic after
+  inherited-indent support shows the same four labels resolving `MarginLeft=0` and `HangingIndent=0`, with
+  emitted span X at shape X plus the default text inset. Continue with glyph-origin/font-metric/PDF text
+  operation alignment instead of another paragraph-margin patch.
 - Observation: The historical private evidence block should not be aggressively trimmed without first
   preserving its facts elsewhere.
   Evidence: a local check on 2026-05-24 found that most older `artifacts/private-visual/lokad-value-based`
@@ -3348,8 +3359,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   gaps.
 - The latest slide-17 schema work resolved the connector-geometry portion of that private issue. Current
   page-aware PDF evidence keeps the next target on typography/text placement: text wrapping is now structurally
-  modeled for `wrap="none"`, but slide 17's private metrics and candidate text-operation count did not move,
-  pointing next toward Office-compatible font advances, glyph origins, and paragraph metrics.
+  modeled for `wrap="none"` and inherited paragraph indentation is now structurally modeled, but slide 17's
+  private metrics did not move. The current evidence points next toward Office-compatible font advances, glyph
+  origins, and PDF text-operation placement.
 
 ## Concrete Steps
 
@@ -3391,14 +3403,14 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-190 passed, 0 failed, 0 skipped
+191 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-194704: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.042022, changed16 0.116405, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-195744: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.035307, changed16 0.116364, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 

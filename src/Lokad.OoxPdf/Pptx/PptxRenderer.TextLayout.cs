@@ -1656,7 +1656,7 @@ internal sealed partial class PptxRenderer
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", fontSize),
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
             ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing).ScaleExplicit(lineSpacingScale),
-            ReadParagraphIndent(paragraphProperties),
+            ReadParagraphIndent(paragraphProperties, defaultParagraphProperties),
             ReadTabStops(paragraphProperties));
     }
 
@@ -2038,18 +2038,20 @@ internal sealed partial class PptxRenderer
         return 0d;
     }
 
-    private static ParagraphIndent ReadParagraphIndent(XElement? paragraphProperties)
+    private static ParagraphIndent ReadParagraphIndent(XElement? paragraphProperties, XElement? defaultParagraphProperties)
     {
         return new ParagraphIndent(
-            ReadParagraphEmuAttribute(paragraphProperties, "marL"),
-            ReadParagraphEmuAttribute(paragraphProperties, "indent"));
+            ReadParagraphEmuAttribute(paragraphProperties, defaultParagraphProperties, "marL"),
+            ReadParagraphEmuAttribute(paragraphProperties, defaultParagraphProperties, "indent"));
     }
 
-    private static double ReadParagraphEmuAttribute(XElement? paragraphProperties, string attributeName)
+    private static double ReadParagraphEmuAttribute(XElement? paragraphProperties, XElement? defaultParagraphProperties, string attributeName)
     {
         return paragraphProperties?.Attribute(attributeName) is { } attribute
             ? OoxUnits.EmuToPoints(long.Parse(attribute.Value, CultureInfo.InvariantCulture))
-            : 0d;
+            : defaultParagraphProperties?.Attribute(attributeName) is { } defaultAttribute
+                ? OoxUnits.EmuToPoints(long.Parse(defaultAttribute.Value, CultureInfo.InvariantCulture))
+                : 0d;
     }
 
     private static IReadOnlyList<double> ReadTabStops(XElement? paragraphProperties)

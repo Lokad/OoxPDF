@@ -42,6 +42,8 @@ internal sealed partial class PptxRenderer
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.FontSize,
+            paragraph.Style.Indent.MarginLeft,
+            paragraph.Style.Indent.Hanging,
             paragraph.Runs.Select(ToSnapshot).ToArray());
     }
 

@@ -36,6 +36,8 @@ internal sealed record PptxTextParagraphModelSnapshot(
     IReadOnlyList<string> CascadeLayerNames,
     string Alignment,
     double FontSize,
+    double MarginLeft,
+    double HangingIndent,
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);
 
 internal sealed record PptxTextRunModelSnapshot(

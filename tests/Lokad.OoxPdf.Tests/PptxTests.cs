@@ -3783,6 +3783,49 @@ internal static class PptxTests
         TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 27d) < 0.01d, "Expected reduced line spacing to drive manual-break baseline steps.");
     }
 
+    public static void PptxSyntheticTextBoxInheritsParagraphIndentFromListStyle()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>
+                      <a:lstStyle><a:lvl1pPr marL="91440" indent="45720"/></a:lstStyle>
+                      <a:p><a:pPr algn="l"/><a:r><a:rPr sz="1200"/><a:t>Indented</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot line = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single();
+        PptxTextFrameModelSnapshot model = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+
+        TestAssert.True(
+            Math.Abs(line.Spans[0].X - 82.8d) < 0.01d,
+            "Expected inherited marL plus first-line indent to move the emitted text span from the text body origin. Actual span: " + line.Spans[0].X.ToString("0.###", CultureInfo.InvariantCulture) +
+            "; line start: " + line.StartX.ToString("0.###", CultureInfo.InvariantCulture) +
+            "; cascade sources: " + model.Paragraphs[0].ResolvedCascadeSourceCount.ToString(CultureInfo.InvariantCulture) +
+            "; margin: " + model.Paragraphs[0].MarginLeft.ToString("0.###", CultureInfo.InvariantCulture) +
+            "; hanging: " + model.Paragraphs[0].HangingIndent.ToString("0.###", CultureInfo.InvariantCulture));
+    }
+
     public static void PptxSyntheticTextBoxFlowsAcrossColumns()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
