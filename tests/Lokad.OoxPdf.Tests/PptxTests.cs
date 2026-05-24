@@ -1933,6 +1933,59 @@ internal static class PptxTests
         TestAssert.True(baselineGap > 100d, $"Expected 72pt endParaRPr trailing line to push the next paragraph down, got {baselineGap.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
+    public static void PptxSyntheticEmptyParagraphUsesEndParagraphFontSize()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="2743200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle/>
+                        <a:p><a:endParaRPr sz="7200"/></a:p>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>Next</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="4572000" y="914400"/><a:ext cx="2743200" cy="2743200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr/><a:lstStyle/>
+                        <a:p><a:endParaRPr sz="1800"/></a:p>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>Next</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        TestAssert.Equal(2, layout.Frames.Count);
+
+        PptxTextLineLayoutSnapshot largeEndParagraphLine = layout.Frames[0]
+            .Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single();
+        PptxTextLineLayoutSnapshot smallEndParagraphLine = layout.Frames[1]
+            .Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .Single();
+
+        double baselineGap = smallEndParagraphLine.BaselineY - largeEndParagraphLine.BaselineY;
+        TestAssert.True(baselineGap > 50d, $"Expected empty 72pt endParaRPr paragraph to advance more than the 18pt control, got {baselineGap.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
+    }
+
     public static void PptxSyntheticTextWrapDropsBreakSpaceAtLineEnd()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

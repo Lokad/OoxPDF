@@ -3862,6 +3862,15 @@ paths. This is behavior-neutral naming and ownership, not evidence that the rati
 open long-term task remains replacing these approximations with Office-PDF-observed chart layout behavior.
 The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 200
 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+empty endParaRPr paragraph public lock / 2026-05-24:
+While comparing `pptx-renderer` typography coverage, `ooxpdf` already had the structural behavior for an
+empty paragraph whose only layout content is `a:endParaRPr`, but only trailing-break coverage locked the
+behavior. `PptxSyntheticEmptyParagraphUsesEndParagraphFontSize` now verifies that an otherwise empty
+paragraph advances by its `endParaRPr` font size before the next visible paragraph. This preserves the
+OOXML paragraph model distinction between "no visible runs" and "no layout content" without introducing a
+slide-specific placement rule. The `pptx-typography` non-slow group passed with 67 passed, 0 failed, 2
+skipped; the full suite passed with 201 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
