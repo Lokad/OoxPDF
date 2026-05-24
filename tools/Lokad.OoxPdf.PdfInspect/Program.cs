@@ -296,9 +296,27 @@ internal sealed record PdfTextOperation(
     double D,
     double X,
     double Y,
+    double EffectiveA,
+    double EffectiveB,
+    double EffectiveC,
+    double EffectiveD,
+    double EffectiveX,
+    double EffectiveY,
     string Operator,
     string Payload)
 {
+    private static readonly Regex SaveGraphicsStateRegex = new(
+        @"(?:^|\s)q(?:\s|$)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex RestoreGraphicsStateRegex = new(
+        @"(?:^|\s)Q(?:\s|$)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex CurrentMatrixRegex = new(
+        @"(?<a>-?(?:\d+\.?\d*|\.\d+))\s+(?<b>-?(?:\d+\.?\d*|\.\d+))\s+(?<c>-?(?:\d+\.?\d*|\.\d+))\s+(?<d>-?(?:\d+\.?\d*|\.\d+))\s+(?<x>-?(?:\d+\.?\d*|\.\d+))\s+(?<y>-?(?:\d+\.?\d*|\.\d+))\s+cm",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex FontRegex = new(
         @"/(?<font>[A-Za-z0-9._+-]+)\s+(?<size>-?(?:\d+\.?\d*|\.\d+))\s+Tf",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -327,9 +345,28 @@ internal sealed record PdfTextOperation(
         double d = 1d;
         double x = 0d;
         double y = 0d;
+        PdfMatrix currentMatrix = PdfMatrix.Identity;
+        var graphicsStack = new Stack<PdfMatrix>();
 
         foreach (string line in stream.Split('\n'))
         {
+            foreach (Match _ in SaveGraphicsStateRegex.Matches(line))
+            {
+                graphicsStack.Push(currentMatrix);
+            }
+
+            foreach (Match match in CurrentMatrixRegex.Matches(line))
+            {
+                PdfMatrix matrix = new(
+                    ReadDouble(match.Groups["a"].Value),
+                    ReadDouble(match.Groups["b"].Value),
+                    ReadDouble(match.Groups["c"].Value),
+                    ReadDouble(match.Groups["d"].Value),
+                    ReadDouble(match.Groups["x"].Value),
+                    ReadDouble(match.Groups["y"].Value));
+                currentMatrix = currentMatrix.Multiply(matrix);
+            }
+
             foreach (Match match in FontRegex.Matches(line))
             {
                 font = match.Groups["font"].Value;
@@ -353,6 +390,7 @@ internal sealed record PdfTextOperation(
 
             foreach (Match match in ShowRegex.Matches(line))
             {
+                PdfMatrix effective = currentMatrix.Multiply(new PdfMatrix(a, b, c, d, x, y));
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -366,8 +404,19 @@ internal sealed record PdfTextOperation(
                     d,
                     x,
                     y,
+                    effective.A,
+                    effective.B,
+                    effective.C,
+                    effective.D,
+                    effective.X,
+                    effective.Y,
                     match.Groups["operator"].Value,
                     match.Groups["payload"].Value));
+            }
+
+            foreach (Match _ in RestoreGraphicsStateRegex.Matches(line))
+            {
+                currentMatrix = graphicsStack.Count == 0 ? PdfMatrix.Identity : graphicsStack.Pop();
             }
         }
 
@@ -375,4 +424,20 @@ internal sealed record PdfTextOperation(
     }
 
     private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
+}
+
+internal readonly record struct PdfMatrix(double A, double B, double C, double D, double X, double Y)
+{
+    public static PdfMatrix Identity { get; } = new(1d, 0d, 0d, 1d, 0d, 0d);
+
+    public PdfMatrix Multiply(PdfMatrix right)
+    {
+        return new PdfMatrix(
+            A * right.A + C * right.B,
+            B * right.A + D * right.B,
+            A * right.C + C * right.D,
+            B * right.C + D * right.D,
+            A * right.X + C * right.Y + X,
+            B * right.X + D * right.Y + Y);
+    }
 }

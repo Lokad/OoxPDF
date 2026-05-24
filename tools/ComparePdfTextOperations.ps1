@@ -11,7 +11,9 @@ param(
 
     [double] $CharacterSpacingTolerance = 0.001,
 
-    [switch] $MatchByPosition
+    [switch] $MatchByPosition,
+
+    [switch] $UseEffectiveMatrix
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,6 +35,22 @@ function Delta([double] $left, [double] $right) {
     return [Math]::Round([double]$right - [double]$left, 6)
 }
 
+function TextX($op) {
+    if ($UseEffectiveMatrix -and $op.EffectiveX -ne $null) {
+        return [double]$op.EffectiveX
+    }
+
+    return [double]$op.X
+}
+
+function TextY($op) {
+    if ($UseEffectiveMatrix -and $op.EffectiveY -ne $null) {
+        return [double]$op.EffectiveY
+    }
+
+    return [double]$op.Y
+}
+
 $referenceOps = Read-JsonArray $Reference
 $candidateOps = Read-JsonArray $Candidate
 $rows = New-Object System.Collections.Generic.List[object]
@@ -51,8 +69,8 @@ if ($MatchByPosition) {
         $bestScore = [double]::PositiveInfinity
         for ($j = 0; $j -lt $unmatched.Count; $j++) {
             $candidateRef = $unmatched[$j]
-            $score = [Math]::Abs([double]$cand.Y - [double]$candidateRef.Y) * 1000d +
-                [Math]::Abs([double]$cand.X - [double]$candidateRef.X)
+            $score = [Math]::Abs((TextY $cand) - (TextY $candidateRef)) * 1000d +
+                [Math]::Abs((TextX $cand) - (TextX $candidateRef))
             if ($score -lt $bestScore) {
                 $bestScore = $score
                 $bestIndex = $j
@@ -88,10 +106,10 @@ foreach ($pair in $pairs) {
     $cand = $pair.Candidate
     if ($null -eq $ref -or $null -eq $cand) {
         $failures++
-        $refX = if ($null -eq $ref) { $null } else { $ref.X }
-        $candX = if ($null -eq $cand) { $null } else { $cand.X }
-        $refY = if ($null -eq $ref) { $null } else { $ref.Y }
-        $candY = if ($null -eq $cand) { $null } else { $cand.Y }
+        $refX = if ($null -eq $ref) { $null } else { TextX $ref }
+        $candX = if ($null -eq $cand) { $null } else { TextX $cand }
+        $refY = if ($null -eq $ref) { $null } else { TextY $ref }
+        $candY = if ($null -eq $cand) { $null } else { TextY $cand }
         $refTc = if ($null -eq $ref) { $null } else { $ref.CharacterSpacing }
         $candTc = if ($null -eq $cand) { $null } else { $cand.CharacterSpacing }
         $refPayload = if ($null -eq $ref) { $null } else { $ref.Payload }
@@ -114,8 +132,12 @@ foreach ($pair in $pairs) {
         continue
     }
 
-    $deltaX = Delta -left ([double]$ref.X) -right ([double]$cand.X)
-    $deltaY = Delta -left ([double]$ref.Y) -right ([double]$cand.Y)
+    $refX = TextX $ref
+    $candX = TextX $cand
+    $refY = TextY $ref
+    $candY = TextY $cand
+    $deltaX = Delta -left $refX -right $candX
+    $deltaY = Delta -left $refY -right $candY
     $deltaSize = Delta -left ([double]$ref.FontSize) -right ([double]$cand.FontSize)
     $deltaTc = Delta -left ([double]$ref.CharacterSpacing) -right ([double]$cand.CharacterSpacing)
     $positionOk = [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
@@ -129,11 +151,11 @@ foreach ($pair in $pairs) {
     $rows.Add([pscustomobject]@{
         Index = $i
         Status = $status
-        RefX = [Math]::Round([double]$ref.X, 6)
-        CandX = [Math]::Round([double]$cand.X, 6)
+        RefX = [Math]::Round($refX, 6)
+        CandX = [Math]::Round($candX, 6)
         DeltaX = $deltaX
-        RefY = [Math]::Round([double]$ref.Y, 6)
-        CandY = [Math]::Round([double]$cand.Y, 6)
+        RefY = [Math]::Round($refY, 6)
+        CandY = [Math]::Round($candY, 6)
         DeltaY = $deltaY
         RefTc = [Math]::Round([double]$ref.CharacterSpacing, 6)
         CandTc = [Math]::Round([double]$cand.CharacterSpacing, 6)
@@ -147,6 +169,9 @@ $rows | Format-Table -AutoSize
 Write-Host "Text operation count: reference=$($referenceOps.Count), candidate=$($candidateOps.Count), deltas=$failures"
 if ($MatchByPosition) {
     Write-Host "Matching: nearest text position"
+}
+if ($UseEffectiveMatrix) {
+    Write-Host "Coordinates: effective text matrix"
 }
 
 if ($failures -ne 0) {

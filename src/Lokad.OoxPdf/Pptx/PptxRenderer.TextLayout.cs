@@ -306,7 +306,7 @@ internal sealed partial class PptxRenderer
         {
             PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
             PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
-            if (HasShapeAutoFit(frameModel.TextBody) && frameModel.Orientation != PptxTextOrientation.Horizontal)
+            if (HasShapeAutoFit(frameModel.TextBody) && UsesRotatedFrameAutoFit(frameModel.Orientation))
             {
                 PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
                 if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
@@ -319,7 +319,9 @@ internal sealed partial class PptxRenderer
                     layout = unwrappedLayout;
                 }
             }
-            else if (HasShapeAutoFit(frameModel.TextBody) && TextLayoutOverflowsHorizontally(layout, flowFrame.Box))
+            else if (HasShapeAutoFit(frameModel.TextBody) &&
+                frameModel.Orientation == PptxTextOrientation.Horizontal &&
+                TextLayoutOverflowsHorizontally(layout, flowFrame.Box))
             {
                 PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
                 layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
@@ -780,6 +782,11 @@ internal sealed partial class PptxRenderer
         return paragraph.Runs
             .SelectMany(run => run.Segments)
             .Count(segment => segment.Draw && segment.AdvanceText.TrimStart().Length > 0);
+    }
+
+    private static bool UsesRotatedFrameAutoFit(PptxTextOrientation orientation)
+    {
+        return orientation is PptxTextOrientation.Vertical or PptxTextOrientation.Vertical270;
     }
 
     private static bool IsShortWordSegment(string text)

@@ -170,6 +170,11 @@ High-priority actions:
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
+- [x] Extend PDF text-operation inspection with effective text matrices:
+  `PdfInspect` now composes text matrices with the active graphics-state CTM, and
+  `ComparePdfTextOperations.ps1 -UseEffectiveMatrix` can compare Office/candidate text placement after
+  `cm`-driven rotation or translation. This is required for vertical PPTX parity because Office often emits
+  rotation directly in `Tm`, while `ooxpdf` commonly rotates the frame with `cm` and emits upright local text.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
@@ -1536,9 +1541,9 @@ Typography oracle family map:
 - Mixed formatting `0031`: covered by `pptx-ladder-04-mixed-bullet-port`, alongside older mixed-run rungs.
 - Bullet list `0032`: covered by `pptx-ladder-04-mixed-bullet-port` for a multi-level PowerPoint-authored
   bullet list.
-- Vertical text `0033..0034`: ported as `pptx-ladder-04-vertical-text-port` with an explicit
-  `PPTX_UNSUPPORTED_TEXT_ORIENTATION` diagnostic gate. Rendering remains a planned capability before
-  private vertical text is revisited.
+- Vertical text `0033..0034`: ported as `pptx-ladder-04-vertical-text-port` and
+  `pptx-ladder-04-vertical-text-270`. First-class orientation routing is present for known `a:bodyPr @vert`
+  values, but stacked glyph order, clipping, column positions, and exact baseline placement remain open.
 - Anchor `0035..0037`: covered by `pptx-ladder-04-anchor-port` for top, middle, and bottom shape text
   anchors.
 - Line spacing `0038`: ported as `pptx-ladder-04-line-spacing-port`. It is gated as a baseline but still
@@ -3118,8 +3123,14 @@ paths, and ExecPlan references together.
     `pptx-ladder-04-vertical-text-270` at MAE `0.292444`, changed16 `0.002682`; and
     `pptx-ladder-04-vertical-text-port` improved to MAE `0.796678`, changed16 `0.005765`.
   - [x] Route `mongolianVert` through the same first-class vertical orientation model. The ported visual case
-    nudged to MAE `0.791131`, changed16 `0.005626`; remaining differences are still dominated by Office's
-    exact stacked-glyph positioning.
+    now preserves declared font size instead of shrinking stacked text against a narrow rotated width. Latest
+    public run `20260524-203630`: MAE `0.791842`, changed16 `0.005630`; remaining differences are still
+    dominated by Office's exact stacked-glyph positioning.
+  - [x] Use effective PDF text matrices for vertical text investigation. In
+    `pptx-ladder-04-vertical-text-port`, the second vertical frame is position-close after CTM composition
+    (candidate effective Y `480.00` vs Office `479.98`, most X deltas under `0.1 pt`), while the stacked
+    frame still differs in text-operation grouping and missing/clipped columns. This keeps the next work item
+    structural: glyph/column layout, not raw matrix normalization.
   - [ ] Continue vertical text parity with Office text-operation inspection: stacked-letter orientation,
     column order, per-column x positions, and baseline placement remain visibly approximate.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
@@ -3396,9 +3407,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 - The latest slide-17 schema work resolved the connector-geometry portion of that private issue. Current
   page-aware PDF evidence keeps the next target on typography/text placement: text wrapping, inherited
   paragraph indentation, ellipse auto-shape horizontal text rectangles, and font-metric middle anchoring are
-  now structurally modeled. Slide 17 improved on runs `20260524-201042` and `20260524-202138`; remaining
-  evidence points to broader text metrics rather than connector geometry, paragraph margins, or small-label
-  preset-shape origins.
+  now structurally modeled. Slide 17 improved on runs `20260524-201042` and `20260524-202138`, then stayed
+  stable on `20260524-204001`; remaining evidence points to broader text metrics rather than connector
+  geometry, paragraph margins, or small-label preset-shape origins.
 
 ## Concrete Steps
 
@@ -3440,13 +3451,13 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-192 passed, 0 failed, 0 skipped
+193 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-202138: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-204001: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.022766, changed16 0.116206, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
 ```
@@ -3456,6 +3467,17 @@ Latest public small-label origin probe:
 ```text
 pptx-ladder-04-typography-small-label-origin-probe / 20260524-202124:
 MAE 0.005514, changed16 0.000073; PDF text-op X delta 0.03 pt, Y delta 0.27 pt.
+```
+
+Latest public vertical text probes:
+
+```text
+pptx-ladder-04-vertical-text-270 / 20260524-203822:
+MAE 0.247899, changed16 0.002204.
+
+pptx-ladder-04-vertical-text-port / 20260524-203630:
+MAE 0.791842, changed16 0.005630; effective-matrix inspection shows the second rotated frame is
+position-close, while stacked `mongolianVert` glyph grouping/columns remain open.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
