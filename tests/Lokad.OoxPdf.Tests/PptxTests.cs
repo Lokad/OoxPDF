@@ -159,6 +159,8 @@ internal static class PptxTests
                     <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
+                    <p:cxnSp><p:nvCxnSpPr><p:cNvPr id="8" name="Connector"/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="0" y="2743200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom></p:spPr></p:cxnSp>
+                    <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Chart"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="914400" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/></a:graphicData></a:graphic></p:graphicFrame>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -174,10 +176,12 @@ internal static class PptxTests
         PptxSceneSlide slide = scene.Slides[0];
         TestAssert.Equal(1, slide.MasterNodes.Count);
         TestAssert.Equal(3, slide.LayoutNodes.Count);
-        TestAssert.Equal(3, slide.SlideNodes.Count);
+        TestAssert.Equal(5, slide.SlideNodes.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Connector, slide.SlideNodes[3].Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
         TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
         PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);
@@ -522,11 +526,55 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.867 0.867 0.867 RG", pdf);
         TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("144 468 72 396 144 396 c", pdf);
+        TestAssert.Contains("111.765 468 144 435.765 144 396 c", pdf);
         TestAssert.Contains("S", pdf);
         TestAssert.Contains("144 396 m", pdf);
-        TestAssert.Contains("137 399.15 l", pdf);
-        TestAssert.Contains("137 392.85 l", pdf);
+        TestAssert.Contains("147.15 403 l", pdf);
+        TestAssert.Contains("140.85 403 l", pdf);
+    }
+
+    public static void PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm rot="5400000" flipH="1" flipV="1"><a:off x="914400" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="curvedConnector2"><a:avLst/></a:prstGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="1828800" y="914400"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="curvedConnector2"><a:avLst/></a:prstGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="DDDDDD"/></a:solidFill><a:tailEnd type="triangle"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("-0 1 -1 -0", pdf);
+        TestAssert.Contains("72 468 m", pdf);
+        TestAssert.Contains("111.765 468 144 435.765 144 396 c", pdf);
+        TestAssert.Contains("144 396 m", pdf);
+        TestAssert.Contains("147.15 403 l", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()

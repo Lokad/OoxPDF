@@ -1445,15 +1445,16 @@ internal sealed partial class PptxRenderer
     {
         double y0 = slideHeight - yTop;
         double y1 = slideHeight - yTop - height;
+        double k = 4d / 3d * (Math.Sqrt(2d) - 1d);
         return
         [
             new(
                 x,
                 y0,
-                x + width,
+                x + width * k,
                 y0,
-                x,
-                y1,
+                x + width,
+                y1 + height * k,
                 x + width,
                 y1)
         ];

@@ -1,10 +1,11 @@
 # Lokad.OoxPdf Current Execution Plan
 
-This ExecPlan is the current working plan for `Lokad.OoxPdf`. It intentionally omits the historical bootstrap
-checklist that has already been completed. Keep `Progress`, `Private Evidence`, `Backlog`, `Decisions`, and
-`Validation` current as work proceeds.
+This ExecPlan is the current working plan for `Lokad.OoxPdf` and is maintained under `PLANS.md` in the
+repository root. It intentionally omits the historical bootstrap checklist that has already been completed.
+Keep `Progress`, `Private Evidence`, `Backlog`, `Decision Log`, `Validation`, `Surprises & Discoveries`, and
+`Outcomes & Retrospective` current as work proceeds.
 
-## Goal
+## Purpose / Big Picture
 
 `Lokad.OoxPdf` is a dependency-free .NET library that converts `.pptx` and `.docx` OOXML documents to static
 PDF. The library must not call Office, PDFium, PowerShell, external executables, or third-party packages.
@@ -15,7 +16,7 @@ public synthetic OOXML as the implementation oracle, inspect those PDFs and thei
 changing renderer behavior, use private local-only documents only to discover missing Office features, and
 keep diagnostics honest when a feature is still missing.
 
-## Repository Map
+## Context and Orientation
 
 - `src/Lokad.OoxPdf`: production library, OOXML parsers, renderers, PDF writer, font/image code.
 - `src/Lokad.OoxPdf.Cli`: local conversion CLI.
@@ -33,6 +34,10 @@ keep diagnostics honest when a feature is still missing.
 - `artifacts/`: ignored validation output.
 - `docs/`: user-facing public docs.
 - `docs/unit-test-audit.md`: Office-PDF-first unit-test audit and rewrite candidates.
+
+The external reference renderer used for PPTX prior art lives outside this repository at
+`C:\Users\JoannesVermorel\code\pptx-renderer`. It is a local TypeScript renderer and must not become a
+runtime dependency of `Lokad.OoxPdf`.
 
 ## Reference Workflow
 
@@ -847,6 +852,23 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-24: Restored the long-form ExecPlan after an over-aggressive compaction lost useful open
+  planning context. Future trimming must preserve open progress items unless a duplicate or obsolete item is
+  proven from checked-in code, tests, tools, or validation artifacts.
+- [x] 2026-05-24: Verified the external reference renderer path exists at
+  `C:\Users\JoannesVermorel\code\pptx-renderer`, and verified the current working tree still contains the
+  public `PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents` test for the slide-17 connector fix.
+- [x] 2026-05-24: Audited the current PPTX render boundary. `PptxScene` and `PptxRenderContext` exist, but
+  production rendering still mostly walks raw slide XML through the shape/text/table/chart partial renderers.
+  This confirms that the next architecture slice should make typed scene nodes authoritative incrementally,
+  not by discarding the existing render path.
+- [x] 2026-05-24: Extended the scene-builder coverage so connector and chart nodes are locked alongside
+  shape, picture, and table nodes. This protects the intermediate-model migration path before render dispatch
+  starts consuming `PptxSceneNode` directly.
+- [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
+  then consolidate only completed historical detail that is already represented by checked-in fixtures,
+  tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
+  found and noted.
 - [x] Dependency-free `.slnx` solution, library, and CLI exist.
 - [x] Dependency-free tests, visual tools, docs, public fixtures, and private validation lane exist.
 - [x] NuGet package version is set to `0.1.0` for the first package.
@@ -2135,6 +2157,12 @@ paths, and ExecPlan references together.
     instead of falling back to rectangular geometry. Private page 17 now shows the loop as curved geometry.
   - [x] Fix missing circular-flow arrowheads by resolving degenerate Bezier endpoint tangents for
     `curvedConnector2` tail markers; public synthetic connector coverage now locks the tail arrowhead.
+  - [x] Fix the remaining circular-flow schema geometry by rendering `curvedConnector2` as a quarter-turn
+    connector with Office-like endpoint tangents instead of an S-shaped diagonal Bezier. Public synthetic
+    coverage now locks both the standalone connector and a rotated/flipped loop slice. Private rerun
+    `artifacts/private-visual/lokad-value-based/20260524-091728` improved slide 17 from MAE `3.031757`,
+    changed16 `0.049716` to MAE `2.945717`, changed16 `0.045530`; remaining visible drift is now dominated
+    by text placement/typography around the schema, not connector geometry.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
@@ -2354,27 +2382,59 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Next Implementation Targets
 
-1. Prioritize the `pptx-renderer` track above all other fidelity work. Complete the architectural survey,
-   identify the abstractions that explain its higher quality, and port those lessons into `ooxpdf` before
-   making more broad renderer patches.
-2. Clean-port `pptx-renderer` tests into `ooxpdf`, starting with its typography Office-oracle family, then
-   shape/preset, layout/composition, images, tables, charts, and SmartArt. Do not vendor code or private
-   assets; recreate minimal public fixtures and keep Office PDF references as validation artifacts.
-3. Decide the intermediate-model direction from the `pptx-renderer` survey: what belongs in the PPTX
-   scene/model, what remains direct PDF rendering, and how render context, style/color resolvers, diagnostics,
-   and assets should be owned.
-4. Continue PPTX Ladder 4 only through the `pptx-renderer`-driven path: inspect Office references, add or
-   port minimal public typography cases, tighten baselines, advances, tracking, highlights, underlines,
-   bullets, and paragraph flow toward near pixel-perfect output.
-5. Keep test-loop performance work in service of the `pptx-renderer` test-port track: cached oracles,
-   fast/slow/oracle lanes, and richer visual metrics should make hundreds of public cases practical.
-   Hot-loop visual checks now avoid rebuilding the CLI, PDFium rasterizer, VisualDiff, and PdfInspect when
-   source files outside `bin`/`obj` are older than the output DLLs. A cached typography probe now reruns in
-   about 4.5s on this machine.
-6. Defer DOCX and private-deck optimization while the PPTX public ladder and `pptx-renderer`-derived tests
-   are still incomplete. Private files remain gap discovery and acceptance evidence only.
+1. Make Office-PDF structure the primary fidelity oracle. Pixel metrics stay useful, but every serious fix
+   should first ask what Office emitted: text matrices, glyph advances, clipping, image XObjects, paths,
+   transparency groups, resources, and drawing order. Extend `PdfInspect`/comparison tooling when a mismatch
+   cannot be explained structurally.
+2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` already models
+   slides, nodes, bounds, and text bodies, while `PptxRenderContext` owns package, theme, inheritance,
+   relationships, image cache, and diagnostics. The next implementation path is to route one node family at a
+   time through typed scene/layout models while preserving the existing XML renderer as the bridge.
+   Immediate slice: introduce a scene-backed ordered-dispatch path for one low-risk family, likely connectors
+   or pictures, prove it emits the same PDF operators as the current XML path, then repeat by family.
+3. Systematically retire heuristics. When a magic constant, special-case branch, or private-slide coordinate
+   rule is touched, either replace it with an OOXML/Office-derived rule or write down why the approximation is
+   temporary. Prefer named geometry/style/text models over narrow `if this preset/slide shape` logic.
+4. Continue the `pptx-renderer` track as architecture input and public test source. The local reference lives
+   at `C:\Users\JoannesVermorel\code\pptx-renderer`; port lessons and minimal public Office-oracle cases into
+   `ooxpdf`, starting with typography, then shape/preset, layout/composition, images, tables, charts, and
+   SmartArt. Do not vendor code or private assets.
+5. Push typography through structural alignment, not pixel nudging. PPTX Ladder 4 should tighten style
+   cascade, font resolution, paragraph metrics, baselines, advances, tracking, highlights, underlines,
+   bullets, and paragraph flow against Office PDF operators and public visual cases.
+6. Promote shapes, connectors, tables, and charts to resolved models before broad fidelity patches. Shape work
+   should converge on Office-like preset paths, connector tangent/marker rules, fills/strokes/effects, and
+   group transforms. Table and chart work should resolve layout and styling into typed models before PDF
+   emission so fixes are reusable across cases.
+7. Keep the validation ladder scalable and honest. Cached oracles, fast/slow/oracle lanes, richer visual
+   metrics, and public fixture families should make hundreds of public cases practical. Private decks remain
+   gap discovery and acceptance evidence only. DOCX should stay deferred until the PPTX public ladder and
+   `pptx-renderer`-derived cases are strong enough to avoid spreading architectural debt across formats.
 
-## Decisions
+## Surprises & Discoveries
+
+- Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
+  support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
+  connector where Office behaves like a quarter-turn loop segment.
+  Evidence: the current implementation now uses the standard quarter-arc control constant
+  `4 / 3 * (sqrt(2) - 1)` in `PptxRenderer.Shapes.cs`, and public tests include a rotated/flipped
+  `curvedConnector2` loop slice.
+- Observation: Full PDF inspection of the large private `lokad-value-based` candidate/reference PDFs can time
+  out and produce excessive intermediate output.
+  Evidence: a full `tools/InspectPdf.ps1` run against those PDFs exceeded the local command timeout. Prefer
+  focused public synthetic PDFs or already extracted page/operator evidence for hot loops.
+- Observation: The historical private evidence block should not be aggressively trimmed without first
+  preserving its facts elsewhere.
+  Evidence: a local check on 2026-05-24 found that most older `artifacts/private-visual/lokad-value-based`
+  run directories referenced by the plan are no longer present, so the public-safe metrics and findings in
+  this file may be the only convenient record of those runs.
+- Observation: OOXPDF already has the start of the desired PPTX intermediate architecture, but it is not yet
+  the source of truth for rendering.
+  Evidence: `PptxScene.cs` defines scene, slide, node, bounds, paragraph, and run records, while
+  `PptxRenderer.cs` and the shape/text/table/chart partials still dispatch mostly from raw XML plus
+  `PptxRenderContext`.
+
+## Decision Log
 
 - The library remains dependency-free. Third-party packages are not allowed in `src/Lokad.OoxPdf`.
 - Office and PDFium remain validation-only under `tools/`.
@@ -2398,6 +2458,48 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   targets.
 - DOCX fidelity should move to the same Office-PDF-first public ladder as PPTX. Private pages remain
   acceptance evidence and gap discovery, not the main implementation driver.
+- Long-term PPTX work should optimize for structural PDF alignment with Office, not isolated raster nudges.
+  Pixel-perfect output remains the outcome target, but the mechanism should be typed OOXML resolution and
+  Office-like PDF operators wherever the structure is observable.
+
+## Outcomes & Retrospective
+
+- The project is past the initial vertical slice: the library, CLI, console tests, public visual validation,
+  private-case validation, PDF inspection, and package output are all in place. Current work is fidelity and
+  architecture, not bootstrapping.
+- The active PPTX direction is bottom-up and `pptx-renderer`-informed: preserve public Office-backed fixtures,
+  move renderer behavior toward explicit intermediate models, and use private decks only to discover generic
+  gaps.
+- The latest slide-17 schema work resolved the connector-geometry portion of that private issue. If slide 17
+  is revisited, next work should target typography/text placement around the schema rather than another
+  private-coordinate connector patch.
+
+## Concrete Steps
+
+Work from `C:\Users\JoannesVermorel\code\ooxpdf` in PowerShell. Use `--tl:off` on .NET commands to avoid
+dynamic terminal logger output.
+
+For normal validation after code changes, run:
+
+```powershell
+dotnet restore Lokad.OoxPdf.slnx --tl:off -v minimal
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal
+dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore
+```
+
+For a public visual case or family, run:
+
+```powershell
+pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/<case>/case.json
+pwsh tools/CheckVisualFamily.ps1 -Family <family>
+```
+
+For private PPTX acceptance evidence after a scoped public fix, run:
+
+```powershell
+pwsh tools/CheckPrivateCase.ps1 -Case private-cases/lokad-value-based.json
+```
 
 ## Validation
 
@@ -2412,7 +2514,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-104 passed, 0 failed
+178 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
@@ -2436,3 +2538,9 @@ user document is open.
 
 If a private case reveals a missing feature, record only public-safe feature gaps here, then create synthetic
 public tests for the implementation. Do not derive public fixtures from private documents.
+
+Revision note, 2026-05-24: An earlier attempt to compact this file too aggressively was reverted because it
+discarded valuable open planning context and private-safe historical evidence. This revision is deliberately
+conservative: it restores `PLANS.md` section naming, records the current slide-17 connector evidence, updates
+the validation baseline, and documents that older private run artifacts are mostly absent locally. Future
+trimming should be done in small audited slices and should preserve open progress items by default.
