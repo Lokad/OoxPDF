@@ -2348,6 +2348,11 @@ paths, and ExecPlan references together.
     - [x] Complete decoded-raster recolor coverage for `a:grayscl` and `a:biLevel` on PNG/BMP images.
       Public synthetic unit `PptxSyntheticPngPictureAppliesGrayAndBilevelRecolor` locks both modes and
       verifies recolor-specific image cache entries.
+    - [x] Add a public synthetic JPEG duotone-plus-alpha diagnostic rung:
+      `PptxSyntheticJpegPictureDuotoneRecolorEmitsDiagnostic` locks the remaining unsupported path without
+      depending on the private deck. Keep the architectural item open: the long-term fix must be a
+      dependency-free JPEG pixel path or a principled PDF color-transform/mask strategy that matches Office
+      output, not a private-slide special case.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
   first-class intermediate models rather than piling more ad hoc logic into rendering code.
 - [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is
