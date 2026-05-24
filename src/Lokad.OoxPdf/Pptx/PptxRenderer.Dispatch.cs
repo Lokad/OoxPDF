@@ -1,6 +1,5 @@
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
-using System.Xml.Linq;
 
 namespace Lokad.OoxPdf.Pptx;
 
@@ -31,26 +30,21 @@ internal sealed partial class PptxRenderer
     {
         foreach (PptxSceneNode node in nodes)
         {
-            XElement source = node.Source;
             switch (node.Kind)
             {
                 case PptxSceneNodeKind.Shape:
                     if (renderPlaceholders || !node.IsPlaceholder)
                     {
-                        RenderShape(
+                        RenderShapeNode(
                             node,
-                            relationships,
-                            context.Package,
-                            context.Document,
+                            context,
                             graphics,
-                            context.DiagnosticSink,
-                            context.SlideNumber,
-                            context.Theme,
-                            transform,
+                            fonts,
                             images,
-                            context.ImageCache,
-                            ref imageIndex);
-                        DrawTextSpansWithFonts(ReadTextSpansForShape(source, context, renderPlaceholders), graphics, fonts);
+                            relationships,
+                            transform,
+                            ref imageIndex,
+                            renderPlaceholders);
                     }
 
                     break;
@@ -101,5 +95,47 @@ internal sealed partial class PptxRenderer
                     break;
             }
         }
+    }
+
+    private static void RenderShapeNode(
+        PptxSceneNode node,
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        IReadOnlyDictionary<string, RenderedFont> fonts,
+        List<PdfImageResource> images,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        GroupTransform transform,
+        ref int imageIndex,
+        bool renderPlaceholders)
+    {
+        RenderShape(
+            node,
+            relationships,
+            context.Package,
+            context.Document,
+            graphics,
+            context.DiagnosticSink,
+            context.SlideNumber,
+            context.Theme,
+            transform,
+            images,
+            context.ImageCache,
+            ref imageIndex);
+        RenderTextNode(node, context, graphics, fonts, renderPlaceholders);
+    }
+
+    private static void RenderTextNode(
+        PptxSceneNode node,
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        IReadOnlyDictionary<string, RenderedFont> fonts,
+        bool renderPlaceholders)
+    {
+        if (node.TextBody is null)
+        {
+            return;
+        }
+
+        DrawTextSpansWithFonts(ReadTextSpansForShape(node.Source, context, renderPlaceholders), graphics, fonts);
     }
 }

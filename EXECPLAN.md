@@ -514,6 +514,11 @@ High-priority actions:
   text-body paragraph/run counts, picture/table/chart ownership, and group children without exposing text
   content. The private-safe layout diagnostic now includes these scene counts so future slide-level schema
   work can distinguish typed-model coverage gaps from text-layout/PDF-emission gaps.
+- [x] Split ordered scene shape dispatch into shape and text node phases:
+  ordered rendering now draws shape geometry through `RenderShapeNode` and emits text through `RenderTextNode`,
+  which first checks the typed scene node's `TextBody` ownership before invoking the existing text layout
+  pipeline. This is behavior-neutral, but it makes text a distinct scene-node rendering phase instead of an
+  inline raw-XML side effect of shape drawing.
 - [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
@@ -3614,6 +3619,12 @@ scene-inspection slice / 2026-05-24:
 `PptxSceneBuilderBuildsResolvedNodeLists` passed after adding private-safe scene snapshots; non-slow tests
 passed with 189 passed, 0 failed, 7 skipped; `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off
 --nologo -v minimal --no-restore` succeeded; full tests passed with 196 passed, 0 failed, 0 skipped.
+
+ordered text-dispatch split / 2026-05-24:
+`PptxSceneBuilderBuildsResolvedNodeLists` passed, and the non-slow suite passed with 189 passed, 0 failed,
+7 skipped. A first parallel attempt at the non-slow suite failed during build because Windows held the
+debug DLL for writing; rerunning serially passed, so this was an environment file lock rather than a code
+failure. `dotnet pack` succeeded, and the full suite passed with 196 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
