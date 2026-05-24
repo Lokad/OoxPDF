@@ -1730,6 +1730,7 @@ internal sealed partial class PptxRenderer
             ShowPercent = dataLabel.ShowPercent ?? options.ShowPercent,
             ShowCategoryName = dataLabel.ShowCategoryName ?? options.ShowCategoryName,
             ShowSeriesName = dataLabel.ShowSeriesName ?? options.ShowSeriesName,
+            ShowLeaderLines = dataLabel.ShowLeaderLines ?? options.ShowLeaderLines,
             CustomText = string.IsNullOrEmpty(dataLabel.CustomText) ? options.CustomText : dataLabel.CustomText,
             Position = string.IsNullOrEmpty(dataLabel.Position) ? options.Position : dataLabel.Position,
             Separator = string.IsNullOrEmpty(dataLabel.Separator) ? options.Separator : dataLabel.Separator,
@@ -1883,6 +1884,7 @@ internal sealed partial class PptxRenderer
                 IsChartLabelFlagEnabled(labels, "showPercent"),
                 IsChartLabelFlagEnabled(labels, "showCatName"),
                 IsChartLabelFlagEnabled(labels, "showSerName"),
+                IsChartLabelFlagEnabled(labels, "showLeaderLines"),
                 string.Empty,
                 labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
@@ -1902,6 +1904,7 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.ShowPercent,
                 plot.DataLabels.ShowCategoryName,
                 plot.DataLabels.ShowSeriesName,
+                plot.DataLabels.ShowLeaderLines,
                 string.Empty,
                 plot.DataLabels.Position,
                 plot.DataLabels.Separator,
@@ -1934,6 +1937,7 @@ internal sealed partial class PptxRenderer
             labels.ShowPercent,
             labels.ShowCategoryName,
             labels.ShowSeriesName,
+            labels.ShowLeaderLines,
             string.Empty,
             labels.Position,
             labels.Separator,
@@ -1960,6 +1964,7 @@ internal sealed partial class PptxRenderer
                 ReadOptionalChartLabelFlagEnabled(label, "showPercent"),
                 ReadOptionalChartLabelFlagEnabled(label, "showCatName"),
                 ReadOptionalChartLabelFlagEnabled(label, "showSerName"),
+                ReadOptionalChartLabelFlagEnabled(label, "showLeaderLines"),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
                 label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
@@ -1986,6 +1991,7 @@ internal sealed partial class PptxRenderer
                 dataLabel.ShowPercent,
                 dataLabel.ShowCategoryName,
                 dataLabel.ShowSeriesName,
+                dataLabel.ShowLeaderLines,
                 dataLabel.CustomText,
                 dataLabel.Position,
                 dataLabel.Separator,
@@ -4212,16 +4218,16 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, CustomText: string.Empty, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, CustomText: string.Empty, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName ||
             !string.IsNullOrWhiteSpace(CustomText) ||
             Overrides.Values.Any(label => label.ShowValue == true || label.ShowPercent == true || label.ShowCategoryName == true || label.ShowSeriesName == true || !string.IsNullOrWhiteSpace(label.CustomText));
     }
 
-    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
+    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, string CustomText, string Position, string Separator, string NumberFormat, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 

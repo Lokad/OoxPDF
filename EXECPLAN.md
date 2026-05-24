@@ -777,7 +777,7 @@ High-priority actions:
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
   value/percent subset, but the richer Office label contract is no longer discarded at scene build time.
   Later on 2026-05-24, supported bar/line renderers also began consuming the preserved category-name and
-  series-name flags for label text composition; leader lines, position semantics, rich text, per-label
+  series-name flags for label text composition; leader-line geometry, position semantics, rich text, per-label
   overrides, and data-label shape styles remain open.
   Focused model/chart tests passed after a transient parallel build lock was rerun serially, the full runner
   passed 186/186, `dotnet pack` succeeded, and private run
@@ -785,7 +785,7 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader lines, rich text
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader-line geometry, rich text
   runs inside custom labels, exact label-box geometry/auto-fit, and richer position semantics still need
   renderer support and visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
@@ -825,6 +825,15 @@ High-priority actions:
   forcing renderers to rediscover the raw chart XML. The scene fixture locks the metadata, the full runner
   passed 187/187, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-183716` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Carry data-label leader-line flags through the renderer option model instead of dropping
+  them after scene/XML parsing. `ChartDataLabelOptions` and point overrides now preserve
+  `showLeaderLines` through plot, series, XML fallback, and per-label resolution, so the remaining
+  leader-line work is geometry/output rather than metadata recovery. The full runner passed 187/187,
+  `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-185426` stayed stable: 84/84 compared pages, zero
   dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
@@ -905,7 +914,7 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043246`, changed16 `0.116409`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Continue data-label rendering alignment with Office: leader lines, rich text runs inside labels,
+- [ ] Continue data-label rendering alignment with Office: leader-line geometry, rich text runs inside labels,
   label layout/auto-fit, and exact Office label-box geometry remain approximate.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
@@ -1062,7 +1071,7 @@ High-priority actions:
   - [x] Consume scene/XML data-label separator and number-format metadata for supported value-label text.
   - [x] Consume scene/XML data-label category-name and series-name flags in supported bar/line rendering.
   - [x] Consume scene/XML data-label position metadata in supported bar/line rendering.
-  - [ ] Extend chart data-label modeling to cover leader lines, rich text runs inside custom labels,
+  - [ ] Extend chart data-label rendering to cover leader-line geometry, rich text runs inside custom labels,
     Office label-box geometry/auto-fit, and richer position semantics before attempting finer
     Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
@@ -1703,8 +1712,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-183716` after the chart
-  style-id metadata slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-185426` after the chart
+  data-label leader-line option bridge:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.
