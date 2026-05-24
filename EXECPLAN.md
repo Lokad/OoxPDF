@@ -896,8 +896,10 @@ High-priority actions:
   the scene model and consumed by ordered shape/connector rendering through a renderer conversion boundary.
 - [x] Move shape/connector dash/cap/join into `PptxSceneShape`: preset dash arrays, PDF line cap, and PDF line
   join are now resolved in the scene model and consumed by ordered shape/connector rendering.
-- [ ] Continue typed shape/connector migration by resolving custom geometry presence and fill/effect styles
-  into typed scene records.
+- [x] Move custom geometry presence into `PptxSceneShape`; ordered shape rendering now uses the scene model to
+  decide whether the node is custom geometry before handing source XML to the existing path interpreter.
+- [ ] Continue typed shape/connector migration by resolving fill/effect styles and then custom geometry path
+  commands into typed scene records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after scene-backed ordered rendering and typed
   picture/shape leaf inputs. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-101919` produced 84/84 compared pages, zero dimension

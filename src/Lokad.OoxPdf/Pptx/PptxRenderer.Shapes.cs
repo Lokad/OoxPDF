@@ -119,6 +119,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             ToShapeBounds(shape.Bounds),
             shape.Shape.Preset,
+            shape.Shape.HasCustomGeometry,
             ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
             ToLineEndStyle(shape.Shape.TailEnd));
@@ -165,6 +166,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             rawBounds.Value,
             ReadPreset(shapeProperties),
+            shapeProperties.Element(DrawingNamespace + "custGeom") is not null,
             null,
             null,
             null);
@@ -185,6 +187,7 @@ internal sealed partial class PptxRenderer
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,
+        bool hasCustomGeometry,
         LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
         LineEndStyle? tailEndOverride)
@@ -254,7 +257,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             out string? pictureFillName,
             out PdfImageXObject? pictureFillImage);
-        XElement? customGeometry = shapeProperties.Element(DrawingNamespace + "custGeom");
+        XElement? customGeometry = hasCustomGeometry ? shapeProperties.Element(DrawingNamespace + "custGeom") : null;
 
         if (transformed)
         {

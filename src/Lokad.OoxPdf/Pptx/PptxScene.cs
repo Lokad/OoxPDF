@@ -177,6 +177,7 @@ internal sealed record PptxSceneNode(
 
 internal sealed record PptxSceneShape(
     string Preset,
+    bool HasCustomGeometry,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
@@ -571,6 +572,7 @@ internal sealed class PptxSceneBuilder
             : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
+            shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
