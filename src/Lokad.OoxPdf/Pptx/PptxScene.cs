@@ -472,6 +472,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneChartDataLabels DataLabels);
 
 internal sealed record PptxSceneChartMarker(
+    bool IsDefined,
     string Symbol,
     double Size,
     PptxSceneFillStyle Fill,
@@ -1296,7 +1297,7 @@ internal sealed class PptxSceneBuilder
         PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartMarker(symbol, size, fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartMarker(marker is not null, symbol, size, fill, ReadChartLine(shapeProperties, theme));
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)

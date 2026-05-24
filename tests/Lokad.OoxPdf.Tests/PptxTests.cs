@@ -443,6 +443,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.HasLine == true, "Expected chart series line in the scene model.");
         TestAssert.Equal(new RgbColor(0, 51, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Color ?? default);
         TestAssert.Equal(3d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Width ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.IsDefined == true, "Expected explicit chart marker ownership in the scene model.");
         TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Symbol ?? string.Empty);
         TestAssert.Equal(7d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Size ?? 0d);
         TestAssert.Equal(new RgbColor(0, 170, 85), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Fill.Color ?? default);
@@ -465,7 +466,9 @@ internal static class PptxTests
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);
         TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
         TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].Series[0].Marker.IsDefined == false, "Expected a missing marker element to remain distinct from the effective marker default.");
         TestAssert.Equal("lineChart", slide.SlideNodes[4].Chart?.Plots[2].Kind ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.IsDefined == false, "Expected missing line-chart marker metadata to remain distinct from explicit default markers.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);

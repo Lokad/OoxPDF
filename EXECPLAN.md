@@ -4279,6 +4279,14 @@ look like marker outlines rather than axis/gridline segments. This is an opt-in 
 future marker geometry gates; default chart graphics comparisons remain unchanged. The clustered-column public
 visual case still passed with the existing `AxisPairPlotBoxCandidate` and `CategoryAxisTickLabel` structural
 gates at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-010512`.
+
+chart marker presence scene ownership / 2026-05-25:
+`PptxSceneChartMarker` now preserves whether a `c:marker` element was actually present, while still carrying
+the effective symbol/size defaults used by the current renderer. `ReadSceneOrXmlMarkerStyles` only treats the
+typed scene marker vector as authoritative when at least one series in the plot has explicit marker metadata,
+so missing-marker plots keep the existing XML fallback path instead of turning scene defaults into false
+source ownership. The focused scene test passed with 1 passed, 0 failed, 0 skipped.
+The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
