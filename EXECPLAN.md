@@ -622,6 +622,14 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Make chart title/legend layout and title rendering consume scene-owned metadata first.
+  `PptxSceneChartTitle` now also captures `c:v` title text, the renderer uses scene title/legend records
+  for supported chart layout and fallback title drawing, and the XML title fallback remains for the existing
+  single-series bar automatic title rule. Focused model/chart tests passed, the full runner passed 186/186,
+  `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-151957`
+  stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
+  and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`,
+  changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -744,6 +752,14 @@ High-priority actions:
   - [x] Add typed chart-series style metadata to `PptxSceneChartSeries`: direct solid fill, direct line,
     marker symbol/size/fill/line, and smooth flag now have scene-model ownership before renderer consumption
     is migrated away from raw `c:ser` style scans.
+  - [x] Make ordered chart rendering consume scene-owned series style metadata first for fills, strokes,
+    markers, and smooth flags, retaining raw `c:ser` style scans only as fallback.
+  - [x] Add and consume typed chart point-style metadata: `PptxSceneChartPointStyle` preserves `c:dPt`
+    index, direct fill, pattern fill, line, and raw explosion values, with percentage normalization only
+    at the PDF-rendering boundary.
+  - [x] Make chart title/legend layout scene-first: supported chart layouts and fallback title drawing now
+    consume `PptxSceneChartTitle`/`PptxSceneChartLegend`, while XML fallback remains for legacy paths and
+    the single-series automatic bar-title rule.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -2785,7 +2801,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    cannot be explained structurally.
 2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` now models
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
-   chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries, chart plot attributes, chart series summaries including scatter/bubble data channels, chart axis catalogs, titles, and legends, while `PptxRenderContext` owns package, theme, inheritance, relationships,
+   chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
+   chart plot attributes, chart series summaries including scatter/bubble data channels, chart series and
+   point styles, chart axis catalogs, titles, and legends, while `PptxRenderContext` owns package, theme,
+   inheritance, relationships,
    image cache, and diagnostics. Keep retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
    models while preserving source XML only as an escape hatch for unported features.

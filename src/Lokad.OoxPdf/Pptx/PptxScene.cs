@@ -1191,6 +1191,13 @@ internal sealed class PptxSceneBuilder
         string? text = title?
             .Descendants(DrawingNamespace + "t")
             .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            text = (string?)title?
+                .Descendants(ChartNamespace + "v")
+                .FirstOrDefault();
+        }
+
         return new PptxSceneChartTitle(string.IsNullOrWhiteSpace(text) ? null : text, isAutoDeleted);
     }
 
