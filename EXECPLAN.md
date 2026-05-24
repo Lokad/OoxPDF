@@ -3759,6 +3759,15 @@ picture fills, and other unmodeled DrawingML edges still need the source XML unt
 rendering is fully model-owned. The `pptx-shapes` non-slow group passed with 14 passed, 0 failed, 0 skipped,
 and the non-slow suite passed with 190 passed, 0 failed, 7 skipped. `dotnet pack` succeeded, and the full
 suite passed with 197 passed, 0 failed, 0 skipped.
+
+model-owned table frame layout / 2026-05-24:
+`BuildTableFrameLayout` now consumes `PptxSceneTable` rows, cells, dimensions, style, fills, and borders
+directly instead of accepting a parallel `a:tbl` XML fallback. The scene table still retains its source XML
+for future unsupported DrawingML edges, but table geometry/fill/border/text layout in the renderer now has a
+single model-owned input. This preserves the long-term direction: parse OOXML once into scene data, build a
+layout model from that scene data, then serialize PDF operators from the layout. The `pptx-tables` non-slow
+group passed with 7 passed, 0 failed, 0 skipped; the full suite passed with 197 passed, 0 failed, 0 skipped;
+and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

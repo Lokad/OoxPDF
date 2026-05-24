@@ -63,7 +63,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return BuildTableFrameLayout(context, bounds, node.Table?.Source, node.Table)?.TextSpans ?? [];
+        return BuildTableFrameLayout(context, bounds, node.Table)?.TextSpans ?? [];
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
@@ -71,7 +71,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table?.Source, node.Table);
+        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table);
         if (layout is null)
         {
             return [];
@@ -81,18 +81,18 @@ internal sealed partial class PptxRenderer
         return layout.TextSpans;
     }
 
-    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable)
+    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         var cellFills = new List<TableCellFill>();
-        if (bounds is null || table is null)
+        if (bounds is null || sceneTable is null)
         {
             return null;
         }
 
-        IReadOnlyList<double> rawColumnWidths = sceneTable?.ColumnWidths ?? PptxSceneBuilder.ReadTableColumnWidths(table);
-        PptxSceneTableStyle tableStyle = sceneTable?.Style ?? PptxSceneBuilder.ReadTableStyle(table);
-        IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
+        IReadOnlyList<double> rawColumnWidths = sceneTable.ColumnWidths;
+        PptxSceneTableStyle tableStyle = sceneTable.Style;
+        IReadOnlyList<PptxSceneTableRow> rows = sceneTable.Rows;
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
             return null;
@@ -105,10 +105,10 @@ internal sealed partial class PptxRenderer
         double frameTop = context.Document.SlideHeightPoints - frameYTop;
         double columnScale = frameWidth / rawColumnWidths.Sum();
 
-        IReadOnlyList<double> rawRowHeights = sceneTable?.RowHeights ?? PptxSceneBuilder.ReadTableRowHeights(table);
+        IReadOnlyList<double> rawRowHeights = sceneTable.RowHeights;
         if (rawRowHeights.Count != rows.Count)
         {
-            rawRowHeights = PptxSceneBuilder.ReadTableRowHeights(table);
+            return null;
         }
 
         double rowScale = frameHeight / rawRowHeights.Sum();
@@ -123,19 +123,18 @@ internal sealed partial class PptxRenderer
         {
             double rowHeight = rawRowHeights[rowIndex] * rowScale;
             double cellY = yTop - rowHeight;
-            IReadOnlyList<XElement> cells = rows[rowIndex].Elements(DrawingNamespace + "tc").ToArray();
+            IReadOnlyList<PptxSceneTableCell> cells = rows[rowIndex].Cells;
 
             double cellX = frameX;
             int columnIndex = 0;
             for (int cellIndex = 0; cellIndex < cells.Count; cellIndex++)
             {
-                XElement cell = cells[cellIndex];
                 if (columnIndex >= rawColumnWidths.Count)
                 {
                     break;
                 }
 
-                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, columnIndex, cell, context.Theme, tableStyle, rows.Count, rawColumnWidths.Count);
+                PptxSceneTableCell sceneCell = cells[cellIndex];
                 if (sceneCell.IsMergedContinuation)
                 {
                     cellX += rawColumnWidths[columnIndex] * columnScale;
@@ -193,7 +192,7 @@ internal sealed partial class PptxRenderer
             rowTops[rowIndex + 1] = yTop;
         }
 
-        if (!TableHasExplicitBorders(sceneTable, table))
+        if (!TableHasExplicitBorders(sceneTable))
         {
             var defaultGrid = new TableDefaultGrid(
                 frameX,
@@ -252,43 +251,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static PptxSceneTableCell ReadSceneTableCell(
-        PptxSceneTable? sceneTable,
-        int rowIndex,
-        int cellIndex,
-        int columnIndex,
-        XElement cell,
-        PptxTheme theme,
-        PptxSceneTableStyle tableStyle,
-        int rowCount,
-        int columnCount)
+    private static bool TableHasExplicitBorders(PptxSceneTable sceneTable)
     {
-        if (sceneTable is not null &&
-            rowIndex < sceneTable.Rows.Count &&
-            cellIndex < sceneTable.Rows[rowIndex].Cells.Count)
-        {
-            return sceneTable.Rows[rowIndex].Cells[cellIndex];
-        }
-
-        return PptxSceneBuilder.ReadTableCell(cell, theme, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
-    }
-
-    private static bool TableHasExplicitBorders(PptxSceneTable? sceneTable, XElement table)
-    {
-        if (sceneTable is not null)
-        {
-            return sceneTable.Rows
-                .SelectMany(row => row.Cells)
-                .Any(cell => cell.Borders.HasExplicitBorder);
-        }
-
-        return table
-            .Descendants(DrawingNamespace + "tcPr")
-            .Any(cellProperties =>
-                cellProperties.Element(DrawingNamespace + "lnL") is not null ||
-                cellProperties.Element(DrawingNamespace + "lnR") is not null ||
-                cellProperties.Element(DrawingNamespace + "lnT") is not null ||
-                cellProperties.Element(DrawingNamespace + "lnB") is not null);
+        return sceneTable.Rows
+            .SelectMany(row => row.Cells)
+            .Any(cell => cell.Borders.HasExplicitBorder);
     }
 
     private static void StrokeDefaultTableGrid(PdfGraphicsBuilder graphics, double x, double yTop, double width, double height, IReadOnlyList<double> columnWidths, IReadOnlyList<double> rowTops, PptxSceneTableStyle tableStyle, int rowCount, bool[,] skippedVerticalGridSegments, bool[,] skippedHorizontalGridSegments)
