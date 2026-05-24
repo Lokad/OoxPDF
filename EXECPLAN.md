@@ -4287,6 +4287,14 @@ typed scene marker vector as authoritative when at least one series in the plot 
 so missing-marker plots keep the existing XML fallback path instead of turning scene defaults into false
 source ownership. The focused scene test passed with 1 passed, 0 failed, 0 skipped.
 The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart varyColors presence scene ownership / 2026-05-25:
+`PptxSceneChartPlot.VaryColors` is now nullable so the scene model distinguishes a missing `c:varyColors`
+element from explicit Office-authored true/false values. Rendering keeps the same effective behavior by using
+typed values when present and the existing XML/default fallback otherwise, but the scene no longer claims
+ownership of defaulted palette-varying semantics. The focused scene test passed with 1 passed, 0 failed,
+0 skipped.
+The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

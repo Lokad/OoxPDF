@@ -394,7 +394,7 @@ internal sealed record PptxSceneChartPlot(
     string Grouping,
     string BarDirection,
     string ScatterStyle,
-    bool VaryColors,
+    bool? VaryColors,
     double? GapWidth,
     double? Overlap,
     double? HoleSize,
@@ -1214,9 +1214,12 @@ internal sealed class PptxSceneBuilder
             : null;
     }
 
-    private static bool ReadChartPlotVaryColors(XElement plot)
+    private static bool? ReadChartPlotVaryColors(XElement plot)
     {
-        return IsOoxmlBooleanElementEnabled(plot.Element(ChartNamespace + "varyColors"), defaultValue: true);
+        XElement? varyColors = plot.Element(ChartNamespace + "varyColors");
+        return varyColors is null
+            ? null
+            : IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true);
     }
 
     private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme)
