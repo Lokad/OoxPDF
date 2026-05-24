@@ -107,7 +107,7 @@ internal sealed partial class PptxRenderer
                     break;
                 }
 
-                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, cell);
+                PptxSceneTableCell sceneCell = ReadSceneTableCell(sceneTable, rowIndex, cellIndex, cell, context.Theme);
                 if (sceneCell.IsMergedContinuation)
                 {
                     cellX += rawColumnWidths[columnIndex] * columnScale;
@@ -142,8 +142,13 @@ internal sealed partial class PptxRenderer
                 double cellBottom = cellTop - cellHeight;
                 XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
 
-                bool hasCellFill = TryReadSolidColorWithAlpha(cellProperties, context.Theme, out RgbColor fill, out double fillAlpha) ||
-                    TryReadBuiltInTableStyleCellFill(table, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
+                bool hasCellFill = sceneCell.Fill.HasFill;
+                RgbColor fill = sceneCell.Fill.Color;
+                double fillAlpha = sceneCell.Fill.Alpha;
+                if (!hasCellFill)
+                {
+                    hasCellFill = TryReadBuiltInTableStyleCellFill(table, rowIndex, columnIndex, rows.Count, rawColumnWidths.Count, context.Theme, out fill, out fillAlpha);
+                }
                 if (hasCellFill)
                 {
                     bool transparentFill = fillAlpha < 0.999d;
@@ -184,7 +189,7 @@ internal sealed partial class PptxRenderer
         return textSpans;
     }
 
-    private static PptxSceneTableCell ReadSceneTableCell(PptxSceneTable? sceneTable, int rowIndex, int cellIndex, XElement cell)
+    private static PptxSceneTableCell ReadSceneTableCell(PptxSceneTable? sceneTable, int rowIndex, int cellIndex, XElement cell, PptxTheme theme)
     {
         if (sceneTable is not null &&
             rowIndex < sceneTable.Rows.Count &&
@@ -198,7 +203,8 @@ internal sealed partial class PptxRenderer
             PptxSceneBuilder.ReadTableCellRowSpan(cell),
             PptxSceneBuilder.IsMergedTableCellContinuation(cell),
             PptxSceneBuilder.ReadTableCellTextInsets(cell),
-            PptxSceneBuilder.ReadTableCellVerticalAnchor(cell));
+            PptxSceneBuilder.ReadTableCellVerticalAnchor(cell),
+            PptxSceneBuilder.ReadTableCellFill(cell, theme));
     }
 
     private static bool TableHasExplicitBorders(XElement table)
