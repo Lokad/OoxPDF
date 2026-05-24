@@ -4197,6 +4197,7 @@ internal static class PptxTests
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => glyph.GlyphId > 0), "Expected glyph-run inspection to expose each emitted glyph id.");
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => string.Equals(glyph.Typeface, paragraphSpan.GlyphSpan.Typeface, StringComparison.OrdinalIgnoreCase)), "Expected glyph-run inspection to preserve current glyph typeface ownership before fallback splits it.");
         TestAssert.True(paragraphGlyphRun.Glyphs.All(glyph => !string.IsNullOrWhiteSpace(glyph.ResourceName)), "Expected glyph-run inspection to expose the PDF font resource that currently owns each glyph.");
+        TestAssert.True(glyphRuns.Any(run => run.Text == "."), "Expected justified glyph-run inspection to preserve Office-like sentence-period operation boundaries.");
         TestAssert.True(paragraphGlyphRun.Width > 0d, "Expected glyph-run inspection to expose measured glyph advance.");
         TestAssert.Equal(paragraphSpan.GlyphSpan.GlyphCount, paragraphGlyphRun.GlyphCount);
         TestAssert.True(Math.Abs(paragraphSpan.GlyphSpan.NaturalWidth - paragraphGlyphRun.Width) < 0.01d, "Expected layout-owned glyph span width to match the emitted glyph-run width before PDF text operators are written.");

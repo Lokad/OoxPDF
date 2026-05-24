@@ -1394,7 +1394,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        PptxTextSpanLayout[] spans = line.Spans
+        IEnumerable<PptxTextSpanLayout> spans = line.Spans
             .Select(span => span with
             {
                 Run = span.Run with
@@ -1405,9 +1405,13 @@ internal sealed partial class PptxRenderer
                 },
                 EndX = span.EndX + offset,
                 Atoms = OffsetAtoms(span.Atoms, offset)
-            })
-            .ToArray();
-        lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, alignment, spans));
+            });
+        if (IsWordJustifiedAlignment(alignment))
+        {
+            spans = spans.SelectMany(span => SplitJustifiedWordSpans(span, advanceEstimator));
+        }
+
+        lines.Add(new PptxTextLineLayout(box, textX + offset, line.EndX + offset, alignment, spans.ToArray()));
     }
 
     private static IReadOnlyList<PptxTextAtomLayout> OffsetAtoms(IReadOnlyList<PptxTextAtomLayout> atoms, double offset)
@@ -1555,7 +1559,9 @@ internal sealed partial class PptxRenderer
             yield break;
         }
 
-        foreach (PptxTextAtomLayout word in words.SelectMany(word => SplitWordAtomOnSpaces(span.Run, word, advanceEstimator)))
+        foreach (PptxTextAtomLayout word in words
+                     .SelectMany(word => SplitWordAtomOnSpaces(span.Run, word, advanceEstimator))
+                     .SelectMany(word => SplitJustifiedWordAtomOnSentencePeriod(span.Run, word, advanceEstimator)))
         {
             TextRun wordRun = span.Run with
             {
@@ -1572,6 +1578,31 @@ internal sealed partial class PptxRenderer
                 GlyphSpan = BuildGlyphSpan(wordRun, advanceEstimator)
             };
         }
+    }
+
+    private static IEnumerable<PptxTextAtomLayout> SplitJustifiedWordAtomOnSentencePeriod(TextRun run, PptxTextAtomLayout atom, TextAdvanceEstimator advanceEstimator)
+    {
+        if (atom.Text.Length <= 1 || atom.Text[^1] != '.')
+        {
+            yield return atom;
+            yield break;
+        }
+
+        string wordText = atom.Text[..^1];
+        double wordWidth = advanceEstimator.Measure(wordText, run.FontSize, run.FontFamily, run.Bold, run.Italic, run.CharacterSpacing, run.KerningEnabled);
+        double periodBoundaryAdjustment = MeasureFlowSegmentBoundaryAdjustment(
+            advanceEstimator,
+            ".",
+            LastCodePoint(wordText),
+            run.FontSize,
+            run.FontFamily,
+            run.Bold,
+            run.Italic,
+            run.CharacterSpacing,
+            run.KerningEnabled);
+        double periodX = atom.X + wordWidth + periodBoundaryAdjustment;
+        yield return atom with { Text = wordText, Width = Math.Max(0d, periodX - atom.X) };
+        yield return atom with { Text = ".", X = periodX, Width = Math.Max(0d, atom.X + atom.Width - periodX) };
     }
 
     private static IEnumerable<PptxTextAtomLayout> SplitWordAtomOnSpaces(TextRun run, PptxTextAtomLayout atom, TextAdvanceEstimator advanceEstimator)

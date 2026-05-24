@@ -466,6 +466,13 @@ High-priority actions:
   the apparent Office/candidate operation split was caused by a mojibake fixture, not true accented Latin.
   The corrected fixture now emits one decoded text operation per line on both sides and passes line-start
   parity at `0.1pt`; raster metrics remain approximate for later font-rendering parity work.
+- [x] Align justified paragraph punctuation/final-line operation boundaries with Office:
+  sentence periods now split as Office text-operation boundary punctuation, and non-expanded final lines in
+  justified paragraphs are still split into word/punctuation glyph spans for PDF emission. The justify probe
+  improved structurally: lines 0-4 now have matching operation text/counts, while paragraph 3 still wraps
+  `like` one line later than Office and remains the next line-break metric target. Validation: typography
+  `66 passed, 0 failed, 2 skipped`; public justify visual `20260524-214947` passed with MAE `4.187326`
+  and PDF text-operation parity for the first five lines; skip-slow/full suites and packing passed.
 - [x] Re-run public spacing probes after the atom/glyph architecture slice:
   `inventory-opti`, `accent-spacing`, and `boundary-invariance` still render without diagnostics; boundary
   invariance remains structurally close while inventory/accent remain acceptance probes for later glyph
