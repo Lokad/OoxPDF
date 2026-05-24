@@ -494,7 +494,7 @@ internal sealed record PptxSceneChartAxis(
     double? CrossesAt,
     string CrossBetween,
     bool IsReversed,
-    bool IsDeleted,
+    bool? IsDeleted,
     bool HasScaling,
     double? Minimum,
     double? Maximum,
@@ -512,7 +512,7 @@ internal sealed record PptxSceneChartAxis(
     int? LabelOffset,
     int? TickLabelSkip,
     int? TickMarkSkip,
-    bool NoMultiLevelLabels,
+    bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartTitle Title);
 
@@ -1453,7 +1453,7 @@ internal sealed class PptxSceneBuilder
                     (string?)axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val"),
                     "maxMin",
                     StringComparison.Ordinal),
-                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete")),
+                ReadOptionalOoxmlBooleanElement(axis, "delete"),
                 axis.Element(ChartNamespace + "scaling") is not null,
                 ReadChartAxisScalingValue(axis, "min"),
                 ReadChartAxisScalingValue(axis, "max"),
@@ -1471,7 +1471,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementInt(axis, "lblOffset"),
                 ReadChartElementInt(axis, "tickLblSkip"),
                 ReadChartElementInt(axis, "tickMarkSkip"),
-                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "noMultiLvlLbl")),
+                ReadOptionalOoxmlBooleanElement(axis, "noMultiLvlLbl"),
                 ReadChartAxisNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme)));
         }

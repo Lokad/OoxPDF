@@ -2336,7 +2336,7 @@ internal sealed partial class PptxRenderer
         {
             return string.Equals(sceneAxis.Kind, "valAx", StringComparison.Ordinal) &&
                 string.Equals(sceneAxis.Position, "r", StringComparison.Ordinal) &&
-                !sceneAxis.IsDeleted;
+                sceneAxis.IsDeleted != true;
         }
 
         return IsRightValueAxis(axis);
@@ -2811,8 +2811,8 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(categoryAxis, categoryAxisElement, theme),
-            valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : !valueAxis.IsDeleted,
-            categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : !categoryAxis.IsDeleted);
+            valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : valueAxis.IsDeleted != true,
+            categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : categoryAxis.IsDeleted != true);
     }
 
     private static ChartSeriesStroke? ReadSceneOrXmlChartAxisStroke(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
@@ -2846,7 +2846,7 @@ internal sealed partial class PptxRenderer
             return IsChartAxisLabelVisible(axis);
         }
 
-        return !sceneAxis.IsDeleted &&
+        return sceneAxis.IsDeleted != true &&
             !string.Equals(sceneAxis.TickLabelPosition, "none", StringComparison.Ordinal);
     }
 

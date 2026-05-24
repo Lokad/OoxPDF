@@ -486,12 +486,14 @@ internal static class PptxTests
         TestAssert.Equal(100, slide.SlideNodes[4].Chart?.Axes[0].LabelOffset ?? 0);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Axes[0].TickLabelSkip ?? 0);
         TestAssert.Equal(3, slide.SlideNodes[4].Chart?.Axes[0].TickMarkSkip ?? 0);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].IsDeleted is null, "Expected missing chart category-axis delete metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].NoMultiLevelLabels == true, "Expected chart axis multi-level-label flag in the scene model.");
         TestAssert.Equal("Categories", slide.SlideNodes[4].Chart?.Axes[0].Title.Text ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].Title.Overlay == false, "Expected chart category-axis title overlay flag in the scene model.");
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Axes[0].Title.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(new RgbColor(34, 68, 136), slide.SlideNodes[4].Chart?.Axes[0].Title.TextStyle.Color ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].NoMultiLevelLabels is null, "Expected missing chart value-axis multi-level-label metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasScaling == true, "Expected chart axis scaling ownership in the scene model.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].Minimum ?? -1d);
         TestAssert.Equal(20d, slide.SlideNodes[4].Chart?.Axes[1].Maximum ?? 0d);

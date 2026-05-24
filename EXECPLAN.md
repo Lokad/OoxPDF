@@ -825,6 +825,12 @@ High-priority actions:
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
   and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`,
   changed16 `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-25: Preserve chart-axis boolean source presence for deletion and multi-level labels.
+  `PptxSceneChartAxis` now keeps `c:delete` and `c:noMultiLvlLbl` as nullable source booleans, so a missing
+  element remains distinct from an explicit `val="0"` disable. The chart renderer still coalesces only
+  explicit deletion to hidden axes, preserving existing output while preventing the scene model from erasing
+  OOXML schema intent before later Office-alignment work. Focused scene tests passed, the full runner passed
+  204/204, and `dotnet pack` succeeded.
 - [x] 2026-05-24: Move chart data-label value/percent flags into `PptxSceneChartPlot.DataLabels` and make
   bar, line, pie, and doughnut data-label rendering consume the typed scene options before raw XML fallback.
   This preserves the existing plot-level then first-series `c:dLbls` precedence while removing another
