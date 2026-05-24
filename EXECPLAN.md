@@ -197,6 +197,11 @@ High-priority actions:
   `pptx-ladder-04-italic-face-single`, `pptx-ladder-04-underline-single`, and
   `pptx-ladder-04-strikethrough-single` now require matching decoded PDF text content as well as position
   and font-size tolerances.
+- [x] Extend decoded-text gates to special text-operation cases that remain structurally locked:
+  `pptx-ladder-04-field-text`, `pptx-ladder-04-soft-hyphen`, and `pptx-ladder-04-tab-character`.
+- [ ] Revisit `pptx-ladder-04-nonbreaking-space` before adding decoded-text gating:
+  its existing visual MAE gate now fails at `0.031545` against a `0.004` limit before text-operation
+  comparison runs, and the failure reproduces without the transformed-text clipping change.
 - [x] Tighten near-miss simple typography cases before locking:
   `pptx-ladder-04-highlight-single` now passes its tight visual gate after the display-size baseline fix,
   and `pptx-ladder-04-mixed-font-size-line` now has a PDF text-operation gate with the remaining second-run
