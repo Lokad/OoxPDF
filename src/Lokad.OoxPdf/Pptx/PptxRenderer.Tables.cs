@@ -579,7 +579,7 @@ internal sealed partial class PptxRenderer
                             lineWidth > PptxTextMetricRules.TextStateTolerance &&
                             lineWidth + advance > textWidth)
                         {
-                            height += maxFontSize * 1.2d;
+                            height += maxFontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
                             maxFontSize = fragmentFontSize;
                             lineWidth = 0d;
                             hasLineContent = false;
@@ -599,7 +599,7 @@ internal sealed partial class PptxRenderer
 
             if (hasLineContent)
             {
-                height += maxFontSize * 1.2d;
+                height += maxFontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
             }
         }
 

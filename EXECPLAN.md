@@ -3791,6 +3791,14 @@ Private run `artifacts/private-visual/lokad-value-based/20260524-230051` stayed 
 chart, and SmartArt scene-boundary cleanups: 84/84 compared pages, zero dimension mismatches, deck MAE
 `9.005915`, changed16 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide 17 stayed at MAE
 `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
+
+named table text-height line metric / 2026-05-24:
+The table-cell text-height estimator no longer carries a local literal `1.2` line-height multiplier; it now
+uses `PptxTextMetricRules.CssNormalLineHeightFallback`, the existing named metric owner. This is still an
+approximate table-centering estimate and should eventually be replaced by the common text-frame layout model,
+but the fallback is no longer an isolated table heuristic. The `pptx-tables` non-slow group passed with 7
+passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed, 7 skipped; `dotnet pack`
+succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
