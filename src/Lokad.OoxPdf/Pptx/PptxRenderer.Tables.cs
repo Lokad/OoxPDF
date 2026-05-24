@@ -169,7 +169,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
-                AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, sceneCell.StyleText);
+                AddTableCellTextSpans(context, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, sceneCell.StyleText);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -390,9 +390,9 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextSpans(PptxRenderContext context, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
-        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
+        XElement? textBody = sceneCell.TextBody;
         if (textBody is null)
         {
             return;

@@ -224,6 +224,7 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(51, 102, 153), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleFill.Color ?? default);
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleText.Bold == true, "Expected resolved table-style text bold in the scene model.");
         TestAssert.Equal(new RgbColor(255, 255, 255), slide.SlideNodes[2].Table?.Rows[0].Cells[0].StyleText.Color ?? default);
+        TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextBody is not null, "Expected table-cell text body ownership in the scene model.");
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.Rows[0].Cells[0].ColumnSpan ?? 0);
         TestAssert.Equal(1, slide.SlideNodes[2].Table?.Rows[0].Cells[0].RowSpan ?? 0);
         TestAssert.Equal(14.4d, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsets.Left ?? 0d);

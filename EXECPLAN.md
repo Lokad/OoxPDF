@@ -504,6 +504,13 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran model/table-focused tests, the full test suite, package, and private PPTX acceptance
+  after moving raw table-cell `txBody` ownership into `PptxSceneTableCell`. Focused tests passed, the full
+  runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-133919` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -569,6 +576,9 @@ High-priority actions:
     scene-owned style fills and text defaults after direct cell formatting. The current limited built-in
     formulas are isolated in `PptxTableStyleResolver`, pending replacement by a full Office table-style
     cascade model.
+  - [x] Move raw table-cell `txBody` ownership into `PptxSceneTableCell` as an interim bridge. Table text is
+    still rendered through the shared text-shape XML bridge, but draw-time cell text no longer re-reads
+    `a:tc/a:txBody` from the table cell XML.
   - [ ] Replace `PptxTableStyleResolver`'s supported-style formulas with a real Office table-style cascade:
     parse table style parts/theme style matrices, conditional formatting priority, `phClr` replacement, and
     unsupported-style diagnostics instead of expanding GUID-specific logic.

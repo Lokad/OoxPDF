@@ -386,7 +386,8 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneFillStyle Fill,
     PptxSceneTableCellBorders Borders,
     PptxSceneFillStyle StyleFill,
-    PptxSceneTableCellTextStyle StyleText);
+    PptxSceneTableCellTextStyle StyleText,
+    XElement? TextBody);
 
 internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
 
@@ -904,7 +905,8 @@ internal sealed class PptxSceneBuilder
             ReadTableCellFill(cell, theme),
             ReadTableCellBorders(cell, theme),
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
-            PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme));
+            PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
+            cell.Element(DrawingNamespace + "txBody"));
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)
