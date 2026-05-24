@@ -158,6 +158,8 @@ internal sealed record PptxTextGlyphRunSnapshot(
 internal sealed record PptxSceneSlide(
     int Index,
     string PartName,
+    string? MasterPartName,
+    string? LayoutPartName,
     XDocument SlideXml,
     IReadOnlyList<PptxSceneNode> MasterNodes,
     IReadOnlyList<PptxSceneNode> LayoutNodes,
@@ -450,7 +452,7 @@ internal sealed class PptxSceneBuilder
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
-                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, new XDocument(), [], [], []));
+                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), [], [], []));
                 continue;
             }
 
@@ -466,6 +468,8 @@ internal sealed class PptxSceneBuilder
             slides.Add(new PptxSceneSlide(
                 slide.Index,
                 slide.PartName,
+                masterPart?.Name,
+                layoutPart?.Name,
                 slideXml,
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme),

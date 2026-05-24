@@ -416,9 +416,9 @@ High-priority actions:
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
   layout scene nodes now render through `RenderOrderedSceneNodes` before slide nodes instead of the old XML
   shape-container pass.
-- [ ] Finish relationship-aware inherited scene rendering for master/layout pictures and charts: scene nodes
-  need source-part relationship maps before inherited media can be rendered without falling back to slide
-  relationships.
+- [x] Finish relationship-aware inherited scene rendering for master/layout pictures and charts: scene slides
+  now retain master/layout part names, and ordered dispatch passes the source part's relationship map to
+  shapes, pictures, and chart frames instead of reusing slide relationships.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving master/layout shape/text rendering
   to ordered scene dispatch. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-114540` stayed stable: 84/84 compared pages, zero

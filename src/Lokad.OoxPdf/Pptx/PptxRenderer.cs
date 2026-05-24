@@ -69,9 +69,9 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<PptxPositionedTextSpan> slideTextSpans = ReadSlideTextSpans(context);
                 IReadOnlyList<PptxPositionedTextSpan> slideTableTextSpans = RenderTables(context, context.SlideXml, new PdfGraphicsBuilder());
                 RenderedFonts renderedFonts = CreateRenderedFonts(inheritedTextSpans.Concat(slideTextSpans).Concat(slideTableTextSpans).Select(span => span.Run).ToArray());
-                RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-                RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-                RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
+                RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.MasterPartName), ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+                RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.LayoutPartName), ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+                RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlideRelationships, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
                 pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
                 continue;
@@ -118,6 +118,15 @@ internal sealed partial class PptxRenderer
         using Stream stream = slidePart.OpenRead();
         XDocument slideXml = SafeXml.Load(stream);
         return CreateRenderContext(package, document, theme, slide, slideXml, null, imageCache, diagnosticSink);
+    }
+
+    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(PptxRenderContext context, string? partName)
+    {
+        return partName is null
+            ? context.SlideRelationships
+            : context.Package.GetRelationships(partName)
+                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
     }
 
     private static PptxRenderContext CreateRenderContext(

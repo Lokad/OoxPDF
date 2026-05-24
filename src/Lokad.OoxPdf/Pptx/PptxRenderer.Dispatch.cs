@@ -20,6 +20,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, RenderedFont> fonts,
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
         ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders)
@@ -34,7 +35,7 @@ internal sealed partial class PptxRenderer
                     {
                         RenderShape(
                             node,
-                            context.SlideRelationships,
+                            relationships,
                             context.Package,
                             context.Document,
                             graphics,
@@ -52,7 +53,7 @@ internal sealed partial class PptxRenderer
                 case PptxSceneNodeKind.Connector:
                     RenderShape(
                         node,
-                        context.SlideRelationships,
+                        relationships,
                         context.Package,
                         context.Document,
                         graphics,
@@ -71,6 +72,7 @@ internal sealed partial class PptxRenderer
                         graphics,
                         transform,
                         images,
+                        relationships,
                         ref imageIndex);
                     break;
                 case PptxSceneNodeKind.Table:
@@ -78,7 +80,7 @@ internal sealed partial class PptxRenderer
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
                     break;
                 case PptxSceneNodeKind.Chart:
-                    RenderChartFrame(context, graphics, chartFonts, source, transform);
+                    RenderChartFrame(context, graphics, chartFonts, source, transform, relationships);
                     break;
                 case PptxSceneNodeKind.Group:
                     RenderOrderedSceneNodes(
@@ -88,6 +90,7 @@ internal sealed partial class PptxRenderer
                         fonts,
                         images,
                         chartFonts,
+                        relationships,
                         ref imageIndex,
                         transform.Combine(ReadGroupTransform(source)),
                         renderPlaceholders);

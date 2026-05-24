@@ -16,7 +16,7 @@ internal sealed partial class PptxRenderer
         int index = 1;
         foreach (XElement shapeTree in context.SlideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            RenderPictureContainer(shapeTree, context, graphics, GroupTransform.Identity, images, ref index);
+            RenderPictureContainer(shapeTree, context, graphics, GroupTransform.Identity, images, context.SlideRelationships, ref index);
         }
 
         return images;
@@ -28,6 +28,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         GroupTransform transform,
         List<PdfImageResource> images,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
         ref int index)
     {
         foreach (XElement child in container.Elements())
@@ -36,7 +37,7 @@ internal sealed partial class PptxRenderer
             {
                 RenderPicture(
                     child,
-                    context.SlideRelationships,
+                    relationships,
                     context.Package,
                     context.Document,
                     context.Theme,
@@ -53,7 +54,7 @@ internal sealed partial class PptxRenderer
             if (child.Name == PresentationNamespace + "grpSp")
             {
                 GroupTransform childTransform = transform.Combine(ReadGroupTransform(child));
-                RenderPictureContainer(child, context, graphics, childTransform, images, ref index);
+                RenderPictureContainer(child, context, graphics, childTransform, images, relationships, ref index);
                 continue;
             }
         }
@@ -65,6 +66,7 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         GroupTransform transform,
         List<PdfImageResource> images,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
         ref int index)
     {
         if (picture.Picture is null || picture.Bounds is null)
@@ -74,7 +76,7 @@ internal sealed partial class PptxRenderer
 
         RenderPicture(
             picture.Source,
-            context.SlideRelationships,
+            relationships,
             context.Package,
             context.Document,
             context.Theme,

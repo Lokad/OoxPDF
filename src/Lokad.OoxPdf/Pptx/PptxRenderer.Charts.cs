@@ -36,7 +36,7 @@ internal sealed partial class PptxRenderer
         {
             if (child.Name == PresentationNamespace + "graphicFrame")
             {
-                RenderChartFrame(context, graphics, fonts, child, transform);
+                RenderChartFrame(context, graphics, fonts, child, transform, context.SlideRelationships);
                 continue;
             }
 
@@ -47,7 +47,13 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderChartFrame(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PdfFontResource> fonts, XElement frame, GroupTransform transform)
+    private static void RenderChartFrame(
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        List<PdfFontResource> fonts,
+        XElement frame,
+        GroupTransform transform,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         ShapeBounds? rawBounds = ReadGraphicFrameBounds(frame);
         ShapeBounds? bounds = rawBounds is { } value ? transform.Apply(value) : null;
@@ -63,7 +69,7 @@ internal sealed partial class PptxRenderer
         string? relationshipId = (string?)graphicData
             .Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
-        if (bounds is null || relationshipId is null || !context.SlideRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        if (bounds is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
             return;
