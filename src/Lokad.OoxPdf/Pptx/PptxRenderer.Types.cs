@@ -807,6 +807,7 @@ internal sealed partial class PptxRenderer
         public const int CategoryAxisDefaultLabelOffset = 100;
         public const int CategoryAxisMinimumLabelOffset = 0;
         public const int CategoryAxisMaximumLabelOffset = 1000;
+        public const int CategoryAxisDefaultTickLabelSkip = 1;
         public const double CategoryAxisHorizontalLeftOffsetRatio = 0.18d;
         public const double CategoryAxisHorizontalWidthRatio = 0.16d;
         public const double CategoryAxisHorizontalBaselineRatio = 0.45d;

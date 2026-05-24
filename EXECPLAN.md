@@ -4389,6 +4389,18 @@ passed with 1 passed, 0 failed, 0 skipped; the `pptx-charts` non-slow group pass
 0 skipped; the clustered-column public visual gate passed at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014112`; the full suite passed with
 205 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart category-axis tick-label skip consumption / 2026-05-25:
+The renderer now consumes scene/XML `c:catAx/c:tickLblSkip` for supported category tick labels as the
+Office-authored drawing interval, defaulting to `1` when absent or invalid. A synthetic render test hides the
+value axis and verifies that a four-category chart with `tickLblSkip=2` emits two category-label text
+matrices, so the existing scene-owned metadata now affects PDF text structure rather than staying archival.
+This does not consume `tickMarkSkip` yet; tick-mark geometry remains separate axis-line work because the
+current renderer has not modeled category tick marks as independent strokes. The focused render test passed
+with 1 passed, 0 failed, 0 skipped; the `pptx-charts` non-slow group passed with 10 passed, 0 failed,
+0 skipped; the clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014345`; the full suite passed with
+206 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

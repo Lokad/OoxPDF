@@ -2125,9 +2125,15 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
         double labelOffsetScale = ResolveSceneOrXmlCategoryAxisLabelOffsetScale(sceneAxis, categoryAxis);
+        int tickLabelSkip = ResolveSceneOrXmlCategoryAxisTickLabelSkip(sceneAxis, categoryAxis);
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
+            if (i % tickLabelSkip != 0)
+            {
+                continue;
+            }
+
             double x;
             double y;
             double width;
@@ -2874,6 +2880,15 @@ internal sealed partial class PptxRenderer
             PptxChartMetricRules.CategoryAxisMaximumLabelOffset);
 
         return offset / (double)PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
+    }
+
+    private static int ResolveSceneOrXmlCategoryAxisTickLabelSkip(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    {
+        int skip = sceneAxis?.TickLabelSkip ??
+            ReadChartElementInt(axis, "tickLblSkip") ??
+            PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
+
+        return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip, skip);
     }
 
     private static int? ReadChartElementInt(XElement? chartElement, string elementName)
