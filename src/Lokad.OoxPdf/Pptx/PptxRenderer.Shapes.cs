@@ -122,6 +122,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.HasCustomGeometry,
             ToFillStyle(shape.Shape.Fill),
             ToShapePatternFill(shape.Shape.PatternFill),
+            ToShapePictureFill(shape.Shape.PictureFill),
             ToGlow(shape.Shape.Glow),
             ToOuterShadow(shape.Shape.OuterShadow),
             ToLineStyle(shape.Shape.Line),
@@ -177,6 +178,7 @@ internal sealed partial class PptxRenderer
             null,
             null,
             null,
+            null,
             null);
     }
 
@@ -198,6 +200,7 @@ internal sealed partial class PptxRenderer
         bool hasCustomGeometry,
         FillStyle? fillOverride,
         ShapePatternFill? patternFillOverride,
+        ShapePictureFill? pictureFillOverride,
         Glow? glowOverride,
         OuterShadow? outerShadowOverride,
         LineStyle? lineOverride,
@@ -289,8 +292,11 @@ internal sealed partial class PptxRenderer
             images,
             imageCache,
             ref imageIndex,
+            pictureFillOverride,
             out string? pictureFillName,
-            out PdfImageXObject? pictureFillImage);
+            out PdfImageXObject? pictureFillImage,
+            out CropRect pictureFillCrop,
+            out FillRect pictureFillRect);
         XElement? customGeometry = hasCustomGeometry ? shapeProperties.Element(DrawingNamespace + "custGeom") : null;
 
         if (transformed)
@@ -508,8 +514,8 @@ internal sealed partial class PptxRenderer
 
         if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
         {
-            CropRect crop = ReadCrop(shapeProperties);
-            FillRect fillRect = ReadFillRect(shapeProperties);
+            CropRect crop = pictureFillCrop;
+            FillRect fillRect = pictureFillRect;
             double imageX = x + fillRect.Left * width;
             double imageY = y + fillRect.Bottom * height;
             double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
@@ -1219,20 +1225,38 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource>? images,
         Dictionary<string, PdfImageXObject?>? imageCache,
         ref int imageIndex,
+        ShapePictureFill? pictureFillOverride,
         out string? name,
-        out PdfImageXObject? image)
+        out PdfImageXObject? image,
+        out CropRect crop,
+        out FillRect fillRect)
     {
         name = null;
         image = null;
+        crop = default;
+        fillRect = default;
         if (relationships is null || package is null || images is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
         {
             return false;
         }
 
-        string? relationshipId = (string?)shapeProperties
-            .Element(DrawingNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip")
-            ?.Attribute(RelationshipsNamespace + "embed");
+        string? relationshipId;
+        if (pictureFillOverride is { } resolvedPictureFill)
+        {
+            relationshipId = resolvedPictureFill.RelationshipId;
+            crop = resolvedPictureFill.Crop;
+            fillRect = resolvedPictureFill.Fill;
+        }
+        else
+        {
+            relationshipId = (string?)shapeProperties
+                .Element(DrawingNamespace + "blipFill")
+                ?.Element(DrawingNamespace + "blip")
+                ?.Attribute(RelationshipsNamespace + "embed");
+            crop = ReadCrop(shapeProperties);
+            fillRect = ReadFillRect(shapeProperties);
+        }
+
         if (relationshipId is null ||
             !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
             relationship.ResolvedTarget is null)
@@ -1730,6 +1754,13 @@ internal sealed partial class PptxRenderer
     {
         return fill.HasPattern
             ? new ShapePatternFill(fill.Preset, fill.Foreground, fill.Background, fill.Alpha)
+            : null;
+    }
+
+    private static ShapePictureFill? ToShapePictureFill(PptxSceneShapePictureFill fill)
+    {
+        return fill.HasPicture
+            ? new ShapePictureFill(fill.RelationshipId, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
             : null;
     }
 

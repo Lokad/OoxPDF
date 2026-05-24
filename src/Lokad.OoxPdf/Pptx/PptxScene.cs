@@ -180,6 +180,7 @@ internal sealed record PptxSceneShape(
     bool HasCustomGeometry,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
+    PptxSceneShapePictureFill PictureFill,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow,
     PptxSceneLineStyle Line,
@@ -197,6 +198,12 @@ internal readonly record struct PptxScenePatternFill(
     RgbColor Foreground,
     RgbColor Background,
     double Alpha);
+
+internal readonly record struct PptxSceneShapePictureFill(
+    bool HasPicture,
+    string RelationshipId,
+    PptxSceneRect Crop,
+    PptxSceneRect Fill);
 
 internal readonly record struct PptxSceneGlow(
     bool HasGlow,
@@ -607,11 +614,27 @@ internal sealed class PptxSceneBuilder
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
             TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
+            ReadShapePictureFill(shapeProperties),
             TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static PptxSceneShapePictureFill ReadShapePictureFill(XElement? shapeProperties)
+    {
+        XElement? blip = shapeProperties
+            ?.Element(DrawingNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        string? relationshipId = (string?)blip?.Attribute(RelationshipsNamespace + "embed");
+        return relationshipId is null
+            ? default
+            : new PptxSceneShapePictureFill(
+                true,
+                relationshipId,
+                ReadPictureCrop(shapeProperties!),
+                ReadPictureFill(shapeProperties!));
     }
 
     private static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, out PptxSceneGlow glow)

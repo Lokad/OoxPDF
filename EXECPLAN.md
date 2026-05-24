@@ -906,8 +906,11 @@ High-priority actions:
 - [x] Move supported shape effect intent into `PptxSceneShape`: glow and outer-shadow color, alpha, radius,
   and offset vectors are now scene-level data while rendering still uses the existing preset duplicate
   approximation.
-- [ ] Continue typed shape/connector migration by resolving picture fills and custom geometry path commands
-  into typed scene records.
+- [x] Move shape picture-fill structure into `PptxSceneShape`: relationship id, source crop, and stretch fill
+  rectangle are now scene-level data while the renderer still resolves image resources from the package at
+  draw time.
+- [ ] Continue typed shape/connector migration by resolving custom geometry path commands into typed scene
+  records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
