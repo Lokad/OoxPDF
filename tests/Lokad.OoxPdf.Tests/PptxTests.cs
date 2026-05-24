@@ -134,7 +134,7 @@ internal static class PptxTests
                 """,
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
                   <c:plotArea><c:barChart>
@@ -145,6 +145,9 @@ internal static class PptxTests
                     <c:overlap val="25"/>
                     <c:ser>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
+                      <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
+                      <c:marker><c:symbol val="diamond"/><c:size val="7"/><c:spPr><a:solidFill><a:srgbClr val="00AA55"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="5500AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:marker>
+                      <c:smooth val="1"/>
                       <c:cat><c:strLit><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt></c:strLit></c:cat>
                       <c:val><c:numLit><c:pt idx="0"><c:v>12.5</c:v></c:pt><c:pt idx="1"><c:v>14</c:v></c:pt></c:numLit></c:val>
                     </c:ser>
@@ -319,6 +322,18 @@ internal static class PptxTests
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.HasFill == true, "Expected chart series fill in the scene model.");
+        TestAssert.Equal(new RgbColor(170, 85, 0), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.Color ?? default);
+        TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Fill.Alpha ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.HasLine == true, "Expected chart series line in the scene model.");
+        TestAssert.Equal(new RgbColor(0, 51, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Color ?? default);
+        TestAssert.Equal(3d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Width ?? 0d);
+        TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Symbol ?? string.Empty);
+        TestAssert.Equal(7d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Size ?? 0d);
+        TestAssert.Equal(new RgbColor(0, 170, 85), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Fill.Color ?? default);
+        TestAssert.Equal(new RgbColor(85, 0, 170), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Line.Color ?? default);
+        TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Line.Alpha ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
         TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);

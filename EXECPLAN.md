@@ -597,6 +597,14 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran chart/model-focused tests, the full test suite, package, and private PPTX acceptance
+  after adding typed chart-series style metadata to `PptxSceneChartSeries`: direct solid fill, direct line,
+  marker symbol/size/fill/line, and smooth flag. Focused tests passed after correcting the expected OOXML
+  line-width conversion, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-145742` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -716,6 +724,9 @@ High-priority actions:
     unmodeled data.
   - [x] Make ordered bar/line chart category-label rendering consume scene-owned cached category labels first,
     leaving raw `c:cat` scans as fallback for legacy chart paths.
+  - [x] Add typed chart-series style metadata to `PptxSceneChartSeries`: direct solid fill, direct line,
+    marker symbol/size/fill/line, and smooth flag now have scene-model ownership before renderer consumption
+    is migrated away from raw `c:ser` style scans.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.

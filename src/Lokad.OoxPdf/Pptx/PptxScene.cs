@@ -345,7 +345,17 @@ internal sealed record PptxSceneChartSeries(
     IReadOnlyList<string> Categories,
     IReadOnlyList<double> XValues,
     IReadOnlyList<double> YValues,
-    IReadOnlyList<double> BubbleSizes);
+    IReadOnlyList<double> BubbleSizes,
+    PptxSceneFillStyle Fill,
+    PptxSceneLineStyle Line,
+    PptxSceneChartMarker Marker,
+    bool Smooth);
+
+internal sealed record PptxSceneChartMarker(
+    string Symbol,
+    double Size,
+    PptxSceneFillStyle Fill,
+    PptxSceneLineStyle Line);
 
 internal sealed record PptxSceneChartAxis(
     string Id,
@@ -874,13 +884,13 @@ internal sealed class PptxSceneBuilder
             targetPartName,
             chartXml,
             paletteColors,
-            ReadChartPlots(chartXml),
+            ReadChartPlots(chartXml, theme),
             ReadChartAxes(chartXml),
             ReadChartTitle(chartXml),
             ReadChartLegend(chartXml));
     }
 
-    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml)
+    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -902,7 +912,7 @@ internal sealed class PptxSceneBuilder
                 plot.Name.LocalName,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
-                ReadChartSeries(plot),
+                ReadChartSeries(plot, theme),
                 ReadChartElementValue(plot, "grouping"),
                 ReadChartElementValue(plot, "barDir"),
                 ReadChartElementValue(plot, "scatterStyle"),
@@ -933,7 +943,7 @@ internal sealed class PptxSceneBuilder
         return !string.Equals(ReadChartElementValue(plot, "varyColors"), "0", StringComparison.Ordinal);
     }
 
-    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot)
+    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme)
     {
         var series = new List<PptxSceneChartSeries>();
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
@@ -944,10 +954,56 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
-                ReadChartSeriesNumbers(seriesElement, "bubbleSize")));
+                ReadChartSeriesNumbers(seriesElement, "bubbleSize"),
+                ReadChartSeriesFill(seriesElement, theme),
+                ReadChartSeriesLine(seriesElement, theme),
+                ReadChartMarker(seriesElement, theme),
+                ReadChartSeriesSmooth(seriesElement)));
         }
 
         return series;
+    }
+
+    private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme)
+    {
+        XElement? shapeProperties = series.Element(ChartNamespace + "spPr");
+        return TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
+            ? new PptxSceneFillStyle(true, color, alpha)
+            : default;
+    }
+
+    private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme)
+    {
+        return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme);
+    }
+
+    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme)
+    {
+        XElement? marker = series.Element(ChartNamespace + "marker");
+        string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ?? "circle";
+        double size = marker?.Element(ChartNamespace + "size")?.Attribute("val") is { } value &&
+            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+                ? Math.Clamp(parsed, 2d, 30d)
+                : 4d;
+        XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
+        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+            ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
+            : default;
+        return new PptxSceneChartMarker(symbol, size, fill, ReadChartLine(shapeProperties, theme));
+    }
+
+    private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)
+    {
+        return shapeProperties is not null &&
+            TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double lineWidth, out double alpha)
+                ? new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null)
+                : default;
+    }
+
+    private static bool ReadChartSeriesSmooth(XElement series)
+    {
+        string? value = (string?)series.Element(ChartNamespace + "smooth")?.Attribute("val");
+        return value is "1" or "true";
     }
 
     private static string? ReadChartSeriesName(XElement series)
