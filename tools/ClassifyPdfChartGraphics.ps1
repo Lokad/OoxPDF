@@ -10,7 +10,9 @@ param(
 
     [double] $MinLineLength = 12,
 
-    [double] $MarkerMaxSize = 20
+    [double] $MarkerMaxSize = 20,
+
+    [double] $GridlineBoundsTolerance = 1.0
 )
 
 $ErrorActionPreference = "Stop"
@@ -82,6 +84,30 @@ function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount
     }
 }
 
+function Copy-StructureAsKind($kind, $structure) {
+    [pscustomobject]@{
+        Kind = $kind
+        PageNumber = $structure.PageNumber
+        SourceKind = $structure.SourceKind
+        SourceOperator = $structure.SourceOperator
+        SegmentCount = $structure.SegmentCount
+        MinX = [double]$structure.MinX
+        MinY = [double]$structure.MinY
+        MaxX = [double]$structure.MaxX
+        MaxY = [double]$structure.MaxY
+        Width = Round (Width $structure)
+        Height = Round (Height $structure)
+        CenterX = Round (CenterX $structure)
+        CenterY = Round (CenterY $structure)
+        LineWidth = [double]$structure.LineWidth
+        StrokeColor = $structure.StrokeColor
+        FillColor = $structure.FillColor
+        Dash = $structure.Dash
+        LineCap = $structure.LineCap
+        LineJoin = $structure.LineJoin
+    }
+}
+
 function Get-UnionBounds($items) {
     if ($items.Count -eq 0) {
         return $null
@@ -97,6 +123,14 @@ function Get-UnionBounds($items) {
         MaxX = [double]$maxX
         MaxY = [double]$maxY
     }
+}
+
+function Is-Near([double]$left, [double]$right, [double]$tolerance) {
+    return [Math]::Abs($left - $right) -le $tolerance
+}
+
+function Is-InsideOpenInterval([double]$value, [double]$min, [double]$max, [double]$tolerance) {
+    return $value -gt ($min + $tolerance) -and $value -lt ($max - $tolerance)
 }
 
 $ops = Read-JsonArray $InputPath
@@ -152,6 +186,34 @@ if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
     if ($maxX -gt $minX -and $maxY -gt $minY) {
         $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
         $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
+    }
+}
+
+$axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)
+$plotBoxForGridlines = if ($axisPairPlotBox.Count -gt 0) {
+    $axisPairPlotBox[0]
+}
+else {
+    @($structures | Where-Object { $_.Kind -eq "PlotBoxCandidate" } | Select-Object -First 1)[0]
+}
+
+if ($null -ne $plotBoxForGridlines) {
+    foreach ($line in $horizontalLines) {
+        $spansPlotWidth = (Is-Near ([double]$line.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
+            (Is-Near ([double]$line.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
+        $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterY) ([double]$plotBoxForGridlines.MinY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance
+        if ($spansPlotWidth -and $isInsidePlot) {
+            $structures.Add((Copy-StructureAsKind "HorizontalGridlineCandidate" $line))
+        }
+    }
+
+    foreach ($line in $verticalLines) {
+        $spansPlotHeight = (Is-Near ([double]$line.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
+            (Is-Near ([double]$line.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
+        $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterX) ([double]$plotBoxForGridlines.MinX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance
+        if ($spansPlotHeight -and $isInsidePlot) {
+            $structures.Add((Copy-StructureAsKind "VerticalGridlineCandidate" $line))
+        }
     }
 }
 

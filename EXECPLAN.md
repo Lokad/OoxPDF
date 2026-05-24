@@ -1794,6 +1794,19 @@ High-priority actions:
   and polar/radar shape semantics. The new derived candidates improve the structural oracle surface, but they
   still do not classify chart text matrices, legend entries, leader lines, or Office radar polygon strokes as
   first-class chart structures.
+- [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
+  `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
+  records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
+  raw line and plot-box structures are unchanged, so current visual gates remain stable unless a manifest
+  explicitly compares the new semantic kinds; `CheckVisualCase.ps1` also forwards optional gridline
+  classification tolerances for future manifests. Validation on `pptx-ladder-11-chart-column-clustered-port`
+  showed Office with zero horizontal gridline candidates and the candidate with six, exposing a real
+  Office/candidate structural mismatch for future renderer work instead of hiding it behind raster metrics.
+- [ ] 2026-05-25: Decide the Office-aligned gridline rendering rule before gating gridline candidates. The
+  public clustered-column case shows that Office does not expose candidate-like horizontal gridline strokes
+  for that default chart even though the candidate currently does; the next chart renderer slice should
+  inspect Office's path/clip/fill strategy and determine whether gridlines should be suppressed, restyled,
+  reordered, clipped differently, or represented through another Office-like PDF structure.
 - [x] 2026-05-25: Add a chart text-structure oracle slice. `ClassifyPdfChartText.ps1` now classifies inspected
   PDF text operations relative to derived chart plot boxes as `AbovePlotText`, `BelowPlotText`,
   `InsidePlotText`, `LeftAxisText`, `RightSideText`, `OuterChartText`, or generic `ChartText`; it records
@@ -3713,6 +3726,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   and a derived `PlotBoxCandidate` from their bounds, while the Office PDF exposes fewer line-like strokes and
   more repeated clipping boxes/Bezier-filled regions. The next classifier work should survey multiple chart
   families before turning any bucket into a strict gate.
+- Observation: Explicit semantic gridline classification exposes a chart fidelity gap that the current
+  clustered-column manifest deliberately does not gate.
+  Evidence: rerunning `ClassifyPdfChartGraphics.ps1` on the public clustered-column inspected PDFs showed
+  zero Office `HorizontalGridlineCandidate` records and six candidate records inside the Office-aligned
+  `AxisPairPlotBoxCandidate`. The existing public visual gate still passes because it only compares
+  `AxisPairPlotBoxCandidate`, which confirms the new gridline kind is available for diagnosis without
+  destabilizing unrelated gates.
 
 ## Decision Log
 
@@ -3756,8 +3776,15 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   beyond charts and avoids baking chart assumptions into the PDF parser.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Keep chart semantic classification as a separate script over inspected PDF graphics JSON.
-  Rationale: The PDF inspector should stay a low-level, reusable parser. Chart classification is intentionally
-  higher-level and exploratory while Office PDF evidence is gathered across chart families.
+  Rationale: The same inspected primitives can support multiple chart-family classifiers, and keeping the
+  semantic layer out of `PdfInspect` lets the plan add, revise, or remove chart-specific candidates without
+  changing the lower-level PDF parser.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Make chart gridline candidates opt-in semantic records rather than default visual gates.
+  Rationale: The clustered-column evidence shows a real Office/candidate mismatch: the candidate has six
+  plot-spanning horizontal strokes where Office exposes no matching gridline strokes. That should drive a
+  renderer investigation, but turning it into a gate before understanding Office's PDF strategy would freeze
+  the current mismatch instead of eliminating it structurally.
   Date/Author: 2026-05-25 / Codex.
 
 ## Outcomes & Retrospective
@@ -3826,7 +3853,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-204 passed, 0 failed, 0 skipped
+207 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -3877,6 +3904,10 @@ and line-marker text operations relative to derived plot boxes; strict reference
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
 `artifacts/tmp-chart-text-gate/case.json` exercised the new `maxChartTextStructurePositionDelta` harness path
 successfully at `artifacts/visual/tmp-chart-text-gate-line-markers/20260525-002824`.
+Chart gridline semantic probe: `ClassifyPdfChartGraphics.ps1` on the clustered-column inspected PDFs emitted
+zero Office `HorizontalGridlineCandidate` structures and six candidate structures, while preserving the
+passing `AxisPairPlotBoxCandidate` gate. The public visual case passed through the updated classifier at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-015313`.
 ```
 
 Latest public vertical text probes:

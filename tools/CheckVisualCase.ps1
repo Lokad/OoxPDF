@@ -335,6 +335,10 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
         $classifyReferenceArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
         $classifyCandidateArgs.MarkerMaxSize = [double]$manifest.expected.chartGraphicsMarkerMaxSize
     }
+    if ($manifest.expected.chartGraphicsGridlineBoundsTolerance -ne $null) {
+        $classifyReferenceArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
+        $classifyCandidateArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartGraphicsGridlineBoundsTolerance
+    }
 
     & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceArgs
     if ($LASTEXITCODE -ne 0) {
@@ -425,6 +429,10 @@ if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
     if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {
         $classifyReferenceGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
         $classifyCandidateGraphicsArgs.PageNumber = [int]$manifest.expected.compareChartTextStructurePageNumber
+    }
+    if ($manifest.expected.chartTextGraphicsGridlineBoundsTolerance -ne $null) {
+        $classifyReferenceGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
+        $classifyCandidateGraphicsArgs.GridlineBoundsTolerance = [double]$manifest.expected.chartTextGraphicsGridlineBoundsTolerance
     }
 
     & (Join-Path $PSScriptRoot "ClassifyPdfChartGraphics.ps1") @classifyReferenceGraphicsArgs
