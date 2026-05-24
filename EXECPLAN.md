@@ -3679,6 +3679,9 @@ typed scene table font prepass / 2026-05-24:
 `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed after replacing the raw XML table
 font prepass with a typed scene-node traversal. The non-slow suite passed with 190 passed, 0 failed,
 7 skipped. `dotnet pack` succeeded and the full suite passed with 197 passed, 0 failed, 0 skipped.
+Private run `artifacts/private-visual/lokad-value-based/20260524-223120` stayed stable: 84/84 compared pages,
+zero dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`, and slide 17 MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
