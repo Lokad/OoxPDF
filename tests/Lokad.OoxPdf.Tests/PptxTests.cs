@@ -143,6 +143,7 @@ internal static class PptxTests
                     <c:varyColors val="0"/>
                     <c:gapWidth val="175"/>
                     <c:overlap val="25"/>
+                    <c:dLbls><c:showVal val="1"/><c:showPercent val="0"/></c:dLbls>
                     <c:ser>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
@@ -321,6 +322,8 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].VaryColors == false, "Expected chart plot varyColors in the scene model.");
         TestAssert.Equal(175d, slide.SlideNodes[4].Chart?.Plots[0].GapWidth ?? 0d);
         TestAssert.Equal(25d, slide.SlideNodes[4].Chart?.Plots[0].Overlap ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShowValue == true, "Expected chart data-label value flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShowPercent == false, "Expected chart data-label percent flag in the scene model.");
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);

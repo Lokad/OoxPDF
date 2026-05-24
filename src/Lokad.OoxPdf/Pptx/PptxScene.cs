@@ -337,7 +337,12 @@ internal sealed record PptxSceneChartPlot(
     bool VaryColors,
     double? GapWidth,
     double? Overlap,
-    double? HoleSize);
+    double? HoleSize,
+    PptxSceneChartDataLabels DataLabels);
+
+internal sealed record PptxSceneChartDataLabels(
+    bool ShowValue,
+    bool ShowPercent);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -937,10 +942,24 @@ internal sealed class PptxSceneBuilder
                 ReadChartPlotVaryColors(plot),
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),
-                ReadChartElementDouble(plot, "holeSize")));
+                ReadChartElementDouble(plot, "holeSize"),
+                ReadChartDataLabels(plot)));
         }
 
         return plots;
+    }
+
+    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot)
+    {
+        XElement? labels = plot.Element(ChartNamespace + "dLbls") ??
+            plot.Elements(ChartNamespace + "ser")
+                .Select(series => series.Element(ChartNamespace + "dLbls"))
+                .FirstOrDefault(element => element is not null);
+        return labels is null
+            ? new PptxSceneChartDataLabels(ShowValue: false, ShowPercent: false)
+            : new PptxSceneChartDataLabels(
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
+                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")));
     }
 
     private static string ReadChartElementValue(XElement element, string childName)

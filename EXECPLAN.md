@@ -647,6 +647,19 @@ High-priority actions:
   stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`,
   and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`,
   changed16 `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Move chart data-label value/percent flags into `PptxSceneChartPlot.DataLabels` and make
+  bar, line, pie, and doughnut data-label rendering consume the typed scene options before raw XML fallback.
+  This preserves the existing plot-level then first-series `c:dLbls` precedence while removing another
+  renderer-local chart XML scan from the supported scene path. Focused model/chart tests passed, the full
+  runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-153953` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend the chart data-label scene model beyond value/percent toggles: label position, separator,
+  category/series-name flags, leader lines, number format, and text/style (`c:txPr`, `c:spPr`) still need
+  typed ownership before data-label layout can be aligned structurally with Office instead of renderer
+  heuristics.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -781,6 +794,12 @@ High-priority actions:
   - [x] Make chart title/legend layout scene-first: supported chart layouts and fallback title drawing now
     consume `PptxSceneChartTitle`/`PptxSceneChartLegend`, while XML fallback remains for legacy paths and
     the single-series automatic bar-title rule.
+  - [x] Add and consume typed chart data-label visibility options: `PptxSceneChartPlot.DataLabels` preserves
+    plot/series fallback `showVal` and `showPercent` flags, and bar, line, pie, and doughnut rendering now
+    consume those options before raw `c:dLbls` fallback.
+  - [ ] Extend chart data-label modeling to cover label position, separators, category/series-name flags,
+    leader lines, number formats, and label text/shape styles before attempting finer Office-aligned
+    data-label layout.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -2960,6 +2979,14 @@ Current expected test result:
 
 ```text
 186 passed, 0 failed
+```
+
+Latest private PPTX acceptance baseline:
+
+```text
+lokad-value-based / 20260524-153953: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -491,7 +491,7 @@ internal sealed partial class PptxRenderer
                         extraBarPlot?.VaryColors ?? ReadChartVaryColors(extraBarChart),
                         extraBarPlot?.GapWidth ?? ReadChartGapWidth(extraBarChart),
                         extraBarPlot?.Overlap ?? ReadChartOverlap(extraBarChart));
-                    fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, extraBarChart, extraSeries, extraValueExtents, extraHorizontalBars));
+                    fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, extraSeries, extraValueExtents, extraHorizontalBars, ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart)));
                     seriesOffset += extraSeries.Count;
                     barChartIndex++;
                 }
@@ -532,7 +532,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, null, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, legendEntries, chartLayout.Legend));
-                fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barChart, barSeries, valueExtents, horizontalBars));
+                fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barSeries, valueExtents, horizontalBars, ReadSceneOrXmlDataLabelOptions(barPlot, barChart)));
                 return true;
             }
         }
@@ -571,7 +571,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(lineChart, seriesStrokes), chartLayout.Legend));
-                fonts.AddRange(RenderLineDataLabels(theme, graphics, plotBox, lineChart, lineSeries, valueExtents));
+                fonts.AddRange(RenderLineDataLabels(theme, graphics, plotBox, lineSeries, valueExtents, ReadSceneOrXmlDataLabelOptions(linePlot, lineChart)));
                 return true;
             }
         }
@@ -656,7 +656,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderPieChart(graphics, document, bounds, pieSeries[0], pointFills, pointStrokes, pointExplosions);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieChart, pieSeries[0], pointExplosions, holeSize: 0d));
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart)));
                 return true;
             }
         }
@@ -674,7 +674,7 @@ internal sealed partial class PptxRenderer
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderDoughnutChart(graphics, document, bounds, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
-                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutChart, doughnutSeries[0], pointExplosions, holeSize));
+                fonts.AddRange(RenderPieDataLabels(document, theme, graphics, bounds, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart)));
                 return true;
             }
         }
@@ -1276,9 +1276,8 @@ internal sealed partial class PptxRenderer
         return value is null || IsOoxmlTrue(value);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XElement chartElement, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
     {
-        ChartDataLabelOptions labelOptions = ReadChartDataLabelOptions(chartElement);
         if ((!labelOptions.ShowValue && !labelOptions.ShowPercent) || values.Count == 0)
         {
             return [];
@@ -1349,9 +1348,9 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CP");
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents, bool horizontalBars)
+    private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents, bool horizontalBars, ChartDataLabelOptions labelOptions)
     {
-        if (!ShouldRenderValueDataLabels(chartElement) || series.Count == 0)
+        if (!labelOptions.ShowValue || series.Count == 0)
         {
             return [];
         }
@@ -1418,9 +1417,9 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CBD");
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderLineDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XElement chartElement, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents)
+    private static IReadOnlyList<PdfFontResource> RenderLineDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, ChartValueExtents extents, ChartDataLabelOptions labelOptions)
     {
-        if (!ShouldRenderValueDataLabels(chartElement) || series.Count == 0)
+        if (!labelOptions.ShowValue || series.Count == 0)
         {
             return [];
         }
@@ -1487,11 +1486,6 @@ internal sealed partial class PptxRenderer
             RotationCenterY: 0d,
             FlipHorizontal: false,
             FlipVertical: false);
-    }
-
-    private static bool ShouldRenderValueDataLabels(XElement chartElement)
-    {
-        return ReadChartDataLabelOptions(chartElement).ShowValue;
     }
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
@@ -1563,6 +1557,13 @@ internal sealed partial class PptxRenderer
             : new ChartDataLabelOptions(
                 IsChartLabelFlagEnabled(labels, "showVal"),
                 IsChartLabelFlagEnabled(labels, "showPercent"));
+    }
+
+    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        return plot is null
+            ? ReadChartDataLabelOptions(chartElement)
+            : new ChartDataLabelOptions(plot.DataLabels.ShowValue, plot.DataLabels.ShowPercent);
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)
