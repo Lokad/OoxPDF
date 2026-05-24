@@ -514,7 +514,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadSceneOrXmlCategoryLabels(barPlot, barChart), horizontalBars));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(barPlot, barChart), horizontalBars));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -525,7 +525,7 @@ internal sealed partial class PptxRenderer
                         GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true) > 0;
                     if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                     {
-                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
+                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
                     }
 
                     if (!horizontalBars)
@@ -533,17 +533,17 @@ internal sealed partial class PptxRenderer
                         if (secondaryValueAxis is not null && IsChartAxisLabelVisible(secondaryValueAxis))
                         {
                             int sideSlot = GetValueAxisSideSlot(valueAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true);
-                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, null, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
+                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, null, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
                         }
                         else
                         {
-                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetBarChartValueExtents(barSeries, grouping)));
+                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeries, grouping)));
                         }
                     }
                 }
                 else if (!horizontalBars && secondaryValueAxis is not null && !IsChartAxisDeleted(secondaryValueAxis) && IsChartAxisLabelVisible(secondaryValueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, secondaryValueAxis, null, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, null, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, legendEntries, chartLayout.Legend));
                 fonts.AddRange(RenderBarDataLabels(theme, graphics, plotBox, barSeries, valueExtents, horizontalBars, ReadSceneOrXmlDataLabelOptions(barPlot, barChart)));
@@ -577,13 +577,13 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, categoryAxis, ReadSceneOrXmlCategoryLabels(linePlot, lineChart), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(linePlot, lineChart), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars: false));
-                    fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, GetLineChartValueExtents(lineSeries)));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars: false));
+                    fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(theme, graphics, plotBox, BuildStrokeLegendEntries(linePlot, lineChart, seriesStrokes), chartLayout.Legend));
                 fonts.AddRange(RenderLineDataLabels(theme, graphics, plotBox, lineSeries, valueExtents, ReadSceneOrXmlDataLabelOptions(linePlot, lineChart)));
@@ -1537,6 +1537,29 @@ internal sealed partial class PptxRenderer
         return style;
     }
 
+    private static ChartTextStyle ReadSceneOrXmlChartTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XDocument chartXml, XElement? element, double fallbackFontSize)
+    {
+        if (sceneChart is null)
+        {
+            return ReadChartTextStyle(theme, chartXml, element, fallbackFontSize);
+        }
+
+        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
+            ? themeText
+            : new RgbColor(0, 0, 0);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor);
+        style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+        style = sceneAxis is null
+            ? MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme))
+            : MergeChartTextStyle(style, ToChartTextStyleOverride(sceneAxis.TextStyle));
+        return style;
+    }
+
+    private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
+    {
+        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color);
+    }
+
     private static string? ResolveChartThemeFontFamily(PptxTheme theme)
     {
         return theme.ResolveTypeface("+mn-lt") ??
@@ -1628,14 +1651,14 @@ internal sealed partial class PptxRenderer
             : FormatChartAxisLabel(value);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? categoryAxis, IReadOnlyList<string> labels, bool horizontalBars)
+    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<string> labels, bool horizontalBars)
     {
         if (labels.Count == 0)
         {
             return [];
         }
 
-        ChartTextStyle style = ReadChartTextStyle(theme, chartXml, categoryAxis, fallbackFontSize: 9d);
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: 9d);
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
         var runs = new List<TextRun>(labels.Count);
@@ -1697,10 +1720,10 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CCA");
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
+    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
-        ChartTextStyle style = ReadChartTextStyle(theme, chartXml, valueAxis, fallbackFontSize: 8.5d);
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: 8.5d);
         double fontSize = style.FontSize;
         double height = fontSize * 1.35d;
         RgbColor color = style.Color;
@@ -1796,7 +1819,7 @@ internal sealed partial class PptxRenderer
         return primaryRight == secondaryRight ? 1 : 0;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, ChartValueExtents fallback)
+    private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback)
     {
         XElement? rightValueAxis = ReadSecondaryRightValueAxis(chartXml);
         if (rightValueAxis is null)
@@ -1806,7 +1829,7 @@ internal sealed partial class PptxRenderer
 
         ChartValueExtents extents = ReadChartValueAxisExtents(rightValueAxis, fallback);
         ChartAxisUnits axisUnits = ReadChartValueAxisUnits(rightValueAxis);
-        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, rightValueAxis, null, extents, axisUnits, horizontalBars: false, rightSide: true);
+        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, null, extents, axisUnits, horizontalBars: false, rightSide: true);
     }
 
     private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)

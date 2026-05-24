@@ -701,6 +701,18 @@ High-priority actions:
 - [ ] Extend chart gridline styling beyond direct solid/noFill lines: dash, cap/join, compound lines,
   theme style references, and chart-style inherited defaults still need typed ownership before gridlines can
   be considered fully structurally aligned with Office.
+- [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
+  and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
+  font size, and solid text color, and supported category/value axis labels consume those scene styles before
+  XML fallback. Focused model/chart tests passed after a transient parallel build lock was rerun serially,
+  the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-160802` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size: rich text runs, bold/italic,
+  rotation, tick-label offsets, multi-level category labels, and chart-style inherited text defaults still
+  need structural modeling before axis and data-label text can match Office without renderer heuristics.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -855,6 +867,10 @@ High-priority actions:
     is present.
   - [ ] Extend scene-owned gridline style records to cover dash/cap/join, compound lines, theme style
     references, and chart-style inherited defaults.
+  - [x] Add scene-owned chart-level and axis-level text-style overrides for the supported `txPr/defRPr`
+    subset: font family, font size, and solid color.
+  - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
+    multi-level category labels, data-label text styles, and chart-style inherited defaults.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -3039,7 +3055,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-160202: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-160802: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

@@ -136,6 +136,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:spPr><a:solidFill><a:srgbClr val="F1E2D3"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
                   <c:plotArea><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
@@ -167,7 +168,7 @@ internal static class PptxTests
                     </c:ser>
                   </c:bubbleChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
-                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
                   </c:chart>
@@ -315,6 +316,9 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
+        TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);
+        TestAssert.Equal(new RgbColor(16, 17, 18), slide.SlideNodes[4].Chart?.TextStyle.Color ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.HasFill == true, "Expected chart area fill in the scene model.");
         TestAssert.Equal(new RgbColor(241, 226, 211), slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Color ?? default);
         TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Fill.Alpha ?? 0d);
@@ -388,6 +392,9 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.HasLine == true, "Expected hidden chart minor gridline line style in the scene model.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Width ?? -1d);
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Alpha ?? -1d);
+        TestAssert.Equal("Aptos", slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal(9d, slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontSize ?? 0d);
+        TestAssert.Equal(new RgbColor(101, 67, 33), slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Color ?? default);
         TestAssert.Equal("high", slide.SlideNodes[4].Chart?.Axes[1].TickLabelPosition ?? string.Empty);
         TestAssert.Equal("$#,##0", slide.SlideNodes[4].Chart?.Axes[1].NumberFormat ?? string.Empty);
         TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);

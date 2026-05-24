@@ -325,6 +325,7 @@ internal sealed record PptxSceneChart(
     IReadOnlyList<PptxSceneChartAxis> Axes,
     PptxSceneChartTitle Title,
     PptxSceneChartLegend Legend,
+    PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ChartAreaStyle,
     PptxSceneChartShapeStyle PlotAreaStyle);
 
@@ -349,6 +350,11 @@ internal sealed record PptxSceneChartDataLabels(
 internal sealed record PptxSceneChartShapeStyle(
     PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line);
+
+internal readonly record struct PptxSceneChartTextStyleOverride(
+    string? FontFamily,
+    double? FontSize,
+    RgbColor? Color);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -392,6 +398,7 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneLineStyle Line,
     PptxSceneLineStyle MajorGridlineLine,
     PptxSceneLineStyle MinorGridlineLine,
+    PptxSceneChartTextStyleOverride TextStyle,
     string TickLabelPosition,
     string? NumberFormat);
 
@@ -920,6 +927,7 @@ internal sealed class PptxSceneBuilder
             ReadChartAxes(chartXml, theme),
             ReadChartTitle(chartXml),
             ReadChartLegend(chartXml),
+            ReadChartTextStyleOverride(chartXml?.Root, theme),
             ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme),
             ReadChartShapeStyle(chartXml?
                 .Descendants(ChartNamespace + "plotArea")
@@ -1231,6 +1239,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartAxisLine(axis, theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
+                ReadChartTextStyleOverride(axis, theme),
                 (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
                 ReadChartAxisNumberFormat(axis)));
         }
@@ -1248,6 +1257,35 @@ internal sealed class PptxSceneBuilder
         }
 
         return ReadChartLine(shapeProperties, theme);
+    }
+
+    private static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme)
+    {
+        XElement? defaultRunProperties = parent?
+            .Element(ChartNamespace + "txPr")?
+            .Elements(DrawingNamespace + "p")
+            .Select(paragraph => paragraph.Element(DrawingNamespace + "pPr")?.Element(DrawingNamespace + "defRPr"))
+            .FirstOrDefault(element => element is not null);
+        if (defaultRunProperties is null)
+        {
+            return default;
+        }
+
+        string? typeface = (string?)defaultRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
+            (string?)defaultRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
+            (string?)defaultRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
+            ? null
+            : theme.ResolveTypeface(typeface);
+        double? fontSize = defaultRunProperties.Attribute("sz") is { } sizeAttribute &&
+            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
+            sizeHundredths > 0
+                ? sizeHundredths / 100d
+                : null;
+        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out _)
+            ? parsedColor
+            : null;
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color);
     }
 
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
