@@ -322,7 +322,9 @@ internal sealed record PptxSceneChart(
     XDocument? ChartXml,
     IReadOnlyList<RgbColor>? PaletteColors,
     IReadOnlyList<PptxSceneChartPlot> Plots,
-    IReadOnlyList<PptxSceneChartAxis> Axes);
+    IReadOnlyList<PptxSceneChartAxis> Axes,
+    PptxSceneChartTitle Title,
+    PptxSceneChartLegend Legend);
 
 internal sealed record PptxSceneChartPlot(
     string Kind,
@@ -334,6 +336,15 @@ internal sealed record PptxSceneChartAxis(
     string Kind,
     string Position,
     bool IsDeleted);
+
+internal sealed record PptxSceneChartTitle(
+    string? Text,
+    bool IsAutoDeleted);
+
+internal sealed record PptxSceneChartLegend(
+    string Position,
+    bool Overlay,
+    bool IsVisible);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -842,7 +853,15 @@ internal sealed class PptxSceneBuilder
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
         XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
         IReadOnlyList<RgbColor>? paletteColors = chartPart is null ? null : ReadChartPaletteColors(package, chartPart.Name, theme);
-        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors, ReadChartPlots(chartXml), ReadChartAxes(chartXml));
+        return new PptxSceneChart(
+            relationshipId,
+            targetPartName,
+            chartXml,
+            paletteColors,
+            ReadChartPlots(chartXml),
+            ReadChartAxes(chartXml),
+            ReadChartTitle(chartXml),
+            ReadChartLegend(chartXml));
     }
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml)
@@ -899,6 +918,40 @@ internal sealed class PptxSceneBuilder
         }
 
         return axes;
+    }
+
+    private static PptxSceneChartTitle ReadChartTitle(XDocument? chartXml)
+    {
+        XElement? chart = chartXml?
+            .Descendants(ChartNamespace + "chart")
+            .FirstOrDefault();
+        if (chart is null)
+        {
+            return new PptxSceneChartTitle(null, IsAutoDeleted: false);
+        }
+
+        bool isAutoDeleted = IsOoxmlBooleanElementEnabled(chart.Element(ChartNamespace + "autoTitleDeleted"));
+        XElement? title = chart.Element(ChartNamespace + "title");
+        string? text = title?
+            .Descendants(DrawingNamespace + "t")
+            .Aggregate(string.Empty, (current, textElement) => current + textElement.Value);
+        return new PptxSceneChartTitle(string.IsNullOrWhiteSpace(text) ? null : text, isAutoDeleted);
+    }
+
+    private static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml)
+    {
+        XElement? legend = chartXml?
+            .Descendants(ChartNamespace + "legend")
+            .FirstOrDefault();
+        if (legend is null)
+        {
+            return new PptxSceneChartLegend("r", Overlay: false, IsVisible: false);
+        }
+
+        return new PptxSceneChartLegend(
+            (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
+            IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay")),
+            !IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "delete")));
     }
 
     private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, string chartPartName, PptxTheme theme)

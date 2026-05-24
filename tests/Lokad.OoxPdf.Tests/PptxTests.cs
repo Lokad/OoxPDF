@@ -135,14 +135,18 @@ internal static class PptxTests
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-                  <c:chart><c:plotArea><c:barChart>
+                  <c:chart>
+                  <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:t>Scene Chart</a:t></a:r></a:p></c:rich></c:tx></c:title>
+                  <c:plotArea><c:barChart>
                     <c:ser/>
                     <c:axId val="10"/>
                     <c:axId val="20"/>
                   </c:barChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/></c:catAx>
                   <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/></c:valAx>
-                  </c:plotArea></c:chart>
+                  </c:plotArea>
+                  <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
+                  </c:chart>
                 </c:chartSpace>
                 """,
             ["ppt/charts/colors1.xml"] = """
@@ -293,6 +297,9 @@ internal static class PptxTests
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
+        TestAssert.Equal("Scene Chart", slide.SlideNodes[4].Chart?.Title.Text ?? string.Empty);
+        TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
         TestAssert.Equal(2743200L, slide.SlideNodes[5].GroupTransform.OffsetX);
         TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleX);

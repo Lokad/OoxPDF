@@ -546,6 +546,13 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Re-ran model/chart-focused tests, the full test suite, package, and private PPTX acceptance
+  after adding typed explicit chart title and legend metadata to `PptxSceneChart`. Focused tests passed, the
+  full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-140522` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -647,6 +654,8 @@ High-priority actions:
     without repeated loose descendant scans.
   - [x] Add the first typed chart-axis catalog: `PptxSceneChart.Axes` records OOXML axis kind, id, position,
     and delete state so plot-to-axis binding can become structural instead of repeatedly searching raw XML.
+  - [x] Add typed explicit chart title and legend metadata to `PptxSceneChart`; this keeps OOXML title/legend
+    state distinct from renderer fallback heuristics and prepares title/legend layout to become scene-driven.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -2688,7 +2697,7 @@ Office-PDF-inspected, visually gated when close, and free of private content.
    cannot be explained structurally.
 2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` now models
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
-   chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries, and chart axis catalogs, while `PptxRenderContext` owns package, theme, inheritance, relationships,
+   chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries, chart axis catalogs, titles, and legends, while `PptxRenderContext` owns package, theme, inheritance, relationships,
    image cache, and diagnostics. Keep retiring XML fallbacks family by family: next slices should promote
    table layout/style records, chart series/axis/layout records, and remaining text/layout inputs into typed
    models while preserving source XML only as an escape hatch for unported features.
