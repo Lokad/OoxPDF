@@ -3871,6 +3871,23 @@ paragraph advances by its `endParaRPr` font size before the next visible paragra
 OOXML paragraph model distinction between "no visible runs" and "no layout content" without introducing a
 slide-specific placement rule. The `pptx-typography` non-slow group passed with 67 passed, 0 failed, 2
 skipped; the full suite passed with 201 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+empty paragraph anchor-estimate alignment / 2026-05-24:
+The vertical-anchor text-height estimator now mirrors line layout for layout-only paragraphs: first-paragraph
+`spcBef` is skipped, later `spcBef` is conditional on prior layout content, and an empty paragraph with
+`a:endParaRPr` uses the `endParaRPr` font size as the reference for percentage spacing. This closes a
+structural mismatch where anchored text could estimate a shorter height than the actual layout path when an
+empty paragraph had percentage spacing. `PptxSyntheticVerticalAnchorUsesEndParagraphFontSizeForEmptySpacing`
+locks percent spacing against an equivalent point spacing case. The `pptx-typography` non-slow group passed
+with 68 passed, 0 failed, 2 skipped; the full suite passed with 202 passed, 0 failed, 0 skipped; and
+`dotnet pack` succeeded.
+
+post empty-paragraph anchor private validation / 2026-05-24:
+Private run `artifacts/private-visual/lokad-value-based/20260524-233516` stayed stable after the
+empty-paragraph anchor-estimate fix: 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`,
+changed16 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 stayed at MAE `2.880739`, RMSE
+`19.298084`, changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, and foreground histogram
+correlation `0.999858`.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

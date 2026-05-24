@@ -1986,6 +1986,63 @@ internal static class PptxTests
         TestAssert.True(baselineGap > 50d, $"Expected empty 72pt endParaRPr paragraph to advance more than the 18pt control, got {baselineGap.ToString("0.###", CultureInfo.InvariantCulture)}pt.");
     }
 
+    public static void PptxSyntheticVerticalAnchorUsesEndParagraphFontSizeForEmptySpacing()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="2743200" cy="3657600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr tIns="0" bIns="0" anchor="ctr"/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>First</a:t></a:r></a:p>
+                        <a:p><a:pPr><a:spcBef><a:spcPct val="100000"/></a:spcBef></a:pPr><a:endParaRPr sz="7200"/></a:p>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>Next</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                    <p:sp>
+                      <p:spPr><a:xfrm><a:off x="4572000" y="914400"/><a:ext cx="2743200" cy="3657600"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr tIns="0" bIns="0" anchor="ctr"/><a:lstStyle/>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>First</a:t></a:r></a:p>
+                        <a:p><a:pPr><a:spcBef><a:spcPts val="7200"/></a:spcBef></a:pPr><a:endParaRPr sz="7200"/></a:p>
+                        <a:p><a:r><a:rPr sz="1800"/><a:t>Next</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        TestAssert.Equal(2, layout.Frames.Count);
+
+        PptxTextLineLayoutSnapshot[] percentSpacingLines = layout.Frames[0]
+            .Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+        PptxTextLineLayoutSnapshot[] pointSpacingLines = layout.Frames[1]
+            .Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, percentSpacingLines.Length);
+        TestAssert.Equal(2, pointSpacingLines.Length);
+        TestAssert.True(Math.Abs(percentSpacingLines[0].BaselineY - pointSpacingLines[0].BaselineY) < 0.01d, "Expected percent and equivalent point spacing before an empty endParaRPr paragraph to estimate the same anchored text height.");
+        TestAssert.True(Math.Abs(percentSpacingLines[1].BaselineY - pointSpacingLines[1].BaselineY) < 0.01d, "Expected anchored follow-up paragraph baselines to stay equivalent after empty endParaRPr spacing.");
+    }
+
     public static void PptxSyntheticTextWrapDropsBreakSpaceAtLineEnd()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

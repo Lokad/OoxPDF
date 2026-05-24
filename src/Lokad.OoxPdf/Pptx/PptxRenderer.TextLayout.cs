@@ -2589,25 +2589,36 @@ internal sealed partial class PptxRenderer
         var advanceEstimator = new TextAdvanceEstimator();
         bool compatibleLineSpacing = HasCompatibleLineSpacing(textBody);
         bool allowWrapping = TextBodyAllowsWrapping(textBody);
+        bool hasEstimatedParagraph = false;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
             XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
                 defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
             LineSpacing lineSpacing = ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing);
-            double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
-            height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", paragraphFontSize);
             if (!ParagraphHasVisibleContent(paragraph))
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {
                     XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
                     double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
+                    if (hasEstimatedParagraph)
+                    {
+                        height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", emptyFontSize);
+                    }
+
                     height += ReadEstimatedAnchorLineAdvance(lineSpacing, emptyFontSize, null, bold: false, italic: false, advanceEstimator);
                     height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", emptyFontSize);
+                    hasEstimatedParagraph = true;
                 }
 
                 continue;
+            }
+
+            double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
+            if (hasEstimatedParagraph)
+            {
+                height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", paragraphFontSize);
             }
 
             double maxFontSize = 0d;
@@ -2687,6 +2698,7 @@ internal sealed partial class PptxRenderer
             }
 
             height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", paragraphFontSize);
+            hasEstimatedParagraph = true;
         }
 
         return height;
