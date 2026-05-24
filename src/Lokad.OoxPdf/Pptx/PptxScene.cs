@@ -2025,7 +2025,7 @@ internal sealed class PptxSceneBuilder
             ParseOptionalDoubleAttribute(path, "w", 21600d),
             ParseOptionalDoubleAttribute(path, "h", 21600d),
             !string.Equals((string?)path.Attribute("fill"), "none", StringComparison.Ordinal),
-            !string.Equals((string?)path.Attribute("stroke"), "false", StringComparison.Ordinal),
+            ParseBoolAttribute(path, "stroke", defaultValue: true),
             commands
                 .Cast<PptxSceneCustomCommand>()
                 .ToArray());
@@ -2809,8 +2809,15 @@ internal sealed class PptxSceneBuilder
 
     private static bool ParseOptionalBoolAttribute(XElement? element, string attributeName)
     {
+        return ParseBoolAttribute(element, attributeName, defaultValue: false);
+    }
+
+    private static bool ParseBoolAttribute(XElement? element, string attributeName, bool defaultValue)
+    {
         string? value = (string?)element?.Attribute(attributeName);
-        return value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        return value is null
+            ? defaultValue
+            : value is "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
     private static int ParseOptionalIntAttribute(XElement? element, string attributeName, int defaultValue)

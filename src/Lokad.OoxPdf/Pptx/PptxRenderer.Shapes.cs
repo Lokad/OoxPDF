@@ -1178,7 +1178,7 @@ internal sealed partial class PptxRenderer
 
     private static bool CustomGeometryPathAllowsStroke(XElement path)
     {
-        return !string.Equals((string?)path.Attribute("stroke"), "false", StringComparison.Ordinal);
+        return ParseBoolAttribute(path, "stroke", defaultValue: true);
     }
 
     private static void AppendCustomGeometryPath(PdfGraphicsBuilder graphics, XElement path, double x, double y, double width, double height)
