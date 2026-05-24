@@ -605,6 +605,14 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Make ordered chart rendering consume scene-owned series styles first for series fills,
+  strokes, markers, and smooth flags. Pattern fills are modeled explicitly in `PptxSceneChartSeries`, so
+  scene-first style consumption does not narrow the existing XML style support. Focused model/chart tests
+  passed after a transient parallel build file lock was rerun serially, the full runner passed 186/186,
+  `dotnet pack` succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-150545`
+  stayed stable: 84/84 compared pages, zero dimension mismatches, deck MAE `9.043369`, changed16
+  `0.116418`, and only one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE
+  `2.945717`, changed16 `0.045530`, SSIM `0.917662`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -2902,7 +2910,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-178 passed, 0 failed
+186 passed, 0 failed
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

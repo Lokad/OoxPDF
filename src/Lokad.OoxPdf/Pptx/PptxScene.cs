@@ -347,6 +347,7 @@ internal sealed record PptxSceneChartSeries(
     IReadOnlyList<double> YValues,
     IReadOnlyList<double> BubbleSizes,
     PptxSceneFillStyle Fill,
+    PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
     bool Smooth);
@@ -956,6 +957,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
                 ReadChartSeriesNumbers(seriesElement, "bubbleSize"),
                 ReadChartSeriesFill(seriesElement, theme),
+                ReadChartSeriesPatternFill(seriesElement, theme),
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme),
                 ReadChartSeriesSmooth(seriesElement)));
@@ -975,6 +977,30 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme)
     {
         return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme);
+    }
+
+    private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme)
+    {
+        XElement? patternFill = series
+            .Element(ChartNamespace + "spPr")
+            ?.Element(DrawingNamespace + "pattFill");
+        if (patternFill is null)
+        {
+            return default;
+        }
+
+        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor, out _)
+            ? foregroundColor
+            : new RgbColor(0, 0, 0);
+        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor, out _)
+            ? backgroundColor
+            : new RgbColor(255, 255, 255);
+        return new PptxScenePatternFill(
+            HasPattern: true,
+            (string?)patternFill.Attribute("prst") ?? "pct50",
+            foreground,
+            background,
+            Alpha: 1d);
     }
 
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme)

@@ -237,6 +237,61 @@ internal sealed partial class PptxRenderer
             : ReadChartCategoryLabels(chartElement);
     }
 
+    private static IReadOnlyList<ChartSeriesFill?> ReadSceneOrXmlSeriesFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        ChartSeriesFill?[]? fills = plot?
+            .Series
+            .Select(series =>
+            {
+                if (series.Fill.HasFill)
+                {
+                    return new ChartSeriesFill(series.Fill.Color, series.Fill.Alpha);
+                }
+
+                return series.PatternFill.HasPattern
+                    ? new ChartSeriesFill(series.PatternFill.Foreground, series.PatternFill.Alpha, series.PatternFill.Preset, series.PatternFill.Background)
+                    : (ChartSeriesFill?)null;
+            })
+            .ToArray();
+        return fills is { Length: > 0 } && fills.Any(fill => fill is not null)
+            ? fills
+            : ReadChartSeriesFills(chartElement, theme);
+    }
+
+    private static IReadOnlyList<ChartSeriesStroke?> ReadSceneOrXmlSeriesStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        ChartSeriesStroke?[]? strokes = plot?
+            .Series
+            .Select(series => series.Line.HasLine ? new ChartSeriesStroke(series.Line.Color, series.Line.Alpha, series.Line.Width) : (ChartSeriesStroke?)null)
+            .ToArray();
+        return strokes is { Length: > 0 } && strokes.Any(stroke => stroke is not null)
+            ? strokes
+            : ReadChartSeriesStrokes(chartElement, theme);
+    }
+
+    private static IReadOnlyList<ChartMarkerStyle> ReadSceneOrXmlMarkerStyles(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    {
+        ChartMarkerStyle[]? markers = plot?
+            .Series
+            .Select(series => new ChartMarkerStyle(
+                series.Marker.Symbol,
+                series.Marker.Size,
+                series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
+                series.Marker.Line.HasLine ? new ChartSeriesStroke(series.Marker.Line.Color, series.Marker.Line.Alpha, series.Marker.Line.Width) : null))
+            .ToArray();
+        return markers is { Length: > 0 }
+            ? markers
+            : ReadChartMarkerStyles(chartElement, theme);
+    }
+
+    private static IReadOnlyList<bool> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        bool[]? smooth = plot?.Series.Select(series => series.Smooth).ToArray();
+        return smooth is { Length: > 0 } && smooth.Any(value => value)
+            ? smooth
+            : ReadChartSeriesSmooth(chartElement);
+    }
+
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, List<PdfFontResource> fonts)
     {
         IReadOnlyList<XElement> barCharts = chartXml.Descendants(ChartNamespace + "barChart").ToArray();
@@ -249,7 +304,7 @@ internal sealed partial class PptxRenderer
             {
                 bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
                 string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(barChart, theme);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
@@ -283,7 +338,7 @@ internal sealed partial class PptxRenderer
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     ChartValueExtents extraValueExtents = ReadChartValueAxisExtents(extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping));
                     ChartAxisUnits extraAxisUnits = ReadChartValueAxisUnits(extraValueAxis);
-                    IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadChartSeriesFills(extraBarChart, theme);
+                    IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadChartSeriesPointFills(extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadChartSeriesPointStrokes(extraBarChart, theme);
                     if (!extraHorizontalBars && secondaryValueAxis is null && IsRightValueAxis(extraValueAxis))
@@ -366,9 +421,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, lineChart);
             if (lineSeries.Count != 0)
             {
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(lineChart, theme);
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(lineChart, theme);
-                IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(lineChart);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, lineChart, theme);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(linePlot, lineChart, theme);
+                IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(linePlot, lineChart);
                 ChartAxesStyle axesStyle = ReadChartAxesStyle(chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadChartPlotAreaStyle(chartXml, theme);
                 ChartValueExtents valueExtents = ReadChartValueAxisExtents(chartXml, GetLineChartValueExtents(lineSeries));
@@ -406,8 +461,8 @@ internal sealed partial class PptxRenderer
                 grouping = string.IsNullOrEmpty(areaPlot?.Grouping) ? grouping : areaPlot.Grouping;
                 bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(areaChart, theme);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(areaChart, theme);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderAreaChart(graphics, document, bounds, areaSeries, stacked, seriesFills, seriesStrokes);
                 return true;
@@ -423,10 +478,10 @@ internal sealed partial class PptxRenderer
             {
                 string scatterStyle = ReadSceneOrXmlChartValue(scatterPlot?.ScatterStyle, scatterChart, "scatterStyle");
                 bool connectLines = scatterStyle.Contains("Line", StringComparison.OrdinalIgnoreCase);
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(scatterChart, theme);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(scatterChart, theme);
-                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadChartMarkerStyles(scatterChart, theme);
-                IReadOnlyList<bool> smoothSeries = ReadChartSeriesSmooth(scatterChart);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
+                IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
+                IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(scatterPlot, scatterChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderScatterChart(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries);
                 return true;
@@ -440,8 +495,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true);
             if (bubbleSeries.Count != 0)
             {
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(bubbleChart, theme);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(bubbleChart, theme);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderScatterChart(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
                 return true;
@@ -455,8 +510,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadSceneOrXmlChartSeries(radarPlot, radarChart);
             if (radarSeries.Count != 0)
             {
-                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadChartSeriesFills(radarChart, theme);
-                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadChartSeriesStrokes(radarChart, theme);
+                IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(radarPlot, radarChart, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, theme);
                 RenderRadarChart(graphics, document, bounds, radarSeries, seriesFills, seriesStrokes);
                 return true;

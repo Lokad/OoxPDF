@@ -157,6 +157,7 @@ internal static class PptxTests
                   <c:bubbleChart>
                     <c:ser>
                       <c:tx><c:strLit><c:pt idx="0"><c:v>Scatter</c:v></c:pt></c:strLit></c:tx>
+                      <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="112233"/></a:fgClr><a:bgClr><a:srgbClr val="F0E0D0"/></a:bgClr></a:pattFill></c:spPr>
                       <c:xVal><c:numLit><c:pt idx="0"><c:v>1.5</c:v></c:pt><c:pt idx="1"><c:v>2.5</c:v></c:pt></c:numLit></c:xVal>
                       <c:yVal><c:numLit><c:pt idx="0"><c:v>3.5</c:v></c:pt><c:pt idx="1"><c:v>4.5</c:v></c:pt></c:numLit></c:yVal>
                       <c:bubbleSize><c:numLit><c:pt idx="0"><c:v>9</c:v></c:pt><c:pt idx="1"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
@@ -336,6 +337,9 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
         TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);
+        TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Preset ?? string.Empty);
+        TestAssert.Equal(new RgbColor(17, 34, 51), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Foreground ?? default);
+        TestAssert.Equal(new RgbColor(240, 224, 208), slide.SlideNodes[4].Chart?.Plots[1].Series[0].PatternFill.Background ?? default);
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].XValues[1] ?? 0d);
         TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
         TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
