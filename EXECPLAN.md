@@ -3815,6 +3815,14 @@ boxes remain separate because they are different fallback behavior and need Offi
 merged. The `pptx-charts` non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed
 with 190 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0
 failed, 0 skipped.
+
+chart plot-box ownership for area/scatter/bubble / 2026-05-24:
+Area, scatter, and bubble chart renderers now consume a `ChartPlotBox` from the shared chart layout path
+instead of recomputing frame-relative geometry internally. This extends manual plot-area layout handling
+beyond bar/line charts and makes the remaining split explicit: radar and pie/doughnut still derive their own
+polar geometry from the frame and need separate Office-PDF-backed layout treatment. The `pptx-charts`
+non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed,
+7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

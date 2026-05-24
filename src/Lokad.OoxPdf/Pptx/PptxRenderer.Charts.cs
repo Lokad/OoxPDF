@@ -570,8 +570,9 @@ internal sealed partial class PptxRenderer
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme);
+                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderAreaChart(graphics, document, bounds, areaSeries, stacked, seriesFills, seriesStrokes);
+                RenderAreaChart(graphics, chartLayout.PlotBox, areaSeries, stacked, seriesFills, seriesStrokes);
                 return true;
             }
         }
@@ -589,8 +590,9 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(scatterPlot, scatterChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderScatterChart(graphics, document, bounds, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries);
+                RenderScatterChart(graphics, chartLayout.PlotBox, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries);
                 return true;
             }
         }
@@ -604,8 +606,9 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme);
+                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderScatterChart(graphics, document, bounds, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
+                RenderScatterChart(graphics, chartLayout.PlotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
                 return true;
             }
         }
@@ -3795,14 +3798,8 @@ internal sealed partial class PptxRenderer
         graphics.SetLineJoin(stroke.Join ?? 0);
     }
 
-    private static void RenderAreaChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderAreaChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
     {
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        ChartPlotBox plotBox = GetDefaultChartPlotBox(new ChartFrameBox(x, y, width, height));
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
@@ -3896,14 +3893,8 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
     {
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
-        ChartPlotBox plotBox = GetDefaultChartPlotBox(new ChartFrameBox(x, y, width, height));
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
