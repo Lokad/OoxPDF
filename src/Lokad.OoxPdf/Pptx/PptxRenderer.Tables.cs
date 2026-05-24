@@ -163,7 +163,7 @@ internal sealed partial class PptxRenderer
 
                 AddTableCellBorders(explicitBorders, cellProperties, context.Theme, cellX, cellBottom, columnWidth, cellHeight);
                 TableCellTextStyle tableStyleTextStyle = ReadBuiltInTableStyleTextStyle(table, rowIndex, columnIndex, context.Theme);
-                AddTableCellTextSpans(context, cell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
+                AddTableCellTextSpans(context, cell, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, tableStyleTextStyle);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -196,7 +196,9 @@ internal sealed partial class PptxRenderer
         return new PptxSceneTableCell(
             PptxSceneBuilder.ReadTableCellColumnSpan(cell),
             PptxSceneBuilder.ReadTableCellRowSpan(cell),
-            PptxSceneBuilder.IsMergedTableCellContinuation(cell));
+            PptxSceneBuilder.IsMergedTableCellContinuation(cell),
+            PptxSceneBuilder.ReadTableCellTextInsets(cell),
+            PptxSceneBuilder.ReadTableCellVerticalAnchor(cell));
     }
 
     private static bool TableHasExplicitBorders(XElement table)
@@ -394,7 +396,7 @@ internal sealed partial class PptxRenderer
         return transform is null ? null : ReadBoundsFromTransform(transform);
     }
 
-    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, TableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextSpans(PptxRenderContext context, XElement cell, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, TableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         if (textBody is null)
@@ -402,9 +404,23 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        TextInsets insets = ReadTableCellTextInsets(cell, textBody);
-        XElement tableTextShape = BuildTableCellTextShape(context, textBody, x, y, width, height, insets, ReadTableCellVerticalAnchor(cell), tableStyleTextStyle);
+        XElement tableTextShape = BuildTableCellTextShape(context, textBody, x, y, width, height, ToTextInsets(sceneCell.TextInsets), ToTextVerticalAnchor(sceneCell.VerticalAnchor), tableStyleTextStyle);
         spans.AddRange(ReadTextSpansForShape(tableTextShape, context, includePlaceholders: false));
+    }
+
+    private static TextInsets ToTextInsets(PptxSceneTextInsets insets)
+    {
+        return new TextInsets(insets.Left, insets.Right, insets.Top, insets.Bottom);
+    }
+
+    private static TextVerticalAnchor ToTextVerticalAnchor(PptxSceneTableCellVerticalAnchor anchor)
+    {
+        return anchor switch
+        {
+            PptxSceneTableCellVerticalAnchor.Middle => TextVerticalAnchor.Middle,
+            PptxSceneTableCellVerticalAnchor.Bottom => TextVerticalAnchor.Bottom,
+            _ => TextVerticalAnchor.Top
+        };
     }
 
     private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, TableCellTextStyle tableStyleTextStyle)
@@ -509,25 +525,6 @@ internal sealed partial class PptxRenderer
     private static long PointsToEmu(double points)
     {
         return (long)Math.Round(points / OoxUnits.PointsPerInch * OoxUnits.EmusPerInch);
-    }
-
-    private static TextInsets ReadTableCellTextInsets(XElement cell, XElement textBody)
-    {
-        TextInsets bodyInsets = ReadTextInsets(textBody);
-        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
-        return new TextInsets(
-            ReadTableCellMargin(cellProperties, "marL", bodyInsets.Left),
-            ReadTableCellMargin(cellProperties, "marR", bodyInsets.Right),
-            ReadTableCellMargin(cellProperties, "marT", bodyInsets.Top),
-            ReadTableCellMargin(cellProperties, "marB", bodyInsets.Bottom));
-    }
-
-    private static double ReadTableCellMargin(XElement? cellProperties, string attributeName, double fallback)
-    {
-        return cellProperties?.Attribute(attributeName) is { } margin &&
-            long.TryParse(margin.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emus)
-                ? OoxUnits.EmuToPoints(emus)
-                : fallback;
     }
 
     private static double EstimateTableCellTextHeight(XElement textBody, double textWidth, PptxTheme theme, TableCellTextStyle tableStyleTextStyle)
@@ -635,19 +632,6 @@ internal sealed partial class PptxRenderer
         }
 
         return 12d;
-    }
-
-    private static TextVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
-    {
-        string? anchor = (string?)cell
-            .Element(DrawingNamespace + "tcPr")
-            ?.Attribute("anchor");
-        return anchor switch
-        {
-            "ctr" => TextVerticalAnchor.Middle,
-            "b" => TextVerticalAnchor.Bottom,
-            _ => TextVerticalAnchor.Top
-        };
     }
 
     private readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color, double Alpha);

@@ -328,7 +328,18 @@ internal sealed record PptxSceneTableRow(IReadOnlyList<PptxSceneTableCell> Cells
 internal readonly record struct PptxSceneTableCell(
     int ColumnSpan,
     int RowSpan,
-    bool IsMergedContinuation);
+    bool IsMergedContinuation,
+    PptxSceneTextInsets TextInsets,
+    PptxSceneTableCellVerticalAnchor VerticalAnchor);
+
+internal readonly record struct PptxSceneTextInsets(double Left, double Right, double Top, double Bottom);
+
+internal enum PptxSceneTableCellVerticalAnchor
+{
+    Top,
+    Middle,
+    Bottom
+}
 
 internal readonly record struct PptxSceneGroupTransform(
     long OffsetX,
@@ -764,7 +775,9 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
-            IsMergedTableCellContinuation(cell));
+            IsMergedTableCellContinuation(cell),
+            ReadTableCellTextInsets(cell),
+            ReadTableCellVerticalAnchor(cell));
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)
@@ -788,6 +801,52 @@ internal sealed class PptxSceneBuilder
             int.TryParse(spanAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span)
             ? Math.Max(1, span)
             : 1;
+    }
+
+    internal static PptxSceneTextInsets ReadTableCellTextInsets(XElement cell)
+    {
+        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
+        XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
+        PptxSceneTextInsets bodyInsets = new(
+            ReadInset(bodyProperties, "lIns", 91440),
+            ReadInset(bodyProperties, "rIns", 91440),
+            ReadInset(bodyProperties, "tIns", 45720),
+            ReadInset(bodyProperties, "bIns", 45720));
+        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+        return new PptxSceneTextInsets(
+            ReadTableCellMargin(cellProperties, "marL", bodyInsets.Left),
+            ReadTableCellMargin(cellProperties, "marR", bodyInsets.Right),
+            ReadTableCellMargin(cellProperties, "marT", bodyInsets.Top),
+            ReadTableCellMargin(cellProperties, "marB", bodyInsets.Bottom));
+    }
+
+    private static double ReadTableCellMargin(XElement? cellProperties, string attributeName, double fallback)
+    {
+        return cellProperties?.Attribute(attributeName) is { } margin &&
+            long.TryParse(margin.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emus)
+                ? OoxUnits.EmuToPoints(emus)
+                : fallback;
+    }
+
+    private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
+    {
+        long emu = element?.Attribute(attributeName) is { } attribute
+            ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
+            : defaultEmu;
+        return OoxUnits.EmuToPoints(emu);
+    }
+
+    internal static PptxSceneTableCellVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
+    {
+        string? anchor = (string?)cell
+            .Element(DrawingNamespace + "tcPr")
+            ?.Attribute("anchor");
+        return anchor switch
+        {
+            "ctr" => PptxSceneTableCellVerticalAnchor.Middle,
+            "b" => PptxSceneTableCellVerticalAnchor.Bottom,
+            _ => PptxSceneTableCellVerticalAnchor.Top
+        };
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
