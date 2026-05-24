@@ -168,7 +168,7 @@ internal static class PptxTests
                     </c:ser>
                   </c:bubbleChart>
                   <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
-                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
+                  <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:min val="0"/><c:max val="20"/></c:scaling><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/></c:legend>
                   </c:chart>
@@ -406,6 +406,9 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(136, 153, 170), slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.Color ?? default);
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.Width ?? 0d);
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.Alpha ?? 0d);
+        TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.DashPattern[0] ?? 0d);
+        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.Cap ?? 0);
+        TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineLine.Join ?? 0);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.HasLine == true, "Expected hidden chart minor gridline line style in the scene model.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Width ?? -1d);
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Alpha ?? -1d);

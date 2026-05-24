@@ -706,7 +706,16 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend chart gridline styling beyond direct solid/noFill lines: dash, cap/join, compound lines,
+- [x] 2026-05-24: Preserve and consume chart stroke dash/cap/join metadata on scene-owned chart lines.
+  `ReadChartLine` now keeps `a:prstDash`, line caps, and joins in `PptxSceneLineStyle`; the chart stroke
+  renderer value object carries those fields through gridlines, axes, series, markers, points, and chart
+  area/plot-area strokes instead of truncating them to color/alpha/width. Focused model/chart tests passed
+  after a transient parallel build lock was rerun serially, the full runner passed 186/186, `dotnet pack`
+  succeeded, and private run `artifacts/private-visual/lokad-value-based/20260524-170506` stayed stable:
+  84/84 compared pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join lines: compound lines,
   theme style references, and chart-style inherited defaults still need typed ownership before gridlines can
   be considered fully structurally aligned with Office.
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
@@ -942,8 +951,10 @@ High-priority actions:
   - [x] Add scene-owned major/minor gridline style records and consume direct solid/noFill strokes for
     color, width, and alpha; hard-coded gray strokes are now defaults only when no explicit gridline style
     is present.
-  - [ ] Extend scene-owned gridline style records to cover dash/cap/join, compound lines, theme style
-    references, and chart-style inherited defaults.
+  - [x] Preserve and consume scene-owned chart line dash/cap/join fields through chart strokes, including
+    gridlines, axes, series, markers, points, and chart/plot-area borders.
+  - [ ] Extend scene-owned gridline style records to cover compound lines, theme style references, and
+    chart-style inherited defaults.
   - [x] Add scene-owned chart-level and axis-level text-style overrides for the supported `txPr/defRPr`
     subset: font family, font size, and solid color.
   - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
@@ -3140,8 +3151,8 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-170005: 84/84 compared pages, 0 dimension mismatches,
-deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
+lokad-value-based / 20260524-170506: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
 

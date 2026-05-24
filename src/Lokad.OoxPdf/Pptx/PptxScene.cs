@@ -1185,7 +1185,19 @@ internal sealed class PptxSceneBuilder
     {
         return shapeProperties is not null &&
             TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double lineWidth, out double alpha)
-                ? new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null)
+                ? new PptxSceneLineStyle(
+                    true,
+                    color,
+                    lineWidth,
+                    alpha,
+                    TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                    ReadLineCap(shapeProperties) switch
+                    {
+                        "rnd" => 1,
+                        "sq" => 2,
+                        _ => null
+                    },
+                    ReadLineJoin(shapeProperties))
                 : default;
     }
 

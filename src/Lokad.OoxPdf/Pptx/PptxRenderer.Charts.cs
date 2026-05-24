@@ -276,7 +276,7 @@ internal sealed partial class PptxRenderer
     {
         ChartSeriesStroke?[]? strokes = plot?
             .Series
-            .Select(series => series.Line.HasLine ? new ChartSeriesStroke(series.Line.Color, series.Line.Alpha, series.Line.Width) : (ChartSeriesStroke?)null)
+            .Select(series => ToChartSeriesStroke(series.Line))
             .ToArray();
         return strokes is { Length: > 0 } && strokes.Any(stroke => stroke is not null)
             ? strokes
@@ -291,7 +291,7 @@ internal sealed partial class PptxRenderer
                 series.Marker.Symbol,
                 series.Marker.Size,
                 series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
-                series.Marker.Line.HasLine ? new ChartSeriesStroke(series.Marker.Line.Color, series.Marker.Line.Alpha, series.Marker.Line.Width) : null))
+                ToChartSeriesStroke(series.Marker.Line)))
             .ToArray();
         return markers is { Length: > 0 }
             ? markers
@@ -379,7 +379,7 @@ internal sealed partial class PptxRenderer
         {
             if (point.Line.HasLine)
             {
-                strokes[point.Index] = new ChartSeriesStroke(point.Line.Color, point.Line.Alpha, point.Line.Width);
+                strokes[point.Index] = ToChartSeriesStroke(point.Line) ?? default;
             }
         }
 
@@ -415,7 +415,7 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke? ToChartSeriesStroke(PptxSceneLineStyle line)
     {
         return line.HasLine
-            ? new ChartSeriesStroke(line.Color, line.Alpha, line.Width)
+            ? new ChartSeriesStroke(line.Color, line.Alpha, line.Width, line.DashPattern, line.Cap, line.Join)
             : null;
     }
 
@@ -1021,7 +1021,36 @@ internal sealed partial class PptxRenderer
 
             graphics.SetStrokeRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
             graphics.SetLineWidth(stroke.Width);
+            if (stroke.DashPattern is { Count: > 0 })
+            {
+                graphics.SetLineDash(stroke.DashPattern);
+            }
+
+            if (stroke.Cap is { } cap)
+            {
+                graphics.SetLineCap(cap);
+            }
+
+            if (stroke.Join is { } join)
+            {
+                graphics.SetLineJoin(join);
+            }
+
             graphics.StrokeRectangle(x, y, width, height);
+            if (stroke.DashPattern is { Count: > 0 })
+            {
+                graphics.ClearLineDash();
+            }
+
+            if (stroke.Cap is not null)
+            {
+                graphics.SetLineCap(0);
+            }
+
+            if (stroke.Join is not null)
+            {
+                graphics.SetLineJoin(0);
+            }
             if (stroke.Alpha < 1d)
             {
                 graphics.RestoreState();
@@ -3433,6 +3462,17 @@ internal sealed partial class PptxRenderer
     {
         graphics.SetStrokeRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
         graphics.SetLineWidth(stroke.Width);
+        if (stroke.DashPattern is { Count: > 0 })
+        {
+            graphics.SetLineDash(stroke.DashPattern);
+        }
+        else
+        {
+            graphics.ClearLineDash();
+        }
+
+        graphics.SetLineCap(stroke.Cap ?? 0);
+        graphics.SetLineJoin(stroke.Join ?? 0);
     }
 
     private static void RenderAreaChart(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
@@ -3788,7 +3828,13 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset = null, RgbColor? BackgroundColor = null);
 
-    private readonly record struct ChartSeriesStroke(RgbColor Color, double Alpha, double Width);
+    private readonly record struct ChartSeriesStroke(
+        RgbColor Color,
+        double Alpha,
+        double Width,
+        IReadOnlyList<double>? DashPattern = null,
+        int? Cap = null,
+        int? Join = null);
 
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
