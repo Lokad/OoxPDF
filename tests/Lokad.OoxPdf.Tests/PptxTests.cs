@@ -146,7 +146,7 @@ internal static class PptxTests
                     <c:varyColors val="false"/>
                     <c:gapWidth val="175"/>
                     <c:overlap val="25"/>
-                    <c:dLbls><c:showVal/><c:showPercent val="false"/><c:showCatName/><c:showSerName val="0"/><c:showLeaderLines/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName/><c:dLblPos val="ctr"/><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
+                    <c:dLbls><c:showVal/><c:showPercent val="false"/><c:showCatName/><c:showSerName val="0"/><c:showLeaderLines/><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName/><c:dLblPos val="ctr"/><c:layout><c:manualLayout><c:x val="0.44"/><c:y val="0.28"/><c:w val="0.1"/><c:h val="0.08"/></c:manualLayout></c:layout><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                     <c:ser>
                       <c:idx val="7"/>
                       <c:order val="3"/>
@@ -403,6 +403,11 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShowSeriesName == true, "Expected per-label show-series-name override in the scene model.");
         TestAssert.Equal("ZXQ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomText ?? string.Empty);
         TestAssert.Equal("ctr", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Position ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.HasLayout == true, "Expected per-label manual layout in the scene model.");
+        TestAssert.Equal(0.44d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.X ?? 0d);
+        TestAssert.Equal(0.28d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Y ?? 0d);
+        TestAssert.Equal(0.1d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Width ?? 0d);
+        TestAssert.Equal(0.08d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Height ?? 0d);
         TestAssert.Equal(" / ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Separator ?? string.Empty);
         TestAssert.Equal("0%", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].NumberFormat ?? string.Empty);
         TestAssert.Equal("Calibri", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].TextStyle.FontFamily ?? string.Empty);

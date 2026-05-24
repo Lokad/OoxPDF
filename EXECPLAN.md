@@ -1836,6 +1836,13 @@ High-priority actions:
 - [ ] 2026-05-25: Continue chart text classification beyond the first semantic roles. Remaining gaps include
   robust chart-title disambiguation, top/bottom legend containers, value-axis origin-label parity, data labels
   outside the plot box, annotations, and multi-chart pages.
+- [x] 2026-05-25: Preserve per-data-label manual layout in the typed chart scene model.
+  `PptxSceneChartDataLabelOverride` now carries `c:layout/c:manualLayout` alongside per-label visibility flags,
+  custom text, position, separator, number format, text style, and shape style. The scene-builder fixture locks
+  per-label `x/y/w/h` factors without changing renderer behavior; the remaining work is to consume label layout
+  only after public Office-PDF text/label-box evidence defines the placement rule. Validation: the focused
+  scene test passed `1 passed, 0 failed, 0 skipped`; the full console suite passed
+  `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
@@ -3599,6 +3606,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `CategoryAxisTickLabel` on the public clustered-column case. A line-marker visual probe still fails its
   pre-existing pixel MAE threshold (`3.640602` actual vs `2.9` limit) before a text gate can run, so it remains
   a separate chart-fidelity cleanup target rather than a tolerance change hidden inside this slice.
+- Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
+  label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
+  Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
+  fixture locks per-label `x/y/w/h` factors before the renderer attempts any Office-aligned label placement.
 - Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
   support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
   connector where Office behaves like a quarter-turn loop segment.
@@ -4240,6 +4251,12 @@ retaining the earlier fallback bucket names. The public clustered-column case no
 `CategoryAxisTickLabel` structures, and `pwsh tools/CheckVisualCase.ps1 -Case
 visual-cases/cases/pptx-ladder-11-chart-column-clustered-port/case.json` passed at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-005334`.
+
+chart data-label override layout preservation / 2026-05-25:
+`PptxSceneChartDataLabelOverride` now preserves `c:layout/c:manualLayout` factors for explicit per-label
+placement. This is a model-first preservation step; rendering does not consume the label layout until public
+Office-PDF evidence defines the label-box placement rule. The focused scene test passed with 1 passed,
+0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

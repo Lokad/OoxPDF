@@ -425,6 +425,7 @@ internal sealed record PptxSceneChartDataLabelOverride(
     string Position,
     string Separator,
     string NumberFormat,
+    PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
 
@@ -1164,6 +1165,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                ReadChartManualLayout(label),
                 ReadChartTextStyleOverride(label, theme),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme)));
         }
