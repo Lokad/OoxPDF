@@ -316,7 +316,7 @@ internal sealed record PptxScenePicture(
     double Alpha,
     PptxSceneImageRecolor Recolor);
 
-internal sealed record PptxSceneChart(string? RelationshipId);
+internal sealed record PptxSceneChart(string? RelationshipId, string? TargetPartName);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -585,6 +585,9 @@ internal sealed class PptxSceneBuilder
             OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
             XDocument? masterXml = masterPart is null ? null : LoadXml(masterPart);
             XDocument? layoutXml = layoutPart is null ? null : LoadXml(layoutPart);
+            IReadOnlyDictionary<string, OoxRelationship> masterRelationships = masterPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, masterPart.Name);
+            IReadOnlyDictionary<string, OoxRelationship> layoutRelationships = layoutPart is null ? new Dictionary<string, OoxRelationship>() : ReadRelationships(package, layoutPart.Name);
+            IReadOnlyDictionary<string, OoxRelationship> slideRelationships = ReadRelationships(package, slide.PartName);
             IReadOnlyList<XDocument> layoutSources = masterXml is null ? [] : [masterXml];
             IReadOnlyList<XDocument> slideSources = masterXml is null
                 ? layoutXml is null ? [] : [layoutXml]
@@ -598,9 +601,9 @@ internal sealed class PptxSceneBuilder
                 ReadBackground(masterXml, theme),
                 ReadBackground(layoutXml, theme),
                 ReadBackground(slideXml, theme),
-                masterXml is null ? [] : ReadNodes(masterXml, [], theme),
-                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme),
-                ReadNodes(slideXml, slideSources, theme)));
+                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterRelationships),
+                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutRelationships),
+                ReadNodes(slideXml, slideSources, theme, slideRelationships)));
         }
 
         return new PptxScene(document, theme, slides);
@@ -619,12 +622,23 @@ internal sealed class PptxSceneBuilder
         return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
-    private static IReadOnlyList<PptxSceneNode> ReadNodes(XDocument xml, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
+    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(OoxPackage package, string sourcePartName)
+    {
+        return package.GetRelationships(sourcePartName)
+            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+    }
+
+    private static IReadOnlyList<PptxSceneNode> ReadNodes(
+        XDocument xml,
+        IReadOnlyList<XDocument> placeholderSources,
+        PptxTheme theme,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme));
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, relationships));
         }
 
         return nodes;
@@ -641,7 +655,11 @@ internal sealed class PptxSceneBuilder
             : default;
     }
 
-    private static IReadOnlyList<PptxSceneNode> ReadChildNodes(XElement container, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
+    private static IReadOnlyList<PptxSceneNode> ReadChildNodes(
+        XElement container,
+        IReadOnlyList<XDocument> placeholderSources,
+        PptxTheme theme,
+        IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement child in container.Elements())
@@ -663,9 +681,9 @@ internal sealed class PptxSceneBuilder
                 ReadTextBody(child, placeholderSources, theme),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
-                kind == PptxSceneNodeKind.Chart ? ReadChart(child) : null,
+                kind == PptxSceneNodeKind.Chart ? ReadChart(child, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
-                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, relationships) : [],
                 child));
         }
 
@@ -785,7 +803,7 @@ internal sealed class PptxSceneBuilder
             ReadImageRecolor(picture, theme));
     }
 
-    private static PptxSceneChart ReadChart(XElement frame)
+    private static PptxSceneChart ReadChart(XElement frame, IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? graphicData = frame
             .Element(DrawingNamespace + "graphic")
@@ -793,7 +811,11 @@ internal sealed class PptxSceneBuilder
         string? relationshipId = (string?)graphicData
             ?.Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
-        return new PptxSceneChart(relationshipId);
+        string? targetPartName = relationshipId is not null &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship)
+            ? relationship.ResolvedTarget
+            : null;
+        return new PptxSceneChart(relationshipId, targetPartName);
     }
 
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)

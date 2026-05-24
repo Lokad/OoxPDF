@@ -49,7 +49,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        RenderChartFrame(context, graphics, fonts, bounds, node.Chart?.RelationshipId, relationships);
+        RenderChartFrame(context, graphics, fonts, bounds, node.Chart?.RelationshipId, node.Chart?.TargetPartName, relationships);
     }
 
     private static void RenderChartFrame(
@@ -74,7 +74,7 @@ internal sealed partial class PptxRenderer
         string? relationshipId = (string?)graphicData
             .Element(ChartNamespace + "chart")
             ?.Attribute(RelationshipsNamespace + "id");
-        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, relationships);
+        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, null, relationships);
     }
 
     private static void RenderChartFrame(
@@ -83,18 +83,27 @@ internal sealed partial class PptxRenderer
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
         string? relationshipId,
+        string? targetPartName,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
-        if (bounds is null || relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        string? chartPartName = targetPartName;
+        if (chartPartName is null &&
+            relationshipId is not null &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
+        {
+            chartPartName = relationship.ResolvedTarget;
+        }
+
+        if (bounds is null || chartPartName is null)
         {
             EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart frame could not be resolved and was ignored.", context.Slide.PartName, context.SlideNumber, "Ignored");
             return;
         }
 
-        OoxPart? chartPart = context.Package.GetPart(relationship.ResolvedTarget);
+        OoxPart? chartPart = context.Package.GetPart(chartPartName);
         if (chartPart is null)
         {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", relationship.ResolvedTarget, context.SlideNumber, "Ignored");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", chartPartName, context.SlideNumber, "Ignored");
             return;
         }
 

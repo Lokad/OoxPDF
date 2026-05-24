@@ -74,6 +74,7 @@ internal static class PptxTests
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
                   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
                   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
                 </Types>
                 """,
@@ -94,6 +95,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """,
             ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
@@ -123,6 +125,10 @@ internal static class PptxTests
                     </a:fontScheme>
                   </a:themeElements>
                 </a:theme>
+                """,
+            ["ppt/charts/chart1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/>
                 """,
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -255,6 +261,7 @@ internal static class PptxTests
         TestAssert.Equal(0.5d, slide.SlideNodes[3].Shape?.TailEnd.LengthScale ?? 0d);
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
+        TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
         TestAssert.Equal(2743200L, slide.SlideNodes[5].GroupTransform.OffsetX);
         TestAssert.Equal(1d, slide.SlideNodes[5].GroupTransform.ScaleX);
