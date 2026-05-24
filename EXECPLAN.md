@@ -865,6 +865,17 @@ High-priority actions:
 - [x] 2026-05-24: Extended the scene-builder coverage so connector and chart nodes are locked alongside
   shape, picture, and table nodes. This protects the intermediate-model migration path before render dispatch
   starts consuming `PptxSceneNode` directly.
+- [x] 2026-05-24: Moved ordered slide dispatch onto the scene model's node-kind classifier
+  (`PptxSceneBuilder.ReadNodeKind`) so render routing no longer owns a separate XML-name/type decision tree.
+  This is intentionally behavior-preserving; the renderers still consume source XML while the model boundary is
+  hardened.
+- [x] Add hierarchical children to `PptxSceneNode` for grouped shapes. The scene builder now records direct
+  children for group nodes and the scene-builder test locks the group -> child shape hierarchy.
+- [x] Replace `RenderOrderedShapeTextContainer` with scene-node iteration for the ordered slide path. Normal
+  PPTX rendering now builds a `PptxScene`, carries the current `PptxSceneSlide` in `PptxRenderContext`, and
+  ordered slide rendering iterates `PptxSceneNode`/`Children` while leaf renderers still consume source XML.
+- [ ] Move leaf PPTX renderers from source XML toward typed node/layout inputs one family at a time, starting
+  with connectors or pictures where the current source XML handoff is smallest.
 - [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
@@ -2433,6 +2444,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: `PptxScene.cs` defines scene, slide, node, bounds, paragraph, and run records, while
   `PptxRenderer.cs` and the shape/text/table/chart partials still dispatch mostly from raw XML plus
   `PptxRenderContext`.
+- Observation: Scene-backed ordered rendering can be introduced without changing leaf PDF emission.
+  Evidence: `RenderPages` now builds a `PptxScene`, carries `PptxSceneSlide` through `PptxRenderContext`, and
+  ordered slide rendering iterates scene nodes and group children while shape/picture/table/chart renderers
+  still receive the same source XML elements as before.
 
 ## Decision Log
 

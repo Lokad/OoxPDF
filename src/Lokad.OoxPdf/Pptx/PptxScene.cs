@@ -170,6 +170,7 @@ internal sealed record PptxSceneNode(
     bool IsPlaceholder,
     PptxSceneBounds? Bounds,
     PptxSceneTextBody? TextBody,
+    IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
 
 internal sealed record PptxSceneTextBody(
@@ -302,23 +303,39 @@ internal sealed class PptxSceneBuilder
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
-            foreach (XElement child in shapeTree.Elements())
-            {
-                PptxSceneNodeKind kind = ReadKind(child);
-                if (kind == PptxSceneNodeKind.Unknown)
-                {
-                    continue;
-                }
-
-                (string id, string name) = ReadNonVisualProperties(child);
-                nodes.Add(new PptxSceneNode(kind, id, name, IsPlaceholder(child), ReadBounds(child), ReadTextBody(child, placeholderSources, theme), child));
-            }
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme));
         }
 
         return nodes;
     }
 
-    private static PptxSceneNodeKind ReadKind(XElement element)
+    private static IReadOnlyList<PptxSceneNode> ReadChildNodes(XElement container, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
+    {
+        var nodes = new List<PptxSceneNode>();
+        foreach (XElement child in container.Elements())
+        {
+            PptxSceneNodeKind kind = ReadNodeKind(child);
+            if (kind == PptxSceneNodeKind.Unknown)
+            {
+                continue;
+            }
+
+            (string id, string name) = ReadNonVisualProperties(child);
+            nodes.Add(new PptxSceneNode(
+                kind,
+                id,
+                name,
+                IsPlaceholder(child),
+                ReadBounds(child),
+                ReadTextBody(child, placeholderSources, theme),
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
+                child));
+        }
+
+        return nodes;
+    }
+
+    internal static PptxSceneNodeKind ReadNodeKind(XElement element)
     {
         if (element.Name == PresentationNamespace + "sp")
         {

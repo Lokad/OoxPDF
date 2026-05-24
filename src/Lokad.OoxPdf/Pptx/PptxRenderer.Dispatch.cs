@@ -10,11 +10,11 @@ internal sealed partial class PptxRenderer
     {
         return !slideXml
             .Descendants(PresentationNamespace + "graphicFrame")
-            .Any(frame => !IsTableGraphicFrame(frame) && !IsChartGraphicFrame(frame));
+            .Any(frame => PptxSceneBuilder.ReadNodeKind(frame) == PptxSceneNodeKind.UnknownGraphicFrame);
     }
 
-    private static void RenderOrderedShapeTextContainer(
-        XElement container,
+    private static void RenderOrderedSceneNodes(
+        IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         IReadOnlyDictionary<string, RenderedFont> fonts,
@@ -24,14 +24,34 @@ internal sealed partial class PptxRenderer
         GroupTransform transform,
         bool renderPlaceholders)
     {
-        foreach (XElement child in container.Elements())
+        foreach (PptxSceneNode node in nodes)
         {
-            if (child.Name == PresentationNamespace + "sp")
+            XElement source = node.Source;
+            switch (node.Kind)
             {
-                if (renderPlaceholders || !IsPlaceholder(child))
-                {
+                case PptxSceneNodeKind.Shape:
+                    if (renderPlaceholders || !node.IsPlaceholder)
+                    {
+                        RenderShape(
+                            source,
+                            context.SlideRelationships,
+                            context.Package,
+                            context.Document,
+                            graphics,
+                            context.DiagnosticSink,
+                            context.SlideNumber,
+                            context.Theme,
+                            transform,
+                            images,
+                            context.ImageCache,
+                            ref imageIndex);
+                        DrawTextSpansWithFonts(ReadTextSpansForShape(source, context, renderPlaceholders), graphics, fonts);
+                    }
+
+                    break;
+                case PptxSceneNodeKind.Connector:
                     RenderShape(
-                        child,
+                        source,
                         context.SlideRelationships,
                         context.Package,
                         context.Document,
@@ -43,75 +63,41 @@ internal sealed partial class PptxRenderer
                         images,
                         context.ImageCache,
                         ref imageIndex);
-                    DrawTextSpansWithFonts(ReadTextSpansForShape(child, context, renderPlaceholders), graphics, fonts);
-                }
-
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "cxnSp")
-            {
-                RenderShape(
-                    child,
-                    context.SlideRelationships,
-                    context.Package,
-                    context.Document,
-                    graphics,
-                    context.DiagnosticSink,
-                    context.SlideNumber,
-                    context.Theme,
-                    transform,
-                    images,
-                    context.ImageCache,
-                    ref imageIndex);
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "pic")
-            {
-                RenderPicture(
-                    child,
-                    context.SlideRelationships,
-                    context.Package,
-                    context.Document,
-                    context.Theme,
-                    graphics,
-                    context.DiagnosticSink,
-                    context.SlideNumber,
-                    transform,
-                    images,
-                    context.ImageCache,
-                    ref imageIndex);
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "graphicFrame")
-            {
-                if (IsTableGraphicFrame(child))
-                {
-                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, child, graphics);
+                    break;
+                case PptxSceneNodeKind.Picture:
+                    RenderPicture(
+                        source,
+                        context.SlideRelationships,
+                        context.Package,
+                        context.Document,
+                        context.Theme,
+                        graphics,
+                        context.DiagnosticSink,
+                        context.SlideNumber,
+                        transform,
+                        images,
+                        context.ImageCache,
+                        ref imageIndex);
+                    break;
+                case PptxSceneNodeKind.Table:
+                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, source, graphics);
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
-                }
-                else
-                {
-                    RenderChartFrame(context, graphics, chartFonts, child, transform);
-                }
-
-                continue;
-            }
-
-            if (child.Name == PresentationNamespace + "grpSp")
-            {
-                RenderOrderedShapeTextContainer(
-                    child,
-                    context,
-                    graphics,
-                    fonts,
-                    images,
-                    chartFonts,
-                    ref imageIndex,
-                    transform.Combine(ReadGroupTransform(child)),
-                    renderPlaceholders);
+                    break;
+                case PptxSceneNodeKind.Chart:
+                    RenderChartFrame(context, graphics, chartFonts, source, transform);
+                    break;
+                case PptxSceneNodeKind.Group:
+                    RenderOrderedSceneNodes(
+                        node.Children,
+                        context,
+                        graphics,
+                        fonts,
+                        images,
+                        chartFonts,
+                        ref imageIndex,
+                        transform.Combine(ReadGroupTransform(source)),
+                        renderPlaceholders);
+                    break;
             }
         }
     }

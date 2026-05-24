@@ -161,6 +161,11 @@ internal static class PptxTests
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl/></a:graphicData></a:graphic></p:graphicFrame>
                     <p:cxnSp><p:nvCxnSpPr><p:cNvPr id="8" name="Connector"/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="0" y="2743200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom></p:spPr></p:cxnSp>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Chart"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="914400" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"/></a:graphicData></a:graphic></p:graphicFrame>
+                    <p:grpSp>
+                      <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
+                      <p:grpSpPr><a:xfrm><a:off x="2743200" y="0"/><a:ext cx="914400" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="914400" cy="914400"/></a:xfrm></p:grpSpPr>
+                      <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm></p:spPr></p:sp>
+                    </p:grpSp>
                   </p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -176,12 +181,15 @@ internal static class PptxTests
         PptxSceneSlide slide = scene.Slides[0];
         TestAssert.Equal(1, slide.MasterNodes.Count);
         TestAssert.Equal(3, slide.LayoutNodes.Count);
-        TestAssert.Equal(5, slide.SlideNodes.Count);
+        TestAssert.Equal(6, slide.SlideNodes.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[0].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Connector, slide.SlideNodes[3].Kind);
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
+        TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
+        TestAssert.Equal(1, slide.SlideNodes[5].Children.Count);
+        TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[5].Children[0].Kind);
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
         TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
         PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);

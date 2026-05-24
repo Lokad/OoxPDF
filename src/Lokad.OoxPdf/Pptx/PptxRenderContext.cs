@@ -11,6 +11,7 @@ internal sealed record PptxRenderContext(
     PptxTheme Theme,
     PptxSlide Slide,
     XDocument SlideXml,
+    PptxSceneSlide? SceneSlide,
     PptxSlideInheritance Inheritance,
     IReadOnlyList<XDocument> InheritedXml,
     IReadOnlyDictionary<string, OoxRelationship> SlideRelationships,
