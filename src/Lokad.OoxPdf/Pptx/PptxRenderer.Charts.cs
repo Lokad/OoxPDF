@@ -1508,7 +1508,9 @@ internal sealed partial class PptxRenderer
 
                     double value = values[category];
                     double barWidth = Math.Abs(value) / range * plotBox.Width;
-                    double x = value >= 0d ? zeroX + barWidth + 2d : zeroX - barWidth - labelWidth - 2d;
+                    double barStart = value >= 0d ? zeroX : zeroX - barWidth;
+                    double barEnd = value >= 0d ? zeroX + barWidth : zeroX;
+                    double x = ResolveHorizontalBarDataLabelX(labelOptions.Position, value, barStart, barEnd, labelWidth);
                     double y = categoryY + seriesIndex * barSlot + barSlot * 0.43d - labelHeight / 2d;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
@@ -1536,7 +1538,9 @@ internal sealed partial class PptxRenderer
                     double value = values[category];
                     double barHeight = Math.Abs(value) / range * plotBox.Height;
                     double x = categoryX + seriesIndex * barSlot;
-                    double y = value >= 0d ? zeroY + barHeight + 1d : zeroY - barHeight - labelHeight - 1d;
+                    double barBase = value >= 0d ? zeroY : zeroY - barHeight;
+                    double barEnd = value >= 0d ? zeroY + barHeight : zeroY;
+                    double y = ResolveVerticalBarDataLabelY(labelOptions.Position, value, barBase, barEnd, labelHeight);
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, labelOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
@@ -1583,21 +1587,61 @@ internal sealed partial class PptxRenderer
                 string label = FormatCartesianDataLabel(values[i], seriesIndex, i, labelOptions, categoryLabels, seriesNames);
                 if (!string.IsNullOrEmpty(label))
                 {
+                    (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
+                        labelOptions.Position,
+                        pointX,
+                        pointY,
+                        labelWidth,
+                        labelHeight);
                     runs.Add(CreateChartLabelRun(
                         label,
-                        pointX - labelWidth / 2d,
-                        pointY + labelHeight * 0.35d,
+                        labelX,
+                        labelY,
                         labelWidth,
                         labelHeight,
                         plotBox,
                         fontSize,
                         color,
-                        TextAlignment.Center));
+                        alignment));
                 }
             }
         }
 
         return RenderTextRuns(runs, graphics, "CLD");
+    }
+
+    private static double ResolveHorizontalBarDataLabelX(string position, double value, double barStart, double barEnd, double labelWidth)
+    {
+        return position switch
+        {
+            "ctr" or "bestFit" => (barStart + barEnd - labelWidth) / 2d,
+            "inBase" => value >= 0d ? barStart + 2d : barEnd - labelWidth - 2d,
+            "inEnd" or "l" or "r" => value >= 0d ? barEnd - labelWidth - 2d : barStart + 2d,
+            "outEnd" or _ => value >= 0d ? barEnd + 2d : barStart - labelWidth - 2d
+        };
+    }
+
+    private static double ResolveVerticalBarDataLabelY(string position, double value, double barBase, double barEnd, double labelHeight)
+    {
+        return position switch
+        {
+            "ctr" or "bestFit" => (barBase + barEnd - labelHeight) / 2d,
+            "inBase" => value >= 0d ? barBase + 1d : barEnd - labelHeight - 1d,
+            "inEnd" or "t" or "b" => value >= 0d ? barEnd - labelHeight - 1d : barBase + 1d,
+            "outEnd" or _ => value >= 0d ? barEnd + 1d : barBase - labelHeight - 1d
+        };
+    }
+
+    private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(string position, double pointX, double pointY, double labelWidth, double labelHeight)
+    {
+        return position switch
+        {
+            "b" => (pointX - labelWidth / 2d, pointY - labelHeight * 1.25d, TextAlignment.Center),
+            "l" => (pointX - labelWidth - 2d, pointY - labelHeight / 2d, TextAlignment.Right),
+            "r" => (pointX + 2d, pointY - labelHeight / 2d, TextAlignment.Left),
+            "ctr" or "bestFit" => (pointX - labelWidth / 2d, pointY - labelHeight / 2d, TextAlignment.Center),
+            "t" or "outEnd" or _ => (pointX - labelWidth / 2d, pointY + labelHeight * 0.35d, TextAlignment.Center)
+        };
     }
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, double fontSize, RgbColor color, TextAlignment alignment)
@@ -1726,6 +1770,7 @@ internal sealed partial class PptxRenderer
                 IsChartLabelFlagEnabled(labels, "showPercent"),
                 IsChartLabelFlagEnabled(labels, "showCatName"),
                 IsChartLabelFlagEnabled(labels, "showSerName"),
+                labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty);
     }
@@ -1739,6 +1784,7 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.ShowPercent,
                 plot.DataLabels.ShowCategoryName,
                 plot.DataLabels.ShowSeriesName,
+                plot.DataLabels.Position,
                 plot.DataLabels.Separator,
                 plot.DataLabels.NumberFormat);
     }
@@ -3940,9 +3986,9 @@ internal sealed partial class PptxRenderer
         public static ChartTextStyleOverride Empty { get; } = new(null, null, null);
     }
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Separator, string NumberFormat)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, string Position, string Separator, string NumberFormat)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Separator: string.Empty, NumberFormat: string.Empty);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName;
     }

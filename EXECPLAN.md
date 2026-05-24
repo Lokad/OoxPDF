@@ -766,9 +766,8 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the remaining richer scene metadata: Office label position,
-  category/series-name composition, leader lines, per-label overrides, and text/shape styles still need
-  renderer support and visual cases.
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader lines, per-label
+  overrides, and text/shape styles still need renderer support and visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
   Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
   visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
@@ -799,9 +798,16 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Continue data-label rendering alignment with Office: label position semantics, leader lines, per-label
-  overrides, rich text, and shape styles are still unconsumed despite now being partly preserved in the scene
-  model.
+- [x] 2026-05-24: Consume scene/XML data-label position metadata in supported bar/line rendering.
+  `dLblPos` now flows into `ChartDataLabelOptions`, and explicit OOXML positions drive bar and line label
+  anchors instead of being discarded after scene parsing. Public line-chart tests lock a below-positioned
+  data-label text matrix, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-172435` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Continue data-label rendering alignment with Office: leader lines, per-label overrides, rich text, and
+  shape styles are still unconsumed despite now being partly preserved in the scene model.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
   `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
@@ -955,9 +961,10 @@ High-priority actions:
   - [x] Extend chart data-label scene metadata to preserve category-name, series-name, leader-line,
     position, separator, and number-format options.
   - [x] Consume scene/XML data-label separator and number-format metadata for supported value-label text.
-  - [ ] Extend chart data-label modeling to cover label position, separators, category/series-name flags,
-    leader lines, per-label overrides, and label text/shape styles in rendering before attempting finer
-    Office-aligned data-label layout.
+  - [x] Consume scene/XML data-label category-name and series-name flags in supported bar/line rendering.
+  - [x] Consume scene/XML data-label position metadata in supported bar/line rendering.
+  - [ ] Extend chart data-label modeling to cover leader lines, per-label overrides, and label text/shape
+    styles in rendering before attempting finer Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
     now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
   - [x] Add and consume scene-owned chart area and plot area solid fill/line styles, so supported chart
@@ -3178,7 +3185,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-171811: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-172435: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
