@@ -912,8 +912,10 @@ High-priority actions:
 - [x] Move renderable custom geometry into `PptxSceneShape`: guide formulas, path dimensions, fill/stroke
   gates, and move/line/cubic/quadratic/arc/close commands are now typed scene records consumed directly by
   ordered shape rendering.
-- [ ] Continue reducing renderer XML fallbacks by turning remaining preset adjustment formulas, curved
-  connector adjustment values, gradients, and richer effect families into scene-owned structures.
+- [x] Move preset geometry adjustment values into `PptxSceneShape`: supported `avLst` `val` guides now travel
+  through the scene model and feed arc and curved-connector geometry instead of being re-read at draw time.
+- [ ] Continue reducing renderer XML fallbacks by turning gradients and richer effect families into
+  scene-owned structures, and decide the JPEG recolor strategy without adding format-specific shortcuts.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after completing the scene migration for
   shape fills, pattern fills, picture fills, effects, line styles, line ends, and renderable custom geometry.
   `dotnet pack` succeeded and private run `artifacts/private-visual/lokad-value-based/20260524-110413`

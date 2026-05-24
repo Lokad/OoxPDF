@@ -119,6 +119,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             ToShapeBounds(shape.Bounds),
             shape.Shape.Preset,
+            shape.Shape.PresetAdjustments,
             shape.Shape.HasCustomGeometry,
             shape.Shape.CustomGeometry,
             ToFillStyle(shape.Shape.Fill),
@@ -172,6 +173,7 @@ internal sealed partial class PptxRenderer
             ref imageIndex,
             rawBounds.Value,
             ReadPreset(shapeProperties),
+            null,
             shapeProperties.Element(DrawingNamespace + "custGeom") is not null,
             null,
             null,
@@ -199,6 +201,7 @@ internal sealed partial class PptxRenderer
         ref int imageIndex,
         ShapeBounds rawBounds,
         string preset,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         bool hasCustomGeometry,
         PptxSceneCustomGeometry? customGeometryOverride,
         FillStyle? fillOverride,
@@ -507,7 +510,8 @@ internal sealed partial class PptxRenderer
                     stroke,
                     lineWidth,
                     headEnd,
-                    tailEnd);
+                    tailEnd,
+                    presetAdjustmentsOverride);
 
                 if (hasDash)
                 {
@@ -623,7 +627,7 @@ internal sealed partial class PptxRenderer
 
             if (preset == "arc")
             {
-                DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height);
+                DrawPresetArcStroke(graphics, shapeProperties, x, y, width, height, presetAdjustmentsOverride);
             }
             else if (preset == "ellipse")
             {
@@ -790,10 +794,17 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawPresetArcStroke(PdfGraphicsBuilder graphics, XElement shapeProperties, double x, double y, double width, double height)
+    private static void DrawPresetArcStroke(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        double x,
+        double y,
+        double width,
+        double height,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
-        double startDegrees = ReadPresetGeometryGuide(shapeProperties, "adj1", 0d) / 60000d;
-        double endDegrees = ReadPresetGeometryGuide(shapeProperties, "adj2", 90d) / 60000d;
+        double startDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 0d) / 60000d;
+        double endDegrees = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj2", 90d) / 60000d;
         double sweepDegrees = endDegrees - startDegrees;
         while (sweepDegrees <= 0d)
         {
@@ -819,8 +830,17 @@ internal sealed partial class PptxRenderer
         graphics.StrokeCurrentPath();
     }
 
-    private static double ReadPresetGeometryGuide(XElement shapeProperties, string name, double fallback)
+    private static double ReadPresetGeometryGuide(
+        XElement shapeProperties,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
+        string name,
+        double fallback)
     {
+        if (presetAdjustmentsOverride is not null && presetAdjustmentsOverride.TryGetValue(name, out double resolved))
+        {
+            return resolved;
+        }
+
         XElement? guide = shapeProperties
             .Element(DrawingNamespace + "prstGeom")
             ?.Element(DrawingNamespace + "avLst")
@@ -1856,12 +1876,13 @@ internal sealed partial class PptxRenderer
         RgbColor stroke,
         double lineWidth,
         LineEndStyle headEnd,
-        LineEndStyle tailEnd)
+        LineEndStyle tailEnd,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         List<BezierSegment> segments = preset switch
         {
             "curvedConnector2" => CreateCurvedConnector2Segments(x, yTop, width, height, slideHeight),
-            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, x, yTop, width, height, slideHeight),
+            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, presetAdjustmentsOverride, x, yTop, width, height, slideHeight),
             _ => []
         };
         if (segments.Count == 0)
@@ -1965,13 +1986,14 @@ internal sealed partial class PptxRenderer
 
     private static List<BezierSegment> CreateCurvedConnector3Segments(
         XElement shapeProperties,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         double x,
         double yTop,
         double width,
         double height,
         double slideHeight)
     {
-        double adj1 = ReadPresetGeometryGuide(shapeProperties, "adj1", 50000d) / 100000d;
+        double adj1 = ReadPresetGeometryGuide(shapeProperties, presetAdjustmentsOverride, "adj1", 50000d) / 100000d;
         double x2 = width * adj1;
         double x1 = x2 / 2d;
         double x3 = (width + x2) / 2d;

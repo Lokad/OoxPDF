@@ -177,6 +177,7 @@ internal sealed record PptxSceneNode(
 
 internal sealed record PptxSceneShape(
     string Preset,
+    IReadOnlyDictionary<string, double> PresetAdjustments,
     bool HasCustomGeometry,
     PptxSceneCustomGeometry CustomGeometry,
     PptxSceneFillStyle Fill,
@@ -648,6 +649,7 @@ internal sealed class PptxSceneBuilder
             : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
+            ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
             TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
@@ -660,6 +662,28 @@ internal sealed class PptxSceneBuilder
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static IReadOnlyDictionary<string, double> ReadPresetAdjustments(XElement? shapeProperties)
+    {
+        Dictionary<string, double> adjustments = new(StringComparer.Ordinal);
+        foreach (XElement guide in shapeProperties
+                     ?.Element(DrawingNamespace + "prstGeom")
+                     ?.Element(DrawingNamespace + "avLst")
+                     ?.Elements(DrawingNamespace + "gd") ?? [])
+        {
+            string? name = (string?)guide.Attribute("name");
+            string? formula = (string?)guide.Attribute("fmla");
+            if (!string.IsNullOrWhiteSpace(name) &&
+                formula is not null &&
+                formula.StartsWith("val ", StringComparison.Ordinal) &&
+                double.TryParse(formula[4..], NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                adjustments[name] = value;
+            }
+        }
+
+        return adjustments;
     }
 
     private static PptxSceneCustomGeometry ReadCustomGeometry(XElement? shapeProperties)
