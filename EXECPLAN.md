@@ -3799,6 +3799,14 @@ approximate table-centering estimate and should eventually be replaced by the co
 but the fallback is no longer an isolated table heuristic. The `pptx-tables` non-slow group passed with 7
 passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed, 7 skipped; `dotnet pack`
 succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+named chart fallback metrics / 2026-05-24:
+The chart renderer no longer carries isolated literals for title, legend, category-axis, value-axis, and data
+label fallback font sizes, doughnut hole-size clamping, or single-value axis headroom. These values now live
+under `PptxChartMetricRules`. This is only an inventory and ownership step: the rules remain approximations
+until replaced by Office-PDF-observed chart layout behavior or a richer scene chart model. The `pptx-charts`
+non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed,
+7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

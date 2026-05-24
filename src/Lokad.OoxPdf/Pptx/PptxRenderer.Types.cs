@@ -749,6 +749,19 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static class PptxChartMetricRules
+    {
+        public const double TitleFallbackFontSize = 12d;
+        public const double LegendFallbackFontSize = 9d;
+        public const double CategoryAxisFallbackFontSize = 9d;
+        public const double ValueAxisFallbackFontSize = 8.5d;
+        public const double DataLabelFallbackFontSize = 8.5d;
+        public const double AxisSingleValueHeadroomFactor = 1.2d;
+        public const double DoughnutHoleMinimumRatio = 0.1d;
+        public const double DoughnutHoleMaximumRatio = 0.9d;
+        public const double DoughnutHoleFallbackRatio = 0.56d;
+    }
+
     private enum TextVerticalAnchor
     {
         Top,

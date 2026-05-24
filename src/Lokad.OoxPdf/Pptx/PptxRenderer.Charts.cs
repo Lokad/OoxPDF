@@ -140,7 +140,7 @@ internal sealed partial class PptxRenderer
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
         return plot?.HoleSize is { } rawHoleSize
-            ? Math.Clamp(rawHoleSize / 100d, 0.1d, 0.9d)
+            ? Math.Clamp(rawHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
             : ReadDoughnutHoleSize(doughnutChart);
     }
 
@@ -1082,10 +1082,10 @@ internal sealed partial class PptxRenderer
         XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
         if (sceneChart is null)
         {
-            return ReadChartTextStyle(theme, chartXml, title, fallbackFontSize: 12d);
+            return ReadChartTextStyle(theme, chartXml, title, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         }
 
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: 12d);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
         return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Title.TextStyle));
     }
@@ -1270,10 +1270,10 @@ internal sealed partial class PptxRenderer
         XElement? legend = chartXml.Descendants(ChartNamespace + "legend").FirstOrDefault();
         if (sceneChart is null)
         {
-            return ReadChartTextStyle(theme, chartXml, legend, fallbackFontSize: 9d);
+            return ReadChartTextStyle(theme, chartXml, legend, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
         }
 
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: 9d);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
         return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
     }
@@ -1640,7 +1640,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), 8.5d, fallbackColor, Bold: false, Italic: false);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), PptxChartMetricRules.DataLabelFallbackFontSize, fallbackColor, Bold: false, Italic: false);
         return MergeChartTextStyle(style, options.TextStyle);
     }
 
@@ -2022,7 +2022,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: 9d);
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
         double fontSize = style.FontSize;
         RgbColor color = style.Color;
         var runs = new List<TextRun>(labels.Count);
@@ -2087,7 +2087,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: 8.5d);
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
         double fontSize = style.FontSize;
         double height = fontSize * 1.35d;
         RgbColor color = style.Color;
@@ -2316,7 +2316,7 @@ internal sealed partial class PptxRenderer
         double range = dataMax - Math.Min(0d, dataMin);
         if (Math.Abs(range) < 0.0001d)
         {
-            return dataMax > 0d ? dataMax * 1.2d : 1d;
+            return dataMax > 0d ? dataMax * PptxChartMetricRules.AxisSingleValueHeadroomFactor : 1d;
         }
 
         double rawInterval = Math.Max(range / Math.Max(1, desiredTicks), double.Epsilon);
@@ -2535,10 +2535,10 @@ internal sealed partial class PptxRenderer
         if (doughnutChart.Element(ChartNamespace + "holeSize")?.Attribute("val") is { } value &&
             double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
         {
-            return Math.Clamp(parsed / 100d, 0.1d, 0.9d);
+            return Math.Clamp(parsed / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio);
         }
 
-        return 0.56d;
+        return PptxChartMetricRules.DoughnutHoleFallbackRatio;
     }
 
     private static IReadOnlyList<ChartSeriesStroke?> ReadChartSeriesStrokes(XElement chartElement, PptxTheme theme)
