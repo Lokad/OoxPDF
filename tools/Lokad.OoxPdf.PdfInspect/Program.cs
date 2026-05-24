@@ -26,6 +26,7 @@ byte[] bytes = File.ReadAllBytes(inputPath);
 string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
+Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
 var textOperations = new List<PdfTextOperation>();
 
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
@@ -58,7 +59,7 @@ foreach (PdfObject item in objects)
         }
 
         int? pageNumber = contentPageNumbers.TryGetValue(item.Number, out int page) ? page : null;
-        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text));
+        textOperations.AddRange(PdfTextOperation.Extract(pageNumber, item.Number, item.Generation, text, fontUnicodeMaps));
     }
     else if (!textOnly)
     {
@@ -149,6 +150,50 @@ static IReadOnlyList<int> ReadContentObjectNumbers(string body)
         : contents.Groups["single"].Value;
     return Regex.Matches(value, @"(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant)
         .Select(match => int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture))
+        .ToArray();
+}
+
+static Dictionary<string, IReadOnlyDictionary<int, string>> BuildFontUnicodeMaps(IReadOnlyList<PdfObject> objects)
+{
+    var objectByNumber = objects.ToDictionary(item => item.Number);
+    var maps = new Dictionary<string, IReadOnlyDictionary<int, string>>(StringComparer.Ordinal);
+    foreach (PdfObject page in objects.Where(item => IsPageObject(item.Body)))
+    {
+        foreach ((string fontName, int fontObjectNumber) in ReadPageFontResources(page.Body))
+        {
+            if (!objectByNumber.TryGetValue(fontObjectNumber, out PdfObject? fontObject))
+            {
+                continue;
+            }
+
+            Match toUnicode = Regex.Match(fontObject.Body, @"/ToUnicode\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant);
+            if (!toUnicode.Success ||
+                !objectByNumber.TryGetValue(int.Parse(toUnicode.Groups["number"].Value, CultureInfo.InvariantCulture), out PdfObject? cmapObject) ||
+                cmapObject.Stream is null)
+            {
+                continue;
+            }
+
+            string cmap = Encoding.Latin1.GetString(cmapObject.Stream.Decoded);
+            maps[fontName] = PdfToUnicodeMap.Parse(cmap);
+        }
+    }
+
+    return maps;
+}
+
+static IReadOnlyList<(string FontName, int ObjectNumber)> ReadPageFontResources(string pageBody)
+{
+    Match fonts = Regex.Match(pageBody, @"(?s)/Font\s*<<(?<fonts>.*?)>>", RegexOptions.CultureInvariant);
+    if (!fonts.Success)
+    {
+        return Array.Empty<(string FontName, int ObjectNumber)>();
+    }
+
+    return Regex.Matches(fonts.Groups["fonts"].Value, @"/(?<name>[A-Za-z0-9._+-]+)\s+(?<number>\d+)\s+\d+\s+R", RegexOptions.CultureInvariant)
+        .Select(match => (
+            match.Groups["name"].Value,
+            int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture)))
         .ToArray();
 }
 
@@ -303,7 +348,8 @@ internal sealed record PdfTextOperation(
     double EffectiveX,
     double EffectiveY,
     string Operator,
-    string Payload)
+    string Payload,
+    string DecodedText)
 {
     private static readonly Regex SaveGraphicsStateRegex = new(
         @"(?:^|\s)q(?:\s|$)",
@@ -333,7 +379,12 @@ internal sealed record PdfTextOperation(
         @"(?<payload>\[(?:[^\[\]]|\([^)]*\)|<[^>]*>)*\]|\([^)]*\)|<[^>]*>)\s*(?<operator>TJ|Tj)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    public static IReadOnlyList<PdfTextOperation> Extract(int? pageNumber, int objectNumber, int generation, string stream)
+    public static IReadOnlyList<PdfTextOperation> Extract(
+        int? pageNumber,
+        int objectNumber,
+        int generation,
+        string stream,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps)
     {
         var operations = new List<PdfTextOperation>();
         string font = string.Empty;
@@ -391,6 +442,10 @@ internal sealed record PdfTextOperation(
             foreach (Match match in ShowRegex.Matches(line))
             {
                 PdfMatrix effective = currentMatrix.Multiply(new PdfMatrix(a, b, c, d, x, y));
+                string payload = match.Groups["payload"].Value;
+                string decodedText = DecodePayload(payload, fontUnicodeMaps.TryGetValue(font, out IReadOnlyDictionary<int, string>? unicodeMap)
+                    ? unicodeMap
+                    : null);
                 operations.Add(new PdfTextOperation(
                     pageNumber,
                     objectNumber,
@@ -411,7 +466,8 @@ internal sealed record PdfTextOperation(
                     effective.X,
                     effective.Y,
                     match.Groups["operator"].Value,
-                    match.Groups["payload"].Value));
+                    payload,
+                    decodedText));
             }
 
             foreach (Match _ in RestoreGraphicsStateRegex.Matches(line))
@@ -424,6 +480,160 @@ internal sealed record PdfTextOperation(
     }
 
     private static double ReadDouble(string value) => double.Parse(value, CultureInfo.InvariantCulture);
+
+    private static string DecodePayload(string payload, IReadOnlyDictionary<int, string>? unicodeMap)
+    {
+        var builder = new StringBuilder();
+        foreach (Match match in Regex.Matches(payload, @"\((?<literal>(?:\\.|[^\\)])*)\)|<(?<hex>[0-9A-Fa-f\s]+)>", RegexOptions.CultureInvariant))
+        {
+            if (match.Groups["literal"].Success)
+            {
+                builder.Append(DecodeLiteralString(match.Groups["literal"].Value));
+            }
+            else if (match.Groups["hex"].Success)
+            {
+                builder.Append(DecodeHexString(match.Groups["hex"].Value, unicodeMap));
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string DecodeLiteralString(string value)
+    {
+        var builder = new StringBuilder();
+        for (int i = 0; i < value.Length; i++)
+        {
+            char current = value[i];
+            if (current != '\\' || i == value.Length - 1)
+            {
+                builder.Append(current);
+                continue;
+            }
+
+            char escaped = value[++i];
+            builder.Append(escaped switch
+            {
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                'b' => '\b',
+                'f' => '\f',
+                '(' => '(',
+                ')' => ')',
+                '\\' => '\\',
+                _ => escaped
+            });
+        }
+
+        return builder.ToString();
+    }
+
+    private static string DecodeHexString(string value, IReadOnlyDictionary<int, string>? unicodeMap)
+    {
+        string hex = Regex.Replace(value, @"\s+", string.Empty);
+        var builder = new StringBuilder();
+        int codeHexLength = 4;
+        if (unicodeMap is not null && hex.Length >= 4)
+        {
+            int firstTwoByteCode = int.Parse(hex.Substring(0, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            if (!unicodeMap.ContainsKey(firstTwoByteCode) && hex.Length >= 2)
+            {
+                int firstOneByteCode = int.Parse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                if (unicodeMap.ContainsKey(firstOneByteCode))
+                {
+                    codeHexLength = 2;
+                }
+            }
+        }
+
+        if (unicodeMap is null && hex.Length % codeHexLength != 0)
+        {
+            return Encoding.Latin1.GetString(Convert.FromHexString(hex));
+        }
+
+        for (int index = 0; index + codeHexLength - 1 < hex.Length; index += codeHexLength)
+        {
+            int code = int.Parse(hex.Substring(index, codeHexLength), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            if (unicodeMap is not null && unicodeMap.TryGetValue(code, out string? mapped))
+            {
+                builder.Append(mapped);
+            }
+            else
+            {
+                builder.Append(char.ConvertFromUtf32(code));
+            }
+        }
+
+        return builder.ToString();
+    }
+}
+
+internal static class PdfToUnicodeMap
+{
+    private static readonly Regex BfCharRegex = new(
+        @"<(?<source>[0-9A-Fa-f]+)>\s*<(?<target>[0-9A-Fa-f]+)>",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex BfRangeRegex = new(
+        @"<(?<start>[0-9A-Fa-f]+)>\s*<(?<end>[0-9A-Fa-f]+)>\s*(?:<(?<target>[0-9A-Fa-f]+)>|\[(?<array>[^\]]*)\])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public static IReadOnlyDictionary<int, string> Parse(string cmap)
+    {
+        var map = new Dictionary<int, string>();
+        foreach (string block in ReadBlocks(cmap, "beginbfchar", "endbfchar"))
+        {
+            foreach (Match match in BfCharRegex.Matches(block))
+            {
+                map[ReadHexInt(match.Groups["source"].Value)] = DecodeUtf16Hex(match.Groups["target"].Value);
+            }
+        }
+
+        foreach (string block in ReadBlocks(cmap, "beginbfrange", "endbfrange"))
+        {
+            foreach (Match match in BfRangeRegex.Matches(block))
+            {
+                int start = ReadHexInt(match.Groups["start"].Value);
+                int end = ReadHexInt(match.Groups["end"].Value);
+                if (match.Groups["array"].Success)
+                {
+                    MatchCollection targets = Regex.Matches(match.Groups["array"].Value, @"<(?<target>[0-9A-Fa-f]+)>", RegexOptions.CultureInvariant);
+                    for (int i = 0; i < targets.Count && start + i <= end; i++)
+                    {
+                        map[start + i] = DecodeUtf16Hex(targets[i].Groups["target"].Value);
+                    }
+                }
+                else
+                {
+                    int targetStart = ReadHexInt(match.Groups["target"].Value);
+                    for (int code = start; code <= end; code++)
+                    {
+                        map[code] = char.ConvertFromUtf32(targetStart + code - start);
+                    }
+                }
+            }
+        }
+
+        return map;
+    }
+
+    private static IEnumerable<string> ReadBlocks(string cmap, string begin, string end)
+    {
+        var regex = new Regex(@"(?s)" + Regex.Escape(begin) + @"(?<block>.*?)" + Regex.Escape(end), RegexOptions.CultureInvariant);
+        foreach (Match match in regex.Matches(cmap))
+        {
+            yield return match.Groups["block"].Value;
+        }
+    }
+
+    private static int ReadHexInt(string value) => int.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+
+    private static string DecodeUtf16Hex(string value)
+    {
+        byte[] bytes = Convert.FromHexString(value);
+        return Encoding.BigEndianUnicode.GetString(bytes);
+    }
 }
 
 internal readonly record struct PdfMatrix(double A, double B, double C, double D, double X, double Y)

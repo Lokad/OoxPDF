@@ -175,6 +175,10 @@ High-priority actions:
   `ComparePdfTextOperations.ps1 -UseEffectiveMatrix` can compare Office/candidate text placement after
   `cm`-driven rotation or translation. This is required for vertical PPTX parity because Office often emits
   rotation directly in `Tm`, while `ooxpdf` commonly rotates the frame with `cm` and emits upright local text.
+- [x] Decode inspected PDF text-operation payloads through `/ToUnicode` maps:
+  `PdfInspect` now emits `DecodedText` beside the raw `Tj`/`TJ` payload, so Office literal strings and
+  candidate embedded-font hex strings can be compared structurally before changing glyph grouping or
+  vertical layout.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
@@ -3131,6 +3135,9 @@ paths, and ExecPlan references together.
     (candidate effective Y `480.00` vs Office `479.98`, most X deltas under `0.1 pt`), while the stacked
     frame still differs in text-operation grouping and missing/clipped columns. This keeps the next work item
     structural: glyph/column layout, not raw matrix normalization.
+  - [x] Add decoded text payloads to PDF inspection, so the vertical port can be compared as text content
+    plus matrices instead of raw glyph hex. In the stacked case, candidate chunks such as decoded `L S`
+    expose grouping/column differences directly against Office literal payloads such as `L ` and `S`.
   - [ ] Continue vertical text parity with Office text-operation inspection: stacked-letter orientation,
     column order, per-column x positions, and baseline placement remain visibly approximate.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
