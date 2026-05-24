@@ -1786,6 +1786,13 @@ High-priority actions:
   `InsidePlotText`, `LeftAxisText`, `RightSideText`, `OuterChartText`, or generic `ChartText`; it records
   stable text hashes and effective text matrices without exposing private text content. `CheckVisualCase.ps1`
   can opt public manifests into this structural gate through `expected.maxChartTextStructurePositionDelta`.
+- [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
+  the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
+  `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest
+  passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-003145`, comparing one
+  reference and one candidate axis-pair plot box with zero reported structure deltas. This is deliberately
+  narrower than the remaining fallback-geometry work: it guards one observable plot-box structure while
+  leaving the broader `PptxChartMetricRules` replacement item open.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
   oracle distinguishes plot-relative regions but does not yet separate title, value-axis ticks, category-axis
   ticks, legend labels, data labels, and annotations as explicit Office-aligned roles.
