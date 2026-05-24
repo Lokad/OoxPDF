@@ -164,7 +164,7 @@ internal static class PptxTests
                     <p:grpSp>
                       <p:nvGrpSpPr><p:cNvPr id="10" name="Group"/><p:nvPr/></p:nvGrpSpPr>
                       <p:grpSpPr><a:xfrm><a:off x="2743200" y="0"/><a:ext cx="914400" cy="914400"/><a:chOff x="0" y="0"/><a:chExt cx="914400" cy="914400"/></a:xfrm></p:grpSpPr>
-                      <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm></p:spPr></p:sp>
+                      <p:sp><p:nvSpPr><p:cNvPr id="11" name="GroupedShape"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm><a:pattFill prst="dkDnDiag"><a:fgClr><a:srgbClr val="2F856A"/></a:fgClr><a:bgClr><a:srgbClr val="EEEEEE"/></a:bgClr></a:pattFill></p:spPr></p:sp>
                     </p:grpSp>
                   </p:spTree></p:cSld>
                 </p:sld>
@@ -213,6 +213,10 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneNodeKind.Group, slide.SlideNodes[5].Kind);
         TestAssert.Equal(1, slide.SlideNodes[5].Children.Count);
         TestAssert.Equal(PptxSceneNodeKind.Shape, slide.SlideNodes[5].Children[0].Kind);
+        TestAssert.True(slide.SlideNodes[5].Children[0].Shape?.PatternFill.HasPattern == true, "Expected grouped shape pattern fill in the scene model.");
+        TestAssert.Equal("dkDnDiag", slide.SlideNodes[5].Children[0].Shape?.PatternFill.Preset ?? string.Empty);
+        TestAssert.Equal(new RgbColor(47, 133, 106), slide.SlideNodes[5].Children[0].Shape?.PatternFill.Foreground ?? default);
+        TestAssert.Equal(new RgbColor(238, 238, 238), slide.SlideNodes[5].Children[0].Shape?.PatternFill.Background ?? default);
         TestAssert.True(slide.LayoutNodes[1].IsPlaceholder, "Expected layout placeholder metadata in the scene model.");
         TestAssert.Equal(72d, slide.SlideNodes[0].Bounds?.Width ?? 0d);
         PptxSceneTextBody textBody = TestAssert.NotNull(slide.SlideNodes[0].TextBody);

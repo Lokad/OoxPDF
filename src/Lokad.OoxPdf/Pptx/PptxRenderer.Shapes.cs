@@ -121,6 +121,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.Preset,
             shape.Shape.HasCustomGeometry,
             ToFillStyle(shape.Shape.Fill),
+            ToShapePatternFill(shape.Shape.PatternFill),
             ToLineStyle(shape.Shape.Line),
             ToLineEndStyle(shape.Shape.HeadEnd),
             ToLineEndStyle(shape.Shape.TailEnd));
@@ -171,6 +172,7 @@ internal sealed partial class PptxRenderer
             null,
             null,
             null,
+            null,
             null);
     }
 
@@ -191,6 +193,7 @@ internal sealed partial class PptxRenderer
         string preset,
         bool hasCustomGeometry,
         FillStyle? fillOverride,
+        ShapePatternFill? patternFillOverride,
         LineStyle? lineOverride,
         LineEndStyle? headEndOverride,
         LineEndStyle? tailEndOverride)
@@ -223,7 +226,17 @@ internal sealed partial class PptxRenderer
         {
             hasFill = TryReadShapeFill(shape, shapeProperties, theme, out fill, out fillAlpha);
         }
-        bool hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out ShapePatternFill patternFill);
+        bool hasPatternFill;
+        ShapePatternFill patternFill;
+        if (patternFillOverride is { } resolvedPatternFill)
+        {
+            patternFill = resolvedPatternFill;
+            hasPatternFill = true;
+        }
+        else
+        {
+            hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out patternFill);
+        }
         RgbColor stroke;
         double lineWidth;
         double strokeAlpha;
@@ -1681,6 +1694,13 @@ internal sealed partial class PptxRenderer
     private static FillStyle ToFillStyle(PptxSceneFillStyle fill)
     {
         return new FillStyle(fill.HasFill, fill.Color, fill.Alpha);
+    }
+
+    private static ShapePatternFill? ToShapePatternFill(PptxScenePatternFill fill)
+    {
+        return fill.HasPattern
+            ? new ShapePatternFill(fill.Preset, fill.Foreground, fill.Background, fill.Alpha)
+            : null;
     }
 
     private static LineEndKind ReadLineEndKind(string? type)

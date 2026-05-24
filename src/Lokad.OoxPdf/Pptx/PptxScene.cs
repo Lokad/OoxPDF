@@ -179,6 +179,7 @@ internal sealed record PptxSceneShape(
     string Preset,
     bool HasCustomGeometry,
     PptxSceneFillStyle Fill,
+    PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
@@ -186,6 +187,13 @@ internal sealed record PptxSceneShape(
 internal readonly record struct PptxSceneFillStyle(
     bool HasFill,
     RgbColor Color,
+    double Alpha);
+
+internal readonly record struct PptxScenePatternFill(
+    bool HasPattern,
+    string Preset,
+    RgbColor Foreground,
+    RgbColor Background,
     double Alpha);
 
 internal readonly record struct PptxSceneLineStyle(
@@ -582,9 +590,37 @@ internal sealed class PptxSceneBuilder
             TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
+            TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, out PptxScenePatternFill fill)
+    {
+        XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
+        string? preset = (string?)patternFill?.Attribute("prst");
+        if (patternFill is null || !IsSupportedDiagonalPatternFill(preset))
+        {
+            fill = default;
+            return false;
+        }
+
+        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor, out _)
+            ? foregroundColor
+            : new RgbColor(0, 0, 0);
+        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor, out _)
+            ? backgroundColor
+            : new RgbColor(255, 255, 255);
+        fill = new PptxScenePatternFill(true, preset!, foreground, background, 1d);
+        return true;
+    }
+
+    private static bool IsSupportedDiagonalPatternFill(string? preset)
+    {
+        return preset is not null &&
+            (preset.Contains("UpDiag", StringComparison.OrdinalIgnoreCase) ||
+             preset.Contains("DnDiag", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool TryReadShapeFill(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double alpha)

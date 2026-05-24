@@ -900,8 +900,11 @@ High-priority actions:
   decide whether the node is custom geometry before handing source XML to the existing path interpreter.
 - [x] Move solid shape fill into `PptxSceneShape`: resolved fill color and alpha are now scene-level data and
   ordered shape rendering consumes them through a renderer conversion boundary.
-- [ ] Continue typed shape/connector migration by resolving pattern/picture fills, effect styles, and then
-  custom geometry path commands into typed scene records.
+- [x] Move supported shape pattern-fill intent into `PptxSceneShape`: diagonal pattern preset, foreground,
+  background, and alpha are now scene-level data and ordered shape rendering consumes them through the existing
+  pattern stroke algorithm.
+- [ ] Continue typed shape/connector migration by resolving picture fills, effect styles, and then custom
+  geometry path commands into typed scene records.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
