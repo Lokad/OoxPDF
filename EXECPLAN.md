@@ -3768,6 +3768,15 @@ single model-owned input. This preserves the long-term direction: parse OOXML on
 layout model from that scene data, then serialize PDF operators from the layout. The `pptx-tables` non-slow
 group passed with 7 passed, 0 failed, 0 skipped; the full suite passed with 197 passed, 0 failed, 0 skipped;
 and `dotnet pack` succeeded.
+
+obsolete chart relationship overload removal / 2026-05-24:
+After ordered scene dispatch made `PptxSceneChart` the chart entry point, the old `RenderChartFrame` overload
+that accepted only relationship id and target part name had no callers. It was removed while leaving the
+current chart renderer's XML fallbacks intact: charts still need a staged migration because many plot, axis,
+label, and style reads intentionally fall back to chart XML until the scene chart model fully covers those
+OOXML surfaces. The `pptx-charts` non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow
+suite passed with 190 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite passed with
+197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

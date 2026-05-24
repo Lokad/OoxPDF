@@ -52,18 +52,6 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds,
         string? relationshipId,
         string? targetPartName,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
-    {
-        RenderChartFrame(context, graphics, fonts, bounds, relationshipId, targetPartName, null, null, null, relationships);
-    }
-
-    private static void RenderChartFrame(
-        PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
-        List<PdfFontResource> fonts,
-        ShapeBounds? bounds,
-        string? relationshipId,
-        string? targetPartName,
         XDocument? chartXml,
         IReadOnlyList<RgbColor>? chartPalette,
         PptxSceneChart? sceneChart,
