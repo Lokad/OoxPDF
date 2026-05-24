@@ -874,8 +874,11 @@ High-priority actions:
 - [x] Replace `RenderOrderedShapeTextContainer` with scene-node iteration for the ordered slide path. Normal
   PPTX rendering now builds a `PptxScene`, carries the current `PptxSceneSlide` in `PptxRenderContext`, and
   ordered slide rendering iterates `PptxSceneNode`/`Children` while leaf renderers still consume source XML.
-- [ ] Move leaf PPTX renderers from source XML toward typed node/layout inputs one family at a time, starting
-  with connectors or pictures where the current source XML handoff is smallest.
+- [x] Move the first leaf PPTX renderer inputs toward typed scene data: ordered picture rendering now takes
+  relationship id and EMU bounds from `PptxSceneNode`/`PptxScenePicture`, while keeping source XML only for
+  crop/recolor/svg details that still need typed models.
+- [ ] Continue typed leaf migration by resolving picture crop/fill/alpha/recolor into `PptxScenePicture`,
+  then repeat the same pattern for connector geometry and line-end styles.
 - [ ] Trim this ExecPlan conservatively: first add missing `PLANS.md`-required sections and current evidence,
   then consolidate only completed historical detail that is already represented by checked-in fixtures,
   tests, or tool support. Do not remove open checkboxes during this cleanup unless a direct duplicate is
@@ -2448,6 +2451,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: `RenderPages` now builds a `PptxScene`, carries `PptxSceneSlide` through `PptxRenderContext`, and
   ordered slide rendering iterates scene nodes and group children while shape/picture/table/chart renderers
   still receive the same source XML elements as before.
+- Observation: The scene model needs to preserve source-unit values, not only convenient point conversions, if
+  it is going to feed Office-like renderer transforms.
+  Evidence: `PptxSceneBounds` now keeps EMU coordinates and extents plus point conversion properties; ordered
+  picture rendering uses those EMU bounds directly through the existing group transform math.
 
 ## Decision Log
 

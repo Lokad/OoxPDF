@@ -170,8 +170,11 @@ internal sealed record PptxSceneNode(
     bool IsPlaceholder,
     PptxSceneBounds? Bounds,
     PptxSceneTextBody? TextBody,
+    PptxScenePicture? Picture,
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
+
+internal sealed record PptxScenePicture(string? RelationshipId);
 
 internal sealed record PptxSceneTextBody(
     XElement? BodyProperties,
@@ -224,13 +227,19 @@ internal enum PptxSceneTextRunKind
 }
 
 internal sealed record PptxSceneBounds(
-    double X,
-    double Y,
-    double Width,
-    double Height,
+    long XEmu,
+    long YEmu,
+    long WidthEmu,
+    long HeightEmu,
     double RotationDegrees,
     bool FlipHorizontal,
-    bool FlipVertical);
+    bool FlipVertical)
+{
+    public double X => OoxUnits.EmuToPoints(XEmu);
+    public double Y => OoxUnits.EmuToPoints(YEmu);
+    public double Width => OoxUnits.EmuToPoints(WidthEmu);
+    public double Height => OoxUnits.EmuToPoints(HeightEmu);
+}
 
 internal enum PptxSceneNodeKind
 {
@@ -248,6 +257,7 @@ internal sealed class PptxSceneBuilder
 {
     private static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
 
@@ -328,6 +338,7 @@ internal sealed class PptxSceneBuilder
                 IsPlaceholder(child),
                 ReadBounds(child),
                 ReadTextBody(child, placeholderSources, theme),
+                kind == PptxSceneNodeKind.Picture ? new PptxScenePicture(ReadPictureRelationshipId(child)) : null,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme) : [],
                 child));
         }
@@ -417,13 +428,25 @@ internal sealed class PptxSceneBuilder
         }
 
         return new PptxSceneBounds(
-            OoxUnits.EmuToPoints(ReadLong(offset, "x")),
-            OoxUnits.EmuToPoints(ReadLong(offset, "y")),
-            OoxUnits.EmuToPoints(ReadLong(extents, "cx")),
-            OoxUnits.EmuToPoints(ReadLong(extents, "cy")),
+            ReadLong(offset, "x"),
+            ReadLong(offset, "y"),
+            ReadLong(extents, "cx"),
+            ReadLong(extents, "cy"),
             transform.Attribute("rot") is { } rotation ? long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d : 0d,
             ReadBool(transform, "flipH"),
             ReadBool(transform, "flipV"));
+    }
+
+    internal static string? ReadPictureRelationshipId(XElement picture)
+    {
+        XElement? blip = picture
+            .Element(PresentationNamespace + "blipFill")
+            ?.Element(DrawingNamespace + "blip");
+        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ??
+            blip?.Descendants()
+                .FirstOrDefault(element => element.Name.LocalName == "svgBlip")
+                ?.Attribute(RelationshipsNamespace + "embed")
+                ?.Value;
     }
 
     private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)

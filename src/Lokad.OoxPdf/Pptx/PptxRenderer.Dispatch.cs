@@ -66,17 +66,11 @@ internal sealed partial class PptxRenderer
                     break;
                 case PptxSceneNodeKind.Picture:
                     RenderPicture(
-                        source,
-                        context.SlideRelationships,
-                        context.Package,
-                        context.Document,
-                        context.Theme,
+                        node,
+                        context,
                         graphics,
-                        context.DiagnosticSink,
-                        context.SlideNumber,
                         transform,
                         images,
-                        context.ImageCache,
                         ref imageIndex);
                     break;
                 case PptxSceneNodeKind.Table:

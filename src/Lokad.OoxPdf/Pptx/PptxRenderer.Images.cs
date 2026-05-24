@@ -60,6 +60,36 @@ internal sealed partial class PptxRenderer
     }
 
     private static void RenderPicture(
+        PptxSceneNode picture,
+        PptxRenderContext context,
+        PdfGraphicsBuilder graphics,
+        GroupTransform transform,
+        List<PdfImageResource> images,
+        ref int index)
+    {
+        if (picture.Picture is null || picture.Bounds is null)
+        {
+            return;
+        }
+
+        RenderPicture(
+            picture.Source,
+            context.SlideRelationships,
+            context.Package,
+            context.Document,
+            context.Theme,
+            graphics,
+            context.DiagnosticSink,
+            context.SlideNumber,
+            transform,
+            images,
+            context.ImageCache,
+            ref index,
+            picture.Picture.RelationshipId,
+            ToShapeBounds(picture.Bounds));
+    }
+
+    private static void RenderPicture(
         XElement picture,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPackage package,
@@ -73,10 +103,48 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int index)
     {
-        string? relationshipId = ReadPictureRelationshipId(picture);
+        string? relationshipId = PptxSceneBuilder.ReadPictureRelationshipId(picture);
         XElement? shapeProperties = picture.Element(PresentationNamespace + "spPr");
         ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-        if (relationshipId is null || bounds is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        if (bounds is null)
+        {
+            return;
+        }
+
+        RenderPicture(
+            picture,
+            relationships,
+            package,
+            document,
+            theme,
+            graphics,
+            diagnosticSink,
+            slideIndex,
+            transform,
+            images,
+            imageCache,
+            ref index,
+            relationshipId,
+            bounds.Value);
+    }
+
+    private static void RenderPicture(
+        XElement picture,
+        IReadOnlyDictionary<string, OoxRelationship> relationships,
+        OoxPackage package,
+        PptxDocument document,
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        int slideIndex,
+        GroupTransform transform,
+        List<PdfImageResource> images,
+        Dictionary<string, PdfImageXObject?> imageCache,
+        ref int index,
+        string? relationshipId,
+        ShapeBounds rawBounds)
+    {
+        if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
         {
             return;
         }
@@ -95,7 +163,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ShapeBounds transformedBounds = transform.Apply(bounds.Value);
+        ShapeBounds transformedBounds = transform.Apply(rawBounds);
         if (imagePart.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
             RenderSvgPicture(graphics, document, picture, transformedBounds, imagePart.Bytes);
@@ -158,16 +226,16 @@ internal sealed partial class PptxRenderer
         images.Add(new PdfImageResource(name, image));
     }
 
-    private static string? ReadPictureRelationshipId(XElement picture)
+    private static ShapeBounds ToShapeBounds(PptxSceneBounds bounds)
     {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
-        return (string?)blip?.Attribute(RelationshipsNamespace + "embed") ??
-            blip?.Descendants()
-                .FirstOrDefault(element => element.Name.LocalName == "svgBlip")
-                ?.Attribute(RelationshipsNamespace + "embed")
-                ?.Value;
+        return new ShapeBounds(
+            bounds.XEmu,
+            bounds.YEmu,
+            bounds.WidthEmu,
+            bounds.HeightEmu,
+            bounds.RotationDegrees,
+            bounds.FlipHorizontal,
+            bounds.FlipVertical);
     }
 
     private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes)
