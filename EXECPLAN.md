@@ -902,6 +902,11 @@ High-priority actions:
   ordered shape rendering consumes them through a renderer conversion boundary.
 - [ ] Continue typed shape/connector migration by resolving pattern/picture fills, effect styles, and then
   custom geometry path commands into typed scene records.
+- [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
+  model. `dotnet pack` succeeded and private run
+  `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
+  mismatches, deck MAE `9.043369`, changed16 `0.116418`, and one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`
+  diagnostic. Page 17 remained stable at MAE `2.945717`, changed16 `0.045530`.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving shape line style, dash/cap/join, and
   custom geometry presence into the scene model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104147` produced 84/84 compared pages, zero dimension
