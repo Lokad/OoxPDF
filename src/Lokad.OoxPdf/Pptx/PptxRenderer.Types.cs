@@ -159,6 +159,12 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextAtomLayout> Atoms,
         PptxTextGlyphSpanLayout GlyphSpan);
 
+    private sealed record TextFontUse(
+        string FamilyName,
+        bool Bold,
+        bool Italic,
+        IReadOnlyList<int> CodePoints);
+
     private sealed record TextGlyphAtom(
         int CodePoint,
         string? Typeface,
@@ -473,48 +479,117 @@ internal sealed partial class PptxRenderer
     {
         private readonly WindowsFontResolver resolver = new();
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, FontResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
         public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
         {
-            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
-            if (font is null)
+            if (fontSize <= 0d)
             {
-                int fallbackRuneCount = text.EnumerateRunes().Count();
-                return PptxTextMetricRules.FallbackAdvanceWidth(text.Length, fallbackRuneCount, fontSize, characterSpacing);
+                return 0d;
             }
 
-            double units = 0d;
+            double points = 0d;
+            OpenTypeFont? previousFont = null;
             ushort previousGlyph = 0;
+            int runeCount = 0;
             foreach (Rune rune in text.EnumerateRunes())
             {
-                ushort glyph = font.MapCodePoint(rune.Value);
-                if (kerningEnabled && previousGlyph != 0 && glyph != 0)
+                runeCount++;
+                ResolvedGlyphFont? resolved = ResolveGlyphFont(familyName, bold, italic, rune.Value);
+                if (resolved is null)
                 {
-                    units += font.GetKerning(previousGlyph, glyph);
+                    continue;
                 }
 
-                units += font.GetAdvanceWidth(glyph);
+                OpenTypeFont font = resolved.Font;
+                ushort glyph = font.MapCodePoint(rune.Value);
+                if (glyph == 0)
+                {
+                    continue;
+                }
+
+                if (kerningEnabled && previousFont == font && previousGlyph != 0)
+                {
+                    points += font.GetKerning(previousGlyph, glyph) * fontSize / font.UnitsPerEm;
+                }
+
+                points += font.GetAdvanceWidth(glyph) * fontSize / font.UnitsPerEm;
+                previousFont = font;
                 previousGlyph = glyph;
             }
 
-            int runeCount = text.EnumerateRunes().Count();
-            return Math.Max(0d, units * fontSize / font.UnitsPerEm + Math.Max(0, runeCount - 1) * characterSpacing);
+            if (previousFont is null)
+            {
+                return PptxTextMetricRules.FallbackAdvanceWidth(text.Length, runeCount, fontSize, characterSpacing);
+            }
+
+            return Math.Max(0d, points + Math.Max(0, runeCount - 1) * characterSpacing);
         }
 
         public double MeasureBoundaryAdvance(int previousCodePoint, int nextCodePoint, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
         {
-            OpenTypeFont? font = ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
-            if (font is null)
+            ResolvedGlyphFont? previousResolved = ResolveGlyphFont(familyName, bold, italic, previousCodePoint);
+            ResolvedGlyphFont? nextResolved = ResolveGlyphFont(familyName, bold, italic, nextCodePoint);
+            if (previousResolved is null || nextResolved is null || previousResolved.Font != nextResolved.Font)
             {
                 return characterSpacing;
             }
 
+            OpenTypeFont font = previousResolved.Font;
             ushort previousGlyph = font.MapCodePoint(previousCodePoint);
             ushort nextGlyph = font.MapCodePoint(nextCodePoint);
             double units = kerningEnabled && previousGlyph != 0 && nextGlyph != 0
                 ? font.GetKerning(previousGlyph, nextGlyph)
                 : 0d;
             return units * fontSize / font.UnitsPerEm + characterSpacing;
+        }
+
+        public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
+        {
+            string requestedFamily = string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName;
+            string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture) + "\u001f" + codePoint.ToString(CultureInfo.InvariantCulture);
+            if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached))
+            {
+                return cached;
+            }
+
+            FontResolution? primaryResolution = ResolveFontResolution(requestedFamily, bold, italic);
+            OpenTypeFont? primaryFont = LoadFont(primaryResolution);
+            if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
+            {
+                cached = new ResolvedGlyphFont(requestedFamily, primaryFont);
+                glyphFonts[key] = cached;
+                return cached;
+            }
+
+            foreach (FontResolution resolution in resolver.GetDiscoveredFonts()
+                         .Where(f => !f.HasMathTable && f.FontFilePath is not null)
+                         .OrderBy(f => f.Bold == bold ? 0 : 1000)
+                         .ThenBy(f => f.Italic == italic ? 0 : 1000)
+                         .ThenBy(f => Math.Abs(f.WeightClass - (bold ? 700 : 400)))
+                         .ThenBy(f => f.FamilyName, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(f => f.FontFilePath, StringComparer.OrdinalIgnoreCase)
+                         .ThenBy(f => f.FontFaceIndex))
+            {
+                if (primaryResolution is not null &&
+                    resolution.FontFaceIndex == primaryResolution.FontFaceIndex &&
+                    string.Equals(resolution.FontFilePath, primaryResolution.FontFilePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                OpenTypeFont? font = LoadFont(resolution);
+                if (font is not null && font.MapCodePoint(codePoint) != 0)
+                {
+                    cached = new ResolvedGlyphFont(resolution.FamilyName, font);
+                    glyphFonts[key] = cached;
+                    return cached;
+                }
+            }
+
+            glyphFonts[key] = null;
+            return null;
         }
 
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
@@ -524,7 +599,38 @@ internal sealed partial class PptxRenderer
 
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
         {
+            return LoadFont(ResolveFontResolution(familyName, bold, italic));
+        }
+
+        private FontResolution? ResolveFontResolution(string familyName, bool bold, bool italic)
+        {
             string key = familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
+            if (resolutions.TryGetValue(key, out FontResolution? cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                cached = resolver.ResolvePresentationTextFace(new FontRequest(familyName, bold, italic));
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
+            {
+                cached = null;
+            }
+
+            resolutions[key] = cached;
+            return cached;
+        }
+
+        private OpenTypeFont? LoadFont(FontResolution? resolution)
+        {
+            if (resolution is null || resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
+            {
+                return null;
+            }
+
+            string key = resolution.FontFilePath + "\u001f" + resolution.FontFaceIndex.ToString(CultureInfo.InvariantCulture);
             if (fonts.TryGetValue(key, out OpenTypeFont? cached))
             {
                 return cached;
@@ -532,10 +638,7 @@ internal sealed partial class PptxRenderer
 
             try
             {
-                FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(familyName, bold, italic));
-                cached = resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath)
-                    ? null
-                    : OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
+                cached = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
             {
@@ -546,6 +649,8 @@ internal sealed partial class PptxRenderer
             return cached;
         }
     }
+
+    private sealed record ResolvedGlyphFont(string Typeface, OpenTypeFont Font);
 
     private enum TextAlignment
     {

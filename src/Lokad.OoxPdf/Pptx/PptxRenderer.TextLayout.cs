@@ -1266,16 +1266,18 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator, double leadingAdjustment = 0d)
     {
-        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(run.FontFamily, run.Bold, run.Italic);
-        if (font is null || font.UnitsPerEm == 0)
-        {
-            return PptxTextGlyphSpanLayout.Empty(run);
-        }
-
         var glyphs = new List<PptxTextGlyphLayout>();
+        OpenTypeFont? previousFont = null;
         ushort previousGlyph = 0;
         foreach (Rune rune in run.Text.EnumerateRunes())
         {
+            ResolvedGlyphFont? resolved = advanceEstimator.ResolveGlyphFont(run.FontFamily, run.Bold, run.Italic, rune.Value);
+            if (resolved is null || resolved.Font.UnitsPerEm == 0)
+            {
+                continue;
+            }
+
+            OpenTypeFont font = resolved.Font;
             ushort glyph = font.MapCodePoint(rune.Value);
             if (glyph == 0)
             {
@@ -1286,15 +1288,21 @@ internal sealed partial class PptxRenderer
             if (glyphs.Count > 0)
             {
                 adjustmentBefore += run.CharacterSpacing;
-                if (run.KerningEnabled && previousGlyph != 0)
+                if (run.KerningEnabled && previousFont == font && previousGlyph != 0)
                 {
                     adjustmentBefore += font.GetKerning(previousGlyph, glyph) * run.FontSize / font.UnitsPerEm;
                 }
             }
 
             double advance = font.GetAdvanceWidth(glyph) * run.FontSize / font.UnitsPerEm;
-            glyphs.Add(new PptxTextGlyphLayout(rune.Value, run.FontFamily, glyph, advance, adjustmentBefore));
+            glyphs.Add(new PptxTextGlyphLayout(rune.Value, resolved.Typeface, glyph, advance, adjustmentBefore));
+            previousFont = font;
             previousGlyph = glyph;
+        }
+
+        if (glyphs.Count == 0)
+        {
+            return PptxTextGlyphSpanLayout.Empty(run);
         }
 
         double naturalWidth = glyphs.Sum(glyph => glyph.Advance) + glyphs.Sum(glyph => glyph.AdjustmentBefore);

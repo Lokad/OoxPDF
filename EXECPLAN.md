@@ -297,6 +297,11 @@ High-priority actions:
   typeface plus the PDF font resource that emits it. This is behavior-neutral and intentionally still reports
   one resource for each current glyph run; the point is to make the future Office-like font fallback split
   observable at the PDF-emission boundary instead of hiding it behind raster drift.
+- [x] Add the first structural per-glyph font fallback path:
+  PPTX text measurement and glyph layout now resolve missing code points against discovered non-math text
+  fonts, keep primary requested typefaces for exact hits, and split positioned spans by glyph typeface before
+  PDF emission so fallback glyph ids are encoded against their own font resource. A synthetic Arial/CJK test
+  locks decoded glyph order plus multiple PDF font resources.
 - [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
   `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
   flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
@@ -3432,11 +3437,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   accent-heavy lines point to unresolved font fallback/glyph grouping parity rather than a simple position
   threshold issue. The new `ComparePdfTextLineStarts.ps1 -ShowText` mode exposes those splits directly:
   Office separates accent/fallback fragments that the candidate currently keeps merged.
-- Observation: The current glyph-run emission boundary still owns only one PDF font resource per run even
-  though layout glyphs now expose per-glyph typeface metadata.
-  Evidence: `PptxTextGlyphRunSnapshot` now reports per-glyph typeface and resource names, and current
-  inspected runs still have a single distinct resource. The next real fallback slice should split glyph runs
-  by resolved font/resource before PDF `TJ` construction instead of patching accent probe thresholds.
+- Observation: The glyph-run emission boundary can now split one OOXML run across multiple PDF font resources
+  when glyph fallback is required, but fallback selection is still a simple discovered-font search.
+  Evidence: `PptxSyntheticTextBoxSplitsMissingGlyphsToFallbackFont` locks an Arial run containing a CJK code
+  point into multiple emitted resources while preserving decoded glyph order. The next refinement should make
+  script-aware fallback preference explicit and compare it against Office PDFs before treating accented/CJK
+  grouping as locked.
 
 ## Decision Log
 
@@ -3565,10 +3571,10 @@ first-line extra candidate operation is a space and later deltas are accent/fall
 
 glyph-run ownership slice / 2026-05-24:
 `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
-passed with 65 passed, 0 failed, 2 skipped after adding per-glyph typeface/resource snapshots to glyph-run
-inspection.
-Non-slow tests passed with 188 passed, 0 failed, 7 skipped; package build succeeded; full tests passed with
-195 passed, 0 failed, 0 skipped.
+passed with 66 passed, 0 failed, 2 skipped after adding per-glyph fallback font splitting and
+typeface/resource snapshots to glyph-run inspection.
+Non-slow tests passed with 189 passed, 0 failed, 7 skipped; package build succeeded; full tests passed with
+196 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

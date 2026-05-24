@@ -13,40 +13,43 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
     {
         IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans.Select(span => span.Run).ToArray());
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, []);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: false);
         textSpans = CoalesceUnderlineSpans(textSpans);
         var glyphRuns = new List<PptxTextGlyphRunSnapshot>();
         foreach (PptxPositionedTextSpan span in textSpans)
         {
-            TextRun run = span.Run;
-            if (!renderedFonts.Fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
             {
-                continue;
-            }
+                TextRun run = emissionSpan.Run;
+                if (!renderedFonts.Fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                {
+                    continue;
+                }
 
-            TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
-            if (glyphRun is null)
-            {
-                continue;
-            }
+                TextGlyphRun? glyphRun = BuildTextGlyphRun(rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                if (glyphRun is null)
+                {
+                    continue;
+                }
 
-            glyphRuns.Add(new PptxTextGlyphRunSnapshot(
-                run.Text,
-                glyphRun.X,
-                glyphRun.BaselineY,
-                glyphRun.Width,
-                glyphRun.Glyphs.Count,
-                glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
-                glyphRun.Glyphs
-                    .Select(glyph => new PptxTextGlyphRunAtomSnapshot(
-                        glyph.CodePoint,
-                        glyph.Typeface,
-                        glyphRun.ResourceName,
-                        glyph.GlyphId,
-                        glyph.Advance,
-                        glyph.AdjustmentBefore))
-                    .ToArray()));
+                glyphRuns.Add(new PptxTextGlyphRunSnapshot(
+                    run.Text,
+                    glyphRun.X,
+                    glyphRun.BaselineY,
+                    glyphRun.Width,
+                    glyphRun.Glyphs.Count,
+                    glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
+                    glyphRun.Glyphs
+                        .Select(glyph => new PptxTextGlyphRunAtomSnapshot(
+                            glyph.CodePoint,
+                            glyph.Typeface,
+                            glyphRun.ResourceName,
+                            glyph.GlyphId,
+                            glyph.Advance,
+                            glyph.AdjustmentBefore))
+                        .ToArray()));
+            }
         }
 
         return glyphRuns;
@@ -74,10 +77,32 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans.Select(span => span.Run).Concat(legacyTextRuns).ToArray());
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns);
         DrawTextSpansWithFonts(textSpans, graphics, renderedFonts.Fonts);
         DrawTextRunsWithFonts(legacyTextRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
+    }
+
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, IReadOnlyList<TextRun> legacyTextRuns, string resourcePrefix = "F")
+    {
+        var uses = new List<TextFontUse>();
+        foreach (PptxPositionedTextSpan span in textSpans)
+        {
+            foreach (IGrouping<string, PptxTextGlyphLayout> group in span.GlyphSpan.Glyphs.GroupBy(
+                         glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? (span.Run.FontFamily ?? "Arial") : glyph.Typeface!,
+                         StringComparer.OrdinalIgnoreCase))
+            {
+                uses.Add(new TextFontUse(group.Key, span.GlyphSpan.Bold, span.GlyphSpan.Italic, group.Select(glyph => glyph.CodePoint).ToArray()));
+            }
+        }
+
+        foreach (TextRun run in CoalesceUnderlineRuns(CoalesceAdjacentTextRuns(legacyTextRuns, compareHighlight: false)))
+        {
+            string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
+            uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
+        }
+
+        return CreateRenderedFonts(uses, resourcePrefix);
     }
 
     private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, string resourcePrefix = "F")
@@ -89,21 +114,36 @@ internal sealed partial class PptxRenderer
 
         textRuns = CoalesceAdjacentTextRuns(textRuns, compareHighlight: false);
         textRuns = CoalesceUnderlineRuns(textRuns);
+        return CreateRenderedFonts(textRuns
+            .Select(run => new TextFontUse(
+                string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!,
+                run.Bold,
+                run.Italic,
+                run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
+            .ToArray(), resourcePrefix);
+    }
+
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, string resourcePrefix)
+    {
+        if (uses.Count == 0)
+        {
+            return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
+        }
+
         var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
-        foreach (IGrouping<string, TextRun> group in textRuns.GroupBy(r => FontKey(r), StringComparer.OrdinalIgnoreCase))
+        foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
         {
-            TextRun first = group.First();
-            string familyName = string.IsNullOrWhiteSpace(first.FontFamily) ? "Arial" : first.FontFamily!;
-            FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(familyName, first.Bold, first.Italic));
+            TextFontUse first = group.First();
+            FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(first.FamilyName, first.Bold, first.Italic));
             if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
             {
                 continue;
             }
 
             OpenTypeFont font = OpenTypeFont.Load(resolution.FontFilePath, resolution.FontFaceIndex);
-            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(r => r.Text.EnumerateRunes().Select(rune => rune.Value)));
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, group.SelectMany(use => use.CodePoints));
             string resourceName = resourcePrefix + (resources.Count + 1).ToString(CultureInfo.InvariantCulture);
             fonts[group.Key] = new RenderedFont(resourceName, embedded, first.Bold && !resolution.Bold, first.Italic && !resolution.Italic);
             resources.Add(new PdfFontResource(resourceName, embedded));
@@ -133,10 +173,13 @@ internal sealed partial class PptxRenderer
         textSpans = CoalesceUnderlineSpans(textSpans);
         foreach (PptxPositionedTextSpan span in textSpans)
         {
-            TextRun run = span.Run;
-            if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+            foreach (PptxPositionedTextSpan emissionSpan in SplitSpanByGlyphTypeface(span))
             {
-                DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, span, rendered.SyntheticBold, rendered.SyntheticItalic);
+                TextRun run = emissionSpan.Run;
+                if (fonts.TryGetValue(FontKey(run), out RenderedFont rendered))
+                {
+                    DrawWrappedSpan(graphics, rendered.ResourceName, rendered.Font, emissionSpan, rendered.SyntheticBold, rendered.SyntheticItalic);
+                }
             }
         }
     }
@@ -474,10 +517,78 @@ internal sealed partial class PptxRenderer
             NearlyEqual(leftOutline.Width, rightOutline.Width);
     }
 
+    private static IEnumerable<PptxPositionedTextSpan> SplitSpanByGlyphTypeface(PptxPositionedTextSpan span)
+    {
+        if (span.GlyphSpan.Glyphs.Count == 0)
+        {
+            yield return span;
+            yield break;
+        }
+
+        double cursor = span.Run.X;
+        int index = 0;
+        while (index < span.GlyphSpan.Glyphs.Count)
+        {
+            PptxTextGlyphLayout first = span.GlyphSpan.Glyphs[index];
+            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? (span.Run.FontFamily ?? "Arial") : first.Typeface!;
+            int start = index;
+            index++;
+            while (index < span.GlyphSpan.Glyphs.Count &&
+                string.Equals(span.GlyphSpan.Glyphs[index].Typeface ?? span.Run.FontFamily ?? "Arial", typeface, StringComparison.OrdinalIgnoreCase))
+            {
+                index++;
+            }
+
+            PptxTextGlyphLayout[] glyphs = span.GlyphSpan.Glyphs.Skip(start).Take(index - start).ToArray();
+            double leadingOffset = start == 0 ? 0d : glyphs[0].AdjustmentBefore;
+            if (start != 0 && Math.Abs(leadingOffset) > PptxTextMetricRules.TextStateTolerance)
+            {
+                glyphs[0] = glyphs[0] with { AdjustmentBefore = 0d };
+            }
+
+            double naturalWidth = glyphs.Sum(glyph => glyph.Advance) + glyphs.Sum(glyph => glyph.AdjustmentBefore);
+            double x = cursor + leadingOffset;
+            string text = string.Concat(glyphs.Select(glyph => char.ConvertFromUtf32(glyph.CodePoint)));
+            TextRun run = span.Run with
+            {
+                Text = text,
+                X = x,
+                Width = naturalWidth,
+                FontFamily = typeface,
+                Alignment = TextAlignment.Left,
+                PreventCoalesce = true
+            };
+            yield return span with
+            {
+                Run = run,
+                EndX = x + naturalWidth,
+                GlyphSpan = new PptxTextGlyphSpanLayout(
+                    text,
+                    typeface,
+                    span.GlyphSpan.Bold,
+                    span.GlyphSpan.Italic,
+                    span.GlyphSpan.FontSize,
+                    span.GlyphSpan.CharacterSpacing,
+                    span.GlyphSpan.KerningEnabled,
+                    start == 0 ? span.GlyphSpan.LeadingAdjustment : 0d,
+                    naturalWidth,
+                    naturalWidth,
+                    glyphs)
+            };
+
+            cursor = x + naturalWidth;
+        }
+    }
+
     private static string FontKey(TextRun run)
     {
         string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
-        return familyName + "\u001f" + run.Bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + run.Italic.ToString(CultureInfo.InvariantCulture);
+        return FontKey(familyName, run.Bold, run.Italic);
+    }
+
+    private static string FontKey(string familyName, bool bold, bool italic)
+    {
+        return familyName + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
     }
 
     private static void DrawWrappedRun(PdfGraphicsBuilder graphics, string resourceName, PdfEmbeddedFont embedded, TextRun run, bool syntheticBold, bool syntheticItalic)

@@ -2677,6 +2677,49 @@ internal static class PptxTests
         TestAssert.Equal("Courier New", span.GlyphSpan.Typeface ?? string.Empty);
     }
 
+    public static void PptxSyntheticTextBoxSplitsMissingGlyphsToFallbackFont()
+    {
+        string fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        if (!File.Exists(Path.Combine(fonts, "arial.ttf")) ||
+            !File.Exists(Path.Combine(fonts, "simsun.ttc")))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>A&#x4E2D;B</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+
+        string expected = "A" + char.ConvertFromUtf32(0x4E2D) + "B";
+        TestAssert.Equal(expected, string.Concat(glyphRuns.Select(run => run.Text)));
+        TestAssert.True(
+            glyphRuns.SelectMany(run => run.Glyphs).Select(glyph => glyph.ResourceName).Distinct(StringComparer.OrdinalIgnoreCase).Count() >= 2,
+            "Expected a missing Arial glyph to emit through a separate fallback PDF font resource.");
+        PptxTextGlyphRunAtomSnapshot fallbackGlyph = glyphRuns.SelectMany(run => run.Glyphs).Single(glyph => glyph.CodePoint == 0x4E2D);
+        TestAssert.True(!string.Equals("Arial", fallbackGlyph.Typeface, StringComparison.OrdinalIgnoreCase), "Expected the CJK glyph to carry its fallback typeface.");
+    }
+
     public static void PptxSyntheticTextBoxResolvesThemeEaAndCsFonts()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
