@@ -364,6 +364,7 @@ internal sealed record PptxSceneChartDataLabelOverride(
     bool? ShowCategoryName,
     bool? ShowSeriesName,
     bool? ShowLeaderLines,
+    string CustomText,
     string Position,
     string Separator,
     string NumberFormat,
@@ -1060,6 +1061,7 @@ internal sealed class PptxSceneBuilder
                 ReadOptionalOoxmlBooleanElement(label, "showCatName"),
                 ReadOptionalOoxmlBooleanElement(label, "showSerName"),
                 ReadOptionalOoxmlBooleanElement(label, "showLeaderLines"),
+                ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
@@ -1256,7 +1258,11 @@ internal sealed class PptxSceneBuilder
 
     private static string? ReadChartSeriesName(XElement series)
     {
-        XElement? text = series.Element(ChartNamespace + "tx");
+        return ReadChartText(series.Element(ChartNamespace + "tx"));
+    }
+
+    private static string? ReadChartText(XElement? text)
+    {
         string? literal = text?
             .Descendants(ChartNamespace + "v")
             .Select(value => value.Value)

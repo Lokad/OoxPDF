@@ -656,9 +656,10 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend the chart data-label scene model beyond the current metadata subset: per-label overrides,
-  label text/style (`c:txPr`, `c:spPr`), and richer position/leader-line semantics still need typed
-  ownership before data-label layout can be aligned structurally with Office instead of renderer heuristics.
+- [ ] Extend the chart data-label scene model beyond the current metadata subset: rich text runs inside
+  custom label text, leader lines, exact Office label-box geometry/auto-fit, and richer position semantics
+  still need typed ownership before data-label layout can be aligned structurally with Office instead of
+  renderer heuristics.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
@@ -837,6 +838,14 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Preserve custom chart data-label text from `c:dLbl/c:tx` in the scene model and consume it
+  before composed series/category/value text. The first pass flattens `c:tx/c:rich` and cached string
+  references into one label string; run-level rich formatting remains intentionally open under chart text
+  style work. Focused scene/chart tests passed, the full runner passed 186/186, `dotnet pack` succeeded, and
+  private run `artifacts/private-visual/lokad-value-based/20260524-175407` stayed stable: 84/84 compared
+  pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Continue data-label rendering alignment with Office: leader lines, rich text runs inside labels,
   label layout/auto-fit, and exact Office label-box geometry remain approximate.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
@@ -994,8 +1003,9 @@ High-priority actions:
   - [x] Consume scene/XML data-label separator and number-format metadata for supported value-label text.
   - [x] Consume scene/XML data-label category-name and series-name flags in supported bar/line rendering.
   - [x] Consume scene/XML data-label position metadata in supported bar/line rendering.
-  - [ ] Extend chart data-label modeling to cover leader lines, per-label overrides, and label text/shape
-    styles in rendering before attempting finer Office-aligned data-label layout.
+  - [ ] Extend chart data-label modeling to cover leader lines, rich text runs inside custom labels,
+    Office label-box geometry/auto-fit, and richer position semantics before attempting finer
+    Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
     now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
   - [x] Add and consume scene-owned chart area and plot area solid fill/line styles, so supported chart
@@ -1019,7 +1029,7 @@ High-priority actions:
   - [x] Add scene-owned chart-level and axis-level text-style overrides for the supported `txPr/defRPr`
     subset: font family, font size, and solid color.
   - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
-    multi-level category labels, data-label text styles, and chart-style inherited defaults.
+    multi-level category labels, per-run data-label styles, and chart-style inherited defaults.
   - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
     text-style decisions for supported bar/line chart paths.
   - [ ] Model and consume cross-axis IDs, crossing behavior, label-side slots, and Office spacing for
@@ -3217,7 +3227,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-174557: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-175407: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```
