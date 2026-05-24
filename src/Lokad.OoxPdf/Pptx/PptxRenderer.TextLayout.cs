@@ -230,6 +230,7 @@ internal sealed partial class PptxRenderer
             span.Text,
             span.Typeface,
             span.FontSize,
+            span.LeadingAdjustment,
             span.NaturalWidth,
             span.LayoutWidth,
             span.Glyphs.Count,
@@ -608,6 +609,7 @@ internal sealed partial class PptxRenderer
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
             int? previousAdvanceCodePoint = null;
+            double pendingVisibleLeadingAdjustment = 0d;
             int remainingDrawableSegments = CountDrawableTextSegments(flowParagraph);
             foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
@@ -623,6 +625,7 @@ internal sealed partial class PptxRenderer
                     line.Reset(paragraphTextX);
                     maxFontSize = 0d;
                     previousAdvanceCodePoint = null;
+                    pendingVisibleLeadingAdjustment = 0d;
                     continue;
                 }
 
@@ -656,6 +659,7 @@ internal sealed partial class PptxRenderer
                         cursorX = ResolveNextTabX(cursorX, paragraphTextX, paragraphStyle.TabStops);
                         line.AdvanceTo(cursorX);
                         previousAdvanceCodePoint = null;
+                        pendingVisibleLeadingAdjustment = 0d;
                         continue;
                     }
 
@@ -689,7 +693,9 @@ internal sealed partial class PptxRenderer
                             maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                             double chunkX = cursorX + chunkBoundaryAdjustment;
                             TextRun textRun = new(chunk, chunkX, cursorY, PptxTextMetricRules.MinimumWidth(chunkWidth), frame.TextHeight, frame.TextX, frame.TextClipY, frame.TextWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
-                            line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
+                            double chunkLeadingAdjustment = pendingVisibleLeadingAdjustment + chunkBoundaryAdjustment;
+                            line.Add(modelRun, textRun, cursorX + chunkTotalWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, chunkLeadingAdjustment));
+                            pendingVisibleLeadingAdjustment = 0d;
                             cursorX += chunkTotalWidth;
                             line.AdvanceTo(cursorX);
                             if (chunkIndex < chunks.Length - 1)
@@ -702,6 +708,7 @@ internal sealed partial class PptxRenderer
                                 line.Reset(paragraphTextX);
                                 maxFontSize = 0d;
                                 previousAdvanceCodePoint = null;
+                                pendingVisibleLeadingAdjustment = 0d;
                             }
                         }
 
@@ -741,6 +748,7 @@ internal sealed partial class PptxRenderer
                         line.Reset(paragraphTextX);
                         maxFontSize = 0d;
                         previousAdvanceCodePoint = null;
+                        pendingVisibleLeadingAdjustment = 0d;
                         currentSegment = currentSegment.TrimStart();
                         currentAdvanceText = currentAdvanceText.TrimStart();
                         segmentIntrinsicWidth = advanceEstimator.Measure(currentAdvanceText, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
@@ -758,7 +766,13 @@ internal sealed partial class PptxRenderer
                         maxFontSize = Math.Max(maxFontSize, fragmentFontSize);
                         double textRunX = cursorX + segmentBoundaryAdjustment;
                         TextRun textRun = new(currentSegment, textRunX, cursorY, PptxTextMetricRules.MinimumWidth(segmentIntrinsicWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, flowSegment.PreventCoalesce, Outline: runStyle.Outline);
-                        line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator));
+                        double leadingAdjustment = pendingVisibleLeadingAdjustment + segmentBoundaryAdjustment;
+                        line.Add(modelRun, textRun, cursorX + segmentWidth, BuildTextAtoms(textRun, advanceEstimator), BuildGlyphSpan(textRun, advanceEstimator, leadingAdjustment));
+                        pendingVisibleLeadingAdjustment = 0d;
+                    }
+                    else
+                    {
+                        pendingVisibleLeadingAdjustment += segmentBoundaryAdjustment;
                     }
 
                     cursorX += segmentWidth;
@@ -1250,7 +1264,7 @@ internal sealed partial class PptxRenderer
         return atoms;
     }
 
-    private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator)
+    private static PptxTextGlyphSpanLayout BuildGlyphSpan(TextRun run, TextAdvanceEstimator advanceEstimator, double leadingAdjustment = 0d)
     {
         OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(run.FontFamily, run.Bold, run.Italic);
         if (font is null || font.UnitsPerEm == 0)
@@ -1292,6 +1306,7 @@ internal sealed partial class PptxRenderer
             run.FontSize,
             run.CharacterSpacing,
             run.KerningEnabled,
+            leadingAdjustment,
             Math.Max(0d, naturalWidth),
             run.Width,
             glyphs);
@@ -1494,6 +1509,7 @@ internal sealed partial class PptxRenderer
                     span.GlyphSpan.FontSize,
                     0d,
                     span.GlyphSpan.KerningEnabled,
+                    0d,
                     glyph.Advance,
                     glyph.Advance,
                     [glyph with { AdjustmentBefore = 0d }]);

@@ -280,6 +280,10 @@ High-priority actions:
   `PptxTextSpanLayout` now owns a `PptxTextGlyphSpanLayout` with code points, glyph ids, advances,
   kerning/tracking adjustments, natural width, and layout width before PDF emission. The justified text
   model test locks parity between the layout-owned glyph span and downstream glyph-run inspection.
+- [x] Preserve hidden/control boundary adjustments in layout-owned glyph spans:
+  visible glyph spans now expose a `LeadingAdjustment` carrying pending kerning/tracking adjustments from
+  preceding hidden advances such as no-break spaces. PDF output remains behavior-compatible, but the
+  intermediate model no longer loses the structural adjustment needed before future `TJ` construction work.
 - [x] Make PPTX shape-text emission consume layout-owned glyph spans directly:
   `PptxPositionedTextSpan` now carries the legacy `TextRun`, line box, atoms, and glyph span through
   flattening. Shape-text emission and glyph-run inspection build `TextGlyphRun` from the carried glyph span
@@ -3406,6 +3410,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   it is going to feed Office-like renderer transforms.
   Evidence: `PptxSceneBounds` now keeps EMU coordinates and extents plus point conversion properties; ordered
   picture rendering uses those EMU bounds directly through the existing group transform math.
+- Observation: `pptx-ladder-04-typography-accent-spacing-probe` should stay approximate until font fallback
+  and glyph-operation grouping are modeled more explicitly.
+  Evidence: the 2026-05-24 run `20260524-212038` passed its current visual gate with MAE `0.799624`,
+  changed16 `0.009473`, and SSIM `0.913024`, but text-line inspection still reports operation-count deltas
+  on three of four lines. Office emits 2/3/1/4 text operations across the lines while the candidate emits
+  3/1/1/1; the first line has matching starts except for a separate candidate space operation, while later
+  accent-heavy lines point to unresolved font fallback/glyph grouping parity rather than a simple position
+  threshold issue.
 
 ## Decision Log
 
@@ -3519,6 +3531,17 @@ pptx-ladder-04-vertical-text-port / 20260524-204933:
 MAE 0.791842, changed16 0.005630; effective-matrix/decoded-text inspection shows the second rotated frame is
 position-close and the stacked frame no longer drops leading `VERTIC...` content, while
 `mongolianVert` glyph grouping/columns remain open.
+```
+
+Latest public typography structural probes:
+
+```text
+pptx-ladder-04-nonbreaking-space / 20260524-212024:
+decoded PDF text gate passed; 2 reference and 2 candidate text operations; B x delta 0.09 pt.
+
+pptx-ladder-04-typography-accent-spacing-probe / 20260524-212038:
+visual gate passed; MAE 0.799624, changed16 0.009473, SSIM 0.913024. Text-line inspection remains
+open: Office/candidate operation counts are 2/3, 3/1, 1/1, and 4/1 by line.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

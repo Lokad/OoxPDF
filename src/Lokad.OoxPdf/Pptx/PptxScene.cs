@@ -130,6 +130,7 @@ internal sealed record PptxTextGlyphSpanLayoutSnapshot(
     string Text,
     string? Typeface,
     double FontSize,
+    double LeadingAdjustment,
     double NaturalWidth,
     double LayoutWidth,
     int GlyphCount,

@@ -345,6 +345,7 @@ internal sealed partial class PptxRenderer
         double FontSize,
         double CharacterSpacing,
         bool KerningEnabled,
+        double LeadingAdjustment,
         double NaturalWidth,
         double LayoutWidth,
         IReadOnlyList<PptxTextGlyphLayout> Glyphs)
@@ -359,6 +360,7 @@ internal sealed partial class PptxRenderer
                 run.FontSize,
                 run.CharacterSpacing,
                 run.KerningEnabled,
+                0d,
                 run.Width,
                 run.Width,
                 []);

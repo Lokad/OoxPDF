@@ -2333,6 +2333,7 @@ internal static class PptxTests
 
         TestAssert.True(totalAdvance > 21d, $"Expected no-break space to keep a visible regular-space class advance, got {totalAdvance}.");
         TestAssert.True(totalAdvance < 22d, $"Expected no-break space to preserve Office's kerning from the preceding glyph, got {totalAdvance}.");
+        TestAssert.True(second.GlyphSpan.LeadingAdjustment < -0.1d, "Expected the visible glyph span after hidden no-break space to own its leading boundary kerning.");
     }
 
     public static void PptxSyntheticTextBoxOffsetsLargeTextByFontSize()
