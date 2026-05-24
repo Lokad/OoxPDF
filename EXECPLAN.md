@@ -3823,6 +3823,13 @@ beyond bar/line charts and makes the remaining split explicit: radar and pie/dou
 polar geometry from the frame and need separate Office-PDF-backed layout treatment. The `pptx-charts`
 non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow suite passed with 190 passed, 0 failed,
 7 skipped; `dotnet pack` succeeded; and the full suite passed with 197 passed, 0 failed, 0 skipped.
+
+post chart-layout private validation / 2026-05-24:
+Private run `artifacts/private-visual/lokad-value-based/20260524-231325` stayed stable after chart metric and
+plot-box ownership cleanup: 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`, changed16
+`0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained at MAE `2.880739`, RMSE `19.298084`,
+changed16 `0.044888`, changed32 `0.035257`, SSIM `0.920083`, foreground histogram correlation `0.999858`,
+with matching dimensions.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
