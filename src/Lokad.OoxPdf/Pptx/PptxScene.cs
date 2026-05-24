@@ -23,6 +23,7 @@ internal sealed record PptxSceneSlideSnapshot(
 internal sealed record PptxSceneNodeSnapshot(
     string Kind,
     bool IsPlaceholder,
+    bool IsSmartArtGraphicFrame,
     bool HasBounds,
     double RotationDegrees,
     bool FlipHorizontal,
@@ -229,6 +230,7 @@ internal sealed record PptxSceneNode(
     string Id,
     string Name,
     bool IsPlaceholder,
+    bool IsSmartArtGraphicFrame,
     PptxSceneBounds? Bounds,
     PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
@@ -879,6 +881,7 @@ internal sealed class PptxSceneBuilder
                 id,
                 name,
                 IsPlaceholder(child),
+                kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicFrame(child),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme) : null,
                 ReadTextBody(child, placeholderSources, theme),
@@ -932,6 +935,14 @@ internal sealed class PptxSceneBuilder
         return uri.Contains("chart", StringComparison.OrdinalIgnoreCase)
             ? PptxSceneNodeKind.Chart
             : PptxSceneNodeKind.UnknownGraphicFrame;
+    }
+
+    internal static bool IsSmartArtGraphicFrame(XElement graphicFrame)
+    {
+        return graphicFrame
+            .Descendants(DrawingNamespace + "graphicData")
+            .Select(element => (string?)element.Attribute("uri"))
+            .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static (string Id, string Name) ReadNonVisualProperties(XElement element)

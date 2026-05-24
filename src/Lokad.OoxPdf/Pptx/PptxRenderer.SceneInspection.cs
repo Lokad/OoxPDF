@@ -35,6 +35,7 @@ internal sealed partial class PptxRenderer
         return new PptxSceneNodeSnapshot(
             node.Kind.ToString(),
             node.IsPlaceholder,
+            node.IsSmartArtGraphicFrame,
             bounds is not null,
             bounds?.RotationDegrees ?? 0d,
             bounds?.FlipHorizontal ?? false,

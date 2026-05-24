@@ -3777,6 +3777,14 @@ label, and style reads intentionally fall back to chart XML until the scene char
 OOXML surfaces. The `pptx-charts` non-slow group passed with 5 passed, 0 failed, 0 skipped; the non-slow
 suite passed with 190 passed, 0 failed, 7 skipped; `dotnet pack` succeeded; and the full suite passed with
 197 passed, 0 failed, 0 skipped.
+
+scene-owned SmartArt graphic-frame classification / 2026-05-24:
+`PptxSceneNode` now carries `IsSmartArtGraphicFrame`, and ordered dispatch uses that scene flag instead of
+peeking back into `node.Source` when deciding whether to suppress unsupported-graphic-frame diagnostics for
+SmartArt. The XML predicate moved to `PptxSceneBuilder` and remains shared with the separate diagnostic
+preflight, which still scans slide XML by design. This removes one more raw scene-source dependency from the
+dispatch layer while preserving existing SmartArt and unsupported graphic-frame behavior. The full suite
+passed with 197 passed, 0 failed, 0 skipped, and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

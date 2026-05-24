@@ -196,7 +196,7 @@ internal sealed partial class PptxRenderer
         XElement? graphicData = graphicFrame
             .Descendants(DrawingNamespace + "graphicData")
             .FirstOrDefault();
-        if (graphicData is null || IsSmartArtGraphicFrame(graphicFrame))
+        if (graphicData is null || PptxSceneBuilder.IsSmartArtGraphicFrame(graphicFrame))
         {
             return false;
         }
@@ -204,14 +204,6 @@ internal sealed partial class PptxRenderer
         string uri = (string?)graphicData.Attribute("uri") ?? string.Empty;
         return !uri.Contains("chart", StringComparison.OrdinalIgnoreCase) &&
             !graphicData.Descendants(DrawingNamespace + "tbl").Any();
-    }
-
-    private static bool IsSmartArtGraphicFrame(XElement graphicFrame)
-    {
-        return graphicFrame
-            .Descendants(DrawingNamespace + "graphicData")
-            .Select(element => (string?)element.Attribute("uri"))
-            .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static bool IsUnsupportedAlpha(XElement alpha)
