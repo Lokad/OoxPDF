@@ -1846,8 +1846,15 @@ High-priority actions:
   `pwsh tools/CheckVisualCase.ps1 -Case visual-cases/cases/pptx-ladder-11-chart-column-clustered-port/case.json`
   passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-005334`.
 - [ ] 2026-05-25: Continue chart text classification beyond the first semantic roles. Remaining gaps include
-  robust chart-title disambiguation, top/bottom legend containers, value-axis origin-label parity, data labels
-  outside the plot box, annotations, and multi-chart pages.
+  robust chart-title disambiguation, top/bottom legend containers, data labels outside the plot box,
+  annotations, and multi-chart pages. Value-axis origin labels are now classified structurally, but value-axis
+  gates should wait until candidate tick generation no longer emits extra tick labels against Office.
+- [x] 2026-05-25: Tighten chart text classification for value-axis origin labels near plot-box edges.
+  `ClassifyPdfChartText.ps1` now uses a slightly wider axis-label vertical band for text left/right of the
+  plot box, so labels near the plot origin are classified as `ValueAxisTickLabel` instead of generic
+  `OuterChartText`. The public clustered-column visual case still passes its existing category-axis text gate,
+  and the richer classification exposes the remaining extra candidate value-axis tick as renderer work rather
+  than oracle ambiguity.
 - [x] 2026-05-25: Preserve per-data-label manual layout in the typed chart scene model.
   `PptxSceneChartDataLabelOverride` now carries `c:layout/c:manualLayout` alongside per-label visibility flags,
   custom text, position, separator, number format, text style, and shape style. The scene-builder fixture locks

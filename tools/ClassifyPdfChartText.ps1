@@ -179,6 +179,7 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     $maxY = [double]$plotBox.MaxY
     $insideX = $x -ge ($minX - $tolerance) -and $x -le ($maxX + $tolerance)
     $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
+    $axisLabelY = $y -ge ($minY - ($tolerance * 2d)) -and $y -le ($maxY + ($tolerance * 2d))
 
     if (-not ($insideX -and $insideY) -and
         (Has-LegendSwatch $op $structures $plotBox)) {
@@ -189,11 +190,11 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
         return "DataLabelText"
     }
 
-    if ($x -lt ($minX - $tolerance) -and $insideY) {
+    if ($x -lt ($minX - $tolerance) -and $axisLabelY) {
         return "ValueAxisTickLabel"
     }
 
-    if ($x -gt ($maxX + $tolerance) -and $insideY) {
+    if ($x -gt ($maxX + $tolerance) -and $axisLabelY) {
         if (Has-LegendContainer $op $structures $plotBox $tolerance) {
             return "LegendText"
         }
