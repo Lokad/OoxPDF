@@ -3141,6 +3141,11 @@ paths, and ExecPlan references together.
   - [x] Add decoded text payloads to PDF inspection, so the vertical port can be compared as text content
     plus matrices instead of raw glyph hex. In the stacked case, candidate chunks such as decoded `L S`
     expose grouping/column differences directly against Office literal payloads such as `L ` and `S`.
+  - [x] Stop dropping transformed text before PDF clipping:
+    baseline-vs-clip prechecks now defer rotated/flipped text to the actual transformed PDF clip instead of
+    testing an unrotated baseline. The public vertical port now emits 25 candidate text operations instead
+    of 20 and preserves the leading decoded `VERTIC...` content; one Office operation and column ordering
+    remain open.
   - [ ] Continue vertical text parity with Office text-operation inspection: stacked-letter orientation,
     column order, per-column x positions, and baseline placement remain visibly approximate.
 - [ ] For every generic capability fixed from a private slide, add a small public synthetic test. Do not
@@ -3461,13 +3466,13 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-193 passed, 0 failed, 0 skipped
+194 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-204001: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-205129: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.022766, changed16 0.116206, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.876335, changed16 0.044819, SSIM 0.920246.
 ```
@@ -3483,12 +3488,13 @@ decoded text gate enabled.
 Latest public vertical text probes:
 
 ```text
-pptx-ladder-04-vertical-text-270 / 20260524-203822:
+pptx-ladder-04-vertical-text-270 / 20260524-205046:
 MAE 0.247899, changed16 0.002204.
 
-pptx-ladder-04-vertical-text-port / 20260524-203630:
-MAE 0.791842, changed16 0.005630; effective-matrix inspection shows the second rotated frame is
-position-close, while stacked `mongolianVert` glyph grouping/columns remain open.
+pptx-ladder-04-vertical-text-port / 20260524-204933:
+MAE 0.791842, changed16 0.005630; effective-matrix/decoded-text inspection shows the second rotated frame is
+position-close and the stacked frame no longer drops leading `VERTIC...` content, while
+`mongolianVert` glyph grouping/columns remain open.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
