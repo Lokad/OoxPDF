@@ -7,6 +7,26 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private sealed record TableFrameLayout(
+        IReadOnlyList<PptxPositionedTextSpan> TextSpans,
+        IReadOnlyList<TableCellFill> CellFills,
+        TableDefaultGrid? DefaultGrid,
+        IReadOnlyList<TableBorderLine> ExplicitBorders);
+
+    private readonly record struct TableCellFill(double X, double Y, double Width, double Height, RgbColor Color, double Alpha);
+
+    private sealed record TableDefaultGrid(
+        double X,
+        double YTop,
+        double Width,
+        double Height,
+        IReadOnlyList<double> ColumnWidths,
+        IReadOnlyList<double> RowTops,
+        PptxSceneTableStyle TableStyle,
+        int RowCount,
+        bool[,] SkippedVerticalSegments,
+        bool[,] SkippedHorizontalSegments);
+
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
@@ -43,7 +63,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return ProcessTableFrame(context, bounds, node.Table?.Source, node.Table, graphics: null);
+        return BuildTableFrameLayout(context, bounds, node.Table?.Source, node.Table)?.TextSpans ?? [];
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
@@ -51,15 +71,23 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return ProcessTableFrame(context, bounds, node.Table?.Source, node.Table, graphics);
+        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table?.Source, node.Table);
+        if (layout is null)
+        {
+            return [];
+        }
+
+        RenderTableFrameLayout(graphics, layout);
+        return layout.TextSpans;
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ProcessTableFrame(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable, PdfGraphicsBuilder? graphics)
+    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, XElement? table, PptxSceneTable? sceneTable)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
+        var cellFills = new List<TableCellFill>();
         if (bounds is null || table is null)
         {
-            return textSpans;
+            return null;
         }
 
         IReadOnlyList<double> rawColumnWidths = sceneTable?.ColumnWidths ?? PptxSceneBuilder.ReadTableColumnWidths(table);
@@ -67,7 +95,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<XElement> rows = table.Elements(DrawingNamespace + "tr").ToArray();
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
-            return textSpans;
+            return null;
         }
 
         double frameX = OoxUnits.EmuToPoints(bounds.Value.X);
@@ -150,21 +178,9 @@ internal sealed partial class PptxRenderer
                     fill = sceneCell.StyleFill.Color;
                     fillAlpha = sceneCell.StyleFill.Alpha;
                 }
-                if (hasCellFill && graphics is not null)
+                if (hasCellFill)
                 {
-                    bool transparentFill = fillAlpha < 0.999d;
-                    if (transparentFill)
-                    {
-                        graphics.SaveState();
-                        graphics.SetAlpha(fillAlpha, 1d);
-                    }
-
-                    graphics.SetFillRgb(fill.Red, fill.Green, fill.Blue);
-                    graphics.FillRectangle(cellX, cellBottom, columnWidth, cellHeight);
-                    if (transparentFill)
-                    {
-                        graphics.RestoreState();
-                    }
+                    cellFills.Add(new TableCellFill(cellX, cellBottom, columnWidth, cellHeight, fill, fillAlpha));
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
@@ -177,21 +193,63 @@ internal sealed partial class PptxRenderer
             rowTops[rowIndex + 1] = yTop;
         }
 
-        if (graphics is null)
-        {
-            return textSpans;
-        }
-
         if (!TableHasExplicitBorders(sceneTable, table))
         {
-            StrokeDefaultTableGrid(graphics, frameX, frameTop, frameWidth, frameHeight, rawColumnWidths.Select(width => width * columnScale).ToArray(), rowTops, tableStyle, rows.Count, skippedVerticalGridSegments, skippedHorizontalGridSegments);
+            var defaultGrid = new TableDefaultGrid(
+                frameX,
+                frameTop,
+                frameWidth,
+                frameHeight,
+                rawColumnWidths.Select(width => width * columnScale).ToArray(),
+                rowTops,
+                tableStyle,
+                rows.Count,
+                skippedVerticalGridSegments,
+                skippedHorizontalGridSegments);
+            return new TableFrameLayout(textSpans, cellFills, defaultGrid, []);
+        }
+
+        return new TableFrameLayout(textSpans, cellFills, DefaultGrid: null, explicitBorders);
+    }
+
+    private static void RenderTableFrameLayout(PdfGraphicsBuilder graphics, TableFrameLayout layout)
+    {
+        foreach (TableCellFill fill in layout.CellFills)
+        {
+            bool transparentFill = fill.Alpha < 0.999d;
+            if (transparentFill)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+            }
+
+            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+            graphics.FillRectangle(fill.X, fill.Y, fill.Width, fill.Height);
+            if (transparentFill)
+            {
+                graphics.RestoreState();
+            }
+        }
+
+        if (layout.DefaultGrid is { } defaultGrid)
+        {
+            StrokeDefaultTableGrid(
+                graphics,
+                defaultGrid.X,
+                defaultGrid.YTop,
+                defaultGrid.Width,
+                defaultGrid.Height,
+                defaultGrid.ColumnWidths,
+                defaultGrid.RowTops,
+                defaultGrid.TableStyle,
+                defaultGrid.RowCount,
+                defaultGrid.SkippedVerticalSegments,
+                defaultGrid.SkippedHorizontalSegments);
         }
         else
         {
-            StrokeTableBorders(graphics, explicitBorders);
+            StrokeTableBorders(graphics, layout.ExplicitBorders);
         }
-
-        return textSpans;
     }
 
     private static PptxSceneTableCell ReadSceneTableCell(
@@ -352,7 +410,7 @@ internal sealed partial class PptxRenderer
         borders.Add(new TableBorderLine(x1, y1, x2, y2, border.Line.Width, border.Line.Color, border.Line.Alpha));
     }
 
-    private static void StrokeTableBorders(PdfGraphicsBuilder graphics, List<TableBorderLine> borders)
+    private static void StrokeTableBorders(PdfGraphicsBuilder graphics, IReadOnlyList<TableBorderLine> borders)
     {
         foreach (IGrouping<TableBorderKey, TableBorderLine> group in borders.GroupBy(TableBorderKey.From))
         {

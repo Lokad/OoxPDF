@@ -3715,6 +3715,16 @@ as a consumer of that model. `PptxSyntheticTableRendersGridAndText`, the `pptx-t
 `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame` passed. The non-slow suite passed with
 190 passed, 0 failed, 7 skipped, `dotnet pack` succeeded, and the full suite passed with 197 passed,
 0 failed, 0 skipped.
+
+table layout model split / 2026-05-24:
+The table renderer now builds an explicit `TableFrameLayout` containing positioned text spans, cell fill
+rectangles, the default-grid plan, and explicit border segments before emitting PDF operators. The font prepass
+reads only the layout text spans, while `RenderTableFrameLayout` consumes the same structural layout for fills
+and borders. This removes the nullable/draw-or-collect processing mode introduced as an intermediate step and
+pushes tables closer to the desired architecture: OOXML inheritance and geometry first, PDF serialization
+second. The `pptx-tables` non-slow group, `PptxSyntheticGroupedTableUsesGroupTransformWithUnknownGraphicFrame`,
+the non-slow suite, `dotnet pack`, and the full suite passed; the broad suite results stayed at 190 passed,
+0 failed, 7 skipped for non-slow and 197 passed, 0 failed, 0 skipped for full.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
