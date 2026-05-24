@@ -757,6 +757,9 @@ High-priority actions:
   model now preserves category-name, series-name, and leader-line flags plus label position, separator, and
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
   value/percent subset, but the richer Office label contract is no longer discarded at scene build time.
+  Later on 2026-05-24, supported bar/line renderers also began consuming the preserved category-name and
+  series-name flags for label text composition; leader lines, position semantics, rich text, per-label
+  overrides, and data-label shape styles remain open.
   Focused model/chart tests passed after a transient parallel build lock was rerun serially, the full runner
   passed 186/186, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-161747` stayed stable: 84/84 compared pages, zero
@@ -788,9 +791,17 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Continue data-label rendering alignment with Office: category-name/series-name composition, label
-  position semantics, leader lines, per-label overrides, rich text, and shape styles are still unconsumed
-  despite now being partly preserved in the scene model.
+- [x] 2026-05-24: Consume scene/XML data-label category-name and series-name flags in supported bar/line
+  rendering. Data labels now compose series name, category name, and value text from typed scene series and
+  category metadata with the OOXML separator. Public bar/line chart tests lock a custom separator glyph in
+  emitted PDF text, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-171811` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Continue data-label rendering alignment with Office: label position semantics, leader lines, per-label
+  overrides, rich text, and shape styles are still unconsumed despite now being partly preserved in the scene
+  model.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
   `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
@@ -2486,6 +2497,10 @@ paths, and ExecPlan references together.
 - [ ] Ladder 10 remaining subcases should isolate broader table style variants.
 - [ ] Ladder 11: charts: cached image fallback, basic bar/line/pie rendering, axes, labels, legends, series
   styles, stacked/grouped variants, and chart diagnostics.
+- [x] Preserve chart data-label category-name and series-name flags through native bar/line rendering:
+  `showCatName` and `showSerName` now compose labels from the typed scene series/category metadata instead
+  of being parsed and then dropped before PDF emission. Public chart tests lock a custom separator glyph in
+  emitted chart labels.
 - [ ] Ladder 12: effects and advanced fills cover transparency, gradients, pattern fills, shadows, glows, soft
   edges, picture fills, and explicit diagnostics for unsupported effects.
 - [x] Ladder 12 unsupported gradient fills, pattern fills, advanced picture fills, and effect lists emit
@@ -3163,7 +3178,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-170856: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-171811: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043200, changed16 0.116408, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

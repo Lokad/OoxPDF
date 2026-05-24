@@ -6034,7 +6034,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>1</c:v></c:pt>
                       <c:pt idx="1"><c:v>3</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
-                    <c:dLbls><c:showVal val="1"/></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:separator> | </c:separator></c:dLbls>
                     <c:axId val="1"/><c:axId val="2"/>
                   </c:barChart>
                   <c:barChart>
@@ -6043,7 +6043,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>0</c:v></c:pt>
                       <c:pt idx="1"><c:v>20</c:v></c:pt>
                     </c:numLit></c:val></c:ser>
-                    <c:dLbls><c:showVal val="1"/></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:separator> | </c:separator></c:dLbls>
                     <c:axId val="3"/><c:axId val="4"/>
                   </c:barChart>
                   <c:valAx>
@@ -6302,7 +6302,7 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>2</c:v></c:pt>
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
                     </c:numLit></c:val><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
-                    <c:dLbls><c:showVal val="1"/></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:separator> | </c:separator></c:dLbls>
                   </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/></c:legend></c:chart>
                 </c:chartSpace>
                 """),
@@ -6352,6 +6352,7 @@ internal static class PptxTests
         TestAssert.Contains("531.352 418.454 m", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
