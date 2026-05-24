@@ -477,7 +477,7 @@ internal sealed partial class PptxRenderer
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme);
-                    if (!extraHorizontalBars && secondaryValueAxis is null && IsRightValueAxis(extraValueAxis))
+                    if (!extraHorizontalBars && secondaryValueAxis is null && IsSceneOrXmlRightValueAxis(extraValueSceneAxis, extraValueAxis))
                     {
                         secondaryValueAxis = extraValueAxis;
                         secondaryValueSceneAxis = extraValueSceneAxis;
@@ -2251,7 +2251,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback)
     {
         XElement? rightValueAxis = ReadSecondaryRightValueAxis(chartXml);
-        PptxSceneChartAxis? rightSceneAxis = ReadSceneSecondaryRightValueAxis(sceneChart);
+        PptxSceneChartAxis? rightSceneAxis = ReadSceneSecondaryRightValueAxis(sceneChart, rightValueAxis);
         if (rightValueAxis is null && rightSceneAxis is null)
         {
             return Array.Empty<PdfFontResource>();
@@ -2270,11 +2270,40 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault();
     }
 
-    private static PptxSceneChartAxis? ReadSceneSecondaryRightValueAxis(PptxSceneChart? sceneChart)
+    private static PptxSceneChartAxis? ReadSceneSecondaryRightValueAxis(PptxSceneChart? sceneChart, XElement? rightValueAxis)
     {
-        return sceneChart?.Axes.FirstOrDefault(axis =>
+        if (sceneChart is null)
+        {
+            return null;
+        }
+
+        string? axisId = ReadChartAxisId(rightValueAxis);
+        if (!string.IsNullOrWhiteSpace(axisId))
+        {
+            PptxSceneChartAxis? matchingAxis = sceneChart.Axes.FirstOrDefault(axis =>
+                string.Equals(axis.Id, axisId, StringComparison.Ordinal) &&
+                string.Equals(axis.Kind, "valAx", StringComparison.Ordinal));
+            if (matchingAxis is not null)
+            {
+                return matchingAxis;
+            }
+        }
+
+        return sceneChart.Axes.FirstOrDefault(axis =>
             string.Equals(axis.Kind, "valAx", StringComparison.Ordinal) &&
             string.Equals(axis.Position, "r", StringComparison.Ordinal));
+    }
+
+    private static bool IsSceneOrXmlRightValueAxis(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    {
+        if (sceneAxis is not null)
+        {
+            return string.Equals(sceneAxis.Kind, "valAx", StringComparison.Ordinal) &&
+                string.Equals(sceneAxis.Position, "r", StringComparison.Ordinal) &&
+                !sceneAxis.IsDeleted;
+        }
+
+        return IsRightValueAxis(axis);
     }
 
     private static bool IsRightValueAxis(XElement? axis)
@@ -2282,6 +2311,11 @@ internal sealed partial class PptxRenderer
         return axis is not null &&
             string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal) &&
             !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
+    }
+
+    private static string? ReadChartAxisId(XElement? axis)
+    {
+        return (string?)axis?.Element(ChartNamespace + "axId")?.Attribute("val");
     }
 
     private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints)
@@ -2736,9 +2770,7 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal));
         PptxSceneChartAxis? valueAxis = ReadSceneChartAxis(sceneChart, plot, "valAx");
         PptxSceneChartAxis? categoryAxis = ReadSceneChartAxis(sceneChart, plot, "catAx");
-        PptxSceneChartAxis? secondaryValueAxis = sceneChart?.Axes.FirstOrDefault(axis =>
-            string.Equals(axis.Kind, "valAx", StringComparison.Ordinal) &&
-            string.Equals(axis.Position, "r", StringComparison.Ordinal));
+        PptxSceneChartAxis? secondaryValueAxis = ReadSceneSecondaryRightValueAxis(sceneChart, secondaryValueAxisElement);
         return new ChartAxesStyle(
             ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),

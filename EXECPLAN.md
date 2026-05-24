@@ -888,6 +888,16 @@ High-priority actions:
   parsing now flow through one helper for attribute, optional-attribute, and element-with-`val` forms. This
   reduces format-local boolean drift after the recent normalization slices; full runner passed 189/189 and
   `dotnet pack` succeeded.
+- [x] 2026-05-24: Pair secondary value-axis scene metadata to raw chart XML by `axId` before consuming
+  right-axis style, scale, units, and labels. Combo bar-chart secondary detection now accepts a scene-owned
+  right value axis when the raw axis is absent or less complete, and the fallback secondary-label/stroke paths
+  no longer independently pick unrelated first-right XML and scene axes. Focused chart tests passed 5/5, the
+  full runner passed 189/189, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-192509` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one diagnostic
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`. This is an identity-alignment slice only: exact secondary-axis crossing
+  geometry and Office spacing remain open.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
