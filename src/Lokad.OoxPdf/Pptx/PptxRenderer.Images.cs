@@ -25,7 +25,6 @@ internal sealed partial class PptxRenderer
         }
 
         RenderPicture(
-            picture.Source,
             relationships,
             context.Package,
             context.Document,
@@ -46,7 +45,6 @@ internal sealed partial class PptxRenderer
     }
 
     private static void RenderPicture(
-        XElement picture,
         IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPackage package,
         PptxDocument document,
@@ -87,7 +85,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds transformedBounds = transform.Apply(rawBounds);
         if (imagePart.ContentType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
         {
-            RenderSvgPicture(graphics, document, picture, transformedBounds, imagePart.Bytes, crop, fillRect);
+            RenderSvgPicture(graphics, document, transformedBounds, imagePart.Bytes, crop, fillRect);
             return;
         }
 
@@ -177,7 +175,7 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, XElement picture, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect)
+    private static void RenderSvgPicture(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, byte[] bytes, CropRect crop, FillRect fillRect)
     {
         XDocument svg;
         using (var stream = new MemoryStream(bytes))

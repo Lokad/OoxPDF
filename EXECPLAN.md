@@ -3741,6 +3741,14 @@ Private run `artifacts/private-visual/lokad-value-based/20260524-224755` stayed 
 model split and text adapter cleanup: 84/84 compared pages, zero dimension mismatches, deck MAE `9.005915`,
 changed16 `0.116052`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide 17 stayed at MAE `2.880739`,
 changed16 `0.044888`, SSIM `0.920083`.
+
+scene-owned picture render path / 2026-05-24:
+Ordered picture rendering no longer passes `PptxSceneNode.Source` into the image renderer. The supported
+picture path now consumes scene-owned relationship id, bounds, crop/fill rectangle, alpha, and recolor data;
+the unused SVG renderer XML parameter was removed. This keeps raw `p:pic` XML attached to scene nodes for
+future unsupported edges, but the production image path no longer depends on it. The `pptx-images` non-slow
+group passed with 13 passed, 0 failed, 0 skipped, and the non-slow suite passed with 190 passed, 0 failed,
+7 skipped. `dotnet pack` succeeded, and the full suite passed with 197 passed, 0 failed, 0 skipped.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
