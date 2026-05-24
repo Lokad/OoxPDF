@@ -433,6 +433,7 @@ internal static class PptxTests
         TestAssert.Equal("Revenue", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Name ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.IsDefined == true, "Expected series-level data-label options to be preserved separately from plot-level labels.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowValue == true, "Expected series-level show-value flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowPercent is null, "Expected missing series-level show-percent flag to remain distinct from an explicit disable.");
         TestAssert.Equal("t", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Position ?? string.Empty);
         TestAssert.Equal(" + ", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);

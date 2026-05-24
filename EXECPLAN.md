@@ -4295,6 +4295,14 @@ typed values when present and the existing XML/default fallback otherwise, but t
 ownership of defaulted palette-varying semantics. The focused scene test passed with 1 passed, 0 failed,
 0 skipped.
 The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart data-label flag presence ownership / 2026-05-25:
+`PptxSceneChartDataLabels` now preserves top-level plot/series `c:dLbls` boolean flags as nullable values,
+matching the existing nullable override-flag handling. This distinguishes missing inherited/defaulted label
+flags from explicit Office-authored true/false values in the scene model while the renderer adapter still
+coalesces to the current effective booleans at the last responsible point. The focused scene test passed with
+1 passed, 0 failed, 0 skipped.
+The full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

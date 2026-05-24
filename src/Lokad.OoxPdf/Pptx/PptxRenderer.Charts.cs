@@ -1908,11 +1908,11 @@ internal sealed partial class PptxRenderer
         return plot is null
             ? ReadChartDataLabelOptions(chartElement, theme)
             : new ChartDataLabelOptions(
-                plot.DataLabels.ShowValue,
-                plot.DataLabels.ShowPercent,
-                plot.DataLabels.ShowCategoryName,
-                plot.DataLabels.ShowSeriesName,
-                plot.DataLabels.ShowLeaderLines,
+                plot.DataLabels.ShowValue == true,
+                plot.DataLabels.ShowPercent == true,
+                plot.DataLabels.ShowCategoryName == true,
+                plot.DataLabels.ShowSeriesName == true,
+                plot.DataLabels.ShowLeaderLines == true,
                 string.Empty,
                 plot.DataLabels.Position,
                 plot.DataLabels.Separator,
@@ -1942,11 +1942,11 @@ internal sealed partial class PptxRenderer
     private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels)
     {
         return new ChartDataLabelOptions(
-            labels.ShowValue,
-            labels.ShowPercent,
-            labels.ShowCategoryName,
-            labels.ShowSeriesName,
-            labels.ShowLeaderLines,
+            labels.ShowValue == true,
+            labels.ShowPercent == true,
+            labels.ShowCategoryName == true,
+            labels.ShowSeriesName == true,
+            labels.ShowLeaderLines == true,
             string.Empty,
             labels.Position,
             labels.Separator,

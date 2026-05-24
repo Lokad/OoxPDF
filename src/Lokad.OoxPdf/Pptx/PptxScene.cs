@@ -401,11 +401,11 @@ internal sealed record PptxSceneChartPlot(
     PptxSceneChartDataLabels DataLabels);
 
 internal sealed record PptxSceneChartDataLabels(
-    bool ShowValue,
-    bool ShowPercent,
-    bool ShowCategoryName,
-    bool ShowSeriesName,
-    bool ShowLeaderLines,
+    bool? ShowValue,
+    bool? ShowPercent,
+    bool? ShowCategoryName,
+    bool? ShowSeriesName,
+    bool? ShowLeaderLines,
     string Position,
     string Separator,
     string NumberFormat,
@@ -1117,11 +1117,11 @@ internal sealed class PptxSceneBuilder
                 .FirstOrDefault(element => element is not null);
         return labels is null
             ? new PptxSceneChartDataLabels(
-                ShowValue: false,
-                ShowPercent: false,
-                ShowCategoryName: false,
-                ShowSeriesName: false,
-                ShowLeaderLines: false,
+                ShowValue: null,
+                ShowPercent: null,
+                ShowCategoryName: null,
+                ShowSeriesName: null,
+                ShowLeaderLines: null,
                 Position: string.Empty,
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
@@ -1130,11 +1130,11 @@ internal sealed class PptxSceneBuilder
                 Overrides: [],
                 IsDefined: false)
             : new PptxSceneChartDataLabels(
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showVal")),
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showPercent")),
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showCatName")),
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showSerName")),
-                IsOoxmlBooleanElementEnabled(labels.Element(ChartNamespace + "showLeaderLines")),
+                ReadOptionalOoxmlBooleanElement(labels, "showVal"),
+                ReadOptionalOoxmlBooleanElement(labels, "showPercent"),
+                ReadOptionalOoxmlBooleanElement(labels, "showCatName"),
+                ReadOptionalOoxmlBooleanElement(labels, "showSerName"),
+                ReadOptionalOoxmlBooleanElement(labels, "showLeaderLines"),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
