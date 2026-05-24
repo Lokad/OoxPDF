@@ -713,6 +713,19 @@ High-priority actions:
 - [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size: rich text runs, bold/italic,
   rotation, tick-label offsets, multi-level category labels, and chart-style inherited text defaults still
   need structural modeling before axis and data-label text can match Office without renderer heuristics.
+- [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
+  Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
+  factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
+  decision out of renderer-local XML scans. Focused model/chart tests passed after a transient parallel build
+  lock was rerun serially, the full runner passed 186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-161346` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
+- [ ] Extend plot-area layout ownership beyond bare `x/y/w/h` factors: `layoutTarget`, `xMode`, `yMode`,
+  `wMode`, `hMode`, inner-vs-outer plot area semantics, title/legend overlay interactions, and reuse across
+  area/scatter/radar/pie/doughnut chart families still need structural modeling before plot bounds can be
+  treated as Office-aligned instead of approximate geometry.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -871,6 +884,9 @@ High-priority actions:
     subset: font family, font size, and solid color.
   - [ ] Extend chart text-style records to cover rich text runs, bold/italic, rotation, tick-label offsets,
     multi-level category labels, data-label text styles, and chart-style inherited defaults.
+  - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
+  - [ ] Extend chart plot-area layout records to cover `layoutTarget`, factor modes, inner/outer plot
+    semantics, title/legend overlay effects, and non-bar/line chart-family consumers.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -1107,8 +1123,8 @@ Composite oracle family map:
   Remaining title work is exact Office title layout, rich text styling, overlay/manual layout, and inherited
   chart style defaults.
 - Bar and line chart renderer now honor `c:plotArea/c:spPr` fill and border styling through the shared
-  chart shape-style helper. Remaining plot-area work is manual layout, rounded corners/effects, and extending
-  exact plot bounds to area/scatter/radar/pie/doughnut families.
+  chart shape-style helper. Remaining plot-area work is full manual-layout mode semantics, rounded
+  corners/effects, and extending exact plot bounds to area/scatter/radar/pie/doughnut families.
 - Bar and line chart renderer now render first-series cached category labels through the shared PPTX text
   pipeline. Remaining axis-label work is tick values, rich text, label rotation, multi-level categories,
   manual positioning, and Office chart font/style inheritance.
@@ -3055,7 +3071,7 @@ Current expected test result:
 Latest private PPTX acceptance baseline:
 
 ```text
-lokad-value-based / 20260524-160802: 84/84 compared pages, 0 dimension mismatches,
+lokad-value-based / 20260524-161346: 84/84 compared pages, 0 dimension mismatches,
 deck MAE 9.043369, changed16 0.116418, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 Page 17: MAE 2.945717, changed16 0.045530, SSIM 0.917662.
 ```

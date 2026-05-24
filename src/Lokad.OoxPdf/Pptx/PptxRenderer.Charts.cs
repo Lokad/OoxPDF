@@ -796,6 +796,16 @@ internal sealed partial class PptxRenderer
         return ReadChartShapeStyle(shapeProperties, theme);
     }
 
+    private static bool TryReadSceneOrXmlManualPlotBox(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, out ChartPlotBox plotBox)
+    {
+        if (sceneChart is not null)
+        {
+            return TryBuildManualPlotBox(sceneChart.PlotAreaLayout, frame, out plotBox);
+        }
+
+        return TryReadManualPlotBox(chartXml, frame, out plotBox);
+    }
+
     private static bool TryReadManualPlotBox(XDocument chartXml, ChartFrameBox frame, out ChartPlotBox plotBox)
     {
         plotBox = default;
@@ -818,10 +828,21 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        double plotWidth = Math.Clamp(width.Value, 0.02d, 1d) * frame.Width;
-        double plotHeight = Math.Clamp(height.Value, 0.02d, 1d) * frame.Height;
-        double plotX = frame.X + Math.Clamp(x.Value, 0d, 1d) * frame.Width;
-        double plotY = frame.Y + frame.Height - Math.Clamp(y.Value, 0d, 1d) * frame.Height - plotHeight;
+        return TryBuildManualPlotBox(new PptxSceneChartManualLayout(true, x.Value, y.Value, width.Value, height.Value), frame, out plotBox);
+    }
+
+    private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, out ChartPlotBox plotBox)
+    {
+        plotBox = default;
+        if (!layout.HasLayout)
+        {
+            return false;
+        }
+
+        double plotWidth = Math.Clamp(layout.Width, 0.02d, 1d) * frame.Width;
+        double plotHeight = Math.Clamp(layout.Height, 0.02d, 1d) * frame.Height;
+        double plotX = frame.X + Math.Clamp(layout.X, 0d, 1d) * frame.Width;
+        double plotY = frame.Y + frame.Height - Math.Clamp(layout.Y, 0d, 1d) * frame.Height - plotHeight;
         plotBox = new ChartPlotBox(plotX, plotY, plotWidth, plotHeight);
         return plotWidth > 0d && plotHeight > 0d;
     }
@@ -2587,13 +2608,13 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotBox plotBox = GetBarChartPlotBox(frame, chartXml, title, legend);
+        ChartPlotBox plotBox = GetBarChartPlotBox(frame, chartXml, sceneChart, title, legend);
         return new ChartLayout(frame, plotBox, title, legend);
     }
 
-    private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, string? title, ChartLegendLayout legend)
+    private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
     {
-        if (TryReadManualPlotBox(chartXml, frame, out ChartPlotBox manualPlotBox))
+        if (TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox))
         {
             return manualPlotBox;
         }
@@ -3137,13 +3158,13 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotBox plotBox = GetLineChartPlotBox(frame, chartXml);
+        ChartPlotBox plotBox = GetLineChartPlotBox(frame, chartXml, sceneChart);
         return new ChartLayout(frame, plotBox, title, legend);
     }
 
-    private static ChartPlotBox GetLineChartPlotBox(ChartFrameBox frame, XDocument chartXml)
+    private static ChartPlotBox GetLineChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
     {
-        if (TryReadManualPlotBox(chartXml, frame, out ChartPlotBox manualPlotBox))
+        if (TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, out ChartPlotBox manualPlotBox))
         {
             return manualPlotBox;
         }

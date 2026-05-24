@@ -326,6 +326,7 @@ internal sealed record PptxSceneChart(
     PptxSceneChartTitle Title,
     PptxSceneChartLegend Legend,
     PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartManualLayout PlotAreaLayout,
     PptxSceneChartShapeStyle ChartAreaStyle,
     PptxSceneChartShapeStyle PlotAreaStyle);
 
@@ -355,6 +356,13 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
     double? FontSize,
     RgbColor? Color);
+
+internal readonly record struct PptxSceneChartManualLayout(
+    bool HasLayout,
+    double X,
+    double Y,
+    double Width,
+    double Height);
 
 internal sealed record PptxSceneChartSeries(
     string? Name,
@@ -928,6 +936,7 @@ internal sealed class PptxSceneBuilder
             ReadChartTitle(chartXml),
             ReadChartLegend(chartXml),
             ReadChartTextStyleOverride(chartXml?.Root, theme),
+            ReadChartPlotAreaManualLayout(chartXml),
             ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme),
             ReadChartShapeStyle(chartXml?
                 .Descendants(ChartNamespace + "plotArea")
@@ -1286,6 +1295,35 @@ internal sealed class PptxSceneBuilder
             ? parsedColor
             : null;
         return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color);
+    }
+
+    private static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
+    {
+        XElement? manualLayout = chartXml?
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault()
+            ?.Element(ChartNamespace + "layout")
+            ?.Element(ChartNamespace + "manualLayout");
+        if (manualLayout is null)
+        {
+            return default;
+        }
+
+        double? x = ReadChartManualLayoutFactor(manualLayout, "x");
+        double? y = ReadChartManualLayoutFactor(manualLayout, "y");
+        double? width = ReadChartManualLayoutFactor(manualLayout, "w");
+        double? height = ReadChartManualLayoutFactor(manualLayout, "h");
+        return x is null || y is null || width is null || height is null
+            ? default
+            : new PptxSceneChartManualLayout(true, x.Value, y.Value, width.Value, height.Value);
+    }
+
+    private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)
+    {
+        string? value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val");
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+            ? parsed
+            : null;
     }
 
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
