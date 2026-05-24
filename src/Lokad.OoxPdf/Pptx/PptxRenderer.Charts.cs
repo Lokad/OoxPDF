@@ -1087,10 +1087,10 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         var run = new TextRun(
             title.Trim(),
-            x + width * 0.08d,
-            y + height * 0.88d,
-            width * 0.84d,
-            fontSize * 1.4d,
+            x + width * PptxChartMetricRules.TitleXInsetRatio,
+            y + height * PptxChartMetricRules.TitleBaselineYRatio,
+            width * PptxChartMetricRules.TitleWidthRatio,
+            fontSize * PptxChartMetricRules.TitleHeightFactor,
             x,
             y,
             width,
@@ -1325,24 +1325,24 @@ internal sealed partial class PptxRenderer
         }
 
         double fontSize = style.FontSize;
-        double lineHeight = fontSize * 1.45d;
-        double markerSize = fontSize * 0.65d;
+        double lineHeight = fontSize * PptxChartMetricRules.LegendLineHeightFactor;
+        double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         bool horizontal = string.Equals(layout.Position, "b", StringComparison.Ordinal) ||
             string.Equals(layout.Position, "t", StringComparison.Ordinal);
-        double width = horizontal ? plotBox.Width : Math.Max(36d, plotBox.Width * 0.22d);
+        double width = horizontal ? plotBox.Width : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
         double x = layout.Position switch
         {
-            "l" => Math.Max(0d, plotBox.X - width - 8d),
+            "l" => Math.Max(0d, plotBox.X - width - PptxChartMetricRules.LegendSideGap),
             _ when horizontal => plotBox.X,
-            _ => plotBox.X + plotBox.Width + 8d
+            _ => plotBox.X + plotBox.Width + PptxChartMetricRules.LegendSideGap
         };
         double firstY = layout.Position switch
         {
-            "b" => Math.Max(0d, plotBox.Y - lineHeight * 1.15d),
-            "t" => plotBox.Y + plotBox.Height + lineHeight * 0.15d,
+            "b" => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
+            "t" => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ => plotBox.Y + plotBox.Height - lineHeight
         };
-        double clipHeight = horizontal ? lineHeight * 1.25d : Math.Max(lineHeight, entries.Count * lineHeight);
+        double clipHeight = horizontal ? lineHeight * PptxChartMetricRules.LegendHorizontalClipHeightFactor : Math.Max(lineHeight, entries.Count * lineHeight);
         var runs = new List<TextRun>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
         {
@@ -1350,7 +1350,7 @@ internal sealed partial class PptxRenderer
             double entryX = horizontal ? x + i * (width / entries.Count) : x;
             double entryWidth = horizontal ? width / entries.Count : width;
             double y = horizontal ? firstY : firstY - i * lineHeight;
-            double markerY = y + lineHeight * 0.35d;
+            double markerY = y + lineHeight * PptxChartMetricRules.LegendMarkerBaselineFactor;
             if (entry.Fill is { } fill)
             {
                 FillChartRectangle(graphics, entryX, markerY, markerSize, markerSize, fill);
@@ -1363,9 +1363,9 @@ internal sealed partial class PptxRenderer
 
             runs.Add(new TextRun(
                 entry.Name,
-                entryX + markerSize + 4d,
+                entryX + markerSize + PptxChartMetricRules.LegendTextGap,
                 y,
-                Math.Max(1d, entryWidth - markerSize - 4d),
+                Math.Max(1d, entryWidth - markerSize - PptxChartMetricRules.LegendTextGap),
                 lineHeight,
                 x,
                 horizontal ? firstY : Math.Max(0d, firstY - (entries.Count - 1) * lineHeight),

@@ -3904,6 +3904,13 @@ instead of anonymous literals inside axis rendering. This does not make the defa
 the remaining approximations explicit and replaceable with PDF-observed chart layout rules. The `pptx-charts`
 non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite passed with 202 passed, 0 failed,
 0 skipped; and `dotnet pack` succeeded.
+
+chart title/legend metric ownership / 2026-05-24:
+Chart title and legend fallback placement still use approximate offsets, but their inset, baseline, width,
+line-height, marker-size, side-gap, and clip-height factors now live under `PptxChartMetricRules`. This keeps
+chart text placement approximations visible and replaceable, rather than scattered as local literals in the
+rendering path. The `pptx-charts` non-slow group passed with 8 passed, 0 failed, 0 skipped; the full suite
+passed with 202 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

@@ -796,6 +796,20 @@ internal sealed partial class PptxRenderer
         public const double HorizontalValueAxisTopOffsetFactor = 1.35d;
         public const double VerticalValueAxisWidthRatio = 0.12d;
         public const double VerticalValueAxisBaselineRatio = 0.45d;
+        public const double TitleXInsetRatio = 0.08d;
+        public const double TitleBaselineYRatio = 0.88d;
+        public const double TitleWidthRatio = 0.84d;
+        public const double TitleHeightFactor = 1.4d;
+        public const double LegendLineHeightFactor = 1.45d;
+        public const double LegendMarkerSizeFactor = 0.65d;
+        public const double LegendMinimumSideWidth = 36d;
+        public const double LegendSideWidthRatio = 0.22d;
+        public const double LegendSideGap = 8d;
+        public const double LegendBottomOffsetFactor = 1.15d;
+        public const double LegendTopOffsetFactor = 0.15d;
+        public const double LegendHorizontalClipHeightFactor = 1.25d;
+        public const double LegendMarkerBaselineFactor = 0.35d;
+        public const double LegendTextGap = 4d;
     }
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);
