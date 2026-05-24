@@ -454,6 +454,12 @@ High-priority actions:
   `artifacts/private-visual/lokad-value-based/20260524-122826` stayed stable: 84/84 compared pages, zero
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-24: Re-ran composition/table-focused tests, the full test suite, package, and private PPTX
+  acceptance after carrying group transforms through the legacy table fallback path. The test runner passed
+  186/186, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-123212` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-24: Re-ran the full test suite, package, and private PPTX acceptance after scene-owned
   backgrounds. The test runner executed 183/183 passing tests, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-120402` stayed stable: 84/84 compared pages, zero
@@ -502,6 +508,9 @@ High-priority actions:
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.
+  - [x] Apply the same group-transform traversal to the legacy table fallback path used when unknown graphic
+    frames disable ordered scene rendering. Public unit
+    `PptxSyntheticGroupedTableUsesGroupTransformInFallbackPath` locks that fallback behavior.
 - [ ] Port `pptx-renderer` shape geometry coverage: preset geometries, custom geometry, rotations, flips,
   group transforms, connectors, arrows, dash/cap/join, and picture-fill clipping.
 - [ ] Port `pptx-renderer` image behavior: relationship resolution, crop/fill/stretch, alpha/soft masks,

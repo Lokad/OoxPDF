@@ -10,12 +10,29 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTables(PptxRenderContext context, XDocument slideXml, PdfGraphicsBuilder graphics)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        foreach (XElement frame in slideXml.Descendants(PresentationNamespace + "graphicFrame"))
+        foreach (XElement shapeTree in slideXml.Descendants(PresentationNamespace + "spTree"))
         {
-            textSpans.AddRange(RenderTableFrame(context, frame, graphics));
+            RenderTableContainer(context, graphics, textSpans, shapeTree, GroupTransform.Identity);
         }
 
         return textSpans;
+    }
+
+    private static void RenderTableContainer(PptxRenderContext context, PdfGraphicsBuilder graphics, List<PptxPositionedTextSpan> textSpans, XElement container, GroupTransform transform)
+    {
+        foreach (XElement child in container.Elements())
+        {
+            if (child.Name == PresentationNamespace + "graphicFrame")
+            {
+                textSpans.AddRange(RenderTableFrame(context, child, graphics, transform));
+                continue;
+            }
+
+            if (child.Name == PresentationNamespace + "grpSp")
+            {
+                RenderTableContainer(context, graphics, textSpans, child, transform.Combine(ReadGroupTransform(child)));
+            }
+        }
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
@@ -28,7 +45,13 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics)
     {
-        return RenderTableFrame(context, ReadGraphicFrameBounds(frame), ReadTableElement(frame), graphics);
+        return RenderTableFrame(context, frame, graphics, GroupTransform.Identity);
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, XElement frame, PdfGraphicsBuilder graphics, GroupTransform transform)
+    {
+        ShapeBounds? bounds = ReadGraphicFrameBounds(frame);
+        return RenderTableFrame(context, bounds is { } rawBounds ? transform.Apply(rawBounds) : null, ReadTableElement(frame), graphics);
     }
 
     private static XElement? ReadTableElement(XElement frame)
