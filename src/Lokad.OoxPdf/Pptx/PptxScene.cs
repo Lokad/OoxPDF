@@ -321,12 +321,19 @@ internal sealed record PptxSceneChart(
     string? TargetPartName,
     XDocument? ChartXml,
     IReadOnlyList<RgbColor>? PaletteColors,
-    IReadOnlyList<PptxSceneChartPlot> Plots);
+    IReadOnlyList<PptxSceneChartPlot> Plots,
+    IReadOnlyList<PptxSceneChartAxis> Axes);
 
 internal sealed record PptxSceneChartPlot(
     string Kind,
     int SeriesCount,
     IReadOnlyList<string> AxisIds);
+
+internal sealed record PptxSceneChartAxis(
+    string Id,
+    string Kind,
+    string Position,
+    bool IsDeleted);
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -835,7 +842,7 @@ internal sealed class PptxSceneBuilder
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
         XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
         IReadOnlyList<RgbColor>? paletteColors = chartPart is null ? null : ReadChartPaletteColors(package, chartPart.Name, theme);
-        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors, ReadChartPlots(chartXml));
+        return new PptxSceneChart(relationshipId, targetPartName, chartXml, paletteColors, ReadChartPlots(chartXml), ReadChartAxes(chartXml));
     }
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml)
@@ -863,6 +870,35 @@ internal sealed class PptxSceneBuilder
         }
 
         return plots;
+    }
+
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml)
+    {
+        XElement? plotArea = chartXml?
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault();
+        if (plotArea is null)
+        {
+            return [];
+        }
+
+        var axes = new List<PptxSceneChartAxis>();
+        foreach (XElement axis in plotArea.Elements().Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Ax", StringComparison.Ordinal)))
+        {
+            string id = (string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty;
+            if (id.Length == 0)
+            {
+                continue;
+            }
+
+            axes.Add(new PptxSceneChartAxis(
+                id,
+                axis.Name.LocalName,
+                (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty,
+                IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"))));
+        }
+
+        return axes;
     }
 
     private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, string chartPartName, PptxTheme theme)
@@ -894,6 +930,19 @@ internal sealed class PptxSceneBuilder
         }
 
         return colors.Count == 0 ? null : colors;
+    }
+
+    private static bool IsOoxmlBooleanElementEnabled(XElement? element)
+    {
+        if (element is null)
+        {
+            return false;
+        }
+
+        string? value = (string?)element.Attribute("val");
+        return value is null ||
+            value == "1" ||
+            value.Equals("true", StringComparison.OrdinalIgnoreCase);
     }
 
     private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)
