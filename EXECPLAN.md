@@ -4265,6 +4265,13 @@ typed scene vector when any series in the plot carries an explicit smooth value,
 a broad chart-XML rescan whenever every scene value was `false`. The scene fixture includes a valid line-chart
 series with explicit smooth disable. The focused scene test passed with 1 passed, 0 failed, 0 skipped; the
 full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart data-label layout adapter preservation / 2026-05-25:
+Renderer-side `ChartDataLabelOptions` and `ChartDataLabelOverride` now carry per-label manual-layout metadata
+forward from both typed scene data and raw XML fallback parsing. Effective per-point label option resolution
+preserves an override layout when one is present, but rendering still does not consume it until public
+Office-PDF evidence defines the label-box placement rule. The focused scene test passed with 1 passed,
+0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
