@@ -1135,7 +1135,7 @@ internal sealed class PptxSceneBuilder
 
     private static bool ReadChartPlotVaryColors(XElement plot)
     {
-        return !string.Equals(ReadChartElementValue(plot, "varyColors"), "0", StringComparison.Ordinal);
+        return IsOoxmlBooleanElementEnabled(plot.Element(ChartNamespace + "varyColors"), defaultValue: true);
     }
 
     private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme)
@@ -1596,9 +1596,14 @@ internal sealed class PptxSceneBuilder
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
+        return IsOoxmlBooleanElementEnabled(element, defaultValue: false);
+    }
+
+    private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
+    {
         if (element is null)
         {
-            return false;
+            return defaultValue;
         }
 
         string? value = (string?)element.Attribute("val");

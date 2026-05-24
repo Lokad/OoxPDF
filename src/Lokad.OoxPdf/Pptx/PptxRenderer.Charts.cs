@@ -1428,9 +1428,14 @@ internal sealed partial class PptxRenderer
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
     {
+        return IsOoxmlBooleanElementEnabled(element, defaultValue: false);
+    }
+
+    private static bool IsOoxmlBooleanElementEnabled(XElement? element, bool defaultValue)
+    {
         if (element is null)
         {
-            return false;
+            return defaultValue;
         }
 
         string? value = (string?)element.Attribute("val");
@@ -2691,7 +2696,7 @@ internal sealed partial class PptxRenderer
 
     private static bool ReadChartVaryColors(XElement chartElement)
     {
-        return !string.Equals((string?)chartElement.Element(ChartNamespace + "varyColors")?.Attribute("val"), "0", StringComparison.Ordinal);
+        return IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "varyColors"), defaultValue: true);
     }
 
     private static double ReadChartGapWidth(XElement chartElement)

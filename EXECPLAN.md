@@ -861,6 +861,15 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-24: Normalize chart `varyColors` parsing to the shared OOXML boolean-element rule while
+  preserving the existing default-on behavior when the element is absent. The scene model and raw chart
+  fallback now both treat `val="false"` like `val="0"` instead of accidentally enabling per-point colors;
+  public fixtures cover `val="false"` in scene parsing and element-only true in rendering. Full runner passed
+  188/188, `dotnet pack` succeeded, and private run
+  `artifacts/private-visual/lokad-value-based/20260524-191141` stayed stable: 84/84 compared pages, zero
+  dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
+  `0.045530`, SSIM `0.917662`.
 - [ ] Finish secondary-axis structural alignment for chart families beyond the current supported bar/line
   paths: crossing geometry still needs to consume the preserved scene metadata, and exact Office spacing still
   needs explicit model-to-renderer plumbing.
@@ -1737,8 +1746,8 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
-- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-190742` after the chart legend
-  overlay boolean normalization slice:
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-191141` after the chart
+  `varyColors` boolean normalization slice:
   - 84/84 pages compared with zero dimension mismatches.
   - Mean absolute error: `9.042022`; max mean absolute error: `19.097502`; mean changed-pixel ratio at
     threshold 16: `0.116405`.
