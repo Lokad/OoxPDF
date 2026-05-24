@@ -511,7 +511,8 @@ internal sealed record PptxSceneChartAxis(
     int? TickLabelSkip,
     int? TickMarkSkip,
     bool NoMultiLevelLabels,
-    string? NumberFormat);
+    string? NumberFormat,
+    PptxSceneChartTitle Title);
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
@@ -1463,7 +1464,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementInt(axis, "tickLblSkip"),
                 ReadChartElementInt(axis, "tickMarkSkip"),
                 IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "noMultiLvlLbl")),
-                ReadChartAxisNumberFormat(axis)));
+                ReadChartAxisNumberFormat(axis),
+                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme)));
         }
 
         return axes;
@@ -1609,17 +1611,20 @@ internal sealed class PptxSceneBuilder
             .FirstOrDefault();
         if (chart is null)
         {
-            return new PptxSceneChartTitle(
-                null,
-                IsAutoDeleted: false,
-                Overlay: false,
-                default,
-                new PptxSceneChartShapeStyle(false, default, default, default),
-                default);
+            return EmptyChartTitle(IsAutoDeleted: false);
         }
 
         bool isAutoDeleted = IsOoxmlBooleanElementEnabled(chart.Element(ChartNamespace + "autoTitleDeleted"));
-        XElement? title = chart.Element(ChartNamespace + "title");
+        return ReadChartTitleElement(chart.Element(ChartNamespace + "title"), theme, isAutoDeleted);
+    }
+
+    private static PptxSceneChartTitle ReadChartTitleElement(XElement? title, PptxTheme theme, bool isAutoDeleted = false)
+    {
+        if (title is null)
+        {
+            return EmptyChartTitle(isAutoDeleted);
+        }
+
         bool overlay = IsOoxmlBooleanElementEnabled(title?.Element(ChartNamespace + "overlay"));
         string? text = title?
             .Descendants(DrawingNamespace + "t")
@@ -1638,6 +1643,17 @@ internal sealed class PptxSceneBuilder
             ReadChartManualLayout(title),
             ReadChartShapeStyle(title?.Element(ChartNamespace + "spPr"), theme),
             ReadChartTextStyleOverride(title, theme));
+    }
+
+    private static PptxSceneChartTitle EmptyChartTitle(bool IsAutoDeleted)
+    {
+        return new PptxSceneChartTitle(
+            null,
+            IsAutoDeleted,
+            Overlay: false,
+            default,
+            new PptxSceneChartShapeStyle(false, default, default, default),
+            default);
     }
 
     private static PptxSceneChartLegend ReadChartLegend(XDocument? chartXml, PptxTheme theme)

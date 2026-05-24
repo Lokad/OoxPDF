@@ -1813,6 +1813,12 @@ High-priority actions:
   remaining title work is to consume the title layout structurally after public Office-PDF evidence defines the
   exact placement rule. Validation: the focused scene test passed `1 passed, 0 failed, 0 skipped`; the full
   console suite passed `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
+- [x] 2026-05-25: Preserve axis titles as typed chart scene data instead of leaving them as raw axis XML.
+  Each `PptxSceneChartAxis` now carries a `PptxSceneChartTitle`, reusing the same title text, overlay,
+  manual-layout, shape-style, and text-style record as the chart title. The scene-builder fixture locks both
+  category-axis and value-axis title metadata. Validation: the focused scene test passed
+  `1 passed, 0 failed, 0 skipped`; the full console suite passed `204 passed, 0 failed, 0 skipped`; and
+  `dotnet pack` succeeded.
 - [ ] 2026-05-25: Continue chart text classification from position buckets to semantic roles. The current text
   oracle now identifies legend labels, but it still does not separate title, value-axis ticks, category-axis
   ticks, data labels, and annotations as explicit Office-aligned roles.
@@ -3563,6 +3569,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   structure that will matter for Office-like placement: `c:overlay`, `c:layout/c:manualLayout`, and `c:spPr`.
   Evidence: `PptxSceneChartTitle` had only `Text`, `IsAutoDeleted`, and `TextStyle`; the scene-builder test now
   locks title overlay, manual-layout factors, fill, and stroke as model data before any renderer consumption.
+- Observation: Axis titles are structurally the same chart-title sub-tree under each chart axis, but were not
+  available to rendering or inspection as axis-owned scene data.
+  Evidence: `PptxSceneChartAxis` preserved tick label style and number format but had no title record; the
+  scene-builder fixture now locks category-axis and value-axis titles through `PptxSceneChartAxis.Title`.
 - Observation: The slide-17 schema issue was not only "curvedConnector2 is unsupported"; after initial
   support and arrowhead tangent fixes, the remaining visible problem came from using an S-shaped one-cubic
   connector where Office behaves like a quarter-turn loop segment.
@@ -4182,6 +4192,12 @@ and text style. This is an intentional model-first slice: rendering did not star
 because exact Office title placement still needs public PDF evidence. The focused scene test passed with 1
 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0 failed, 0 skipped; and `dotnet pack`
 succeeded.
+
+chart axis-title scene-structure preservation / 2026-05-25:
+`PptxSceneChartAxis` now carries a `PptxSceneChartTitle`, so category and value axes preserve explicit
+OOXML axis-title text, overlay, manual layout, fill/stroke, and text-style data before rendering uses it.
+The focused scene test passed with 1 passed, 0 failed, 0 skipped; the full suite passed with 204 passed, 0
+failed, 0 skipped; and `dotnet pack` succeeded.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
