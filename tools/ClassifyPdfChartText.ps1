@@ -204,18 +204,20 @@ function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     $dy = $y - $centerY
     $distance = [Math]::Sqrt($dx * $dx + $dy * $dy)
     $text = TextValue $op
-    if ((-not (Is-NumericText $text)) -and $distance -ge ($radius * 0.8d)) {
+    $isNumeric = Is-NumericText $text
+    if ($isNumeric -and
+        $x -le ($centerX - $tolerance) -and
+        $distance -le ($radius + $tolerance) -and
+        $y -ge ($centerY - $tolerance * 2d)) {
+        return "ValueAxisTickLabel"
+    }
+
+    if ((-not $isNumeric) -and $distance -ge ($radius * 0.8d)) {
         return "CategoryAxisTickLabel"
     }
 
     if ($distance -ge ($radius + $tolerance * 0.5d)) {
         return "CategoryAxisTickLabel"
-    }
-
-    if ($x -le ($centerX - $tolerance) -and
-        $distance -le ($radius + $tolerance) -and
-        $y -ge ($centerY - $tolerance * 2d)) {
-        return "ValueAxisTickLabel"
     }
 
     return $null

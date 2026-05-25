@@ -528,6 +528,19 @@ if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
     if ($LASTEXITCODE -ne 0) {
         throw "PDF chart text structure gate failed."
     }
+
+    if ($manifest.expected.maxChartTextStructurePositionDeltaByKind -ne $null) {
+        foreach ($entry in $manifest.expected.maxChartTextStructurePositionDeltaByKind.PSObject.Properties) {
+            $kindTolerance = [double]$entry.Value
+            $kindCompareArgs = $compareChartTextArgs.Clone()
+            $kindCompareArgs.BoundsTolerance = $kindTolerance
+            $kindCompareArgs.Kinds = @([string]$entry.Name)
+            & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @kindCompareArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "PDF chart text structure gate failed for kind '$($entry.Name)'."
+            }
+        }
+    }
 }
 
 $diagnosticsJson = Get-Content -Raw -LiteralPath $diagnostics

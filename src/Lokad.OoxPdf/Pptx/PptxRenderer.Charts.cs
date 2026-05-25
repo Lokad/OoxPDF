@@ -5716,12 +5716,17 @@ internal sealed partial class PptxRenderer
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
-            double y = geometry.CenterY + geometry.Radius * ratio - height / 2d;
+            double y = ResolveRadarValueAxisLabelBaselineY(layout, ratio, height);
             string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis);
             runs.Add(CreateChartLabelRun(label, x, y, width, height, plotBox, style, TextAlignment.Right));
         }
 
         return RenderTextRuns(runs, graphics, "RVA");
+    }
+
+    private static double ResolveRadarValueAxisLabelBaselineY(ChartRadarLayout layout, double ratio, double labelHeight)
+    {
+        return layout.Geometry.CenterY + layout.Geometry.Radius * ratio - labelHeight * PptxChartMetricRules.RadarValueLabelBaselineOffsetFactor;
     }
 
     private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double firstSliceAngle)

@@ -832,6 +832,7 @@ internal sealed partial class PptxRenderer
         public const double MarkerRadarRadiusRatio = 0.4226d;
         public const double RadarCategoryLabelGapFactor = 0.65d;
         public const double RadarValueLabelGapFactor = 1.01d;
+        public const double RadarValueLabelBaselineOffsetFactor = 0.25d;
         public const double RadarValueLabelWidthFactor = 3.0d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;

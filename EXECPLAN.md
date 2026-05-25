@@ -2113,6 +2113,12 @@ High-priority actions:
     now matches the Office PDF text matrices on both public radar fixtures within `0.03 pt` horizontally; the
     remaining radar text slack is the vertical text baseline/anchor model, especially category-axis labels
     (`13.79..14.55 pt` max Y drift on the public radar cases), so the shared `15 pt` radar text gate stays open.
+  - [x] Align radar value-axis label baselines and lock them independently from category-label drift. The radar
+    value-axis label resolver now applies the Office-observed quarter-height baseline offset, and
+    `CheckVisualCase.ps1` supports per-kind chart text tolerances so both radar manifests gate
+    `ValueAxisTickLabel` at `0.5 pt` while leaving `CategoryAxisTickLabel` at the broader mixed `15 pt` gate.
+    The classifier now treats numeric left-of-center radar text as value-axis ticks before broad radial category
+    classification, preserving the top tick when its baseline overlaps the bottom category band.
 - [x] 2026-05-25: Tighten chart text classification for value-axis origin labels near plot-box edges.
   `ClassifyPdfChartText.ps1` now uses a slightly wider axis-label vertical band for text left/right of the
   plot box, so labels near the plot origin are classified as `ValueAxisTickLabel` instead of generic
@@ -5994,3 +6000,19 @@ passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
 long-term gap: value-axis labels still have about `6 pt` vertical drift and radar category labels still have up to
 `13.79..14.55 pt` vertical drift, so the next durable slice is a typed radar text-frame/baseline model rather than
 more center/radius tuning.
+
+Revision note, 2026-05-25: Closed the remaining radar value-axis label baseline gap and made the text gate capable
+of recording that closure separately from category-label drift. `ResolveRadarValueAxisLabelBaselineY` now uses the
+radial tick coordinate minus the Office-observed quarter label height, reducing radar value-axis text deltas to max
+X `0.03 pt` and max Y `0.15..0.17 pt` on the two public radar cases. `ClassifyPdfChartText.ps1` now classifies
+numeric left-of-center radar labels as value-axis ticks before broad outside-radius category logic, which keeps the
+top numeric tick stable when its corrected baseline lands near the bottom category band. `CheckVisualCase.ps1` now
+supports `maxChartTextStructurePositionDeltaByKind`, and both radar manifests use it to gate
+`ValueAxisTickLabel` within `0.5 pt` while the mixed category/value gate remains at `15 pt` for the still-open
+category-label baseline problem. Validation: focused `pptx-charts` tests passed 38/38; marker radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-194152`; filled radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-194203`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: radar category labels still need a structural radial text-frame/anchor model before the global radar
+text gate can be tightened.
