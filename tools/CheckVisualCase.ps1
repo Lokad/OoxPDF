@@ -395,7 +395,9 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     }
 }
 
-if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
+$hasChartTextGlobalTolerance = $manifest.expected.maxChartTextStructurePositionDelta -ne $null
+$hasChartTextKindTolerances = $manifest.expected.maxChartTextStructurePositionDeltaByKind -ne $null
+if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
     $textInspectRoot = Join-Path $comparisonDir "pdf-text"
     $referenceTextInspect = Join-Path $textInspectRoot "reference"
     $candidateTextInspect = Join-Path $textInspectRoot "candidate"
@@ -501,9 +503,12 @@ if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
     $compareChartTextArgs = @{
         Reference = $referenceChartTextStructures
         Candidate = $candidateChartTextStructures
-        BoundsTolerance = [double]$manifest.expected.maxChartTextStructurePositionDelta
+        BoundsTolerance = 0d
         LineWidthTolerance = 0
         MatchByBounds = $true
+    }
+    if ($hasChartTextGlobalTolerance) {
+        $compareChartTextArgs.BoundsTolerance = [double]$manifest.expected.maxChartTextStructurePositionDelta
     }
     if ($manifest.expected.compareChartTextStructureKinds -ne $null) {
         $compareChartTextArgs.Kinds = @($manifest.expected.compareChartTextStructureKinds)
@@ -524,12 +529,14 @@ if ($manifest.expected.maxChartTextStructurePositionDelta -ne $null) {
             "ChartText")
     }
 
-    & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "PDF chart text structure gate failed."
+    if ($hasChartTextGlobalTolerance) {
+        & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "PDF chart text structure gate failed."
+        }
     }
 
-    if ($manifest.expected.maxChartTextStructurePositionDeltaByKind -ne $null) {
+    if ($hasChartTextKindTolerances) {
         foreach ($entry in $manifest.expected.maxChartTextStructurePositionDeltaByKind.PSObject.Properties) {
             $kindTolerance = [double]$entry.Value
             $kindCompareArgs = $compareChartTextArgs.Clone()

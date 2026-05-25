@@ -6086,3 +6086,14 @@ value labels, and the filled-radar chart title. Validation: the marker radar cas
 `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200540`. Remaining long-term gap: the text gate
 now honestly reflects sub-point public evidence for compared radar labels, but the chart-text comparison harness
 still requires a global fallback tolerance instead of treating per-kind tolerances as the complete contract.
+
+Revision note, 2026-05-25: Removed that chart-text harness limitation. `CheckVisualCase.ps1` now runs chart text
+classification when either a global text tolerance or `maxChartTextStructurePositionDeltaByKind` is present, and
+it only runs the global comparison when the manifest actually declares a global tolerance. The public radar
+manifests therefore dropped `maxChartTextStructurePositionDelta` entirely and now express their text oracle as
+explicit per-kind tolerances for the compared text classes. Validation: marker radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-200638`; filled radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200638`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json`. Remaining long-term gap: several non-radar chart
+manifests still use broad global text tolerances where the better contract is likely a per-kind one backed by
+Office-PDF text evidence.
