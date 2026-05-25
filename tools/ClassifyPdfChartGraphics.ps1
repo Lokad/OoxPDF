@@ -143,6 +143,125 @@ function Get-PieSlicePathGeometry($op) {
     }
 }
 
+function New-Point($values, [int]$offset) {
+    [pscustomobject]@{
+        X = [double]$values[$offset]
+        Y = [double]$values[$offset + 1]
+    }
+}
+
+function Distance($a, $b) {
+    return [Math]::Sqrt(([double]$a.X - [double]$b.X) * ([double]$a.X - [double]$b.X) +
+        ([double]$a.Y - [double]$b.Y) * ([double]$a.Y - [double]$b.Y))
+}
+
+function Get-CommandEndPoint($command) {
+    if ($null -eq $command.Values -or $command.Values.Count -lt 2) {
+        return $null
+    }
+
+    if ([string]$command.Operator -eq "c") {
+        if ($command.Values.Count -lt 6) {
+            return $null
+        }
+
+        return New-Point $command.Values 4
+    }
+
+    return New-Point $command.Values 0
+}
+
+function Intersect-Lines($a1, $a2, $b1, $b2) {
+    $ax = [double]$a2.X - [double]$a1.X
+    $ay = [double]$a2.Y - [double]$a1.Y
+    $bx = [double]$b2.X - [double]$b1.X
+    $by = [double]$b2.Y - [double]$b1.Y
+    $denominator = $ax * $by - $ay * $bx
+    if ([Math]::Abs($denominator) -lt 0.000001d) {
+        $collinearDelta = ([double]$b1.X - [double]$a1.X) * $ay - ([double]$b1.Y - [double]$a1.Y) * $ax
+        if ([Math]::Abs($collinearDelta) -gt 0.001d) {
+            return $null
+        }
+
+        return [pscustomobject]@{
+            X = ([double]$a1.X + [double]$b1.X) / 2d
+            Y = ([double]$a1.Y + [double]$b1.Y) / 2d
+        }
+    }
+
+    $cx = [double]$b1.X - [double]$a1.X
+    $cy = [double]$b1.Y - [double]$a1.Y
+    $t = ($cx * $by - $cy * $bx) / $denominator
+    [pscustomobject]@{
+        X = [double]$a1.X + $t * $ax
+        Y = [double]$a1.Y + $t * $ay
+    }
+}
+
+function Get-AnnularSlicePathGeometry($op) {
+    if ($null -eq $op.PathCommands) {
+        return $null
+    }
+
+    $commands = @($op.PathCommands)
+    if ($commands.Count -lt 5 -or [string]$commands[0].Operator -ne "m") {
+        return $null
+    }
+
+    $drawingCommands = @($commands | Where-Object { [string]$_.Operator -ne "h" })
+    $lineIndexes = @()
+    for ($i = 0; $i -lt $drawingCommands.Count; $i++) {
+        if ([string]$drawingCommands[$i].Operator -eq "l") {
+            $lineIndexes += $i
+        }
+        elseif ([string]$drawingCommands[$i].Operator -ne "m" -and [string]$drawingCommands[$i].Operator -ne "c") {
+            return $null
+        }
+    }
+
+    if ($lineIndexes.Count -ne 1) {
+        return $null
+    }
+
+    $lineIndex = [int]$lineIndexes[0]
+    if ($lineIndex -lt 2 -or $lineIndex -ge ($drawingCommands.Count - 1)) {
+        return $null
+    }
+
+    $outerStart = Get-CommandEndPoint $drawingCommands[0]
+    $outerEnd = Get-CommandEndPoint $drawingCommands[$lineIndex - 1]
+    $innerEnd = Get-CommandEndPoint $drawingCommands[$lineIndex]
+    $innerStart = Get-CommandEndPoint $drawingCommands[$drawingCommands.Count - 1]
+    if ($null -eq $outerStart -or $null -eq $outerEnd -or $null -eq $innerEnd -or $null -eq $innerStart) {
+        return $null
+    }
+
+    $center = Intersect-Lines $outerStart $innerStart $outerEnd $innerEnd
+    if ($null -eq $center) {
+        return $null
+    }
+
+    $outerRadii = @((Distance $center $outerStart), (Distance $center $outerEnd))
+    $innerRadii = @((Distance $center $innerStart), (Distance $center $innerEnd))
+    $outerRadius = ($outerRadii | Measure-Object -Average).Average
+    $innerRadius = ($innerRadii | Measure-Object -Average).Average
+    $maxRadiusDelta = 0d
+    foreach ($radius in @($outerRadii + $innerRadii)) {
+        $target = if ($radius -gt (($outerRadius + $innerRadius) / 2d)) { $outerRadius } else { $innerRadius }
+        $maxRadiusDelta = [Math]::Max($maxRadiusDelta, [Math]::Abs([double]$radius - [double]$target))
+    }
+
+    [pscustomobject]@{
+        PathCenterX = Round $center.X
+        PathCenterY = Round $center.Y
+        PathRadius = Round $outerRadius
+        PathMinRadius = Round $innerRadius
+        PathMaxRadius = Round $outerRadius
+        PathCenterMaxDelta = Round $maxRadiusDelta
+        PathSpokeCount = $null
+    }
+}
+
 function BoundsDistance($a, $b) {
     return [Math]::Abs([double]$a.MinX - [double]$b.MinX) +
         [Math]::Abs([double]$a.MinY - [double]$b.MinY) +
@@ -153,7 +272,8 @@ function BoundsDistance($a, $b) {
 function New-Structure($kind, $op) {
     $radarSpokeGeometry = if ($kind -eq "RadarSpokeGroupCandidate") { Get-RadarSpokePathGeometry $op } else { $null }
     $pieSliceGeometry = if ($kind -eq "FilledRegion") { Get-PieSlicePathGeometry $op } else { $null }
-    $pathGeometry = if ($null -ne $radarSpokeGeometry) { $radarSpokeGeometry } else { $pieSliceGeometry }
+    $annularSliceGeometry = if ($kind -eq "FilledRegion" -and $null -eq $pieSliceGeometry) { Get-AnnularSlicePathGeometry $op } else { $null }
+    $pathGeometry = if ($null -ne $radarSpokeGeometry) { $radarSpokeGeometry } elseif ($null -ne $pieSliceGeometry) { $pieSliceGeometry } else { $annularSliceGeometry }
     [pscustomobject]@{
         Kind = $kind
         PageNumber = $op.PageNumber

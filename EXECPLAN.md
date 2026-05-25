@@ -6195,3 +6195,21 @@ focused pie cases passed at `artifacts/visual/pptx-ladder-11-chart-pie-5-categor
 passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-203806` run. Remaining long-term
 gap: doughnut slices still have no true annulus center/radius gate, so their path geometry is still represented by
 the polar envelope until the classifier derives outer and inner radii from the annular path commands.
+
+Revision note, 2026-05-25: Added that true doughnut annulus oracle. `ClassifyPdfChartGraphics.ps1` now recognizes
+annular sector paths (`m`, outer arc curves, radial `l`, inner arc curves, `h`) and derives a structural center from
+the two radial edge lines. It also handles 180-degree annular sectors where the radial edges are collinear by using
+the outer chord midpoint. `ComparePdfGraphicsOperations.ps1` now includes `PathMinRadius` and `PathMaxRadius` in
+path-geometry comparisons, so doughnut hole-size and outer-radius regressions are both gated. The public doughnut
+manifests now keep their broad envelope tolerances but add per-kind `PolarSliceCandidate` annulus gates: `12.5 pt`
+for normal doughnut and `25.1 pt` for exploded doughnut. The new evidence shows radius and hole-size are already
+close (`0.08..0.18 pt`), while center drift is the real layout gap: normal doughnut slices use Office center
+`373.69,270.32` versus candidate `385.92,269.86`; exploded doughnut slice centers are consistently about `25 pt`
+left of the candidate while radii stay within about `0.14 pt`. Validation: the four focused polar cases passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-204323`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-204328`,
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-204334`, and
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-204339`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-204349` run. Remaining long-term
+gap: move doughnut center placement out of shared pie constants and into typed `ChartPolarKind`/legend/explosion
+layout rules; do not adjust hole size or outer radius based on the current evidence.

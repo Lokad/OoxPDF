@@ -21,6 +21,9 @@
     "compareChartGraphicsStructurePathCommandCounts": true,
     "compareChartGraphicsStructurePathOperators": true,
     "compareChartGraphicsStructurePathGeometry": true,
-    "maxChartGraphicsStructurePathGeometryDelta": 33
+    "maxChartGraphicsStructurePathGeometryDelta": 33,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 25.1
+    }
   }
 }

@@ -211,15 +211,23 @@ foreach ($pair in $pairs) {
     $pathGeometryRelevant = (HasValue $ref.PathCenterX) -or (HasValue $cand.PathCenterX) -or
         (HasValue $ref.PathCenterY) -or (HasValue $cand.PathCenterY) -or
         (HasValue $ref.PathRadius) -or (HasValue $cand.PathRadius)
+    $pathMinRadiusRelevant = (HasValue $ref.PathMinRadius) -or (HasValue $cand.PathMinRadius)
+    $pathMaxRadiusRelevant = (HasValue $ref.PathMaxRadius) -or (HasValue $cand.PathMaxRadius)
+    $pathMinRadiusAvailable = (HasValue $ref.PathMinRadius) -and (HasValue $cand.PathMinRadius)
+    $pathMaxRadiusAvailable = (HasValue $ref.PathMaxRadius) -and (HasValue $cand.PathMaxRadius)
     $deltaPathCenterX = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterX) ([double]$cand.PathCenterX) } else { $null }
     $deltaPathCenterY = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterY) ([double]$cand.PathCenterY) } else { $null }
     $deltaPathRadius = if ($pathGeometryAvailable) { Delta ([double]$ref.PathRadius) ([double]$cand.PathRadius) } else { $null }
+    $deltaPathMinRadius = if ($pathMinRadiusAvailable) { Delta ([double]$ref.PathMinRadius) ([double]$cand.PathMinRadius) } else { $null }
+    $deltaPathMaxRadius = if ($pathMaxRadiusAvailable) { Delta ([double]$ref.PathMaxRadius) ([double]$cand.PathMaxRadius) } else { $null }
     $pathGeometryToleranceForKind = GetPathGeometryTolerance $ref.Kind
     $pathGeometryOk = (-not $MatchPathGeometry) -or (-not $pathGeometryRelevant) -or ($null -eq $pathGeometryToleranceForKind) -or (
         $pathGeometryAvailable -and
         [Math]::Abs($deltaPathCenterX) -le $pathGeometryToleranceForKind -and
         [Math]::Abs($deltaPathCenterY) -le $pathGeometryToleranceForKind -and
-        [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind)
+        [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind -and
+        ((-not $pathMinRadiusRelevant) -or ($pathMinRadiusAvailable -and [Math]::Abs($deltaPathMinRadius) -le $pathGeometryToleranceForKind)) -and
+        ((-not $pathMaxRadiusRelevant) -or ($pathMaxRadiusAvailable -and [Math]::Abs($deltaPathMaxRadius) -le $pathGeometryToleranceForKind)))
     $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
@@ -258,6 +266,12 @@ foreach ($pair in $pairs) {
         RefPathRadius = $ref.PathRadius
         CandPathRadius = $cand.PathRadius
         DeltaPathRadius = $deltaPathRadius
+        RefPathMinRadius = $ref.PathMinRadius
+        CandPathMinRadius = $cand.PathMinRadius
+        DeltaPathMinRadius = $deltaPathMinRadius
+        RefPathMaxRadius = $ref.PathMaxRadius
+        CandPathMaxRadius = $cand.PathMaxRadius
+        DeltaPathMaxRadius = $deltaPathMaxRadius
         PathGeometryTolerance = $pathGeometryToleranceForKind
         PathGeometryOk = $pathGeometryOk
         DeltaMinX = $deltaMinX
