@@ -5317,17 +5317,17 @@ public clustered-column structural gate passed at
 
 Revision note, 2026-05-25: Added renderer-side plot clip structure for bar/column and line charts and
 tightened the public clustered-column PDF gate to compare `PlotAreaClipBoxCandidate` alongside the axis-pair
-plot box and gridline group. The first exact-plot clipping attempt was rejected because it clipped edge
-strokes and lowered the `layoutTarget="inner"` foreground histogram; the committed path uses a scoped
-chart-plot clip with a small edge allowance, restores graphics state through horizontal/stacked early returns,
-and keeps the existing raster gates passing. Focused `pptx-charts` tests passed with 33/33; the two
-`layoutTarget` probes passed at
-`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-131250` and
-`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-131258`; and the stricter
-clustered-column structural gate passed at
-`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-131342`, with the candidate plot clip
-within the existing 1 pt structural bound. Remaining long-term gap: the clip padding is still a shared
-renderer primitive rather than a typed Office plot-clip box derived from the outer plot area, inner data plot,
-stroke extents, and chart-family draw order. The `layoutTarget` probes still prove that candidate inner/outer
-manual plot boxes collapse to the same geometry, so strict clip gates for those probes must wait until the
-layout model derives Office-equivalent outer and inner boxes instead of encoding more local offsets.
+plot box and gridline group. The first exact-plot clipping attempt was rejected because the graphics state
+leaked through horizontal/stacked early returns and lowered the `layoutTarget="inner"` foreground histogram;
+after that leak was fixed, exact plot clipping was kept rather than padding the bounds. Focused `pptx-charts`
+tests passed with 33/33; the line-chart structural gate now also compares `PlotAreaClipBoxCandidate` and
+passed at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-131636`; the clustered-column
+structural gate passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-131650`; and
+the two `layoutTarget` probes still passed at
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-131656` and
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-131659`. Remaining long-term
+gap: the clip box is now Office-aligned for the covered bar/column and line cases, but it is still emitted as
+a renderer-scoped primitive rather than a typed Office plot-clip box derived from the outer plot area, inner
+data plot, stroke extents, and chart-family draw order. The `layoutTarget` probes still prove that candidate
+inner/outer manual plot boxes collapse to the same geometry, so strict clip gates for those probes must wait
+until the layout model derives Office-equivalent outer and inner boxes instead of encoding more local offsets.

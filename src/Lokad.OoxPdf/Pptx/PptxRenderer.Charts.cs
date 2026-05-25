@@ -10,7 +10,6 @@ internal sealed partial class PptxRenderer
 {
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
-    private const double ChartPlotClipPadding = 1.0d;
 
     private static void RenderChartFrame(
         PptxRenderContext context,
@@ -1219,11 +1218,7 @@ internal sealed partial class PptxRenderer
 
     private static void ClipChartPlotArea(PdfGraphicsBuilder graphics, double x, double y, double width, double height)
     {
-        graphics.ClipRectangle(
-            x - ChartPlotClipPadding,
-            y - ChartPlotClipPadding,
-            width + ChartPlotClipPadding * 2d,
-            height + ChartPlotClipPadding * 2d);
+        graphics.ClipRectangle(x, y, width, height);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
