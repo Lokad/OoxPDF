@@ -13,7 +13,7 @@
     "maxChangedPixelRatioAtThreshold16": 0.220,
     "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate"],
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "PlotAreaClipBoxCandidate"],
     "maxChartTextStructurePositionDelta": 1,
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]

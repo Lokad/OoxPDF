@@ -295,8 +295,7 @@ if ($clipBoxes.Count -gt 0) {
     })
     if ($nonPageClipBoxes.Count -gt 0) {
         $clipGroups = @($nonPageClipBoxes |
-            Group-Object -Property MinX, MinY, MaxX, MaxY |
-            Where-Object { $_.Count -ge 2 })
+            Group-Object -Property MinX, MinY, MaxX, MaxY)
         $dominantGroup = $null
         if ($clipGroups.Count -gt 0 -and $null -ne $plotBoxForGridlines) {
             $dominantGroup = $clipGroups |

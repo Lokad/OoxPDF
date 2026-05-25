@@ -10,6 +10,7 @@ internal sealed partial class PptxRenderer
 {
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
+    private const double ChartPlotClipPadding = 1.0d;
 
     private static void RenderChartFrame(
         PptxRenderContext context,
@@ -1214,6 +1215,15 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static void ClipChartPlotArea(PdfGraphicsBuilder graphics, double x, double y, double width, double height)
+    {
+        graphics.ClipRectangle(
+            x - ChartPlotClipPadding,
+            y - ChartPlotClipPadding,
+            width + ChartPlotClipPadding * 2d,
+            height + ChartPlotClipPadding * 2d);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
@@ -3370,120 +3380,129 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
-        int categoryCount = Math.Max(1, series.Max(values => values.Count));
-        bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-            string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-        bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-        double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisReversed);
-        double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
-        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
-        double valueAxisAutoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible);
-        if (minorGridlines)
+        graphics.SaveState();
+        try
         {
-            if (horizontalBars)
+            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
+            int categoryCount = Math.Max(1, series.Max(values => values.Count));
+            bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
+                string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+            bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+            double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisReversed);
+            double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
+            double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
+            double valueAxisAutoTickTargetCount = GetValueAxisAutoTickTargetCount(horizontalBars, valueAxisLabelsVisible);
+            if (minorGridlines)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
-            }
-            else
-            {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
-            }
-        }
-
-        if (majorGridlines)
-        {
-            if (horizontalBars)
-            {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisAutoTickTargetCount);
-            }
-            else
-            {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
-            }
-        }
-
-        ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
-        ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
-        if (axesStyle.CategoryAxisVisible)
-        {
-            ChartSeriesStroke stroke = horizontalBars ? valueAxisStroke : categoryAxisStroke;
-            if (stroke.Alpha > 0.001d)
-            {
-                SetChartStroke(graphics, stroke);
-                double axisY = horizontalBars
-                    ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
-                    : valueAxisCrossingY;
-                graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY);
-            }
-        }
-
-        if (axesStyle.ValueAxisVisible)
-        {
-            ChartSeriesStroke stroke = horizontalBars ? categoryAxisStroke : valueAxisStroke;
-            if (stroke.Alpha > 0.001d)
-            {
-                SetChartStroke(graphics, stroke);
-                double axisX = horizontalBars
-                    ? (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
-                    : (axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX);
-                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
-            }
-        }
-
-        if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
-        {
-            if (secondaryValueAxisStroke.Alpha > 0.001d)
-            {
-                SetChartStroke(graphics, secondaryValueAxisStroke);
-                double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
-            }
-        }
-
-        if (horizontalBars)
-        {
-            if (stacked)
-            {
-                RenderStackedHorizontalBars(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, percentStacked, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent);
-            }
-            else
-            {
-                RenderClusteredHorizontalBars(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, zeroX, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent, overlapPercent);
-            }
-
-            return;
-        }
-
-        if (stacked)
-        {
-            RenderStackedColumns(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, percentStacked, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent);
-            return;
-        }
-
-        double categoryWidth = plotWidth / categoryCount;
-        double barWidth = GetClusteredBarWidth(categoryWidth, series.Count, gapWidthPercent);
-        double step = GetClusteredBarStep(barWidth, overlapPercent);
-        double clusterWidth = barWidth + Math.Max(0, series.Count - 1) * step;
-        for (int category = 0; category < categoryCount; category++)
-        {
-            double categoryX = plotX + category * categoryWidth + (categoryWidth - clusterWidth) / 2d;
-            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
-            {
-                IReadOnlyList<double> values = series[seriesIndex];
-                if (category >= values.Count)
+                if (horizontalBars)
                 {
-                    continue;
+                    DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                }
+                else
+                {
+                    DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                }
+            }
+
+            if (majorGridlines)
+            {
+                if (horizontalBars)
+                {
+                    DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisAutoTickTargetCount);
+                }
+                else
+                {
+                    DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+                }
+            }
+
+            ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
+            ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
+            if (axesStyle.CategoryAxisVisible)
+            {
+                ChartSeriesStroke stroke = horizontalBars ? valueAxisStroke : categoryAxisStroke;
+                if (stroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, stroke);
+                    double axisY = horizontalBars
+                        ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
+                        : valueAxisCrossingY;
+                    graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY);
+                }
+            }
+
+            if (axesStyle.ValueAxisVisible)
+            {
+                ChartSeriesStroke stroke = horizontalBars ? categoryAxisStroke : valueAxisStroke;
+                if (stroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, stroke);
+                    double axisX = horizontalBars
+                        ? (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
+                        : (axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX);
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                }
+            }
+
+            if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+            {
+                if (secondaryValueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, secondaryValueAxisStroke);
+                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                }
+            }
+
+            if (horizontalBars)
+            {
+                if (stacked)
+                {
+                    RenderStackedHorizontalBars(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, percentStacked, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent);
+                }
+                else
+                {
+                    RenderClusteredHorizontalBars(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, zeroX, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent, overlapPercent);
                 }
 
-                double value = values[category];
-                ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(theme, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
-                double barX = categoryX + seriesIndex * step;
-                double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisReversed);
-                double barY = Math.Min(zeroY, valueY);
-                double barHeight = Math.Abs(valueY - zeroY);
-                FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
-                StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);
+                return;
             }
+
+            if (stacked)
+            {
+                RenderStackedColumns(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, percentStacked, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent);
+                return;
+            }
+
+            double categoryWidth = plotWidth / categoryCount;
+            double barWidth = GetClusteredBarWidth(categoryWidth, series.Count, gapWidthPercent);
+            double step = GetClusteredBarStep(barWidth, overlapPercent);
+            double clusterWidth = barWidth + Math.Max(0, series.Count - 1) * step;
+            for (int category = 0; category < categoryCount; category++)
+            {
+                double categoryX = plotX + category * categoryWidth + (categoryWidth - clusterWidth) / 2d;
+                for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+                {
+                    IReadOnlyList<double> values = series[seriesIndex];
+                    if (category >= values.Count)
+                    {
+                        continue;
+                    }
+
+                    double value = values[category];
+                    ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(theme, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
+                    double barX = categoryX + seriesIndex * step;
+                    double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisReversed);
+                    double barY = Math.Min(zeroY, valueY);
+                    double barHeight = Math.Abs(valueY - zeroY);
+                    FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
+                    StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);
+                }
+            }
+        }
+        finally
+        {
+            graphics.RestoreState();
         }
     }
 
@@ -3998,6 +4017,8 @@ internal sealed partial class PptxRenderer
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
+        graphics.SaveState();
+        ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double maxValue = valueExtents.Max;
         double minValue = valueExtents.Min;
@@ -4089,6 +4110,8 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+
+        graphics.RestoreState();
     }
 
     private static ChartLayout GetLineChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
