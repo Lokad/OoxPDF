@@ -349,6 +349,21 @@ if ($null -ne $plotBoxForGridlines) {
     }
 }
 
+if ($null -eq $plotBoxForGridlines) {
+    foreach ($op in $ops) {
+        $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
+        $moveCount = IntValue $op.MoveCount
+        $lineCount = IntValue $op.LineCount
+        $curveCount = IntValue $op.CurveCount
+        $width = Width $op
+        $height = Height $op
+        if ($op.Kind -eq "Stroke" -and $segmentCount -ge 6 -and $moveCount -ge 3 -and
+            $lineCount -ge 3 -and $curveCount -eq 0 -and $width -gt 40d -and $height -gt 40d) {
+            $structures.Add((New-Structure "RadarGridGroupCandidate" $op))
+        }
+    }
+}
+
 $clipBoxes = @($structures | Where-Object { $_.Kind -eq "ClipBox" })
 if ($clipBoxes.Count -gt 0) {
     $nonPageClipBoxes = @($clipBoxes | Where-Object {

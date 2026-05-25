@@ -5830,3 +5830,17 @@ passed at `artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-
 `2026-05-25T18:37:31.3556521+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: the oracle now
 guards curve-vs-line composition, but it still does not derive polar center/radius/explosion geometry from the
 Bezier commands themselves.
+
+Revision note, 2026-05-25: Made the radar chart baseline more honest after inspecting Office and candidate PDF
+graphics. The public radar fixtures already render natively with zero diagnostics, so their manifests now require
+empty diagnostics instead of allowing the obsolete `PPTX_CHART_STATIC_FALLBACK`. Manual PDF inspection also exposed
+a structural radar-grid gap: Office groups radar grid/ring/spoke strokes into multi-move path operations, while
+OOXPDF currently emits many separate ring, spoke, and series line strokes. `ClassifyPdfChartGraphics.ps1` now
+surfaces those Office-side multi-move strokes as `RadarGridGroupCandidate` when no cartesian plot box is present,
+so future radar work can gate the PDF structure instead of treating the residual as only raster error. Validation:
+`pptx-ladder-11-chart-radar-2series-port` passed with diagnostics required empty at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-184107`; the filled radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-184119`; the full public `pptx-charts`
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T18:43:18.3914831+02:00`; and `dotnet pack` succeeded. Remaining long-term gap: the candidate does
+not yet emit Office-like grouped radar grid paths, so no radar structural manifest gate has been enabled yet.
