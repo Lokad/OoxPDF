@@ -413,6 +413,7 @@ internal sealed record PptxSceneChartDataLabels(
     bool? ShowCategoryName,
     bool? ShowSeriesName,
     bool? ShowLeaderLines,
+    PptxSceneChartDataLabelPosition PositionKind,
     string Position,
     string Separator,
     string NumberFormat,
@@ -429,12 +430,27 @@ internal sealed record PptxSceneChartDataLabelOverride(
     bool? ShowSeriesName,
     bool? ShowLeaderLines,
     string CustomText,
+    PptxSceneChartDataLabelPosition PositionKind,
     string Position,
     string Separator,
     string NumberFormat,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
+
+internal enum PptxSceneChartDataLabelPosition
+{
+    BestFit,
+    Bottom,
+    Center,
+    InsideBase,
+    InsideEnd,
+    Left,
+    OutsideEnd,
+    Right,
+    Top,
+    Unknown
+}
 
 internal sealed record PptxSceneChartShapeStyle(
     bool NoFill,
@@ -845,6 +861,32 @@ internal sealed class PptxSceneBuilder
             _ => PptxSceneChartMarkerSymbol.Unknown
         };
     }
+
+    internal static PptxSceneChartDataLabelPosition ParseChartDataLabelPosition(string? position)
+    {
+        return position switch
+        {
+            "bestFit" => PptxSceneChartDataLabelPosition.BestFit,
+            "b" => PptxSceneChartDataLabelPosition.Bottom,
+            "ctr" => PptxSceneChartDataLabelPosition.Center,
+            "inBase" => PptxSceneChartDataLabelPosition.InsideBase,
+            "inEnd" => PptxSceneChartDataLabelPosition.InsideEnd,
+            "l" => PptxSceneChartDataLabelPosition.Left,
+            "outEnd" => PptxSceneChartDataLabelPosition.OutsideEnd,
+            "r" => PptxSceneChartDataLabelPosition.Right,
+            "t" => PptxSceneChartDataLabelPosition.Top,
+            _ when position?.Equals("bestFit", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.BestFit,
+            _ when position?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Bottom,
+            _ when position?.Equals("ctr", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Center,
+            _ when position?.Equals("inBase", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.InsideBase,
+            _ when position?.Equals("inEnd", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.InsideEnd,
+            _ when position?.Equals("l", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Left,
+            _ when position?.Equals("outEnd", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.OutsideEnd,
+            _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Right,
+            _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Top,
+            _ => PptxSceneChartDataLabelPosition.Unknown
+        };
+    }
     private const double MinimumStrokeWidth = 0.1d;
     private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
@@ -1194,6 +1236,7 @@ internal sealed class PptxSceneBuilder
                 ShowCategoryName: null,
                 ShowSeriesName: null,
                 ShowLeaderLines: null,
+                PositionKind: PptxSceneChartDataLabelPosition.Unknown,
                 Position: string.Empty,
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
@@ -1207,6 +1250,7 @@ internal sealed class PptxSceneBuilder
                 ReadOptionalOoxmlBooleanElement(labels, "showCatName"),
                 ReadOptionalOoxmlBooleanElement(labels, "showSerName"),
                 ReadOptionalOoxmlBooleanElement(labels, "showLeaderLines"),
+                ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
@@ -1235,6 +1279,7 @@ internal sealed class PptxSceneBuilder
                 ReadOptionalOoxmlBooleanElement(label, "showSerName"),
                 ReadOptionalOoxmlBooleanElement(label, "showLeaderLines"),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
+                ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,

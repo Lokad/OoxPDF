@@ -417,6 +417,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShowSeriesName == true, "Expected per-label show-series-name override in the scene model.");
         TestAssert.Equal("ZXQ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomText ?? string.Empty);
         TestAssert.Equal("ctr", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Position ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.Center, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].PositionKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.HasLayout == true, "Expected per-label manual layout in the scene model.");
         TestAssert.Equal(0.44d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.X ?? 0d);
         TestAssert.Equal(0.28d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Layout.Y ?? 0d);
@@ -437,6 +438,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowValue == true, "Expected series-level show-value flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.ShowPercent is null, "Expected missing series-level show-percent flag to remain distinct from an explicit disable.");
         TestAssert.Equal("t", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Position ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.Top, slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.PositionKind);
         TestAssert.Equal(" + ", slide.SlideNodes[4].Chart?.Plots[0].Series[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal(12.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Values[0] ?? 0d);
         TestAssert.Equal("South", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Categories[1] ?? string.Empty);

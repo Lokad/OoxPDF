@@ -2542,7 +2542,7 @@ internal sealed partial class PptxRenderer
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double x = ResolveHorizontalBarDataLabelX(effectiveOptions.Position, barBase, barEnd, labelWidth);
+                    double x = ResolveHorizontalBarDataLabelX(effectiveOptions.PositionKind, barBase, barEnd, labelWidth);
                     double y = categoryY + seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
@@ -2576,7 +2576,7 @@ internal sealed partial class PptxRenderer
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double y = ResolveVerticalBarDataLabelY(effectiveOptions.Position, barBase, barEnd, labelHeight);
+                    double y = ResolveVerticalBarDataLabelY(effectiveOptions.PositionKind, barBase, barEnd, labelHeight);
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
@@ -2628,7 +2628,7 @@ internal sealed partial class PptxRenderer
                 if (!string.IsNullOrEmpty(label))
                 {
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
-                        effectiveOptions.Position,
+                        effectiveOptions.PositionKind,
                         pointX,
                         pointY,
                         labelWidth,
@@ -2650,39 +2650,39 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CLD");
     }
 
-    private static double ResolveHorizontalBarDataLabelX(string position, double barBase, double barEnd, double labelWidth)
+    private static double ResolveHorizontalBarDataLabelX(PptxSceneChartDataLabelPosition position, double barBase, double barEnd, double labelWidth)
     {
         bool extendsRight = barEnd >= barBase;
         return position switch
         {
-            "ctr" or "bestFit" => (barBase + barEnd - labelWidth) / 2d,
-            "inBase" => extendsRight ? barBase + PptxChartMetricRules.BarDataLabelHorizontalGap : barBase - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap,
-            "inEnd" or "l" or "r" => extendsRight ? barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap,
-            "outEnd" or _ => extendsRight ? barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap
+            PptxSceneChartDataLabelPosition.Center or PptxSceneChartDataLabelPosition.BestFit => (barBase + barEnd - labelWidth) / 2d,
+            PptxSceneChartDataLabelPosition.InsideBase => extendsRight ? barBase + PptxChartMetricRules.BarDataLabelHorizontalGap : barBase - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap,
+            PptxSceneChartDataLabelPosition.InsideEnd or PptxSceneChartDataLabelPosition.Left or PptxSceneChartDataLabelPosition.Right => extendsRight ? barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap,
+            PptxSceneChartDataLabelPosition.OutsideEnd or _ => extendsRight ? barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap
         };
     }
 
-    private static double ResolveVerticalBarDataLabelY(string position, double barBase, double barEnd, double labelHeight)
+    private static double ResolveVerticalBarDataLabelY(PptxSceneChartDataLabelPosition position, double barBase, double barEnd, double labelHeight)
     {
         bool extendsUp = barEnd >= barBase;
         return position switch
         {
-            "ctr" or "bestFit" => (barBase + barEnd - labelHeight) / 2d,
-            "inBase" => extendsUp ? barBase + PptxChartMetricRules.BarDataLabelVerticalGap : barBase - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap,
-            "inEnd" or "t" or "b" => extendsUp ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barEnd + PptxChartMetricRules.BarDataLabelVerticalGap,
-            "outEnd" or _ => extendsUp ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
+            PptxSceneChartDataLabelPosition.Center or PptxSceneChartDataLabelPosition.BestFit => (barBase + barEnd - labelHeight) / 2d,
+            PptxSceneChartDataLabelPosition.InsideBase => extendsUp ? barBase + PptxChartMetricRules.BarDataLabelVerticalGap : barBase - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap,
+            PptxSceneChartDataLabelPosition.InsideEnd or PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.Bottom => extendsUp ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barEnd + PptxChartMetricRules.BarDataLabelVerticalGap,
+            PptxSceneChartDataLabelPosition.OutsideEnd or _ => extendsUp ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
         };
     }
 
-    private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(string position, double pointX, double pointY, double labelWidth, double labelHeight)
+    private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth, double labelHeight)
     {
         return position switch
         {
-            "b" => (pointX - labelWidth / 2d, pointY - labelHeight * PptxChartMetricRules.LineDataLabelBelowOffsetFactor, TextAlignment.Center),
-            "l" => (pointX - labelWidth - PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Right),
-            "r" => (pointX + PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Left),
-            "ctr" or "bestFit" => (pointX - labelWidth / 2d, pointY - labelHeight / 2d, TextAlignment.Center),
-            "t" or "outEnd" or _ => (pointX - labelWidth / 2d, pointY + labelHeight * PptxChartMetricRules.LineDataLabelAboveOffsetFactor, TextAlignment.Center)
+            PptxSceneChartDataLabelPosition.Bottom => (pointX - labelWidth / 2d, pointY - labelHeight * PptxChartMetricRules.LineDataLabelBelowOffsetFactor, TextAlignment.Center),
+            PptxSceneChartDataLabelPosition.Left => (pointX - labelWidth - PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Right),
+            PptxSceneChartDataLabelPosition.Right => (pointX + PptxChartMetricRules.LineDataLabelSideGap, pointY - labelHeight / 2d, TextAlignment.Left),
+            PptxSceneChartDataLabelPosition.Center or PptxSceneChartDataLabelPosition.BestFit => (pointX - labelWidth / 2d, pointY - labelHeight / 2d, TextAlignment.Center),
+            PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd or _ => (pointX - labelWidth / 2d, pointY + labelHeight * PptxChartMetricRules.LineDataLabelAboveOffsetFactor, TextAlignment.Center)
         };
     }
 
@@ -2716,6 +2716,7 @@ internal sealed partial class PptxRenderer
             ShowSeriesName = dataLabel.ShowSeriesName ?? options.ShowSeriesName,
             ShowLeaderLines = dataLabel.ShowLeaderLines ?? options.ShowLeaderLines,
             CustomText = string.IsNullOrEmpty(dataLabel.CustomText) ? options.CustomText : dataLabel.CustomText,
+            PositionKind = string.IsNullOrEmpty(dataLabel.Position) ? options.PositionKind : dataLabel.PositionKind,
             Position = string.IsNullOrEmpty(dataLabel.Position) ? options.Position : dataLabel.Position,
             Separator = string.IsNullOrEmpty(dataLabel.Separator) ? options.Separator : dataLabel.Separator,
             NumberFormat = string.IsNullOrEmpty(dataLabel.NumberFormat) ? options.NumberFormat : dataLabel.NumberFormat,
@@ -2871,6 +2872,7 @@ internal sealed partial class PptxRenderer
                 IsChartLabelFlagEnabled(labels, "showSerName"),
                 IsChartLabelFlagEnabled(labels, "showLeaderLines"),
                 string.Empty,
+                PptxSceneBuilder.ParseChartDataLabelPosition(labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty),
                 labels.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
@@ -2892,6 +2894,7 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.ShowSeriesName == true,
                 plot.DataLabels.ShowLeaderLines == true,
                 string.Empty,
+                plot.DataLabels.PositionKind,
                 plot.DataLabels.Position,
                 plot.DataLabels.Separator,
                 plot.DataLabels.NumberFormat,
@@ -2926,6 +2929,7 @@ internal sealed partial class PptxRenderer
             labels.ShowSeriesName == true,
             labels.ShowLeaderLines == true,
             string.Empty,
+            labels.PositionKind,
             labels.Position,
             labels.Separator,
             labels.NumberFormat,
@@ -2954,6 +2958,7 @@ internal sealed partial class PptxRenderer
                 ReadOptionalChartLabelFlagEnabled(label, "showSerName"),
                 ReadOptionalChartLabelFlagEnabled(label, "showLeaderLines"),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
+                PptxSceneBuilder.ParseChartDataLabelPosition(label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty),
                 label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
@@ -2982,6 +2987,7 @@ internal sealed partial class PptxRenderer
                 dataLabel.ShowSeriesName,
                 dataLabel.ShowLeaderLines,
                 dataLabel.CustomText,
+                dataLabel.PositionKind,
                 dataLabel.Position,
                 dataLabel.Separator,
                 dataLabel.NumberFormat,
@@ -6435,16 +6441,16 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, string CustomText, string Position, string Separator, string NumberFormat, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, string CustomText, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, CustomText: string.Empty, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, Layout: default, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, CustomText: string.Empty, PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, Layout: default, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName ||
             !string.IsNullOrWhiteSpace(CustomText) ||
             Overrides.Values.Any(label => label.ShowValue == true || label.ShowPercent == true || label.ShowCategoryName == true || label.ShowSeriesName == true || !string.IsNullOrWhiteSpace(label.CustomText));
     }
 
-    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, string CustomText, string Position, string Separator, string NumberFormat, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
+    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, string CustomText, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 
