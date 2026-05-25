@@ -5331,3 +5331,25 @@ a renderer-scoped primitive rather than a typed Office plot-clip box derived fro
 data plot, stroke extents, and chart-family draw order. The `layoutTarget` probes still prove that candidate
 inner/outer manual plot boxes collapse to the same geometry, so strict clip gates for those probes must wait
 until the layout model derives Office-equivalent outer and inner boxes instead of encoding more local offsets.
+
+Revision note, 2026-05-25: Corrected the horizontal-bar auto tick-density rule after the public
+`pptx-ladder-11-chart-bar-clustered-port` structural gate exposed that the previous "visible labels imply
+sparse ticks" conclusion was too broad. Office emits 10 vertical gridline segments for the ordinary clustered
+horizontal bar case with visible bottom value-axis labels, while the public `layoutTarget` probes with manual
+plot layout continue to emit 5 segments for the same 0..50 value range. OOXPDF now threads the typed
+`ChartLayout.ManualPlotLayoutApplied` state into both value-axis label and gridline tick generation, so
+ordinary horizontal bars use the dense horizontal value-axis target and manual plot-layout bars use the sparse
+target. The unit guard is now split into
+`PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithoutManualBoxUseOfficeDenseTicks` and
+`PptxSyntheticChartHorizontalValueAxisVisibleLabelsWithManualBoxUseOfficeSparseTicks`; focused `pptx-charts`
+tests passed with 34/34. The clustered-bar structural gate passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-132531`, matching Office's 10-segment
+`VerticalGridlineGroupCandidate`; the `layoutTarget` probes still passed at
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-132515` and
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-132541`; and the column/line
+clip gates still passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-132551` and
+`artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-132551`. Full non-slow tests passed with
+223 passed, 0 failed, 7 skipped, and `dotnet pack` succeeded. Remaining long-term gap: this is still an
+evidence-backed boolean connection between manual plot layout and axis tick density; the durable destination
+is a typed Office axis-layout model that derives tick density from chart frame, outer plot area, inner data
+plot, axis label reservations, and manual `layoutTarget` semantics rather than renderer-local branching.
