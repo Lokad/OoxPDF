@@ -5407,3 +5407,12 @@ to `3.2` and changed16 from `0.092` to `0.04`; current metrics are MAE `3.049522
 text-box placement. The durable destination is a typed polar chart layout that derives the inner radar plot, radial
 label strip, category-label anchors, filled/unfilled draw order, and gradient/pattern fill behavior from Office PDF
 structure across radar, filled radar, pie, and doughnut charts rather than keeping metric constants in the renderer.
+
+Revision note, 2026-05-25: Ran the private `lokad-value-based` validation after the line-axis and radar polar
+chart slices. Private run `artifacts/private-visual/lokad-value-based/20260525-135730` compared 84 pages with no
+dimension mismatches, aggregate MAE `8.936878`, maximum page MAE `19.097502`, mean changed16 `0.115263`, and only
+the existing `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. The private slide-17 schema concern is stable in this
+run: page 17 reports MAE `2.8807392939814815`, changed16 `0.04488811728395062`, SSIM `0.9200831393083286`, and
+foreground histogram `0.9998584380437963`. Remaining private-safe gap: the worst private pages are still dominated
+by broader layout/typography and unsupported recolor differences, so future private evidence should continue to be
+translated into public synthetic or Office-authored probes before implementation.
