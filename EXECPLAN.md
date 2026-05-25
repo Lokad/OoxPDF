@@ -5660,3 +5660,22 @@ and Office's inside-crossing category axis should eventually reclaim bottom labe
 cartesian layout solver rather than a local bar-chart adjustment. A trial local bottom-reservation adjustment
 moved the minimum tick in the right direction but over-expanded the zero-axis position, confirming that this needs
 PDF structural oracle support for plot-area, axis-label, tick, and clip boxes before being made durable.
+
+Revision note, 2026-05-25: Closed most of the public bubble-chart residual by replacing the old proportional
+axis headroom rule with separated Office-observed value-axis semantics. Office's bubble chart PDF showed x-axis
+labels at `0..6`, y-axis labels at `0..5` with `0.5` tick cadence, and candidate output had x-axis labels at
+`0..7` plus only whole-number y ticks. The first hypothesis, removing bubble headroom and using dense automatic
+major units everywhere, correctly aligned the x labels but capped the y axis at `4.5` and worsened MAE to
+`5.360064`, so it was not accepted. The durable rule is more specific and more structural: bubble chart axis
+bounds use a sparse automatic bounds target, while missing major units use a denser automatic tick target for
+labels and gridlines. This keeps explicit OOXML `min`, `max`, and `majorUnit` authoritative while removing the
+hard-coded `BubbleAxisHeadroomRatio`. Focused `pptx-charts` tests pass with 38/38, and the tightened public
+`pptx-ladder-11-chart-bubble-port` gate passes at
+`artifacts/visual/pptx-ladder-11-chart-bubble-port/20260525-171648` with MAE `1.1921492814429013`,
+changed16 `0.017367380401234568`, SSIM `0.9168760561685979`, dimensions matching, and empty diagnostics. The
+manifest now locks MAE at `1.3` and changed16 at `0.018`. The full public `pptx-charts` visual family passed
+28/28 at `artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T17:19:11.1310477+02:00`, and
+`dotnet pack` succeeded. Remaining long-term gap: this still encodes Office's
+bubble automatic-axis behavior as chart metric rules in the renderer. The durable target is to move automatic
+axis bound and tick selection into a typed chart-axis model shared by scatter, bubble, line, bar, and area charts,
+with public Office-PDF structural tests for labels, gridlines, bubble marker extents, and plot clipping.

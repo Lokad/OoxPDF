@@ -789,10 +789,10 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, bubbleChart);
                 XElement? xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : null;
                 XElement? yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : ReadChartValueAxisForChart(chartXml, bubbleChart);
-                ChartValueExtents xExtents = ReadChartValueAxisExtents(xValueAxis, GetBubbleXValueExtents(bubbleSeries));
-                ChartValueExtents yExtents = ReadChartValueAxisExtents(yValueAxis, GetBubbleYValueExtents(bubbleSeries));
-                ChartAxisUnits xAxisUnits = ReadChartValueAxisUnits(xValueAxis);
-                ChartAxisUnits yAxisUnits = ReadChartValueAxisUnits(yValueAxis);
+                ChartValueExtents xExtents = ReadBubbleChartValueAxisExtents(xValueAxis, GetBubbleXValueExtents(bubbleSeries));
+                ChartValueExtents yExtents = ReadBubbleChartValueAxisExtents(yValueAxis, GetBubbleYValueExtents(bubbleSeries));
+                ChartAxisUnits xAxisUnits = ResolveBubbleAxisUnits(ReadChartValueAxisUnits(xValueAxis), xExtents);
+                ChartAxisUnits yAxisUnits = ResolveBubbleAxisUnits(ReadChartValueAxisUnits(yValueAxis), yExtents);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(sceneAxis: null, yValueAxis, theme);
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisUnits.MajorUnit, crossingValue: null, reversed: false, major: true, gridlineStyle.Major);
                 RenderScatterChart(graphics, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], xExtents, yExtents);
@@ -1234,6 +1234,16 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
     {
+        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.AxisNiceTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+    }
+
+    private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
+    {
+        return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount);
+    }
+
+    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
+    {
         XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
         if (scaling is null)
         {
@@ -1241,7 +1251,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = ReadAxisScalingValue(scaling, "min") ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -1260,7 +1270,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.AxisNiceTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -1333,6 +1343,13 @@ internal sealed partial class PptxRenderer
     {
         return percentStacked && axisUnits.MajorUnit is null
             ? axisUnits with { MajorUnit = 0.1d }
+            : axisUnits;
+    }
+
+    private static ChartAxisUnits ResolveBubbleAxisUnits(ChartAxisUnits axisUnits, ChartValueExtents extents)
+    {
+        return axisUnits.MajorUnit is null
+            ? axisUnits with { MajorUnit = ChooseChartAxisMajorUnit(Math.Max(1d, extents.Max - extents.Min), PptxChartMetricRules.BubbleAxisNiceTickTargetCount) }
             : axisUnits;
     }
 
@@ -2954,7 +2971,7 @@ internal sealed partial class PptxRenderer
         return niceMin < dataMax ? niceMin : dataMin;
     }
 
-    private static double GetNiceChartAxisMax(double dataMax, double dataMin, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
+    private static double GetNiceChartAxisMax(double dataMax, double dataMin, double tickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
     {
         if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
@@ -2967,7 +2984,7 @@ internal sealed partial class PptxRenderer
             return dataMax > 0d ? dataMax * PptxChartMetricRules.AxisSingleValueHeadroomFactor : 1d;
         }
 
-        double unit = ChooseChartAxisMajorUnit(range);
+        double unit = ChooseChartAxisMajorUnit(range, tickTargetCount);
         double niceMax = Math.Ceiling(dataMax / unit) * unit;
         if (niceMax < dataMax + PptxChartMetricRules.AxisValueEpsilon)
         {
@@ -5243,18 +5260,12 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetBubbleXValueExtents(IReadOnlyList<ScatterSeries> series)
     {
-        return AddBubbleAxisHeadroom(GetScatterXValueExtents(series));
+        return GetScatterXValueExtents(series);
     }
 
     private static ChartValueExtents GetBubbleYValueExtents(IReadOnlyList<ScatterSeries> series)
     {
-        return AddBubbleAxisHeadroom(GetScatterYValueExtents(series));
-    }
-
-    private static ChartValueExtents AddBubbleAxisHeadroom(ChartValueExtents extents)
-    {
-        double range = Math.Max(1d, extents.Max - extents.Min);
-        return new ChartValueExtents(extents.Min, extents.Max + range * PptxChartMetricRules.BubbleAxisHeadroomRatio);
+        return GetScatterYValueExtents(series);
     }
 
     private static ChartValueExtents GetScatterDataXExtents(IReadOnlyList<ScatterSeries> series)

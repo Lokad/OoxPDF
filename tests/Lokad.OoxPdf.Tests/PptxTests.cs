@@ -7369,9 +7369,9 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
 
-        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, true, 0.96d])!;
-        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, false, 0.96d])!;
-        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, true, 0.96d])!;
+        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, 8d, true, 0.96d])!;
+        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, 8d, false, 0.96d])!;
+        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, 8d, true, 0.96d])!;
 
         TestAssert.Equal(120d, lineMarkerMax);
         TestAssert.Equal(100d, ordinaryMax);
