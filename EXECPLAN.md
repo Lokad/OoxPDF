@@ -5679,3 +5679,22 @@ manifest now locks MAE at `1.3` and changed16 at `0.018`. The full public `pptx-
 bubble automatic-axis behavior as chart metric rules in the renderer. The durable target is to move automatic
 axis bound and tick selection into a typed chart-axis model shared by scatter, bubble, line, bar, and area charts,
 with public Office-PDF structural tests for labels, gridlines, bubble marker extents, and plot clipping.
+
+Revision note, 2026-05-25: Advanced the right-legend polar chart path by making side fill legends frame-owned
+when the polar plot box is the whole chart frame. Office's doughnut PDFs keep the category legend inside the
+chart frame and size its x-anchor from the actual legend text: the short exploded legend markers sit at about
+`685 pt`, while the longer doughnut labels sit near `610 pt`. OOXPDF previously placed both side fill legends
+outside the full-frame plot at `728 pt` and low in the chart. The renderer now detects full-frame side fill
+legends, derives their width from marker/text content, right-aligns them to the chart frame, and uses the
+Office-centered side-fill baseline. Focused `pptx-charts` tests pass with 38/38. The public polar gates remain
+stable, and the tightened doughnut gates now pass with empty diagnostics: `pptx-ladder-11-chart-doughnut-port`
+at `artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-172914`, MAE `3.4835991753472224`,
+changed16 `0.038485243055555556`, SSIM `0.8613474577058061`; and
+`pptx-ladder-11-chart-doughnut-exploded-port` at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-172849`, MAE `5.704483506944444`,
+changed16 `0.06192756558641975`, SSIM `0.682460010030526`. The neighboring no-legend pie fixtures were
+re-run and stayed tight. Remaining long-term gap: the doughnut slice centers and exploded-slice envelope still
+come from renderer metric ratios even though the legend container is now structurally closer to Office. The
+durable target is a shared polar layout oracle that derives the plot circle, legend container, explosion
+envelope, and Bezier arc operators from OOXML plus Office PDF structure instead of combining a structural legend
+with hard-coded polar center/radius rules.

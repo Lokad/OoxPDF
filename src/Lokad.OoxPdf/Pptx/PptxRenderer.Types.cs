@@ -877,6 +877,7 @@ internal sealed partial class PptxRenderer
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;
         public const double LegendMinimumSideWidth = 36d;
+        public const double LegendSideFillMinimumWidthFactor = 1.95d;
         public const double LegendSideWidthRatio = 0.22d;
         public const double LegendSideGap = 8d;
         public const double LegendSideStrokeGapFactor = 0.8333333333333334d;
