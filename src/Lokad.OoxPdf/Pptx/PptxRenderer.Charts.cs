@@ -901,27 +901,15 @@ internal sealed partial class PptxRenderer
     private static bool TryReadManualPlotBox(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
     {
         plotBox = default;
-        XElement? manualLayout = chartXml
+        XElement? plotArea = chartXml
             .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault()
-            ?.Element(ChartNamespace + "layout")
-            ?.Element(ChartNamespace + "manualLayout");
-        if (manualLayout is null)
+            .FirstOrDefault();
+        if (plotArea is null)
         {
             return false;
         }
 
-        return TryBuildManualPlotBox(new PptxSceneChartManualLayout(
-            true,
-            ReadManualLayoutFactor(manualLayout, "x"),
-            ReadManualLayoutFactor(manualLayout, "y"),
-            ReadManualLayoutFactor(manualLayout, "w"),
-            ReadManualLayoutFactor(manualLayout, "h"),
-            ReadManualLayoutValue(manualLayout, "layoutTarget"),
-            ReadManualLayoutValue(manualLayout, "xMode"),
-            ReadManualLayoutValue(manualLayout, "yMode"),
-            ReadManualLayoutValue(manualLayout, "wMode"),
-            ReadManualLayoutValue(manualLayout, "hMode")), frame, defaultPlotBox, out plotBox);
+        return TryBuildManualPlotBox(ReadManualLayout(plotArea), frame, defaultPlotBox, out plotBox);
     }
 
     private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
@@ -2178,7 +2166,7 @@ internal sealed partial class PptxRenderer
                 label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
-                ReadChartManualLayout(label),
+                ReadManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme));
         }
@@ -2218,26 +2206,6 @@ internal sealed partial class PptxRenderer
     {
         XElement? element = labels.Element(ChartNamespace + elementName);
         return element is null ? null : IsOoxmlBooleanElementEnabled(element);
-    }
-
-    private static PptxSceneChartManualLayout ReadChartManualLayout(XElement container)
-    {
-        XElement? manualLayout = container
-            .Element(ChartNamespace + "layout")
-            ?.Element(ChartNamespace + "manualLayout");
-        return manualLayout is null
-            ? default
-            : new PptxSceneChartManualLayout(
-                true,
-                ReadManualLayoutFactor(manualLayout, "x"),
-                ReadManualLayoutFactor(manualLayout, "y"),
-                ReadManualLayoutFactor(manualLayout, "w"),
-                ReadManualLayoutFactor(manualLayout, "h"),
-                ReadManualLayoutValue(manualLayout, "layoutTarget"),
-                ReadManualLayoutValue(manualLayout, "xMode"),
-                ReadManualLayoutValue(manualLayout, "yMode"),
-                ReadManualLayoutValue(manualLayout, "wMode"),
-                ReadManualLayoutValue(manualLayout, "hMode"));
     }
 
     private static bool IsChartLabelFlagEnabled(XElement labels, string elementName)

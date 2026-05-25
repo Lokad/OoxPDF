@@ -5238,3 +5238,12 @@ passed at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-1232
 by X `0.01 pt` and Y `0.35 pt`. Remaining long-term gap: the shared manual box resolver currently preserves the
 existing plot-area semantics and handles edge/factor modes, but `layoutTarget` and Office's exact internal legend
 text packing inside arbitrary manual boxes still need public Office-PDF probes before this can be called complete.
+
+Revision note, 2026-05-25: Audited `C:\Users\JoannesVermorel\code\pptx-renderer` for chart manual-layout prior art
+before extending OOXPDF further. Its chart renderer applies title, legend, and plot-area manual layouts as direct
+ECharts percentage overrides, which confirms these layouts should be first-class chart structure but does not provide
+Office/PDF-level `layoutTarget`, edge-mode, or internal legend packing semantics. In OOXPDF, the renderer-side XML
+fallback paths now use one `ReadManualLayout` parser for plot areas, legends, and data labels instead of maintaining
+separate duplicate parser code. This is intentionally a no-geometry-change cleanup; focused `pptx-charts` tests passed
+with 32/32. Remaining long-term gap: resolve `layoutTarget` and partial manual-layout semantics from public Office-PDF
+structural probes, not from the sibling ECharts adapter.
