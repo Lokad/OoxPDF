@@ -6249,3 +6249,39 @@ family passed 29/29 at `artifacts/visual/reports/pptx-charts.json` from the `202
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
 long-term gap: the polar resolver now has distinct rules for pie, right-legend doughnut, and no-legend doughnut, but
 left/top/bottom/overlay legends still need public probes before this can become a complete Office layout model.
+
+Revision note, 2026-05-25: Added the missing public doughnut legend-position probes and removed the next shared
+pie/doughnut fallback. The Office-authored probes
+`pptx-ladder-11-chart-doughnut-left-legend-probe.pptx`,
+`pptx-ladder-11-chart-doughnut-top-legend-probe.pptx`,
+`pptx-ladder-11-chart-doughnut-bottom-legend-probe.pptx`, and
+`pptx-ladder-11-chart-doughnut-right-overlay-legend-probe.pptx` are generated from
+`tools/NewChartProbeFixtures.ps1`; the generator now saves the doughnut probe before closing the embedded workbook
+because bottom-legend Office COM generation can invalidate the presentation if the workbook is closed first. The
+chart graphics classifier also learned not to treat small legend clip boxes as page-size clips; otherwise a left
+legend candidate with only legend-sized clip boxes incorrectly dropped real annular filled regions from the
+`PolarSliceCandidate` oracle.
+
+The observed Office rules are now explicit in `PptxChartMetricRules`: left non-overlay doughnut legends use the
+larger no-legend radius and shift center X to `0.56743` of the chart frame while keeping center Y at `0.5`; top
+non-overlay legends use center `(0.5, 0.46095)` and radius `0.4355`; bottom non-overlay legends use center
+`(0.5, 0.53907)` and the same `0.4355` radius; right overlay legends behave like no-legend doughnuts for annulus
+geometry. Before these rules, true annulus drift was about `84.92 pt` X, `18.14 pt` Y, and `17.51 pt` radius for
+left legends; `46.08 pt` X and `1.27 pt` Y for top legends; and `46.08 pt` X and `35.02 pt` Y for bottom legends.
+After the renderer change, the focused probes have true slice center/radius deltas below `0.04 pt`: left MAE
+`0.458711`, changed16 `0.004060`, SSIM `0.978872`; top MAE `0.455079`, changed16 `0.003956`, SSIM `0.975916`;
+bottom MAE `0.503042`, changed16 `0.004055`, SSIM `0.982421`; overlay MAE `0.498510`, changed16 `0.004129`,
+SSIM `0.984040`. The manifests keep broader envelope tolerances for `PolarPlotBoxCandidate` while requiring
+`PolarSliceCandidate` path geometry within `0.6 pt`. Validation: `dotnet build
+src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal` succeeded; the focused left/top/bottom/overlay
+doughnut visual cases passed at `artifacts/visual/pptx-ladder-11-chart-doughnut-left-legend-probe/20260525-211435`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-top-legend-probe/20260525-211440`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-bottom-legend-probe/20260525-211446`, and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-right-overlay-legend-probe/20260525-211522`; the no-legend and
+existing right-legend/exploded doughnut cases also passed after the change; focused `pptx-charts` unit tests passed
+38/38; the full public `pptx-charts` family passed 33/33 at `artifacts/visual/reports/pptx-charts.json` from the
+`20260525-211638` run; and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal
+--no-restore` succeeded. Remaining long-term gap: non-right
+legend explosion behavior, titles combined with these legend positions, manual plot layout, multi-series doughnut
+rings, and legend text/marker placement still need their own Office-backed probes before the polar layout resolver
+can be considered complete.

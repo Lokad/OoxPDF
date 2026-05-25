@@ -996,6 +996,8 @@ internal sealed partial class PptxRenderer
         {
             ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
             ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
+            ChartPolarKind.Doughnut when string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
+            ChartPolarKind.Doughnut when IsHorizontalLegendPosition(legend.Position) => PptxChartMetricRules.DoughnutHorizontalLegendRadiusRatio,
             ChartPolarKind.Doughnut => PptxChartMetricRules.PieRadiusRatio,
             _ => PptxChartMetricRules.PieRadiusRatio
         };
@@ -1008,6 +1010,8 @@ internal sealed partial class PptxRenderer
         {
             ChartPolarKind.Pie => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
             ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "r", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutLeftLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && IsHorizontalLegendPosition(legend.Position) => PptxChartMetricRules.DoughnutHorizontalLegendCenterXRatio,
             ChartPolarKind.Doughnut => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
             _ => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
         };
@@ -1019,8 +1023,17 @@ internal sealed partial class PptxRenderer
         return kind switch
         {
             ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
+            ChartPolarKind.Doughnut when string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
+            ChartPolarKind.Doughnut when string.Equals(legend.Position, "t", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutTopLegendCenterYRatio,
+            ChartPolarKind.Doughnut when string.Equals(legend.Position, "b", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutBottomLegendCenterYRatio,
             _ => PptxChartMetricRules.PieCenterYRatio
         };
+    }
+
+    private static bool IsHorizontalLegendPosition(string position)
+    {
+        return string.Equals(position, "t", StringComparison.Ordinal) ||
+            string.Equals(position, "b", StringComparison.Ordinal);
     }
 
     private static double GetPieOrDoughnutCenterXOffset(ChartPolarKind kind, double radius, double explosionReserve, ChartLegendLayout legend)

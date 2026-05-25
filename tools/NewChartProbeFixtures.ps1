@@ -42,6 +42,82 @@ function Close-ChartWorkbook($workbook) {
     }
 }
 
+function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPosition, [bool]$HasLegend = $true, [bool]$IncludeInLayout = $true) {
+    $output = Join-Path $Cases $FileName
+    $presentation = $null
+    $workbook = $null
+    $worksheet = $null
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartShape = $slide.Shapes.AddChart(-4120, 144, 36, 576, 432)
+        $chart = $chartShape.Chart
+        [void]($chart.HasTitle = $false)
+        [void]($chart.HasLegend = $HasLegend)
+        if ($HasLegend) {
+            [void]($chart.Legend.Position = $LegendPosition)
+            [void]($chart.Legend.IncludeInLayout = $IncludeInLayout)
+        }
+
+        $chart.ChartData.Activate()
+        $workbook = $chart.ChartData.Workbook
+        $worksheet = $workbook.Worksheets.Item(1)
+        $worksheet.Cells.Clear()
+        $worksheet.Cells.Item(1, 1).Value = "Category"
+        $worksheet.Cells.Item(1, 2).Value = "Share"
+        $worksheet.Cells.Item(2, 1).Value = "North"
+        $worksheet.Cells.Item(2, 2).Value = 65.0
+        $worksheet.Cells.Item(3, 1).Value = "South"
+        $worksheet.Cells.Item(3, 2).Value = 20.0
+        $worksheet.Cells.Item(4, 1).Value = "West"
+        $worksheet.Cells.Item(4, 2).Value = 15.0
+
+        $chart.SetSourceData("=Sheet1!`$A`$1:`$B`$4", 2)
+        [void]($chart.ChartType = -4120)
+        [void]($chart.ChartGroups(1).DoughnutHoleSize = 50)
+
+        $series = $chart.SeriesCollection().Item(1)
+        try {
+            $series.Points(1).Format.Fill.ForeColor.RGB = Rgb 68 114 196
+            $series.Points(2).Format.Fill.ForeColor.RGB = Rgb 237 125 49
+            $series.Points(3).Format.Fill.ForeColor.RGB = Rgb 165 165 165
+        }
+        catch {
+            # Some Office builds defer doughnut point materialization until save.
+            # The default Office palette is acceptable for these geometry probes.
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        $presentation.SaveAs($output, 24)
+        Release-ComObject $worksheet
+        $worksheet = $null
+        Close-ChartWorkbook $workbook
+        $workbook = $null
+
+        $presentation.Close()
+        $presentation = $null
+    }
+    finally {
+        if ($worksheet -ne $null) { Release-ComObject $worksheet }
+        if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
+        if ($presentation -ne $null) {
+            try { $presentation.Close() }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
 $powerPoint = $null
 $presentation = $null
 
@@ -224,10 +300,58 @@ try {
     }
 
     $presentation.SaveAs($output, 24)
+    $presentation.Close()
+    $presentation = $null
+
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-no-legend-probe.pptx" `
+        -LegendPosition -4152 `
+        -HasLegend $false `
+        -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-left-legend-probe.pptx" `
+        -LegendPosition -4131 `
+        -HasLegend $true `
+        -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-top-legend-probe.pptx" `
+        -LegendPosition -4160 `
+        -HasLegend $true `
+        -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-bottom-legend-probe.pptx" `
+        -LegendPosition -4107 `
+        -HasLegend $true `
+        -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-right-overlay-legend-probe.pptx" `
+        -LegendPosition -4152 `
+        -HasLegend $true `
+        -IncludeInLayout $false
 }
 finally {
-    if ($presentation -ne $null) { $presentation.Close() }
-    if ($powerPoint -ne $null) { $powerPoint.Quit() }
+    if ($presentation -ne $null) {
+        try { $presentation.Close() }
+        catch {
+            # COM cleanup should not mask the generation error that preceded it.
+        }
+    }
+    if ($powerPoint -ne $null) {
+        try { $powerPoint.Quit() }
+        catch {
+            # PowerPoint may already be unavailable after a COM failure.
+        }
+    }
     Release-ComObject $presentation
     Release-ComObject $powerPoint
     [GC]::Collect()
