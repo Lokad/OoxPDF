@@ -1582,8 +1582,10 @@ High-priority actions:
   - [x] Resolve horizontal bar auto value-axis tick targets from value-axis label visibility. Hidden value
     axes keep the denser Office-like horizontal gridline cadence; visible horizontal value-axis labels use
     the ordinary value-axis target so labels and gridlines do not overpopulate the bottom axis.
-  - [ ] Extend chart plot-area layout records to cover `layoutTarget`, x/y edge semantics, inner/outer plot
-    semantics, title/legend overlay effects, and non-bar/line chart-family consumers in rendered geometry.
+- [ ] Extend chart plot-area layout records to cover `layoutTarget`, x/y edge semantics, inner/outer plot
+  semantics, title/legend overlay effects, and non-bar/line chart-family consumers in rendered geometry. The
+  bar/line `ChartLayout` now carries a separate outer plot-area box and inner data-plot box, but both still
+  resolve to the same rectangle until axis-label/title reservation rules are derived structurally.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
@@ -5284,3 +5286,17 @@ ratios improved, while foreground histogram gates were lowered by one-thousandth
 tick/gridline population change. Remaining long-term gap: replace the shared outer/inner plot-box
 approximation with separate outer plot-area and inner data-plot boxes before tightening these probes
 structurally.
+
+Revision note, 2026-05-25: Started the structural separation required by the plot-area `layoutTarget`
+probes without adding probe-specific offsets. Bar and line chart layout now returns both `PlotAreaBox`
+and `PlotBox`: plot-area fill/line styling is routed through the outer plot-area box, while bars, lines,
+gridlines, axes, labels, data labels, and legends continue to consume the inner data-plot box. The
+current manual-layout resolver deliberately maps both boxes to the same rectangle, preserving existing
+output and keeping the unresolved Office semantics explicit: `layoutTarget="outer"` must later derive the
+inner data plot from axis label/title reservations, and `layoutTarget="inner"` must align its coordinate
+basis with Office before the two public probes can become strict structural gates. Focused
+`pptx-charts` tests passed with 33/33. The two `layoutTarget` visual probes passed at
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-130206` and
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-130218` after a transient
+parallel CLI build lock was rerun serially; the non-slow suite passed with 222 passed, 0 failed, 7
+skipped; and `dotnet pack` succeeded.

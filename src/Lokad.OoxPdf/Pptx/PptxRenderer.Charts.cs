@@ -399,7 +399,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -438,6 +438,7 @@ internal sealed partial class PptxRenderer
                         graphics,
                         theme,
                         chartPalette,
+                        chartLayout.PlotAreaBox,
                         plotBox,
                         extraSeries,
                         extraHorizontalBars,
@@ -507,6 +508,7 @@ internal sealed partial class PptxRenderer
                         graphics,
                         theme,
                         chartPalette,
+                        chartLayout.PlotAreaBox,
                         plotBox,
                         lineSeries,
                         lineSeriesStrokes,
@@ -616,7 +618,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, theme, chartPalette, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
+                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -840,8 +842,8 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         ChartPlotBox defaultPlotBox = new(frame.X, frame.Y, frame.Width, frame.Height);
-        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
-            ? manualPlotBox
+        return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+            ? manualPlotLayout.PlotBox
             : defaultPlotBox;
     }
 
@@ -890,19 +892,19 @@ internal sealed partial class PptxRenderer
         return ReadChartShapeStyle(shapeProperties, theme);
     }
 
-    private static bool TryReadSceneOrXmlManualPlotBox(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
+    private static bool TryReadSceneOrXmlManualPlotLayout(PptxSceneChart? sceneChart, XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
     {
         if (sceneChart is not null)
         {
-            return TryBuildManualPlotBox(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out plotBox);
+            return TryBuildManualPlotLayout(sceneChart.PlotAreaLayout, frame, defaultPlotBox, out plotLayout);
         }
 
-        return TryReadManualPlotBox(chartXml, frame, defaultPlotBox, out plotBox);
+        return TryReadManualPlotLayout(chartXml, frame, defaultPlotBox, out plotLayout);
     }
 
-    private static bool TryReadManualPlotBox(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
+    private static bool TryReadManualPlotLayout(XDocument chartXml, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
     {
-        plotBox = default;
+        plotLayout = default;
         XElement? plotArea = chartXml
             .Descendants(ChartNamespace + "plotArea")
             .FirstOrDefault();
@@ -911,18 +913,19 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        return TryBuildManualPlotBox(ReadManualLayout(plotArea), frame, defaultPlotBox, out plotBox);
+        return TryBuildManualPlotLayout(ReadManualLayout(plotArea), frame, defaultPlotBox, out plotLayout);
     }
 
-    private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
+    private static bool TryBuildManualPlotLayout(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotLayout plotLayout)
     {
-        plotBox = default;
+        plotLayout = default;
         if (!TryBuildManualLayoutBox(layout, frame, new ChartLayoutBox(defaultPlotBox.X, defaultPlotBox.Y, defaultPlotBox.Width, defaultPlotBox.Height), out ChartLayoutBox layoutBox))
         {
             return false;
         }
 
-        plotBox = new ChartPlotBox(layoutBox.X, layoutBox.Y, layoutBox.Width, layoutBox.Height);
+        ChartPlotBox plotBox = new(layoutBox.X, layoutBox.Y, layoutBox.Width, layoutBox.Height);
+        plotLayout = new ChartPlotLayout(layoutBox, plotBox, layout.LayoutTarget);
         return true;
     }
 
@@ -3360,13 +3363,13 @@ internal sealed partial class PptxRenderer
         return ChartPalette(null, theme, index);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, bool valueAxisLabelsVisible, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, bool valueAxisLabelsVisible, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        RenderChartShapeStyle(graphics, plotX, plotY, plotWidth, plotHeight, plotAreaStyle);
+        RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int categoryCount = Math.Max(1, series.Max(values => values.Count));
         bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
             string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
@@ -3489,11 +3492,11 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotBox plotBox = GetBarChartPlotBox(frame, chartXml, sceneChart, title, legend, horizontalBars);
-        return new ChartLayout(frame, plotBox, title, legend);
+        ChartPlotLayout plotLayout = GetBarChartPlotLayout(frame, chartXml, sceneChart, title, legend, horizontalBars);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, title, legend);
     }
 
-    private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, bool horizontalBars)
+    private static ChartPlotLayout GetBarChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, bool horizontalBars)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -3531,9 +3534,9 @@ internal sealed partial class PptxRenderer
                 frame.Height * PptxChartMetricRules.BarDefaultPlotBoxHeightRatio);
         }
 
-        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
-            ? manualPlotBox
-            : defaultPlotBox;
+        return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+            ? manualPlotLayout
+            : ChartPlotLayout.FromPlotBox(defaultPlotBox);
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, string grouping)
@@ -3988,13 +3991,13 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        RenderChartShapeStyle(graphics, plotX, plotY, plotWidth, plotHeight, plotAreaStyle);
+        RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         int pointCount = Math.Max(1, series.Max(values => values.Count));
         double maxValue = valueExtents.Max;
         double minValue = valueExtents.Min;
@@ -4093,11 +4096,11 @@ internal sealed partial class PptxRenderer
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotBox plotBox = GetLineChartPlotBox(frame, chartXml, sceneChart, title, legend);
-        return new ChartLayout(frame, plotBox, title, legend);
+        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, title, legend);
     }
 
-    private static ChartPlotBox GetLineChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
+    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && string.Equals(legend.Position, "r", StringComparison.Ordinal);
@@ -4108,9 +4111,9 @@ internal sealed partial class PptxRenderer
                 frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxWidthRatio,
                 frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio)
             : GetDefaultChartPlotBox(frame);
-        return TryReadSceneOrXmlManualPlotBox(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotBox manualPlotBox)
-            ? manualPlotBox
-            : defaultPlotBox;
+        return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+            ? manualPlotLayout
+            : ChartPlotLayout.FromPlotBox(defaultPlotBox);
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
@@ -4690,13 +4693,21 @@ internal sealed partial class PptxRenderer
         public static ChartGridlineStyle Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartPlotBox PlotBox, string? Title, ChartLegendLayout Legend);
+    private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, string? Title, ChartLegendLayout Legend);
 
     private readonly record struct ChartFrameBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartLayoutBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
+
+    private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, string? ManualLayoutTarget)
+    {
+        public static ChartPlotLayout FromPlotBox(ChartPlotBox plotBox)
+        {
+            return new ChartPlotLayout(new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height), plotBox, null);
+        }
+    }
 
     private readonly record struct ChartValueExtents(double Min, double Max);
 
