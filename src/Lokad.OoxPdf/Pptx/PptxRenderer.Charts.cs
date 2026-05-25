@@ -927,17 +927,29 @@ internal sealed partial class PptxRenderer
     private static bool TryBuildManualPlotBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartPlotBox defaultPlotBox, out ChartPlotBox plotBox)
     {
         plotBox = default;
+        if (!TryBuildManualLayoutBox(layout, frame, new ChartLayoutBox(defaultPlotBox.X, defaultPlotBox.Y, defaultPlotBox.Width, defaultPlotBox.Height), out ChartLayoutBox layoutBox))
+        {
+            return false;
+        }
+
+        plotBox = new ChartPlotBox(layoutBox.X, layoutBox.Y, layoutBox.Width, layoutBox.Height);
+        return true;
+    }
+
+    private static bool TryBuildManualLayoutBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartLayoutBox defaultBox, out ChartLayoutBox box)
+    {
+        box = default;
         if (!layout.HasLayout)
         {
             return false;
         }
 
-        ChartPlotBoxRatios defaults = GetPlotBoxRatios(frame, defaultPlotBox);
+        ChartPlotBoxRatios defaults = GetLayoutBoxRatios(frame, defaultBox);
         double left = layout.X is { } x
-            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XMode, defaultPlotBox.X, frame.X, frame.Width), 0d, 1d)
+            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XMode, defaultBox.X, frame.X, frame.Width), 0d, 1d)
             : defaults.Left;
         double top = layout.Y is { } y
-            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YMode, frame.Y + frame.Height - defaultPlotBox.Y - defaultPlotBox.Height, 0d, frame.Height), 0d, 1d)
+            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YMode, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), 0d, 1d)
             : defaults.Top;
         double width = layout.Width is { } layoutWidth
             ? Math.Clamp(layoutWidth, 0.02d, 1d)
@@ -951,25 +963,30 @@ internal sealed partial class PptxRenderer
         double bottom = IsManualLayoutEdgeMode(layout.HeightMode)
             ? Math.Clamp(layout.Height ?? defaults.Bottom, top, 1d)
             : top + height;
-        double plotWidth = Math.Max(0d, right - left) * frame.Width;
-        double plotHeight = Math.Max(0d, bottom - top) * frame.Height;
-        double plotX = frame.X + left * frame.Width;
-        double plotY = frame.Y + frame.Height - bottom * frame.Height;
-        plotBox = new ChartPlotBox(plotX, plotY, plotWidth, plotHeight);
-        return plotWidth > 0d && plotHeight > 0d;
+        double boxWidth = Math.Max(0d, right - left) * frame.Width;
+        double boxHeight = Math.Max(0d, bottom - top) * frame.Height;
+        double boxX = frame.X + left * frame.Width;
+        double boxY = frame.Y + frame.Height - bottom * frame.Height;
+        box = new ChartLayoutBox(boxX, boxY, boxWidth, boxHeight);
+        return boxWidth > 0d && boxHeight > 0d;
     }
 
     private static ChartPlotBoxRatios GetPlotBoxRatios(ChartFrameBox frame, ChartPlotBox plotBox)
+    {
+        return GetLayoutBoxRatios(frame, new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height));
+    }
+
+    private static ChartPlotBoxRatios GetLayoutBoxRatios(ChartFrameBox frame, ChartLayoutBox box)
     {
         if (frame.Width <= 0d || frame.Height <= 0d)
         {
             return new ChartPlotBoxRatios(0d, 0d, 1d, 1d);
         }
 
-        double left = (plotBox.X - frame.X) / frame.Width;
-        double top = (frame.Y + frame.Height - plotBox.Y - plotBox.Height) / frame.Height;
-        double width = plotBox.Width / frame.Width;
-        double height = plotBox.Height / frame.Height;
+        double left = (box.X - frame.X) / frame.Width;
+        double top = (frame.Y + frame.Height - box.Y - box.Height) / frame.Height;
+        double width = box.Width / frame.Width;
+        double height = box.Height / frame.Height;
         return new ChartPlotBoxRatios(left, top, width, height);
     }
 
@@ -1194,15 +1211,29 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        double x = OoxUnits.EmuToPoints(bounds.X);
-        double yTop = OoxUnits.EmuToPoints(bounds.Y);
-        double width = OoxUnits.EmuToPoints(bounds.Width);
-        double height = OoxUnits.EmuToPoints(bounds.Height);
-        double y = document.SlideHeightPoints - yTop - height;
+        ChartFrameBox frame = GetChartFrameBox(document, bounds);
+        double x = frame.X;
+        double y = frame.Y;
+        double width = frame.Width;
+        double height = frame.Height;
+        bool titleManualLayoutApplied = false;
+        if (sceneChart?.Title.Layout.HasLayout == true &&
+            TryBuildManualLayoutBox(sceneChart.Title.Layout, frame, new ChartLayoutBox(frame.X, frame.Y, frame.Width, frame.Height), out ChartLayoutBox titleBox))
+        {
+            x = titleBox.X;
+            y = titleBox.Y;
+            width = titleBox.Width;
+            height = titleBox.Height;
+            titleManualLayoutApplied = true;
+        }
+
         bool isAutoTitle = IsAutoGeneratedChartTitle(sceneChart);
         ChartTextStyle style = ReadSceneOrXmlChartTitleTextStyle(theme, sceneChart, chartXml, isAutoTitle);
         double fontSize = style.FontSize;
-        double baselineY = ResolveChartTitleBaselineY(document, bounds, chartXml, sceneChart, y + height * PptxChartMetricRules.TitleBaselineYRatio, fontSize);
+        double fallbackBaselineY = y + height * PptxChartMetricRules.TitleBaselineYRatio;
+        double baselineY = titleManualLayoutApplied
+            ? fallbackBaselineY
+            : ResolveChartTitleBaselineY(document, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize);
         var run = new TextRun(
             title.Trim(),
             x + width * PptxChartMetricRules.TitleXInsetRatio,
@@ -4649,6 +4680,8 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartLayout(ChartFrameBox Frame, ChartPlotBox PlotBox, string? Title, ChartLegendLayout Legend);
 
     private readonly record struct ChartFrameBox(double X, double Y, double Width, double Height);
+
+    private readonly record struct ChartLayoutBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
 

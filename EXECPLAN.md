@@ -5216,3 +5216,14 @@ text deltas bounded by X `0.01 pt` and Y `0.35 pt`, and focused chart tests pass
 legend layout should move from observed metric constants into a typed legend layout model that can cover manual
 layouts, overlay, fill-marker legends, top/bottom packing, and chart-family differences without additional
 renderer-local branches.
+
+Revision note, 2026-05-25: Closed the next typed chart-layout consumption gap for explicit chart titles. The
+renderer now resolves `c:title/c:layout/c:manualLayout` through a shared chart manual-layout box resolver instead
+of parsing the title layout into `PptxSceneChartTitle` and then ignoring it during PDF emission. Plot-area manual
+layout still uses the same semantics through the shared resolver, while title rendering preserves the existing
+auto-title baseline path when no explicit title layout is present. `PptxSyntheticChartTitleManualBoxDrivesPlacement`
+locks the manual title box baseline, focused chart tests passed with 31/31, and the public clustered-bar chart gate
+passed at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-122804` with `ChartTitleText` still at
+X delta `0.92 pt` and Y delta `0.00 pt`. Long-term gap: legend manual layout is still parsed but not consumed, and
+title/legend `layoutTarget` semantics need public Office-PDF probes across overlay/manual top, bottom, left, and
+right placements before the remaining metric constants can be collapsed into a typed chart layout model.
