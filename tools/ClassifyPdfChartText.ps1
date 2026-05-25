@@ -40,6 +40,11 @@ function TextValue($op) {
     return [string]$op.Payload
 }
 
+function Is-NumericText([string]$text) {
+    $trimmed = $text.Trim()
+    return $trimmed -match '^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)%?$'
+}
+
 function TextX($op) {
     if ($op.EffectiveX -ne $null) {
         return [double]$op.EffectiveX
@@ -167,6 +172,55 @@ function Looks-LikeChartTitle($op, $plotBox) {
         [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.35d)
 }
 
+function Find-RadarSpokeGeometry($structures) {
+    $spoke = @($structures | Where-Object {
+        $_.Kind -eq "RadarSpokeGroupCandidate" -and
+        $_.PathCenterX -ne $null -and
+        $_.PathCenterY -ne $null -and
+        $_.PathRadius -ne $null
+    } | Sort-Object -Property PageNumber, MinY, MinX | Select-Object -First 1)
+    if ($spoke.Count -eq 0) {
+        return $null
+    }
+
+    return $spoke[0]
+}
+
+function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
+    if ($null -eq $radarGeometry) {
+        return $null
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $centerX = [double]$radarGeometry.PathCenterX
+    $centerY = [double]$radarGeometry.PathCenterY
+    $radius = [double]$radarGeometry.PathRadius
+    if ($radius -le 0d) {
+        return $null
+    }
+
+    $dx = $x - $centerX
+    $dy = $y - $centerY
+    $distance = [Math]::Sqrt($dx * $dx + $dy * $dy)
+    $text = TextValue $op
+    if ((-not (Is-NumericText $text)) -and $distance -ge ($radius * 0.8d)) {
+        return "CategoryAxisTickLabel"
+    }
+
+    if ($distance -ge ($radius + $tolerance * 0.5d)) {
+        return "CategoryAxisTickLabel"
+    }
+
+    if ($x -le ($centerX - $tolerance) -and
+        $distance -le ($radius + $tolerance) -and
+        $y -ge ($centerY - $tolerance * 2d)) {
+        return "ValueAxisTickLabel"
+    }
+
+    return $null
+}
+
 function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     if ($null -eq $plotBox) {
         return "ChartText"
@@ -181,6 +235,10 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     $insideX = $x -ge ($minX - $tolerance) -and $x -le ($maxX + $tolerance)
     $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
     $axisLabelY = $y -ge ($minY - ($tolerance * 2d)) -and $y -le ($maxY + ($tolerance * 2d))
+    $radarKind = Classify-RadarText $op (Find-RadarSpokeGeometry $structures) $tolerance
+    if ($null -ne $radarKind) {
+        return $radarKind
+    }
 
     if (-not ($insideX -and $insideY) -and
         (Has-LegendSwatch $op $structures $plotBox)) {
