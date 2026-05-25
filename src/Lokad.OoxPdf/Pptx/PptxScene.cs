@@ -459,6 +459,7 @@ internal sealed record PptxSceneChartSeries(
     int? Index,
     int? Order,
     string? Name,
+    PptxSceneChartSeriesDataSources DataSources,
     IReadOnlyList<double> Values,
     IReadOnlyList<string> Categories,
     IReadOnlyList<double> XValues,
@@ -472,6 +473,20 @@ internal sealed record PptxSceneChartSeries(
     double? Explosion,
     bool? Smooth,
     PptxSceneChartDataLabels DataLabels);
+
+internal sealed record PptxSceneChartSeriesDataSources(
+    PptxSceneChartDataSource Name,
+    PptxSceneChartDataSource Values,
+    PptxSceneChartDataSource Categories,
+    PptxSceneChartDataSource XValues,
+    PptxSceneChartDataSource YValues,
+    PptxSceneChartDataSource BubbleSizes);
+
+internal readonly record struct PptxSceneChartDataSource(
+    string? Formula,
+    string ReferenceKind,
+    string CacheKind,
+    bool HasCachedPoints);
 
 internal sealed record PptxSceneChartMarker(
     bool IsDefined,
@@ -1238,6 +1253,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementInt(seriesElement, "idx"),
                 ReadChartElementInt(seriesElement, "order"),
                 ReadChartSeriesName(seriesElement),
+                ReadChartSeriesDataSources(seriesElement),
                 ReadChartSeriesValues(seriesElement),
                 ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
@@ -1383,6 +1399,48 @@ internal sealed class PptxSceneBuilder
     private static string? ReadChartSeriesName(XElement series)
     {
         return ReadChartText(series.Element(ChartNamespace + "tx"));
+    }
+
+    private static PptxSceneChartSeriesDataSources ReadChartSeriesDataSources(XElement series)
+    {
+        return new PptxSceneChartSeriesDataSources(
+            ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef"),
+            ReadChartDataSource(series.Element(ChartNamespace + "val"), "numRef"),
+            ReadChartDataSource(series.Element(ChartNamespace + "cat"), "strRef", "numRef", "multiLvlStrRef"),
+            ReadChartDataSource(series.Element(ChartNamespace + "xVal"), "numRef", "strRef", "multiLvlStrRef"),
+            ReadChartDataSource(series.Element(ChartNamespace + "yVal"), "numRef"),
+            ReadChartDataSource(series.Element(ChartNamespace + "bubbleSize"), "numRef"));
+    }
+
+    private static PptxSceneChartDataSource ReadChartDataSource(XElement? container, params string[] referenceKinds)
+    {
+        if (container is null)
+        {
+            return default;
+        }
+
+        foreach (string referenceKind in referenceKinds)
+        {
+            XElement? reference = container.Element(ChartNamespace + referenceKind);
+            if (reference is null)
+            {
+                continue;
+            }
+
+            XElement? cache = reference
+                .Elements()
+                .FirstOrDefault(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Cache", StringComparison.Ordinal));
+            bool hasCachedPoints = cache?
+                .Elements(ChartNamespace + "pt")
+                .Any() == true;
+            return new PptxSceneChartDataSource(
+                (string?)reference.Element(ChartNamespace + "f"),
+                referenceKind,
+                cache?.Name.LocalName ?? string.Empty,
+                hasCachedPoints);
+        }
+
+        return default;
     }
 
     private static string? ReadChartText(XElement? text)

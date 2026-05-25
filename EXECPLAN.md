@@ -6368,3 +6368,17 @@ fragile secondary-axis COM setup, and the generator suppresses incidental COM bo
 polluted its final path reporting. Remaining gap: construct the right-overlay exploded probe through a more reliable
 Office-authored path, or inspect why PowerPoint's PDF export blanks that generated chart, before adding it to the
 public visual matrix.
+
+Revision note, 2026-05-25: Started moving the workbook-cache bridge toward a typed chart data-source model by
+preserving formula provenance in the PPTX scene model. `PptxSceneChartSeries` now carries `DataSources` entries for
+series name, values, categories, x-values, y-values, and bubble sizes; each entry records the source formula, OOXML
+reference kind (`numRef`, `strRef`, `multiLvlStrRef`), cache kind, and whether the chart-side cache actually has
+points. The old hydrated value/category arrays are intentionally still present and unchanged, so this is a
+model-first step rather than a rendering behavior change. The regression `PptxScenePreservesChartSeriesDataSourceReferences`
+locks the important distinction between formula-only references with empty caches and references with real cached
+points. Validation: focused `pptx-charts` tests passed 39/39; the full non-slow test runner passed 229/229 with
+7 skipped; and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded. Remaining long-term gap: the data-source model still only preserves chart XML provenance; it does not yet
+resolve workbook/table/name references into typed value vectors, blank-cell semantics, multi-sheet ranges,
+stale-cache detection, or renderer-facing data-source objects that remove the need for cache hydration as an
+intermediate XML mutation.
