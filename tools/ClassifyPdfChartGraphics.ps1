@@ -140,6 +140,32 @@ function Is-InsideOpenInterval([double]$value, [double]$min, [double]$max, [doub
     return $value -gt ($min + $tolerance) -and $value -lt ($max - $tolerance)
 }
 
+function Is-OutsideBox($structure, $box, [double]$tolerance) {
+    return ([double]$structure.CenterX -lt ([double]$box.MinX - $tolerance)) -or
+        ([double]$structure.CenterX -gt ([double]$box.MaxX + $tolerance)) -or
+        ([double]$structure.CenterY -lt ([double]$box.MinY - $tolerance)) -or
+        ([double]$structure.CenterY -gt ([double]$box.MaxY + $tolerance))
+}
+
+function Is-LegendSwatchShape($structure) {
+    $kind = [string]$structure.Kind
+    $width = Width $structure
+    $height = Height $structure
+    if (($kind -eq "MarkerCandidate" -or $kind -eq "StrokeMarkerCandidate") -and $width -le 24d -and $height -le 24d) {
+        return $true
+    }
+
+    if ($kind -eq "HorizontalLine" -and $width -le 100d -and [double]$structure.LineWidth -ge 1d) {
+        return $true
+    }
+
+    if ($kind -eq "FilledRegion" -and $width -le 40d -and $height -le 40d) {
+        return $true
+    }
+
+    return $false
+}
+
 $ops = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
     $ops = @($ops | Where-Object { [int]$_.PageNumber -eq $PageNumber })
@@ -281,6 +307,15 @@ if ($null -ne $plotBoxForGridlines) {
         $isInsidePlot = Is-InsideOpenInterval ([double]$line.CenterX) ([double]$plotBoxForGridlines.MinX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance
         if ($spansPlotHeight -and $isInsidePlot) {
             $structures.Add((Copy-StructureAsKind "VerticalGridlineCandidate" $line))
+        }
+    }
+}
+
+if ($null -ne $plotBoxForGridlines) {
+    $structureSnapshot = [object[]]$structures.ToArray()
+    foreach ($structure in $structureSnapshot) {
+        if ((Is-LegendSwatchShape $structure) -and (Is-OutsideBox $structure $plotBoxForGridlines $GridlineBoundsTolerance)) {
+            $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
         }
     }
 }

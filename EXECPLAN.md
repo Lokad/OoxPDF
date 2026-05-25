@@ -2017,6 +2017,11 @@ High-priority actions:
   - [x] Make `PlotAreaClipBoxCandidate` prefer repeated clip boxes that align with the derived axis/gridline
     plot box, so repeated chart-frame clips no longer hide the actual Office data-plot clip in structural
     reports.
+  - [x] Promote legend swatches from incidental marker/line evidence to `LegendSwatchCandidate` structures.
+    `ClassifyPdfChartGraphics.ps1` now derives swatches from small markers, filled swatches, and short line
+    samples outside the inferred plot box. The line-chart gate now compares the three right-legend line
+    swatches, and the composite-chart gate now compares the three top-legend marker swatches instead of the
+    generic marker bucket.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
@@ -5353,3 +5358,14 @@ clip gates still passed at `artifacts/visual/pptx-ladder-11-chart-column-cluster
 evidence-backed boolean connection between manual plot layout and axis tick density; the durable destination
 is a typed Office axis-layout model that derives tick density from chart frame, outer plot area, inner data
 plot, axis label reservations, and manual `layoutTarget` semantics rather than renderer-local branching.
+
+Revision note, 2026-05-25: Promoted chart legend swatches into first-class structural oracle evidence.
+`ClassifyPdfChartGraphics.ps1` now emits `LegendSwatchCandidate` for small marker/fill/short-line samples
+outside the inferred plot box, preserving the raw `MarkerCandidate`, `HorizontalLine`, and `FilledRegion`
+buckets for older gates. The public line-chart manifest now compares the three right-legend line samples as
+legend swatches and passed at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-132950`.
+The composite chart manifest now compares the three top-legend marker samples as legend swatches instead of
+generic markers and passed at `artifacts/visual/pptx-ladder-11-composite-chart-port/20260525-133000`.
+Remaining long-term gap: swatch classification is still geometry-relative to the inferred plot box; the
+durable target is a chart legend structure that pairs swatch, label text, legend container, and series identity
+from Office PDF evidence, then feeds that back into typed chart scene/layout records.

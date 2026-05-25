@@ -12,7 +12,7 @@
     "maxMeanAbsoluteError": 12.41,
     "maxChangedPixelRatioAtThreshold16": 0.139,
     "maxChartGraphicsStructureBoundsDelta": 2.0,
-    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "MarkerCandidate"],
+    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "LegendSwatchCandidate"],
     "chartGraphicsGridlineBoundsTolerance": 1.0,
     "maxChartTextStructurePositionDelta": 2.0,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
