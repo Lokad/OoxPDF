@@ -2392,6 +2392,13 @@ internal sealed partial class PptxRenderer
         return values;
     }
 
+    private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, double? explicitUnit)
+    {
+        return GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: true)
+            .Where(value => value > extents.Min + PptxChartMetricRules.AxisValueEpsilon)
+            .ToArray();
+    }
+
     private static double ChooseChartAxisMajorUnit(double range)
     {
         double target = Math.Max(range / PptxChartMetricRules.AxisNiceTickTargetCount, double.Epsilon);
@@ -3178,10 +3185,18 @@ internal sealed partial class PptxRenderer
 
         SetChartStroke(graphics, stroke);
         double range = Math.Max(1d, extents.Max - extents.Min);
-        foreach (double value in GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: false))
+        bool hasPath = false;
+        foreach (double value in GetChartGridlineValues(extents, explicitUnit))
         {
             double y = plotY + plotHeight * (value - extents.Min) / range;
-            graphics.StrokeLine(plotX, y, plotX + plotWidth, y);
+            graphics.MoveTo(plotX, y);
+            graphics.LineTo(plotX + plotWidth, y);
+            hasPath = true;
+        }
+
+        if (hasPath)
+        {
+            graphics.StrokeCurrentPath();
         }
 
         if (stroke.Alpha < 1d)
@@ -3206,10 +3221,18 @@ internal sealed partial class PptxRenderer
 
         SetChartStroke(graphics, stroke);
         double range = Math.Max(1d, extents.Max - extents.Min);
-        foreach (double value in GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: false))
+        bool hasPath = false;
+        foreach (double value in GetChartGridlineValues(extents, explicitUnit))
         {
             double x = plotX + plotWidth * (value - extents.Min) / range;
-            graphics.StrokeLine(x, plotY, x, plotY + plotHeight);
+            graphics.MoveTo(x, plotY);
+            graphics.LineTo(x, plotY + plotHeight);
+            hasPath = true;
+        }
+
+        if (hasPath)
+        {
+            graphics.StrokeCurrentPath();
         }
 
         if (stroke.Alpha < 1d)
@@ -3221,7 +3244,7 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke DefaultChartGridlineStroke(bool major)
     {
         return major
-            ? new ChartSeriesStroke(new RgbColor(217, 217, 217), 1d, 0.5d)
+            ? new ChartSeriesStroke(new RgbColor(0, 0, 0), 1d, 0.75d)
             : new ChartSeriesStroke(new RgbColor(235, 235, 235), 1d, 0.25d);
     }
 

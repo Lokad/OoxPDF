@@ -4444,6 +4444,22 @@ The `pptx-charts` non-slow group passed with 11 passed, 0 failed, 0 skipped afte
 line-chart first-value-axis fallback scoped to that resolved axis; the clustered-column public visual gate
 passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-014718`; the full suite
 passed with 207 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded.
+
+chart gridline PDF-structure alignment / 2026-05-25:
+Office evidence from the clustered-column public case showed major value gridlines emitted as one
+multi-segment stroked PDF path, with the maximum tick included and the baseline axis excluded; the previous
+candidate emitted separate gray line strokes and skipped the maximum tick. The renderer now derives gridline
+ticks from the endpoint-inclusive axis sequence, filters only the axis minimum, emits all gridline segments
+into one current path before a single `S`, and uses the Office-observed default major gridline stroke
+(`0 0 0 RG`, `0.75 w`) when no explicit gridline style is present. `ClassifyPdfChartGraphics.ps1` now emits
+`HorizontalGridlineGroupCandidate` and `VerticalGridlineGroupCandidate` for multi-segment gridline strokes so
+public visual cases can compare Office/candidate structure directly instead of mistaking grouped Office paths
+for missing gridlines. The clustered-column manifest now gates both `AxisPairPlotBoxCandidate` and
+`HorizontalGridlineGroupCandidate` with line-width delta `0.05`; it passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-020019`. Focused chart tests passed
+with 12 passed, 0 failed, 0 skipped; the full suite passed with 208 passed, 0 failed, 0 skipped; and
+`dotnet pack` succeeded. Remaining gap: endpoint filtering is still "exclude minimum" rather than fully
+crossing-axis aware for negative ranges, reversed axes, or non-default axis crossing.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

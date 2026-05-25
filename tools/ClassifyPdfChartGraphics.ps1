@@ -198,6 +198,32 @@ else {
 }
 
 if ($null -ne $plotBoxForGridlines) {
+    foreach ($op in $ops) {
+        $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
+        if ($op.Kind -ne "Stroke" -or $segmentCount -lt 2) {
+            continue
+        }
+
+        $width = Width $op
+        $height = Height $op
+        $spansPlotWidth = (Is-Near ([double]$op.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
+            (Is-Near ([double]$op.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)
+        $insideVerticalRange = ([double]$op.MinY -gt ([double]$plotBoxForGridlines.MinY + $GridlineBoundsTolerance)) -and
+            ([double]$op.MaxY -le ([double]$plotBoxForGridlines.MaxY + $GridlineBoundsTolerance))
+        if ($width -ge $MinLineLength -and $height -gt $LineTolerance -and $spansPlotWidth -and $insideVerticalRange) {
+            $structures.Add((New-Structure "HorizontalGridlineGroupCandidate" $op))
+            continue
+        }
+
+        $spansPlotHeight = (Is-Near ([double]$op.MinY) ([double]$plotBoxForGridlines.MinY) $GridlineBoundsTolerance) -and
+            (Is-Near ([double]$op.MaxY) ([double]$plotBoxForGridlines.MaxY) $GridlineBoundsTolerance)
+        $insideHorizontalRange = ([double]$op.MinX -gt ([double]$plotBoxForGridlines.MinX + $GridlineBoundsTolerance)) -and
+            ([double]$op.MaxX -le ([double]$plotBoxForGridlines.MaxX + $GridlineBoundsTolerance))
+        if ($height -ge $MinLineLength -and $width -gt $LineTolerance -and $spansPlotHeight -and $insideHorizontalRange) {
+            $structures.Add((New-Structure "VerticalGridlineGroupCandidate" $op))
+        }
+    }
+
     foreach ($line in $horizontalLines) {
         $spansPlotWidth = (Is-Near ([double]$line.MinX) ([double]$plotBoxForGridlines.MinX) $GridlineBoundsTolerance) -and
             (Is-Near ([double]$line.MaxX) ([double]$plotBoxForGridlines.MaxX) $GridlineBoundsTolerance)

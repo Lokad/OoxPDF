@@ -12,8 +12,8 @@
     "maxMeanAbsoluteError": 16.4,
     "maxChangedPixelRatioAtThreshold16": 0.220,
     "maxChartGraphicsStructureBoundsDelta": 1,
-    "maxChartGraphicsStructureLineWidthDelta": 10,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate"],
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate"],
     "maxChartTextStructurePositionDelta": 1,
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]

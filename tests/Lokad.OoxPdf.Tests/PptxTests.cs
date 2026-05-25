@@ -7112,7 +7112,69 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(!Regex.IsMatch(pdf, @"0\.75 w\s+(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){2,}S"),
+            "Category-axis gridlines must not enable value-axis gridline rendering.");
+    }
+
+    public static void PptxSyntheticChartValueGridlinesUseOfficeLikeMultiSegmentPath()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea>
+                  <c:barChart>
+                    <c:barDir val="col"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx>
+                    <c:axId val="1"/><c:axPos val="b"/>
+                  </c:catAx>
+                  <c:valAx>
+                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:majorUnit val="10"/><c:majorGridlines/>
+                  </c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 0 RG", pdf);
+        TestAssert.Contains("0.75 w", pdf);
         TestAssert.DoesNotContain("0.851 0.851 0.851 RG", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){3}S"),
+            "Major value gridlines should be emitted as one multi-segment stroked path that includes the maximum tick and excludes the axis baseline.");
     }
 
     public static void PptxSyntheticChartManualLayoutEdgeModesRender()
@@ -7564,12 +7626,13 @@ internal static class PptxTests
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("93.6 352.8 144 108 re f", pdf);
         TestAssert.Contains("93.6 374.4 m", pdf);
-        TestAssert.Contains("93.6 374.4 m 237.6 374.4 l S", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){5}S"),
+            "Line-chart major gridlines should share one stroked path for the five non-baseline tick marks.");
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 7, "Chart title, axes, legend, and data labels should emit chart text objects.");
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
-        TestAssert.Contains("0.851 0.851 0.851 RG", pdf);
+        TestAssert.Contains("0 0 0 RG", pdf);
         TestAssert.DoesNotContain("0 0.667 0 RG", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);
