@@ -9427,6 +9427,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int pathStartCount = Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count;
         TestAssert.True(pathStartCount >= 3, $"Expected workbook-backed chart references to produce native doughnut paths; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
+        TestAssert.True(CountTextMatrices(pdf) >= 3, "Expected workbook-backed category references to feed native legend text without requiring chart-side string caches.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Charts with formulas and embedded workbook data should not require chart-side caches.");
     }

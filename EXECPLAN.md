@@ -6382,3 +6382,16 @@ succeeded. Remaining long-term gap: the data-source model still only preserves c
 resolve workbook/table/name references into typed value vectors, blank-cell semantics, multi-sheet ranges,
 stale-cache detection, or renderer-facing data-source objects that remove the need for cache hydration as an
 intermediate XML mutation.
+
+Revision note, 2026-05-25: Made the renderer consume workbook-backed scene data before falling back to XML cache
+hydration. Chart frame rendering now reads the embedded workbook once, passes it into the native chart renderer, and
+lets scene series resolve empty value/category/name vectors from their preserved formulas. Bar/line/area/radar/pie/
+doughnut values, scatter/bubble x/y/size values, category labels, series names, legends, and data labels can now use
+that typed source path without first materializing `c:numCache` or `c:strCache` into the chart XML. The old cache
+hydration remains as a compatibility fallback when the structural scene/workbook path cannot render. The workbook
+regression now also checks that formula-backed category references feed native legend text, not only slice geometry.
+Validation: focused `pptx-charts` tests passed 39/39; the full non-slow test runner passed 229/229 with 7 skipped;
+and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: workbook resolution is still an in-renderer helper with simple cell/range formulas and
+string/double vectors. It is not yet a reusable chart-data object with source freshness, blank-cell policy, table/
+defined-name support, multi-sheet unions, date/category typing, or explicit stale-cache reconciliation.
