@@ -2160,11 +2160,25 @@ High-priority actions:
   Office-backed cases.
 - [ ] 2026-05-25: Migrate PPTX text frames fully to the model-first path where style cascade, line layout,
   glyph positioning, and PDF emission are separate observable stages.
+  - [x] 2026-05-25: Introduced a typed `PptxTextBodyProperties` record for text-frame body properties instead
+    of letting orientation, anchor, wrapping, overflow, columns, autofit scale, line-spacing reduction, rotation,
+    and explicit wrap width remain independent XML reads scattered across the renderer. `PptxTextFrameModel`
+    now owns this record, layout consumes the typed wrap/overflow values, and
+    `InspectTextFrameModels` exposes the main enum-like values for public diagnostics; `vertOverflow="ellipsis"`
+    now emits `PPTX_UNSUPPORTED_TEXT_OVERFLOW` until ellipsis clipping is implemented. The synthetic
+    `PptxTextModelExposesTypedBodyProperties` test locks the model surface for `vert`, `anchor`, `wrap`,
+    `vertOverflow`, `numCol`, `spcCol`, and `normAutofit`; focused typography validation passed
+    `70 passed, 0 failed, 2 skipped`, the full console suite passed `238 passed, 0 failed, 0 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Converge table-cell text on the common PPTX text-frame layout model so table-local height
   and vertical-alignment estimates are retired when shared layout can express the same Office behavior.
 - [ ] 2026-05-25: Replace one-off OOXML enum handling with explicit ladders for touched enum families,
   including unsupported-value inventory, public fixtures where visible, and diagnostics where rendering is
   intentionally incomplete.
+  - [x] 2026-05-25: Moved text-body `vert`, `wrap`, `vertOverflow`, and `anchor` parsing behind typed enums
+    owned by `PptxTextBodyProperties`; this is a first text enum-ladder slice and preserves current rendering
+    behavior while making supported values inspectable before PDF emission and warning on the intentionally
+    incomplete ellipsis overflow mode.
 - [x] 2026-05-24: Preserved chart `txPr/a:defRPr` bold/italic as structural chart text-style data instead
   of a render-time heuristic. `PptxSceneChartTextStyleOverride` and the chart renderer `ChartTextStyle`
   now carry nullable bold/italic through chart defaults, axes, plot/series data labels, and per-label

@@ -30,6 +30,12 @@ internal sealed partial class PptxRenderer
             frame.TextX,
             frame.TextWidth,
             frame.FontScale,
+            frame.BodyProperties.Orientation.ToString(),
+            frame.BodyProperties.VerticalAnchor.ToString(),
+            frame.BodyProperties.WrapMode.ToString(),
+            frame.BodyProperties.VerticalOverflow.ToString(),
+            frame.BodyProperties.ColumnCount,
+            frame.BodyProperties.ColumnSpacing,
             frame.Paragraphs.Select(ToSnapshot).ToArray());
     }
 
@@ -121,11 +127,12 @@ internal sealed partial class PptxRenderer
         double yTop = OoxUnits.EmuToPoints(bounds.Value.Y);
         double width = OoxUnits.EmuToPoints(bounds.Value.Width);
         double height = OoxUnits.EmuToPoints(bounds.Value.Height);
-        TextInsets insets = ReadTextInsets(textBody);
-        PptxTextOrientation orientation = ReadTextOrientation(textBody, inheritedTextBody);
-        double fontScale = ReadNormAutofitFontScale(textBody);
-        double lineSpacingScale = ReadNormAutofitLineSpacingScale(textBody);
-        bool compatibleLineSpacing = HasCompatibleLineSpacing(textBody);
+        PptxTextBodyProperties bodyProperties = ReadTextBodyProperties(textBody, inheritedTextBody);
+        TextInsets insets = bodyProperties.Insets;
+        PptxTextOrientation orientation = bodyProperties.Orientation;
+        double fontScale = bodyProperties.FontScale;
+        double lineSpacingScale = bodyProperties.LineSpacingScale;
+        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
         double rotationCenterX = x + width / 2d;
         double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
         double flowX = x;
@@ -141,7 +148,7 @@ internal sealed partial class PptxRenderer
             flowHeight = Math.Max(1d, flowHeight - presetTextInsets.Top - presetTextInsets.Bottom);
         }
 
-        double? explicitTextRotationDegrees = ReadTextBodyRotationDegrees(textBody);
+        double? explicitTextRotationDegrees = bodyProperties.RotationDegrees;
         double textRotationDegrees = explicitTextRotationDegrees ?? bounds.Value.RotationDegrees;
         if (explicitTextRotationDegrees is null && bounds.Value.FlipHorizontal != bounds.Value.FlipVertical)
         {
@@ -166,10 +173,11 @@ internal sealed partial class PptxRenderer
 
         double textX = flowX + insets.Left;
         double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
-        double textWrapWidth = ReadTextWrapWidth(textBody) ?? textWidth;
+        double textWrapWidth = bodyProperties.ExplicitWrapWidth ?? textWidth;
         double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
-        (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
-        bool clipsVerticalOverflow = ClipsVerticalOverflow(textBody);
+        int columnCount = bodyProperties.ColumnCount;
+        double columnSpacing = bodyProperties.ColumnSpacing;
+        bool clipsVerticalOverflow = bodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
         double textClipY = clipsVerticalOverflow
             ? document.SlideHeightPoints - flowYTop - insets.Top - textHeight
             : 0d;
@@ -181,9 +189,9 @@ internal sealed partial class PptxRenderer
             : null;
         XElement? defaultParagraphProperties = MergeParagraphProperties(
             BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, "lvl1pPr").Sources.ToArray());
-        double verticalOffset = ReadVerticalAnchor(textBody) switch
+        double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Top when inheritedTextBody is not null => ReadVerticalAnchor(inheritedTextBody) switch
+            TextVerticalAnchor.Top when inheritedTextBody is not null => ReadTextVerticalAnchor(inheritedTextBody) switch
             {
                 TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)) / 2d),
                 TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)),
@@ -210,6 +218,7 @@ internal sealed partial class PptxRenderer
             textBody,
             inheritedTextBody,
             theme,
+            bodyProperties,
             bounds.Value,
             insets,
             fontScale,
@@ -232,6 +241,24 @@ internal sealed partial class PptxRenderer
             orientation,
             shapeFontColor,
             paragraphs);
+    }
+
+    private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
+    {
+        (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
+        return new PptxTextBodyProperties(
+            ReadTextInsets(textBody),
+            ReadTextOrientation(textBody, inheritedTextBody),
+            ReadTextVerticalAnchor(textBody),
+            ReadTextWrapMode(textBody),
+            ReadTextVerticalOverflow(textBody),
+            columnCount,
+            columnSpacing,
+            ReadNormAutofitFontScale(textBody),
+            ReadNormAutofitLineSpacingScale(textBody),
+            HasCompatibleLineSpacing(textBody),
+            ReadTextBodyRotationDegrees(textBody),
+            ReadTextWrapWidth(textBody));
     }
 
     private static double? ReadTextWrapWidth(XElement textBody)

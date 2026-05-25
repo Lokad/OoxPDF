@@ -83,6 +83,11 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         }
 
+        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextVerticalOverflow))
+        {
+            Emit("PPTX_UNSUPPORTED_TEXT_OVERFLOW", "text vertical overflow");
+        }
+
         if (slideXml.Descendants(PresentationNamespace + "spPr").Any(HasUnsupportedPictureFill))
         {
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
@@ -176,6 +181,12 @@ internal sealed partial class PptxRenderer
             !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasUnsupportedTextVerticalOverflow(XElement bodyProperties)
+    {
+        string? overflow = (string?)bodyProperties.Attribute("vertOverflow");
+        return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static bool IsUnsupportedPatternFill(XElement patternFill)

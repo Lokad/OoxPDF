@@ -218,6 +218,7 @@ internal sealed partial class PptxRenderer
         XElement TextBody,
         XElement? InheritedTextBody,
         PptxTheme Theme,
+        PptxTextBodyProperties BodyProperties,
         ShapeBounds Bounds,
         TextInsets Insets,
         double FontScale,
@@ -240,6 +241,20 @@ internal sealed partial class PptxRenderer
         PptxTextOrientation Orientation,
         RgbColor? ShapeFontColor,
         IReadOnlyList<PptxTextParagraphModel> Paragraphs);
+
+    private readonly record struct PptxTextBodyProperties(
+        TextInsets Insets,
+        PptxTextOrientation Orientation,
+        TextVerticalAnchor VerticalAnchor,
+        PptxTextWrapMode WrapMode,
+        PptxTextVerticalOverflow VerticalOverflow,
+        int ColumnCount,
+        double ColumnSpacing,
+        double FontScale,
+        double LineSpacingScale,
+        bool CompatibleLineSpacing,
+        double? RotationDegrees,
+        double? ExplicitWrapWidth);
 
     private sealed record PptxTextParagraphModel(
         XElement Source,
@@ -962,6 +977,19 @@ internal sealed partial class PptxRenderer
         Top,
         Middle,
         Bottom
+    }
+
+    private enum PptxTextWrapMode
+    {
+        Square,
+        None
+    }
+
+    private enum PptxTextVerticalOverflow
+    {
+        Overflow,
+        Clip,
+        Ellipsis
     }
 
     private enum PptxTextOrientation

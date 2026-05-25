@@ -396,10 +396,12 @@ internal sealed partial class PptxRenderer
 
     private static bool TextBodyAllowsWrapping(XElement textBody)
     {
-        string? wrap = (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("wrap");
-        return !string.Equals(wrap, "none", StringComparison.Ordinal);
+        return ReadTextWrapMode(textBody) != PptxTextWrapMode.None;
+    }
+
+    private static bool TextBodyAllowsWrapping(PptxTextBodyProperties bodyProperties)
+    {
+        return bodyProperties.WrapMode != PptxTextWrapMode.None;
     }
 
     private static PptxTextFrameModel FitShapeAutoFitFrame(
@@ -624,7 +626,7 @@ internal sealed partial class PptxRenderer
     private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFlowFrame flowFrame, PptxDocument document, TextAdvanceEstimator advanceEstimator, bool allowWrapping = true)
     {
         PptxTextFrameModel frame = flowFrame.Model;
-        allowWrapping &= TextBodyAllowsWrapping(frame.TextBody);
+        allowWrapping &= TextBodyAllowsWrapping(frame.BodyProperties);
         double cursorLineTop = flowFrame.Box.CursorTop;
         int columnIndex = 0;
         double totalColumnSpacing = frame.ColumnSpacing * (frame.ColumnCount - 1);
@@ -2182,12 +2184,29 @@ internal sealed partial class PptxRenderer
         return ParseOptionalBoolAttribute(textBody.Element(DrawingNamespace + "bodyPr"), "compatLnSpc");
     }
 
-    private static bool ClipsVerticalOverflow(XElement textBody)
+    private static PptxTextWrapMode ReadTextWrapMode(XElement textBody)
+    {
+        string? wrap = (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute("wrap");
+        return wrap?.Equals("none", StringComparison.OrdinalIgnoreCase) == true
+            ? PptxTextWrapMode.None
+            : PptxTextWrapMode.Square;
+    }
+
+    private static PptxTextVerticalOverflow ReadTextVerticalOverflow(XElement textBody)
     {
         string? overflow = (string?)textBody
             .Element(DrawingNamespace + "bodyPr")
             ?.Attribute("vertOverflow");
-        return overflow?.Equals("clip", StringComparison.OrdinalIgnoreCase) == true;
+        return overflow switch
+        {
+            "clip" => PptxTextVerticalOverflow.Clip,
+            "ellipsis" => PptxTextVerticalOverflow.Ellipsis,
+            _ when overflow?.Equals("clip", StringComparison.OrdinalIgnoreCase) == true => PptxTextVerticalOverflow.Clip,
+            _ when overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true => PptxTextVerticalOverflow.Ellipsis,
+            _ => PptxTextVerticalOverflow.Overflow
+        };
     }
 
     private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
@@ -2656,7 +2675,7 @@ internal sealed partial class PptxRenderer
         return RgbColor.TryParse(hex, out color);
     }
 
-    private static TextVerticalAnchor ReadVerticalAnchor(XElement textBody)
+    private static TextVerticalAnchor ReadTextVerticalAnchor(XElement textBody)
     {
         string? anchor = (string?)textBody
             .Element(DrawingNamespace + "bodyPr")

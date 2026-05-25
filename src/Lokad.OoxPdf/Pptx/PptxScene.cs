@@ -65,6 +65,12 @@ internal sealed record PptxTextFrameModelSnapshot(
     double TextX,
     double TextWidth,
     double FontScale,
+    string Orientation,
+    string VerticalAnchor,
+    string WrapMode,
+    string VerticalOverflow,
+    int ColumnCount,
+    double ColumnSpacing,
     IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
 
 internal sealed record PptxTextParagraphModelSnapshot(
