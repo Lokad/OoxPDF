@@ -10,6 +10,14 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 4.3,
-    "maxChangedPixelRatioAtThreshold16": 0.108
+    "maxChangedPixelRatioAtThreshold16": 0.108,
+    "maxChartGraphicsStructureBoundsDelta": 36,
+    "maxChartGraphicsStructureLineWidthDelta": 0.3,
+    "compareChartGraphicsStructureKinds": [
+      "RadarRingGridGroupCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true
   }
 }

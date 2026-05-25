@@ -5844,3 +5844,17 @@ so future radar work can gate the PDF structure instead of treating the residual
 family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
 `2026-05-25T18:43:18.3914831+02:00`; and `dotnet pack` succeeded. Remaining long-term gap: the candidate does
 not yet emit Office-like grouped radar grid paths, so no radar structural manifest gate has been enabled yet.
+
+Revision note, 2026-05-25: Closed the first radar PDF-structure gap by grouping the candidate ring grid into an
+Office-like multi-move stroke path. Radar rendering now emits ring-grid edges as one path, radial spokes as one
+path, and each radar series as one closed polyline path instead of stroking every ring, spoke, and series segment
+separately. The classifier now distinguishes `RadarRingGridGroupCandidate` from the still-open spoke group, and
+both public radar manifests gate the ring-grid structure with operator, segment-count, and move/line/curve/close
+parity. The ring-grid gate passes for `pptx-ladder-11-chart-radar-2series-port` at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-184757` and for
+`pptx-ladder-11-chart-radar-filled-port` at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-184808`. Focused `pptx-charts` tests passed
+38/38, the full public `pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-25T18:49:59.2780377+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: Office
+still exposes a six-segment spoke/axis group while the candidate emits a five-segment spoke group, and the radar
+center/radius/text placement still come from polar metric rules rather than a typed radar layout oracle.

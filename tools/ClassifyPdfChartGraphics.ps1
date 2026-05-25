@@ -359,7 +359,8 @@ if ($null -eq $plotBoxForGridlines) {
         $height = Height $op
         if ($op.Kind -eq "Stroke" -and $segmentCount -ge 6 -and $moveCount -ge 3 -and
             $lineCount -ge 3 -and $curveCount -eq 0 -and $width -gt 40d -and $height -gt 40d) {
-            $structures.Add((New-Structure "RadarGridGroupCandidate" $op))
+            $kind = if ($segmentCount -ge 10) { "RadarRingGridGroupCandidate" } else { "RadarSpokeGroupCandidate" }
+            $structures.Add((New-Structure $kind $op))
         }
     }
 }

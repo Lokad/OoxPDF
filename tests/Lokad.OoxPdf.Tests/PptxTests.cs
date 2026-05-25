@@ -8877,7 +8877,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("201.6 387.9 m 201.6 429.21 l S", pdf);
+        TestAssert.Contains("201.6 387.9 m", pdf);
+        TestAssert.Contains("201.6 429.21 l", pdf);
+        TestAssert.DoesNotContain("201.6 387.9 m 201.6 429.21 l S", pdf);
         TestAssert.DoesNotContain("216 364.32 m 216 295.2 l S", pdf);
     }
 
