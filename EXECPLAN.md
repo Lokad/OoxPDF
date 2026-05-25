@@ -995,6 +995,18 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.042022`, changed16 `0.116405`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
+- [x] 2026-05-25: Consume value-axis crossing metadata for value-gridline endpoint filtering.
+  Supported bar and line chart renderers now derive the excluded gridline tick from scene/XML `c:crossesAt`
+  or `c:crosses`, falling back to Office-like `autoZero` behavior: zero when the value range contains zero,
+  otherwise the nearest visible endpoint. This removes the previous hard-coded "exclude minimum" rule for
+  non-default crossings while preserving the grouped gridline PDF structure and XML fallback paths. A
+  synthetic chart with `c:crosses val="max"` locks the behavior by requiring the maximum crossing tick to be
+  omitted while the minimum tick remains a gridline. Focused chart tests passed with 13 passed, 0 failed,
+  0 skipped; the clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-020737`; the full suite passed with
+  209 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: the axis line and bar/line
+  coordinate crossing geometry still do not fully consume `crosses`, `crossesAt`, reversed axes, or
+  secondary-axis bindings.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1358,8 +1370,9 @@ High-priority actions:
   - [x] Preserve chart-axis tick mark, label offset, tick skip, and multi-level label metadata in
     `PptxSceneChartAxis`.
   - [x] Preserve chart style IDs in `PptxSceneChart` as a prerequisite for chart-style inherited defaults.
-  - [ ] Consume axis crossing metadata and Office spacing for secondary axes instead of relying on right-side
-    XML/layout assumptions.
+  - [x] Consume value-axis crossing metadata for bar/line chart gridline endpoint filtering.
+  - [ ] Consume axis crossing metadata for axis-line placement, series coordinate baselines, reversed axes,
+    and secondary axes instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4449,7 +4462,7 @@ chart gridline PDF-structure alignment / 2026-05-25:
 Office evidence from the clustered-column public case showed major value gridlines emitted as one
 multi-segment stroked PDF path, with the maximum tick included and the baseline axis excluded; the previous
 candidate emitted separate gray line strokes and skipped the maximum tick. The renderer now derives gridline
-ticks from the endpoint-inclusive axis sequence, filters only the axis minimum, emits all gridline segments
+ticks from the endpoint-inclusive axis sequence, filters the crossing-axis tick, emits all gridline segments
 into one current path before a single `S`, and uses the Office-observed default major gridline stroke
 (`0 0 0 RG`, `0.75 w`) when no explicit gridline style is present. `ClassifyPdfChartGraphics.ps1` now emits
 `HorizontalGridlineGroupCandidate` and `VerticalGridlineGroupCandidate` for multi-segment gridline strokes so
@@ -4458,8 +4471,22 @@ for missing gridlines. The clustered-column manifest now gates both `AxisPairPlo
 `HorizontalGridlineGroupCandidate` with line-width delta `0.05`; it passed at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-020019`. Focused chart tests passed
 with 12 passed, 0 failed, 0 skipped; the full suite passed with 208 passed, 0 failed, 0 skipped; and
-`dotnet pack` succeeded. Remaining gap: endpoint filtering is still "exclude minimum" rather than fully
-crossing-axis aware for negative ranges, reversed axes, or non-default axis crossing.
+`dotnet pack` succeeded.
+
+chart gridline crossing consumption / 2026-05-25:
+The gridline renderer no longer assumes that the excluded endpoint is always the value-axis minimum. For
+supported bar and line charts, scene-owned crossing metadata (`crossesAt` and `crosses`) or the same raw XML
+fallback now provides the value tick that represents the crossing axis. `crosses=max` excludes the maximum
+tick, `crosses=min` excludes the minimum tick, `crossesAt` excludes the explicit crossing value, and
+`autoZero` excludes zero when visible or the nearest endpoint when the data range is entirely positive or
+negative. This is a structural axis-owned rule, not a visual nudge: the candidate keeps Office-like grouped
+PDF gridline paths while changing which segment is present. A synthetic `c:crosses val="max"` chart proves
+the minimum tick remains visible as a gridline while the maximum crossing tick is omitted. The focused
+`pptx-charts` non-slow group passed with 13 passed, 0 failed, 0 skipped; the clustered-column public visual
+gate passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-020737`; the full suite
+passed with 209 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining axis-crossing work is
+larger than gridlines: axis line placement, category/value baseline choice for bars and lines, reversed
+scales, and secondary-axis binding still need Office-PDF evidence and public gates.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
