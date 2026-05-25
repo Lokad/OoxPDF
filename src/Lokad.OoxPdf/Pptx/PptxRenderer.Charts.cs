@@ -5517,7 +5517,7 @@ internal sealed partial class PptxRenderer
             graphics.StrokeCurrentPath();
         }
 
-        AppendRadarRadialSegments(graphics, geometry, pointCount);
+        AppendRadarRadialSegments(graphics, geometry, pointCount, repeatFirstSpoke: true);
         graphics.StrokeCurrentPath();
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
@@ -5591,11 +5591,12 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void AppendRadarRadialSegments(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount)
+    private static void AppendRadarRadialSegments(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, bool repeatFirstSpoke)
     {
-        for (int i = 0; i < pointCount; i++)
+        int segmentCount = repeatFirstSpoke ? pointCount + 1 : pointCount;
+        for (int i = 0; i < segmentCount; i++)
         {
-            double angle = GetRadarPointAngle(i, pointCount);
+            double angle = GetRadarPointAngle(i % pointCount, pointCount);
             graphics.MoveTo(geometry.CenterX, geometry.CenterY);
             graphics.LineTo(
                 geometry.CenterX + Math.Cos(angle) * geometry.Radius,

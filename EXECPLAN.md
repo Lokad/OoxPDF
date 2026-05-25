@@ -5858,3 +5858,18 @@ parity. The ring-grid gate passes for `pptx-ladder-11-chart-radar-2series-port` 
 generated `2026-05-25T18:49:59.2780377+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: Office
 still exposes a six-segment spoke/axis group while the candidate emits a five-segment spoke group, and the radar
 center/radius/text placement still come from polar metric rules rather than a typed radar layout oracle.
+
+Revision note, 2026-05-25: Closed the follow-up radar spoke structural gap after checking both the Office PDF
+streams and the public fixture OOXML. The source radar charts have five category/value points, but Office emits
+the spoke/axis path as six move/line pairs by repeating the first spoke after the five category spokes. OOXPDF now
+does the same repeated first-spoke emission for radar radial axes, and both public radar manifests gate
+`RadarRingGridGroupCandidate` and `RadarSpokeGroupCandidate` with operator, segment-count, and
+move/line/curve/close parity. Validation: focused `pptx-charts` tests passed 38/38; the two-series radar case
+passed at `artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-185415` with MAE `3.0432` and
+changed-pixel ratio at threshold 16 `0.0366`; the filled radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-185427` with MAE `3.9580` and changed-pixel
+ratio at threshold 16 `0.1061`; the full public `pptx-charts` family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T18:57:06.2640655+02:00`; and `dotnet pack`
+succeeded. Remaining long-term radar gap: the center/radius, gridline stroke width/color,
+label placement, and radar plot-box derivation are still approximate metric rules rather than an Office-PDF-derived
+typed radar layout oracle.
