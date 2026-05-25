@@ -285,7 +285,9 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     }
 }
 
-if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
+$hasChartGraphicsStructureGlobalBoundsTolerance = $manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null
+$hasChartGraphicsStructureKindBoundsTolerances = $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind -ne $null
+if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructureKindBoundsTolerances) {
     $graphicsInspectRoot = Join-Path $comparisonDir "pdf-graphics"
     $referenceGraphicsInspect = Join-Path $graphicsInspectRoot "reference"
     $candidateGraphicsInspect = Join-Path $graphicsInspectRoot "candidate"
@@ -352,8 +354,19 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     $compareChartArgs = @{
         Reference = $referenceChartStructures
         Candidate = $candidateChartStructures
-        BoundsTolerance = [double]$manifest.expected.maxChartGraphicsStructureBoundsDelta
         MatchByBounds = $true
+    }
+    if ($hasChartGraphicsStructureGlobalBoundsTolerance) {
+        $compareChartArgs.BoundsTolerance = [double]$manifest.expected.maxChartGraphicsStructureBoundsDelta
+        $compareChartArgs.UseBoundsToleranceForUnlistedKinds = $true
+    }
+    if ($hasChartGraphicsStructureKindBoundsTolerances) {
+        $boundsToleranceByKind = @{}
+        foreach ($entry in $manifest.expected.maxChartGraphicsStructureBoundsDeltaByKind.PSObject.Properties) {
+            $boundsToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+        }
+
+        $compareChartArgs.BoundsToleranceByKind = $boundsToleranceByKind
     }
     if ($manifest.expected.maxChartGraphicsStructureLineWidthDelta -ne $null) {
         $compareChartArgs.LineWidthTolerance = [double]$manifest.expected.maxChartGraphicsStructureLineWidthDelta

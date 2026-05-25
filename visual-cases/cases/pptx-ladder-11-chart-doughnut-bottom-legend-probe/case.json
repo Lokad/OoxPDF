@@ -12,7 +12,10 @@
     "maxMeanAbsoluteError": 0.55,
     "maxChangedPixelRatioAtThreshold16": 0.005,
     "minStructuralSimilarity": 0.97,
-    "maxChartGraphicsStructureBoundsDelta": 20.1,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "PolarPlotBoxCandidate": 20.1,
+      "PolarSliceCandidate": 20.1
+    },
     "compareChartGraphicsStructureKinds": [
       "PolarPlotBoxCandidate",
       "PolarSliceCandidate"

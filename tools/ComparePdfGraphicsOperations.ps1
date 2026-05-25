@@ -7,6 +7,10 @@ param(
 
     [double] $BoundsTolerance = 0.25,
 
+    [hashtable] $BoundsToleranceByKind = @{},
+
+    [switch] $UseBoundsToleranceForUnlistedKinds,
+
     [double] $LineWidthTolerance = 0.05,
 
     [string[]] $Kinds = @("Stroke", "Fill", "FillStroke", "Clip"),
@@ -109,6 +113,17 @@ function GetPathGeometryTolerance($kind) {
 
     return $null
 }
+function GetBoundsTolerance($kind) {
+    if ($BoundsToleranceByKind.ContainsKey([string]$kind)) {
+        return [double]$BoundsToleranceByKind[[string]$kind]
+    }
+
+    if ($BoundsToleranceByKind.Count -eq 0 -or $UseBoundsToleranceForUnlistedKinds) {
+        return [double]$BoundsTolerance
+    }
+
+    return $null
+}
 
 $referenceOps = Select-Ops (Read-JsonArray $Reference)
 $candidateOps = Select-Ops (Read-JsonArray $Candidate)
@@ -188,10 +203,12 @@ foreach ($pair in $pairs) {
     $deltaMaxX = Delta ([double]$ref.MaxX) ([double]$cand.MaxX)
     $deltaMaxY = Delta ([double]$ref.MaxY) ([double]$cand.MaxY)
     $deltaWidth = Delta ([double]$ref.LineWidth) ([double]$cand.LineWidth)
-    $boundsOk = [Math]::Abs($deltaMinX) -le $BoundsTolerance -and
-        [Math]::Abs($deltaMinY) -le $BoundsTolerance -and
-        [Math]::Abs($deltaMaxX) -le $BoundsTolerance -and
-        [Math]::Abs($deltaMaxY) -le $BoundsTolerance
+    $boundsToleranceForKind = GetBoundsTolerance $ref.Kind
+    $boundsOk = ($null -eq $boundsToleranceForKind) -or (
+        [Math]::Abs($deltaMinX) -le $boundsToleranceForKind -and
+        [Math]::Abs($deltaMinY) -le $boundsToleranceForKind -and
+        [Math]::Abs($deltaMaxX) -le $boundsToleranceForKind -and
+        [Math]::Abs($deltaMaxY) -le $boundsToleranceForKind)
     $widthOk = [Math]::Abs($deltaWidth) -le $LineWidthTolerance
     $kindOk = [string]$ref.Kind -eq [string]$cand.Kind
     $operatorOk = (-not $MatchOperator) -or [string]$ref.SourceOperator -eq [string]$cand.SourceOperator
@@ -278,6 +295,7 @@ foreach ($pair in $pairs) {
         DeltaMinY = $deltaMinY
         DeltaMaxX = $deltaMaxX
         DeltaMaxY = $deltaMaxY
+        BoundsTolerance = $boundsToleranceForKind
         DeltaWidth = $deltaWidth
     })
 }
