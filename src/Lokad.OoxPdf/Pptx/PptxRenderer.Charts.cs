@@ -394,7 +394,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills));
-                ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart, horizontalBars);
+                ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, horizontalBars);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
@@ -1321,7 +1321,7 @@ internal sealed partial class PptxRenderer
         double fallbackBaselineY = y + height * PptxChartMetricRules.TitleBaselineYRatio;
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
-            : ResolveChartTitleBaselineY(document, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize);
+            : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize);
         var run = new TextRun(
             title.Trim(),
             x + width * PptxChartMetricRules.TitleXInsetRatio,
@@ -1353,7 +1353,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns([run], graphics, "CT");
     }
 
-    private static double ResolveChartTitleBaselineY(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, double fallbackBaselineY, double fontSize)
+    private static double ResolveChartTitleBaselineY(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, double fallbackBaselineY, double fontSize)
     {
         XElement? barChart = ReadChartPlotElements(chartXml, "barChart").FirstOrDefault();
         if (barChart is null)
@@ -1363,7 +1363,7 @@ internal sealed partial class PptxRenderer
 
         PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, "barChart");
         bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
-        ChartLayout layout = GetBarChartLayout(document, bounds, chartXml, sceneChart, horizontalBars);
+        ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, horizontalBars);
         return layout.PlotBox.Y + layout.PlotBox.Height + fontSize * PptxChartMetricRules.TitleAbovePlotBaselineOffsetFactor;
     }
 
@@ -3630,16 +3630,16 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartLayout GetBarChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, bool horizontalBars)
+    private static ChartLayout GetBarChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, bool horizontalBars)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetBarChartPlotLayout(frame, chartXml, sceneChart, title, legend, horizontalBars);
+        ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, title, legend, horizontalBars);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTarget is not null, title, legend);
     }
 
-    private static ChartPlotLayout GetBarChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, bool horizontalBars)
+    private static ChartPlotLayout GetBarChartPlotLayout(PptxTheme theme, ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, bool horizontalBars)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -3677,9 +3677,80 @@ internal sealed partial class PptxRenderer
                 frame.Height * PptxChartMetricRules.BarDefaultPlotBoxHeightRatio);
         }
 
+        defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
+    }
+
+    private static ChartPlotBox AdjustBarChartPlotBoxForVisibleValueAxes(PptxTheme theme, ChartPlotBox plotBox, ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, bool horizontalBars)
+    {
+        if (horizontalBars)
+        {
+            return plotBox;
+        }
+
+        IReadOnlyList<XElement> barCharts = ReadChartPlotElements(chartXml, "barChart");
+        if (barCharts.Count < 2)
+        {
+            return plotBox;
+        }
+
+        var valueAxes = new List<XElement>();
+        foreach (XElement barChart in barCharts)
+        {
+            XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
+            if (valueAxis is not null && IsChartAxisLabelVisible(valueAxis) && !valueAxes.Any(axis => ReadChartAxisId(axis) == ReadChartAxisId(valueAxis)))
+            {
+                valueAxes.Add(valueAxis);
+            }
+        }
+
+        if (valueAxes.Count < 2)
+        {
+            return plotBox;
+        }
+
+        double leftReserve = plotBox.X - frame.X;
+        double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
+        double requiredLeftReserve = leftReserve;
+        double requiredRightReserve = rightReserve;
+        foreach (XElement valueAxis in valueAxes)
+        {
+            double stripWidth = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis);
+            bool labelsRight = ResolveValueAxisLabelsRightSide(valueAxis, ResolveSceneOrXmlValueAxisRightSide(null, valueAxis, defaultRightSide: false));
+            if (labelsRight)
+            {
+                requiredRightReserve = Math.Max(requiredRightReserve, stripWidth * PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor);
+            }
+            else
+            {
+                requiredLeftReserve = Math.Max(requiredLeftReserve, stripWidth * PptxChartMetricRules.BarMultiValueAxisPrimaryStripFactor);
+            }
+        }
+
+        double x = frame.X + requiredLeftReserve;
+        double right = frame.X + frame.Width - requiredRightReserve;
+        double width = Math.Max(1d, right - x);
+        return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+    }
+
+    private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement valueAxis)
+    {
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis: null, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
+        double fontSize = style.FontSize;
+        ChartValueExtents extents = ReadChartValueAxisExtents(valueAxis, new ChartValueExtents(0d, 1d));
+        ChartAxisUnits units = ReadChartValueAxisUnits(valueAxis);
+        IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
+        double maxLabelWidth = tickValues
+            .Select(value => FormatChartAxisLabel(value, valueAxis))
+            .DefaultIfEmpty("0")
+            .Max(label => EstimateChartTextWidth(label, fontSize));
+        double labelWidth = Math.Max(
+            fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
+            maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+        double sideGap = Math.Max(3d, fontSize * PptxChartMetricRules.ValueAxisLabelSideGapFactor);
+        return labelWidth + sideGap;
     }
 
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, string grouping)

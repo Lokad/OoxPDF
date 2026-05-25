@@ -785,6 +785,8 @@ internal sealed partial class PptxRenderer
         public const double BarNoTitleBottomLegendPlotBoxYRatio = 0.151d;
         public const double BarNoTitleBottomLegendPlotBoxWidthRatio = 0.9406d;
         public const double BarNoTitleBottomLegendPlotBoxHeightRatio = 0.815d;
+        public const double BarMultiValueAxisPrimaryStripFactor = 1.85d;
+        public const double BarMultiValueAxisSecondaryStripFactor = 1.2d;
         public const double HorizontalBarTitleNoLegendPlotBoxXRatio = 0.1524d;
         public const double HorizontalBarTitleNoLegendPlotBoxYRatio = 0.0924d;
         public const double HorizontalBarTitleNoLegendPlotBoxWidthRatio = 0.8196d;

@@ -5492,3 +5492,23 @@ falling back to the generic chart box. Focused `pptx-charts` tests passed with 3
 title+right-legend plot-box ratios are still encoded as Office-observed constants. The durable target remains a
 typed cartesian chart layout solver that derives title, legend, axis-label, tick-mark, marker, and plot
 reservations from Office PDF structures instead of case-family layout branches.
+
+Revision note, 2026-05-25: Advanced the secondary-axis chart probes by separating the visible value-axis label
+strips from the overlaid bar chart's data plot instead of widening every overlaid series to the same outer plot
+box. The two public probes are both stacked column charts bound to primary and secondary value axes; the old
+layout treated the overlay plot box as the data plot, so bars and gridlines started too far left and the compact
+probe barely missed its changed-pixel gate. `GetBarChartPlotLayout` now detects multiple visible vertical value
+axes for overlaid bar charts and derives a narrower inner `PlotBox` from the formatted value-axis label strips,
+while preserving the existing outer plot-area path for drawing order and clipping. The unit guard
+`PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips` prevents a regression to the outer overlay box.
+Focused `pptx-charts` tests passed with 36/36. The public secondary-axis gates now pass with empty diagnostics:
+`pptx-ladder-11-secondary-axis-overlay-probe` at
+`artifacts/visual/pptx-ladder-11-secondary-axis-overlay-probe/20260525-151950`, MAE `1.97283878279321`,
+changed16 `0.02594039351851852`; and
+`pptx-ladder-11-compact-stacked-secondary-axis-probe` at
+`artifacts/visual/pptx-ladder-11-compact-stacked-secondary-axis-probe/20260525-152005`, MAE
+`0.47676420235339506`, changed16 `0.006827739197530864`. Remaining long-term gap: the new secondary-axis
+reservation still uses text-width-derived strip factors. The durable target is a typed cartesian layout solver
+that computes outer plot area, inner data plot, primary/secondary axis strips, tick marks, label boxes, and clip
+regions together from OOXML axis metadata plus Office PDF evidence, then applies that model across bar, line,
+area, scatter, and combo charts without chart-family branches.
