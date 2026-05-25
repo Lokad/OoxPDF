@@ -7359,9 +7359,9 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
 
-        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, true])!;
-        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, false])!;
-        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, true])!;
+        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, true, 0.96d])!;
+        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, false, 0.96d])!;
+        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, true, 0.96d])!;
 
         TestAssert.Equal(120d, lineMarkerMax);
         TestAssert.Equal(100d, ordinaryMax);
@@ -9221,7 +9221,7 @@ internal static class PptxTests
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("0.667 0.667 0 rg", pdf);
         TestAssert.True(Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count >= 4, "Expected native chart paths for area, scatter, radar, and doughnut charts.");
-        TestAssert.Contains("/GS62000F100000S gs", pdf);
+        TestAssert.DoesNotContain("/GS62000F100000S gs", pdf);
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.DoesNotContain("1 1 1 rg", pdf);

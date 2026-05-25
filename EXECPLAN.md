@@ -5438,3 +5438,22 @@ skipped, and `dotnet pack` succeeded. Remaining long-term gap: the polar chart f
 fixed center/radius ratios and polygonal arc approximation. The durable target is a typed polar layout/slice model
 that derives first-slice angle, hole size, explosion offsets, color-style/theme mapping, legend swatches, labels,
 and Bezier arc geometry from OOXML plus Office PDF structure instead of renderer-local slice construction.
+
+Revision note, 2026-05-25: Promoted area charts from the old bare filled-polygon branch into the shared
+Office-style chart structure used by bar/line charts. Area charts now read chart/scene axes, gridlines, plot-area
+style, axis visibility, category/value labels, legend entries, theme/chart-palette fills, series strokes, value-axis
+reversal, stacked/percent-stacked normalization, and clipped plot drawing instead of rendering only local polygons
+with a hard-coded translucent palette. The stacked-area Office fixture also exposed a chart-family-specific
+auto-axis headroom boundary: the 115 total stack over a 0..120 nice maximum still exports as 0..140 in Office,
+while the existing line-chart boundary must remain 1520 -> 1600. The renderer now keeps the line-chart threshold
+unchanged and threads an explicit stacked-area near-maximum threshold through the shared nice-axis helper instead
+of lowering the global rule. Focused `pptx-charts` tests passed with 35/35. The tightened public area gates passed:
+`pptx-ladder-11-chart-area-2series-port` at
+`artifacts/visual/pptx-ladder-11-chart-area-2series-port/20260525-142428` with MAE `3.4515684076003086` and
+changed16 `0.035132137345679014`, and `pptx-ladder-11-chart-area-stacked-port` at
+`artifacts/visual/pptx-ladder-11-chart-area-stacked-port/20260525-142438` with MAE `2.3000317081404322` and
+changed16 `0.024130497685185184`. Remaining long-term gap: area charts still share the general chart layout and
+text-box heuristics rather than a typed Office area-chart layout model that derives plot/legend reservations, axis
+scale maxima, stack baselines, draw order, and label anchors from Office PDF structure. This is a large structural
+improvement, but the explicit stacked-area headroom threshold should eventually disappear into a unified Office
+axis-layout model.

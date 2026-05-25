@@ -659,11 +659,53 @@ internal sealed partial class PptxRenderer
                 grouping = string.IsNullOrEmpty(areaPlot?.Grouping) ? grouping : areaPlot.Grouping;
                 bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
                     string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+                bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                ChartPlotBox plotBox = chartLayout.PlotBox;
+                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, areaChart);
+                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, areaChart);
+                PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, areaPlot, "valAx");
+                PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, areaPlot, "catAx");
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetAreaChartValueExtents(areaSeries, stacked, percentStacked), useNearMaximumHeadroom: stacked && !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
+                ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
+                bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
+                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
+                ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, areaPlot, chartXml, theme, areaChart);
+                ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderAreaChart(graphics, chartLayout.PlotBox, areaSeries, stacked, seriesFills, seriesStrokes);
+                RenderAreaChart(
+                    graphics,
+                    theme,
+                    chartPalette,
+                    chartLayout.PlotAreaBox,
+                    plotBox,
+                    areaSeries,
+                    stacked,
+                    percentStacked,
+                    seriesFills,
+                    seriesStrokes,
+                    ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis),
+                    ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis),
+                    gridlineStyle,
+                    axesStyle,
+                    plotAreaStyle,
+                    valueExtents,
+                    axisUnits,
+                    ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents),
+                    valueAxisReversed);
+                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                {
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(areaPlot, areaChart), horizontalBars: false));
+                }
+
+                if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
+                {
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false));
+                }
+
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1088,7 +1130,7 @@ internal sealed partial class PptxRenderer
             chartXml.Descendants(ChartNamespace + "catAx").FirstOrDefault();
     }
 
-    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false)
+    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
     {
         XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
         if (scaling is null)
@@ -1097,17 +1139,17 @@ internal sealed partial class PptxRenderer
         }
 
         double min = ReadAxisScalingValue(scaling, "min") ?? fallback.Min;
-        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom);
+        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
     }
 
-    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false)
+    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
     {
         if (axis is null)
         {
-            return ReadChartValueAxisExtents(valueAxis, fallback, useNearMaximumHeadroom);
+            return ReadChartValueAxisExtents(valueAxis, fallback, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         }
 
         if (!axis.HasScaling)
@@ -1116,7 +1158,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? fallback.Min;
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -2718,7 +2760,7 @@ internal sealed partial class PptxRenderer
         return nice * magnitude;
     }
 
-    private static double GetNiceChartAxisMax(double dataMax, double dataMin, bool useNearMaximumHeadroom = false)
+    private static double GetNiceChartAxisMax(double dataMax, double dataMin, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
     {
         if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
@@ -2741,7 +2783,7 @@ internal sealed partial class PptxRenderer
         if (useNearMaximumHeadroom &&
             niceMax > 0d &&
             dataMax > 0d &&
-            dataMax / niceMax >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
+            dataMax / niceMax >= nearMaximumHeadroomRatio)
         {
             return niceMax + unit;
         }
@@ -4421,23 +4463,87 @@ internal sealed partial class PptxRenderer
         graphics.SetLineJoin(stroke.Join ?? 0);
     }
 
-    private static void RenderAreaChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderAreaChart(
+        PdfGraphicsBuilder graphics,
+        PptxTheme theme,
+        IReadOnlyList<RgbColor>? chartPalette,
+        ChartLayoutBox plotAreaBox,
+        ChartPlotBox plotBox,
+        IReadOnlyList<IReadOnlyList<double>> series,
+        bool stacked,
+        bool percentStacked,
+        IReadOnlyList<ChartSeriesFill?> seriesFills,
+        IReadOnlyList<ChartSeriesStroke?> seriesStrokes,
+        bool majorGridlines,
+        bool minorGridlines,
+        ChartGridlineStyle gridlineStyle,
+        ChartAxesStyle axesStyle,
+        ChartShapeStyle plotAreaStyle,
+        ChartValueExtents valueExtents,
+        ChartAxisUnits axisUnits,
+        double? valueAxisCrossingValue,
+        bool valueAxisReversed)
+    {
+        double plotX = plotBox.X;
+        double plotY = plotBox.Y;
+        double plotWidth = plotBox.Width;
+        double plotHeight = plotBox.Height;
+        RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
+        graphics.SaveState();
+        try
+        {
+            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
+            if (minorGridlines)
+            {
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+            }
+
+            if (majorGridlines)
+            {
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+            }
+
+            RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, series, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed);
+
+            ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
+            ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
+            double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
+            if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
+            {
+                SetChartStroke(graphics, categoryAxisStroke);
+                graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
+            }
+
+            if (axesStyle.ValueAxisVisible)
+            {
+                if (valueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, valueAxisStroke);
+                    double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                }
+
+                if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke && secondaryValueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, secondaryValueAxisStroke);
+                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                }
+            }
+        }
+        finally
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
         int pointCount = Math.Max(1, series.Max(values => values.Count));
-        double maxValue = stacked ? GetMaxStackedLineValue(series, pointCount) : Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
-        double valueRange = Math.Max(1d, maxValue - minValue);
-        double zeroY = plotY + (-minValue) / valueRange * plotHeight;
-
-        graphics.SetStrokeRgb(90, 90, 90);
-        graphics.SetLineWidth(0.75d);
-        graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
-        graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
-
         double[] lower = new double[pointCount];
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
@@ -4454,9 +4560,11 @@ internal sealed partial class PptxRenderer
                 double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
                 double value = i < values.Count ? values[i] : 0d;
                 double lowerValue = stacked ? lower[i] : 0d;
-                double upperValue = stacked ? lower[i] + value : value;
-                upperPoints[i] = (pointX, plotY + (upperValue - minValue) / valueRange * plotHeight);
-                lowerPoints[i] = (pointX, plotY + (lowerValue - minValue) / valueRange * plotHeight);
+                double positiveTotal = GetCategoryPositiveTotal(series, i, percentStacked);
+                double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
+                double upperValue = stacked ? lower[i] + normalizedValue : value;
+                upperPoints[i] = (pointX, ChartValueToPlotCoordinate(valueExtents, upperValue, plotY, plotHeight, valueAxisReversed));
+                lowerPoints[i] = (pointX, ChartValueToPlotCoordinate(valueExtents, lowerValue, plotY, plotHeight, valueAxisReversed));
                 if (stacked)
                 {
                     lower[i] = upperValue;
@@ -4470,13 +4578,21 @@ internal sealed partial class PptxRenderer
                 polygon[polygon.Length - i - 1] = lowerPoints[i];
             }
 
-            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, 0.62d);
-            graphics.SaveState();
-            graphics.SetAlpha(fill.Alpha, 1d);
+            ChartSeriesFill fill = ChartSeriesColor(theme, chartPalette, seriesIndex, seriesFills);
+            if (fill.Alpha < 1d)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+            }
+
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
             graphics.FillPolygon(polygon);
-            graphics.RestoreState();
-            ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+            if (fill.Alpha < 1d)
+            {
+                graphics.RestoreState();
+            }
+
+            ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
             if (stroke.Alpha < 1d)
             {
                 graphics.SaveState();
@@ -4655,6 +4771,20 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked)
+    {
+        if (percentStacked)
+        {
+            return new ChartValueExtents(0d, 1d);
+        }
+
+        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        (double minValue, double maxValue) = stacked
+            ? GetStackedValueExtents(series, pointCount, percentStacked)
+            : GetClusteredValueExtents(series);
+        return new ChartValueExtents(minValue, maxValue);
     }
 
     private static void StrokeRadarPolygon(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, double radius)
