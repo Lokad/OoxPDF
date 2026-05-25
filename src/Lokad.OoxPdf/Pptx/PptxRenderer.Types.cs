@@ -906,6 +906,21 @@ internal sealed partial class PptxRenderer
         double ExplosionReserve,
         bool HasLegend);
 
+    private enum ChartRadarStyle
+    {
+        Marker,
+        Filled
+    }
+
+    private readonly record struct ChartRadarLayout(
+        ChartPlotBox PlotBox,
+        ChartPolarGeometry Geometry,
+        ChartRadarStyle Style,
+        int PointCount)
+    {
+        public bool IsFilled => Style == ChartRadarStyle.Filled;
+    }
+
     private readonly record struct ChartPlotBoxRatios(double Left, double Top, double Width, double Height)
     {
         public double Right => Left + Width;

@@ -819,17 +819,17 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(radarSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
-                bool filledRadar = string.Equals((string?)radarChart.Element(ChartNamespace + "radarStyle")?.Attribute("val"), "filled", StringComparison.Ordinal);
+                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, radarChart, radarSeries);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderRadarChart(graphics, plotBox, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, filledRadar);
+                RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart), radarSeries, filledRadar));
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart)));
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                 {
-                    fonts.AddRange(RenderRadarValueAxisLabels(theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, filledRadar));
+                    fonts.AddRange(RenderRadarValueAxisLabels(theme, graphics, radarLayout, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits));
                 }
 
                 return true;
@@ -1001,12 +1001,29 @@ internal sealed partial class PptxRenderer
             hasLegend);
     }
 
-    private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, bool filledRadar)
+    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, XElement radarChart, IReadOnlyList<IReadOnlyList<double>> series)
     {
-        double centerYRatio = filledRadar
+        ChartRadarStyle style = ReadRadarStyle(radarChart);
+        return new ChartRadarLayout(
+            plotBox,
+            GetRadarChartGeometry(plotBox, style),
+            style,
+            Math.Max(3, series.Max(values => values.Count)));
+    }
+
+    private static ChartRadarStyle ReadRadarStyle(XElement radarChart)
+    {
+        return string.Equals((string?)radarChart.Element(ChartNamespace + "radarStyle")?.Attribute("val"), "filled", StringComparison.Ordinal)
+            ? ChartRadarStyle.Filled
+            : ChartRadarStyle.Marker;
+    }
+
+    private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, ChartRadarStyle style)
+    {
+        double centerYRatio = style == ChartRadarStyle.Filled
             ? PptxChartMetricRules.FilledRadarCenterYRatio
             : PptxChartMetricRules.MarkerRadarCenterYRatio;
-        double radiusRatio = filledRadar
+        double radiusRatio = style == ChartRadarStyle.Filled
             ? PptxChartMetricRules.FilledRadarRadiusRatio
             : PptxChartMetricRules.MarkerRadarRadiusRatio;
         return new ChartPolarGeometry(
@@ -5499,10 +5516,10 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, bool filledRadar)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartRadarLayout layout, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)
     {
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
-        int pointCount = Math.Max(3, series.Max(values => values.Count));
+        ChartPolarGeometry geometry = layout.Geometry;
+        int pointCount = layout.PointCount;
 
         SetChartStroke(graphics, RadarGridlineDefaultStroke);
         bool hasGridPath = false;
@@ -5537,7 +5554,7 @@ internal sealed partial class PptxRenderer
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
             }
 
-            if (filledRadar)
+            if (layout.IsFilled)
             {
                 ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
                 graphics.SaveState();
@@ -5633,14 +5650,12 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderRadarCategoryLabels(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
-        ChartPlotBox plotBox,
+        ChartRadarLayout layout,
         XDocument chartXml,
         PptxSceneChart? sceneChart,
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
-        IReadOnlyList<string> labels,
-        IReadOnlyList<IReadOnlyList<double>> series,
-        bool filledRadar)
+        IReadOnlyList<string> labels)
     {
         if (labels.Count == 0)
         {
@@ -5648,8 +5663,9 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
-        int pointCount = Math.Max(labels.Count, Math.Max(3, series.Max(values => values.Count)));
+        ChartPlotBox plotBox = layout.PlotBox;
+        ChartPolarGeometry geometry = layout.Geometry;
+        int pointCount = Math.Max(labels.Count, layout.PointCount);
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         double gap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
@@ -5681,17 +5697,17 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PdfFontResource> RenderRadarValueAxisLabels(
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
-        ChartPlotBox plotBox,
+        ChartRadarLayout layout,
         XDocument chartXml,
         PptxSceneChart? sceneChart,
         XElement? valueAxis,
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
-        ChartAxisUnits axisUnits,
-        bool filledRadar)
+        ChartAxisUnits axisUnits)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
+        ChartPlotBox plotBox = layout.PlotBox;
+        ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         double width = fontSize * PptxChartMetricRules.RadarValueLabelWidthFactor;

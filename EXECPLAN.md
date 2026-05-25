@@ -2033,6 +2033,11 @@ High-priority actions:
   - [ ] Promote radar geometry into a typed radar layout model instead of leaving the filled-vs-marker split as
     renderer metric constants. Preserve the current path-geometry gates as the oracle while deriving center,
     radius, label frame, and plot-box reserves from chart layout context.
+  - [x] Introduce the first `ChartRadarLayout` handoff so radar drawing and radar axis labels consume one typed
+    layout record with plot box, style, point count, and resolved center/radius geometry. This is behavior-neutral
+    ownership work; the current center/radius values are still Office-observed metric constants.
+  - [ ] Move the filled-vs-marker radar geometry evidence out of `PptxChartMetricRules` into a resolver that can
+    also own radar label frames, marker envelopes, axis text anchors, and future plot-box reserve semantics.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
@@ -5944,3 +5949,16 @@ the full public `pptx-charts` family passed 28/28 at `artifacts/visual/reports/p
 Remaining long-term gap: the split is now evidence-backed and gated, but it is still a renderer metric rule.
 Radar center/radius, label frames, plot-box reserve, marker geometry, and axis text should move into a typed
 radar layout resolver fed by OOXML plus Office-PDF structural evidence.
+
+Revision note, 2026-05-25: Took the first behavior-neutral step toward that typed radar layout resolver.
+`ChartRadarLayout` now carries the radar plot box, resolved style, point count, and center/radius geometry, and
+the radar chart body plus category/value axis-label renderers all consume that one layout record instead of
+passing `plotBox` plus `filledRadar` and recomputing geometry locally. This makes the ownership boundary match
+the earlier `ChartPolarLayout` handoff for pie/doughnut charts while preserving the existing public PDF-structure
+gates. Validation: focused `pptx-charts` tests passed 38/38; the public marker and filled radar visual gates
+passed at `artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-192413` and
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-192421`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: the record currently owns the handoff, not the derivation. The resolver still delegates
+to style-specific metric constants until radar label frames, marker envelopes, and plot-box reserves are backed by
+Office-PDF structural evidence.
