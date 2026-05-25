@@ -1068,6 +1068,15 @@ High-priority actions:
   with 19 passed, 0 failed, 0 skipped; the full suite passed with 215 passed, 0 failed, 0 skipped; and
   `dotnet pack` succeeded. Remaining gap: stacked horizontal bars still use fixed X-direction accumulation,
   and secondary-axis geometry still needs independently resolved orientation/crossing decisions.
+- [x] 2026-05-25: Consume value-axis reversed orientation for stacked horizontal bar segment accumulation.
+  Stacked horizontal bars now use the same cumulative value-interval model as stacked columns: positive and
+  negative accumulators stay in value space, then each segment maps its start/end values through the shared
+  value-to-plot-coordinate helper for X geometry. A synthetic `maxMin` stacked horizontal bar locks the
+  emitted segment rectangle order, and the public stacked-bar visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-bar-stacked-port/20260525-100338`. Focused chart tests passed with
+  20 passed, 0 failed, 0 skipped; the full suite passed with 216 passed, 0 failed, 0 skipped; and
+  `dotnet pack` succeeded. Remaining gap: secondary-axis geometry, axis side/cross-axis placement, and
+  Office-PDF visual coverage for reversed-axis inside/outside label positions still need separate slices.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1442,9 +1451,10 @@ High-priority actions:
     horizontal data-label offsets.
   - [x] Consume value-axis reversed orientation for stacked column accumulation through cumulative value
     intervals.
-  - [ ] Consume axis crossing/orientation metadata for stacked horizontal bars, value-axis
-    side/cross-axis placement, series coordinate baselines, and secondary axes instead of relying on
-    right-side XML/layout assumptions.
+  - [x] Consume value-axis reversed orientation for stacked horizontal bar accumulation through cumulative
+    value intervals.
+  - [ ] Consume axis crossing/orientation metadata for value-axis side/cross-axis placement, series
+    coordinate baselines, and secondary axes instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4642,6 +4652,19 @@ under reversed orientation. The focused `pptx-charts` non-slow group passed with
 215 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Stacked horizontal bars remain open because
 their X-direction accumulation still uses fixed screen-space movement; secondary-axis combo geometry also
 remains open.
+
+chart reversed stacked horizontal accumulation / 2026-05-25:
+Stacked horizontal bars now share the cumulative value-interval model used by stacked columns. Positive and
+negative accumulators stay in value space, each segment maps its start/end values through the shared
+value-to-plot-coordinate helper on the X axis, and the rectangle is built from those two mapped coordinates.
+This removes the old fixed `positiveX += segmentWidth` and `negativeX -= segmentWidth` screen-space rule
+that was wrong under `maxMin`. A synthetic `maxMin` stacked horizontal bar verifies that later cumulative
+segments move left under reversed orientation. The focused `pptx-charts` non-slow group passed with
+20 passed, 0 failed, 0 skipped; the stacked-bar public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-stacked-port/20260525-100338`; the full suite passed with
+216 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining axis work is now concentrated on
+secondary-axis geometry, side/cross-axis placement, and Office-PDF visual evidence for inside/outside
+data-label positions under reversed axes.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
