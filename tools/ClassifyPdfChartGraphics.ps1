@@ -213,6 +213,11 @@ if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
         $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
         $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
     }
+    elseif ((Is-Near ([double]$topAxis.MinY) ([double]$leftAxis.MaxY) $GridlineBoundsTolerance) -and
+        $maxX -gt $minX -and [double]$leftAxis.MaxY -gt [double]$leftAxis.MinY) {
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+        $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $leftAxis.MinY $maxX $topAxis.MinY))
+    }
 }
 
 $axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)

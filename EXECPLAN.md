@@ -3822,6 +3822,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `HorizontalGridlineGroupCandidate`, `CategoryAxisTickLabel`, and `ValueAxisTickLabel`, but intentionally
   leaves `LegendText` out until right-legend container detection is structural rather than clip-region
   incidental.
+- Observation: Horizontal bar charts need a transposed axis-pair oracle before they can get honest structural
+  gates; the previous axis-pair derivation only handled the vertical-chart case where the horizontal axis is
+  the lower plot edge.
+  Evidence: `ClassifyPdfChartGraphics.ps1` now also derives `AxisPairPlotBoxCandidate` when the horizontal
+  axis aligns with the vertical axis' far end. On `pptx-ladder-11-chart-bar-clustered-port`, this recovers the
+  candidate plot box and vertical gridline group, revealing that the candidate plot box is still shifted left
+  by about `37.75 pt`, the value-label X positions are also left of Office, and the current text classifier can
+  mistake the chart title for data-label text when the recovered bar plot box covers the title baseline.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4292,6 +4300,17 @@ and legend text through chart structural checks. The gated run
 the alignment slice, plus structural deltas under 2 pt: plot-box minY delta `-0.71`, marker X deltas up to
 `-1.54`, category-label Y delta `-0.93`, value-label Y deltas up to `-0.78`, and legend-text X deltas up to
 `-1.49`.
+Horizontal bar structural-oracle probe: `ClassifyPdfChartGraphics.ps1` now derives an axis-pair plot box when
+the horizontal axis lies at the vertical axis' far end, which lets the public
+`pptx-ladder-11-chart-bar-clustered-port` candidate expose `AxisPairPlotBoxCandidate` and
+`VerticalGridlineGroupCandidate` instead of untyped chart graphics only. The probe run at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-112749` stayed visually passing, and the
+reclassified candidate artifacts under `artifacts/tmp-barcluster-cand-112749` show the recovered plot box
+(`144.00 132.48 734.40 482.40`) and vertical gridline group. This is not yet a manifest gate: Office's
+derived plot box is `181.75 111.90 771.88 457.63`, so the candidate is still materially left/vertically
+offset, value-axis label X positions are off, and the text classifier mis-buckets the title as data-label text
+for this bar orientation. Existing structural gates for clustered column, line, and composite charts were
+rerun at `20260525-112941` and remained passing after the classifier extension.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -5046,3 +5065,6 @@ an architectural direction into an enforced regression surface.
 Revision note, 2026-05-25: Tightened the public line-chart gate to include derived plot/gridline and axis
 tick-label structure. The right-legend text gap is preserved as open classifier work rather than hidden behind
 a broad tolerance.
+
+Revision note, 2026-05-25: Extended chart graphics classification for horizontal bar axis-pair plot boxes and
+recorded why `pptx-ladder-11-chart-bar-clustered-port` is still not ready for a strict structural gate.
