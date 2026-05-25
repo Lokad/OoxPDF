@@ -9,8 +9,10 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 4.8,
-    "maxChangedPixelRatioAtThreshold16": 0.044,
-    "minForegroundColorHistogramCorrelation": 0.998
+    "maxMeanAbsoluteError": 1.2,
+    "maxChangedPixelRatioAtThreshold16": 0.01,
+    "minForegroundColorHistogramCorrelation": 0.998,
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"]
   }
 }

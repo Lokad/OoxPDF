@@ -5554,3 +5554,29 @@ radius ratios, legend padding, label radii, and polygonal arc segmentation. The 
 chart layout oracle that derives the plot circle, legend reservation, first-slice basis, explosion envelope,
 label anchors, and Bezier arcs from OOXML plus Office PDF path/text structure across pie, doughnut, and radar
 families rather than treating these ratios as final renderer rules.
+
+Revision note, 2026-05-25: Advanced the manual chart-layout target probes by separating the OOXML
+`layoutTarget` contract from the inner data-plot rectangle. The public `inner`/`outer` fixtures are identical
+horizontal bar charts except for `c:manualLayout/c:layoutTarget`; Office keeps the `inner` target as the data
+plot box, while `outer` first maps the manual box to an outer plot area and then reserves left category-label
+and top value-axis label/tick strips before deriving the inner plot. OOXPDF previously collapsed both targets
+to the same data plot (`311.33,103.41..757.73,397.17`), which hid the difference behind loose raster gates.
+`GetBarChartPlotLayout` now preserves the generic manual-layout path but, for explicit horizontal-bar
+`layoutTarget="outer"`, derives a separate `PlotAreaBox` and `PlotBox` from axis metadata and existing axis
+label/tick metrics. The horizontal-bar title/no-legend default remains unchanged for ordinary bar charts; only
+explicit manual-layout targets use the Office probe baseline, which brought the `inner` target into structural
+alignment without regressing the existing clustered-bar case. Focused `pptx-charts` tests passed with 37/37,
+the full public `pptx-charts` visual family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T16:17:26.1711715+02:00`, and the probes now
+have PDF chart-graphics structure gates for both
+`AxisPairPlotBoxCandidate` and `PlotAreaClipBoxCandidate`: `pptx-ladder-11-chart-plot-layout-target-inner-probe`
+at `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-161540`, MAE
+`0.987508680555556`, changed16 `0.00856722608024691`; and
+`pptx-ladder-11-chart-plot-layout-target-outer-probe` at
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-161540`, MAE
+`1.68000831886574`, changed16 `0.0137905092592593`, with the outer plot-box bounds within the new 3 pt
+structural tolerance. Remaining long-term gap: this is still a bar-family structural resolver backed by
+Office-observed metric constants. The durable target is a shared chart layout oracle that models chart area,
+plot area, inner plot, axis labels, tick marks, title, legend, and clip boxes together for all cartesian charts,
+so `layoutTarget`, `xMode/yMode/wMode/hMode`, and axis-side reservations are interpreted once instead of being
+reimplemented by chart family.
