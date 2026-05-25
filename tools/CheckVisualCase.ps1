@@ -373,6 +373,9 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     if ($manifest.expected.compareChartGraphicsStructurePathCommandCounts -eq $true) {
         $compareChartArgs.MatchPathCommandCounts = $true
     }
+    if ($manifest.expected.compareChartGraphicsStructurePathOperators -eq $true) {
+        $compareChartArgs.MatchPathOperators = $true
+    }
     if ($manifest.expected.compareChartGraphicsStructureStrokeColors -eq $true) {
         $compareChartArgs.MatchStrokeColor = $true
     }

@@ -6143,3 +6143,21 @@ family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated fro
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
 long-term gap: replace the still-shared pie/doughnut center/radius constants with Office-PDF-backed rules that use
 `ChartPolarKind`, legend overlay/position, and explosion reserve explicitly.
+
+Revision note, 2026-05-25: Aligned pie-slice PDF path structure with Office before further polar geometry tuning.
+Raw Office PDF inspection showed that pie slices start at the outer arc, draw the arc, then line back to the center
+before closing; OOXPDF had been starting at the center, drawing a radial line to the arc, then closing from the arc
+back to the center. The raster output is effectively equivalent, but the PDF structure is not. `AppendPieOrDoughnutSlicePath`
+now emits solid pie wedges in Office's arc-first order. The chart graphics oracle now records a compact
+`PathOperators` signature and `ComparePdfGraphicsOperations.ps1` plus `CheckVisualCase.ps1` support opt-in path
+operator-sequence comparison. All four public pie/doughnut manifests now require matching path operator sequences
+in addition to operator, segment-count, command-count, path-geometry, and broad bounds gates. Validation: focused
+`pptx-charts` tests passed 38/38; the five-category pie case passed at
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-202716`; the exploded pie case passed at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-202739`; both doughnut cases passed manual
+path-operator comparison before their manifests were opted in; the full public `pptx-charts` family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated from the `20260525-202819` run; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: path operator parity does not fix the remaining polar center/radius deltas; the next layout work
+should use the typed `ChartPolarKind` and the polar path-geometry oracle to derive Office-like center/radius rules
+for legend and explosion contexts.

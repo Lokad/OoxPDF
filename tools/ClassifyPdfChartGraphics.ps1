@@ -36,6 +36,13 @@ function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Round([double]$value) { return [Math]::Round($value, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+function PathOperators($op) {
+    if ($null -eq $op.PathCommands) {
+        return ""
+    }
+
+    return (@($op.PathCommands) | ForEach-Object { [string]$_.Operator }) -join "/"
+}
 
 function Get-RadarSpokePathGeometry($op) {
     if ($null -eq $op.PathCommands) {
@@ -113,6 +120,7 @@ function New-Structure($kind, $op) {
         LineCount = IntValue $op.LineCount
         CurveCount = IntValue $op.CurveCount
         CloseCount = IntValue $op.CloseCount
+        PathOperators = PathOperators $op
         MinX = [double]$op.MinX
         MinY = [double]$op.MinY
         MaxX = [double]$op.MaxX
@@ -148,6 +156,7 @@ function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount
         LineCount = 0
         CurveCount = 0
         CloseCount = 0
+        PathOperators = ""
         MinX = Round $minX
         MinY = Round $minY
         MaxX = Round $maxX
@@ -197,6 +206,7 @@ function Copy-StructureAsKind($kind, $structure) {
         LineCount = IntValue $structure.LineCount
         CurveCount = IntValue $structure.CurveCount
         CloseCount = IntValue $structure.CloseCount
+        PathOperators = $structure.PathOperators
         MinX = [double]$structure.MinX
         MinY = [double]$structure.MinY
         MaxX = [double]$structure.MaxX

@@ -19,6 +19,7 @@
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
     "compareChartGraphicsStructurePathGeometry": true,
     "maxChartGraphicsStructurePathGeometryDelta": 33
   }

@@ -21,6 +21,8 @@ param(
 
     [switch] $MatchPathCommandCounts,
 
+    [switch] $MatchPathOperators,
+
     [switch] $MatchStrokeColor,
 
     [switch] $MatchLineCap,
@@ -184,6 +186,7 @@ foreach ($pair in $pairs) {
         (IntValue $ref.LineCount) -eq (IntValue $cand.LineCount) -and
         (IntValue $ref.CurveCount) -eq (IntValue $cand.CurveCount) -and
         (IntValue $ref.CloseCount) -eq (IntValue $cand.CloseCount))
+    $pathOperatorsOk = (-not $MatchPathOperators) -or [string]$ref.PathOperators -eq [string]$cand.PathOperators
     $strokeColorOk = (-not $MatchStrokeColor) -or (StrokeColorEqual $ref.StrokeColor $cand.StrokeColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
     $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
@@ -201,7 +204,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaPathCenterX) -le $PathGeometryTolerance -and
         [Math]::Abs($deltaPathCenterY) -le $PathGeometryTolerance -and
         [Math]::Abs($deltaPathRadius) -le $PathGeometryTolerance)
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -217,9 +220,12 @@ foreach ($pair in $pairs) {
         CandSeg = $cand.SegmentCount
         RefPath = "$(IntValue $ref.MoveCount)/$(IntValue $ref.LineCount)/$(IntValue $ref.CurveCount)/$(IntValue $ref.CloseCount)"
         CandPath = "$(IntValue $cand.MoveCount)/$(IntValue $cand.LineCount)/$(IntValue $cand.CurveCount)/$(IntValue $cand.CloseCount)"
+        RefPathOps = $ref.PathOperators
+        CandPathOps = $cand.PathOperators
         OperatorOk = $operatorOk
         SegmentCountOk = $segmentCountOk
         PathCommandCountsOk = $pathCommandCountsOk
+        PathOperatorsOk = $pathOperatorsOk
         RefStrokeColor = $ref.StrokeColor
         CandStrokeColor = $cand.StrokeColor
         StrokeColorOk = $strokeColorOk

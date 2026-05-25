@@ -5852,9 +5852,9 @@ internal sealed partial class PptxRenderer
         double outerStartY = centerY + Math.Sin(startAngle) * outerRadius;
         if (innerRadius <= 0d)
         {
-            graphics.MoveTo(centerX, centerY);
-            graphics.LineTo(outerStartX, outerStartY);
+            graphics.MoveTo(outerStartX, outerStartY);
             AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle, moveToStart: false);
+            graphics.LineTo(centerX, centerY);
             graphics.ClosePath();
             return;
         }
