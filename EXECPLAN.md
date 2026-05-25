@@ -1158,6 +1158,14 @@ High-priority actions:
   `VerticalGridlineGroupCandidate` alongside the plot box and axis strokes. Focused `pptx-charts` tests
   passed with 26 passed, 0 failed, 0 skipped. Remaining gaps: horizontal-axis tick-label Y, value-label
   positions, and chart-title classification/placement.
+- [x] 2026-05-25: Gate public horizontal-bar bottom value-axis tick-label placement structurally.
+  The horizontal value-axis label baseline now uses the same Office-observed bottom-axis offset factor as the
+  supported vertical category-axis label path, moving the public clustered-bar bottom tick labels from a
+  `-4.12 pt` Y delta to `0.01 pt`. The `pptx-ladder-11-chart-bar-clustered-port` manifest now also gates
+  `CategoryAxisTickLabel` text structures for the 11 bottom value-axis labels; public visual run
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114904` passed with X deltas up to
+  `-0.12 pt` and Y deltas `0.01 pt`. Remaining gaps: side category/value label positions and chart-title
+  classification/placement.
 - [ ] Replace fixed chart auto tick target constants with an Office-aligned axis layout model that derives
   target tick density from axis length, label text extents, number format, orientation, and available label
   bands. The new horizontal-axis target is useful evidence, but it is still a named metric rule; the long-term
@@ -3849,8 +3857,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: `ClassifyPdfChartGraphics.ps1` now also derives `AxisPairPlotBoxCandidate` when the horizontal
   axis aligns with the vertical axis' far end, and the renderer now uses a horizontal-bar title/no-legend plot
   box plus Office-style bottom value-axis placement. `pptx-ladder-11-chart-bar-clustered-port` now gates the
-  plot box, the 10-segment vertical gridline group, and axis strokes within 1 pt. Remaining ungated gaps are
-  horizontal-axis tick-label Y, value-label positions, and chart-title text classification.
+  plot box, the 10-segment vertical gridline group, axis strokes, and bottom value-axis tick labels within
+  1 pt. Remaining ungated gaps are side category/value label positions and chart-title text classification.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4136,10 +4144,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   scale, and packed bottom legend placement to Office PDF evidence. The composite chart is now protected by
   structural gates for the derived gridline/axis plot box, legend markers, category tick labels, value tick
   labels, and legend text. The public clustered horizontal-bar chart now additionally gates its derived plot
-  box, two axis strokes, and 10-segment vertical gridline group. These remove both cases from the pre-existing
-  failure list and turn the bar case into a structural-regression surface, while broader chart-family layout
-  work remains open because the current named metric rules still need to be replaced by systematic chart
-  structural oracle tooling.
+  box, two axis strokes, 10-segment vertical gridline group, and bottom value-axis tick-label text positions.
+  These remove both cases from the pre-existing failure list and turn the bar case into a structural-regression
+  surface, while broader chart-family layout work remains open because the current named metric rules still
+  need to be replaced by systematic chart structural oracle tooling.
 
 ## Concrete Steps
 
@@ -4349,6 +4357,15 @@ a 0..50 auto axis. Public visual case `pptx-ladder-11-chart-bar-clustered-port` 
 label Y about `-4.12 pt`, value-label positions, and chart-title classification/placement. Long-term gap:
 replace the fixed auto tick target constants with an Office-aligned axis layout model driven by axis length,
 label extents, number format, and orientation.
+Horizontal bar bottom tick-label slice: `HorizontalValueAxisTopOffsetFactor` now matches the existing
+Office-observed bottom-axis offset factor instead of using the taller 1.35 line-height multiplier. Public
+visual case `pptx-ladder-11-chart-bar-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114904` after adding
+`CategoryAxisTickLabel` text-structure comparison for the bottom value-axis labels; candidate deltas were X
+up to `-0.12 pt` and Y `0.01 pt`. Focused `pptx-charts` tests passed with 26 passed, 0 failed, 0 skipped;
+the full suite passed with 222 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining ungated
+gaps: side label placement and the chart title still classifies as `DataLabelText` because candidate title
+placement remains inside the derived plot box.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -5112,3 +5129,7 @@ Revision note, 2026-05-25: Added the horizontal bar gridline-density structural 
 now compares the Office/candidate 10-segment vertical gridline group; remaining bar gaps are text
 placement/classification and replacing fixed auto tick targets with an Office-aligned axis layout model, not
 gridline density.
+
+Revision note, 2026-05-25: Added the horizontal bar bottom tick-label structural gate. The clustered-bar case
+now compares bottom value-axis tick-label text positions under the chart-text harness; remaining text work is
+side label placement and title placement/classification.
