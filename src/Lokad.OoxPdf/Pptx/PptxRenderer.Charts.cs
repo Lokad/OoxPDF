@@ -850,8 +850,7 @@ internal sealed partial class PptxRenderer
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                bool hasLegend = legend.Visible && !legend.Overlay;
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, hasLegend);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, legend);
                 RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSeries[0], pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart));
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -874,8 +873,7 @@ internal sealed partial class PptxRenderer
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                bool hasLegend = legend.Visible && !legend.Overlay;
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, hasLegend);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, legend);
                 RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart));
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -974,7 +972,7 @@ internal sealed partial class PptxRenderer
             : defaultPlotBox;
     }
 
-    private static ChartPolarGeometry GetPieOrDoughnutGeometry(ChartPolarKind kind, ChartPlotBox plotBox, double explosionReserve = 0d, bool hasLegend = false)
+    private static ChartPolarGeometry GetPieOrDoughnutGeometry(ChartPolarKind kind, ChartPlotBox plotBox, double explosionReserve, ChartLegendLayout legend)
     {
         double radius = Math.Min(plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio(kind);
         if (explosionReserve > 0d)
@@ -982,9 +980,10 @@ internal sealed partial class PptxRenderer
             radius /= 1d + explosionReserve;
         }
 
-        double centerXRatio = GetPieOrDoughnutCenterXRatio(kind, hasLegend);
+        double centerXRatio = GetPieOrDoughnutCenterXRatio(kind, legend);
+        double centerXOffset = GetPieOrDoughnutCenterXOffset(kind, radius, explosionReserve, legend);
         return new ChartPolarGeometry(
-            plotBox.X + plotBox.Width * centerXRatio,
+            plotBox.X + plotBox.Width * centerXRatio + centerXOffset,
             plotBox.Y + plotBox.Height * PptxChartMetricRules.PieCenterYRatio,
             radius);
     }
@@ -999,23 +998,40 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double GetPieOrDoughnutCenterXRatio(ChartPolarKind kind, bool hasLegend)
+    private static double GetPieOrDoughnutCenterXRatio(ChartPolarKind kind, ChartLegendLayout legend)
     {
+        bool hasLegend = legend.Visible && !legend.Overlay;
         return kind switch
         {
             ChartPolarKind.Pie => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "r", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
             ChartPolarKind.Doughnut => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
             _ => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
         };
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, bool hasLegend)
+    private static double GetPieOrDoughnutCenterXOffset(ChartPolarKind kind, double radius, double explosionReserve, ChartLegendLayout legend)
+    {
+        if (kind == ChartPolarKind.Doughnut &&
+            explosionReserve > 0d &&
+            legend.Visible &&
+            !legend.Overlay &&
+            string.Equals(legend.Position, "r", StringComparison.Ordinal))
+        {
+            return radius * explosionReserve * PptxChartMetricRules.DoughnutExplosionCenterOffsetRatio;
+        }
+
+        return 0d;
+    }
+
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, ChartLegendLayout legend)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
+        bool hasLegend = legend.Visible && !legend.Overlay;
         return new ChartPolarLayout(
             kind,
             plotBox,
-            GetPieOrDoughnutGeometry(kind, plotBox, explosionReserve, hasLegend),
+            GetPieOrDoughnutGeometry(kind, plotBox, explosionReserve, legend),
             explosionReserve,
             hasLegend);
     }

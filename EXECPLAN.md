@@ -6213,3 +6213,22 @@ left of the candidate while radii stay within about `0.14 pt`. Validation: the f
 passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-204349` run. Remaining long-term
 gap: move doughnut center placement out of shared pie constants and into typed `ChartPolarKind`/legend/explosion
 layout rules; do not adjust hole size or outer radius based on the current evidence.
+
+Revision note, 2026-05-25: Moved doughnut center placement onto that typed layout path instead of changing shared
+pie constants. `ResolvePieOrDoughnutLayout` now receives the full `ChartLegendLayout`, and
+`GetPieOrDoughnutGeometry` applies an Office-PDF-backed doughnut rule only for right non-overlay legends:
+normal doughnuts use center-X ratio `0.3988`, while exploded doughnuts add `explosionReserve * radius` to the base
+center before per-slice explosion offsets. Pie behavior remains unchanged. This reduced public doughnut annulus
+center drift from `12.23 pt` to about `0.02 pt` in the normal case and from about `25 pt` to `0.29..0.33 pt` in the
+exploded case; outer-radius and hole-radius drift stayed small (`0.07..0.18 pt`). The doughnut slice path-geometry
+gates were tightened to `0.6 pt`, while the envelope gates remain looser (`10.4 pt` normal, `4 pt` exploded)
+because the envelope is still distribution/legend dependent rather than a true plot circle. Validation: focused
+`pptx-charts` tests passed 38/38; the focused polar visual cases passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-205026`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-205032`,
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-205037`, and
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-205042`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-205058` run; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: generalize polar layout from the two public right-legend doughnut probes to a chart-kind/legend
+position/explosion-reserve model covering left/top/bottom/overlay legends and no-legend doughnuts.

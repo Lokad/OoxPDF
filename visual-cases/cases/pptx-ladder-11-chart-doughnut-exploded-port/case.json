@@ -11,7 +11,7 @@
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 5.9,
     "maxChangedPixelRatioAtThreshold16": 0.063,
-    "maxChartGraphicsStructureBoundsDelta": 34,
+    "maxChartGraphicsStructureBoundsDelta": 8,
     "compareChartGraphicsStructureKinds": [
       "PolarPlotBoxCandidate",
       "PolarSliceCandidate"
@@ -21,9 +21,9 @@
     "compareChartGraphicsStructurePathCommandCounts": true,
     "compareChartGraphicsStructurePathOperators": true,
     "compareChartGraphicsStructurePathGeometry": true,
-    "maxChartGraphicsStructurePathGeometryDelta": 33,
+    "maxChartGraphicsStructurePathGeometryDelta": 4,
     "maxChartGraphicsStructurePathGeometryDeltaByKind": {
-      "PolarSliceCandidate": 25.1
+      "PolarSliceCandidate": 0.6
     }
   }
 }
