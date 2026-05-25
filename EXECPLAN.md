@@ -5199,3 +5199,9 @@ regressing back to bar-only logic. Focused chart tests passed with 28/28. Remain
 currently the observed single-series-name case; public Office-PDF probes are still needed for multi-series charts,
 blank series names, explicit title deletion, and chart families where Office may use a default title string rather
 than a series name.
+
+Revision note, 2026-05-25: Added guard coverage for the auto-title inference boundary. `PptxChartAutoTitleDeletedSuppressesSingleSeriesName`
+locks `autoTitleDeleted=true` as an explicit suppression of inferred titles, and
+`PptxChartAutoTitleDoesNotInventAmbiguousMultiSeriesTitle` keeps multi-series charts titleless until public
+Office evidence defines a broader rule. A small chart-scene fixture helper now keeps these probes model-level and
+independent of renderer pixel tolerances. Focused chart tests passed with 30/30.
