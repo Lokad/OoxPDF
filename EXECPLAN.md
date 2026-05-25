@@ -1089,6 +1089,17 @@ High-priority actions:
   binding still prefer right-side axes, value-axis labels still use tick-label side rules rather than full
   axis-line/crossing placement, and horizontal bar axis-line placement remains a separate Office-PDF-backed
   slice.
+- [x] 2026-05-25: Discover supported secondary value axes by axis identity instead of right-side position.
+  Secondary value-axis lookup now selects a visible `c:valAx` whose `axId` differs from the primary chart's
+  value-axis `axId`, then uses the existing scene/XML side resolver for its stroke and label defaults. The
+  old right-side fallback remains only when the primary value axis cannot be identified. A synthetic combo
+  column chart with the primary value axis on the right and a secondary value axis on the left locks both
+  vertical strokes on their own plot edges. Focused `pptx-charts` tests passed with 22 passed, 0 failed,
+  0 skipped; the clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-101934`; the full suite passed with
+  218 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: combo-chart value scales,
+  data labels, and series geometry still need explicit secondary-axis binding beyond axis strokes and label
+  defaults.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -2763,9 +2774,9 @@ document-specific business content into public notes.
   transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text
   inside cells, and precise row/column sizing.
-- [ ] Charts: cached chart images, chart XML rendering, secondary-axis binding, horizontal axis-line
-  placement, labels, legends, series styling, grouped/stacked families, line charts, combo charts, and
-  embedded chart data.
+- [ ] Charts: cached chart images, chart XML rendering, secondary-axis scale binding for combo geometry and
+  labels, horizontal axis-line placement, labels, legends, series styling, grouped/stacked families, line
+  charts, combo charts, and embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
 - [ ] Slide inheritance: deeper master/layout placeholder resolution, theme variants, background styles,
   footer/date/slide-number placeholders, and hidden placeholder semantics.
@@ -3847,6 +3858,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `RenderBarChart` and `RenderLineChart` still drew primary vertical value-axis strokes at `plotX` and
   secondary strokes at `plotX + plotWidth`. The new synthetic right-side-axis chart would have failed before
   the stroke renderer consumed the same scene/XML side metadata.
+- Observation: Secondary value-axis identity and secondary value-axis side are separate concerns.
+  Evidence: a synthetic combo chart with primary `valAx` on the right and secondary `valAx` on the left showed
+  that selecting secondary axes by `axPos="r"` finds the primary axis or misses the secondary axis entirely.
+  Selecting the non-primary `axId` first, then applying `axPos`, produces both vertical axis strokes at their
+  declared sides.
 
 ## Decision Log
 
@@ -3887,6 +3903,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: OOXML `c:axPos` locates the axis line, while `c:tickLblPos` can independently place labels high,
   low, next to the axis, or hide them. Keeping these as separate renderer inputs prevents a label-placement
   shortcut from becoming a hardcoded axis geometry rule.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Discover secondary value axes by value-axis identity before applying side placement.
+  Rationale: Office chart XML can place primary and secondary axes on either side. Using `axPos="r"` as the
+  definition of secondary bakes a layout convention into model selection and fails when the primary axis is
+  right-sided or the secondary axis is left-sided.
   Date/Author: 2026-05-25 / Codex.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
@@ -3972,7 +3993,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-217 passed, 0 failed, 0 skipped
+218 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -4025,6 +4046,12 @@ passed with 21 passed, 0 failed, 0 skipped. Public visual case
 `AxisPairPlotBoxCandidate`, `HorizontalGridlineGroupCandidate`, `CategoryAxisTickLabel`, and
 `ValueAxisTickLabel` structural comparisons. Full console suite passed with 217 passed, 0 failed, 0 skipped.
 `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Secondary-axis identity slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 22 passed, 0 failed, 0 skipped. Public visual case
+`pptx-ladder-11-chart-column-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-101934`. Full console suite passed with
+218 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -4729,3 +4756,6 @@ trimming should be done in small audited slices and should preserve open progres
 Revision note, 2026-05-25: Added the completed chart value-axis side-placement slice, narrowed the remaining
 chart-axis backlog to secondary-axis binding and horizontal/cross-axis placement, and refreshed validation
 evidence after the new public synthetic test, clustered-column visual gate, full console suite, and pack run.
+
+Revision note, 2026-05-25: Added the completed secondary value-axis identity slice, preserving the remaining
+secondary-axis work as scale/series/label binding rather than axis-stroke discovery.
