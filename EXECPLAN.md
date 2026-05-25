@@ -5873,3 +5873,19 @@ ratio at threshold 16 `0.1061`; the full public `pptx-charts` family passed 28/2
 succeeded. Remaining long-term radar gap: the center/radius, gridline stroke width/color,
 label placement, and radar plot-box derivation are still approximate metric rules rather than an Office-PDF-derived
 typed radar layout oracle.
+
+Revision note, 2026-05-25: Tightened radar grid styling from raster-only approximation to PDF structural parity.
+`ComparePdfGraphicsOperations.ps1` and `CheckVisualCase.ps1` now support opt-in stroke color, line-cap, and
+line-join comparisons; the radar manifests use those gates together with a `0.01 pt` line-width tolerance. OOXPDF
+now emits the Office-observed default radar grid stroke (`0.75 pt`, gray `0.525`, cap `0`, join `1`) for empty
+radar major-gridline styling. This intentionally raises the two-series radar MAE slightly because the darker,
+more correct grid makes the still-open geometry offset more visible; the two-series raster gate was narrowed to
+`3.3` rather than hiding the change behind a broad tolerance. Validation: focused `pptx-charts` tests passed
+38/38; `pptx-ladder-11-chart-radar-2series-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-190101` with MAE `3.2425` and threshold-16
+changed-pixel ratio `0.0381`; `pptx-ladder-11-chart-radar-filled-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-190111` with MAE `3.9370` and threshold-16
+changed-pixel ratio `0.1055`; the full public `pptx-charts` family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T19:03:17.7309827+02:00`; and `dotnet pack`
+succeeded. Remaining long-term radar gap is now almost entirely geometry and labels: derive the radar
+center/radius/label frame from Office-PDF evidence instead of the current polar metric ratios.

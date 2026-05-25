@@ -19,7 +19,13 @@ param(
 
     [switch] $MatchSegmentCount,
 
-    [switch] $MatchPathCommandCounts
+    [switch] $MatchPathCommandCounts,
+
+    [switch] $MatchStrokeColor,
+
+    [switch] $MatchLineCap,
+
+    [switch] $MatchLineJoin
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +59,34 @@ function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function Delta([double] $left, [double] $right) { return [Math]::Round($right - $left, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+function ColorValues($value) {
+    $text = [string]$value
+    if ($text -match '^G:(?<g>[0-9.]+)$') {
+        $g = [double]$Matches['g']
+        return @($g, $g, $g)
+    }
+
+    if ($text -match '^RG:(?<r>[0-9.]+),(?<g>[0-9.]+),(?<b>[0-9.]+)$') {
+        return @([double]$Matches['r'], [double]$Matches['g'], [double]$Matches['b'])
+    }
+
+    return @()
+}
+function StrokeColorEqual($left, $right) {
+    $leftValues = @(ColorValues $left)
+    $rightValues = @(ColorValues $right)
+    if ($leftValues.Count -eq 0 -or $rightValues.Count -eq 0) {
+        return [string]$left -eq [string]$right
+    }
+
+    for ($i = 0; $i -lt 3; $i++) {
+        if ([Math]::Abs($leftValues[$i] - $rightValues[$i]) -gt 0.002d) {
+            return $false
+        }
+    }
+
+    return $true
+}
 
 $referenceOps = Select-Ops (Read-JsonArray $Reference)
 $candidateOps = Select-Ops (Read-JsonArray $Candidate)
@@ -145,7 +179,10 @@ foreach ($pair in $pairs) {
         (IntValue $ref.LineCount) -eq (IntValue $cand.LineCount) -and
         (IntValue $ref.CurveCount) -eq (IntValue $cand.CurveCount) -and
         (IntValue $ref.CloseCount) -eq (IntValue $cand.CloseCount))
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk) { "ok" } else { "delta" }
+    $strokeColorOk = (-not $MatchStrokeColor) -or (StrokeColorEqual $ref.StrokeColor $cand.StrokeColor)
+    $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
+    $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -164,6 +201,15 @@ foreach ($pair in $pairs) {
         OperatorOk = $operatorOk
         SegmentCountOk = $segmentCountOk
         PathCommandCountsOk = $pathCommandCountsOk
+        RefStrokeColor = $ref.StrokeColor
+        CandStrokeColor = $cand.StrokeColor
+        StrokeColorOk = $strokeColorOk
+        RefLineCap = $ref.LineCap
+        CandLineCap = $cand.LineCap
+        LineCapOk = $lineCapOk
+        RefLineJoin = $ref.LineJoin
+        CandLineJoin = $cand.LineJoin
+        LineJoinOk = $lineJoinOk
         DeltaMinX = $deltaMinX
         DeltaMinY = $deltaMinY
         DeltaMaxX = $deltaMaxX

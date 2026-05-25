@@ -5498,8 +5498,7 @@ internal sealed partial class PptxRenderer
         ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
         int pointCount = Math.Max(3, series.Max(values => values.Count));
 
-        graphics.SetStrokeRgb(180, 180, 180);
-        graphics.SetLineWidth(0.5d);
+        SetChartStroke(graphics, RadarGridlineDefaultStroke);
         bool hasGridPath = false;
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
         {
@@ -5845,6 +5844,8 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
     private static ChartSeriesStroke ChartNegativeBarDefaultStroke { get; } = new(new RgbColor(0, 0, 0), 1d, 0.75d);
+
+    private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1);
 
     private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, string majorTickMark)
     {

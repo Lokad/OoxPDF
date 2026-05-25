@@ -373,6 +373,15 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     if ($manifest.expected.compareChartGraphicsStructurePathCommandCounts -eq $true) {
         $compareChartArgs.MatchPathCommandCounts = $true
     }
+    if ($manifest.expected.compareChartGraphicsStructureStrokeColors -eq $true) {
+        $compareChartArgs.MatchStrokeColor = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureLineCaps -eq $true) {
+        $compareChartArgs.MatchLineCap = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureLineJoins -eq $true) {
+        $compareChartArgs.MatchLineJoin = $true
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
     if ($LASTEXITCODE -ne 0) {

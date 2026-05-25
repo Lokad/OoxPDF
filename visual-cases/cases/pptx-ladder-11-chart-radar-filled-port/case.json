@@ -12,13 +12,16 @@
     "maxMeanAbsoluteError": 4.3,
     "maxChangedPixelRatioAtThreshold16": 0.108,
     "maxChartGraphicsStructureBoundsDelta": 36,
-    "maxChartGraphicsStructureLineWidthDelta": 0.3,
+    "maxChartGraphicsStructureLineWidthDelta": 0.01,
     "compareChartGraphicsStructureKinds": [
       "RadarRingGridGroupCandidate",
       "RadarSpokeGroupCandidate"
     ],
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
-    "compareChartGraphicsStructurePathCommandCounts": true
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructureStrokeColors": true,
+    "compareChartGraphicsStructureLineCaps": true,
+    "compareChartGraphicsStructureLineJoins": true
   }
 }
