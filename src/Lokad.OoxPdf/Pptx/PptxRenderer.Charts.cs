@@ -5664,35 +5664,42 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
         ChartPlotBox plotBox = layout.PlotBox;
-        ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = Math.Max(labels.Count, layout.PointCount);
+        var runs = new List<TextRun>(labels.Count);
+        for (int i = 0; i < labels.Count; i++)
+        {
+            ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, labels[i], style, i, pointCount);
+            runs.Add(CreateChartLabelRun(labels[i], frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
+        }
+
+        return RenderTextRuns(runs, graphics, "RCA");
+    }
+
+    private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, int index, int pointCount)
+    {
+        ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         double verticalGap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
         double horizontalGap = fontSize * ResolveRadarCategoryLabelHorizontalGapFactor(layout.Style);
-        var runs = new List<TextRun>(labels.Count);
-        for (int i = 0; i < labels.Count; i++)
+        double angle = GetRadarPointAngle(index, pointCount);
+        double cosine = Math.Cos(angle);
+        double anchorX = geometry.CenterX + cosine * (geometry.Radius + horizontalGap);
+        double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + verticalGap);
+        double width = Math.Max(fontSize * 2d, EstimateChartTextWidth(label, fontSize) + fontSize);
+        TextAlignment alignment = cosine > 0.25d
+            ? TextAlignment.Left
+            : cosine < -0.25d
+                ? TextAlignment.Right
+                : TextAlignment.Center;
+        double x = alignment switch
         {
-            double angle = GetRadarPointAngle(i, pointCount);
-            double anchorX = geometry.CenterX + Math.Cos(angle) * (geometry.Radius + horizontalGap);
-            double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + verticalGap);
-            double width = Math.Max(fontSize * 2d, EstimateChartTextWidth(labels[i], fontSize) + fontSize);
-            TextAlignment alignment = Math.Cos(angle) > 0.25d
-                ? TextAlignment.Left
-                : Math.Cos(angle) < -0.25d
-                    ? TextAlignment.Right
-                    : TextAlignment.Center;
-            double x = alignment switch
-            {
-                TextAlignment.Left => anchorX,
-                TextAlignment.Right => anchorX - width,
-                _ => anchorX - width / 2d
-            };
-            double y = ResolveRadarCategoryLabelBaselineY(anchorY, angle, height);
-            runs.Add(CreateChartLabelRun(labels[i], x, y, width, height, plotBox, style, alignment));
-        }
-
-        return RenderTextRuns(runs, graphics, "RCA");
+            TextAlignment.Left => anchorX,
+            TextAlignment.Right => anchorX - width,
+            _ => anchorX - width / 2d
+        };
+        double y = ResolveRadarCategoryLabelBaselineY(anchorY, angle, height);
+        return new ChartRadarLabelFrame(x, y, width, height, alignment);
     }
 
     private static double ResolveRadarCategoryLabelHorizontalGapFactor(ChartRadarStyle style)
@@ -5724,21 +5731,27 @@ internal sealed partial class PptxRenderer
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
         ChartPlotBox plotBox = layout.PlotBox;
+        var runs = new List<TextRun>();
+        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
+        {
+            double ratio = GetChartValuePlotRatio(extents, tickValue, false);
+            string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis);
+            ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, style, ratio);
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
+        }
+
+        return RenderTextRuns(runs, graphics, "RVA");
+    }
+
+    private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, ChartTextStyle style, double ratio)
+    {
         ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         double width = fontSize * PptxChartMetricRules.RadarValueLabelWidthFactor;
         double x = geometry.CenterX - width - fontSize * PptxChartMetricRules.RadarValueLabelGapFactor;
-        var runs = new List<TextRun>();
-        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
-        {
-            double ratio = GetChartValuePlotRatio(extents, tickValue, false);
-            double y = ResolveRadarValueAxisLabelBaselineY(layout, ratio, height);
-            string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis);
-            runs.Add(CreateChartLabelRun(label, x, y, width, height, plotBox, style, TextAlignment.Right));
-        }
-
-        return RenderTextRuns(runs, graphics, "RVA");
+        double y = ResolveRadarValueAxisLabelBaselineY(layout, ratio, height);
+        return new ChartRadarLabelFrame(x, y, width, height, TextAlignment.Right);
     }
 
     private static double ResolveRadarValueAxisLabelBaselineY(ChartRadarLayout layout, double ratio, double labelHeight)

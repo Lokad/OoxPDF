@@ -6050,3 +6050,18 @@ passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
 long-term gap: these category-label factors are now Office-observed and publicly gated, but they still live as
 metric constants. The durable destination is a typed radar label-frame/layout model that owns category and value
 label frame rectangles, marker envelopes, and title/plot reserves before text emission.
+
+Revision note, 2026-05-25: Took the first behavior-neutral step toward that typed radar label-frame model.
+`ChartRadarLabelFrame` now represents the resolved rectangle and alignment consumed by radar category and value
+axis text emission. `RenderRadarCategoryLabels` and `RenderRadarValueAxisLabels` no longer compute text-frame
+coordinates inline; they call explicit frame resolvers and then hand the frame to `CreateChartLabelRun`. This does
+not remove the Office-observed constants yet, but it gives category/value label rectangles a named ownership point
+inside the radar layout path rather than leaving them as unstructured renderer arithmetic. Validation: focused
+`pptx-charts` tests passed 38/38; the filled radar visual case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200054`; the marker radar visual case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-200108`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: the new frame type is still produced from metric constants. The next structural improvement should
+feed radar label frames from layout evidence such as chart title/legend reserves, marker envelope, and Office PDF
+text/frame observations, then apply the same frame contract to non-radar chart labels.

@@ -927,6 +927,13 @@ internal sealed partial class PptxRenderer
         public bool IsFilled => Style == ChartRadarStyle.Filled;
     }
 
+    private readonly record struct ChartRadarLabelFrame(
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        TextAlignment Alignment);
+
     private readonly record struct ChartPlotBoxRatios(double Left, double Top, double Width, double Height)
     {
         public double Right => Left + Width;
