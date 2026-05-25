@@ -36,6 +36,13 @@ function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Round([double]$value) { return [Math]::Round($value, 6) }
 
+function BoundsDistance($a, $b) {
+    return [Math]::Abs([double]$a.MinX - [double]$b.MinX) +
+        [Math]::Abs([double]$a.MinY - [double]$b.MinY) +
+        [Math]::Abs([double]$a.MaxX - [double]$b.MaxX) +
+        [Math]::Abs([double]$a.MaxY - [double]$b.MaxY)
+}
+
 function New-Structure($kind, $op) {
     [pscustomobject]@{
         Kind = $kind
@@ -287,12 +294,39 @@ if ($clipBoxes.Count -gt 0) {
         -not ([Math]::Abs([double]$_.Width - [double]$largestWidth) -le 0.01 -and [Math]::Abs([double]$_.Height - [double]$largestHeight) -le 0.01)
     })
     if ($nonPageClipBoxes.Count -gt 0) {
-        $dominantGroup = $nonPageClipBoxes |
+        $clipGroups = @($nonPageClipBoxes |
             Group-Object -Property MinX, MinY, MaxX, MaxY |
-            Sort-Object -Property Count -Descending |
-            Select-Object -First 1
-        $clip = @($dominantGroup.Group)[0]
-        $structures.Add((New-DerivedStructure "PlotAreaClipBoxCandidate" $clip.PageNumber "DominantClipBox" $dominantGroup.Count $clip.MinX $clip.MinY $clip.MaxX $clip.MaxY))
+            Where-Object { $_.Count -ge 2 })
+        $dominantGroup = $null
+        if ($clipGroups.Count -gt 0 -and $null -ne $plotBoxForGridlines) {
+            $dominantGroup = $clipGroups |
+                Sort-Object -Property @{
+                    Expression = {
+                        $clip = @($_.Group)[0]
+                        BoundsDistance $clip $plotBoxForGridlines
+                    }
+                }, @{
+                    Expression = { -[int]$_.Count }
+                } |
+                Select-Object -First 1
+
+            $nearestClip = @($dominantGroup.Group)[0]
+            if ((BoundsDistance $nearestClip $plotBoxForGridlines) -gt 10d) {
+                $dominantGroup = $null
+            }
+        }
+
+        if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
+            $dominantGroup = $nonPageClipBoxes |
+                Group-Object -Property MinX, MinY, MaxX, MaxY |
+                Sort-Object -Property Count -Descending |
+                Select-Object -First 1
+        }
+
+        if ($null -ne $dominantGroup) {
+            $clip = @($dominantGroup.Group)[0]
+            $structures.Add((New-DerivedStructure "PlotAreaClipBoxCandidate" $clip.PageNumber "DominantClipBox" $dominantGroup.Count $clip.MinX $clip.MinY $clip.MaxX $clip.MaxY))
+        }
     }
 }
 

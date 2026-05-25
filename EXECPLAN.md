@@ -2014,6 +2014,9 @@ High-priority actions:
   and polar/radar shape semantics. The new derived candidates improve the structural oracle surface, but they
   still do not classify chart text matrices, legend entries, leader lines, or Office radar polygon strokes as
   first-class chart structures.
+  - [x] Make `PlotAreaClipBoxCandidate` prefer repeated clip boxes that align with the derived axis/gridline
+    plot box, so repeated chart-frame clips no longer hide the actual Office data-plot clip in structural
+    reports.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
@@ -5300,3 +5303,14 @@ basis with Office before the two public probes can become strict structural gate
 `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-130218` after a transient
 parallel CLI build lock was rerun serially; the non-slow suite passed with 222 passed, 0 failed, 7
 skipped; and `dotnet pack` succeeded.
+
+Revision note, 2026-05-25: Tightened the PDF chart-graphics classifier for plot-area clip evidence. Office
+exports for the `layoutTarget` probes contain many repeated chart-frame clips and a smaller repeated
+data-plot clip; the old `PlotAreaClipBoxCandidate` selected the dominant frame clip and obscured the useful
+structure. `ClassifyPdfChartGraphics.ps1` now prefers repeated clip boxes whose bounds align with the
+derived axis/gridline plot box and suppresses false plot-clip candidates when no nearby repeated clip exists.
+The latest probe inspections now expose reference `PlotAreaClipBoxCandidate` near
+`330.36,106.20..777.60,400.68` for `layoutTarget="inner"` and `443.04,106.20..770.40,365.76` for
+`layoutTarget="outer"`, while the current candidate still lacks an equivalent repeated plot clip. The
+public clustered-column structural gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-130708`.
