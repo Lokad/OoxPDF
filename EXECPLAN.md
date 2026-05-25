@@ -3951,6 +3951,15 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `72 72 720 432` chart frame. The previous generic default was `x=158.4`, `y=141.12`, `w=547.2`, `h=293.76`.
   The new named metric rule moves the candidate to `131.616`, `111.226`, `553.464`, `376.79`, and the public
   visual gate drops from the pre-existing MAE `5.42615294656636` to `1.9852012201003086`.
+- Observation: Office's default clustered-column chart with no title and a bottom legend reserves a compact
+  bottom legend band below category labels, and its automatic value scale uses whole major units for a data
+  maximum of `5`.
+  Evidence: the Office PDF for `pptx-ladder-11-composite-chart-port` draws the plot clip at about
+  `95.88 126.36 541.8 293.4 re`, emits value-axis labels `0` through `6`, places category labels at
+  `y=108.22`, and places legend text at `y=84.816`. The previous candidate used a narrower plot box, emitted
+  a `5.5` top label, and placed legend text at the same vertical band as category labels. After the change,
+  candidate inspection shows labels `0` through `6`, no `5.5`, category labels at `107.29`, and legend text
+  at `84.88`; the public visual gate drops from MAE `13.6832895688657` to `3.3798655719521604`.
 
 ## Decision Log
 
@@ -3974,6 +3983,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   equivalence.
 - PPTX fidelity is bottom-up: minimal public synthetic fixtures are made close to pixel-perfect and gated
   before larger public combinations or private documents matter.
+- Decision: Treat the public composite chart failure as an Office-PDF structural chart layout slice, not as
+  a private-deck tuning problem.
+  Rationale: The failure was explained by inspected Office PDF structure: plot-box geometry, whole-number
+  value-axis ticks, packed bottom legend placement, and legend marker/text geometry. Naming these as
+  chart-layout metric rules keeps the current approximation auditable while future chart oracle tooling is
+  built.
+  Date/Author: 2026-05-25 / Codex.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is
   feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation
   targets.
@@ -4065,9 +4081,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   geometry, paragraph margins, or small-label preset-shape origins.
 - The public `pptx-ladder-11-chart-line-3series-port` gate now passes through structural chart alignment:
   default line colors/width, category midpoint positions, and the no-title/right-legend plot box are aligned
-  to Office PDF operators. This removes that case from the pre-existing failure list. The composite-chart
-  gate remains open at MAE `13.6832895688657` versus `12.41`, so broader combo/chart-family layout work is
-  still needed.
+  to Office PDF operators. The public `pptx-ladder-11-composite-chart-port` gate also now passes after
+  aligning the default clustered-column no-title/bottom-legend plot box, whole-number value scale, and
+  packed bottom legend placement to Office PDF evidence. These remove both cases from the pre-existing
+  failure list, while broader chart-family layout work remains open because the current named metric rules
+  still need to be replaced by systematic chart structural oracle tooling.
 
 ## Concrete Steps
 
@@ -4216,6 +4234,22 @@ to Office (`131.616 111.226` plot origin; first line point `177.738 393.818`). P
 `pptx-ladder-11-composite-chart-port` still failed its pre-existing gate at `13.6832895688657` versus
 `12.41`. Full console suite passed with 221 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
+Composite column-chart structural alignment slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off
+--nologo -v minimal -- --group pptx-charts --skip-slow` passed with 25 passed, 0 failed, 0 skipped. Public
+visual case `pptx-ladder-11-composite-chart-port` passed at
+`artifacts/visual/pptx-ladder-11-composite-chart-port/20260525-110923` with MAE `3.3798655719521604` versus
+limit `12.41` and changed-pixel ratio at threshold 16 `0.0310132137345679`. The candidate PDF inspected at
+`artifacts/tmp-composite-cand-inspect-after-bottom-legend` now emits whole-number value-axis labels `0`
+through `6` with no `5.5` label, category label baselines near Office (`107.29 pt` candidate versus
+`108.22 pt` Office), and bottom legend baselines near Office (`84.88 pt` candidate versus `84.82 pt`
+Office). The line-chart visual guard was re-run at
+`artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-111005` and stayed passing with MAE
+`1.9829273967978396` versus limit `3.6`. Full console suite passed with 221 passed, 0 failed, 0 skipped.
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+This resolves the formerly open composite chart gate, but the new named metric rules are still Office-PDF
+observed approximations rather than a general chart layout engine; future work should replace them with
+chart-family layout/oracle tooling that compares plot boxes, tick labels, gridlines, legend marker geometry,
+and text matrices directly.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -4956,3 +4990,9 @@ Revision note, 2026-05-25: Added the completed public line-chart structural alig
 `pptx-ladder-11-chart-line-3series-port` visual failure is now resolved by Office-PDF-aligned line stroke
 fallbacks, category midpoint plotting, and a constrained no-title/right-legend plot-box rule. The composite
 chart visual gate remains open.
+
+Revision note, 2026-05-25: Added the completed public composite column-chart structural alignment slice. The
+prior `pptx-ladder-11-composite-chart-port` visual failure is now resolved by Office-PDF-observed
+whole-number value scaling, no-title/bottom-legend plot-box ratios, and packed bottom legend placement.
+The remaining chart-layout work is reframed as systematic chart structural oracle tooling rather than more
+case-local metric constants.

@@ -758,7 +758,7 @@ internal sealed partial class PptxRenderer
         public const double DataLabelFallbackFontSize = 8.5d;
         public const double AxisSingleValueHeadroomFactor = 1.2d;
         public const double AxisValueEpsilon = 0.0001d;
-        public const double AxisNiceTickTargetCount = 10d;
+        public const double AxisNiceTickTargetCount = 8d;
         public const double AxisNiceTickStepSmall = 1d;
         public const double AxisNiceTickStepMedium = 2d;
         public const double AxisNiceTickStepLarge = 5d;
@@ -778,6 +778,10 @@ internal sealed partial class PptxRenderer
         public const double BarOverlayOnlyPlotBoxYRatio = 0.0924d;
         public const double BarOverlayOnlyPlotBoxWidthRatio = 0.9272d;
         public const double BarOverlayOnlyPlotBoxHeightRatio = 0.8706d;
+        public const double BarNoTitleBottomLegendPlotBoxXRatio = 0.0415d;
+        public const double BarNoTitleBottomLegendPlotBoxYRatio = 0.151d;
+        public const double BarNoTitleBottomLegendPlotBoxWidthRatio = 0.9406d;
+        public const double BarNoTitleBottomLegendPlotBoxHeightRatio = 0.815d;
         public const double LineNoTitleRightLegendPlotBoxXRatio = 0.0828d;
         public const double LineNoTitleRightLegendPlotBoxYRatio = 0.0908d;
         public const double LineNoTitleRightLegendPlotBoxWidthRatio = 0.7687d;
@@ -835,15 +839,16 @@ internal sealed partial class PptxRenderer
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
         public const double LegendLineHeightFactor = 1.45d;
-        public const double LegendMarkerSizeFactor = 0.65d;
+        public const double LegendMarkerSizeFactor = 0.55d;
         public const double LegendMinimumSideWidth = 36d;
         public const double LegendSideWidthRatio = 0.22d;
         public const double LegendSideGap = 8d;
-        public const double LegendBottomOffsetFactor = 1.15d;
+        public const double LegendBottomOffsetFactor = 2.39d;
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
         public const double LegendMarkerBaselineFactor = 0.35d;
-        public const double LegendTextGap = 4d;
+        public const double LegendHorizontalMarkerBaselineFactor = 0d;
+        public const double LegendTextGap = 3d;
     }
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);

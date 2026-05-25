@@ -1445,11 +1445,13 @@ internal sealed partial class PptxRenderer
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         bool horizontal = string.Equals(layout.Position, "b", StringComparison.Ordinal) ||
             string.Equals(layout.Position, "t", StringComparison.Ordinal);
-        double width = horizontal ? plotBox.Width : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
+        double width = horizontal
+            ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, fontSize, markerSize))
+            : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
         double x = layout.Position switch
         {
             "l" => Math.Max(0d, plotBox.X - width - PptxChartMetricRules.LegendSideGap),
-            _ when horizontal => plotBox.X,
+            _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ => plotBox.X + plotBox.Width + PptxChartMetricRules.LegendSideGap
         };
         double firstY = layout.Position switch
@@ -1463,10 +1465,13 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             ChartLegendEntry entry = entries[i];
-            double entryX = horizontal ? x + i * (width / entries.Count) : x;
-            double entryWidth = horizontal ? width / entries.Count : width;
+            double entryX = horizontal ? GetPackedHorizontalLegendEntryX(entries, fontSize, markerSize, x, i) : x;
+            double entryWidth = horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, fontSize, markerSize) : width;
             double y = horizontal ? firstY : firstY - i * lineHeight;
-            double markerY = y + lineHeight * PptxChartMetricRules.LegendMarkerBaselineFactor;
+            double markerBaselineFactor = horizontal
+                ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
+                : PptxChartMetricRules.LegendMarkerBaselineFactor;
+            double markerY = y + lineHeight * markerBaselineFactor;
             if (entry.Fill is { } fill)
             {
                 FillChartRectangle(graphics, entryX, markerY, markerSize, markerSize, fill);
@@ -1508,6 +1513,33 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CL");
+    }
+
+    private static double GetPackedHorizontalLegendWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerSize)
+    {
+        double width = 0d;
+        foreach (ChartLegendEntry entry in entries)
+        {
+            width += GetPackedHorizontalLegendEntryWidth(entry.Name, fontSize, markerSize);
+        }
+
+        return Math.Max(1d, width);
+    }
+
+    private static double GetPackedHorizontalLegendEntryX(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerSize, double legendX, int entryIndex)
+    {
+        double x = legendX;
+        for (int i = 0; i < entryIndex; i++)
+        {
+            x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, fontSize, markerSize);
+        }
+
+        return x;
+    }
+
+    private static double GetPackedHorizontalLegendEntryWidth(string name, double fontSize, double markerSize)
+    {
+        return markerSize + PptxChartMetricRules.LegendTextGap + EstimateChartTextWidth(name, fontSize);
     }
 
     private static bool IsOoxmlTrue(string? value)
@@ -3398,6 +3430,14 @@ internal sealed partial class PptxRenderer
                 frame.Y + frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxYRatio,
                 frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxWidthRatio,
                 frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxHeightRatio);
+        }
+        else if (!hasTitle && string.Equals(legend.Position, "b", StringComparison.Ordinal))
+        {
+            defaultPlotBox = new ChartPlotBox(
+                frame.X + frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxXRatio,
+                frame.Y + frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio,
+                frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxWidthRatio,
+                frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
         }
         else
         {
