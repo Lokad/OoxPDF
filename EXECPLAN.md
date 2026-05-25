@@ -5602,3 +5602,21 @@ long-term gap: built-in table style definitions and cartesian title/legend/axis 
 encoded as renderer rules. The durable target is to ingest Office table style definitions and a shared chart
 layout oracle so conditional table regions, automatic titles, legends, axes, and plot boxes are derived from
 OOXML style/layout structure plus PDF evidence rather than per-family constants.
+
+Revision note, 2026-05-25: Closed the public exploded pie gap as a polar layout-center issue rather than as a
+slice-data or palette issue. The Office and candidate PDFs had matching values, slice order, fills, vertical
+envelope, and explosion distances, but every candidate slice was displaced left because `GetPieChartGeometry`
+always used the legend-reserved center ratio (`0.42`) even when no legend was present. Polar charts now choose
+between the legend-reserved center and a no-legend centered plot circle, and pie/doughnut data labels share the
+same geometry choice as the slices. Polar chart titles also use an Office-observed title baseline instead of the
+generic cartesian fallback. Focused `pptx-charts` tests passed with 37/37, the full public `pptx-charts` visual
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T16:40:32.0358614+02:00`, and `dotnet pack` succeeded. The public
+`pptx-ladder-11-chart-pie-exploded-port` gate now passes with empty diagnostics at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-163952`, MAE `0.14267783082561727`,
+changed16 `0.003050733024691358`, SSIM `0.9956710961994095`, and foreground histogram correlation
+`0.9999923256302597`; its manifest now rejects the old loose raster envelope. Remaining long-term gap:
+pie/doughnut arcs are still polygonal paths and polar plot/title constants still live in renderer metric rules.
+The durable target is a polar layout oracle that derives title reservation, legend reservation, centered plot
+circle, explosion envelope, label anchors, and Bezier arc operators together from OOXML plus Office PDF path
+structure instead of treating any single center/radius ratio as universal.
