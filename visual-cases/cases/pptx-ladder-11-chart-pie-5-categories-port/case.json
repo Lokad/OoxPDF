@@ -17,6 +17,7 @@
       "PolarSliceCandidate"
     ],
     "compareChartGraphicsStructureOperators": true,
-    "compareChartGraphicsStructureSegmentCounts": true
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true
   }
 }

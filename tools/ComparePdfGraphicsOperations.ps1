@@ -17,7 +17,9 @@ param(
 
     [switch] $MatchOperator,
 
-    [switch] $MatchSegmentCount
+    [switch] $MatchSegmentCount,
+
+    [switch] $MatchPathCommandCounts
 )
 
 $ErrorActionPreference = "Stop"
@@ -50,6 +52,7 @@ function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function Delta([double] $left, [double] $right) { return [Math]::Round($right - $left, 6) }
+function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
 
 $referenceOps = Select-Ops (Read-JsonArray $Reference)
 $candidateOps = Select-Ops (Read-JsonArray $Candidate)
@@ -137,7 +140,12 @@ foreach ($pair in $pairs) {
     $kindOk = [string]$ref.Kind -eq [string]$cand.Kind
     $operatorOk = (-not $MatchOperator) -or [string]$ref.SourceOperator -eq [string]$cand.SourceOperator
     $segmentCountOk = (-not $MatchSegmentCount) -or [int]$ref.SegmentCount -eq [int]$cand.SegmentCount
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk) { "ok" } else { "delta" }
+    $pathCommandCountsOk = (-not $MatchPathCommandCounts) -or (
+        (IntValue $ref.MoveCount) -eq (IntValue $cand.MoveCount) -and
+        (IntValue $ref.LineCount) -eq (IntValue $cand.LineCount) -and
+        (IntValue $ref.CurveCount) -eq (IntValue $cand.CurveCount) -and
+        (IntValue $ref.CloseCount) -eq (IntValue $cand.CloseCount))
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -151,8 +159,11 @@ foreach ($pair in $pairs) {
         CandOp = $cand.SourceOperator
         RefSeg = $ref.SegmentCount
         CandSeg = $cand.SegmentCount
+        RefPath = "$(IntValue $ref.MoveCount)/$(IntValue $ref.LineCount)/$(IntValue $ref.CurveCount)/$(IntValue $ref.CloseCount)"
+        CandPath = "$(IntValue $cand.MoveCount)/$(IntValue $cand.LineCount)/$(IntValue $cand.CurveCount)/$(IntValue $cand.CloseCount)"
         OperatorOk = $operatorOk
         SegmentCountOk = $segmentCountOk
+        PathCommandCountsOk = $pathCommandCountsOk
         DeltaMinX = $deltaMinX
         DeltaMinY = $deltaMinY
         DeltaMaxX = $deltaMaxX

@@ -589,6 +589,10 @@ internal sealed record PdfGraphicsOperation(
     string Kind,
     string Operator,
     int SegmentCount,
+    int MoveCount,
+    int LineCount,
+    int CurveCount,
+    int CloseCount,
     double MinX,
     double MinY,
     double MaxX,
@@ -744,7 +748,16 @@ internal sealed record PdfGraphicsOperation(
         string kind,
         string op)
     {
-        if (!path.TryGetBounds(out double minX, out double minY, out double maxX, out double maxY, out int segmentCount))
+        if (!path.TryGetBounds(
+            out double minX,
+            out double minY,
+            out double maxX,
+            out double maxY,
+            out int segmentCount,
+            out int moveCount,
+            out int lineCount,
+            out int curveCount,
+            out int closeCount))
         {
             return;
         }
@@ -756,6 +769,10 @@ internal sealed record PdfGraphicsOperation(
             kind,
             op,
             segmentCount,
+            moveCount,
+            lineCount,
+            curveCount,
+            closeCount,
             Round(minX),
             Round(minY),
             Round(maxX),
@@ -811,12 +828,17 @@ internal sealed record PdfGraphicsOperation(
     {
         private readonly List<PdfPoint> points = new();
         private int segments;
+        private int moves;
+        private int lines;
+        private int curves;
+        private int closes;
         private PdfPoint? startPoint;
         private PdfPoint? currentPoint;
 
         public void MoveTo(PdfPoint point)
         {
             points.Add(point);
+            moves++;
             startPoint = point;
             currentPoint = point;
         }
@@ -826,6 +848,7 @@ internal sealed record PdfGraphicsOperation(
             points.Add(point);
             currentPoint = point;
             segments++;
+            lines++;
         }
 
         public void CurveTo(PdfPoint firstControl, PdfPoint secondControl, PdfPoint endPoint)
@@ -835,6 +858,7 @@ internal sealed record PdfGraphicsOperation(
             points.Add(endPoint);
             currentPoint = endPoint;
             segments++;
+            curves++;
         }
 
         public void CurveTo(PdfPoint control, PdfPoint endPoint)
@@ -843,6 +867,7 @@ internal sealed record PdfGraphicsOperation(
             points.Add(endPoint);
             currentPoint = endPoint;
             segments++;
+            curves++;
         }
 
         public void Close()
@@ -851,6 +876,7 @@ internal sealed record PdfGraphicsOperation(
             {
                 currentPoint = startPoint;
                 segments++;
+                closes++;
             }
         }
 
@@ -863,9 +889,22 @@ internal sealed record PdfGraphicsOperation(
             Close();
         }
 
-        public bool TryGetBounds(out double minX, out double minY, out double maxX, out double maxY, out int segmentCount)
+        public bool TryGetBounds(
+            out double minX,
+            out double minY,
+            out double maxX,
+            out double maxY,
+            out int segmentCount,
+            out int moveCount,
+            out int lineCount,
+            out int curveCount,
+            out int closeCount)
         {
             segmentCount = segments;
+            moveCount = moves;
+            lineCount = lines;
+            curveCount = curves;
+            closeCount = closes;
             if (points.Count == 0)
             {
                 minX = minY = maxX = maxY = 0d;
@@ -883,6 +922,10 @@ internal sealed record PdfGraphicsOperation(
         {
             points.Clear();
             segments = 0;
+            moves = 0;
+            lines = 0;
+            curves = 0;
+            closes = 0;
             startPoint = null;
             currentPoint = null;
         }

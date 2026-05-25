@@ -370,6 +370,9 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     if ($manifest.expected.compareChartGraphicsStructureSegmentCounts -eq $true) {
         $compareChartArgs.MatchSegmentCount = $true
     }
+    if ($manifest.expected.compareChartGraphicsStructurePathCommandCounts -eq $true) {
+        $compareChartArgs.MatchPathCommandCounts = $true
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
     if ($LASTEXITCODE -ne 0) {

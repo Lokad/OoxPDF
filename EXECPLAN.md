@@ -5814,3 +5814,19 @@ visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` genera
 pie/doughnut slice families now have an operator/segment structural floor, but the polar layout solver still
 needs to derive center, radius, legend reserve, title reserve, explosion envelope, and label anchors from typed
 `ChartPolarLayout` plus Office PDF structural evidence instead of accepting broad bounds drift as final.
+
+Revision note, 2026-05-25: Strengthened the chart graphics oracle so path structure is no longer reduced to
+total segment counts. `PdfInspect` now emits per-operation move, line, curve, and close counts; the chart
+graphics classifier carries those counts into semantic structures; and `ComparePdfGraphicsOperations.ps1` plus
+`CheckVisualCase.ps1` expose an opt-in `compareChartGraphicsStructurePathCommandCounts` gate. The public pie and
+doughnut manifests now require path-command parity for `PolarSliceCandidate` structures in addition to operator
+and total segment parity. This closes an oracle gap where a future regression could keep the same segment count
+while replacing Office-like Bezier slices with straight-line paths. Serial visual evidence: pie five-category
+passed at `artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-183504`, exploded pie at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-183516`, doughnut at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-183525`, and exploded doughnut at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-183535`. The full public
+`pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T18:37:31.3556521+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: the oracle now
+guards curve-vs-line composition, but it still does not derive polar center/radius/explosion geometry from the
+Bezier commands themselves.

@@ -35,6 +35,7 @@ function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Round([double]$value) { return [Math]::Round($value, 6) }
+function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
 
 function BoundsDistance($a, $b) {
     return [Math]::Abs([double]$a.MinX - [double]$b.MinX) +
@@ -50,6 +51,10 @@ function New-Structure($kind, $op) {
         SourceKind = $op.Kind
         SourceOperator = $op.Operator
         SegmentCount = $op.SegmentCount
+        MoveCount = IntValue $op.MoveCount
+        LineCount = IntValue $op.LineCount
+        CurveCount = IntValue $op.CurveCount
+        CloseCount = IntValue $op.CloseCount
         MinX = [double]$op.MinX
         MinY = [double]$op.MinY
         MaxX = [double]$op.MaxX
@@ -74,6 +79,10 @@ function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount
         SourceKind = "Derived"
         SourceOperator = $sourceOperator
         SegmentCount = $segmentCount
+        MoveCount = 0
+        LineCount = 0
+        CurveCount = 0
+        CloseCount = 0
         MinX = Round $minX
         MinY = Round $minY
         MaxX = Round $maxX
@@ -98,6 +107,10 @@ function Copy-StructureAsKind($kind, $structure) {
         SourceKind = $structure.SourceKind
         SourceOperator = $structure.SourceOperator
         SegmentCount = $structure.SegmentCount
+        MoveCount = IntValue $structure.MoveCount
+        LineCount = IntValue $structure.LineCount
+        CurveCount = IntValue $structure.CurveCount
+        CloseCount = IntValue $structure.CloseCount
         MinX = [double]$structure.MinX
         MinY = [double]$structure.MinY
         MaxX = [double]$structure.MaxX
