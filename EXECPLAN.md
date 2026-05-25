@@ -1028,6 +1028,16 @@ High-priority actions:
   211 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bars, stacked
   bar/column accumulation, chart data-label positions, secondary-axis orientation, and Office-backed public
   visual coverage for reversed axes still need separate slices.
+- [x] 2026-05-25: Consume value-axis reversed orientation for line-chart data-label anchors.
+  Line data labels now derive their point anchor from the same value-to-plot-coordinate helper as line-series
+  geometry, so `maxMin` orientation moves labels with their points instead of leaving labels on the old
+  min-to-max value coordinate. A synthetic two-point line chart with visible value labels locks the emitted
+  text matrices in reversed order. Focused chart tests passed with 16 passed, 0 failed, 0 skipped; the
+  clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-094236`; the full suite passed with
+  212 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: bar data labels still need a
+  separate Office-backed rule because their positions depend on positive/negative bar-edge semantics, not
+  only point anchors.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1395,9 +1405,10 @@ High-priority actions:
   - [x] Consume value-axis crossing metadata for vertical bar/line category-axis stroke placement.
   - [x] Consume value-axis reversed orientation for vertical bar/line gridlines, value labels, crossing-line
     placement, line-series geometry, and clustered vertical bar endpoints.
-  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, data labels,
-    value-axis side/cross-axis placement, series coordinate baselines, and secondary axes instead of relying
-    on right-side XML/layout assumptions.
+  - [x] Consume value-axis reversed orientation for line-chart data-label point anchors.
+  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, bar data
+    labels, value-axis side/cross-axis placement, series coordinate baselines, and secondary axes instead of
+    relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4542,6 +4553,19 @@ horizontal bar axes are intentionally left unchanged in this slice, stacked bar/
 needs a direction-aware model, chart data labels still use the older position formulas, secondary axes need
 independent orientation, and a public Office-PDF visual case for reversed axes should be added before calling
 this Office-complete.
+
+chart reversed line data-label anchors / 2026-05-25:
+Line-chart data labels now use the same scene/XML value-axis orientation as the line series itself. Before
+this slice, a `maxMin` line chart could draw the series with reversed value coordinates while placing labels
+from the old min-to-max formula. `RenderLineDataLabels` now receives the resolved value-axis orientation and
+uses the shared value-to-plot-coordinate helper for its point anchor before applying the existing top/bottom/
+left/right label offset. A synthetic `maxMin` two-point line chart verifies the text matrices move with the
+reversed points. The focused `pptx-charts` non-slow group passed with 16 passed, 0 failed, 0 skipped; the
+clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-094236`; the full suite passed with
+212 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Bar data labels remain open because their
+Office rule must account for inside/outside base/end semantics under positive, negative, stacked,
+horizontal, and reversed-axis combinations.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

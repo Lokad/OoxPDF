@@ -557,15 +557,16 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, plotBox, BuildStrokeLegendEntries(linePlot, lineChart, seriesStrokes), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
-                fonts.AddRange(RenderLineDataLabels(
-                    theme,
-                    graphics,
-                    plotBox,
-                    lineSeries,
-                    valueExtents,
-                    ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
-                    ReadSceneOrXmlCategoryLabels(linePlot, lineChart),
+                    fonts.AddRange(RenderLineDataLabels(
+                        theme,
+                        graphics,
+                        plotBox,
+                        lineSeries,
+                        valueExtents,
+                        valueAxisReversed,
+                        ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
+                        ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
+                        ReadSceneOrXmlCategoryLabels(linePlot, lineChart),
                     ReadSceneOrXmlChartSeriesNames(linePlot, lineChart)));
                 return true;
             }
@@ -1626,6 +1627,7 @@ internal sealed partial class PptxRenderer
         ChartPlotBox plotBox,
         IReadOnlyList<IReadOnlyList<double>> series,
         ChartValueExtents extents,
+        bool valueAxisReversed,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<string> categoryLabels,
@@ -1637,7 +1639,6 @@ internal sealed partial class PptxRenderer
         }
 
         int pointCount = Math.Max(1, series.Max(values => values.Count));
-        double range = Math.Max(1d, extents.Max - extents.Min);
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
@@ -1648,7 +1649,7 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < values.Count; i++)
             {
                 double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
-                double pointY = plotBox.Y + (values[i] - extents.Min) / range * plotBox.Height;
+                double pointY = ChartValueToPlotCoordinate(extents, values[i], plotBox.Y, plotBox.Height, valueAxisReversed);
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                 double fontSize = style.FontSize;
