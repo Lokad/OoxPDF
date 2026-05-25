@@ -6076,3 +6076,13 @@ join gates. Validation: the marker radar case passed at
 `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200443`. Remaining long-term gap: this tightens
 the existing radar grid/spoke oracle but does not yet model filled radar area/series paths, marker envelopes, or
 chart title/legend reserve structurally.
+
+Revision note, 2026-05-25: Removed the matching obsolete loose radar text oracle gate. `CheckVisualCase.ps1` still
+runs the global chart-text tolerance before the per-kind tolerances, so the global radar text gate cannot be
+deleted, but it no longer needs to be `15 pt`. Both public radar manifests now require
+`maxChartTextStructurePositionDelta` of `1.0 pt` while keeping the tighter per-kind gates for category labels,
+value labels, and the filled-radar chart title. Validation: the marker radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-200540`; the filled radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200540`. Remaining long-term gap: the text gate
+now honestly reflects sub-point public evidence for compared radar labels, but the chart-text comparison harness
+still requires a global fallback tolerance instead of treating per-kind tolerances as the complete contract.
