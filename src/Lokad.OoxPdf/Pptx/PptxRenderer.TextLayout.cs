@@ -563,8 +563,7 @@ internal sealed partial class PptxRenderer
                 segment with
                 {
                     Text = segment.Text[hiddenLength..],
-                    AdvanceText = segment.AdvanceText[hiddenLength..],
-                    PreventCoalesce = true
+                    AdvanceText = segment.AdvanceText[hiddenLength..]
                 }
             ];
         }

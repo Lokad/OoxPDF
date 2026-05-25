@@ -6413,10 +6413,10 @@ zero dimension mismatches, deck MAE `8.946935`, changed16 `0.115528`, and the sa
 schema/text-placement issue.
 
 Private validation note, 2026-05-25: Re-ran `private-cases/lokad-value-based.json` after the Unicode dash-boundary
-text segmentation change. The run `artifacts/private-visual/lokad-value-based/20260525-223509` compared 84/84 pages
-with zero dimension mismatches, deck MAE `8.945317`, changed16 `0.115517`, and the same single
-`PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 stayed visually neutral at MAE `2.881016`, changed16
-`0.044896`, SSIM `0.920071`; PDF text inspection now emits independent candidate em-dash operations at the
-Office-observed positions and no longer emits a standalone visible regular-space operation after that dash. Remaining
-slide-17 work is broader text placement/order parity: page-17 operation counts are still not aligned (`44` reference
-operations versus `46` candidate operations after this change).
+text segmentation change. The run `artifacts/private-visual/lokad-value-based/20260525-223821` compared 84/84 pages
+with zero dimension mismatches, deck MAE `8.945316`, changed16 `0.115517`, and the same single
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 stayed visually neutral at MAE `2.881015`, changed16
+`0.044900`, SSIM `0.920075`; PDF text inspection now emits independent candidate em-dash operations at the
+Office-observed positions, no longer emits a standalone visible regular-space operation after that dash, and matches
+the reference page-17 text-operation count (`44` reference operations versus `44` candidate operations). Remaining
+slide-17 work is broader text placement/order parity rather than dash or post-dash visible-space segmentation.
