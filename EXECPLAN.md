@@ -5640,6 +5640,26 @@ percent totals. The durable target is a typed stacked-value model that separates
 per category, exposes normalized signed extents to all chart families, and feeds the same axis/label semantics
 from that model instead of deriving them ad hoc in each renderer path.
 
+Revision note, 2026-05-25: Tightened the same public 100%-stacked column case from axis-label correctness to
+plot-frame structural alignment. The Office PDF showed that `percentStacked` value labels consume a wider
+left reserve than the otherwise matching no-title/no-legend clustered-column frame: clustered stays at
+`113.4 pt` plot-left, while 100%-stacked moves to about `135.4 pt` because the generated `0%..100%` labels
+must fit even without an explicit OOXML `c:numFmt`. The renderer now derives the vertical bar plot reserve from
+the same percent-aware value-axis label strip used for label emission, preserving the existing clustered-column
+plot frame while moving the 100%-stacked plot box to `136.98 pt`. The public manifest now gates MAE `1.5`,
+changed16 `0.018`, SSIM `0.94`, `AxisPairPlotBoxCandidate`, `GridlineAxisPlotBoxCandidate`,
+`HorizontalGridlineGroupCandidate`, `PlotAreaClipBoxCandidate`, and category/value tick-label positions. Focused
+`pptx-charts` tests passed with 38/38, the tightened 100%-stacked visual case passed at
+`artifacts/visual/pptx-ladder-11-chart-column-100-stacked-port/20260525-175543`, the clustered-column guard
+still passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-175444`, and the ordinary
+stacked-column guard still passed at `artifacts/visual/pptx-ladder-11-chart-column-stacked-port/20260525-175444`.
+The full public `pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`, and
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: Office combines each stacked series' same-color category rectangles into compound PDF
+fill paths, while OOXPDF still emits separate segment rectangles. That is structurally visible but no longer the
+dominant geometry error; the durable target is a typed stacked-series drawing model that can choose Office-like
+path ownership without changing the normalized axis contract.
+
 Revision note, 2026-05-25: Advanced the public negative-column chart case by separating three Office-observed
 semantics that were previously blurred together. Value axes with negative data and no explicit minimum now floor
 to a nice tick boundary, so the public negative column fixture exposes the Office `-15..25` axis instead of using

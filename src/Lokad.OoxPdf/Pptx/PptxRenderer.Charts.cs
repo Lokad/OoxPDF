@@ -3943,6 +3943,7 @@ internal sealed partial class PptxRenderer
         }
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars);
+        defaultPlotBox = AdjustBarChartPlotBoxForPercentStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, horizontalBars);
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasExplicitManualPlotLayoutTarget(sceneChart, chartXml)
             ? GetHorizontalBarManualLayoutTargetDefaultPlotBox(frame, defaultPlotBox)
             : defaultPlotBox;
@@ -4110,15 +4111,81 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
     }
 
+    private static ChartPlotBox AdjustBarChartPlotBoxForPercentStackedValueAxisLabels(
+        PptxTheme theme,
+        ChartPlotBox plotBox,
+        ChartFrameBox frame,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart,
+        PptxSceneChartPlot? barPlot,
+        XElement barChart,
+        bool horizontalBars)
+    {
+        if (horizontalBars)
+        {
+            return plotBox;
+        }
+
+        string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
+        if (!IsPercentStackedChartGrouping(grouping))
+        {
+            return plotBox;
+        }
+
+        XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
+        PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
+        if (!IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
+        {
+            return plotBox;
+        }
+
+        IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(barPlot, barChart);
+        if (series.Count == 0)
+        {
+            return plotBox;
+        }
+
+        ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
+            valueSceneAxis,
+            valueAxis,
+            GetBarChartValueExtents(series, grouping),
+            percentStacked: true);
+        ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked: true);
+        double requiredReserve = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, axisUnits, "0%");
+        double leftReserve = plotBox.X - frame.X;
+        double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
+        bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueSceneAxis, valueAxis, defaultRightSide: false);
+        if (labelsRight)
+        {
+            rightReserve = Math.Max(rightReserve, requiredReserve);
+        }
+        else
+        {
+            leftReserve = Math.Max(leftReserve, requiredReserve);
+        }
+
+        double x = frame.X + leftReserve;
+        double right = frame.X + frame.Width - rightReserve;
+        double width = Math.Max(1d, right - x);
+        return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+    }
+
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement valueAxis)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis: null, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
         double fontSize = style.FontSize;
         ChartValueExtents extents = ReadChartValueAxisExtents(valueAxis, new ChartValueExtents(0d, 1d));
         ChartAxisUnits units = ReadChartValueAxisUnits(valueAxis);
+        return EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis, sceneAxis: null, extents, units, defaultNumberFormat: null);
+    }
+
+    private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat)
+    {
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
+        double fontSize = style.FontSize;
         IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
         double maxLabelWidth = tickValues
-            .Select(value => FormatChartAxisLabel(value, valueAxis))
+            .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0")
             .Max(label => EstimateChartTextWidth(label, fontSize));
         double labelWidth = Math.Max(
