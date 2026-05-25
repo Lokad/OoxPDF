@@ -1394,8 +1394,8 @@ internal sealed partial class PptxRenderer
         {
             ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
             ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
-            ChartPolarKind.Doughnut when string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
-            ChartPolarKind.Doughnut when IsHorizontalLegendPosition(legend.Position) => PptxChartMetricRules.DoughnutHorizontalLegendRadiusRatio,
+            ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
+            ChartPolarKind.Doughnut when IsHorizontalLegendPosition(legend.PositionKind) => PptxChartMetricRules.DoughnutHorizontalLegendRadiusRatio,
             ChartPolarKind.Doughnut => PptxChartMetricRules.PieRadiusRatio,
             _ => PptxChartMetricRules.PieRadiusRatio
         };
@@ -1407,9 +1407,9 @@ internal sealed partial class PptxRenderer
         return kind switch
         {
             ChartPolarKind.Pie => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
-            ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "r", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
-            ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutLeftLegendCenterXRatio,
-            ChartPolarKind.Doughnut when hasLegend && IsHorizontalLegendPosition(legend.Position) => PptxChartMetricRules.DoughnutHorizontalLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && legend.PositionKind == PptxSceneChartLegendPosition.Right => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutLeftLegendCenterXRatio,
+            ChartPolarKind.Doughnut when hasLegend && IsHorizontalLegendPosition(legend.PositionKind) => PptxChartMetricRules.DoughnutHorizontalLegendCenterXRatio,
             ChartPolarKind.Doughnut => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
             _ => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
         };
@@ -1421,17 +1421,16 @@ internal sealed partial class PptxRenderer
         return kind switch
         {
             ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
-            ChartPolarKind.Doughnut when string.Equals(legend.Position, "l", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
-            ChartPolarKind.Doughnut when string.Equals(legend.Position, "t", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutTopLegendCenterYRatio,
-            ChartPolarKind.Doughnut when string.Equals(legend.Position, "b", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutBottomLegendCenterYRatio,
+            ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Left => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
+            ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Top => PptxChartMetricRules.DoughnutTopLegendCenterYRatio,
+            ChartPolarKind.Doughnut when legend.PositionKind == PptxSceneChartLegendPosition.Bottom => PptxChartMetricRules.DoughnutBottomLegendCenterYRatio,
             _ => PptxChartMetricRules.PieCenterYRatio
         };
     }
 
-    private static bool IsHorizontalLegendPosition(string position)
+    private static bool IsHorizontalLegendPosition(PptxSceneChartLegendPosition position)
     {
-        return string.Equals(position, "t", StringComparison.Ordinal) ||
-            string.Equals(position, "b", StringComparison.Ordinal);
+        return position is PptxSceneChartLegendPosition.Top or PptxSceneChartLegendPosition.Bottom;
     }
 
     private static double GetPieOrDoughnutCenterXOffset(ChartPolarKind kind, double radius, double explosionReserve, ChartLegendLayout legend)
@@ -1440,7 +1439,7 @@ internal sealed partial class PptxRenderer
             explosionReserve > 0d &&
             legend.Visible &&
             !legend.Overlay &&
-            string.Equals(legend.Position, "r", StringComparison.Ordinal))
+            legend.PositionKind == PptxSceneChartLegendPosition.Right)
         {
             return radius * explosionReserve * PptxChartMetricRules.DoughnutExplosionCenterOffsetRatio;
         }
@@ -2219,7 +2218,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(position, overlay, Visible: true, ReadManualLayout(legend));
+        return new ChartLegendLayout(PptxSceneBuilder.ParseChartLegendPosition(position), position, overlay, Visible: true, ReadManualLayout(legend));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxSceneChart? sceneChart, XDocument chartXml)
@@ -2230,7 +2229,7 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsDefined && sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout)
+            ? new ChartLegendLayout(sceneChart.Legend.PositionKind, sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout)
             : ChartLegendLayout.Hidden;
     }
 
@@ -2256,8 +2255,7 @@ internal sealed partial class PptxRenderer
 
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
-        bool horizontal = string.Equals(layout.Position, "b", StringComparison.Ordinal) ||
-            string.Equals(layout.Position, "t", StringComparison.Ordinal);
+        bool horizontal = IsHorizontalLegendPosition(layout.PositionKind);
         bool sideStrokeLegend = !horizontal && entries.All(entry => entry.Stroke is not null && entry.Fill is null);
         double lineHeight = fontSize * (sideStrokeLegend
             ? PptxChartMetricRules.LegendSideStrokeLineHeightFactor
@@ -2277,17 +2275,17 @@ internal sealed partial class PptxRenderer
             : sideFillLegendInFullFrame
                 ? GetFrameAnchoredSideFillLegendWidth(entries, fontSize, markerWidth, textGap)
             : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
-        double x = layout.Position switch
+        double x = layout.PositionKind switch
         {
-            "l" => Math.Max(0d, plotBox.X - width - sideGap),
+            PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
             _ => plotBox.X + plotBox.Width + sideGap
         };
-        double firstY = layout.Position switch
+        double firstY = layout.PositionKind switch
         {
-            "b" => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
-            "t" => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
+            PptxSceneChartLegendPosition.Bottom => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
+            PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
@@ -4411,7 +4409,7 @@ internal sealed partial class PptxRenderer
                 frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxWidthRatio,
                 frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxHeightRatio);
         }
-        else if (!hasTitle && string.Equals(legend.Position, "b", StringComparison.Ordinal))
+        else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
             defaultPlotBox = new ChartPlotBox(
                 frame.X + frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxXRatio,
@@ -5319,7 +5317,7 @@ internal sealed partial class PptxRenderer
     private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
-        bool hasRightLegend = legend.Visible && !legend.Overlay && string.Equals(legend.Position, "r", StringComparison.Ordinal);
+        bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         bool hasLineChart = ReadChartPlotElements(chartXml, "lineChart").Count != 0;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
             ? GetLineNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
@@ -5421,7 +5419,7 @@ internal sealed partial class PptxRenderer
     private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
-        bool hasRightLegend = legend.Visible && !legend.Overlay && string.Equals(legend.Position, "r", StringComparison.Ordinal);
+        bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
             ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart)
             : GetDefaultChartPlotBox(frame);
@@ -6454,9 +6452,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 
-    private readonly record struct ChartLegendLayout(string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout)
+    private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout)
     {
-        public static ChartLegendLayout Hidden { get; } = new("r", Overlay: false, Visible: false, default);
+        public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default);
     }
 
     private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)

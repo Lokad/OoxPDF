@@ -581,6 +581,7 @@ internal sealed record PptxSceneChartTitle(
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartLegend(
+    PptxSceneChartLegendPosition PositionKind,
     string Position,
     bool? Overlay,
     bool IsDefined,
@@ -588,6 +589,16 @@ internal sealed record PptxSceneChartLegend(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneChartTextStyleOverride TextStyle);
+
+internal enum PptxSceneChartLegendPosition
+{
+    Bottom,
+    Left,
+    Right,
+    Top,
+    TopRight,
+    Unknown
+}
 
 internal sealed record PptxSceneTable(
     IReadOnlyList<double> ColumnWidths,
@@ -885,6 +896,24 @@ internal sealed class PptxSceneBuilder
             _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Right,
             _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDataLabelPosition.Top,
             _ => PptxSceneChartDataLabelPosition.Unknown
+        };
+    }
+
+    internal static PptxSceneChartLegendPosition ParseChartLegendPosition(string? position)
+    {
+        return position switch
+        {
+            "b" => PptxSceneChartLegendPosition.Bottom,
+            "l" => PptxSceneChartLegendPosition.Left,
+            "r" => PptxSceneChartLegendPosition.Right,
+            "t" => PptxSceneChartLegendPosition.Top,
+            "tr" => PptxSceneChartLegendPosition.TopRight,
+            _ when position?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.Bottom,
+            _ when position?.Equals("l", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.Left,
+            _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.Right,
+            _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.Top,
+            _ when position?.Equals("tr", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.TopRight,
+            _ => PptxSceneChartLegendPosition.Unknown
         };
     }
     private const double MinimumStrokeWidth = 0.1d;
@@ -1864,6 +1893,7 @@ internal sealed class PptxSceneBuilder
         if (legend is null)
         {
             return new PptxSceneChartLegend(
+                PptxSceneChartLegendPosition.Right,
                 "r",
                 Overlay: null,
                 IsDefined: false,
@@ -1873,8 +1903,10 @@ internal sealed class PptxSceneBuilder
                 default);
         }
 
+        string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         return new PptxSceneChartLegend(
-            (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r",
+            ParseChartLegendPosition(position),
+            position,
             ReadOptionalOoxmlBooleanElement(legend, "overlay"),
             IsDefined: true,
             ReadOptionalOoxmlBooleanElement(legend, "delete"),

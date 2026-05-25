@@ -2155,6 +2155,13 @@ High-priority actions:
     kind, keeping current unknown-position fallback behavior explicit. Scene coverage locks raw `t`/`ctr` and
     typed `Top`/`Center`; focused chart validation passed `39 passed, 0 failed, 0 skipped`, the non-slow suite
     passed `231 passed, 0 failed, 7 skipped`, and `dotnet pack` succeeded.
+  - [x] 2026-05-25: Promoted chart legend positions from raw `legendPos` strings to a typed
+    `PptxSceneChartLegendPosition` ladder on `PptxSceneChartLegend` and the renderer's `ChartLegendLayout`,
+    while preserving the raw OOXML value. Pie/doughnut center/radius rules, bar no-title bottom-legend
+    reservation, line/bubble right-legend plot boxes, and legend drawing now branch on the typed position.
+    Scene coverage locks raw `b` and typed `Bottom`; focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.

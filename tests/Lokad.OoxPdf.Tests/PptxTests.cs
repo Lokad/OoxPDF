@@ -555,6 +555,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Bold == true, "Expected chart title bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Italic == false, "Expected explicit chart title italic disable in the scene model.");
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, slide.SlideNodes[4].Chart?.Legend.PositionKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDefined == true, "Expected chart legend presence in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDeleted is null, "Expected missing chart legend delete metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.Overlay == true, "Expected chart legend overlay flag in the scene model.");
