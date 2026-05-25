@@ -5247,3 +5247,13 @@ fallback paths now use one `ReadManualLayout` parser for plot areas, legends, an
 separate duplicate parser code. This is intentionally a no-geometry-change cleanup; focused `pptx-charts` tests passed
 with 32/32. Remaining long-term gap: resolve `layoutTarget` and partial manual-layout semantics from public Office-PDF
 structural probes, not from the sibling ECharts adapter.
+
+Revision note, 2026-05-25: Built temporary public-safe chart manual-layout probes under `artifacts/probes` from
+existing public chart fixtures. PowerPoint accepted `c:plotArea/c:layout/c:manualLayout` probes for both
+`layoutTarget="inner"` and `layoutTarget="outer"`, but rejected generated title/legend probes when `layoutTarget`
+was placed under `c:title` or `c:legend`; the same title/legend manual boxes opened once `layoutTarget` was removed.
+The paired plot-area probes show `layoutTarget` cannot be ignored: with the same x/y/w/h factors, Office exported
+the inner-target plot bounds near `330.48,106.90..776.88,400.66`, while outer-target bounds moved/shrank to roughly
+`443.15,106.90..769.67,365.76`; OOXPDF currently emits the same `311.33,103.41..757.73,397.17` for both. Do not
+paper over this with chart-specific offsets. The durable architecture needs separate outer plot-area and inner
+data-plot boxes, with axis-label/axis-title reservations derived structurally before manual `layoutTarget` is applied.
