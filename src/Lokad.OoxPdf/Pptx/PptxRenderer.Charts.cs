@@ -5686,40 +5686,6 @@ internal sealed partial class PptxRenderer
             double explosionOffset = pointExplosions.TryGetValue(i, out double explosion) ? geometry.Radius * explosion : 0d;
             double sliceCenterX = geometry.CenterX + Math.Cos(midpointAngle) * explosionOffset;
             double sliceCenterY = geometry.CenterY + Math.Sin(midpointAngle) * explosionOffset;
-            int segments = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 18d)));
-            (double X, double Y)[] points;
-            if (innerRadius <= 0d)
-            {
-                points = new (double X, double Y)[segments + 2];
-                points[0] = (sliceCenterX, sliceCenterY);
-                for (int segment = 0; segment <= segments; segment++)
-                {
-                    double segmentAngle = angle + sweep * segment / segments;
-                    points[segment + 1] = (
-                        sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
-                        sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
-                }
-            }
-            else
-            {
-                points = new (double X, double Y)[(segments + 1) * 2];
-                for (int segment = 0; segment <= segments; segment++)
-                {
-                    double segmentAngle = angle + sweep * segment / segments;
-                    points[segment] = (
-                        sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
-                        sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
-                }
-
-                for (int segment = 0; segment <= segments; segment++)
-                {
-                    double segmentAngle = angle + sweep * (segments - segment) / segments;
-                    points[segments + 1 + segment] = (
-                        sliceCenterX + Math.Cos(segmentAngle) * innerRadius,
-                        sliceCenterY + Math.Sin(segmentAngle) * innerRadius);
-                }
-            }
-
             ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill explicitFill)
                 ? explicitFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, i), 1d);
@@ -5730,7 +5696,8 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            graphics.FillPolygon(points);
+            AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, angle, sweep);
+            graphics.FillCurrentPathEvenOdd();
             if (fill.Alpha < 1d)
             {
                 graphics.RestoreState();
@@ -5745,7 +5712,8 @@ internal sealed partial class PptxRenderer
                 }
 
                 SetChartStroke(graphics, stroke);
-                graphics.StrokePolygon(points);
+                AppendPieOrDoughnutSlicePath(graphics, sliceCenterX, sliceCenterY, geometry.Radius, innerRadius, angle, sweep);
+                graphics.StrokeCurrentPath();
                 if (stroke.Alpha < 1d)
                 {
                     graphics.RestoreState();
@@ -5753,6 +5721,48 @@ internal sealed partial class PptxRenderer
             }
 
             angle += sweep;
+        }
+    }
+
+    private static void AppendPieOrDoughnutSlicePath(PdfGraphicsBuilder graphics, double centerX, double centerY, double outerRadius, double innerRadius, double startAngle, double sweepAngle)
+    {
+        double outerStartX = centerX + Math.Cos(startAngle) * outerRadius;
+        double outerStartY = centerY + Math.Sin(startAngle) * outerRadius;
+        if (innerRadius <= 0d)
+        {
+            graphics.MoveTo(centerX, centerY);
+            graphics.LineTo(outerStartX, outerStartY);
+            AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle, moveToStart: false);
+            graphics.ClosePath();
+            return;
+        }
+
+        double endAngle = startAngle + sweepAngle;
+        double innerEndX = centerX + Math.Cos(endAngle) * innerRadius;
+        double innerEndY = centerY + Math.Sin(endAngle) * innerRadius;
+        graphics.MoveTo(outerStartX, outerStartY);
+        AppendCircularArc(graphics, centerX, centerY, outerRadius, startAngle, sweepAngle, moveToStart: false);
+        graphics.LineTo(innerEndX, innerEndY);
+        AppendCircularArc(graphics, centerX, centerY, innerRadius, endAngle, -sweepAngle, moveToStart: false);
+        graphics.ClosePath();
+    }
+
+    private static void AppendCircularArc(PdfGraphicsBuilder graphics, double centerX, double centerY, double radius, double startAngle, double sweepAngle, bool moveToStart)
+    {
+        int segmentCount = Math.Max(1, (int)Math.Ceiling(Math.Abs(sweepAngle) / (Math.PI / 2d)));
+        double segmentSweep = sweepAngle / segmentCount;
+        for (int segment = 0; segment < segmentCount; segment++)
+        {
+            double segmentStart = startAngle + segmentSweep * segment;
+            AppendEllipseArcSegment(
+                graphics,
+                centerX,
+                centerY,
+                radius,
+                radius,
+                segmentStart * 180d / Math.PI,
+                segmentSweep * 180d / Math.PI,
+                moveToStart && segment == 0);
         }
     }
 

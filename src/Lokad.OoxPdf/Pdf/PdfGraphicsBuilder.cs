@@ -202,6 +202,11 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("f");
     }
 
+    public void FillCurrentPathEvenOdd()
+    {
+        builder.AppendLine("f*");
+    }
+
     public void StrokeCurrentPath()
     {
         builder.AppendLine("S");

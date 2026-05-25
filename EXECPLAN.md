@@ -5741,3 +5741,25 @@ come from renderer metric ratios even though the legend container is now structu
 durable target is a shared polar layout oracle that derives the plot circle, legend container, explosion
 envelope, and Bezier arc operators from OOXML plus Office PDF structure instead of combining a structural legend
 with hard-coded polar center/radius rules.
+
+Revision note, 2026-05-25: Advanced the polar chart PDF structure without claiming a geometry win. Pie and
+doughnut slices now emit cubic Bezier arc paths through the shared ellipse-arc segment helper instead of sampled
+polygon rings, and annular doughnut regions use the PDF even-odd fill operator `f*`, matching the Office-exported
+slice regions. This is locked by the native chart test, which now requires both curve operators and `f*` for the
+area/scatter/radar/doughnut synthetic case. Focused `pptx-charts` tests passed with 38/38, the full public
+`pptx-charts` visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T18:09:03.5217079+02:00`, and `dotnet pack` succeeded. The polar visual gates
+stayed stable after the structural change: `pptx-ladder-11-chart-doughnut-exploded-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-180602` with MAE
+`5.707283227237654`, changed16 `0.06195987654320988`, SSIM `0.6831093274582816`;
+`pptx-ladder-11-chart-doughnut-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-180611` with MAE `3.4931896219135803`,
+changed16 `0.038610628858024694`, SSIM `0.8611076639650247`; and the neighboring exploded-pie guard passed at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-180619` with MAE
+`0.14541353202160495`, changed16 `0.0030984760802469135`, SSIM `0.9955628726875425`. Structural inspection of
+the exploded-doughnut candidate now reports three slice `FilledRegion` objects using `f*` with segment counts
+`6/6/4`, matching Office's fill operator and slice segmentation class. Remaining long-term gap: the same
+inspection still shows the candidate slice union at roughly `198.10..573.41 x 97.83..450.18 pt` while Office is
+around `230.74..598.22 x 98.44..450.48 pt`, so the dominant residual is the polar layout solver: center, radius,
+legend reserve, and explosion envelope must move out of fixed renderer ratios and into a typed polar chart model
+with PDF structural gates.

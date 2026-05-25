@@ -9305,6 +9305,7 @@ internal static class PptxTests
         TestAssert.True(Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count >= 4, "Expected native chart paths for area, scatter, radar, and doughnut charts.");
         TestAssert.DoesNotContain("/GS62000F100000S gs", pdf);
         TestAssert.Contains(" c", pdf);
+        TestAssert.Contains("f*", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.DoesNotContain("1 1 1 rg", pdf);
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
