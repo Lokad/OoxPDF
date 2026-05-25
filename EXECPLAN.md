@@ -1149,6 +1149,19 @@ High-priority actions:
   passed with 25 passed, 0 failed, 0 skipped. Remaining gaps stay explicit: vertical gridline/tick density,
   horizontal-axis tick-label placement, value-label positions, and chart-title classification/placement need
   separate Office-PDF-backed slices before a strict text/gridline gate is honest.
+- [x] 2026-05-25: Gate public horizontal-bar vertical gridline density structurally.
+  Horizontal value-axis auto major-unit selection now uses a horizontal-axis tick target while still honoring
+  explicit `majorUnit`; this matches Office's 5-unit cadence on the public 0..50 clustered horizontal-bar
+  chart without changing vertical value-axis defaults. A synthetic horizontal-bar chart locks the 10-segment
+  gridline path for a 0..50 auto axis. The public `pptx-ladder-11-chart-bar-clustered-port` visual case
+  passed at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114511` and now gates
+  `VerticalGridlineGroupCandidate` alongside the plot box and axis strokes. Focused `pptx-charts` tests
+  passed with 26 passed, 0 failed, 0 skipped. Remaining gaps: horizontal-axis tick-label Y, value-label
+  positions, and chart-title classification/placement.
+- [ ] Replace fixed chart auto tick target constants with an Office-aligned axis layout model that derives
+  target tick density from axis length, label text extents, number format, orientation, and available label
+  bands. The new horizontal-axis target is useful evidence, but it is still a named metric rule; the long-term
+  state should select major units from structural axis-layout constraints rather than chart-family constants.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -3836,8 +3849,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Evidence: `ClassifyPdfChartGraphics.ps1` now also derives `AxisPairPlotBoxCandidate` when the horizontal
   axis aligns with the vertical axis' far end, and the renderer now uses a horizontal-bar title/no-legend plot
   box plus Office-style bottom value-axis placement. `pptx-ladder-11-chart-bar-clustered-port` now gates the
-  plot box and axis strokes within 1 pt. Remaining ungated gaps are vertical gridline/tick density,
-  horizontal-axis tick labels, value-label positions, and chart-title text classification.
+  plot box, the 10-segment vertical gridline group, and axis strokes within 1 pt. Remaining ungated gaps are
+  horizontal-axis tick-label Y, value-label positions, and chart-title text classification.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4123,9 +4136,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   scale, and packed bottom legend placement to Office PDF evidence. The composite chart is now protected by
   structural gates for the derived gridline/axis plot box, legend markers, category tick labels, value tick
   labels, and legend text. The public clustered horizontal-bar chart now additionally gates its derived plot
-  box and two axis strokes. These remove both cases from the pre-existing failure list and turn the bar case
-  into a structural-regression surface, while broader chart-family layout work remains open because the
-  current named metric rules still need to be replaced by systematic chart structural oracle tooling.
+  box, two axis strokes, and 10-segment vertical gridline group. These remove both cases from the pre-existing
+  failure list and turn the bar case into a structural-regression surface, while broader chart-family layout
+  work remains open because the current named metric rules still need to be replaced by systematic chart
+  structural oracle tooling.
 
 ## Concrete Steps
 
@@ -4178,7 +4192,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-221 passed, 0 failed, 0 skipped
+222 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -4263,6 +4277,13 @@ the same command against `HEAD` produced the same value. Public visual case
 the same command against `HEAD` produced the same value. Full console suite passed with 221 passed, 0 failed,
 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
+Horizontal bar gridline-density slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 26 passed, 0 failed, 0 skipped after adding
+`PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks`. Public visual case
+`pptx-ladder-11-chart-bar-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114511` with
+`AxisPairPlotBoxCandidate`, `VerticalGridlineGroupCandidate`, `HorizontalLine`, and `VerticalLine` structural
+comparisons all within 1 pt. Full console suite passed with 222 passed, 0 failed, 0 skipped.
 Line-chart structural alignment slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
 passed with 25 passed, 0 failed, 0 skipped. Public visual case
 `pptx-ladder-11-chart-line-3series-port` passed at
@@ -4318,6 +4339,16 @@ passed at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-113
 `-0.02/0.02 pt`. Remaining ungated gaps: candidate emits fewer vertical gridline/tick positions (`10 pt`
 instead of Office's `5 pt` step), horizontal-axis tick label Y is about `-4.12 pt`, value-axis labels remain
 positionally off, and title text sits too low / is currently classified as `DataLabelText`.
+Horizontal bar gridline-density slice: horizontal value-axis auto unit selection now uses
+`AxisNiceHorizontalValueTickTargetCount` for horizontal bar value axes while explicit `majorUnit` still wins.
+The synthetic `PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks` locks a 10-segment path for
+a 0..50 auto axis. Public visual case `pptx-ladder-11-chart-bar-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114511` after adding
+`VerticalGridlineGroupCandidate`; candidate and Office both emit `SegmentCount=10`, with minX delta about
+`0.02 pt`, minY `0.02 pt`, maxX `-0.04 pt`, and maxY `0.02 pt`. Remaining ungated gaps: horizontal-axis tick
+label Y about `-4.12 pt`, value-label positions, and chart-title classification/placement. Long-term gap:
+replace the fixed auto tick target constants with an Office-aligned axis layout model driven by axis length,
+label extents, number format, and orientation.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -5076,3 +5107,8 @@ a broad tolerance.
 Revision note, 2026-05-25: Added the horizontal bar plot-box/axis structural gate slice. The clustered-bar
 case now gates its derived plot box and axis strokes, while tick/gridline density, tick-label placement,
 value-label placement, and title classification remain open rather than being hidden behind loose tolerances.
+
+Revision note, 2026-05-25: Added the horizontal bar gridline-density structural gate. The clustered-bar case
+now compares the Office/candidate 10-segment vertical gridline group; remaining bar gaps are text
+placement/classification and replacing fixed auto tick targets with an Office-aligned axis layout model, not
+gridline density.

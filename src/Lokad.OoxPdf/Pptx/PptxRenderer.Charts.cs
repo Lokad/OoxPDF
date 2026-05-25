@@ -2305,7 +2305,10 @@ internal sealed partial class PptxRenderer
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         RgbColor color = style.Color;
-        IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true);
+        double autoTickTargetCount = horizontalBars
+            ? PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount
+            : PptxChartMetricRules.AxisNiceTickTargetCount;
+        IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true, autoTickTargetCount);
         double maxLabelWidth = tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis))
             .DefaultIfEmpty("0")
@@ -2514,12 +2517,12 @@ internal sealed partial class PptxRenderer
         return (string?)axis?.Element(ChartNamespace + "axId")?.Attribute("val");
     }
 
-    private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints)
+    private static IReadOnlyList<double> GetChartAxisTickValues(ChartValueExtents extents, double? explicitUnit, bool includeEndpoints, double autoTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
         if (explicitUnit is not { } unit || unit <= 0d)
         {
-            unit = ChooseChartAxisMajorUnit(range);
+            unit = ChooseChartAxisMajorUnit(range, autoTickTargetCount);
         }
 
         var values = new List<double>();
@@ -2545,9 +2548,9 @@ internal sealed partial class PptxRenderer
         return values;
     }
 
-    private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, double? explicitUnit, double? crossingValue)
+    private static IReadOnlyList<double> GetChartGridlineValues(ChartValueExtents extents, double? explicitUnit, double? crossingValue, double autoTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount)
     {
-        return GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: true)
+        return GetChartAxisTickValues(extents, explicitUnit, includeEndpoints: true, autoTickTargetCount)
             .Where(value => crossingValue is not { } crossing || Math.Abs(value - crossing) > PptxChartMetricRules.AxisValueEpsilon)
             .ToArray();
     }
@@ -2603,9 +2606,9 @@ internal sealed partial class PptxRenderer
         return plotStart + plotLength * GetChartValuePlotRatio(extents, value ?? 0d, reversed);
     }
 
-    private static double ChooseChartAxisMajorUnit(double range)
+    private static double ChooseChartAxisMajorUnit(double range, double tickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount)
     {
-        double target = Math.Max(range / PptxChartMetricRules.AxisNiceTickTargetCount, double.Epsilon);
+        double target = Math.Max(range / Math.Max(1d, tickTargetCount), double.Epsilon);
         double magnitude = Math.Pow(PptxChartMetricRules.AxisNiceTickStepMaximum, Math.Floor(Math.Log10(target)));
         double normalized = target / magnitude;
         double nice = normalized <= PptxChartMetricRules.AxisNiceTickStepSmall
@@ -3316,7 +3319,7 @@ internal sealed partial class PptxRenderer
         {
             if (horizontalBars)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount);
             }
             else
             {
@@ -3509,7 +3512,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke)
+    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, double autoTickTargetCount = PptxChartMetricRules.AxisNiceTickTargetCount)
     {
         ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
         if (stroke.Alpha <= 0.001d)
@@ -3526,7 +3529,7 @@ internal sealed partial class PptxRenderer
         SetChartStroke(graphics, stroke);
         double range = Math.Max(1d, extents.Max - extents.Min);
         bool hasPath = false;
-        foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue))
+        foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue, autoTickTargetCount))
         {
             double x = ChartValueToPlotCoordinate(extents, value, plotX, plotWidth, reversed);
             graphics.MoveTo(x, plotY);

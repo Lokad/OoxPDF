@@ -13,7 +13,7 @@
     "maxChangedPixelRatioAtThreshold16": 0.186,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalLine", "VerticalLine"]
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "VerticalGridlineGroupCandidate", "HorizontalLine", "VerticalLine"]
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"
