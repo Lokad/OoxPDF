@@ -1545,9 +1545,7 @@ internal sealed partial class PptxRenderer
         }
 
         int categoryCount = Math.Max(1, series.Max(values => values.Count));
-        double range = Math.Max(1d, extents.Max - extents.Min);
-        double zeroOffset = (0d - extents.Min) / range;
-        double zeroX = plotBox.X + zeroOffset * plotBox.Width;
+        double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         if (horizontalBars)
@@ -1567,14 +1565,13 @@ internal sealed partial class PptxRenderer
                     }
 
                     double value = values[category];
-                    double barWidth = Math.Abs(value) / range * plotBox.Width;
-                    double barStart = value >= 0d ? zeroX : zeroX - barWidth;
-                    double barEnd = value >= 0d ? zeroX + barWidth : zeroX;
+                    double barBase = zeroX;
+                    double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.X, plotBox.Width, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double x = ResolveHorizontalBarDataLabelX(effectiveOptions.Position, value, barStart, barEnd, labelWidth);
+                    double x = ResolveHorizontalBarDataLabelX(effectiveOptions.Position, barBase, barEnd, labelWidth);
                     double y = categoryY + seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d;
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
@@ -1682,14 +1679,15 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CLD");
     }
 
-    private static double ResolveHorizontalBarDataLabelX(string position, double value, double barStart, double barEnd, double labelWidth)
+    private static double ResolveHorizontalBarDataLabelX(string position, double barBase, double barEnd, double labelWidth)
     {
+        bool extendsRight = barEnd >= barBase;
         return position switch
         {
-            "ctr" or "bestFit" => (barStart + barEnd - labelWidth) / 2d,
-            "inBase" => value >= 0d ? barStart + PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap,
-            "inEnd" or "l" or "r" => value >= 0d ? barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap : barStart + PptxChartMetricRules.BarDataLabelHorizontalGap,
-            "outEnd" or _ => value >= 0d ? barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap : barStart - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap
+            "ctr" or "bestFit" => (barBase + barEnd - labelWidth) / 2d,
+            "inBase" => extendsRight ? barBase + PptxChartMetricRules.BarDataLabelHorizontalGap : barBase - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap,
+            "inEnd" or "l" or "r" => extendsRight ? barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap,
+            "outEnd" or _ => extendsRight ? barEnd + PptxChartMetricRules.BarDataLabelHorizontalGap : barEnd - labelWidth - PptxChartMetricRules.BarDataLabelHorizontalGap
         };
     }
 
@@ -3088,11 +3086,9 @@ internal sealed partial class PptxRenderer
         bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
         (double minValue, double maxValue) = (valueExtents.Min, valueExtents.Max);
         double valueRange = Math.Max(1d, maxValue - minValue);
-        valueAxisReversed = horizontalBars ? false : valueAxisReversed;
-
         double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisReversed);
-        double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, valueAxisReversed);
-        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
+        double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
         if (minorGridlines)
         {
             if (horizontalBars)
@@ -3157,7 +3153,7 @@ internal sealed partial class PptxRenderer
             }
             else
             {
-                RenderClusteredHorizontalBars(graphics, theme, chartPalette, plotY, plotWidth, plotHeight, series, categoryCount, valueRange, zeroX, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent, overlapPercent);
+                RenderClusteredHorizontalBars(graphics, theme, chartPalette, plotX, plotY, plotWidth, plotHeight, series, categoryCount, valueExtents, valueAxisReversed, zeroX, seriesFills, pointFills, pointStrokes, varyColors, gapWidthPercent, overlapPercent);
             }
 
             return;
@@ -3531,7 +3527,7 @@ internal sealed partial class PptxRenderer
         return (minValue, maxValue);
     }
 
-    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, double valueRange, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderClusteredHorizontalBars(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, double plotX, double plotY, double plotWidth, double plotHeight, IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, ChartValueExtents valueExtents, bool valueAxisReversed, double zeroX, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double categoryHeight = plotHeight / categoryCount;
         double barHeight = GetClusteredBarWidth(categoryHeight, series.Count, gapWidthPercent);
@@ -3549,9 +3545,10 @@ internal sealed partial class PptxRenderer
                 }
 
                 double value = values[category];
-                double barWidth = Math.Abs(value) / valueRange * plotWidth;
                 ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(theme, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
-                double barX = value >= 0d ? zeroX : zeroX - barWidth;
+                double valueX = ChartValueToPlotCoordinate(valueExtents, value, plotX, plotWidth, valueAxisReversed);
+                double barX = Math.Min(zeroX, valueX);
+                double barWidth = Math.Abs(valueX - zeroX);
                 double barY = categoryY + seriesIndex * step;
                 FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
                 StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);

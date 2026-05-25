@@ -1048,6 +1048,17 @@ High-priority actions:
   213 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar labels,
   stacked bar/column accumulation, and Office visual coverage for inside/outside label positions under
   reversed axes still need separate evidence.
+- [x] 2026-05-25: Consume value-axis reversed orientation for clustered horizontal bar geometry and labels.
+  Clustered horizontal bars no longer disable `maxMin` value-axis orientation. The renderer now maps both the
+  zero baseline and value endpoint through the shared value-to-plot-coordinate helper, derives rectangle
+  bounds from those mapped coordinates, and resolves horizontal data-label inside/outside positions from the
+  actual base-to-end direction instead of the numeric sign. A synthetic horizontal `maxMin` bar chart locks
+  both filled rectangle direction and centered value-label X coordinates. Focused chart tests passed with
+  18 passed, 0 failed, 0 skipped; the clustered horizontal bar public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-095648`; the full suite passed with
+  214 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: stacked horizontal bars,
+  stacked columns, secondary-axis geometry, and Office-PDF visual coverage for reversed-axis inside/outside
+  label positions still need separate evidence.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1418,9 +1429,11 @@ High-priority actions:
   - [x] Consume value-axis reversed orientation for line-chart data-label point anchors.
   - [x] Consume value-axis reversed orientation for vertical bar data-label anchors and direction-aware
     inside/outside vertical label offsets.
-  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, horizontal bar
-    data labels, value-axis side/cross-axis placement, series coordinate baselines, and secondary axes
-    instead of relying on right-side XML/layout assumptions.
+  - [x] Consume value-axis reversed orientation for clustered horizontal bar endpoints and direction-aware
+    horizontal data-label offsets.
+  - [ ] Consume axis crossing/orientation metadata for stacked bars/columns, value-axis
+    side/cross-axis placement, series coordinate baselines, and secondary axes instead of relying on
+    right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4590,6 +4603,21 @@ with 17 passed, 0 failed, 0 skipped; the clustered-column public visual gate pas
 213 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Horizontal bar labels and stacked bar/column
 labels remain open because they need independent direction and accumulation rules, and inside/outside label
 positions under reversed axes still need Office-PDF visual evidence before being called complete.
+
+chart reversed clustered horizontal bars / 2026-05-25:
+Clustered horizontal bar geometry and labels now consume the resolved scene/XML value-axis orientation. The
+renderer no longer disables `maxMin` on horizontal bars; it maps both zero and value coordinates through the
+shared value-to-plot-coordinate helper, builds bar rectangles from the two mapped X positions, and resolves
+horizontal data-label offsets from the actual base-to-end direction. This removes the previous sign-only
+assumption that positive horizontal bars always extend right. A synthetic `maxMin` horizontal bar chart
+verifies that the maximum-value bar extends left of the smaller bar and that centered value-label matrices
+move with the reversed geometry. The focused `pptx-charts` non-slow group passed with 18 passed, 0 failed,
+0 skipped; the clustered horizontal bar public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-095648`; the full suite passed with
+214 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Stacked horizontal bars and stacked columns
+remain open because they need a direction-aware accumulation model rather than a one-segment baseline/end
+mapping. Secondary axes also remain open until their orientation and crossing decisions are consumed
+independently in combo-chart geometry.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
