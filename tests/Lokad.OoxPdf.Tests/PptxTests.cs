@@ -9207,7 +9207,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart><c:plotArea><c:doughnutChart>
                   <c:holeSize val="75"/>
-                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt><c:pt idx="1"><c:v>70</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:ser><c:explosion val="25"/><c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt><c:pt idx="1"><c:v>70</c:v></c:pt></c:numLit></c:val></c:ser>
                 </c:doughnutChart></c:plotArea></c:chart></c:chartSpace>
                 """)
         });
@@ -9220,10 +9220,11 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("0.667 0.667 0 rg", pdf);
-        TestAssert.Contains("653.22 434.88 m", pdf);
+        TestAssert.True(Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count >= 4, "Expected native chart paths for area, scatter, radar, and doughnut charts.");
         TestAssert.Contains("/GS62000F100000S gs", pdf);
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains(" l S", pdf);
+        TestAssert.DoesNotContain("1 1 1 rg", pdf);
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }

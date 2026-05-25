@@ -9,8 +9,8 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
-    "maxMeanAbsoluteError": 13.2,
-    "maxChangedPixelRatioAtThreshold16": 0.166
+    "maxMeanAbsoluteError": 12.0,
+    "maxChangedPixelRatioAtThreshold16": 0.141
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

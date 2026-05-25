@@ -749,7 +749,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderPieChart(graphics, plotBox, pieSeries[0], pointFills, pointStrokes, pointExplosions);
+                RenderPieChart(graphics, theme, chartPalette, plotBox, pieSeries[0], pointFills, pointStrokes, pointExplosions);
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 return true;
             }
@@ -768,7 +768,7 @@ internal sealed partial class PptxRenderer
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderDoughnutChart(graphics, plotBox, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
+                RenderDoughnutChart(graphics, theme, chartPalette, plotBox, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize);
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 return true;
             }
@@ -1695,7 +1695,7 @@ internal sealed partial class PptxRenderer
             double labelHeight = fontSize * PptxChartMetricRules.PieDataLabelHeightFactor;
             double sweep = values[i] / total * 360d;
             double mid = (angle + sweep / 2d) * Math.PI / 180d;
-            double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset / 100d, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
+            double explosion = pointExplosions.TryGetValue(i, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
             string label = FormatPieDataLabel(values[i], total, effectiveOptions);
@@ -2927,6 +2927,24 @@ internal sealed partial class PptxRenderer
         if (series is null)
         {
             return explosions;
+        }
+
+        if (series.Element(ChartNamespace + "explosion")?.Attribute("val") is { } seriesExplosionAttribute &&
+            double.TryParse(seriesExplosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double seriesExplosion))
+        {
+            double fraction = Math.Clamp(seriesExplosion / 100d, 0d, 1d);
+            int pointCount = series
+                .Elements(ChartNamespace + "val")
+                .Descendants(ChartNamespace + "pt")
+                .Select(point => (string?)point.Attribute("idx"))
+                .Select(value => int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ? index : -1)
+                .Where(index => index >= 0)
+                .DefaultIfEmpty(-1)
+                .Max() + 1;
+            for (int index = 0; index < pointCount; index++)
+            {
+                explosions[index] = fraction;
+            }
         }
 
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
@@ -4732,7 +4750,12 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "RVA");
     }
 
-    private static void RenderPieChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)
+    private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)
+    {
+        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, plotBox, values, pointFills, pointStrokes, pointExplosions, holeSize: 0d);
+    }
+
+    private static void RenderPieOrDoughnutSlices(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -4741,6 +4764,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
+        double innerRadius = geometry.Radius * Math.Clamp(holeSize, 0d, 0.95d);
         double angle = -Math.PI / 2d;
 
         for (int i = 0; i < values.Count; i++)
@@ -4757,19 +4781,42 @@ internal sealed partial class PptxRenderer
             double sliceCenterX = geometry.CenterX + Math.Cos(midpointAngle) * explosionOffset;
             double sliceCenterY = geometry.CenterY + Math.Sin(midpointAngle) * explosionOffset;
             int segments = Math.Max(2, (int)Math.Ceiling(Math.Abs(sweep) / (Math.PI / 18d)));
-            var points = new (double X, double Y)[segments + 2];
-            points[0] = (sliceCenterX, sliceCenterY);
-            for (int segment = 0; segment <= segments; segment++)
+            (double X, double Y)[] points;
+            if (innerRadius <= 0d)
             {
-                double segmentAngle = angle + sweep * segment / segments;
-                points[segment + 1] = (
-                    sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
-                    sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
+                points = new (double X, double Y)[segments + 2];
+                points[0] = (sliceCenterX, sliceCenterY);
+                for (int segment = 0; segment <= segments; segment++)
+                {
+                    double segmentAngle = angle + sweep * segment / segments;
+                    points[segment + 1] = (
+                        sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
+                        sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
+                }
+            }
+            else
+            {
+                points = new (double X, double Y)[(segments + 1) * 2];
+                for (int segment = 0; segment <= segments; segment++)
+                {
+                    double segmentAngle = angle + sweep * segment / segments;
+                    points[segment] = (
+                        sliceCenterX + Math.Cos(segmentAngle) * geometry.Radius,
+                        sliceCenterY + Math.Sin(segmentAngle) * geometry.Radius);
+                }
+
+                for (int segment = 0; segment <= segments; segment++)
+                {
+                    double segmentAngle = angle + sweep * (segments - segment) / segments;
+                    points[segments + 1 + segment] = (
+                        sliceCenterX + Math.Cos(segmentAngle) * innerRadius,
+                        sliceCenterY + Math.Sin(segmentAngle) * innerRadius);
+                }
             }
 
             ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill explicitFill)
                 ? explicitFill
-                : new ChartSeriesFill(ChartPalette(i), 1d);
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, i), 1d);
             if (fill.Alpha < 1d)
             {
                 graphics.SaveState();
@@ -4803,14 +4850,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
+    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize)
     {
-        RenderPieChart(graphics, plotBox, values, pointFills, pointStrokes, pointExplosions);
-
-        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox);
-        double innerRadius = geometry.Radius * holeSize;
-        graphics.SetFillRgb(255, 255, 255);
-        graphics.FillEllipse(geometry.CenterX - innerRadius, geometry.CenterY - innerRadius, innerRadius * 2d, innerRadius * 2d);
+        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, plotBox, values, pointFills, pointStrokes, pointExplosions, holeSize);
     }
 
     private static void EmitChartDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, string id, OoxPdfSeverity severity, string message, string? partName, int slideIndex, string fallback)

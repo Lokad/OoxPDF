@@ -5416,3 +5416,25 @@ run: page 17 reports MAE `2.8807392939814815`, changed16 `0.04488811728395062`, 
 foreground histogram `0.9998584380437963`. Remaining private-safe gap: the worst private pages are still dominated
 by broader layout/typography and unsupported recolor differences, so future private evidence should continue to be
 translated into public synthetic or Office-authored probes before implementation.
+
+Revision note, 2026-05-25: Replaced two pie-family heuristics with more structural Office-aligned behavior. Pie and
+doughnut slice fills now follow explicit point fills, then chart color style, then the active theme accent palette,
+instead of falling back directly to a hard-coded modern Office palette. Doughnut charts now render annular slice
+paths directly rather than drawing shifted pie wedges and masking a single central white ellipse; this matters for
+series-level explosion because Office shifts each slice with its own inner arc. The OOXML reader now expands
+series-level `c:explosion` into point explosion offsets, and pie/doughnut data-label explosion offsets now consume
+the existing normalized fraction instead of dividing by 100 a second time. The native-chart unit fixture now exercises
+series-level doughnut explosion and rejects the old white-mask shortcut. Focused `pptx-charts` tests passed with
+35/35. The public pie-family gates passed after tightening: `pptx-ladder-11-chart-pie-5-categories-port` at
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-140916` with MAE
+`9.668700086805556`, changed16 `0.14166956018518517`; `pptx-ladder-11-chart-doughnut-port` at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-140920` with MAE `12.281039737654321`,
+changed16 `0.13636670524691358`; `pptx-ladder-11-chart-pie-exploded-port` at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-140924` with MAE `11.719692443094136`,
+changed16 `0.13810956790123458`; and `pptx-ladder-11-chart-doughnut-exploded-port` at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-140928` with MAE
+`7.274055266203704`, changed16 `0.09432581018518518`. Full non-slow tests passed with 224 passed, 0 failed, 7
+skipped, and `dotnet pack` succeeded. Remaining long-term gap: the polar chart family still uses
+fixed center/radius ratios and polygonal arc approximation. The durable target is a typed polar layout/slice model
+that derives first-slice angle, hole size, explosion offsets, color-style/theme mapping, legend swatches, labels,
+and Bezier arc geometry from OOXML plus Office PDF structure instead of renderer-local slice construction.
