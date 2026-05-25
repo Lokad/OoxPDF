@@ -471,6 +471,65 @@ internal sealed partial class PptxRenderer
                     barChartIndex++;
                 }
 
+                int lineChartIndex = 0;
+                foreach (XElement comboLineChart in ReadChartPlotElements(chartXml, "lineChart"))
+                {
+                    PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, "lineChart", lineChartIndex);
+                    IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, comboLineChart);
+                    if (lineSeries.Count == 0)
+                    {
+                        lineChartIndex++;
+                        continue;
+                    }
+
+                    XElement? lineValueAxis = ReadChartValueAxisForChart(chartXml, comboLineChart);
+                    XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
+                    PptxSceneChartAxis? lineValueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
+                    ChartValueExtents lineValueExtents = ReadSceneOrXmlChartValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeries));
+                    ChartAxisUnits lineAxisUnits = ReadSceneOrXmlChartValueAxisUnits(lineValueSceneAxis, lineValueAxisForScale);
+                    bool lineValueAxisReversed = ReadSceneOrXmlValueAxisReversed(lineValueSceneAxis, lineValueAxisForScale);
+                    IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme);
+                    IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneOrXmlMarkerStyles(linePlot, comboLineChart, theme);
+                    IReadOnlyList<bool> lineSmoothSeries = ReadSceneOrXmlSmoothSeries(linePlot, comboLineChart);
+                    if (secondaryValueAxis is null && IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
+                    {
+                        secondaryValueAxis = lineValueAxis;
+                        secondaryValueSceneAxis = lineValueSceneAxis;
+                        secondaryValueExtents = lineValueExtents;
+                        secondaryAxisUnits = lineAxisUnits;
+                    }
+
+                    legendEntries.AddRange(BuildStrokeLegendEntries(linePlot, comboLineChart, lineSeriesStrokes));
+                    RenderLineChart(
+                        graphics,
+                        plotBox,
+                        lineSeries,
+                        lineSeriesStrokes,
+                        lineMarkerStyles,
+                        lineSmoothSeries,
+                        majorGridlines: false,
+                        minorGridlines: false,
+                        ChartGridlineStyle.Empty,
+                        axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
+                        ChartShapeStyle.Empty,
+                        lineValueExtents,
+                        lineAxisUnits,
+                        ReadSceneOrXmlValueAxisCrossingValue(lineValueSceneAxis, lineValueAxisForScale, lineValueExtents),
+                        lineValueAxisReversed);
+                    fonts.AddRange(RenderLineDataLabels(
+                        theme,
+                        graphics,
+                        plotBox,
+                        lineSeries,
+                        lineValueExtents,
+                        lineValueAxisReversed,
+                        ReadSceneOrXmlDataLabelOptions(linePlot, comboLineChart, theme),
+                        ReadSceneOrXmlSeriesDataLabelOptions(linePlot, comboLineChart, theme),
+                        ReadSceneOrXmlCategoryLabels(linePlot, comboLineChart),
+                        ReadSceneOrXmlChartSeriesNames(linePlot, comboLineChart)));
+                    lineChartIndex++;
+                }
+
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, barChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))

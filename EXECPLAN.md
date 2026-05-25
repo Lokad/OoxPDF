@@ -1124,6 +1124,22 @@ High-priority actions:
   suite passed with 220 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal
   bar category/value label placement under non-default axis sides still needs Office-PDF evidence; secondary
   value-axis scale, series, and label binding remain separate combo-chart work.
+- [x] 2026-05-25: Render bar-first combo line plots with their own value-axis scale.
+  The supported bar/combo dispatch path now consumes sibling `c:lineChart` plot elements before returning from
+  the bar renderer. Each line plot resolves its own value axis through its chart-level `axId` bindings, then
+  uses that axis for value extents, units, crossing, orientation, data-label anchors, secondary-axis labels,
+  and legend entries. This closes the narrow case where a column+line combo chart preserved secondary-axis
+  metadata but silently dropped the line series geometry. A synthetic combo chart with a primary 0..10 bar
+  axis and a secondary 0..100 line axis locks the blue line point at the secondary-axis midpoint instead of
+  clamping it to the primary-axis top. Focused `pptx-charts` tests passed with 25 passed, 0 failed, 0 skipped;
+  the clustered-column visual guard passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-104200`; the composite public visual
+  case still fails its pre-existing MAE gate at `13.6832895688657` versus `12.41`, and the standalone
+  line-3series case still fails its pre-existing MAE gate at `5.42615294656636` versus `3.6` when checked
+  against both this worktree and `HEAD`. The full suite passed with 221 passed, 0 failed, 0 skipped; and
+  `dotnet pack` succeeded. Remaining gap: richer combo families, independent combo axis crossing/orientation
+  evidence, line/marker/label visual gates, and secondary-axis label placement still need Office-PDF-backed
+  slices.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -2803,9 +2819,9 @@ document-specific business content into public notes.
   transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text
   inside cells, and precise row/column sizing.
-- [ ] Charts: cached chart images, chart XML rendering, secondary-axis scale binding for combo geometry and
-  labels, non-default-axis-side label evidence, legends, series styling, grouped/stacked families, line
-  charts, combo charts, and embedded chart data.
+- [ ] Charts: cached chart images, chart XML rendering, secondary-axis scale binding beyond the first
+  bar-first line combo path, combo labels, non-default-axis-side label evidence, legends, series styling,
+  grouped/stacked families, line charts, combo charts, and embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
 - [ ] Slide inheritance: deeper master/layout placeholder resolution, theme variants, background styles,
   footer/date/slide-number placeholders, and hidden placeholder semantics.
@@ -3903,6 +3919,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `zeroY`, so `valAx @axPos="b"` or `valAx @axPos="t"` could not affect the visible axis line. The renderer
   now keeps value-axis bottom/top side as structural axis metadata, while value-to-coordinate mapping remains
   responsible for series, gridlines, and value label anchors.
+- Observation: Bar-first combo chart dispatch preserved secondary-axis metadata but skipped sibling line
+  plots.
+  Evidence: `TryRenderChart` entered the bar renderer as soon as it found a `c:barChart`, rendered additional
+  `barChart` siblings, then returned before the later line-chart branch could see any `c:lineChart` sibling.
+  This meant a column+line combo could expose secondary value-axis labels while omitting the line series
+  itself. Rendering sibling line plots inside the bar-first combo path closes that dispatch gap for the
+  supported vertical line geometry and makes plot geometry axis-bound by each chart element's own `axId`.
 
 ## Decision Log
 
@@ -3959,6 +3982,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   consumed geometry is different after chart orientation is known. Keeping bottom/top as its own resolved
   style field prevents a left/right axis-line rule from leaking into horizontal bar charts and keeps value
   coordinates out of axis-side selection.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Combo plot geometry is owned by each chart element's axis bindings, not by the first chart type in
+  dispatch.
+  Rationale: Office combo charts can mix chart families while sharing categories and using independent value
+  axes. If the renderer lets the first matched chart type decide all series geometry, it bakes a dispatch
+  artifact into chart semantics and drops or mis-scales sibling plots. Each plot element should resolve its
+  own `axId` references before geometry, labels, and legend entries are emitted.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
   Rationale: Plot areas, axes, gridlines, markers, and legend swatches all appear as ordinary PDF path,
@@ -4116,6 +4146,17 @@ passed with 24 passed, 0 failed, 0 skipped. Public visual cases
 `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-103015` and
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-103028`. Full console suite passed with
 220 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded.
+Bar-first combo line plot slice: focused `PptxSyntheticChartComboLineUsesOwnValueAxisScale` passed;
+`dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 25 passed, 0 failed, 0 skipped. Public visual case
+`pptx-ladder-11-chart-column-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-104200`. Public visual case
+`pptx-ladder-11-composite-chart-port` failed its pre-existing MAE gate at `13.6832895688657` versus `12.41`;
+the same command against `HEAD` produced the same value. Public visual case
+`pptx-ladder-11-chart-line-3series-port` failed its pre-existing MAE gate at `5.42615294656636` versus `3.6`;
+the same command against `HEAD` produced the same value. Full console suite passed with 221 passed, 0 failed,
+0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
@@ -4788,6 +4829,23 @@ segments move left under reversed orientation. The focused `pptx-charts` non-slo
 216 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining axis work is now concentrated on
 secondary-axis geometry, side/cross-axis placement, and Office-PDF visual evidence for inside/outside
 data-label positions under reversed axes.
+
+bar-first combo line plot axis binding / 2026-05-25:
+Column/bar-first combo charts now render sibling line plots before leaving the bar renderer. The added path
+does not reuse the primary bar value axis by default; it resolves each line chart's value axis through the
+line plot's own `axId` bindings, then uses that axis for scale, units, crossing, orientation, line data-label
+anchors, secondary-axis labels, and legend entries. This is a structural dispatch fix rather than a visual
+nudge: the first chart type found in the XML no longer decides whether later plot families are visible or
+which scale they use. A synthetic combo chart with a 0..10 bar axis and a 0..100 line axis proves that a line
+value of 50 lands at the plot midpoint instead of clamping to the top of the primary bar scale. The focused
+`pptx-charts` non-slow group passed with 25 passed, 0 failed, 0 skipped; the clustered-column public visual
+guard passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-104200`; the full suite
+passed with 221 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Two relevant public visual gates
+remain pre-existing failures and were checked against `HEAD`: `pptx-ladder-11-composite-chart-port` stays at
+MAE `13.6832895688657` versus limit `12.41`, and `pptx-ladder-11-chart-line-3series-port` stays at MAE
+`5.42615294656636` versus limit `3.6`. Remaining combo work should focus on public Office-PDF evidence for
+mixed plot-family ordering, secondary label placement, marker/line structure, independent crossing and
+orientation, and combo families beyond the current bar+line vertical path.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
@@ -4831,3 +4889,7 @@ remaining horizontal bar axis work to value-axis crossing placement and label ev
 Revision note, 2026-05-25: Added the completed horizontal bar value-axis side slice, narrowing the remaining
 horizontal bar side/cross-axis work to label placement evidence and preserving secondary-axis scale/series
 binding as open combo-chart work.
+
+Revision note, 2026-05-25: Added the completed bar-first combo line plot slice, narrowing secondary-axis
+scale/series binding for the supported column+line combo path while preserving broader combo-family,
+secondary-label, marker, crossing, orientation, and public visual-gate work as open.

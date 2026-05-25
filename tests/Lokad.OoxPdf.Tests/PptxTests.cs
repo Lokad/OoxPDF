@@ -7519,6 +7519,111 @@ internal static class PptxTests
             "The primary value axis should still use c:axPos val=\"r\".");
     }
 
+    public static void PptxSyntheticChartComboLineUsesOwnValueAxisScale()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea>
+                  <c:barChart>
+                    <c:barDir val="col"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>5</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:lineChart>
+                    <c:ser>
+                      <c:spPr><a:ln><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></c:spPr>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>0</c:v></c:pt><c:pt idx="1"><c:v>50</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                    <c:axId val="1"/><c:axId val="3"/>
+                  </c:lineChart>
+                  <c:catAx>
+                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+                  </c:catAx>
+                  <c:valAx>
+                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="10"/></c:scaling>
+                  </c:valAx>
+                  <c:valAx>
+                    <c:axId val="3"/><c:axPos val="r"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="100"/></c:scaling>
+                  </c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        var allLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
+            .Cast<Match>()
+            .Select(match => new
+            {
+                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
+                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
+                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
+                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
+            })
+            .ToArray();
+        var verticalLines = allLines
+            .Where(line => Math.Abs(line.X1 - line.X2) < 0.001d && Math.Abs(line.Y1 - line.Y2) > 100d)
+            .ToArray();
+        MatchCollection blueLineMatches = Regex.Matches(
+            pdf,
+            @"0 0 1 RG\s+[0-9.]+ w\s+\[\] 0 d\s+0 J\s+0 j\s+(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S");
+        var blueLine = blueLineMatches
+            .Cast<Match>()
+            .Select(match => new
+            {
+                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
+                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
+                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
+                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
+            })
+            .FirstOrDefault(line => Math.Abs(line.X1 - line.X2) > 100d);
+
+        TestAssert.True(verticalLines.Length >= 1, "Expected value-axis strokes to establish the plot height.");
+        TestAssert.True(blueLine is not null, "Expected the combo line chart to emit its blue line series.");
+        double plotBottomY = verticalLines.Min(line => Math.Min(line.Y1, line.Y2));
+        double plotTopY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
+        double plotMidY = (plotBottomY + plotTopY) / 2d;
+        double lineSecondY = blueLine!.X2 > blueLine.X1 ? blueLine.Y2 : blueLine.Y1;
+        TestAssert.True(Math.Abs(lineSecondY - plotMidY) < 1d,
+            "The combo line point with value 50 should use the line chart's 0..100 secondary value-axis scale.");
+        TestAssert.True(Math.Abs(lineSecondY - plotTopY) > 20d,
+            "The combo line point should not be clamped to the top of the primary 0..10 value-axis scale.");
+    }
+
     public static void PptxSyntheticChartHorizontalBarCategoryAxisStrokeUsesAxisPosition()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
