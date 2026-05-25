@@ -5369,3 +5369,23 @@ generic markers and passed at `artifacts/visual/pptx-ladder-11-composite-chart-p
 Remaining long-term gap: swatch classification is still geometry-relative to the inferred plot box; the
 durable target is a chart legend structure that pairs swatch, label text, legend container, and series identity
 from Office PDF evidence, then feeds that back into typed chart scene/layout records.
+
+Revision note, 2026-05-25: The public line-marker chart exposed an Office auto value-axis scale distinction
+that is independent of the recent horizontal bar tick-density work. With two line series whose maximum value
+is 96 and no explicit `c:scaling/c:max`, Office exports a 0..120 value axis; the previous generic nice-axis
+rule chose 0..100. The public three-series line chart remains 0..1600 for maximum value 1520, so the renderer
+now applies the extra headroom only to auto-scaled line charts whose data maximum is near the current nice
+maximum. `PptxSyntheticChartLineAxisNearMaximumKeepsOfficeHeadroom` locks the observed boundary: 96/0 line
+auto scaling returns 120, the ordinary axis helper still returns 100, and 1520/0 still returns 1600. Focused
+`pptx-charts` tests passed with 35/35; `pptx-ladder-11-chart-line-3series-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-133735`; and
+`pptx-ladder-11-chart-line-markers-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-line-markers-port/20260525-133755` with MAE `2.2637361352237653` and
+changed16 `0.022809606481481483`. The line-marker case is deliberately still raster-gated: manual PDF
+inspection shows matching text categories after the scale fix, but candidate plot/text geometry remains
+structurally offset from Office by roughly 9 pt on the plot box and 13.5 pt on right-legend text, so a tight
+structural manifest gate would currently encode a known layout debt rather than prove alignment. Remaining
+long-term gap: this is still an observed near-maximum threshold. The durable target is a typed Office
+axis-layout model that derives scale maxima, major units, tick density, plot/legend reservations, and
+manual-layout interactions from chart type, chart frame, outer plot area, inner data plot, and Office PDF
+evidence instead of renderer-local boolean branches.

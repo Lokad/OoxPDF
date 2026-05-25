@@ -490,7 +490,7 @@ internal sealed partial class PptxRenderer
                     XElement? lineValueAxis = ReadChartValueAxisForChart(chartXml, comboLineChart);
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
-                    ChartValueExtents lineValueExtents = ReadSceneOrXmlChartValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeries));
+                    ChartValueExtents lineValueExtents = ReadSceneOrXmlChartValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeries), useNearMaximumHeadroom: true);
                     ChartAxisUnits lineAxisUnits = ReadSceneOrXmlChartValueAxisUnits(lineValueSceneAxis, lineValueAxisForScale);
                     bool lineValueAxisReversed = ReadSceneOrXmlValueAxisReversed(lineValueSceneAxis, lineValueAxisForScale);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme);
@@ -613,7 +613,7 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxisForScale = valueAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxisForScale, theme);
-                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries));
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries), useNearMaximumHeadroom: true);
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxisForScale);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
@@ -1071,7 +1071,7 @@ internal sealed partial class PptxRenderer
             chartXml.Descendants(ChartNamespace + "catAx").FirstOrDefault();
     }
 
-    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
+    private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false)
     {
         XElement? scaling = valueAxis?.Element(ChartNamespace + "scaling");
         if (scaling is null)
@@ -1080,17 +1080,17 @@ internal sealed partial class PptxRenderer
         }
 
         double min = ReadAxisScalingValue(scaling, "min") ?? fallback.Min;
-        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min);
+        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
     }
 
-    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback)
+    private static ChartValueExtents ReadSceneOrXmlChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false)
     {
         if (axis is null)
         {
-            return ReadChartValueAxisExtents(valueAxis, fallback);
+            return ReadChartValueAxisExtents(valueAxis, fallback, useNearMaximumHeadroom);
         }
 
         if (!axis.HasScaling)
@@ -1099,7 +1099,7 @@ internal sealed partial class PptxRenderer
         }
 
         double min = axis.Minimum ?? fallback.Min;
-        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, useNearMaximumHeadroom);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -2701,7 +2701,7 @@ internal sealed partial class PptxRenderer
         return nice * magnitude;
     }
 
-    private static double GetNiceChartAxisMax(double dataMax, double dataMin)
+    private static double GetNiceChartAxisMax(double dataMax, double dataMin, bool useNearMaximumHeadroom = false)
     {
         if (Math.Abs(dataMax) < PptxChartMetricRules.AxisValueEpsilon && Math.Abs(dataMin) < PptxChartMetricRules.AxisValueEpsilon)
         {
@@ -2716,7 +2716,20 @@ internal sealed partial class PptxRenderer
 
         double unit = ChooseChartAxisMajorUnit(range);
         double niceMax = Math.Ceiling(dataMax / unit) * unit;
-        return niceMax < dataMax + PptxChartMetricRules.AxisValueEpsilon ? niceMax + unit : niceMax;
+        if (niceMax < dataMax + PptxChartMetricRules.AxisValueEpsilon)
+        {
+            return niceMax + unit;
+        }
+
+        if (useNearMaximumHeadroom &&
+            niceMax > 0d &&
+            dataMax > 0d &&
+            dataMax / niceMax >= PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
+        {
+            return niceMax + unit;
+        }
+
+        return niceMax;
     }
 
     private static string FormatChartAxisLabel(double value, XElement? axis = null)

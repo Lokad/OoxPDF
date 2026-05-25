@@ -7352,6 +7352,22 @@ internal static class PptxTests
             "Visible horizontal bar value-axis labels should use Office-like 10-unit ticks for a 0..50 axis, excluding the zero crossing gridline.");
     }
 
+    public static void PptxSyntheticChartLineAxisNearMaximumKeepsOfficeHeadroom()
+    {
+        var method = typeof(PptxRenderer).GetMethod(
+            "GetNiceChartAxisMax",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        TestAssert.True(method is not null, "Expected chart axis maximum helper to remain inspectable by the Office evidence guard.");
+
+        double lineMarkerMax = (double)method!.Invoke(null, [96d, 0d, true])!;
+        double ordinaryMax = (double)method.Invoke(null, [96d, 0d, false])!;
+        double lineThreeSeriesMax = (double)method.Invoke(null, [1520d, 0d, true])!;
+
+        TestAssert.Equal(120d, lineMarkerMax);
+        TestAssert.Equal(100d, ordinaryMax);
+        TestAssert.Equal(1600d, lineThreeSeriesMax);
+    }
+
     public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
