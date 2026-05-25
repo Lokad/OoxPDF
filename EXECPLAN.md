@@ -1077,6 +1077,18 @@ High-priority actions:
   20 passed, 0 failed, 0 skipped; the full suite passed with 216 passed, 0 failed, 0 skipped; and
   `dotnet pack` succeeded. Remaining gap: secondary-axis geometry, axis side/cross-axis placement, and
   Office-PDF visual coverage for reversed-axis inside/outside label positions still need separate slices.
+- [x] 2026-05-25: Consume value-axis side metadata for supported vertical chart axis strokes.
+  `ChartAxesStyle` now carries the resolved left/right side for primary and secondary value axes from the
+  typed scene axis when available, with raw `c:valAx/c:axPos` as fallback. Column and line chart axis strokes
+  now use that side instead of always placing the primary value axis on the left and the secondary value axis
+  on the right. A synthetic chart with `c:valAx/c:axPos val="r"` locks the vertical stroke on the plot area's
+  right edge. Focused `pptx-charts` tests passed with 21 passed, 0 failed, 0 skipped; the clustered-column
+  public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-101117`; the full suite passed with
+  217 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: secondary-axis discovery and
+  binding still prefer right-side axes, value-axis labels still use tick-label side rules rather than full
+  axis-line/crossing placement, and horizontal bar axis-line placement remains a separate Office-PDF-backed
+  slice.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -2751,8 +2763,9 @@ document-specific business content into public notes.
   transparency, SVG/EMF/WMF, TIFF/GIF/BMP, and image compression variants.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text
   inside cells, and precise row/column sizing.
-- [ ] Charts: cached chart images, chart XML rendering, axes, labels, legends, series styling,
-  stacked/grouped bars, line charts, combo charts, and embedded chart data.
+- [ ] Charts: cached chart images, chart XML rendering, secondary-axis binding, horizontal axis-line
+  placement, labels, legends, series styling, grouped/stacked families, line charts, combo charts, and
+  embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
 - [ ] Slide inheritance: deeper master/layout placeholder resolution, theme variants, background styles,
   footer/date/slide-number placeholders, and hidden placeholder semantics.
@@ -3828,6 +3841,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `AxisPairPlotBoxCandidate`. The existing public visual gate still passes because it only compares
   `AxisPairPlotBoxCandidate`, which confirms the new gridline kind is available for diagnosis without
   destabilizing unrelated gates.
+- Observation: Chart value-axis side placement had already been parsed into the scene model as `Position`,
+  but axis stroke rendering still ignored it.
+  Evidence: `PptxSceneChartAxis.Position` stores `c:axPos`, and label placement has side-aware helpers, yet
+  `RenderBarChart` and `RenderLineChart` still drew primary vertical value-axis strokes at `plotX` and
+  secondary strokes at `plotX + plotWidth`. The new synthetic right-side-axis chart would have failed before
+  the stroke renderer consumed the same scene/XML side metadata.
 
 ## Decision Log
 
@@ -3864,6 +3883,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: The chart renderer now has many named fallback metrics, but naming heuristics is only inventory.
   A chart-specific Office/PDF structural comparison path is the evidence layer needed to delete those
   heuristics safely and move chart output toward Office-like plot, axis, label, and resource structure.
+- Decision: Treat chart axis-line side as axis-owned metadata, separate from tick-label side.
+  Rationale: OOXML `c:axPos` locates the axis line, while `c:tickLblPos` can independently place labels high,
+  low, next to the axis, or hide them. Keeping these as separate renderer inputs prevents a label-placement
+  shortcut from becoming a hardcoded axis geometry rule.
+  Date/Author: 2026-05-25 / Codex.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
   Rationale: Plot areas, axes, gridlines, markers, and legend swatches all appear as ordinary PDF path,
@@ -3948,7 +3972,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-207 passed, 0 failed, 0 skipped
+217 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -3994,6 +4018,13 @@ Classifier family probe: inspected and classified Office/candidate PDFs from pub
 scatter-cluster, and line-marker chart cases under ignored `artifacts/tmp-chart-family-inspect/`. The updated
 classifier emits `PlotAreaClipBoxCandidate`, `AxisPairPlotBoxCandidate`, and `PolarPlotBoxCandidate`; strict
 reference-vs-reference comparison of those derived kinds passed for all five sampled families.
+Chart axis-side slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 21 passed, 0 failed, 0 skipped. Public visual case
+`pptx-ladder-11-chart-column-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-101117`, including
+`AxisPairPlotBoxCandidate`, `HorizontalGridlineGroupCandidate`, `CategoryAxisTickLabel`, and
+`ValueAxisTickLabel` structural comparisons. Full console suite passed with 217 passed, 0 failed, 0 skipped.
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -4694,3 +4725,7 @@ discarded valuable open planning context and private-safe historical evidence. T
 conservative: it restores `PLANS.md` section naming, records the current slide-17 connector evidence, updates
 the validation baseline, and documents that older private run artifacts are mostly absent locally. Future
 trimming should be done in small audited slices and should preserve open progress items by default.
+
+Revision note, 2026-05-25: Added the completed chart value-axis side-placement slice, narrowed the remaining
+chart-axis backlog to secondary-axis binding and horizontal/cross-axis placement, and refreshed validation
+evidence after the new public synthetic test, clustered-column visual gate, full console suite, and pack run.

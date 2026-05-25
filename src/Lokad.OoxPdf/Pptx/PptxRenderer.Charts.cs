@@ -2850,6 +2850,8 @@ internal sealed partial class PptxRenderer
                 .FirstOrDefault(axis => string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal)),
                 theme),
             categoryAxis,
+            ResolveSceneOrXmlValueAxisRightSide(null, valueAxisElement, defaultRightSide: false),
+            true,
             !IsChartAxisDeleted(valueAxisElement),
             !IsChartAxisDeleted(categoryAxisElement));
     }
@@ -2869,6 +2871,8 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(secondaryValueAxis, secondaryValueAxisElement, theme),
             ReadSceneOrXmlChartAxisStroke(categoryAxis, categoryAxisElement, theme),
+            ResolveSceneOrXmlValueAxisRightSide(valueAxis, valueAxisElement, defaultRightSide: false),
+            ResolveSceneOrXmlValueAxisRightSide(secondaryValueAxis, secondaryValueAxisElement, defaultRightSide: true),
             valueAxis is null ? !IsChartAxisDeleted(valueAxisElement) : valueAxis.IsDeleted != true,
             categoryAxis is null ? !IsChartAxisDeleted(categoryAxisElement) : categoryAxis.IsDeleted != true);
     }
@@ -2878,6 +2882,27 @@ internal sealed partial class PptxRenderer
         return sceneAxis is not null && sceneAxis.Line.HasLine
             ? ToChartSeriesStroke(sceneAxis.Line)
             : ReadChartAxisStroke(xmlAxis, theme);
+    }
+
+    private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
+    {
+        if (sceneAxis is not null)
+        {
+            return sceneAxis.Position switch
+            {
+                "r" => true,
+                "l" => false,
+                _ => defaultRightSide
+            };
+        }
+
+        string? position = (string?)axis?.Element(ChartNamespace + "axPos")?.Attribute("val");
+        return position switch
+        {
+            "r" => true,
+            "l" => false,
+            _ => defaultRightSide
+        };
     }
 
     private static bool IsChartAxisDeleted(XElement? axis)
@@ -3130,7 +3155,8 @@ internal sealed partial class PptxRenderer
             if (stroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, stroke);
-                graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+                double axisX = !horizontalBars && axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
+                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
             }
         }
 
@@ -3139,7 +3165,8 @@ internal sealed partial class PptxRenderer
             if (secondaryValueAxisStroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, secondaryValueAxisStroke);
-                graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
             }
         }
 
@@ -3717,7 +3744,8 @@ internal sealed partial class PptxRenderer
             if (valueAxisStroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, valueAxisStroke);
-                graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
+                double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
+                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
             }
 
             if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
@@ -3725,7 +3753,8 @@ internal sealed partial class PptxRenderer
                 if (secondaryValueAxisStroke.Alpha > 0.001d)
                 {
                     SetChartStroke(graphics, secondaryValueAxisStroke);
-                    graphics.StrokeLine(plotX + plotWidth, plotY, plotX + plotWidth, plotY + plotHeight);
+                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
                 }
             }
         }
@@ -4356,7 +4385,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
-    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisVisible, bool CategoryAxisVisible);
+    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisRightSide, bool SecondaryValueAxisRightSide, bool ValueAxisVisible, bool CategoryAxisVisible);
 
     private readonly record struct ChartGridlineStyle(ChartSeriesStroke? Major, ChartSeriesStroke? Minor)
     {
