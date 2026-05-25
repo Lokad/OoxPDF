@@ -6161,3 +6161,25 @@ path-operator comparison before their manifests were opted in; the full public `
 long-term gap: path operator parity does not fix the remaining polar center/radius deltas; the next layout work
 should use the typed `ChartPolarKind` and the polar path-geometry oracle to derive Office-like center/radius rules
 for legend and explosion contexts.
+
+Revision note, 2026-05-25: Split true solid-pie slice geometry from the broader polar filled-region envelope
+before tuning any pie/doughnut layout constants. The earlier `PolarPlotBoxCandidate` path geometry remains useful as
+an envelope, but it is not the actual solid-pie center/radius: the union bounds move with slice distribution and can
+mislead renderer tuning. `ClassifyPdfChartGraphics.ps1` now recognizes the Office-like solid pie slice path pattern
+(`m`, arc curves, final radial `l`, `h`) and derives `PathCenterX`, `PathCenterY`, and `PathRadius` from the radial
+line endpoint and the first outer-arc point. The classifier deliberately ignores doughnut paths here by requiring the
+radial line to be the last drawing command; doughnut inner-arc geometry needs its own annulus oracle. Manual Office
+PDF inspection showed the true pie centers are already close: the normal five-category pie slices use Office center
+`432,270.32` versus candidate `432,269.856` with radius drift about `0.17..0.18 pt`; exploded pie slices show center
+drift around `0.01..0.04 pt` horizontally and `0.43..0.50 pt` vertically with radius drift about `0.13..0.14 pt`.
+The public pie path-geometry gates were tightened from `20` to `10.1` for the normal pie and from `13` to `6.5` for
+the exploded pie, constrained by the still-compared envelope rows rather than the true slice-center rows.
+Validation: the four focused polar cases passed at
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-203252`,
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-203258`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-203303`, and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-203308`; the full public `pptx-charts`
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-203321` run. Remaining
+long-term gap: separate true slice/annulus geometry and union/envelope geometry into distinct oracle contracts or
+per-kind geometry tolerances, then derive doughnut center/radius from outer and inner arc commands instead of filled
+union bounds.

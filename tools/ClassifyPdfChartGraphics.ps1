@@ -101,6 +101,48 @@ function Get-RadarSpokePathGeometry($op) {
     }
 }
 
+function Get-PieSlicePathGeometry($op) {
+    if ($null -eq $op.PathCommands) {
+        return $null
+    }
+
+    $commands = @($op.PathCommands)
+    if ($commands.Count -lt 4 -or [string]$commands[0].Operator -ne "m") {
+        return $null
+    }
+
+    $lineCommands = @($commands | Where-Object { [string]$_.Operator -eq "l" -and $null -ne $_.Values -and $_.Values.Count -ge 2 })
+    if ($lineCommands.Count -ne 1) {
+        return $null
+    }
+
+    $lastDrawingCommand = @($commands | Where-Object { [string]$_.Operator -ne "h" } | Select-Object -Last 1)
+    if ($lastDrawingCommand.Count -eq 0 -or [string]$lastDrawingCommand[0].Operator -ne "l") {
+        return $null
+    }
+
+    $move = $commands[0]
+    if ($null -eq $move.Values -or $move.Values.Count -lt 2) {
+        return $null
+    }
+
+    $centerX = [double]$lineCommands[0].Values[0]
+    $centerY = [double]$lineCommands[0].Values[1]
+    $radius = [Math]::Sqrt(
+        ([double]$move.Values[0] - $centerX) * ([double]$move.Values[0] - $centerX) +
+        ([double]$move.Values[1] - $centerY) * ([double]$move.Values[1] - $centerY))
+
+    [pscustomobject]@{
+        PathCenterX = Round $centerX
+        PathCenterY = Round $centerY
+        PathRadius = Round $radius
+        PathMinRadius = Round $radius
+        PathMaxRadius = Round $radius
+        PathCenterMaxDelta = 0d
+        PathSpokeCount = $null
+    }
+}
+
 function BoundsDistance($a, $b) {
     return [Math]::Abs([double]$a.MinX - [double]$b.MinX) +
         [Math]::Abs([double]$a.MinY - [double]$b.MinY) +
@@ -110,6 +152,8 @@ function BoundsDistance($a, $b) {
 
 function New-Structure($kind, $op) {
     $radarSpokeGeometry = if ($kind -eq "RadarSpokeGroupCandidate") { Get-RadarSpokePathGeometry $op } else { $null }
+    $pieSliceGeometry = if ($kind -eq "FilledRegion") { Get-PieSlicePathGeometry $op } else { $null }
+    $pathGeometry = if ($null -ne $radarSpokeGeometry) { $radarSpokeGeometry } else { $pieSliceGeometry }
     [pscustomobject]@{
         Kind = $kind
         PageNumber = $op.PageNumber
@@ -135,13 +179,13 @@ function New-Structure($kind, $op) {
         Dash = $op.Dash
         LineCap = $op.LineCap
         LineJoin = $op.LineJoin
-        PathCenterX = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterX }
-        PathCenterY = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterY }
-        PathRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathRadius }
-        PathMinRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathMinRadius }
-        PathMaxRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathMaxRadius }
-        PathCenterMaxDelta = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterMaxDelta }
-        PathSpokeCount = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathSpokeCount }
+        PathCenterX = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathCenterX }
+        PathCenterY = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathCenterY }
+        PathRadius = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathRadius }
+        PathMinRadius = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathMinRadius }
+        PathMaxRadius = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathMaxRadius }
+        PathCenterMaxDelta = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathCenterMaxDelta }
+        PathSpokeCount = if ($null -eq $pathGeometry) { $null } else { $pathGeometry.PathSpokeCount }
     }
 }
 
