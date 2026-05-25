@@ -1059,6 +1059,15 @@ High-priority actions:
   214 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: stacked horizontal bars,
   stacked columns, secondary-axis geometry, and Office-PDF visual coverage for reversed-axis inside/outside
   label positions still need separate evidence.
+- [x] 2026-05-25: Consume value-axis reversed orientation for stacked column segment accumulation.
+  Stacked columns now accumulate in value space and map each segment's start/end cumulative values through
+  the shared value-to-plot-coordinate helper instead of moving positive segments in a fixed screen direction.
+  A synthetic `maxMin` stacked column verifies that segment rectangles follow cumulative value intervals, and
+  the public stacked-column visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-stacked-port/20260525-100046`. Focused chart tests passed
+  with 19 passed, 0 failed, 0 skipped; the full suite passed with 215 passed, 0 failed, 0 skipped; and
+  `dotnet pack` succeeded. Remaining gap: stacked horizontal bars still use fixed X-direction accumulation,
+  and secondary-axis geometry still needs independently resolved orientation/crossing decisions.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1431,7 +1440,9 @@ High-priority actions:
     inside/outside vertical label offsets.
   - [x] Consume value-axis reversed orientation for clustered horizontal bar endpoints and direction-aware
     horizontal data-label offsets.
-  - [ ] Consume axis crossing/orientation metadata for stacked bars/columns, value-axis
+  - [x] Consume value-axis reversed orientation for stacked column accumulation through cumulative value
+    intervals.
+  - [ ] Consume axis crossing/orientation metadata for stacked horizontal bars, value-axis
     side/cross-axis placement, series coordinate baselines, and secondary axes instead of relying on
     right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
@@ -4618,6 +4629,19 @@ move with the reversed geometry. The focused `pptx-charts` non-slow group passed
 remain open because they need a direction-aware accumulation model rather than a one-segment baseline/end
 mapping. Secondary axes also remain open until their orientation and crossing decisions are consumed
 independently in combo-chart geometry.
+
+chart reversed stacked column accumulation / 2026-05-25:
+Stacked columns now use cumulative value intervals before screen geometry is computed. For each category,
+positive and negative accumulators stay in value space; each segment rectangle is built from the mapped
+start and end cumulative values via the shared value-to-plot-coordinate helper. This replaces the old
+screen-space rule where positive segments always advanced by adding height from the zero coordinate, which
+was directionally wrong under `maxMin`. A synthetic `maxMin` stacked column locks the segment rectangle order
+under reversed orientation. The focused `pptx-charts` non-slow group passed with 19 passed, 0 failed,
+0 skipped; the stacked-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-stacked-port/20260525-100046`; the full suite passed with
+215 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Stacked horizontal bars remain open because
+their X-direction accumulation still uses fixed screen-space movement; secondary-axis combo geometry also
+remains open.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
