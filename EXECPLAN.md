@@ -1579,6 +1579,9 @@ High-priority actions:
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
     edges.
+  - [x] Resolve horizontal bar auto value-axis tick targets from value-axis label visibility. Hidden value
+    axes keep the denser Office-like horizontal gridline cadence; visible horizontal value-axis labels use
+    the ordinary value-axis target so labels and gridlines do not overpopulate the bottom axis.
   - [ ] Extend chart plot-area layout records to cover `layoutTarget`, x/y edge semantics, inner/outer plot
     semantics, title/legend overlay effects, and non-bar/line chart-family consumers in rendered geometry.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
@@ -5265,3 +5268,19 @@ enough to pass with today's renderer while preserving the Office-backed document
 Both cases passed through `tools/CheckVisualCase.ps1` at
 `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-124746` and
 `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-124746`.
+
+Revision note, 2026-05-25: The plot-area `layoutTarget` probes exposed an independent horizontal-bar
+value-axis tick-density distinction. The earlier dense horizontal-axis target remains correct for hidden
+value-axis labels, but Office uses the ordinary value-axis target when the same horizontal value axis has
+visible labels; otherwise the bottom labels and gridlines overpopulate. The renderer now chooses the auto
+tick target from axis orientation plus value-axis label visibility and uses the same target for visible
+labels and major gridlines. `PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks` preserves
+the hidden-label 10-segment 0..50 gridline behavior, while
+`PptxSyntheticChartHorizontalValueAxisVisibleLabelsUseOfficeSparseTicks` locks the visible-label 5-segment
+0..50 behavior. Focused `pptx-charts` tests passed with 33/33. The two `layoutTarget` visual probes passed
+again at `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-125330` and
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-125338`; MAE and changed-pixel
+ratios improved, while foreground histogram gates were lowered by one-thousandth to reflect the intended
+tick/gridline population change. Remaining long-term gap: replace the shared outer/inner plot-box
+approximation with separate outer plot-area and inner data-plot boxes before tightening these probes
+structurally.

@@ -11,6 +11,6 @@
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 4.8,
     "maxChangedPixelRatioAtThreshold16": 0.044,
-    "minForegroundColorHistogramCorrelation": 0.999
+    "minForegroundColorHistogramCorrelation": 0.998
   }
 }
