@@ -3051,14 +3051,19 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ChartMarkerStyle> ReadChartMarkerStyles(XElement chartElement, PptxTheme theme)
     {
         var styles = new List<ChartMarkerStyle>();
+        bool chartMarkerEnabled = IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "marker"));
+        bool lineChart = string.Equals(chartElement.Name.LocalName, "lineChart", StringComparison.Ordinal);
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             XElement? marker = element.Element(ChartNamespace + "marker");
-            string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ?? "circle";
+            string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
+                (lineChart
+                    ? chartMarkerEnabled ? AutoLineChartMarkerSymbol(styles.Count) : "none"
+                    : "circle");
             double size = marker?.Element(ChartNamespace + "size")?.Attribute("val") is { } value &&
                 double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                     ? Math.Clamp(parsed, 2d, 30d)
-                    : 4d;
+                    : lineChart && chartMarkerEnabled && marker is null ? 5d : 4d;
             XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
             ChartSeriesFill? fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
                 ? new ChartSeriesFill(fillColor, fillAlpha)
@@ -3071,6 +3076,12 @@ internal sealed partial class PptxRenderer
         }
 
         return styles;
+    }
+
+    private static string AutoLineChartMarkerSymbol(int seriesIndex)
+    {
+        ReadOnlySpan<string> symbols = ["diamond", "square", "triangle", "x", "star", "circle"];
+        return symbols[seriesIndex % symbols.Length];
     }
 
     private static IReadOnlyList<bool> ReadChartSeriesSmooth(XElement chartElement)
@@ -4254,12 +4265,24 @@ internal sealed partial class PptxRenderer
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && string.Equals(legend.Position, "r", StringComparison.Ordinal);
+        bool hasLineChart = ReadChartPlotElements(chartXml, "lineChart").Count != 0;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
             ? GetLineNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
+            : hasTitle && hasRightLegend && hasLineChart
+                ? GetLineTitleRightLegendPlotBox(frame)
             : GetDefaultChartPlotBox(frame);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
+    }
+
+    private static ChartPlotBox GetLineTitleRightLegendPlotBox(ChartFrameBox frame)
+    {
+        return new ChartPlotBox(
+            frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio,
+            frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio,
+            frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxWidthRatio,
+            frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio);
     }
 
     private static ChartPlotBox GetLineNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)

@@ -797,6 +797,10 @@ internal sealed partial class PptxRenderer
         public const double LineRightLegendExtraValueLabelCharacterPadding = 5.3d;
         public const double LineRightLegendReservePadding = 43.8d;
         public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
+        public const double LineTitleRightLegendPlotBoxXRatio = 0.0639d;
+        public const double LineTitleRightLegendPlotBoxYRatio = 0.0924d;
+        public const double LineTitleRightLegendPlotBoxWidthRatio = 0.7391d;
+        public const double LineTitleRightLegendPlotBoxHeightRatio = 0.7888d;
         public const double PieCenterXRatio = 0.46d;
         public const double PieCenterYRatio = 0.52d;
         public const double PieRadiusRatio = 0.34d;

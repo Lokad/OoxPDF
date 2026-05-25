@@ -5478,3 +5478,17 @@ layout is structurally driven by axis labels and legend text, but the reservatio
 Office-observed metric constants. The durable target is a shared cartesian chart layout model that computes outer
 plot area, inner plot box, axis tick/label strips, legend containers, and clipping regions from typed OOXML plus
 Office PDF structures across line, area, bar, scatter, and combo charts.
+
+Revision note, 2026-05-25: Closed the public line-trend chart gap as a chart-layout and marker-default issue,
+not as a special trendline feature. The fixture has no `c:trendline`; it is a titled, right-legend line chart
+with chart-level `<c:marker val="1"/>` and no per-series marker override. OOXPDF now resolves line-chart
+chart-level markers to Office's automatic marker sequence (`diamond`, then `square`, etc.) while preserving
+explicit per-series `<c:marker><c:symbol val="none"/>` suppression. Titled right-legend line charts now use an
+Office-observed plot-box path, aligning the plot, dense category ticks, markers, and legend anchor instead of
+falling back to the generic chart box. Focused `pptx-charts` tests passed with 35/35. The public
+`pptx-ladder-11-chart-line-trend-port` gate now passes with empty diagnostics at
+`artifacts/visual/pptx-ladder-11-chart-line-trend-port/20260525-150800`, MAE `1.036112075617284`, changed16
+`0.013601466049382716`; its manifest now rejects static fallback diagnostics. Remaining long-term gap: the
+title+right-legend plot-box ratios are still encoded as Office-observed constants. The durable target remains a
+typed cartesian chart layout solver that derives title, legend, axis-label, tick-mark, marker, and plot
+reservations from Office PDF structures instead of case-family layout branches.
