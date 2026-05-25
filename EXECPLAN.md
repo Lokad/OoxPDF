@@ -5763,3 +5763,23 @@ inspection still shows the candidate slice union at roughly `198.10..573.41 x 97
 around `230.74..598.22 x 98.44..450.48 pt`, so the dominant residual is the polar layout solver: center, radius,
 legend reserve, and explosion envelope must move out of fixed renderer ratios and into a typed polar chart model
 with PDF structural gates.
+
+Revision note, 2026-05-25: Added a public PDF-structure gate for polar slices so the doughnut family no longer
+depends only on raster tolerances while the layout solver remains approximate. `ClassifyPdfChartGraphics.ps1`
+now preserves non-page polar `FilledRegion` slices as `PolarSliceCandidate` only after proving there is no
+cartesian plot box and the filled-region union has a polar aspect ratio. The same classifier now keeps full-chart
+clips available for polar cases instead of discarding the largest non-page clip by count, and falls back to the
+largest dominant clip when there is no cartesian plot box. `ComparePdfGraphicsOperations.ps1` can now require
+source PDF operator and segment-count parity, and `CheckVisualCase.ps1` exposes those switches through manifest
+keys. The public doughnut and exploded-doughnut manifests now compare `PolarPlotBoxCandidate` plus
+`PolarSliceCandidate` bounds under deliberately loose geometry tolerances, while strictly requiring the Office
+`f*` fill operator and Bezier segment-count class for each slice. Focused `pptx-charts` tests passed with 38/38.
+The structural polar gates passed at `artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-181923` and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-181923`; both compare four structures
+with operator and segment-count parity. The full public `pptx-charts` visual family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T18:21:14.1697679+02:00`, and
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: the new gate is intentionally structural rather than celebratory. Doughnut plot boxes
+still allow `28..34 pt` bounds drift because center, radius, legend reserve, and explosion envelope are still
+renderer metric rules. The durable endpoint is a typed polar layout model whose Office-PDF oracle can tighten
+those geometry tolerances while keeping operator/segment parity as a non-negotiable lower layer.

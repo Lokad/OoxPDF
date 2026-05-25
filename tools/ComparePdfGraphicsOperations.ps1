@@ -13,7 +13,11 @@ param(
 
     [int] $PageNumber = 0,
 
-    [switch] $MatchByBounds
+    [switch] $MatchByBounds,
+
+    [switch] $MatchOperator,
+
+    [switch] $MatchSegmentCount
 )
 
 $ErrorActionPreference = "Stop"
@@ -131,7 +135,9 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaMaxY) -le $BoundsTolerance
     $widthOk = [Math]::Abs($deltaWidth) -le $LineWidthTolerance
     $kindOk = [string]$ref.Kind -eq [string]$cand.Kind
-    $status = if ($boundsOk -and $widthOk -and $kindOk) { "ok" } else { "delta" }
+    $operatorOk = (-not $MatchOperator) -or [string]$ref.SourceOperator -eq [string]$cand.SourceOperator
+    $segmentCountOk = (-not $MatchSegmentCount) -or [int]$ref.SegmentCount -eq [int]$cand.SegmentCount
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -141,10 +147,12 @@ foreach ($pair in $pairs) {
         Status = $status
         RefKind = $ref.Kind
         CandKind = $cand.Kind
-        RefOp = $ref.Operator
-        CandOp = $cand.Operator
+        RefOp = $ref.SourceOperator
+        CandOp = $cand.SourceOperator
         RefSeg = $ref.SegmentCount
         CandSeg = $cand.SegmentCount
+        OperatorOk = $operatorOk
+        SegmentCountOk = $segmentCountOk
         DeltaMinX = $deltaMinX
         DeltaMinY = $deltaMinY
         DeltaMaxX = $deltaMaxX

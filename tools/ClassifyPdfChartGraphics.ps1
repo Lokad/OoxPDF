@@ -338,11 +338,9 @@ if ($null -ne $plotBoxForGridlines) {
 
 $clipBoxes = @($structures | Where-Object { $_.Kind -eq "ClipBox" })
 if ($clipBoxes.Count -gt 0) {
-    $largestWidth = ($clipBoxes | Measure-Object -Property Width -Maximum).Maximum
-    $largestHeight = ($clipBoxes | Measure-Object -Property Height -Maximum).Maximum
     $nonPageClipBoxes = @($clipBoxes | Where-Object {
         $_.Width -gt 40 -and $_.Height -gt 40 -and
-        -not ([Math]::Abs([double]$_.Width - [double]$largestWidth) -le 0.01 -and [Math]::Abs([double]$_.Height - [double]$largestHeight) -le 0.01)
+        -not ([Math]::Abs([double]$_.MinX) -le 0.01 -and [Math]::Abs([double]$_.MinY) -le 0.01)
     })
     if ($nonPageClipBoxes.Count -gt 0) {
         $clipGroups = @($nonPageClipBoxes |
@@ -369,7 +367,14 @@ if ($clipBoxes.Count -gt 0) {
         if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
             $dominantGroup = $nonPageClipBoxes |
                 Group-Object -Property MinX, MinY, MaxX, MaxY |
-                Sort-Object -Property Count -Descending |
+                Sort-Object -Property @{
+                    Expression = {
+                        $clip = @($_.Group)[0]
+                        -((Width $clip) * (Height $clip))
+                    }
+                }, @{
+                    Expression = { -[int]$_.Count }
+                } |
                 Select-Object -First 1
         }
 
@@ -384,17 +389,31 @@ $polarRegions = @($structures | Where-Object {
     $_.Kind -eq "FilledRegion" -and $_.Width -gt $MarkerMaxSize -and $_.Height -gt $MarkerMaxSize
 })
 if ($polarRegions.Count -gt 1) {
-    $largestWidth = ($polarRegions | Measure-Object -Property Width -Maximum).Maximum
-    $largestHeight = ($polarRegions | Measure-Object -Property Height -Maximum).Maximum
+    $largestPageWidth = if ($clipBoxes.Count -gt 0) {
+        ($clipBoxes | Measure-Object -Property Width -Maximum).Maximum
+    }
+    else {
+        ($structures | Measure-Object -Property MaxX -Maximum).Maximum
+    }
+    $largestPageHeight = if ($clipBoxes.Count -gt 0) {
+        ($clipBoxes | Measure-Object -Property Height -Maximum).Maximum
+    }
+    else {
+        ($structures | Measure-Object -Property MaxY -Maximum).Maximum
+    }
     $nonPageRegions = @($polarRegions | Where-Object {
-        -not ([Math]::Abs([double]$_.Width - [double]$largestWidth) -le 0.01 -and [Math]::Abs([double]$_.Height - [double]$largestHeight) -le 0.01)
+        -not ([double]$_.Width -ge ([double]$largestPageWidth * 0.8d) -and [double]$_.Height -ge ([double]$largestPageHeight * 0.8d))
     })
-    if ($nonPageRegions.Count -ge 2) {
+    if ($nonPageRegions.Count -ge 2 -and $null -eq $plotBoxForGridlines) {
         $bounds = Get-UnionBounds $nonPageRegions
         $width = [double]$bounds.MaxX - [double]$bounds.MinX
         $height = [double]$bounds.MaxY - [double]$bounds.MinY
         $aspect = $width / [Math]::Max(1d, $height)
         if ($aspect -ge 0.74d -and $aspect -le 1.35d) {
+            foreach ($region in $nonPageRegions) {
+                $structures.Add((Copy-StructureAsKind "PolarSliceCandidate" $region))
+            }
+
             $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
             $structures.Add((New-DerivedStructure "PolarPlotBoxCandidate" $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
         }

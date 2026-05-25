@@ -364,6 +364,12 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     else {
         $compareChartArgs.Kinds = @("HorizontalLine", "VerticalLine", "PlotBoxCandidate", "FilledRegion", "MarkerCandidate", "ClipBox")
     }
+    if ($manifest.expected.compareChartGraphicsStructureOperators -eq $true) {
+        $compareChartArgs.MatchOperator = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructureSegmentCounts -eq $true) {
+        $compareChartArgs.MatchSegmentCount = $true
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
     if ($LASTEXITCODE -ne 0) {
