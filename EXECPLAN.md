@@ -6336,3 +6336,25 @@ the same Office COM path produced chart XML without `c:numCache`/category caches
 either the generator can force Office to persist caches for this combination or OOXPDF intentionally learns to read
 embedded workbook data for uncached chart references. Full-family validation for the committed public matrix passed
 37/37 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-213922` run.
+
+Revision note, 2026-05-25: Removed the cache-only assumption for supported chart references when the PPTX carries
+the usual embedded workbook package. Chart rendering now resolves `c:externalData/@r:id` through the chart part
+relationship, opens the embedded XLSX package, reads workbook sheets/shared strings/inline strings, evaluates simple
+single-sheet cell/range references, and materializes missing `c:numCache`, `c:strCache`, and `c:multiLvlStrCache`
+elements in schema order. The renderer does this even when chart XML came from the typed scene model rather than
+being loaded directly during rendering; this was the real failure discovered while testing, because the scene XML
+still needs the chart part context to resolve workbook relationships. A new synthetic regression,
+`PptxEmbeddedWorkbookReferencesHydrateMissingChartCaches`, locks a formula-only doughnut chart with shared-string
+categories and workbook-backed values so it renders through the native chart path without
+`PPTX_UNSUPPORTED_CHART` or `PPTX_CHART_STATIC_FALLBACK`.
+
+Validation: focused `pptx-charts` tests passed 39/39; the full non-slow test runner passed 228/228 with 7 skipped;
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded; and the
+private `lokad-value-based` run `artifacts/private-visual/lokad-value-based/20260525-215436` compared 84/84 pages
+with zero dimension mismatches, deck MAE `8.946935`, changed16 `0.115528`, and only one
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private slide 17 stayed at MAE `2.880739`, changed16 `0.044888`, SSIM
+`0.920083`, which confirms this chart-data change did not mask the known slide-17 text-placement path. Remaining
+long-term gap: this is still a bridge that hydrates XML caches for the existing renderer. The durable architecture
+is a typed chart data-source layer where series/category/name references preserve their workbook provenance, cache
+freshness, numeric/string typing, blank-cell behavior, and multi-sheet/table/name support instead of requiring each
+renderer path to infer data availability from chart-side cache XML.

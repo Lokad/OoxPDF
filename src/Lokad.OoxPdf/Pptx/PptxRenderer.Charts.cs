@@ -9,7 +9,14 @@ namespace Lokad.OoxPdf.Pptx;
 internal sealed partial class PptxRenderer
 {
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
+    private const string ChartExternalDataPackageRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+    private const string WorkbookRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
+    private const string WorksheetRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
+    private const string SharedStringsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings";
+    private const string WorkbookContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml";
+    private const string SharedStringsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
+    private static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
     private static void RenderChartFrame(
         PptxRenderContext context,
@@ -74,10 +81,9 @@ internal sealed partial class PptxRenderer
 
         XDocument? resolvedChartXml = chartXml;
         IReadOnlyList<RgbColor>? resolvedChartPalette = chartPalette;
-        OoxPart? chartPart = null;
+        OoxPart? chartPart = context.Package.GetPart(chartPartName);
         if (resolvedChartXml is null)
         {
-            chartPart = context.Package.GetPart(chartPartName);
             if (chartPart is null)
             {
                 EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", chartPartName, context.SlideNumber, "Ignored");
@@ -89,13 +95,18 @@ internal sealed partial class PptxRenderer
             resolvedChartPalette = ReadChartPaletteColors(context.Package, chartPart, context.Theme);
         }
 
+        if (chartPart is not null)
+        {
+            HydrateChartReferenceCaches(context.Package, chartPart, resolvedChartXml);
+        }
+
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, fonts))
         {
             fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
             return;
         }
 
-        EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
+        EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached or embedded-workbook-backed numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
     }
 
     private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, string kind, int index = 0)
@@ -942,6 +953,369 @@ internal sealed partial class PptxRenderer
         }
 
         return series;
+    }
+
+    private static void HydrateChartReferenceCaches(OoxPackage package, OoxPart chartPart, XDocument chartXml)
+    {
+        ChartWorkbookData? workbook = ReadEmbeddedChartWorkbookData(package, chartPart, chartXml);
+        if (workbook is null)
+        {
+            return;
+        }
+
+        foreach (XElement reference in chartXml.Descendants(ChartNamespace + "numRef").ToArray())
+        {
+            if (reference.Descendants(ChartNamespace + "pt").Any())
+            {
+                continue;
+            }
+
+            string? formula = reference.Element(ChartNamespace + "f")?.Value;
+            string[] values = workbook.ReadRange(formula)
+                .Where(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                .ToArray();
+            if (values.Length == 0)
+            {
+                continue;
+            }
+
+            InsertChartReferenceCache(reference, new XElement(
+                ChartNamespace + "numCache",
+                new XElement(ChartNamespace + "formatCode", "General"),
+                BuildChartCachePoints(values)));
+        }
+
+        foreach (XElement reference in chartXml.Descendants(ChartNamespace + "strRef").ToArray())
+        {
+            if (reference.Descendants(ChartNamespace + "pt").Any())
+            {
+                continue;
+            }
+
+            string[] values = workbook.ReadRange(reference.Element(ChartNamespace + "f")?.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToArray();
+            if (values.Length == 0)
+            {
+                continue;
+            }
+
+            InsertChartReferenceCache(reference, new XElement(
+                ChartNamespace + "strCache",
+                BuildChartCachePoints(values)));
+        }
+
+        foreach (XElement reference in chartXml.Descendants(ChartNamespace + "multiLvlStrRef").ToArray())
+        {
+            if (reference.Descendants(ChartNamespace + "pt").Any())
+            {
+                continue;
+            }
+
+            string[] values = workbook.ReadRange(reference.Element(ChartNamespace + "f")?.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToArray();
+            if (values.Length == 0)
+            {
+                continue;
+            }
+
+            InsertChartReferenceCache(reference, new XElement(
+                ChartNamespace + "multiLvlStrCache",
+                new XElement(ChartNamespace + "ptCount", new XAttribute("val", values.Length.ToString(CultureInfo.InvariantCulture))),
+                new XElement(ChartNamespace + "lvl", values.Select((value, index) => BuildChartCachePoint(index, value)))));
+        }
+    }
+
+    private static void InsertChartReferenceCache(XElement reference, XElement cache)
+    {
+        XElement? formula = reference.Element(ChartNamespace + "f");
+        if (formula is not null)
+        {
+            formula.AddAfterSelf(cache);
+            return;
+        }
+
+        reference.AddFirst(cache);
+    }
+
+    private static object[] BuildChartCachePoints(IReadOnlyList<string> values)
+    {
+        var elements = new object[values.Count + 1];
+        elements[0] = new XElement(ChartNamespace + "ptCount", new XAttribute("val", values.Count.ToString(CultureInfo.InvariantCulture)));
+        for (int index = 0; index < values.Count; index++)
+        {
+            elements[index + 1] = BuildChartCachePoint(index, values[index]);
+        }
+
+        return elements;
+    }
+
+    private static XElement BuildChartCachePoint(int index, string value)
+    {
+        return new XElement(
+            ChartNamespace + "pt",
+            new XAttribute("idx", index.ToString(CultureInfo.InvariantCulture)),
+            new XElement(ChartNamespace + "v", value));
+    }
+
+    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(OoxPackage package, OoxPart chartPart, XDocument chartXml)
+    {
+        string? relationshipId = (string?)chartXml
+            .Descendants(ChartNamespace + "externalData")
+            .FirstOrDefault()?
+            .Attribute(RelationshipsNamespace + "id");
+        if (relationshipId is null)
+        {
+            return null;
+        }
+
+        OoxRelationship? relationship = package
+            .GetRelationships(chartPart.Name)
+            .FirstOrDefault(item =>
+                item.Id == relationshipId &&
+                !item.IsExternal &&
+                item.Type == ChartExternalDataPackageRelationshipType &&
+                item.ResolvedTarget is not null);
+        if (relationship?.ResolvedTarget is null)
+        {
+            return null;
+        }
+
+        OoxPart? workbookPackagePart = package.GetPart(relationship.ResolvedTarget);
+        if (workbookPackagePart is null)
+        {
+            return null;
+        }
+
+        using Stream stream = workbookPackagePart.OpenRead();
+        OoxPackage workbookPackage = OoxPackage.Open(stream);
+        return ReadWorkbookData(workbookPackage);
+    }
+
+    private static ChartWorkbookData? ReadWorkbookData(OoxPackage workbookPackage)
+    {
+        OoxPart? workbookPart = workbookPackage
+            .GetRelationships("/")
+            .Where(relationship => !relationship.IsExternal && relationship.Type == WorkbookRelationshipType && relationship.ResolvedTarget is not null)
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .FirstOrDefault(part => part is not null);
+        workbookPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == WorkbookContentType);
+        if (workbookPart is null)
+        {
+            return null;
+        }
+
+        using Stream workbookStream = workbookPart.OpenRead();
+        XDocument workbookXml = SafeXml.Load(workbookStream);
+        string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
+        IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
+            .GetRelationships(workbookPart.Name)
+            .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
+            .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (XElement sheet in workbookXml.Descendants(SpreadsheetNamespace + "sheet"))
+        {
+            string? name = (string?)sheet.Attribute("name");
+            string? relationshipId = (string?)sheet.Attribute(RelationshipsNamespace + "id");
+            if (string.IsNullOrWhiteSpace(name) ||
+                relationshipId is null ||
+                !workbookRelationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
+                relationship.Type != WorksheetRelationshipType ||
+                relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            OoxPart? worksheetPart = workbookPackage.GetPart(relationship.ResolvedTarget);
+            if (worksheetPart is null)
+            {
+                continue;
+            }
+
+            sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
+        }
+
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets);
+    }
+
+    private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
+    {
+        OoxPart? sharedStringsPart = workbookPackage
+            .GetRelationships(workbookPart.Name)
+            .Where(relationship => !relationship.IsExternal && relationship.Type == SharedStringsRelationshipType && relationship.ResolvedTarget is not null)
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .FirstOrDefault(part => part is not null);
+        sharedStringsPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SharedStringsContentType);
+        if (sharedStringsPart is null)
+        {
+            return [];
+        }
+
+        using Stream stream = sharedStringsPart.OpenRead();
+        XDocument document = SafeXml.Load(stream);
+        return document
+            .Descendants(SpreadsheetNamespace + "si")
+            .Select(item => string.Concat(item.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value)))
+            .ToArray();
+    }
+
+    private static Dictionary<string, string> ReadWorksheetCells(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
+    {
+        using Stream stream = worksheetPart.OpenRead();
+        XDocument document = SafeXml.Load(stream);
+        var cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (XElement cell in document.Descendants(SpreadsheetNamespace + "c"))
+        {
+            string? reference = (string?)cell.Attribute("r");
+            string? value = cell.Element(SpreadsheetNamespace + "v")?.Value;
+            if (string.IsNullOrWhiteSpace(reference))
+            {
+                continue;
+            }
+
+            string? cellType = (string?)cell.Attribute("t");
+            if (string.Equals(cellType, "inlineStr", StringComparison.Ordinal))
+            {
+                value = string.Concat(cell.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value));
+            }
+
+            if (value is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(cellType, "s", StringComparison.Ordinal) &&
+                int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex) &&
+                sharedStringIndex >= 0 &&
+                sharedStringIndex < sharedStrings.Count)
+            {
+                value = sharedStrings[sharedStringIndex];
+            }
+
+            cells[reference] = value;
+        }
+
+        return cells;
+    }
+
+    private sealed class ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
+    {
+        public string[] ReadRange(string? formula)
+        {
+            if (!TryParseRange(formula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
+                !sheets.TryGetValue(sheetName, out Dictionary<string, string>? cells))
+            {
+                return [];
+            }
+
+            var values = new List<string>();
+            int minColumn = Math.Min(firstColumn, lastColumn);
+            int maxColumn = Math.Max(firstColumn, lastColumn);
+            int minRow = Math.Min(firstRow, lastRow);
+            int maxRow = Math.Max(firstRow, lastRow);
+            for (int row = minRow; row <= maxRow; row++)
+            {
+                for (int column = minColumn; column <= maxColumn; column++)
+                {
+                    if (cells.TryGetValue(ToCellReference(column, row), out string? value))
+                    {
+                        values.Add(value);
+                    }
+                }
+            }
+
+            return values.ToArray();
+        }
+
+        private static bool TryParseRange(string? formula, out string sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)
+        {
+            sheetName = string.Empty;
+            firstColumn = 0;
+            firstRow = 0;
+            lastColumn = 0;
+            lastRow = 0;
+            if (string.IsNullOrWhiteSpace(formula))
+            {
+                return false;
+            }
+
+            string trimmed = formula.Trim();
+            int separator = trimmed.LastIndexOf('!');
+            if (separator <= 0 || separator == trimmed.Length - 1)
+            {
+                return false;
+            }
+
+            sheetName = NormalizeSheetName(trimmed[..separator]);
+            string[] references = trimmed[(separator + 1)..].Split(':', 2, StringSplitOptions.TrimEntries);
+            if (!TryParseCellReference(references[0], out firstColumn, out firstRow))
+            {
+                return false;
+            }
+
+            if (references.Length == 1)
+            {
+                lastColumn = firstColumn;
+                lastRow = firstRow;
+                return true;
+            }
+
+            return TryParseCellReference(references[1], out lastColumn, out lastRow);
+        }
+
+        private static string NormalizeSheetName(string sheetName)
+        {
+            int workbookEnd = sheetName.LastIndexOf(']');
+            if (workbookEnd >= 0 && workbookEnd < sheetName.Length - 1)
+            {
+                sheetName = sheetName[(workbookEnd + 1)..];
+            }
+
+            sheetName = sheetName.Trim();
+            if (sheetName.Length >= 2 && sheetName[0] == '\'' && sheetName[^1] == '\'')
+            {
+                sheetName = sheetName[1..^1].Replace("''", "'", StringComparison.Ordinal);
+            }
+
+            return sheetName;
+        }
+
+        private static bool TryParseCellReference(string reference, out int column, out int row)
+        {
+            column = 0;
+            row = 0;
+            string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
+            int index = 0;
+            while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
+            {
+                column = (column * 26) + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
+                index++;
+            }
+
+            if (column <= 0 || index == normalized.Length)
+            {
+                return false;
+            }
+
+            return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row > 0;
+        }
+
+        private static string ToCellReference(int column, int row)
+        {
+            Span<char> buffer = stackalloc char[16];
+            int position = buffer.Length;
+            int value = column;
+            while (value > 0)
+            {
+                value--;
+                buffer[--position] = (char)('A' + (value % 26));
+                value /= 26;
+            }
+
+            return string.Concat(new string(buffer[position..]), row.ToString(CultureInfo.InvariantCulture));
+        }
     }
 
     private static ChartFrameBox GetChartFrameBox(PptxDocument document, ShapeBounds bounds)
