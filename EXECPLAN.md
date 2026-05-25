@@ -1007,6 +1007,17 @@ High-priority actions:
   209 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: the axis line and bar/line
   coordinate crossing geometry still do not fully consume `crosses`, `crossesAt`, reversed axes, or
   secondary-axis bindings.
+- [x] 2026-05-25: Consume value-axis crossing metadata for vertical chart category-axis strokes.
+  Supported vertical bar and line chart renderers now place the category-axis line at the scene/XML
+  value-axis crossing value instead of always drawing it at the old zero/min baseline. The same crossing
+  resolver used by gridlines feeds the axis stroke, so `crosses=max`, `crosses=min`, explicit `crossesAt`,
+  and `autoZero` follow one axis-owned rule. A synthetic `c:crosses val="max"` chart locks the horizontal
+  category-axis stroke at the value-axis maximum. Focused chart tests passed with 14 passed, 0 failed,
+  0 skipped; the clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-021112`; the full suite passed with
+  210 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar axes,
+  value-axis side/cross-axis placement, reversed scales, series baselines, and secondary axes still need
+  separate Office-PDF-backed slices.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1371,8 +1382,10 @@ High-priority actions:
     `PptxSceneChartAxis`.
   - [x] Preserve chart style IDs in `PptxSceneChart` as a prerequisite for chart-style inherited defaults.
   - [x] Consume value-axis crossing metadata for bar/line chart gridline endpoint filtering.
-  - [ ] Consume axis crossing metadata for axis-line placement, series coordinate baselines, reversed axes,
-    and secondary axes instead of relying on right-side XML/layout assumptions.
+  - [x] Consume value-axis crossing metadata for vertical bar/line category-axis stroke placement.
+  - [ ] Consume axis crossing metadata for horizontal bar axes, value-axis side/cross-axis placement, series
+    coordinate baselines, reversed axes, and secondary axes instead of relying on right-side XML/layout
+    assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4487,6 +4500,20 @@ gate passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/2026
 passed with 209 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining axis-crossing work is
 larger than gridlines: axis line placement, category/value baseline choice for bars and lines, reversed
 scales, and secondary-axis binding still need Office-PDF evidence and public gates.
+
+chart category-axis crossing-line consumption / 2026-05-25:
+The vertical bar/line chart category-axis stroke now uses the same value-axis crossing resolver as gridlines.
+For the supported vertical chart path, `c:crosses val="max"` moves the category-axis line to the value-axis
+maximum, `c:crosses val="min"` keeps it at the minimum, `c:crossesAt` places it at the explicit value after
+clamping to the visible value range, and `autoZero` uses zero when visible or the nearest endpoint otherwise.
+This keeps the visible axis stroke structurally tied to OOXML crossing metadata instead of using a zero-line
+heuristic. A synthetic structural PDF test verifies that a `crosses=max` category-axis horizontal stroke
+shares the top coordinate of the value-axis vertical stroke. The focused `pptx-charts` non-slow group passed
+with 14 passed, 0 failed, 0 skipped; the clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-021112`; the full suite passed with
+210 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining work deliberately stays open for
+separate evidence: horizontal bar axis crossing, secondary-axis binding, reversed axis orientation, and
+whether series baselines should move with axis crossing or stay tied to zero for each chart family.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

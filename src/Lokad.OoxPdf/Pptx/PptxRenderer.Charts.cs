@@ -2430,6 +2430,13 @@ internal sealed partial class PptxRenderer
         return extents.Min > 0d ? extents.Min : extents.Max;
     }
 
+    private static double ChartValueToPlotCoordinate(ChartValueExtents extents, double? value, double plotStart, double plotLength)
+    {
+        double range = Math.Max(1d, extents.Max - extents.Min);
+        double boundedValue = Math.Clamp(value ?? 0d, extents.Min, extents.Max);
+        return plotStart + plotLength * (boundedValue - extents.Min) / range;
+    }
+
     private static double ChooseChartAxisMajorUnit(double range)
     {
         double target = Math.Max(range / PptxChartMetricRules.AxisNiceTickTargetCount, double.Epsilon);
@@ -3062,6 +3069,7 @@ internal sealed partial class PptxRenderer
 
         double zeroX = plotX + (-minValue) / valueRange * plotWidth;
         double zeroY = plotY + (-minValue) / valueRange * plotHeight;
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight);
         if (minorGridlines)
         {
             if (horizontalBars)
@@ -3094,7 +3102,8 @@ internal sealed partial class PptxRenderer
             if (stroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, stroke);
-                graphics.StrokeLine(plotX, zeroY, plotX + plotWidth, zeroY);
+                double axisY = horizontalBars ? zeroY : valueAxisCrossingY;
+                graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY);
             }
         }
 
@@ -3645,6 +3654,7 @@ internal sealed partial class PptxRenderer
         double maxValue = valueExtents.Max;
         double minValue = valueExtents.Min;
         double valueRange = Math.Max(1d, maxValue - minValue);
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight);
 
         if (minorGridlines)
         {
@@ -3663,7 +3673,7 @@ internal sealed partial class PptxRenderer
             if (categoryAxisStroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, categoryAxisStroke);
-                graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
+                graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
             }
         }
 

@@ -7236,13 +7236,100 @@ internal static class PptxTests
         double[] groupY = Regex.Matches(group.Value, @"[0-9.]+ (?<y>[0-9.]+) m\s+[0-9.]+ [0-9.]+ l")
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
             .ToArray();
-        double bottomAxisY = Regex.Matches(pdf, @"[0-9.]+ (?<y>[0-9.]+) m [0-9.]+ (?<y2>[0-9.]+) l S")
+        double categoryAxisY = Regex.Matches(pdf, @"[0-9.]+ (?<y>[0-9.]+) m [0-9.]+ (?<y2>[0-9.]+) l S")
             .Cast<Match>()
             .Where(match => match.Groups["y"].Value == match.Groups["y2"].Value)
             .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
-            .Min();
-        TestAssert.True(groupY.Any(y => Math.Abs(y - bottomAxisY) < 0.001d),
-            "When c:crosses is max, the top crossing tick is excluded and the minimum tick remains a gridline.");
+            .Max();
+        TestAssert.True(groupY.All(y => Math.Abs(y - categoryAxisY) > 0.001d),
+            "When c:crosses is max, the grouped gridlines should exclude the top crossing tick.");
+        TestAssert.True(groupY.Min() < categoryAxisY,
+            "When c:crosses is max, lower value ticks remain visible as gridlines.");
+    }
+
+    public static void PptxSyntheticChartCategoryAxisLineUsesCrossingTick()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea>
+                  <c:barChart>
+                    <c:barDir val="col"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:barChart>
+                  <c:catAx>
+                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+                  </c:catAx>
+                  <c:valAx>
+                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crosses val="max"/>
+                  </c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        var horizontalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
+            .Cast<Match>()
+            .Select(match => new
+            {
+                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
+                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
+                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
+                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
+            })
+            .Where(line => Math.Abs(line.Y1 - line.Y2) < 0.001d && Math.Abs(line.X1 - line.X2) > 100d)
+            .ToArray();
+        var verticalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
+            .Cast<Match>()
+            .Select(match => new
+            {
+                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
+                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
+                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
+                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
+            })
+            .Where(line => Math.Abs(line.X1 - line.X2) < 0.001d && Math.Abs(line.Y1 - line.Y2) > 100d)
+            .ToArray();
+
+        TestAssert.True(horizontalLines.Length >= 1, "Expected a category-axis horizontal stroke.");
+        TestAssert.True(verticalLines.Length >= 1, "Expected a value-axis vertical stroke.");
+        double categoryAxisY = horizontalLines.Max(line => line.Y1);
+        double valueAxisTopY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
+        TestAssert.True(Math.Abs(categoryAxisY - valueAxisTopY) < 0.001d,
+            "When c:crosses is max, the category-axis line should be placed at the value-axis maximum.");
     }
 
     public static void PptxSyntheticChartManualLayoutEdgeModesRender()
