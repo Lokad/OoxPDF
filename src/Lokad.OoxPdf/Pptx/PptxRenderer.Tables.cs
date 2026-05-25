@@ -515,7 +515,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        foreach (XElement runProperties in textBody.Descendants(DrawingNamespace + "rPr").Concat(textBody.Descendants(DrawingNamespace + "endParaRPr")))
+        foreach (XElement runProperties in ReadTableTextRunProperties(textBody))
         {
             if (style.Bold && runProperties.Attribute("b") is null)
             {
@@ -529,6 +529,34 @@ internal sealed partial class PptxRenderer
                             new XElement(DrawingNamespace + "srgbClr",
                             new XAttribute("val", string.Create(CultureInfo.InvariantCulture, $"{color.Red:X2}{color.Green:X2}{color.Blue:X2}")))));
             }
+        }
+    }
+
+    private static IEnumerable<XElement> ReadTableTextRunProperties(XElement textBody)
+    {
+        foreach (XElement run in textBody.Descendants(DrawingNamespace + "r"))
+        {
+            XElement? runProperties = run.Element(DrawingNamespace + "rPr");
+            if (runProperties is null)
+            {
+                runProperties = new XElement(DrawingNamespace + "rPr");
+                XElement? text = run.Element(DrawingNamespace + "t");
+                if (text is null)
+                {
+                    run.AddFirst(runProperties);
+                }
+                else
+                {
+                    text.AddBeforeSelf(runProperties);
+                }
+            }
+
+            yield return runProperties;
+        }
+
+        foreach (XElement runProperties in textBody.Descendants(DrawingNamespace + "endParaRPr"))
+        {
+            yield return runProperties;
         }
     }
 

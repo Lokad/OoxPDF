@@ -68,8 +68,8 @@ internal static class PptxTableStyleResolver
             bool banded = (tableStyle.BandRow && bodyRowIndex >= 0 && bodyRowIndex % 2 == 0) ||
                 (tableStyle.BandColumn && bodyColumnIndex >= 0 && bodyColumnIndex % 2 == 0);
             RgbColor color = banded
-                ? TintColor(accent, 0.4d)
-                : TintColor(accent, 0.2d);
+                ? TintOfficeTableAccent(accent, 0.71d, 0.75d)
+                : TintOfficeTableAccent(accent, 0.86d, 0.75d);
             return new PptxSceneFillStyle(true, color, alpha);
         }
 
@@ -132,6 +132,13 @@ internal static class PptxTableStyleResolver
             ToByte(color.Blue + (255d - color.Blue) * tint));
     }
 
+    private static RgbColor TintOfficeTableAccent(RgbColor color, double tint, double saturationFactor)
+    {
+        (double hue, double saturation, double luminance) = ToHsl(color);
+        double tintedLuminance = luminance + (1d - luminance) * tint;
+        return FromHsl(hue, saturation * saturationFactor, tintedLuminance);
+    }
+
     private static RgbColor ShadeColor(RgbColor color, double shade)
     {
         return new RgbColor(
@@ -143,5 +150,60 @@ internal static class PptxTableStyleResolver
     private static byte ToByte(double value)
     {
         return (byte)Math.Clamp((int)Math.Round(value, MidpointRounding.AwayFromZero), 0, 255);
+    }
+
+    private static (double Hue, double Saturation, double Luminance) ToHsl(RgbColor color)
+    {
+        double red = color.Red / 255d;
+        double green = color.Green / 255d;
+        double blue = color.Blue / 255d;
+        double max = Math.Max(red, Math.Max(green, blue));
+        double min = Math.Min(red, Math.Min(green, blue));
+        double delta = max - min;
+        double luminance = (max + min) / 2d;
+        double saturation = delta == 0d ? 0d : delta / (1d - Math.Abs(2d * luminance - 1d));
+        double hue = 0d;
+        if (delta != 0d)
+        {
+            if (max == red)
+            {
+                hue = 60d * (((green - blue) / delta) % 6d);
+            }
+            else if (max == green)
+            {
+                hue = 60d * ((blue - red) / delta + 2d);
+            }
+            else
+            {
+                hue = 60d * ((red - green) / delta + 4d);
+            }
+
+            if (hue < 0d)
+            {
+                hue += 360d;
+            }
+        }
+
+        return (hue, saturation, luminance);
+    }
+
+    private static RgbColor FromHsl(double hue, double saturation, double luminance)
+    {
+        saturation = Math.Clamp(saturation, 0d, 1d);
+        luminance = Math.Clamp(luminance, 0d, 1d);
+        double chroma = (1d - Math.Abs(2d * luminance - 1d)) * saturation;
+        double segment = hue / 60d;
+        double second = chroma * (1d - Math.Abs(segment % 2d - 1d));
+        (double red, double green, double blue) = segment switch
+        {
+            >= 0d and < 1d => (chroma, second, 0d),
+            >= 1d and < 2d => (second, chroma, 0d),
+            >= 2d and < 3d => (0d, chroma, second),
+            >= 3d and < 4d => (0d, second, chroma),
+            >= 4d and < 5d => (second, 0d, chroma),
+            _ => (chroma, 0d, second)
+        };
+        double match = luminance - chroma / 2d;
+        return new RgbColor(ToByte((red + match) * 255d), ToByte((green + match) * 255d), ToByte((blue + match) * 255d));
     }
 }

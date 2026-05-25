@@ -8,12 +8,10 @@
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": false,
-    "maxMeanAbsoluteError": 20,
-    "maxChangedPixelRatioAtThreshold16": 0.25
-  },
-  "allowedUnsupportedFeatures": [
-    "PPTX_UNSUPPORTED_CHART",
-    "PPTX_CHART_STATIC_FALLBACK"
-  ]
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 1.0,
+    "maxChangedPixelRatioAtThreshold16": 0.01,
+    "minStructuralSimilarity": 0.96,
+    "minForegroundColorHistogramCorrelation": 0.999
+  }
 }

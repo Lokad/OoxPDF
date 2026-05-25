@@ -787,6 +787,10 @@ internal sealed partial class PptxRenderer
         public const double BarNoTitleBottomLegendPlotBoxYRatio = 0.151d;
         public const double BarNoTitleBottomLegendPlotBoxWidthRatio = 0.9406d;
         public const double BarNoTitleBottomLegendPlotBoxHeightRatio = 0.815d;
+        public const double BarTitleNoLegendPlotBoxXRatio = 0.1106d;
+        public const double BarTitleNoLegendPlotBoxYRatio = 0.1008d;
+        public const double BarTitleNoLegendPlotBoxWidthRatio = 0.8691d;
+        public const double BarTitleNoLegendPlotBoxHeightRatio = 0.7696d;
         public const double BarMultiValueAxisPrimaryStripFactor = 1.85d;
         public const double BarMultiValueAxisSecondaryStripFactor = 1.2d;
         public const double HorizontalBarTitleNoLegendPlotBoxXRatio = 0.1524d;
@@ -863,6 +867,7 @@ internal sealed partial class PptxRenderer
         public const double TitleBaselineYRatio = 0.88d;
         public const double AutoTitleFontScale = 1.2d;
         public const double TitleAbovePlotBaselineOffsetFactor = 0.8483333333333334d;
+        public const double AutoBarTitleAbovePlotBaselineOffsetFactor = 1.08d;
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
         public const double LegendLineHeightFactor = 1.45d;

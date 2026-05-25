@@ -5580,3 +5580,25 @@ Office-observed metric constants. The durable target is a shared chart layout or
 plot area, inner plot, axis labels, tick marks, title, legend, and clip boxes together for all cartesian charts,
 so `layoutTarget`, `xMode/yMode/wMode/hMode`, and axis-side reservations are interpreted once instead of being
 reimplemented by chart family.
+
+Revision note, 2026-05-25: Closed the public dashboard table/chart composite gap as two structural Office
+alignment issues rather than as a tolerated chart fallback. The table frame already carried a supported built-in
+`Medium-Style-2` style, but style text defaults were only applied to cells whose runs already had `a:rPr`; the
+Office-authored dashboard cells omit run properties, so the header lost its white bold text. OOXPDF now creates
+run properties when applying table-style text defaults and uses a desaturated Office-style tint path for
+`Medium-Style-2` body fills, matching the light accent bands instead of over-saturated RGB interpolation. The
+chart frame had a single-series automatic title and no legend; Office uses that title to reserve a shorter,
+wider vertical column plot box, while OOXPDF fell through to the generic bar default and pushed the plot and
+title upward. Vertical bar charts with a title and no legend now use their own plot-box ratios, and automatic
+bar titles use the Office-observed title-to-plot baseline spacing. Focused `pptx-tables` tests passed with 7/7,
+focused `pptx-charts` tests passed with 37/37, the full public `pptx-charts` visual family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T16:32:07.5618893+02:00`, and `dotnet pack`
+succeeded. The public
+`pptx-ladder-11-dashboard-table-chart-port` gate now passes with empty diagnostics at
+`artifacts/visual/pptx-ladder-11-dashboard-table-chart-port/20260525-163201`, MAE `0.7373203607253086`,
+changed16 `0.008074845679012345`, SSIM `0.9686203303347848`, and foreground histogram correlation
+`0.9996619068888233`; its manifest now rejects fallback diagnostics and tightens raster/color gates. Remaining
+long-term gap: built-in table style definitions and cartesian title/legend/axis plot reservations are still
+encoded as renderer rules. The durable target is to ingest Office table style definitions and a shared chart
+layout oracle so conditional table regions, automatic titles, legends, axes, and plot boxes are derived from
+OOXML style/layout structure plus PDF evidence rather than per-family constants.
