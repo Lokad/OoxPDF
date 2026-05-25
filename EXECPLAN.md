@@ -3815,6 +3815,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   pair, suppresses wide filled-region unions as polar plot boxes, and avoids comparing meaningless line width
   on fill-only marker rectangles. The public composite chart gate now compares the derived plot box and legend
   markers instead of raw clip boxes.
+- Observation: The line-chart right-legend classifier is not yet reliable enough for an enforced text gate:
+  the same chart whose plot box and axis tick labels match Office within 1 pt still classifies right-legend
+  text at different vertical regions in Office and candidate PDFs.
+  Evidence: `pptx-ladder-11-chart-line-3series-port` now gates `GridlineAxisPlotBoxCandidate`,
+  `HorizontalGridlineGroupCandidate`, `CategoryAxisTickLabel`, and `ValueAxisTickLabel`, but intentionally
+  leaves `LegendText` out until right-legend container detection is structural rather than clip-region
+  incidental.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4094,13 +4101,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   geometry, paragraph margins, or small-label preset-shape origins.
 - The public `pptx-ladder-11-chart-line-3series-port` gate now passes through structural chart alignment:
   default line colors/width, category midpoint positions, and the no-title/right-legend plot box are aligned
-  to Office PDF operators. The public `pptx-ladder-11-composite-chart-port` gate also now passes after
-  aligning the default clustered-column no-title/bottom-legend plot box, whole-number value scale, and
-  packed bottom legend placement to Office PDF evidence. The composite chart is now protected by structural
-  gates for the derived gridline/axis plot box, legend markers, category tick labels, value tick labels, and
-  legend text. These remove both cases from the pre-existing failure list, while broader chart-family layout
-  work remains open because the current named metric rules still need to be replaced by systematic chart
-  structural oracle tooling.
+  to Office PDF operators, and the manifest now guards the derived gridline/axis plot box, gridline group,
+  category tick labels, and value tick labels. The public `pptx-ladder-11-composite-chart-port` gate also now
+  passes after aligning the default clustered-column no-title/bottom-legend plot box, whole-number value
+  scale, and packed bottom legend placement to Office PDF evidence. The composite chart is now protected by
+  structural gates for the derived gridline/axis plot box, legend markers, category tick labels, value tick
+  labels, and legend text. These remove both cases from the pre-existing failure list, while broader
+  chart-family layout work remains open because the current named metric rules still need to be replaced by
+  systematic chart structural oracle tooling.
 
 ## Concrete Steps
 
@@ -4249,6 +4257,13 @@ to Office (`131.616 111.226` plot origin; first line point `177.738 393.818`). P
 `pptx-ladder-11-composite-chart-port` still failed its pre-existing gate at `13.6832895688657` versus
 `12.41`. Full console suite passed with 221 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
+Line-chart structural gate tightening: the public `pptx-ladder-11-chart-line-3series-port` manifest now
+gates `GridlineAxisPlotBoxCandidate`, `HorizontalGridlineGroupCandidate`, category tick labels, and value tick
+labels. The gated run at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-112557` passed
+with the existing raster thresholds, plot/gridline deltas under 1 pt, category-label deltas up to `0.57 pt`
+X and `-0.68 pt` Y, and value-label deltas up to `-0.14 pt` X and `-0.63 pt` Y. Right-legend text remains
+outside the gate because the current classifier finds different vertical legend regions between Office and
+candidate PDFs; that is chart-oracle work, not a reason to weaken the line plot/tick gate.
 Composite column-chart structural alignment slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off
 --nologo -v minimal -- --group pptx-charts --skip-slow` passed with 25 passed, 0 failed, 0 skipped. Public
 visual case `pptx-ladder-11-composite-chart-port` passed at
@@ -5027,3 +5042,7 @@ case-local metric constants.
 Revision note, 2026-05-25: Added the composite chart structural gate/tooling slice. The same public composite
 case now compares derived chart primitives, not only raster metrics, which turns the chart-oracle track from
 an architectural direction into an enforced regression surface.
+
+Revision note, 2026-05-25: Tightened the public line-chart gate to include derived plot/gridline and axis
+tick-label structure. The right-legend text gap is preserved as open classifier work rather than hidden behind
+a broad tolerance.
