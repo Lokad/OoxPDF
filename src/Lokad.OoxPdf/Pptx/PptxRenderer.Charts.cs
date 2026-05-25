@@ -974,25 +974,28 @@ internal sealed partial class PptxRenderer
 
     private static ChartPolarGeometry GetPieOrDoughnutGeometry(ChartPolarKind kind, ChartPlotBox plotBox, double explosionReserve, ChartLegendLayout legend)
     {
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio(kind);
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio(kind, legend);
         if (explosionReserve > 0d)
         {
             radius /= 1d + explosionReserve;
         }
 
         double centerXRatio = GetPieOrDoughnutCenterXRatio(kind, legend);
+        double centerYRatio = GetPieOrDoughnutCenterYRatio(kind, legend);
         double centerXOffset = GetPieOrDoughnutCenterXOffset(kind, radius, explosionReserve, legend);
         return new ChartPolarGeometry(
             plotBox.X + plotBox.Width * centerXRatio + centerXOffset,
-            plotBox.Y + plotBox.Height * PptxChartMetricRules.PieCenterYRatio,
+            plotBox.Y + plotBox.Height * centerYRatio,
             radius);
     }
 
-    private static double GetPieOrDoughnutRadiusRatio(ChartPolarKind kind)
+    private static double GetPieOrDoughnutRadiusRatio(ChartPolarKind kind, ChartLegendLayout legend)
     {
+        bool hasLegend = legend.Visible && !legend.Overlay;
         return kind switch
         {
             ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
+            ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendRadiusRatio,
             ChartPolarKind.Doughnut => PptxChartMetricRules.PieRadiusRatio,
             _ => PptxChartMetricRules.PieRadiusRatio
         };
@@ -1007,6 +1010,16 @@ internal sealed partial class PptxRenderer
             ChartPolarKind.Doughnut when hasLegend && string.Equals(legend.Position, "r", StringComparison.Ordinal) => PptxChartMetricRules.DoughnutRightLegendCenterXRatio,
             ChartPolarKind.Doughnut => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
             _ => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
+        };
+    }
+
+    private static double GetPieOrDoughnutCenterYRatio(ChartPolarKind kind, ChartLegendLayout legend)
+    {
+        bool hasLegend = legend.Visible && !legend.Overlay;
+        return kind switch
+        {
+            ChartPolarKind.Doughnut when !hasLegend => PptxChartMetricRules.DoughnutNoLegendCenterYRatio,
+            _ => PptxChartMetricRules.PieCenterYRatio
         };
     }
 

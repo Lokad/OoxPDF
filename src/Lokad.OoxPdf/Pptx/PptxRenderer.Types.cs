@@ -819,6 +819,8 @@ internal sealed partial class PptxRenderer
         public const double PieCenterXRatio = 0.42d;
         public const double PieNoLegendCenterXRatio = 0.5d;
         public const double DoughnutRightLegendCenterXRatio = 0.3988d;
+        public const double DoughnutNoLegendCenterYRatio = 0.5d;
+        public const double DoughnutNoLegendRadiusRatio = 0.4746d;
         public const double DoughnutExplosionCenterOffsetRatio = 1.0d;
         public const double PieCenterYRatio = 0.458d;
         public const double PieRadiusRatio = 0.434d;

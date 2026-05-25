@@ -6232,3 +6232,20 @@ passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-2
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
 long-term gap: generalize polar layout from the two public right-legend doughnut probes to a chart-kind/legend
 position/explosion-reserve model covering left/top/bottom/overlay legends and no-legend doughnuts.
+
+Revision note, 2026-05-25: Added the missing public no-legend doughnut probe and used it to remove another shared
+pie/doughnut geometry assumption. The new Office-authored
+`pptx-ladder-11-chart-doughnut-no-legend-probe.pptx` showed that no-legend doughnuts do not use the pie no-legend
+vertical center or radius: Office centers the annulus at the chart-frame midpoint (`CenterYRatio = 0.5`) and uses a
+larger radius (`0.4746` of the frame's smaller dimension). Before the renderer change, true annulus centers were
+about `18.14 pt` too low and radii about `17.52 pt` too small; after the change the true slice geometry is within
+`0.03 pt` radius and `0.01 pt` center drift, with raster MAE `0.009301`, changed16 `0.000283`, and SSIM `0.999973`.
+The probe is now in the public `pptx-charts` family with tight raster and `PolarSliceCandidate` path-geometry gates.
+Validation: focused `pptx-charts` tests passed 38/38; the new no-legend doughnut visual case passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-no-legend-probe/20260525-205737`; the existing right-legend doughnut
+cases passed at `artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-205658` and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-205704`; the full public `pptx-charts`
+family passed 29/29 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-205757` run; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: the polar resolver now has distinct rules for pie, right-legend doughnut, and no-legend doughnut, but
+left/top/bottom/overlay legends still need public probes before this can become a complete Office layout model.
