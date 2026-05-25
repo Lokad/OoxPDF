@@ -480,6 +480,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal("l", slide.SlideNodes[4].Chart?.Axes[1].Position ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisPosition.Left, slide.SlideNodes[4].Chart?.Axes[1].PositionKind);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Axes[0].CrossAxisId ?? string.Empty);
         TestAssert.Equal("autoZero", slide.SlideNodes[4].Chart?.Axes[0].Crosses ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.Axes[1].CrossAxisId ?? string.Empty);

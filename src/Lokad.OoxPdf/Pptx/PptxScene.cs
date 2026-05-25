@@ -543,6 +543,7 @@ internal sealed record PptxSceneChartPointStyle(
 internal sealed record PptxSceneChartAxis(
     string Id,
     string Kind,
+    PptxSceneChartAxisPosition PositionKind,
     string Position,
     string CrossAxisId,
     string Crosses,
@@ -570,6 +571,15 @@ internal sealed record PptxSceneChartAxis(
     bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartTitle Title);
+
+internal enum PptxSceneChartAxisPosition
+{
+    Bottom,
+    Left,
+    Right,
+    Top,
+    Unknown
+}
 
 internal sealed record PptxSceneChartTitle(
     string? Text,
@@ -914,6 +924,22 @@ internal sealed class PptxSceneBuilder
             _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.Top,
             _ when position?.Equals("tr", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartLegendPosition.TopRight,
             _ => PptxSceneChartLegendPosition.Unknown
+        };
+    }
+
+    internal static PptxSceneChartAxisPosition ParseChartAxisPosition(string? position)
+    {
+        return position switch
+        {
+            "b" => PptxSceneChartAxisPosition.Bottom,
+            "l" => PptxSceneChartAxisPosition.Left,
+            "r" => PptxSceneChartAxisPosition.Right,
+            "t" => PptxSceneChartAxisPosition.Top,
+            _ when position?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Bottom,
+            _ when position?.Equals("l", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Left,
+            _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Right,
+            _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Top,
+            _ => PptxSceneChartAxisPosition.Unknown
         };
     }
     private const double MinimumStrokeWidth = 0.1d;
@@ -1634,6 +1660,7 @@ internal sealed class PptxSceneBuilder
             axes.Add(new PptxSceneChartAxis(
                 id,
                 axis.Name.LocalName,
+                ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty),
                 (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty,
                 (string?)axis.Element(ChartNamespace + "crossAx")?.Attribute("val") ?? string.Empty,
                 (string?)axis.Element(ChartNamespace + "crosses")?.Attribute("val") ?? string.Empty,

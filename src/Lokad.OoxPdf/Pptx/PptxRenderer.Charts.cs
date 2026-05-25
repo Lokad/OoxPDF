@@ -3355,7 +3355,7 @@ internal sealed partial class PptxRenderer
 
         return sceneChart.Axes.FirstOrDefault(axis =>
             string.Equals(axis.Kind, "valAx", StringComparison.Ordinal) &&
-            string.Equals(axis.Position, "r", StringComparison.Ordinal));
+            axis.PositionKind == PptxSceneChartAxisPosition.Right);
     }
 
     private static bool IsSceneOrXmlVisibleValueAxis(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -3373,7 +3373,7 @@ internal sealed partial class PptxRenderer
     private static bool IsRightValueAxis(XElement? axis)
     {
         return axis is not null &&
-            string.Equals((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"), "r", StringComparison.Ordinal) &&
+            PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")) == PptxSceneChartAxisPosition.Right &&
             !IsOoxmlBooleanElementEnabled(axis.Element(ChartNamespace + "delete"));
     }
 
@@ -3985,19 +3985,19 @@ internal sealed partial class PptxRenderer
     {
         if (sceneAxis is not null)
         {
-            return sceneAxis.Position switch
+            return sceneAxis.PositionKind switch
             {
-                "r" => true,
-                "l" => false,
+                PptxSceneChartAxisPosition.Right => true,
+                PptxSceneChartAxisPosition.Left => false,
                 _ => defaultRightSide
             };
         }
 
         string? position = (string?)axis?.Element(ChartNamespace + "axPos")?.Attribute("val");
-        return position switch
+        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
-            "r" => true,
-            "l" => false,
+            PptxSceneChartAxisPosition.Right => true,
+            PptxSceneChartAxisPosition.Left => false,
             _ => defaultRightSide
         };
     }
@@ -4006,19 +4006,19 @@ internal sealed partial class PptxRenderer
     {
         if (sceneAxis is not null)
         {
-            return sceneAxis.Position switch
+            return sceneAxis.PositionKind switch
             {
-                "b" => true,
-                "t" => false,
+                PptxSceneChartAxisPosition.Bottom => true,
+                PptxSceneChartAxisPosition.Top => false,
                 _ => defaultBottomSide
             };
         }
 
         string? position = (string?)axis?.Element(ChartNamespace + "axPos")?.Attribute("val");
-        return position switch
+        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
-            "b" => true,
-            "t" => false,
+            PptxSceneChartAxisPosition.Bottom => true,
+            PptxSceneChartAxisPosition.Top => false,
             _ => defaultBottomSide
         };
     }
@@ -4027,19 +4027,19 @@ internal sealed partial class PptxRenderer
     {
         if (sceneAxis is not null)
         {
-            return sceneAxis.Position switch
+            return sceneAxis.PositionKind switch
             {
-                "r" => true,
-                "l" => false,
+                PptxSceneChartAxisPosition.Right => true,
+                PptxSceneChartAxisPosition.Left => false,
                 _ => defaultRightSide
             };
         }
 
         string? position = (string?)axis?.Element(ChartNamespace + "axPos")?.Attribute("val");
-        return position switch
+        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
         {
-            "r" => true,
-            "l" => false,
+            PptxSceneChartAxisPosition.Right => true,
+            PptxSceneChartAxisPosition.Left => false,
             _ => defaultRightSide
         };
     }

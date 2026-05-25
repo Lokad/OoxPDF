@@ -2162,6 +2162,12 @@ High-priority actions:
     Scene coverage locks raw `b` and typed `Bottom`; focused chart validation passed
     `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
     `dotnet pack` succeeded.
+  - [x] 2026-05-25: Promoted chart axis positions from raw `axPos` strings to a typed
+    `PptxSceneChartAxisPosition` ladder on `PptxSceneChartAxis`, while preserving the raw OOXML value. Value
+    and category axis side resolution, right-value-axis discovery, and secondary-axis selection now use the
+    typed position. Scene coverage locks raw `l` and typed `Left`; focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
