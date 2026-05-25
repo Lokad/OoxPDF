@@ -5179,3 +5179,13 @@ label placement remain explicit open work.
 Revision note, 2026-05-25: Added the horizontal bar side-label structural gate. The clustered-bar case now
 compares both bottom value-axis labels and side category labels within 1 pt; title X/text-measurement remains
 open.
+
+Revision note, 2026-05-25: Added the horizontal bar auto-title text-size slice. Office emits absent
+auto-generated chart titles at 120% of the chart text size, while axis labels keep the chart text size. The
+renderer now applies that structural title-style rule, adjusts the title-above-plot baseline factor to keep
+the Office baseline stable with the corrected font size, adds `PptxSyntheticChartAutoTitleUsesOfficeScaledSize`,
+and tightens `pptx-ladder-11-chart-bar-clustered-port` to gate `ChartTitleText`. The public visual gate passed
+at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-120518` with title delta X `0.92 pt`
+and Y `0.00 pt`; focused chart tests passed with 27/27. Remaining long-term gap: auto-title text derivation is
+still narrow and bar-oriented in `ReadChartTitleText`; it should become a typed chart-scene rule that handles
+Office's title inference across chart families instead of a renderer-local single-series bar special case.

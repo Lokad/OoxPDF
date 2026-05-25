@@ -841,7 +841,8 @@ internal sealed partial class PptxRenderer
         public const double VerticalValueAxisBaselineRatio = 0.215d;
         public const double TitleXInsetRatio = 0.08d;
         public const double TitleBaselineYRatio = 0.88d;
-        public const double TitleAbovePlotBaselineOffsetFactor = 1.018d;
+        public const double AutoTitleFontScale = 1.2d;
+        public const double TitleAbovePlotBaselineOffsetFactor = 0.8483333333333334d;
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
         public const double LegendLineHeightFactor = 1.45d;
