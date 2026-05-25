@@ -5457,3 +5457,24 @@ text-box heuristics rather than a typed Office area-chart layout model that deri
 scale maxima, stack baselines, draw order, and label anchors from Office PDF structure. This is a large structural
 improvement, but the explicit stacked-area headroom threshold should eventually disappear into a unified Office
 axis-layout model.
+
+Revision note, 2026-05-25: Closed the public stacked-line chart gap by replacing three local mismatches with
+Office-structured line-chart behavior. Line charts now consume `c:grouping` for stacked and percent-stacked
+series extents and point geometry, so the second series is plotted on top of the accumulated baseline and the
+auto value axis sees the stacked totals instead of raw series maxima. Stacked stroke legends now preserve series
+colors but render entries in Office's stacked legend order. The no-title/right-legend line layout no longer uses
+a single fixed plot-box width: it derives left reservation from formatted value-axis tick labels and right
+reservation from the actual legend labels, which keeps the existing three-series structural gate aligned while
+matching the narrower 0..400 stacked-line axis and two-entry legend; area-chart callers that still share this
+layout helper keep the previous fixed fallback until area gets its own typed layout. The renderer also preserves category-axis
+major tick mark metadata and emits line-chart category ticks outside the plot clip. Focused `pptx-charts` tests
+passed with 35/35. Public evidence: `pptx-ladder-11-chart-line-stacked-port` now passes with empty diagnostics at
+`artifacts/visual/pptx-ladder-11-chart-line-stacked-port/20260525-145219`, MAE `2.095482494212963`, changed16
+`0.022873263888888887`; `pptx-ladder-11-chart-line-3series-port` still passes its structural graphics/text gates
+at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-145111`; and
+`pptx-ladder-11-chart-line-markers-port` still passes at
+`artifacts/visual/pptx-ladder-11-chart-line-markers-port/20260525-145049`. Remaining long-term gap: the new line
+layout is structurally driven by axis labels and legend text, but the reservation padding is still encoded as
+Office-observed metric constants. The durable target is a shared cartesian chart layout model that computes outer
+plot area, inner plot box, axis tick/label strips, legend containers, and clipping regions from typed OOXML plus
+Office PDF structures across line, area, bar, scatter, and combo charts.

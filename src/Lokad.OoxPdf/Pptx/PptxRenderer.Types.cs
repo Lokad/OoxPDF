@@ -793,6 +793,10 @@ internal sealed partial class PptxRenderer
         public const double LineNoTitleRightLegendPlotBoxYRatio = 0.0908d;
         public const double LineNoTitleRightLegendPlotBoxWidthRatio = 0.7687d;
         public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.8722d;
+        public const double LineRightLegendValueAxisPadding = 35.7d;
+        public const double LineRightLegendExtraValueLabelCharacterPadding = 5.3d;
+        public const double LineRightLegendReservePadding = 43.8d;
+        public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
         public const double PieCenterXRatio = 0.46d;
         public const double PieCenterYRatio = 0.52d;
         public const double PieRadiusRatio = 0.34d;
@@ -831,6 +835,7 @@ internal sealed partial class PptxRenderer
         public const double CategoryAxisHorizontalBaselineRatio = 0.217d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
+        public const double CategoryAxisMajorTickLength = 4d;
         public const double AxisLabelClipTopOffsetFactor = 0.25d;
         public const double AxisLabelClipHeightFactor = 1.6d;
         public const double ValueAxisMinimumLabelWidthFactor = 1.6d;
