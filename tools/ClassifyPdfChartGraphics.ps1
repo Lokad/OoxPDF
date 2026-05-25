@@ -172,6 +172,20 @@ function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount
     }
 }
 
+function New-PolarPlotBoxStructure($pageNumber, $sourceOperator, $segmentCount, $minX, $minY, $maxX, $maxY) {
+    $structure = New-DerivedStructure "PolarPlotBoxCandidate" $pageNumber $sourceOperator $segmentCount $minX $minY $maxX $maxY
+    $width = [double]$maxX - [double]$minX
+    $height = [double]$maxY - [double]$minY
+    $radius = [Math]::Max($width, $height) / 2d
+    $structure.PathCenterX = Round (([double]$minX + [double]$maxX) / 2d)
+    $structure.PathCenterY = Round (([double]$minY + [double]$maxY) / 2d)
+    $structure.PathRadius = Round $radius
+    $structure.PathMinRadius = Round ([Math]::Min($width, $height) / 2d)
+    $structure.PathMaxRadius = Round $radius
+    $structure.PathCenterMaxDelta = Round ([Math]::Abs($width - $height) / 2d)
+    return $structure
+}
+
 function Copy-StructureAsKind($kind, $structure) {
     [pscustomobject]@{
         Kind = $kind
@@ -523,7 +537,7 @@ if ($polarRegions.Count -gt 1) {
             }
 
             $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
-            $structures.Add((New-DerivedStructure "PolarPlotBoxCandidate" $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+            $structures.Add((New-PolarPlotBoxStructure $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
         }
     }
 }

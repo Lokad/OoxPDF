@@ -6108,3 +6108,24 @@ legend text, and chart titles. Validation: the full public `pptx-charts` family 
 `artifacts/visual/reports/pptx-charts.json` after the manifest conversion. Remaining long-term gap: this makes the
 text oracle more honest, but several chart families still have broad raster MAE gates because plot area, series
 shape, legend reserve, and fallback chart rendering are not structurally aligned yet.
+
+Revision note, 2026-05-25: Extended the chart graphics oracle for pie and doughnut charts before changing polar
+layout constants. `ClassifyPdfChartGraphics.ps1` now derives `PathCenterX`, `PathCenterY`, and `PathRadius` for
+`PolarPlotBoxCandidate` from the Office/candidate filled-slice union, matching the path-geometry contract already
+used for radar spoke groups. The four public polar manifests now opt into `compareChartGraphicsStructurePathGeometry`
+for that derived envelope while keeping their existing slice operator, segment-count, path-command-count, and broad
+bounds gates. Validation: the four focused cases passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-201612`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-201612`,
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-201612`, and
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-201612`, and the full public `pptx-charts`
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated from the `20260525-201832` run.
+The observed polar plot-envelope deltas are context-specific: doughnut exploded is `DX=-28.727 pt,
+DY=-0.457 pt, DR=3.915 pt`; doughnut is
+`DX=19.376 pt, DY=-10.358 pt, DR=7.330 pt`; pie with five categories is `DX=7.454 pt, DY=-10.036 pt,
+DR=7.639 pt`; and exploded pie is `DX=6.368 pt, DY=-0.471 pt, DR=2.656 pt`. The fixture XML check showed that
+the doughnut cases have a right non-overlay legend and an empty `c:layout`, while the pie cases have no legend;
+only the exploded cases carry `c:explosion val="25"`. Remaining long-term gap: polar geometry should move into a
+typed pie/doughnut layout resolver that models chart kind, legend reserve, and explosion reserve from Office-PDF
+evidence. The current deltas argue against a single shared `PieCenterXRatio`, `PieCenterYRatio`, or
+`PieRadiusRatio` adjustment.
