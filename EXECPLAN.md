@@ -2108,6 +2108,15 @@ High-priority actions:
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
+  - [x] Bubble charts now consume structural value axes, gridlines, value tick labels, right legends, and
+    Office-like bubble radius scaling instead of rendering as a bare scatter fallback. The public
+    `pptx-ladder-11-chart-bubble-port` case now has empty diagnostics and tighter native-rendering gates
+    (MAE `4.85`, changed16 `0.05`); focused chart tests include
+    `PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles`.
+  - [ ] Bubble chart layout still uses Office-observed title/right-legend plot-box and bubble headroom
+    constants. Keep these as explicit temporary `PptxChartMetricRules` inventory until chart structural
+    oracle tooling can derive plot box, legend reserve, and bubble extent from Office PDF structures across
+    more public bubble variants.
 - [ ] 2026-05-25: Continue the private slide-17 typography investigation through public fixtures: use private
   evidence only to identify generic missing text behavior, then lock the behavior with synthetic
   Office-backed cases.
@@ -4237,7 +4246,17 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-222 passed, 0 failed, 0 skipped
+226 passed, 0 failed, 7 skipped with --skip-slow
+```
+
+Latest public bubble-chart validation:
+
+```text
+pptx-ladder-11-chart-bubble-port / 20260525-153634:
+diagnostics empty; MAE 4.719024, changed16 0.049359 after native bubble axis,
+gridline, legend, and radius rendering. Focused chart tests: 37 passed, 0 failed,
+0 skipped. Full non-slow suite: 226 passed, 0 failed, 7 skipped. dotnet pack
+created artifacts/nuget/Lokad.OoxPdf.0.1.0.nupkg.
 ```
 
 Latest private PPTX acceptance baseline:

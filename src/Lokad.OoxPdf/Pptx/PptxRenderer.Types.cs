@@ -766,6 +766,8 @@ internal sealed partial class PptxRenderer
         public const double AxisNiceTickStepMaximum = 10d;
         public const double AxisNiceNearMaximumHeadroomRatio = 0.96d;
         public const double AreaChartStackedAxisNearMaximumHeadroomRatio = 0.95d;
+        public const double BubbleAxisHeadroomRatio = 0.2d;
+        public const double BubbleRadiusPlotRatio = 0.128d;
         public const double DoughnutHoleMinimumRatio = 0.1d;
         public const double DoughnutHoleMaximumRatio = 0.9d;
         public const double DoughnutHoleFallbackRatio = 0.56d;

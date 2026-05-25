@@ -9303,6 +9303,27 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-11-chart-bubble-port.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var collector = new DiagnosticCollector();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.True(Regex.Matches(pdf, @" c\s").Count >= 16, "Expected native bubble ellipses to be emitted as Bezier curves.");
+        TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0035>"), "Expected bubble value-axis labels to include the Office 0..5 scale.");
+        TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0036>"), "Expected bubble value-axis labels to include the Office 0..6 scale.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bubble charts should render without static fallback diagnostics.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bubble charts should not emit unsupported chart diagnostics.");
+    }
+
     public static void PptxUnsupportedFeaturesEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

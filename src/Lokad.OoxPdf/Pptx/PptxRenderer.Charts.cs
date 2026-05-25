@@ -749,9 +749,22 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme);
-                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetBubbleChartLayout(document, bounds, chartXml, sceneChart, bubblePlot, bubbleChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderScatterChart(graphics, chartLayout.PlotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], []);
+                ChartPlotBox plotBox = chartLayout.PlotBox;
+                IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, bubbleChart);
+                XElement? xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : null;
+                XElement? yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : ReadChartValueAxisForChart(chartXml, bubbleChart);
+                ChartValueExtents xExtents = ReadChartValueAxisExtents(xValueAxis, GetBubbleXValueExtents(bubbleSeries));
+                ChartValueExtents yExtents = ReadChartValueAxisExtents(yValueAxis, GetBubbleYValueExtents(bubbleSeries));
+                ChartAxisUnits xAxisUnits = ReadChartValueAxisUnits(xValueAxis);
+                ChartAxisUnits yAxisUnits = ReadChartValueAxisUnits(yValueAxis);
+                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(sceneAxis: null, yValueAxis, theme);
+                DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisUnits.MajorUnit, crossingValue: null, reversed: false, major: true, gridlineStyle.Major);
+                RenderScatterChart(graphics, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], xExtents, yExtents);
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis, null, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis, null, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1124,6 +1137,34 @@ internal sealed partial class PptxRenderer
         return chartXml
             .Descendants(ChartNamespace + "valAx")
             .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty));
+    }
+
+    private static IReadOnlyList<XElement> ReadChartValueAxesForChart(XDocument chartXml, XElement chartElement)
+    {
+        string[] axisIds = chartElement
+            .Elements(ChartNamespace + "axId")
+            .Select(axis => (string?)axis.Attribute("val"))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToArray();
+        if (axisIds.Length == 0)
+        {
+            return chartXml.Descendants(ChartNamespace + "valAx").ToArray();
+        }
+
+        var axes = new List<XElement>();
+        foreach (string axisId in axisIds)
+        {
+            XElement? axis = chartXml
+                .Descendants(ChartNamespace + "valAx")
+                .FirstOrDefault(candidate => string.Equals(ReadChartAxisId(candidate), axisId, StringComparison.Ordinal));
+            if (axis is not null)
+            {
+                axes.Add(axis);
+            }
+        }
+
+        return axes;
     }
 
     private static XElement? ReadChartCategoryAxisForChart(XDocument chartXml, XElement chartElement)
@@ -4425,6 +4466,51 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, y, width, height);
     }
 
+    private static ChartLayout GetBubbleChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
+    {
+        ChartFrameBox frame = GetChartFrameBox(document, bounds);
+        string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+        ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTarget is not null, title, legend);
+    }
+
+    private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend)
+    {
+        bool hasTitle = !string.IsNullOrWhiteSpace(title);
+        bool hasRightLegend = legend.Visible && !legend.Overlay && string.Equals(legend.Position, "r", StringComparison.Ordinal);
+        ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
+            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart)
+            : GetDefaultChartPlotBox(frame);
+        return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
+            ? manualPlotLayout
+            : ChartPlotLayout.FromPlotBox(defaultPlotBox);
+    }
+
+    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
+    {
+        IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(bubblePlot, bubbleChart);
+        double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
+        double maxLegendTextWidth = seriesNames.Count == 0
+            ? 0d
+            : seriesNames.Max(name => EstimateChartTextWidth(name, legendFontSize));
+        int maxLegendTextLength = seriesNames.Count == 0
+            ? 0
+            : seriesNames.Max(name => name.Length);
+        double rightReserve = maxLegendTextWidth +
+            legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
+            legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
+            legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor +
+            PptxChartMetricRules.LineRightLegendReservePadding +
+            Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding;
+
+        double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
+        double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
+        double width = Math.Max(1d, frame.Width - (x - frame.X) - rightReserve);
+        double height = frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio;
+        return new ChartPlotBox(x, y, width, height);
+    }
+
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
     {
         return GetLineChartValueExtents(series, stacked: false, percentStacked: false);
@@ -4839,16 +4925,62 @@ internal sealed partial class PptxRenderer
         return maxValue;
     }
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries)
+    private static ChartValueExtents GetScatterXValueExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        double maxX = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.X));
+        double minX = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.X));
+        return new ChartValueExtents(minX, maxX);
+    }
+
+    private static ChartValueExtents GetScatterYValueExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
+        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
+        return new ChartValueExtents(minY, maxY);
+    }
+
+    private static ChartValueExtents GetBubbleXValueExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        return AddBubbleAxisHeadroom(GetScatterXValueExtents(series));
+    }
+
+    private static ChartValueExtents GetBubbleYValueExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        return AddBubbleAxisHeadroom(GetScatterYValueExtents(series));
+    }
+
+    private static ChartValueExtents AddBubbleAxisHeadroom(ChartValueExtents extents)
+    {
+        double range = Math.Max(1d, extents.Max - extents.Min);
+        return new ChartValueExtents(extents.Min, extents.Max + range * PptxChartMetricRules.BubbleAxisHeadroomRatio);
+    }
+
+    private static ChartValueExtents GetScatterDataXExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
+        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
+        return new ChartValueExtents(minX, maxX);
+    }
+
+    private static ChartValueExtents GetScatterDataYExtents(IReadOnlyList<ScatterSeries> series)
+    {
+        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
+        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
+        return new ChartValueExtents(minY, maxY);
+    }
+
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, ChartValueExtents? xValueExtents = null, ChartValueExtents? yValueExtents = null)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
-        double minX = series.SelectMany(item => item.Points).Min(point => point.X);
-        double maxX = series.SelectMany(item => item.Points).Max(point => point.X);
-        double minY = Math.Min(0d, series.SelectMany(item => item.Points).Min(point => point.Y));
-        double maxY = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Y));
+        ChartValueExtents xExtents = xValueExtents ?? GetScatterDataXExtents(series);
+        ChartValueExtents yExtents = yValueExtents ?? GetScatterDataYExtents(series);
+        double minX = xExtents.Min;
+        double maxX = xExtents.Max;
+        double minY = yExtents.Min;
+        double maxY = yExtents.Max;
         double xRange = Math.Max(1d, maxX - minX);
         double yRange = Math.Max(1d, maxY - minY);
         double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).Max(point => point.Size));
@@ -4894,7 +5026,9 @@ internal sealed partial class PptxRenderer
             {
                 double pointX = plotX + (point.X - minX) / xRange * plotWidth;
                 double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
-                double radius = bubble ? 3d + Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * 8d : 3d;
+                double radius = bubble
+                    ? Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * Math.Min(plotWidth, plotHeight) * PptxChartMetricRules.BubbleRadiusPlotRatio
+                    : 3d;
                 if (bubble)
                 {
                     graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
