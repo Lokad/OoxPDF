@@ -5668,13 +5668,14 @@ internal sealed partial class PptxRenderer
         int pointCount = Math.Max(labels.Count, layout.PointCount);
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-        double gap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
+        double verticalGap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
+        double horizontalGap = fontSize * ResolveRadarCategoryLabelHorizontalGapFactor(layout.Style);
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
             double angle = GetRadarPointAngle(i, pointCount);
-            double anchorX = geometry.CenterX + Math.Cos(angle) * (geometry.Radius + gap);
-            double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + gap);
+            double anchorX = geometry.CenterX + Math.Cos(angle) * (geometry.Radius + horizontalGap);
+            double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + verticalGap);
             double width = Math.Max(fontSize * 2d, EstimateChartTextWidth(labels[i], fontSize) + fontSize);
             TextAlignment alignment = Math.Cos(angle) > 0.25d
                 ? TextAlignment.Left
@@ -5692,6 +5693,13 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "RCA");
+    }
+
+    private static double ResolveRadarCategoryLabelHorizontalGapFactor(ChartRadarStyle style)
+    {
+        return style == ChartRadarStyle.Filled
+            ? PptxChartMetricRules.FilledRadarCategoryLabelHorizontalGapFactor
+            : PptxChartMetricRules.MarkerRadarCategoryLabelHorizontalGapFactor;
     }
 
     private static double ResolveRadarCategoryLabelBaselineY(double anchorY, double angle, double labelHeight)

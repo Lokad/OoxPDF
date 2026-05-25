@@ -6033,3 +6033,20 @@ family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
 Remaining long-term gap: move radar category horizontal anchors and label-frame width into the typed radar
 layout/text-frame model so the category gate can move from `5.5 pt` toward sub-point parity.
+
+Revision note, 2026-05-25: Closed the radar category-label horizontal anchor gap exposed by the tightened text
+oracle. Office PDF text matrices show that the radial gap used for category-label Y/baseline placement is not the
+same as the gap that determines left/right label X anchors: marker radar labels align with an observed horizontal
+gap near `0.41em`, while filled radar labels align near `0.35em`; the vertical baseline model continues to use the
+existing `0.65em` radial gap. `RenderRadarCategoryLabels` now separates those horizontal and vertical distances and
+resolves the horizontal factor from the radar style carried by `ChartRadarLayout`. This reduced category-label
+position drift to max `0.60 pt` on the marker radar fixture and max `0.58 pt` on the filled radar fixture, allowing
+both public manifests to tighten `CategoryAxisTickLabel` from `5.5 pt` to `0.75 pt`. Validation: focused
+`pptx-charts` tests passed 38/38; the marker radar case passed the tightened gate at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-195601`; the filled radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-195601`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: these category-label factors are now Office-observed and publicly gated, but they still live as
+metric constants. The durable destination is a typed radar label-frame/layout model that owns category and value
+label frame rectangles, marker envelopes, and title/plot reserves before text emission.
