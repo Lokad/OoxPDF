@@ -1100,6 +1100,18 @@ High-priority actions:
   218 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: combo-chart value scales,
   data labels, and series geometry still need explicit secondary-axis binding beyond axis strokes and label
   defaults.
+- [x] 2026-05-25: Consume category-axis side metadata for supported horizontal bar axis strokes.
+  `ChartAxesStyle` now also carries the resolved left/right side for category axes. On horizontal bar charts,
+  where the category axis is the vertical axis, the renderer places that stroke from `catAx @axPos` instead
+  of always using the left plot edge. A synthetic horizontal bar chart with `c:catAx/c:axPos val="r"` locks
+  the vertical category-axis stroke on the plot area's right edge. Focused `pptx-charts` tests passed with
+  23 passed, 0 failed, 0 skipped; the public clustered-bar visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-102409`; the clustered-column visual
+  gate passed after a serial rerun at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-102422`; the full suite passed with
+  219 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar value-axis
+  crossing placement still uses the current zero-line rule, and full category/value label placement under
+  non-default axis sides needs Office-PDF evidence.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -2775,8 +2787,8 @@ document-specific business content into public notes.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text
   inside cells, and precise row/column sizing.
 - [ ] Charts: cached chart images, chart XML rendering, secondary-axis scale binding for combo geometry and
-  labels, horizontal axis-line placement, labels, legends, series styling, grouped/stacked families, line
-  charts, combo charts, and embedded chart data.
+  labels, horizontal bar value-axis crossing placement, labels, legends, series styling, grouped/stacked
+  families, line charts, combo charts, and embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
 - [ ] Slide inheritance: deeper master/layout placeholder resolution, theme variants, background styles,
   footer/date/slide-number placeholders, and hidden placeholder semantics.
@@ -3863,6 +3875,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   that selecting secondary axes by `axPos="r"` finds the primary axis or misses the secondary axis entirely.
   Selecting the non-primary `axId` first, then applying `axPos`, produces both vertical axis strokes at their
   declared sides.
+- Observation: Horizontal bar chart axis strokes reuse the same renderer blocks as vertical charts with
+  swapped axis meaning.
+  Evidence: in `RenderBarChart`, the horizontal bar vertical stroke uses `categoryAxisStroke` inside the
+  `ValueAxisVisible` branch. This made the existing left-edge coordinate look like value-axis placement until
+  the code was read in context. The new category-axis side field is intentionally consumed only for the
+  horizontal-bar vertical category-axis stroke.
 
 ## Decision Log
 
@@ -3908,6 +3926,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: Office chart XML can place primary and secondary axes on either side. Using `axPos="r"` as the
   definition of secondary bakes a layout convention into model selection and fails when the primary axis is
   right-sided or the secondary axis is left-sided.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Keep category-axis side as a separate chart-axis style field instead of reusing value-axis side.
+  Rationale: In horizontal bar charts, the category axis is the vertical axis, while in column and line charts
+  the value axis is vertical. Separate fields make the orientation swap explicit and avoid a new heuristic
+  that treats all vertical strokes as value axes.
   Date/Author: 2026-05-25 / Codex.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
@@ -3993,7 +4016,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-218 passed, 0 failed, 0 skipped
+219 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -4051,6 +4074,14 @@ passed with 22 passed, 0 failed, 0 skipped. Public visual case
 `pptx-ladder-11-chart-column-clustered-port` passed at
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-101934`. Full console suite passed with
 218 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded.
+Horizontal bar category-axis side slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 23 passed, 0 failed, 0 skipped. Public visual cases
+`pptx-ladder-11-chart-bar-clustered-port` and `pptx-ladder-11-chart-column-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-102409` and
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-102422`. The column visual was rerun
+serially after an intentional parallel run hit a build-output file lock. Full console suite passed with
+219 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
@@ -4759,3 +4790,6 @@ evidence after the new public synthetic test, clustered-column visual gate, full
 
 Revision note, 2026-05-25: Added the completed secondary value-axis identity slice, preserving the remaining
 secondary-axis work as scale/series/label binding rather than axis-stroke discovery.
+
+Revision note, 2026-05-25: Added the completed horizontal bar category-axis side slice, narrowing the
+remaining horizontal bar axis work to value-axis crossing placement and label evidence.
