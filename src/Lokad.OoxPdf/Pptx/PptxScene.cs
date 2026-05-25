@@ -562,6 +562,7 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneLineStyle MajorGridlineLine,
     PptxSceneLineStyle MinorGridlineLine,
     PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartTickLabelPosition TickLabelPositionKind,
     string TickLabelPosition,
     string MajorTickMark,
     string MinorTickMark,
@@ -571,6 +572,15 @@ internal sealed record PptxSceneChartAxis(
     bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartTitle Title);
+
+internal enum PptxSceneChartTickLabelPosition
+{
+    High,
+    Low,
+    NextTo,
+    None,
+    Unknown
+}
 
 internal enum PptxSceneChartAxisPosition
 {
@@ -940,6 +950,22 @@ internal sealed class PptxSceneBuilder
             _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Right,
             _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Top,
             _ => PptxSceneChartAxisPosition.Unknown
+        };
+    }
+
+    internal static PptxSceneChartTickLabelPosition ParseChartTickLabelPosition(string? position)
+    {
+        return position switch
+        {
+            "high" => PptxSceneChartTickLabelPosition.High,
+            "low" => PptxSceneChartTickLabelPosition.Low,
+            "nextTo" => PptxSceneChartTickLabelPosition.NextTo,
+            "none" => PptxSceneChartTickLabelPosition.None,
+            _ when position?.Equals("high", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartTickLabelPosition.High,
+            _ when position?.Equals("low", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartTickLabelPosition.Low,
+            _ when position?.Equals("nextTo", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartTickLabelPosition.NextTo,
+            _ when position?.Equals("none", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartTickLabelPosition.None,
+            _ => PptxSceneChartTickLabelPosition.Unknown
         };
     }
     private const double MinimumStrokeWidth = 0.1d;
@@ -1682,6 +1708,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
                 ReadChartTextStyleOverride(axis, theme),
+                ParseChartTickLabelPosition((string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty),
                 (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
                 ReadChartElementValue(axis, "majorTickMark"),
                 ReadChartElementValue(axis, "minorTickMark"),

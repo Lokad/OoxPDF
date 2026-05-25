@@ -4058,7 +4058,7 @@ internal sealed partial class PptxRenderer
         }
 
         string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
-        return !string.Equals(tickLabelPosition, "none", StringComparison.Ordinal);
+        return PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition) != PptxSceneChartTickLabelPosition.None;
     }
 
     private static bool IsSceneOrXmlChartAxisLabelVisible(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -4069,16 +4069,16 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneAxis.IsDeleted != true &&
-            !string.Equals(sceneAxis.TickLabelPosition, "none", StringComparison.Ordinal);
+            sceneAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.None;
     }
 
     private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
     {
         string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
-        return tickLabelPosition switch
+        return PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition) switch
         {
-            "high" => true,
-            "low" => false,
+            PptxSceneChartTickLabelPosition.High => true,
+            PptxSceneChartTickLabelPosition.Low => false,
             _ => defaultRightSide
         };
     }
@@ -4090,10 +4090,10 @@ internal sealed partial class PptxRenderer
             return ResolveValueAxisLabelsRightSide(axis, defaultRightSide);
         }
 
-        return sceneAxis.TickLabelPosition switch
+        return sceneAxis.TickLabelPositionKind switch
         {
-            "high" => true,
-            "low" => false,
+            PptxSceneChartTickLabelPosition.High => true,
+            PptxSceneChartTickLabelPosition.Low => false,
             _ => defaultRightSide
         };
     }

@@ -2168,6 +2168,12 @@ High-priority actions:
     typed position. Scene coverage locks raw `l` and typed `Left`; focused chart validation passed
     `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
     `dotnet pack` succeeded.
+  - [x] 2026-05-25: Promoted chart tick-label positions from raw `tickLblPos` strings to a typed
+    `PptxSceneChartTickLabelPosition` ladder on `PptxSceneChartAxis`, while preserving the raw OOXML value.
+    Axis-label visibility and high/low side selection now branch on the typed value instead of string
+    comparisons. Scene coverage locks typed `Low`; focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.

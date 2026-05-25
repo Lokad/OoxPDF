@@ -490,6 +490,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsReversed == true, "Expected chart axis orientation metadata in the scene model.");
         TestAssert.Equal("out", slide.SlideNodes[4].Chart?.Axes[0].MajorTickMark ?? string.Empty);
         TestAssert.Equal("in", slide.SlideNodes[4].Chart?.Axes[0].MinorTickMark ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartTickLabelPosition.Low, slide.SlideNodes[4].Chart?.Axes[0].TickLabelPositionKind);
         TestAssert.Equal(100, slide.SlideNodes[4].Chart?.Axes[0].LabelOffset ?? 0);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Axes[0].TickLabelSkip ?? 0);
         TestAssert.Equal(3, slide.SlideNodes[4].Chart?.Axes[0].TickMarkSkip ?? 0);
