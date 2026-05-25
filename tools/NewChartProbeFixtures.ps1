@@ -19,13 +19,13 @@ function Close-ChartWorkbook($workbook) {
     try {
         if ($null -ne $workbook) {
             $excel = $workbook.Application
-            $workbook.Close($false)
+            [void]($workbook.Close($false))
         }
 
         if ($null -ne $excel) {
             try {
                 if ($excel.Workbooks.Count -eq 0) {
-                    $excel.Quit()
+                    [void]($excel.Quit())
                 }
             }
             catch {
@@ -42,7 +42,7 @@ function Close-ChartWorkbook($workbook) {
     }
 }
 
-function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPosition, [bool]$HasLegend = $true, [bool]$IncludeInLayout = $true) {
+function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPosition, [bool]$HasLegend = $true, [bool]$IncludeInLayout = $true, [int]$Explosion = 0) {
     $output = Join-Path $Cases $FileName
     $presentation = $null
     $workbook = $null
@@ -80,6 +80,9 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
         [void]($chart.ChartGroups(1).DoughnutHoleSize = 50)
 
         $series = $chart.SeriesCollection().Item(1)
+        if ($Explosion -gt 0) {
+            [void]($series.Explosion = $Explosion)
+        }
         try {
             $series.Points(1).Format.Fill.ForeColor.RGB = Rgb 68 114 196
             $series.Points(2).Format.Fill.ForeColor.RGB = Rgb 237 125 49
@@ -94,20 +97,20 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
             Remove-Item -LiteralPath $output -Force
         }
 
-        $presentation.SaveAs($output, 24)
+        [void]($presentation.SaveAs($output, 24))
         Release-ComObject $worksheet
         $worksheet = $null
         Close-ChartWorkbook $workbook
         $workbook = $null
 
-        $presentation.Close()
+        [void]($presentation.Close())
         $presentation = $null
     }
     finally {
         if ($worksheet -ne $null) { Release-ComObject $worksheet }
         if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
         if ($presentation -ne $null) {
-            try { $presentation.Close() }
+            try { [void]($presentation.Close()) }
             catch {
                 # PowerPoint can already have torn down a failed presentation.
             }
@@ -160,9 +163,9 @@ try {
     $series = $chart.SeriesCollection()
     $series.Item(1).Format.Fill.ForeColor.RGB = Rgb 191 191 191
     $series.Item(2).Format.Fill.ForeColor.RGB = Rgb 192 0 0
-    $series.Item(3).AxisGroup = 2
+    [void]($series.Item(3).AxisGroup = 2)
     $series.Item(3).Format.Fill.ForeColor.RGB = Rgb 47 133 106
-    $series.Item(4).AxisGroup = 2
+    [void]($series.Item(4).AxisGroup = 2)
     $series.Item(4).Format.Fill.ForeColor.RGB = Rgb 47 133 106
     $series.Item(4).Format.Fill.Patterned(9)
     $series.Item(4).Format.Fill.ForeColor.RGB = Rgb 47 133 106
@@ -203,8 +206,8 @@ try {
         Remove-Item -LiteralPath $output -Force
     }
 
-    $presentation.SaveAs($output, 24)
-    $presentation.Close()
+    [void]($presentation.SaveAs($output, 24))
+    [void]($presentation.Close())
     $presentation = $null
 
     $output = Join-Path $cases "pptx-ladder-11-compact-stacked-secondary-axis-probe.pptx"
@@ -247,7 +250,7 @@ try {
     $series.Item(1).Format.Fill.ForeColor.RGB = Rgb 191 191 191
     $series.Item(2).Format.Fill.ForeColor.RGB = Rgb 192 0 0
     for ($i = 3; $i -le 5; $i++) {
-        $series.Item($i).AxisGroup = 2
+        [void]($series.Item($i).AxisGroup = 2)
         $series.Item($i).Format.Fill.ForeColor.RGB = Rgb 47 133 106
     }
     $series.Item(4).Format.Fill.Patterned(9)
@@ -299,8 +302,8 @@ try {
         Remove-Item -LiteralPath $output -Force
     }
 
-    $presentation.SaveAs($output, 24)
-    $presentation.Close()
+    [void]($presentation.SaveAs($output, 24))
+    [void]($presentation.Close())
     $presentation = $null
 
     $output = New-DoughnutLegendProbe `
@@ -313,10 +316,26 @@ try {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-no-legend-exploded-probe.pptx" `
+        -LegendPosition -4152 `
+        -HasLegend $false `
+        -IncludeInLayout $true `
+        -Explosion 25
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
         -FileName "pptx-ladder-11-chart-doughnut-left-legend-probe.pptx" `
         -LegendPosition -4131 `
         -HasLegend $true `
         -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-left-legend-exploded-probe.pptx" `
+        -LegendPosition -4131 `
+        -HasLegend $true `
+        -IncludeInLayout $true `
+        -Explosion 25
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `
@@ -327,10 +346,26 @@ try {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-top-legend-exploded-probe.pptx" `
+        -LegendPosition -4160 `
+        -HasLegend $true `
+        -IncludeInLayout $true `
+        -Explosion 25
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
         -FileName "pptx-ladder-11-chart-doughnut-bottom-legend-probe.pptx" `
         -LegendPosition -4107 `
         -HasLegend $true `
         -IncludeInLayout $true
+    $output = New-DoughnutLegendProbe `
+        -PowerPoint $powerPoint `
+        -Cases $cases `
+        -FileName "pptx-ladder-11-chart-doughnut-bottom-legend-exploded-probe.pptx" `
+        -LegendPosition -4107 `
+        -HasLegend $true `
+        -IncludeInLayout $true `
+        -Explosion 25
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `
@@ -341,13 +376,13 @@ try {
 }
 finally {
     if ($presentation -ne $null) {
-        try { $presentation.Close() }
+        try { [void]($presentation.Close()) }
         catch {
             # COM cleanup should not mask the generation error that preceded it.
         }
     }
     if ($powerPoint -ne $null) {
-        try { $powerPoint.Quit() }
+        try { [void]($powerPoint.Quit()) }
         catch {
             # PowerPoint may already be unavailable after a COM failure.
         }

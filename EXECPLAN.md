@@ -6308,3 +6308,31 @@ Validation: the four affected visual cases passed with per-kind-only bounds gate
 Remaining long-term gap: derive a richer chart-structure oracle that separates true polar layout primitives from
 PDF filled-region envelopes, so future probes can tighten structural bounds rather than relying on path-geometry
 side channels for the actual circle/ring contract.
+
+Revision note, 2026-05-25: Added public Office-authored exploded doughnut probes for the non-right legend cases
+that were still missing from the polar layout matrix:
+`pptx-ladder-11-chart-doughnut-no-legend-exploded-probe.pptx`,
+`pptx-ladder-11-chart-doughnut-left-legend-exploded-probe.pptx`,
+`pptx-ladder-11-chart-doughnut-top-legend-exploded-probe.pptx`, and
+`pptx-ladder-11-chart-doughnut-bottom-legend-exploded-probe.pptx`. `tools/NewChartProbeFixtures.ps1` now accepts
+an explicit doughnut explosion percentage and suppresses noisy COM return values from save/close/axis assignment
+calls. These probes are evidence-only: no renderer constants changed, because the existing typed polar resolver
+already keeps true exploded slice geometry aligned for no-legend, left, top, and bottom legend contexts.
+
+Observed validation from the focused runs: no-legend exploded MAE `0.007125`, changed16 `0.000166`, SSIM
+`0.999976`, with `PolarSliceCandidate` path deltas under `0.02 pt`; left exploded MAE about `0.46`, SSIM
+`0.96994`, and slice path deltas under `0.04 pt`; top and bottom exploded MAE about `0.45`, with slice path deltas
+under `0.02 pt`. The remaining broad tolerances are still the PDF filled-region envelopes: max bounds deltas were
+`17.35 pt` for no-legend/left and `15.89 pt` for top/bottom, while `PolarPlotBoxCandidate` path geometry remains
+an envelope at `7.95..8.69 pt`. Validation: the four new visual cases passed at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-no-legend-exploded-probe/20260525-213540`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-left-legend-exploded-probe/20260525-213543`,
+`artifacts/visual/pptx-ladder-11-chart-doughnut-top-legend-exploded-probe/20260525-213548`, and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-bottom-legend-exploded-probe/20260525-213553`.
+
+Additional gap discovered and deliberately not hidden: attempting a right-overlay exploded doughnut probe through
+the same Office COM path produced chart XML without `c:numCache`/category caches, so OOXPDF emitted the expected
+`PPTX_UNSUPPORTED_CHART` diagnostic for an uncached chart. Do not add that fixture as a passing visual case until
+either the generator can force Office to persist caches for this combination or OOXPDF intentionally learns to read
+embedded workbook data for uncached chart references. Full-family validation for the committed public matrix passed
+37/37 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-213922` run.
