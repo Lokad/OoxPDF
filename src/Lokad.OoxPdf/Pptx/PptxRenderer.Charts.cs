@@ -462,6 +462,7 @@ internal sealed partial class PptxRenderer
                         extraSeries,
                         extraValueExtents,
                         extraHorizontalBars,
+                        ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabels(extraBarPlot, extraBarChart),
@@ -513,6 +514,7 @@ internal sealed partial class PptxRenderer
                     barSeries,
                     valueExtents,
                     horizontalBars,
+                    valueAxisReversed,
                     ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabels(barPlot, barChart),
@@ -1531,6 +1533,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<double>> series,
         ChartValueExtents extents,
         bool horizontalBars,
+        bool valueAxisReversed,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<string> categoryLabels,
@@ -1545,7 +1548,7 @@ internal sealed partial class PptxRenderer
         double range = Math.Max(1d, extents.Max - extents.Min);
         double zeroOffset = (0d - extents.Min) / range;
         double zeroX = plotBox.X + zeroOffset * plotBox.Width;
-        double zeroY = plotBox.Y + zeroOffset * plotBox.Height;
+        double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         if (horizontalBars)
         {
@@ -1598,15 +1601,14 @@ internal sealed partial class PptxRenderer
                     }
 
                     double value = values[category];
-                    double barHeight = Math.Abs(value) / range * plotBox.Height;
                     double x = categoryX + seriesIndex * barSlot;
-                    double barBase = value >= 0d ? zeroY : zeroY - barHeight;
-                    double barEnd = value >= 0d ? zeroY + barHeight : zeroY;
+                    double barBase = zeroY;
+                    double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
                     ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                     double fontSize = style.FontSize;
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                    double y = ResolveVerticalBarDataLabelY(effectiveOptions.Position, value, barBase, barEnd, labelHeight);
+                    double y = ResolveVerticalBarDataLabelY(effectiveOptions.Position, barBase, barEnd, labelHeight);
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
@@ -1691,14 +1693,15 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double ResolveVerticalBarDataLabelY(string position, double value, double barBase, double barEnd, double labelHeight)
+    private static double ResolveVerticalBarDataLabelY(string position, double barBase, double barEnd, double labelHeight)
     {
+        bool extendsUp = barEnd >= barBase;
         return position switch
         {
             "ctr" or "bestFit" => (barBase + barEnd - labelHeight) / 2d,
-            "inBase" => value >= 0d ? barBase + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap,
-            "inEnd" or "t" or "b" => value >= 0d ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barBase + PptxChartMetricRules.BarDataLabelVerticalGap,
-            "outEnd" or _ => value >= 0d ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barBase - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
+            "inBase" => extendsUp ? barBase + PptxChartMetricRules.BarDataLabelVerticalGap : barBase - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap,
+            "inEnd" or "t" or "b" => extendsUp ? barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap : barEnd + PptxChartMetricRules.BarDataLabelVerticalGap,
+            "outEnd" or _ => extendsUp ? barEnd + PptxChartMetricRules.BarDataLabelVerticalGap : barEnd - labelHeight - PptxChartMetricRules.BarDataLabelVerticalGap
         };
     }
 

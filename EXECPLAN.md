@@ -1038,6 +1038,16 @@ High-priority actions:
   212 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: bar data labels still need a
   separate Office-backed rule because their positions depend on positive/negative bar-edge semantics, not
   only point anchors.
+- [x] 2026-05-25: Consume value-axis reversed orientation for vertical bar data-label anchors.
+  Vertical bar data labels now use the shared value-to-plot-coordinate helper for the zero baseline and bar
+  value endpoint, then resolve inside/outside base/end positions from the actual base-to-end direction rather
+  than from the sign alone. A synthetic `maxMin` column chart with centered value labels locks the emitted
+  text matrices in reversed order. Focused chart tests passed with 17 passed, 0 failed, 0 skipped; the
+  clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-094632`; the full suite passed with
+  213 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar labels,
+  stacked bar/column accumulation, and Office visual coverage for inside/outside label positions under
+  reversed axes still need separate evidence.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1406,9 +1416,11 @@ High-priority actions:
   - [x] Consume value-axis reversed orientation for vertical bar/line gridlines, value labels, crossing-line
     placement, line-series geometry, and clustered vertical bar endpoints.
   - [x] Consume value-axis reversed orientation for line-chart data-label point anchors.
-  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, bar data
-    labels, value-axis side/cross-axis placement, series coordinate baselines, and secondary axes instead of
-    relying on right-side XML/layout assumptions.
+  - [x] Consume value-axis reversed orientation for vertical bar data-label anchors and direction-aware
+    inside/outside vertical label offsets.
+  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, horizontal bar
+    data labels, value-axis side/cross-axis placement, series coordinate baselines, and secondary axes
+    instead of relying on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4566,6 +4578,18 @@ clustered-column public visual gate passed at
 212 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Bar data labels remain open because their
 Office rule must account for inside/outside base/end semantics under positive, negative, stacked,
 horizontal, and reversed-axis combinations.
+
+chart reversed vertical bar data-label anchors / 2026-05-25:
+Vertical bar data labels now follow the resolved scene/XML value-axis orientation. The renderer computes the
+zero baseline and value endpoint through the shared value-to-plot-coordinate helper, then resolves label
+positions from the actual base-to-end direction. This avoids the previous sign-only assumption where positive
+bars always extended upward. A synthetic `maxMin` column chart with centered value labels verifies that the
+lower-value label is emitted above the higher-value label. The focused `pptx-charts` non-slow group passed
+with 17 passed, 0 failed, 0 skipped; the clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-094632`; the full suite passed with
+213 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Horizontal bar labels and stacked bar/column
+labels remain open because they need independent direction and accumulation rules, and inside/outside label
+positions under reversed axes still need Office-PDF visual evidence before being called complete.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and
