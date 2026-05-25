@@ -2250,6 +2250,12 @@ High-priority actions:
 - [x] Private DOCX assessment completed on an 18-candidate-page document without exposing private contents.
 - [x] VisualDiff computes overlap metrics even when reference/candidate raster dimensions differ by a small
   page-rounding mismatch.
+- [x] PPTX line charts without explicit series strokes now use theme/chart-palette fallback colors and the
+  Office-observed 2.25 pt default line width for both plotted lines and stroke legends.
+- [x] PPTX line charts now place category-series points at category band centers, matching Office's tick
+  boundary / data midpoint structure for category axes.
+- [x] The public no-title/right-legend line-chart case now uses an Office-PDF-observed plot box instead of
+  the older generic chart plot box, while explicit manual plot layouts still override the default.
 
 ## Private Evidence
 
@@ -3926,6 +3932,25 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   This meant a column+line combo could expose secondary value-axis labels while omitting the line series
   itself. Rendering sibling line plots inside the bar-first combo path closes that dispatch gap for the
   supported vertical line geometry and makes plot geometry axis-bound by each chart element's own `axId`.
+- Observation: Office line charts with category axes plot data points at category band midpoints, not at the
+  left and right edges of the plot box.
+  Evidence: the Office PDF for `pptx-ladder-11-chart-line-3series-port` uses plot clip
+  `131.64 111.24 553.44 376.8 re`, draws category-axis ticks at about `131.7`, `223.8`, ..., `684.42`, and
+  starts the first series at `177.76`, halfway between the first two tick boundaries. The candidate had been
+  drawing the first and last data points at the plot edges. After the change, candidate points start at
+  `177.738` and end at `638.958`, matching the Office midpoint structure.
+- Observation: Default line-series styling is not the hardcoded modern chart palette when the deck theme
+  provides Office 2007-style accents.
+  Evidence: the public line-chart fixture has no explicit series `spPr` and no chart color-style relationship,
+  but its theme accents are `4F81BD`, `C0504D`, and `9BBB59`; Office strokes are blue/red/green at `2.25 w`.
+  The old fallback emitted the no-theme palette and `1.5 w`. The renderer now passes theme/chart palette into
+  line-series stroke fallback, and the inspected candidate stream emits theme-colored `2.25 w` line strokes.
+- Observation: The public no-title/right-legend line chart exposes a real Office plot-box rule that the
+  generic chart default could not approximate.
+  Evidence: Office draws the plot box at about `x=131.64`, `y=111.24`, `w=553.44`, `h=376.8` inside the
+  `72 72 720 432` chart frame. The previous generic default was `x=158.4`, `y=141.12`, `w=547.2`, `h=293.76`.
+  The new named metric rule moves the candidate to `131.616`, `111.226`, `553.464`, `376.79`, and the public
+  visual gate drops from the pre-existing MAE `5.42615294656636` to `1.9852012201003086`.
 
 ## Decision Log
 
@@ -4006,6 +4031,23 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   renderer investigation, but turning it into a gate before understanding Office's PDF strategy would freeze
   the current mismatch instead of eliminating it structurally.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Treat line-chart category positions as category band centers for the supported category-axis path.
+  Rationale: Office's PDF places line-series points between category tick boundaries. Drawing them at plot-box
+  edges was a structural axis error, not a pixel offset. This keeps category labels and line geometry on the
+  same band model.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Add a narrowly named no-title/right-legend line-chart plot-box rule, but keep it in
+  `PptxChartMetricRules` as an inventory item rather than treating metric constants as the final architecture.
+  Rationale: The public Office PDF provides exact plot-box evidence for this common layout, and the generic
+  default was visibly wrong. The rule is constrained by title/legend state and still yields to manual layout;
+  longer term, chart plot layout should be resolved from typed chart layout records and structural oracle data.
+  Date/Author: 2026-05-25 / Codex.
+- Decision: Line-chart default stroke fallback must resolve chart palette and theme before hardcoded palette
+  colors.
+  Rationale: Office used theme accent colors for the public line-chart fixture even without explicit series
+  `spPr` or a chart color-style part. Keeping the fallback theme-aware removes a hardcoded narrow palette from
+  the line and legend path.
+  Date/Author: 2026-05-25 / Codex.
 
 ## Outcomes & Retrospective
 
@@ -4021,6 +4063,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   now structurally modeled. Slide 17 improved on runs `20260524-201042` and `20260524-202138`, then stayed
   stable on `20260524-204001`; remaining evidence points to broader text metrics rather than connector
   geometry, paragraph margins, or small-label preset-shape origins.
+- The public `pptx-ladder-11-chart-line-3series-port` gate now passes through structural chart alignment:
+  default line colors/width, category midpoint positions, and the no-title/right-legend plot box are aligned
+  to Office PDF operators. This removes that case from the pre-existing failure list. The composite-chart
+  gate remains open at MAE `13.6832895688657` versus `12.41`, so broader combo/chart-family layout work is
+  still needed.
 
 ## Concrete Steps
 
@@ -4073,7 +4120,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-220 passed, 0 failed, 0 skipped
+221 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -4157,6 +4204,17 @@ the same command against `HEAD` produced the same value. Public visual case
 `pptx-ladder-11-chart-line-3series-port` failed its pre-existing MAE gate at `5.42615294656636` versus `3.6`;
 the same command against `HEAD` produced the same value. Full console suite passed with 221 passed, 0 failed,
 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded.
+Line-chart structural alignment slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 25 passed, 0 failed, 0 skipped. Public visual case
+`pptx-ladder-11-chart-line-3series-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-105731` with MAE
+`1.9852012201003086` versus limit `3.6` and changed-pixel ratio at threshold 16
+`0.02415653935185185`. The candidate PDF inspected at
+`artifacts/tmp-line3-cand-inspect-after-layout` now emits plot edges and category midpoint coordinates close
+to Office (`131.616 111.226` plot origin; first line point `177.738 393.818`). Public visual case
+`pptx-ladder-11-composite-chart-port` still failed its pre-existing gate at `13.6832895688657` versus
+`12.41`. Full console suite passed with 221 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
@@ -4893,3 +4951,8 @@ binding as open combo-chart work.
 Revision note, 2026-05-25: Added the completed bar-first combo line plot slice, narrowing secondary-axis
 scale/series binding for the supported column+line combo path while preserving broader combo-family,
 secondary-label, marker, crossing, orientation, and public visual-gate work as open.
+
+Revision note, 2026-05-25: Added the completed public line-chart structural alignment slice. The prior
+`pptx-ladder-11-chart-line-3series-port` visual failure is now resolved by Office-PDF-aligned line stroke
+fallbacks, category midpoint plotting, and a constrained no-title/right-legend plot-box rule. The composite
+chart visual gate remains open.
