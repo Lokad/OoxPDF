@@ -385,11 +385,21 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     if ($manifest.expected.compareChartGraphicsStructureLineJoins -eq $true) {
         $compareChartArgs.MatchLineJoin = $true
     }
-    if ($manifest.expected.compareChartGraphicsStructurePathGeometry -eq $true) {
+    $hasChartGraphicsPathGeometryKindTolerances = $manifest.expected.maxChartGraphicsStructurePathGeometryDeltaByKind -ne $null
+    if ($manifest.expected.compareChartGraphicsStructurePathGeometry -eq $true -or $hasChartGraphicsPathGeometryKindTolerances) {
         $compareChartArgs.MatchPathGeometry = $true
     }
     if ($manifest.expected.maxChartGraphicsStructurePathGeometryDelta -ne $null) {
         $compareChartArgs.PathGeometryTolerance = [double]$manifest.expected.maxChartGraphicsStructurePathGeometryDelta
+        $compareChartArgs.UsePathGeometryToleranceForUnlistedKinds = $true
+    }
+    if ($hasChartGraphicsPathGeometryKindTolerances) {
+        $pathGeometryToleranceByKind = @{}
+        foreach ($entry in $manifest.expected.maxChartGraphicsStructurePathGeometryDeltaByKind.PSObject.Properties) {
+            $pathGeometryToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+        }
+
+        $compareChartArgs.PathGeometryToleranceByKind = $pathGeometryToleranceByKind
     }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs

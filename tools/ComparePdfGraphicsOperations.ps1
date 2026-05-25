@@ -31,7 +31,11 @@ param(
 
     [switch] $MatchPathGeometry,
 
-    [double] $PathGeometryTolerance = 0.25
+    [double] $PathGeometryTolerance = 0.25,
+
+    [hashtable] $PathGeometryToleranceByKind = @{},
+
+    [switch] $UsePathGeometryToleranceForUnlistedKinds
 )
 
 $ErrorActionPreference = "Stop"
@@ -93,6 +97,17 @@ function StrokeColorEqual($left, $right) {
     }
 
     return $true
+}
+function GetPathGeometryTolerance($kind) {
+    if ($PathGeometryToleranceByKind.ContainsKey([string]$kind)) {
+        return [double]$PathGeometryToleranceByKind[[string]$kind]
+    }
+
+    if ($PathGeometryToleranceByKind.Count -eq 0 -or $UsePathGeometryToleranceForUnlistedKinds) {
+        return [double]$PathGeometryTolerance
+    }
+
+    return $null
 }
 
 $referenceOps = Select-Ops (Read-JsonArray $Reference)
@@ -199,11 +214,12 @@ foreach ($pair in $pairs) {
     $deltaPathCenterX = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterX) ([double]$cand.PathCenterX) } else { $null }
     $deltaPathCenterY = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterY) ([double]$cand.PathCenterY) } else { $null }
     $deltaPathRadius = if ($pathGeometryAvailable) { Delta ([double]$ref.PathRadius) ([double]$cand.PathRadius) } else { $null }
-    $pathGeometryOk = (-not $MatchPathGeometry) -or (-not $pathGeometryRelevant) -or (
+    $pathGeometryToleranceForKind = GetPathGeometryTolerance $ref.Kind
+    $pathGeometryOk = (-not $MatchPathGeometry) -or (-not $pathGeometryRelevant) -or ($null -eq $pathGeometryToleranceForKind) -or (
         $pathGeometryAvailable -and
-        [Math]::Abs($deltaPathCenterX) -le $PathGeometryTolerance -and
-        [Math]::Abs($deltaPathCenterY) -le $PathGeometryTolerance -and
-        [Math]::Abs($deltaPathRadius) -le $PathGeometryTolerance)
+        [Math]::Abs($deltaPathCenterX) -le $pathGeometryToleranceForKind -and
+        [Math]::Abs($deltaPathCenterY) -le $pathGeometryToleranceForKind -and
+        [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind)
     $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
@@ -242,6 +258,7 @@ foreach ($pair in $pairs) {
         RefPathRadius = $ref.PathRadius
         CandPathRadius = $cand.PathRadius
         DeltaPathRadius = $deltaPathRadius
+        PathGeometryTolerance = $pathGeometryToleranceForKind
         PathGeometryOk = $pathGeometryOk
         DeltaMinX = $deltaMinX
         DeltaMinY = $deltaMinY

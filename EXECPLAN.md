@@ -6183,3 +6183,15 @@ family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `202
 long-term gap: separate true slice/annulus geometry and union/envelope geometry into distinct oracle contracts or
 per-kind geometry tolerances, then derive doughnut center/radius from outer and inner arc commands instead of filled
 union bounds.
+
+Revision note, 2026-05-25: Removed that first ambiguity from the chart graphics oracle contract. `ComparePdfGraphicsOperations.ps1`
+now supports `PathGeometryToleranceByKind`, and `CheckVisualCase.ps1` maps the manifest key
+`maxChartGraphicsStructurePathGeometryDeltaByKind` into that comparer. The two public pie manifests now require
+`PolarSliceCandidate` true path geometry within `0.6 pt` while keeping their broader `PolarPlotBoxCandidate`
+envelope tolerances (`10.1 pt` for the normal pie, `6.5 pt` for exploded pie). This keeps the real slice center and
+radius gate tight without pretending that the filled-region union envelope is a plot-box center. Validation: the
+focused pie cases passed at `artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-203744` and
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-203749`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json` from the `20260525-203806` run. Remaining long-term
+gap: doughnut slices still have no true annulus center/radius gate, so their path geometry is still represented by
+the polar envelope until the classifier derives outer and inner radii from the annular path commands.
