@@ -1166,10 +1166,24 @@ High-priority actions:
   `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-114904` passed with X deltas up to
   `-0.12 pt` and Y deltas `0.01 pt`. Remaining gaps: side category/value label positions and chart-title
   classification/placement.
+- [x] 2026-05-25: Align public horizontal-bar auto-title vertical placement structurally.
+  Bar-chart title fallback rendering now resolves its baseline from the same `ChartLayout.PlotBox` used by
+  chart geometry instead of from the outer chart frame. On the public clustered horizontal-bar fixture this
+  moves the auto-generated series title above the derived plot box and into the same `ChartTitleText`
+  structural bucket as Office. Public visual run
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-115406` passed the existing graphics and
+  bottom tick-label gates; Office/candidate title Y now matches at `475.97 pt`. Remaining gaps: title X is
+  still about `8.9 pt` to the right, so title text extents/centering need a font-measurement-backed title-box
+  model before a strict title-position gate is honest, and side category/value label positions remain open.
 - [ ] Replace fixed chart auto tick target constants with an Office-aligned axis layout model that derives
   target tick density from axis length, label text extents, number format, orientation, and available label
   bands. The new horizontal-axis target is useful evidence, but it is still a named metric rule; the long-term
   state should select major units from structural axis-layout constraints rather than chart-family constants.
+- [ ] Replace frame-relative fallback chart-title placement with an Office-aligned title layout model that
+  preserves/consumes title `overlay`, explicit/manual layout, title box geometry, inherited text style, and
+  measured text extents. The new horizontal-bar title baseline is a useful structural anchor, but it is still
+  a constrained fallback rule; long-term title placement should derive both X and Y from the Office chart
+  layout object model and font metrics rather than fixed inset/width ratios.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -3858,7 +3872,9 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   axis aligns with the vertical axis' far end, and the renderer now uses a horizontal-bar title/no-legend plot
   box plus Office-style bottom value-axis placement. `pptx-ladder-11-chart-bar-clustered-port` now gates the
   plot box, the 10-segment vertical gridline group, axis strokes, and bottom value-axis tick labels within
-  1 pt. Remaining ungated gaps are side category/value label positions and chart-title text classification.
+  1 pt. The auto-generated series title now also classifies as `ChartTitleText` after its baseline is anchored
+  above the resolved plot box, but title X/text-width alignment and side category/value label positions remain
+  ungated.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4366,6 +4382,13 @@ up to `-0.12 pt` and Y `0.01 pt`. Focused `pptx-charts` tests passed with 26 pas
 the full suite passed with 222 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining ungated
 gaps: side label placement and the chart title still classifies as `DataLabelText` because candidate title
 placement remains inside the derived plot box.
+Horizontal bar title-classification slice: bar-chart fallback titles now anchor their baseline to the
+resolved chart plot box instead of the outer frame baseline. Public visual case
+`pptx-ladder-11-chart-bar-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-115406`; the auto-generated title now
+classifies as `ChartTitleText`, and Office/candidate title Y both report `475.97 pt`. Remaining ungated gaps:
+title X is still about `8.9 pt` to the right, so strict title-position gating should wait for title-box/text
+extent alignment, and side category/value labels still need independent placement evidence.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -5133,3 +5156,7 @@ gridline density.
 Revision note, 2026-05-25: Added the horizontal bar bottom tick-label structural gate. The clustered-bar case
 now compares bottom value-axis tick-label text positions under the chart-text harness; remaining text work is
 side label placement and title placement/classification.
+
+Revision note, 2026-05-25: Added the horizontal bar title-classification slice. The clustered-bar case now
+shows the auto-title in the `ChartTitleText` bucket with matching Y, while title X/text-measurement and side
+label placement remain explicit open work.

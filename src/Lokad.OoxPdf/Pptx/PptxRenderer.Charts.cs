@@ -1201,10 +1201,11 @@ internal sealed partial class PptxRenderer
         double y = document.SlideHeightPoints - yTop - height;
         ChartTextStyle style = ReadSceneOrXmlChartTitleTextStyle(theme, sceneChart, chartXml);
         double fontSize = style.FontSize;
+        double baselineY = ResolveChartTitleBaselineY(document, bounds, chartXml, sceneChart, y + height * PptxChartMetricRules.TitleBaselineYRatio, fontSize);
         var run = new TextRun(
             title.Trim(),
             x + width * PptxChartMetricRules.TitleXInsetRatio,
-            y + height * PptxChartMetricRules.TitleBaselineYRatio,
+            baselineY,
             width * PptxChartMetricRules.TitleWidthRatio,
             fontSize * PptxChartMetricRules.TitleHeightFactor,
             x,
@@ -1230,6 +1231,20 @@ internal sealed partial class PptxRenderer
             FlipHorizontal: false,
             FlipVertical: false);
         return RenderTextRuns([run], graphics, "CT");
+    }
+
+    private static double ResolveChartTitleBaselineY(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, double fallbackBaselineY, double fontSize)
+    {
+        XElement? barChart = ReadChartPlotElements(chartXml, "barChart").FirstOrDefault();
+        if (barChart is null)
+        {
+            return fallbackBaselineY;
+        }
+
+        PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, "barChart");
+        bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
+        ChartLayout layout = GetBarChartLayout(document, bounds, chartXml, sceneChart, horizontalBars);
+        return layout.PlotBox.Y + layout.PlotBox.Height + fontSize * PptxChartMetricRules.TitleAbovePlotBaselineOffsetFactor;
     }
 
     private static ChartTextStyle ReadSceneOrXmlChartTitleTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
