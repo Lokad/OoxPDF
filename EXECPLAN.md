@@ -5783,3 +5783,18 @@ Remaining long-term gap: the new gate is intentionally structural rather than ce
 still allow `28..34 pt` bounds drift because center, radius, legend reserve, and explosion envelope are still
 renderer metric rules. The durable endpoint is a typed polar layout model whose Office-PDF oracle can tighten
 those geometry tolerances while keeping operator/segment parity as a non-negotiable lower layer.
+
+Revision note, 2026-05-25: Introduced the first typed `ChartPolarLayout` handoff for pie and doughnut rendering.
+This is intentionally behavior-neutral: slices and data labels now consume the same resolved `ChartPolarGeometry`
+instead of each recomputing center/radius/explosion reserve through renderer-local calls. The current resolver
+still delegates to the existing metric constants, but the ownership boundary is now explicit: future Office-PDF
+layout evidence can replace `GetPieChartGeometry`/`ResolvePieOrDoughnutLayout` in one place and feed both slice
+paths and label anchors consistently. Focused `pptx-charts` tests passed with 38/38. The public polar structural
+gates passed after the refactor at `artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-182409` and
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-182423`; the initial parallel rerun of
+both cases hit only a CLI `obj` file-lock build race, and the exploded case passed when rerun alone. The full
+public `pptx-charts` visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T18:26:13.3928638+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: the polar layout
+record is still filled from Office-observed constants, not from structural plot-circle/legend/explosion evidence.
+The next real fidelity gain should use the new single handoff to derive center and radius from the PDF slice
+union and legend frame rather than tuning separate slice and label paths.

@@ -851,8 +851,9 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 bool hasLegend = legend.Visible && !legend.Overlay;
-                RenderPieChart(graphics, theme, chartPalette, plotBox, pieSeries[0], pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart), hasLegend);
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme), hasLegend));
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(plotBox, pointExplosions, hasLegend);
+                RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSeries[0], pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart));
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -874,8 +875,9 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 bool hasLegend = legend.Visible && !legend.Overlay;
-                RenderDoughnutChart(graphics, theme, chartPalette, plotBox, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart), hasLegend);
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, plotBox, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme), hasLegend));
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(plotBox, pointExplosions, hasLegend);
+                RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart));
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -987,6 +989,16 @@ internal sealed partial class PptxRenderer
             plotBox.X + plotBox.Width * centerXRatio,
             plotBox.Y + plotBox.Height * PptxChartMetricRules.PieCenterYRatio,
             radius);
+    }
+
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, bool hasLegend)
+    {
+        double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
+        return new ChartPolarLayout(
+            plotBox,
+            GetPieChartGeometry(plotBox, explosionReserve, hasLegend),
+            explosionReserve,
+            hasLegend);
     }
 
     private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox)
@@ -1922,7 +1934,7 @@ internal sealed partial class PptxRenderer
         return OoxBoolean.ParseElement(element, defaultValue);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions, bool hasLegend)
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
     {
         if (!labelOptions.HasVisibleText || values.Count == 0)
         {
@@ -1935,8 +1947,8 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
-        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox, explosionReserve, hasLegend);
+        ChartPlotBox plotBox = layout.PlotBox;
+        ChartPolarGeometry geometry = layout.Geometry;
         double labelRadius = geometry.Radius * (holeSize > 0d ? Math.Max(PptxChartMetricRules.PieDataLabelRadiusRatio, (1d + holeSize) / 2d) : PptxChartMetricRules.PieDataLabelRadiusRatio);
         double labelWidth = Math.Max(PptxChartMetricRules.PieDataLabelMinimumWidth, geometry.Radius * PptxChartMetricRules.PieDataLabelWidthRatio);
         var runs = new List<TextRun>(values.Count);
@@ -5655,12 +5667,12 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "RVA");
     }
 
-    private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double firstSliceAngle, bool hasLegend)
+    private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double firstSliceAngle)
     {
-        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, plotBox, values, pointFills, pointStrokes, pointExplosions, holeSize: 0d, firstSliceAngle, hasLegend);
+        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, layout, values, pointFills, pointStrokes, pointExplosions, holeSize: 0d, firstSliceAngle);
     }
 
-    private static void RenderPieOrDoughnutSlices(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, bool hasLegend)
+    private static void RenderPieOrDoughnutSlices(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle)
     {
         double total = values.Where(value => value > 0d).Sum();
         if (total <= 0d)
@@ -5668,8 +5680,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
-        ChartPolarGeometry geometry = GetPieChartGeometry(plotBox, explosionReserve, hasLegend);
+        ChartPolarGeometry geometry = layout.Geometry;
         double innerRadius = geometry.Radius * Math.Clamp(holeSize, 0d, 0.95d);
         double angle = Math.PI / 2d - firstSliceAngle * Math.PI / 180d;
 
@@ -5766,9 +5777,9 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle, bool hasLegend)
+    private static void RenderDoughnutChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, double firstSliceAngle)
     {
-        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, plotBox, values, pointFills, pointStrokes, pointExplosions, holeSize, firstSliceAngle, hasLegend);
+        RenderPieOrDoughnutSlices(graphics, theme, chartPalette, layout, values, pointFills, pointStrokes, pointExplosions, holeSize, firstSliceAngle);
     }
 
     private static void EmitChartDiagnostic(Action<OoxPdfDiagnostic>? diagnosticSink, string id, OoxPdfSeverity severity, string message, string? partName, int slideIndex, string fallback)
