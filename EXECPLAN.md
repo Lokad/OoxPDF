@@ -6358,3 +6358,13 @@ long-term gap: this is still a bridge that hydrates XML caches for the existing 
 is a typed chart data-source layer where series/category/name references preserve their workbook provenance, cache
 freshness, numeric/string typing, blank-cell behavior, and multi-sheet/table/name support instead of requiring each
 renderer path to infer data availability from chart-side cache XML.
+
+Follow-up discovery, 2026-05-25: Re-attempted the right-overlay exploded doughnut public probe after workbook-backed
+chart hydration. OOXPDF can now render the generated formula-backed chart without diagnostics, but the Office COM
+reference export for that generated PPTX produced a blank page, so the case is not a valid public oracle and was not
+added. This is a generator/oracle gap, not a renderer pass condition. `tools/NewChartProbeFixtures.ps1` now has a
+`-DoughnutOnly` mode so future polar fixture work can regenerate the doughnut probes without traversing the more
+fragile secondary-axis COM setup, and the generator suppresses incidental COM boolean outputs that previously
+polluted its final path reporting. Remaining gap: construct the right-overlay exploded probe through a more reliable
+Office-authored path, or inspect why PowerPoint's PDF export blanks that generated chart, before adding it to the
+public visual matrix.

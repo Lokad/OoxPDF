@@ -1,3 +1,7 @@
+param(
+    [switch] $DoughnutOnly
+)
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -62,7 +66,7 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
             [void]($chart.Legend.IncludeInLayout = $IncludeInLayout)
         }
 
-        $chart.ChartData.Activate()
+        [void]($chart.ChartData.Activate())
         $workbook = $chart.ChartData.Workbook
         $worksheet = $workbook.Worksheets.Item(1)
         $worksheet.Cells.Clear()
@@ -75,7 +79,7 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
         $worksheet.Cells.Item(4, 1).Value = "West"
         $worksheet.Cells.Item(4, 2).Value = 15.0
 
-        $chart.SetSourceData("=Sheet1!`$A`$1:`$B`$4", 2)
+        [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$B`$4", 2))
         [void]($chart.ChartType = -4120)
         [void]($chart.ChartGroups(1).DoughnutHoleSize = 50)
 
@@ -127,6 +131,7 @@ $presentation = $null
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
 
+    if (-not $DoughnutOnly) {
     $output = Join-Path $cases "pptx-ladder-11-secondary-axis-overlay-probe.pptx"
     $presentation = $powerPoint.Presentations.Add($true)
     $slide = $presentation.Slides.Add(1, 12)
@@ -305,6 +310,7 @@ try {
     [void]($presentation.SaveAs($output, 24))
     [void]($presentation.Close())
     $presentation = $null
+    }
 
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
@@ -393,4 +399,4 @@ finally {
     [GC]::WaitForPendingFinalizers()
 }
 
-Get-Item -LiteralPath $output
+Get-Item -LiteralPath @($output)[-1]
