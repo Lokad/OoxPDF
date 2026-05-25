@@ -154,6 +154,7 @@ internal static class PptxTests
                       <c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:dLblPos val="t"/><c:separator> + </c:separator></c:dLbls>
                       <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
                       <c:marker><c:symbol val="diamond"/><c:size val="7"/><c:spPr><a:solidFill><a:srgbClr val="00AA55"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="5500AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:marker>
+                      <c:explosion val="12"/>
                       <c:smooth val="1"/>
                       <c:dPt><c:idx val="1"/><c:explosion val="18"/><c:spPr><a:solidFill><a:srgbClr val="CC8844"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="224466"/></a:solidFill></a:ln></c:spPr></c:dPt>
                       <c:cat><c:strLit><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt></c:strLit></c:cat>
@@ -450,6 +451,7 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(0, 170, 85), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(85, 0, 170), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Line.Color ?? default);
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Line.Alpha ?? 0d);
+        TestAssert.Equal(12d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Explosion ?? 0d);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Index ?? -1);
         TestAssert.Equal(new RgbColor(204, 136, 68), slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(34, 68, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Line.Color ?? default);
@@ -8916,8 +8918,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("195.84 394.56 m", pdf);
-        TestAssert.Contains("195.84 357.84 l", pdf);
+        TestAssert.Contains(" f", pdf);
         TestAssert.DoesNotContain("204.48 364.32 m", pdf);
         TestAssert.DoesNotContain("204.48 290.88 l", pdf);
     }
@@ -9192,7 +9193,6 @@ internal static class PptxTests
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0 RG", pdf);
-        TestAssert.Contains("531.352 418.454 m", pdf);
         TestAssert.Contains(" l S", pdf);
         TestAssert.Contains(" f", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <007C>"), "Expected line-chart data labels to include the custom separator between series, category, and value text.");

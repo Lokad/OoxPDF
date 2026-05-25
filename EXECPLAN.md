@@ -5531,3 +5531,26 @@ reservation still uses text-width-derived strip factors. The durable target is a
 that computes outer plot area, inner data plot, primary/secondary axis strips, tick marks, label boxes, and clip
 regions together from OOXML axis metadata plus Office PDF evidence, then applies that model across bar, line,
 area, scatter, and combo charts without chart-family branches.
+
+Revision note, 2026-05-25: Tightened the polar pie/doughnut path toward Office structure instead of leaving it
+on broad fallback geometry. The scene model now preserves plot-level `c:firstSliceAng` and series-level
+`c:explosion`; rendering consumes those typed values before raw XML fallback, starts pie/doughnut slices from the
+Office top-angle basis, sweeps clockwise, reserves radius for exploded slices, and overlays point-level explosion
+over series-level explosion. Pie and doughnut charts now also emit category fill legends from the same point fill
+and chart-palette mapping used by slices, and side fill legends use a centered vertical baseline path instead of
+the bottom-anchored generic legend fallback. Focused `pptx-charts` tests passed with 37/37. The public polar
+gates pass with empty diagnostics after tightening and rejecting the old static fallback allowance:
+`pptx-ladder-11-chart-doughnut-port` at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-port/20260525-155643`, MAE `3.677070915316358`, changed16
+`0.039557773919753084`; `pptx-ladder-11-chart-pie-5-categories-port` at
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-155649`, MAE `8.566240716628087`,
+changed16 `0.11691695601851852`; `pptx-ladder-11-chart-doughnut-exploded-port` at
+`artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-155655`, MAE `5.970853105709876`,
+changed16 `0.06386429398148148`; and `pptx-ladder-11-chart-pie-exploded-port` at
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-155701`, MAE `11.382967544367284`,
+changed16 `0.12352864583333334`. Full non-slow tests passed with 226 passed, 0 failed, 7 skipped, and
+`dotnet pack` succeeded. Remaining long-term gap: `PptxChartMetricRules` still owns polar center and
+radius ratios, legend padding, label radii, and polygonal arc segmentation. The durable target is a typed polar
+chart layout oracle that derives the plot circle, legend reservation, first-slice basis, explosion envelope,
+label anchors, and Bezier arcs from OOXML plus Office PDF path/text structure across pie, doughnut, and radar
+families rather than treating these ratios as final renderer rules.

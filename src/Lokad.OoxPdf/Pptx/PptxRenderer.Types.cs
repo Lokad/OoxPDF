@@ -805,9 +805,9 @@ internal sealed partial class PptxRenderer
         public const double LineTitleRightLegendPlotBoxYRatio = 0.0924d;
         public const double LineTitleRightLegendPlotBoxWidthRatio = 0.7391d;
         public const double LineTitleRightLegendPlotBoxHeightRatio = 0.7888d;
-        public const double PieCenterXRatio = 0.46d;
-        public const double PieCenterYRatio = 0.52d;
-        public const double PieRadiusRatio = 0.34d;
+        public const double PieCenterXRatio = 0.42d;
+        public const double PieCenterYRatio = 0.458d;
+        public const double PieRadiusRatio = 0.434d;
         public const double PieDataLabelRadiusRatio = 0.62d;
         public const double PieDataLabelWidthRatio = 0.55d;
         public const double PieDataLabelMinimumWidth = 18d;

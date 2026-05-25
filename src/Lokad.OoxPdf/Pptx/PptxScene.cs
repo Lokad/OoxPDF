@@ -398,6 +398,7 @@ internal sealed record PptxSceneChartPlot(
     double? GapWidth,
     double? Overlap,
     double? HoleSize,
+    double? FirstSliceAngle,
     PptxSceneChartDataLabels DataLabels);
 
 internal sealed record PptxSceneChartDataLabels(
@@ -468,6 +469,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
+    double? Explosion,
     bool? Smooth,
     PptxSceneChartDataLabels DataLabels);
 
@@ -1107,6 +1109,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),
                 ReadChartElementDouble(plot, "holeSize"),
+                ReadChartElementDouble(plot, "firstSliceAng"),
                 ReadChartDataLabels(plot, theme)));
         }
 
@@ -1245,6 +1248,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme),
                 ReadChartPointStyles(seriesElement, theme),
+                ReadChartElementDouble(seriesElement, "explosion"),
                 ReadChartSeriesSmooth(seriesElement),
                 ReadChartDataLabels(seriesElement, theme)));
         }
