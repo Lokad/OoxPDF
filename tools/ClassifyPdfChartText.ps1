@@ -205,6 +205,14 @@ function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     $distance = [Math]::Sqrt($dx * $dx + $dy * $dy)
     $text = TextValue $op
     $isNumeric = Is-NumericText $text
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    if ((-not $isNumeric) -and
+        $fontSize -ge ([Math]::Max(14d, $radius * 0.12d)) -and
+        [Math]::Abs($dx) -le ($radius * 0.35d) -and
+        $y -ge ($centerY + $radius + $tolerance * 2d)) {
+        return "ChartTitleText"
+    }
+
     if ($isNumeric -and
         $x -le ($centerX - $tolerance) -and
         $distance -le ($radius + $tolerance) -and
@@ -237,6 +245,11 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     $insideX = $x -ge ($minX - $tolerance) -and $x -le ($maxX + $tolerance)
     $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
     $axisLabelY = $y -ge ($minY - ($tolerance * 2d)) -and $y -le ($maxY + ($tolerance * 2d))
+
+    if ($insideX -and $y -gt ($maxY + $tolerance) -and (Looks-LikeChartTitle $op $plotBox)) {
+        return "ChartTitleText"
+    }
+
     $radarKind = Classify-RadarText $op (Find-RadarSpokeGeometry $structures) $tolerance
     if ($null -ne $radarKind) {
         return $radarKind

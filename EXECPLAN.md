@@ -6016,3 +6016,20 @@ passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
 `dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
 long-term gap: radar category labels still need a structural radial text-frame/anchor model before the global radar
 text gate can be tightened.
+
+Revision note, 2026-05-25: Closed the radar category-label baseline gap against the public Office-PDF text
+oracle. `RenderRadarCategoryLabels` now routes label Y placement through `ResolveRadarCategoryLabelBaselineY`,
+which uses the resolved radar spoke angle and label height instead of treating every category label as a
+vertically centered text box. This reduced category-label Y drift from `5.54..14.55 pt` to at most `0.60 pt`
+across the marker and filled radar fixtures. While validating the filled-radar case, the text oracle also exposed
+that the chart title `Student` was being classified as a category tick label; `ClassifyPdfChartText.ps1` now
+classifies centered, title-sized radar text beyond the plot radius as `ChartTitleText`. The marker and filled
+radar manifests now gate `CategoryAxisTickLabel` within `5.5 pt`; the remaining category delta is X-only from
+horizontal label anchor/width estimation. The filled radar manifest also locks `ChartTitleText` within `1.0 pt`.
+Validation: focused `pptx-charts` tests passed 38/38; marker radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-195134`; filled radar passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-195134`; the full public `pptx-charts`
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: move radar category horizontal anchors and label-frame width into the typed radar
+layout/text-frame model so the category gate can move from `5.5 pt` toward sub-point parity.

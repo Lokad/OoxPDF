@@ -5687,11 +5687,20 @@ internal sealed partial class PptxRenderer
                 TextAlignment.Right => anchorX - width,
                 _ => anchorX - width / 2d
             };
-            double y = anchorY - height / 2d;
+            double y = ResolveRadarCategoryLabelBaselineY(anchorY, angle, height);
             runs.Add(CreateChartLabelRun(labels[i], x, y, width, height, plotBox, style, alignment));
         }
 
         return RenderTextRuns(runs, graphics, "RCA");
+    }
+
+    private static double ResolveRadarCategoryLabelBaselineY(double anchorY, double angle, double labelHeight)
+    {
+        double sine = Math.Sin(angle);
+        double baselineFactor = PptxChartMetricRules.RadarCategoryLabelBaselineBaseFactor +
+            PptxChartMetricRules.RadarCategoryLabelBaselineSineFactor * sine +
+            PptxChartMetricRules.RadarCategoryLabelBaselineSineSquaredFactor * sine * sine;
+        return anchorY + labelHeight * baselineFactor;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderRadarValueAxisLabels(

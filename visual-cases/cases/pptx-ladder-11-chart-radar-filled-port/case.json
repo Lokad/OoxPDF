@@ -27,10 +27,13 @@
     "maxChartGraphicsStructurePathGeometryDelta": 0.5,
     "maxChartTextStructurePositionDelta": 15,
     "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 5.5,
+      "ChartTitleText": 1.0,
       "ValueAxisTickLabel": 0.5
     },
     "compareChartTextStructureKinds": [
       "CategoryAxisTickLabel",
+      "ChartTitleText",
       "ValueAxisTickLabel"
     ]
   }
