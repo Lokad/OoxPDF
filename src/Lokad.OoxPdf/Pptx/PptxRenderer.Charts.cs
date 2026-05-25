@@ -3917,6 +3917,14 @@ internal sealed partial class PptxRenderer
                 frame.Width * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxWidthRatio,
                 frame.Height * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxHeightRatio);
         }
+        else if (hasTitle && !hasLegend && HasInsideValueAxisCrossing(sceneChart, barPlot, barChart, chartXml))
+        {
+            defaultPlotBox = new ChartPlotBox(
+                frame.X + frame.Width * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxXRatio,
+                frame.Y + frame.Height * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxYRatio,
+                frame.Width * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxWidthRatio,
+                frame.Height * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxHeightRatio);
+        }
         else if (hasTitle && !hasLegend)
         {
             defaultPlotBox = new ChartPlotBox(
@@ -3944,6 +3952,27 @@ internal sealed partial class PptxRenderer
         }
 
         return ResolveBarManualPlotLayoutTarget(theme, chartXml, sceneChart, barPlot, barChart, manualPlotLayout, horizontalBars);
+    }
+
+    private static bool HasInsideValueAxisCrossing(PptxSceneChart? sceneChart, PptxSceneChartPlot? barPlot, XElement barChart, XDocument chartXml)
+    {
+        IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(barPlot, barChart);
+        if (series.Count == 0)
+        {
+            return false;
+        }
+
+        string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
+        XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
+        PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
+        ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
+            valueSceneAxis,
+            valueAxis,
+            GetBarChartValueExtents(series, grouping),
+            IsPercentStackedChartGrouping(grouping));
+        double? crossing = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
+        return crossing > valueExtents.Min + PptxChartMetricRules.AxisValueEpsilon &&
+            crossing < valueExtents.Max - PptxChartMetricRules.AxisValueEpsilon;
     }
 
     private static bool HasExplicitManualPlotLayoutTarget(PptxSceneChart? sceneChart, XDocument chartXml)

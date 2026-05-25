@@ -251,12 +251,28 @@ if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
         $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
         $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $leftAxis.MinY $maxX $topAxis.MinY))
     }
+
+    $crossingAxis = @($horizontalLines | Where-Object {
+        (Is-Near ([double]$_.MinX) ([double]$leftAxis.MinX) $GridlineBoundsTolerance) -and
+        ([double]$_.CenterY -gt ([double]$leftAxis.MinY + $GridlineBoundsTolerance)) -and
+        ([double]$_.CenterY -lt ([double]$leftAxis.MaxY - $GridlineBoundsTolerance)) -and
+        ([double]$_.MaxX -gt [double]$leftAxis.MinX)
+    } | Sort-Object -Property Width -Descending | Select-Object -First 1)
+    if ($crossingAxis.Count -gt 0) {
+        $axis = $crossingAxis[0]
+        $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
+        $structures.Add((New-DerivedStructure "CrossingAxisPlotBoxCandidate" $page "CrossingAxisLinePairBounds" 2 $leftAxis.MinX $leftAxis.MinY $axis.MaxX $leftAxis.MaxY))
+    }
 }
 
 $axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)
 $gridlineAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "GridlineAxisPlotBoxCandidate" } | Select-Object -First 1)
+$crossingAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "CrossingAxisPlotBoxCandidate" } | Select-Object -First 1)
 $plotBoxForGridlines = if ($gridlineAxisPlotBox.Count -gt 0) {
     $gridlineAxisPlotBox[0]
+}
+elseif ($crossingAxisPlotBox.Count -gt 0) {
+    $crossingAxisPlotBox[0]
 }
 elseif ($axisPairPlotBox.Count -gt 0) {
     $axisPairPlotBox[0]

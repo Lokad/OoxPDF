@@ -5661,6 +5661,29 @@ cartesian layout solver rather than a local bar-chart adjustment. A trial local 
 moved the minimum tick in the right direction but over-expanded the zero-axis position, confirming that this needs
 PDF structural oracle support for plot-area, axis-label, tick, and clip boxes before being made durable.
 
+Revision note, 2026-05-25: Closed the public negative-column chart plot-box residual with structural
+Office-PDF evidence instead of a raster-only nudge. `ClassifyPdfChartGraphics.ps1` now emits
+`CrossingAxisPlotBoxCandidate` when a horizontal category axis crosses inside the vertical value-axis span,
+and it can use that full crossing-axis plot box to select the dominant `PlotAreaClipBoxCandidate`. This exposed
+the real Office gap: the existing `AxisPairPlotBoxCandidate` represented the zero axis as the top edge, while
+Office's clip and value-axis stroke span the full inside-crossing plot frame. The renderer now routes
+title/no-legend vertical bar charts whose value-axis crossing is strictly inside the resolved value extents to
+an Office-observed inside-crossing plot frame. This leaves positive-only title/no-legend column charts on the
+existing positive branch. The public negative-column manifest now gates MAE `0.9`, changed16 `0.042`, SSIM
+`0.96`, `CrossingAxisPlotBoxCandidate`, `PlotAreaClipBoxCandidate`, the crossing axis lines, and chart text.
+Focused `pptx-charts` tests passed with 38/38. The tightened
+`pptx-ladder-11-chart-column-negative-port` case passed at
+`artifacts/visual/pptx-ladder-11-chart-column-negative-port/20260525-174443` with MAE
+`0.785537471064815`, changed16 `0.0407918595679012`, SSIM `0.968181689376667`, empty diagnostics, and
+structural geometry deltas under `1 pt`; category/value labels were under `0.1 pt`, with the auto title X delta
+about `1.56 pt`. The positive clustered-column structural case passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-174418`, and the dashboard table/chart
+case still passed at `artifacts/visual/pptx-ladder-11-dashboard-table-chart-port/20260525-174418`. The full
+public `pptx-charts` visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`.
+Remaining long-term gap: this is still an Office-observed renderer metric branch. The durable endpoint is a
+typed cartesian chart layout solver that derives plot-frame reserves from title, legend, axis labels, crossing
+mode, tick labels, and clip ownership, with the crossing-axis structure gate kept as the public oracle.
+
 Revision note, 2026-05-25: Closed most of the public bubble-chart residual by replacing the old proportional
 axis headroom rule with separated Office-observed value-axis semantics. Office's bubble chart PDF showed x-axis
 labels at `0..6`, y-axis labels at `0..5` with `0.5` tick cadence, and candidate output had x-axis labels at
