@@ -12,6 +12,13 @@
     "maxMeanAbsoluteError": 0.25,
     "maxChangedPixelRatioAtThreshold16": 0.004,
     "minStructuralSimilarity": 0.995,
-    "minForegroundColorHistogramCorrelation": 0.999
+    "minForegroundColorHistogramCorrelation": 0.999,
+    "maxChartGraphicsStructureBoundsDelta": 14,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true
   }
 }

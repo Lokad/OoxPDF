@@ -10,6 +10,13 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 8.75,
-    "maxChangedPixelRatioAtThreshold16": 0.12
+    "maxChangedPixelRatioAtThreshold16": 0.12,
+    "maxChartGraphicsStructureBoundsDelta": 21,
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true
   }
 }

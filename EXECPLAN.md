@@ -5798,3 +5798,19 @@ public `pptx-charts` visual family passed 28/28 at `artifacts/visual/reports/ppt
 record is still filled from Office-observed constants, not from structural plot-circle/legend/explosion evidence.
 The next real fidelity gain should use the new single handoff to derive center and radius from the PDF slice
 union and legend frame rather than tuning separate slice and label paths.
+
+Revision note, 2026-05-25: Extended the polar PDF-structure gate from doughnut charts to the public pie fixtures.
+`pptx-ladder-11-chart-pie-5-categories-port` and `pptx-ladder-11-chart-pie-exploded-port` now compare
+`PolarPlotBoxCandidate` plus `PolarSliceCandidate` structures and require Office/candidate parity for the slice
+fill operator and Bezier segment-count class. Manual inspection before tightening showed matching `f*` operators
+and slice segment counts (`5/3/3/3/3` for the five-category pie and `3/4/3/3` for the exploded pie), so the new
+gate locks PDF path structure rather than just the raster envelope. The geometry tolerances remain deliberately
+loose: `21 pt` for the five-category pie and `14 pt` for the exploded pie, because the candidate plot circle is
+still fed by metric-layout constants. The cases passed after manifest tightening at
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-182844` and
+`artifacts/visual/pptx-ladder-11-chart-pie-exploded-port/20260525-182849`; the full public `pptx-charts`
+visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T18:30:44.4015090+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: all public
+pie/doughnut slice families now have an operator/segment structural floor, but the polar layout solver still
+needs to derive center, radius, legend reserve, title reserve, explosion envelope, and label anchors from typed
+`ChartPolarLayout` plus Office PDF structural evidence instead of accepting broad bounds drift as final.
