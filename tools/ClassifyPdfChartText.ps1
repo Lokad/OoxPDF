@@ -68,6 +68,7 @@ function StableTextHash([string]$text) {
 
 function Find-PlotBox($structures) {
     $priority = @(
+        "GridlineAxisPlotBoxCandidate",
         "AxisPairPlotBoxCandidate",
         "PlotBoxCandidate",
         "PolarPlotBoxCandidate",
@@ -203,10 +204,6 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     }
 
     if ($insideX -and $y -lt ($minY - $tolerance)) {
-        if (Looks-LikeChartTitle $op $plotBox) {
-            return "ChartTitleText"
-        }
-
         return "CategoryAxisTickLabel"
     }
 

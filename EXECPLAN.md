@@ -3808,6 +3808,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `CategoryAxisTickLabel` on the public clustered-column case. A line-marker visual probe still fails its
   pre-existing pixel MAE threshold (`3.640602` actual vs `2.9` limit) before a text gate can run, so it remains
   a separate chart-fidelity cleanup target rather than a tolerance change hidden inside this slice.
+- Observation: Raw PDF chart graphics buckets were too weak for clustered column charts: repeated clipping
+  rectangles and filled bar unions could look like plot-area or polar-plot evidence even when Office's
+  structural signal was the multi-segment gridline stroke plus the matching axis baseline.
+  Evidence: `ClassifyPdfChartGraphics.ps1` now derives `GridlineAxisPlotBoxCandidate` from that gridline/axis
+  pair, suppresses wide filled-region unions as polar plot boxes, and avoids comparing meaningless line width
+  on fill-only marker rectangles. The public composite chart gate now compares the derived plot box and legend
+  markers instead of raw clip boxes.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -3990,6 +3997,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   chart-layout metric rules keeps the current approximation auditable while future chart oracle tooling is
   built.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Chart structural gates should compare derived Office-like primitives before raw graphics
+  operations whenever the higher-level primitive can be recovered from PDF structure.
+  Rationale: Raw clips, filled bars, and graphics-state attributes can be incidental or reused across text and
+  chart drawing. Derived structures such as gridline-plus-axis plot boxes, legend marker rectangles, and typed
+  tick/legend text buckets are closer to the chart semantics needed to eliminate renderer heuristics.
+  Date/Author: 2026-05-25 / Codex.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is
   feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation
   targets.
@@ -4083,9 +4096,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   default line colors/width, category midpoint positions, and the no-title/right-legend plot box are aligned
   to Office PDF operators. The public `pptx-ladder-11-composite-chart-port` gate also now passes after
   aligning the default clustered-column no-title/bottom-legend plot box, whole-number value scale, and
-  packed bottom legend placement to Office PDF evidence. These remove both cases from the pre-existing
-  failure list, while broader chart-family layout work remains open because the current named metric rules
-  still need to be replaced by systematic chart structural oracle tooling.
+  packed bottom legend placement to Office PDF evidence. The composite chart is now protected by structural
+  gates for the derived gridline/axis plot box, legend markers, category tick labels, value tick labels, and
+  legend text. These remove both cases from the pre-existing failure list, while broader chart-family layout
+  work remains open because the current named metric rules still need to be replaced by systematic chart
+  structural oracle tooling.
 
 ## Concrete Steps
 
@@ -4250,6 +4265,18 @@ This resolves the formerly open composite chart gate, but the new named metric r
 observed approximations rather than a general chart layout engine; future work should replace them with
 chart-family layout/oracle tooling that compares plot boxes, tick labels, gridlines, legend marker geometry,
 and text matrices directly.
+Composite chart structural gate slice: `ClassifyPdfChartGraphics.ps1` now derives
+`GridlineAxisPlotBoxCandidate` from a multi-segment horizontal gridline stroke plus the matching baseline
+axis stroke, ignores fill-only graphics-state line width during structural comparison, and no longer
+misclassifies wide column-bar rectangle unions as polar plot boxes. `ClassifyPdfChartText.ps1` uses that
+derived plot box before weaker fallbacks and treats text below the plot as category-axis ticks rather than
+possible chart titles. The public `pptx-ladder-11-composite-chart-port` manifest now gates
+`GridlineAxisPlotBoxCandidate`, legend `MarkerCandidate` geometry, category tick labels, value tick labels,
+and legend text through chart structural checks. The gated run
+`artifacts/visual/pptx-ladder-11-composite-chart-port/20260525-112248` passed with the same raster metrics as
+the alignment slice, plus structural deltas under 2 pt: plot-box minY delta `-0.71`, marker X deltas up to
+`-1.54`, category-label Y delta `-0.93`, value-label Y deltas up to `-0.78`, and legend-text X deltas up to
+`-1.49`.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -4996,3 +5023,7 @@ prior `pptx-ladder-11-composite-chart-port` visual failure is now resolved by Of
 whole-number value scaling, no-title/bottom-legend plot-box ratios, and packed bottom legend placement.
 The remaining chart-layout work is reframed as systematic chart structural oracle tooling rather than more
 case-local metric constants.
+
+Revision note, 2026-05-25: Added the composite chart structural gate/tooling slice. The same public composite
+case now compares derived chart primitives, not only raster metrics, which turns the chart-oracle track from
+an architectural direction into an enforced regression surface.

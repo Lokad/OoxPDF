@@ -51,7 +51,7 @@ function New-Structure($kind, $op) {
         Height = Round (Height $op)
         CenterX = Round (CenterX $op)
         CenterY = Round (CenterY $op)
-        LineWidth = [double]$op.LineWidth
+        LineWidth = if ($op.Kind -eq "Fill") { 0d } else { [double]$op.LineWidth }
         StrokeColor = $op.StrokeColor
         FillColor = $op.FillColor
         Dash = $op.Dash
@@ -175,6 +175,32 @@ if ($horizontalLines.Count -ge 2) {
     $structures.Add((New-DerivedStructure "PlotBoxCandidate" $page "HorizontalLineBounds" $horizontalLines.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
 }
 
+foreach ($op in $ops) {
+    $segmentCount = if ($null -ne $op.SegmentCount) { [int]$op.SegmentCount } else { 0 }
+    if ($op.Kind -ne "Stroke" -or $segmentCount -lt 2) {
+        continue
+    }
+
+    $width = Width $op
+    $height = Height $op
+    if ($width -lt $MinLineLength -or $height -le $LineTolerance) {
+        continue
+    }
+
+    $matchingBaseline = @($horizontalLines | Where-Object {
+        (Is-Near ([double]$_.MinX) ([double]$op.MinX) $GridlineBoundsTolerance) -and
+        (Is-Near ([double]$_.MaxX) ([double]$op.MaxX) $GridlineBoundsTolerance) -and
+        ([double]$_.CenterY -lt [double]$op.MinY)
+    } | Sort-Object -Property CenterY -Descending | Select-Object -First 1)
+    if ($matchingBaseline.Count -eq 0) {
+        continue
+    }
+
+    $baseline = $matchingBaseline[0]
+    $page = if ($PageNumber -gt 0) { $PageNumber } else { $op.PageNumber }
+    $structures.Add((New-DerivedStructure "GridlineAxisPlotBoxCandidate" $page "HorizontalGridlineAndAxisBounds" ($segmentCount + 1) $op.MinX $baseline.MinY $op.MaxX $op.MaxY))
+}
+
 $verticalLines = @($structures | Where-Object { $_.Kind -eq "VerticalLine" })
 if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
     $leftAxis = @($verticalLines | Sort-Object -Property MinX | Select-Object -First 1)[0]
@@ -190,7 +216,11 @@ if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
 }
 
 $axisPairPlotBox = @($structures | Where-Object { $_.Kind -eq "AxisPairPlotBoxCandidate" } | Select-Object -First 1)
-$plotBoxForGridlines = if ($axisPairPlotBox.Count -gt 0) {
+$gridlineAxisPlotBox = @($structures | Where-Object { $_.Kind -eq "GridlineAxisPlotBoxCandidate" } | Select-Object -First 1)
+$plotBoxForGridlines = if ($gridlineAxisPlotBox.Count -gt 0) {
+    $gridlineAxisPlotBox[0]
+}
+elseif ($axisPairPlotBox.Count -gt 0) {
     $axisPairPlotBox[0]
 }
 else {
@@ -272,8 +302,13 @@ if ($polarRegions.Count -gt 1) {
     })
     if ($nonPageRegions.Count -ge 2) {
         $bounds = Get-UnionBounds $nonPageRegions
-        $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
-        $structures.Add((New-DerivedStructure "PolarPlotBoxCandidate" $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+        $width = [double]$bounds.MaxX - [double]$bounds.MinX
+        $height = [double]$bounds.MaxY - [double]$bounds.MinY
+        $aspect = $width / [Math]::Max(1d, $height)
+        if ($aspect -ge 0.74d -and $aspect -le 1.35d) {
+            $page = if ($PageNumber -gt 0) { $PageNumber } else { $nonPageRegions[0].PageNumber }
+            $structures.Add((New-DerivedStructure "PolarPlotBoxCandidate" $page "FilledRegionUnion" $nonPageRegions.Count $bounds.MinX $bounds.MinY $bounds.MaxX $bounds.MaxY))
+        }
     }
 }
 
