@@ -824,12 +824,12 @@ internal sealed partial class PptxRenderer
                 RenderRadarChart(graphics, plotBox, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, filledRadar);
                 if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart), radarSeries));
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart), radarSeries, filledRadar));
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                 {
-                    fonts.AddRange(RenderRadarValueAxisLabels(theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits));
+                    fonts.AddRange(RenderRadarValueAxisLabels(theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, filledRadar));
                 }
 
                 return true;
@@ -1001,12 +1001,18 @@ internal sealed partial class PptxRenderer
             hasLegend);
     }
 
-    private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox)
+    private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, bool filledRadar)
     {
+        double centerYRatio = filledRadar
+            ? PptxChartMetricRules.FilledRadarCenterYRatio
+            : PptxChartMetricRules.MarkerRadarCenterYRatio;
+        double radiusRatio = filledRadar
+            ? PptxChartMetricRules.FilledRadarRadiusRatio
+            : PptxChartMetricRules.MarkerRadarRadiusRatio;
         return new ChartPolarGeometry(
             plotBox.X + plotBox.Width * PptxChartMetricRules.RadarCenterXRatio,
-            plotBox.Y + plotBox.Height * PptxChartMetricRules.RadarCenterYRatio,
-            Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.RadarRadiusRatio);
+            plotBox.Y + plotBox.Height * centerYRatio,
+            Math.Min(plotBox.Width, plotBox.Height) * radiusRatio);
     }
 
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)
@@ -5495,7 +5501,7 @@ internal sealed partial class PptxRenderer
 
     private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, bool filledRadar)
     {
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
         int pointCount = Math.Max(3, series.Max(values => values.Count));
 
         SetChartStroke(graphics, RadarGridlineDefaultStroke);
@@ -5633,7 +5639,8 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
         IReadOnlyList<string> labels,
-        IReadOnlyList<IReadOnlyList<double>> series)
+        IReadOnlyList<IReadOnlyList<double>> series,
+        bool filledRadar)
     {
         if (labels.Count == 0)
         {
@@ -5641,7 +5648,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
         int pointCount = Math.Max(labels.Count, Math.Max(3, series.Max(values => values.Count)));
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
@@ -5680,10 +5687,11 @@ internal sealed partial class PptxRenderer
         XElement? valueAxis,
         PptxSceneChartAxis? sceneAxis,
         ChartValueExtents extents,
-        ChartAxisUnits axisUnits)
+        ChartAxisUnits axisUnits,
+        bool filledRadar)
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
-        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox, filledRadar);
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         double width = fontSize * PptxChartMetricRules.RadarValueLabelWidthFactor;

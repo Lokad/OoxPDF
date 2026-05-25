@@ -2024,13 +2024,15 @@ High-priority actions:
     generic marker bucket.
   - [x] Preserve transformed PDF path commands in `PdfInspect` graphics-operation JSON and derive radar spoke
     center/radius from repeated move/line pairs in `ClassifyPdfChartGraphics.ps1`. The filled-radar public
-    manifest now gates this path-derived geometry within `0.5 pt`; the two-series radar case intentionally
-    remains open because Office's spoke center/radius are `432,288 / 182.56 pt` while the candidate still emits
-    `432,270 / 165.24 pt`.
-  - [ ] Explain and replace the two-series radar center/radius mismatch with a typed polar chart layout rule.
-    Do not change the shared radar center/radius constants blindly: the filled-radar fixture is already aligned
-    within `0.5 pt`, so the two-series mismatch is layout-context-specific evidence, not a generic radar-scale
-    correction.
+    manifest gates this path-derived geometry within `0.5 pt`; the two-series radar fixture exposed a separate
+    marker-style center/radius rule rather than a generic radar-scale correction.
+  - [x] Explain and replace the two-series radar center/radius mismatch without regressing filled radar:
+    `c:radarStyle val="marker"` now uses the Office-observed spoke geometry `432,288 / 182.56 pt` for the public
+    marker fixture, while filled radar keeps the prior `432,270.36 / 164.88 pt` geometry and remains gated within
+    `0.5 pt`.
+  - [ ] Promote radar geometry into a typed radar layout model instead of leaving the filled-vs-marker split as
+    renderer metric constants. Preserve the current path-geometry gates as the oracle while deriving center,
+    radius, label frame, and plot-box reserves from chart layout context.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
@@ -4109,6 +4111,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   already structurally aligned while two-series radar is not, so a shared center/radius tweak would regress a
   passing public case and would not be an Office-aligned rule.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Split current radar center/radius metric rules by resolved radar style, not by fixture identity.
+  Rationale: The path-command oracle shows Office uses different observable spoke geometry for filled radar and
+  marker/default radar on the public cases. Encoding this as a `c:radarStyle`-driven rule closes the marker case
+  while preserving the filled-radar gate; the next architecture step is still a typed radar layout resolver that
+  owns these values instead of renderer constants.
+  Date/Author: 2026-05-25 / Codex.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is
   feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation
   targets.
@@ -5921,3 +5929,18 @@ tools\Lokad.OoxPdf.PdfInspect\Lokad.OoxPdf.PdfInspect.csproj --tl:off --nologo -
 passed at `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-191024`; the full public
 `pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
 `2026-05-25T19:12:20.4710183+02:00`; and `dotnet pack` succeeded.
+
+Revision note, 2026-05-25: Closed the public marker-radar center/radius gap by making radar geometry depend on
+the resolved radar style instead of one shared polar ratio. The path-command oracle showed the two-series marker
+radar Office spoke group at `432,288 / 182.56 pt`, while filled radar remained aligned at
+`432,270.36 / 164.88 pt`; OOXPDF now uses style-specific Office-observed center/radius ratios and routes radar
+category/value labels through the same style-specific geometry. The two-series radar public manifest now gates
+`RadarSpokeGroupCandidate` path geometry within `0.5 pt`, matching the filled-radar gate. Validation: the focused
+synthetic radar path test passed 1/1; focused `pptx-charts` tests passed 38/38; marker radar passed the new
+path-geometry gate at `artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-191858`; the prior
+serial filled-radar check passed at `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-191735`;
+the full public `pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded.
+Remaining long-term gap: the split is now evidence-backed and gated, but it is still a renderer metric rule.
+Radar center/radius, label frames, plot-box reserve, marker geometry, and axis text should move into a typed
+radar layout resolver fed by OOXML plus Office-PDF structural evidence.
