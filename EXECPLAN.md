@@ -227,6 +227,13 @@ High-priority actions:
   `ComparePdfTextLineStarts.ps1 -ShowText` now prints per-line reference/candidate decoded operation text
   after the coordinate table. This keeps default output compact while making operation grouping mismatches
   diagnosable without opening `text-operations.json` by hand.
+- [x] Generalize Office-style dash text-operation boundaries:
+  private page-17 PDF inspection showed that Office emits em dashes as independent text operations, while
+  `ooxpdf` only protected a narrow hand-listed dash subset. Text segmentation now uses the Unicode
+  `DashPunctuation` category, preserving ASCII hyphen and em dash boundaries through layout/emission. A
+  public synthetic `PptxTypographyTextEmDashBoundariesRemainSeparateSpans` regression locks the generic
+  behavior without using private content. Remaining slide-17 gap: text placement/order comparison is still
+  broader than dash segmentation.
 - [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
   should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
@@ -6402,3 +6409,11 @@ zero dimension mismatches, deck MAE `8.946935`, changed16 `0.115528`, and the sa
 `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 remained unchanged at MAE `2.880739`, changed16
 `0.044888`, SSIM `0.920083`, so the current chart data-source work neither fixes nor worsens the known slide-17
 schema/text-placement issue.
+
+Private validation note, 2026-05-25: Re-ran `private-cases/lokad-value-based.json` after the Unicode dash-boundary
+text segmentation change. The run `artifacts/private-visual/lokad-value-based/20260525-222716` compared 84/84 pages
+with zero dimension mismatches, deck MAE `8.945271`, changed16 `0.115517`, and the same single
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 stayed visually neutral at MAE `2.881707`, changed16
+`0.044934`, SSIM `0.920078`, but PDF text inspection now emits independent candidate em-dash operations at the
+Office-observed positions. Remaining slide-17 work is broader text placement/order parity, not dash-boundary
+segmentation.

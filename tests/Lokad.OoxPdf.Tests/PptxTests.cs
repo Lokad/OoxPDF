@@ -4499,6 +4499,52 @@ internal static class PptxTests
         TestAssert.True(firstLineTexts[2].StartsWith("123", StringComparison.Ordinal), "Expected text after the hyphen to remain a separate positioned span for Office-style PDF text operations.");
     }
 
+    public static void PptxTypographyTextEmDashBoundariesRemainSeparateSpans()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:nvPr/></p:nvSpPr>
+                        <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm></p:spPr>
+                        <p:txBody>
+                          <a:bodyPr/>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Plan &#x2014; execute</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        string[] firstLineTexts = layout.Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .First()
+            .Spans
+            .Select(span => span.Text)
+            .Take(3)
+            .ToArray();
+
+        TestAssert.Equal("Plan ", firstLineTexts[0]);
+        TestAssert.Equal("\u2014", firstLineTexts[1]);
+        TestAssert.Equal(" ", firstLineTexts[2]);
+    }
+
     public static void PptxPrivateLayoutDiagnosticWhenRequested()
     {
         string? input = Environment.GetEnvironmentVariable("OOXPDF_PRIVATE_PPTX_PATH");

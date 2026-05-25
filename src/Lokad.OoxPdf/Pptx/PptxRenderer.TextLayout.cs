@@ -1177,7 +1177,7 @@ internal sealed partial class PptxRenderer
 
     private static bool IsOfficeTextOperationBoundaryPunctuation(char value)
     {
-        return value is '-' or '\u2010' or '\u2011' or '\u2012' or '\u2013';
+        return CharUnicodeInfo.GetUnicodeCategory(value) == UnicodeCategory.DashPunctuation;
     }
 
     private static double MeasureFlowSegmentBoundaryAdjustment(TextAdvanceEstimator advanceEstimator, string advanceText, int? previousCodePoint, double fontSize, string? typeface, bool bold, bool italic, double characterSpacing, bool kerningEnabled)
