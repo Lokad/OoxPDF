@@ -1175,6 +1175,14 @@ High-priority actions:
   bottom tick-label gates; Office/candidate title Y now matches at `475.97 pt`. Remaining gaps: title X is
   still about `8.9 pt` to the right, so title text extents/centering need a font-measurement-backed title-box
   model before a strict title-position gate is honest, and side category/value label positions remain open.
+- [x] 2026-05-25: Gate public horizontal-bar side category-label placement structurally.
+  The horizontal bar category-axis label band now uses the Office-PDF-observed side offset and a baseline
+  ratio aligned with the vertical value-axis label band instead of the prior low/right placement. The public
+  `pptx-ladder-11-chart-bar-clustered-port` manifest now gates both bottom `CategoryAxisTickLabel` records and
+  side `ValueAxisTickLabel` records under the chart-text harness. Visual run
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-115803` passed: side-label X deltas are
+  at most `0.70 pt` and Y deltas are at most `0.06 pt`. Remaining gap: title X/text extent alignment still
+  needs an Office title-box/font-measurement model before strict title gating.
 - [ ] Replace fixed chart auto tick target constants with an Office-aligned axis layout model that derives
   target tick density from axis length, label text extents, number format, orientation, and available label
   bands. The new horizontal-axis target is useful evidence, but it is still a named metric rule; the long-term
@@ -3873,8 +3881,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   box plus Office-style bottom value-axis placement. `pptx-ladder-11-chart-bar-clustered-port` now gates the
   plot box, the 10-segment vertical gridline group, axis strokes, and bottom value-axis tick labels within
   1 pt. The auto-generated series title now also classifies as `ChartTitleText` after its baseline is anchored
-  above the resolved plot box, but title X/text-width alignment and side category/value label positions remain
-  ungated.
+  above the resolved plot box, and the side category labels now gate within 1 pt after their label band was
+  realigned. Title X/text-width alignment remains ungated.
 - Observation: Per-point chart data labels preserved visibility/text/style overrides, but still dropped the
   label-local `c:layout/c:manualLayout` subtree that Office can use for explicit label placement.
   Evidence: `PptxSceneChartDataLabelOverride` now carries `PptxSceneChartManualLayout`, and the scene-builder
@@ -4389,6 +4397,13 @@ resolved chart plot box instead of the outer frame baseline. Public visual case
 classifies as `ChartTitleText`, and Office/candidate title Y both report `475.97 pt`. Remaining ungated gaps:
 title X is still about `8.9 pt` to the right, so strict title-position gating should wait for title-box/text
 extent alignment, and side category/value labels still need independent placement evidence.
+Horizontal bar side-label gate slice: `CategoryAxisHorizontalLeftOffsetRatio` and
+`CategoryAxisHorizontalBaselineRatio` now place horizontal-bar category labels in the Office-observed side
+band. Public visual case `pptx-ladder-11-chart-bar-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-115803` after adding
+`ValueAxisTickLabel` to the text gate; the 11 bottom labels and 5 side labels all compare within 1 pt, with
+side-label X deltas up to `0.70 pt` and Y deltas up to `0.06 pt`. Remaining ungated gap: title X/text extent
+alignment.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
 the chart text buckets passed for all five sampled families. A temporary ignored visual manifest
@@ -5160,3 +5175,7 @@ side label placement and title placement/classification.
 Revision note, 2026-05-25: Added the horizontal bar title-classification slice. The clustered-bar case now
 shows the auto-title in the `ChartTitleText` bucket with matching Y, while title X/text-measurement and side
 label placement remain explicit open work.
+
+Revision note, 2026-05-25: Added the horizontal bar side-label structural gate. The clustered-bar case now
+compares both bottom value-axis labels and side category labels within 1 pt; title X/text-measurement remains
+open.
