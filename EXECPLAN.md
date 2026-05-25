@@ -5227,3 +5227,14 @@ passed at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-122
 X delta `0.92 pt` and Y delta `0.00 pt`. Long-term gap: legend manual layout is still parsed but not consumed, and
 title/legend `layoutTarget` semantics need public Office-PDF probes across overlay/manual top, bottom, left, and
 right placements before the remaining metric constants can be collapsed into a typed chart layout model.
+
+Revision note, 2026-05-25: Closed the matching typed chart-layout consumption gap for explicit legends. The
+`ChartLegendLayout` render record now carries the parsed `PptxSceneChartManualLayout`, XML-only fallback rendering
+also reads `c:legend/c:layout/c:manualLayout`, and `RenderChartLegend` applies the shared chart box resolver when a
+manual legend box is present. `PptxSyntheticChartLegendManualBoxDrivesPlacement` locks the legend baseline under an
+explicit manual box. Focused chart tests passed with 32/32; `pptx-ladder-11-composite-chart-port` passed at
+`artifacts/visual/pptx-ladder-11-composite-chart-port/20260525-123154`; and the stricter line-chart legend gate
+passed at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-123211` with legend text still bounded
+by X `0.01 pt` and Y `0.35 pt`. Remaining long-term gap: the shared manual box resolver currently preserves the
+existing plot-area semantics and handles edge/factor modes, but `layoutTarget` and Office's exact internal legend
+text packing inside arbitrary manual boxes still need public Office-PDF probes before this can be called complete.

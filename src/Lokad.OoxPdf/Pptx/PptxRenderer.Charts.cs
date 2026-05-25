@@ -575,7 +575,7 @@ internal sealed partial class PptxRenderer
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, ReadSceneOrXmlValueAxisReversed(secondaryValueSceneAxis, secondaryValueAxis), horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide)));
                 }
-                fonts.AddRange(RenderChartLegend(graphics, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderBarDataLabels(
                     theme,
                     graphics,
@@ -627,7 +627,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries)));
                 }
-                fonts.AddRange(RenderChartLegend(graphics, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                     fonts.AddRange(RenderLineDataLabels(
                         theme,
                         graphics,
@@ -1008,6 +1008,26 @@ internal sealed partial class PptxRenderer
     private static bool IsManualLayoutFactorMode(string mode)
     {
         return string.Equals(mode, "factor", StringComparison.Ordinal);
+    }
+
+    private static PptxSceneChartManualLayout ReadManualLayout(XElement parent)
+    {
+        XElement? manualLayout = parent
+            .Element(ChartNamespace + "layout")
+            ?.Element(ChartNamespace + "manualLayout");
+        return manualLayout is null
+            ? default
+            : new PptxSceneChartManualLayout(
+                true,
+                ReadManualLayoutFactor(manualLayout, "x"),
+                ReadManualLayoutFactor(manualLayout, "y"),
+                ReadManualLayoutFactor(manualLayout, "w"),
+                ReadManualLayoutFactor(manualLayout, "h"),
+                ReadManualLayoutValue(manualLayout, "layoutTarget"),
+                ReadManualLayoutValue(manualLayout, "xMode"),
+                ReadManualLayoutValue(manualLayout, "yMode"),
+                ReadManualLayoutValue(manualLayout, "wMode"),
+                ReadManualLayoutValue(manualLayout, "hMode"));
     }
 
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
@@ -1449,7 +1469,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(position, overlay, Visible: true);
+        return new ChartLegendLayout(position, overlay, Visible: true, ReadManualLayout(legend));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxSceneChart? sceneChart, XDocument chartXml)
@@ -1460,7 +1480,7 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsDefined && sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true)
+            ? new ChartLegendLayout(sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout)
             : ChartLegendLayout.Hidden;
     }
 
@@ -1477,7 +1497,7 @@ internal sealed partial class PptxRenderer
         return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style)
+    private static IReadOnlyList<PdfFontResource> RenderChartLegend(PdfGraphicsBuilder graphics, ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style)
     {
         if (!layout.Visible || entries.Count == 0)
         {
@@ -1520,6 +1540,18 @@ internal sealed partial class PptxRenderer
             _ => plotBox.Y + plotBox.Height - lineHeight
         };
         double clipHeight = horizontal ? lineHeight * PptxChartMetricRules.LegendHorizontalClipHeightFactor : Math.Max(lineHeight, entries.Count * lineHeight);
+        double clipY = horizontal ? firstY : Math.Max(0d, firstY - (entries.Count - 1) * lineHeight);
+        if (TryBuildManualLayoutBox(layout.Layout, frame, new ChartLayoutBox(x, clipY, width, clipHeight), out ChartLayoutBox manualBox))
+        {
+            x = manualBox.X;
+            width = manualBox.Width;
+            clipY = manualBox.Y;
+            clipHeight = manualBox.Height;
+            firstY = horizontal
+                ? manualBox.Y
+                : manualBox.Y + manualBox.Height - lineHeight;
+        }
+
         var runs = new List<TextRun>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
         {
@@ -1548,7 +1580,7 @@ internal sealed partial class PptxRenderer
                 Math.Max(1d, entryWidth - markerWidth - textGap),
                 lineHeight,
                 x,
-                horizontal ? firstY : Math.Max(0d, firstY - (entries.Count - 1) * lineHeight),
+                clipY,
                 width,
                 clipHeight,
                 fontSize,
@@ -4714,9 +4746,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 
-    private readonly record struct ChartLegendLayout(string Position, bool Overlay, bool Visible)
+    private readonly record struct ChartLegendLayout(string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout)
     {
-        public static ChartLegendLayout Hidden { get; } = new("r", Overlay: false, Visible: false);
+        public static ChartLegendLayout Hidden { get; } = new("r", Overlay: false, Visible: false, default);
     }
 
     private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
