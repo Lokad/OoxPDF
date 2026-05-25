@@ -5620,3 +5620,22 @@ pie/doughnut arcs are still polygonal paths and polar plot/title constants still
 The durable target is a polar layout oracle that derives title reservation, legend reservation, centered plot
 circle, explosion envelope, label anchors, and Bezier arc operators together from OOXML plus Office PDF path
 structure instead of treating any single center/radius ratio as universal.
+
+Revision note, 2026-05-25: Closed the public `percentStacked` column-axis defect as chart-axis semantics
+rather than as a fixture-specific label replacement. Office exports a 100% stacked column chart with normalized
+bar geometry, a 0..100% value axis, and 10% major ticks even when the OOXML value axis has only an empty
+`c:scaling` element and no explicit `c:numFmt`. OOXPDF already normalized the stacked bar segments to 0..1, but
+the value axis stayed on the generic decimal path and could expose a 0..1.2 scale. Bar, line, and area chart
+rendering now carry the `percentStacked` grouping into value-axis extents, default major units, label formatting,
+and line-layout label-width estimation while preserving explicit OOXML/scene min, max, and number-format
+overrides. The regression guard `PptxPercentStackedColumnChartUsesPercentValueAxis` checks the emitted PDF
+font map for percent labels and rejects the old decimal-point axis. Focused `pptx-charts` tests passed with
+38/38, the tightened public `pptx-ladder-11-chart-column-100-stacked-port` gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-100-stacked-port/20260525-165222` with MAE
+`5.823969184027778`, changed16 `0.06262731481481482`, and empty diagnostics, the full public `pptx-charts`
+visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T16:54:06.2150905+02:00`, and `dotnet pack` succeeded. Remaining long-term gap: signed 100%-stacked values
+are still not structurally modeled; `GetStackedValueExtents` and `NormalizeStackedValue` only handle positive
+percent totals. The durable target is a typed stacked-value model that separates positive and negative totals
+per category, exposes normalized signed extents to all chart families, and feeds the same axis/label semantics
+from that model instead of deriving them ad hoc in each renderer path.

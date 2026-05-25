@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -9331,6 +9332,30 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bubble charts should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-11-chart-column-100-stacked-port.pptx");
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var collector = new DiagnosticCollector();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        string pdf = ReadPdfDecodedAscii(output);
+        TestAssert.True(
+            Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"),
+            "Expected percent-stacked value-axis labels to include a percent sign by default.");
+        TestAssert.True(
+            !Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002E>"),
+            "Percent-stacked value-axis labels should not use the generic 0..1.2 decimal scale.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Percent-stacked column charts should render without static fallback diagnostics.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Percent-stacked column charts should not emit unsupported chart diagnostics.");
+    }
+
     public static void PptxUnsupportedFeaturesEmitDiagnostics()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -9433,6 +9458,54 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
         PptxScene scene = new PptxSceneBuilder().Build(document, package);
         return scene.Slides[0].SlideNodes[0].Chart;
+    }
+
+    private static string ReadPdfDecodedAscii(string path)
+    {
+        byte[] bytes = File.ReadAllBytes(path);
+        string pdf = Encoding.ASCII.GetString(bytes);
+        var text = new StringBuilder(pdf);
+        int searchStart = 0;
+        while (true)
+        {
+            int streamMarker = pdf.IndexOf("stream", searchStart, StringComparison.Ordinal);
+            if (streamMarker < 0)
+            {
+                break;
+            }
+
+            int streamStart = streamMarker + "stream".Length;
+            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\r')
+            {
+                streamStart++;
+            }
+
+            if (streamStart < bytes.Length && bytes[streamStart] == (byte)'\n')
+            {
+                streamStart++;
+            }
+
+            int streamEnd = pdf.IndexOf("endstream", streamStart, StringComparison.Ordinal);
+            if (streamEnd < 0)
+            {
+                break;
+            }
+
+            int dictionaryStart = Math.Max(0, pdf.LastIndexOf("<<", streamMarker, StringComparison.Ordinal));
+            string dictionary = pdf.Substring(dictionaryStart, streamMarker - dictionaryStart);
+            if (dictionary.Contains("/FlateDecode", StringComparison.Ordinal))
+            {
+                using var input = new MemoryStream(bytes, streamStart, streamEnd - streamStart);
+                using var deflate = new ZLibStream(input, CompressionMode.Decompress);
+                using var output = new MemoryStream();
+                deflate.CopyTo(output);
+                text.Append(Encoding.ASCII.GetString(output.ToArray()));
+            }
+
+            searchStart = streamEnd + "endstream".Length;
+        }
+
+        return text.ToString();
     }
 
     private static double ReadOnlyTextBaseline(string pdf)
