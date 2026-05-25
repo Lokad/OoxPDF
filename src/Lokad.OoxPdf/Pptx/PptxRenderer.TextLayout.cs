@@ -498,7 +498,78 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph, bool attachSpacesToFollowingWord)
     {
-        return new PptxTextFlowParagraph(paragraph, paragraph.Style, paragraph.Runs.Select(run => BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties, attachSpacesToFollowingWord)).ToArray());
+        var runs = new List<PptxTextFlowRun>(paragraph.Runs.Count);
+        bool hideLeadingSpacesAfterBoundary = false;
+        foreach (PptxTextRunModel run in paragraph.Runs)
+        {
+            PptxTextFlowRun flowRun = BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties, attachSpacesToFollowingWord);
+            runs.Add(flowRun with { Segments = HideSpacesAfterBoundaryPunctuation(flowRun.Segments, ref hideLeadingSpacesAfterBoundary) });
+        }
+
+        return new PptxTextFlowParagraph(paragraph, paragraph.Style, runs.ToArray());
+    }
+
+    private static IReadOnlyList<PptxTextFlowSegment> HideSpacesAfterBoundaryPunctuation(IReadOnlyList<PptxTextFlowSegment> segments, ref bool hideLeadingSpaces)
+    {
+        var rewritten = new List<PptxTextFlowSegment>(segments.Count);
+        foreach (PptxTextFlowSegment segment in segments)
+        {
+            foreach (PptxTextFlowSegment current in HideLeadingSpacesIfNeeded(segment, hideLeadingSpaces))
+            {
+                rewritten.Add(current);
+                if (current.Kind == PptxTextFlowSegmentKind.BoundaryPunctuation)
+                {
+                    hideLeadingSpaces = true;
+                }
+                else if (current.AdvanceText.Any(static c => c != ' '))
+                {
+                    hideLeadingSpaces = false;
+                }
+            }
+        }
+
+        return rewritten.ToArray();
+    }
+
+    private static IReadOnlyList<PptxTextFlowSegment> HideLeadingSpacesIfNeeded(PptxTextFlowSegment segment, bool hideLeadingSpaces)
+    {
+        if (!hideLeadingSpaces ||
+            !segment.Draw ||
+            segment.Kind != PptxTextFlowSegmentKind.Text ||
+            segment.Text.Length == 0 ||
+            segment.AdvanceText.Length == 0 ||
+            segment.Text[0] != ' ' ||
+            segment.AdvanceText[0] != ' ')
+        {
+            return [segment];
+        }
+
+        int hiddenLength = 0;
+        while (hiddenLength < segment.AdvanceText.Length &&
+            hiddenLength < segment.Text.Length &&
+            segment.AdvanceText[hiddenLength] == ' ' &&
+            segment.Text[hiddenLength] == ' ')
+        {
+            hiddenLength++;
+        }
+
+        string hiddenAdvance = segment.AdvanceText[..hiddenLength];
+        PptxTextFlowSegment hidden = new(string.Empty, hiddenAdvance, PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true, segment.FontScale);
+        if (hiddenLength < segment.Text.Length)
+        {
+            return
+            [
+                hidden,
+                segment with
+                {
+                    Text = segment.Text[hiddenLength..],
+                    AdvanceText = segment.AdvanceText[hiddenLength..],
+                    PreventCoalesce = true
+                }
+            ];
+        }
+
+        return [hidden];
     }
 
     private static PptxTextFlowRun BuildTextFlowRun(PptxTextRunModel run, XElement? defaultRunProperties, bool attachSpacesToFollowingWord)
@@ -1126,8 +1197,23 @@ internal sealed partial class PptxRenderer
     {
         var builder = new StringBuilder();
         bool nextPreventsCoalesce = false;
+        bool hideLeadingSpaces = false;
         foreach (char c in text)
         {
+            if (hideLeadingSpaces && c == ' ')
+            {
+                if (builder.Length > 0)
+                {
+                    yield return new PptxTextFlowSegment(builder.ToString(), builder.ToString(), PptxTextFlowSegmentKind.Text, Draw: true, PreventCoalesce: nextPreventsCoalesce);
+                    builder.Clear();
+                }
+
+                yield return new PptxTextFlowSegment(string.Empty, c.ToString(), PptxTextFlowSegmentKind.HiddenAdvance, Draw: false, PreventCoalesce: true);
+                nextPreventsCoalesce = true;
+                continue;
+            }
+
+            hideLeadingSpaces = false;
             if (c == '\u00A0' || c == '\u202F')
             {
                 if (builder.Length > 0)
@@ -1163,6 +1249,7 @@ internal sealed partial class PptxRenderer
 
                 yield return new PptxTextFlowSegment(c.ToString(), c.ToString(), PptxTextFlowSegmentKind.BoundaryPunctuation, Draw: true, PreventCoalesce: true);
                 nextPreventsCoalesce = true;
+                hideLeadingSpaces = true;
                 continue;
             }
 

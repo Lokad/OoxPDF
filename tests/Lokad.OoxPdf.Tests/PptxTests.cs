@@ -4542,7 +4542,7 @@ internal static class PptxTests
 
         TestAssert.Equal("Plan ", firstLineTexts[0]);
         TestAssert.Equal("\u2014", firstLineTexts[1]);
-        TestAssert.Equal(" ", firstLineTexts[2]);
+        TestAssert.Equal("execute", firstLineTexts[2]);
     }
 
     public static void PptxPrivateLayoutDiagnosticWhenRequested()
