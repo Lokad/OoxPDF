@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-11-chart-plot-layout-target-outer-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-plot-layout-target-outer-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "manual-layout", "layout-target", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 7.5,
+    "maxChangedPixelRatioAtThreshold16": 0.074,
+    "minForegroundColorHistogramCorrelation": 0.995
+  }
+}

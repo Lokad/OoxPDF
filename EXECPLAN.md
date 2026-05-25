@@ -5257,3 +5257,11 @@ the inner-target plot bounds near `330.48,106.90..776.88,400.66`, while outer-ta
 `443.15,106.90..769.67,365.76`; OOXPDF currently emits the same `311.33,103.41..757.73,397.17` for both. Do not
 paper over this with chart-specific offsets. The durable architecture needs separate outer plot-area and inner
 data-plot boxes, with axis-label/axis-title reservations derived structurally before manual `layoutTarget` is applied.
+
+Revision note, 2026-05-25: Promoted the two public-safe plot-area `layoutTarget` probes into committed visual cases:
+`pptx-ladder-11-chart-plot-layout-target-inner-probe` and
+`pptx-ladder-11-chart-plot-layout-target-outer-probe`. Their current gates are intentionally raster-only and loose
+enough to pass with today's renderer while preserving the Office-backed documents for future structural tightening.
+Both cases passed through `tools/CheckVisualCase.ps1` at
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260525-124746` and
+`artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260525-124746`.
