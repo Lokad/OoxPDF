@@ -1018,6 +1018,16 @@ High-priority actions:
   210 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar axes,
   value-axis side/cross-axis placement, reversed scales, series baselines, and secondary axes still need
   separate Office-PDF-backed slices.
+- [x] 2026-05-25: Consume value-axis reversed orientation on the supported vertical bar/line value-position
+  path. `c:scaling/c:orientation val="maxMin"` now flows from scene/XML axis metadata into value-axis
+  labels, gridline coordinates, vertical category-axis crossing placement, line-series point positions, and
+  clustered vertical bar endpoints instead of preserving the metadata without using it. A synthetic two-point
+  line chart locks the inverted line geometry. Focused chart tests passed with 15 passed, 0 failed,
+  0 skipped; the clustered-column public visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-021718`; the full suite passed with
+  211 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bars, stacked
+  bar/column accumulation, chart data-label positions, secondary-axis orientation, and Office-backed public
+  visual coverage for reversed axes still need separate slices.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1383,9 +1393,11 @@ High-priority actions:
   - [x] Preserve chart style IDs in `PptxSceneChart` as a prerequisite for chart-style inherited defaults.
   - [x] Consume value-axis crossing metadata for bar/line chart gridline endpoint filtering.
   - [x] Consume value-axis crossing metadata for vertical bar/line category-axis stroke placement.
-  - [ ] Consume axis crossing metadata for horizontal bar axes, value-axis side/cross-axis placement, series
-    coordinate baselines, reversed axes, and secondary axes instead of relying on right-side XML/layout
-    assumptions.
+  - [x] Consume value-axis reversed orientation for vertical bar/line gridlines, value labels, crossing-line
+    placement, line-series geometry, and clustered vertical bar endpoints.
+  - [ ] Consume axis crossing/orientation metadata for horizontal bars, stacked bars/columns, data labels,
+    value-axis side/cross-axis placement, series coordinate baselines, and secondary axes instead of relying
+    on right-side XML/layout assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -4514,6 +4526,22 @@ with 14 passed, 0 failed, 0 skipped; the clustered-column public visual gate pas
 210 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining work deliberately stays open for
 separate evidence: horizontal bar axis crossing, secondary-axis binding, reversed axis orientation, and
 whether series baselines should move with axis crossing or stay tied to zero for each chart family.
+
+chart reversed value-axis orientation consumption / 2026-05-25:
+The renderer now consumes scene/XML `c:scaling/c:orientation val="maxMin"` for the supported vertical
+bar/line value-position path. A shared value-to-plot-coordinate helper applies the reversed ratio to
+gridline coordinates, value-axis tick label baselines, vertical category-axis crossing-line placement,
+line-series points, and clustered vertical bar rectangle endpoints. This keeps the renderer aligned with the
+typed `PptxSceneChartAxis.IsReversed` metadata instead of silently ignoring it after parsing. A synthetic
+line chart with values `0` then `30` proves that `maxMin` places the lower value above the higher value in
+the emitted diagonal PDF stroke. The focused `pptx-charts` non-slow group passed with 15 passed, 0 failed,
+0 skipped; the clustered-column public visual gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-021718`; the full suite passed with
+211 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. This is not the end of axis orientation work:
+horizontal bar axes are intentionally left unchanged in this slice, stacked bar/column accumulation still
+needs a direction-aware model, chart data labels still use the older position formulas, secondary axes need
+independent orientation, and a public Office-PDF visual case for reversed axes should be added before calling
+this Office-complete.
 ```
 
 Representative public visual cases already exist for PPTX blank/shapes/text/images/tables/corporate-theme and

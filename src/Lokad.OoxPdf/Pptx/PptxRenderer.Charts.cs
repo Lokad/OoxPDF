@@ -388,6 +388,7 @@ internal sealed partial class PptxRenderer
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeries, grouping));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
+                bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
                 bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
@@ -396,7 +397,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
-                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -450,6 +451,7 @@ internal sealed partial class PptxRenderer
                         extraValueExtents,
                         extraAxisUnits,
                         ReadSceneOrXmlValueAxisCrossingValue(extraValueSceneAxis, extraValueAxis, extraValueExtents),
+                        ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         extraBarPlot?.VaryColors ?? ReadChartVaryColors(extraBarChart),
                         extraBarPlot?.GapWidth ?? ReadChartGapWidth(extraBarChart),
                         extraBarPlot?.Overlap ?? ReadChartOverlap(extraBarChart));
@@ -483,7 +485,7 @@ internal sealed partial class PptxRenderer
                         GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true) > 0;
                     if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                     {
-                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
+                        fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars, useTextSizedWidth: sameSideSecondaryValueAxis));
                     }
 
                     if (!horizontalBars)
@@ -491,7 +493,7 @@ internal sealed partial class PptxRenderer
                         if (secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                         {
                             int sideSlot = GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: false, defaultSecondaryRightSide: true);
-                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
+                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, ReadSceneOrXmlValueAxisReversed(secondaryValueSceneAxis, secondaryValueAxis), horizontalBars: false, rightSide: true, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
                         }
                         else
                         {
@@ -501,7 +503,7 @@ internal sealed partial class PptxRenderer
                 }
                 else if (!horizontalBars && secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, horizontalBars: false, rightSide: true));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, ReadSceneOrXmlValueAxisReversed(secondaryValueSceneAxis, secondaryValueAxis), horizontalBars: false, rightSide: true));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderBarDataLabels(
@@ -537,10 +539,11 @@ internal sealed partial class PptxRenderer
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxisForScale, theme);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale);
+                bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxisForScale);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents));
+                RenderLineChart(graphics, plotBox, lineSeries, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "catAx");
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -550,7 +553,7 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, horizontalBars: false));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, plotBox, BuildStrokeLegendEntries(linePlot, lineChart, seriesStrokes), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -2192,7 +2195,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CCA");
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
+    private static IReadOnlyList<PdfFontResource> RenderChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits axisUnits, bool valueAxisReversed, bool horizontalBars, bool rightSide = false, int axisSideSlot = 0, bool useTextSizedWidth = false)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
@@ -2211,7 +2214,7 @@ internal sealed partial class PptxRenderer
         foreach (double value in tickValues)
         {
             string label = FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis);
-            double offset = (value - extents.Min) / range;
+            double offset = GetChartValuePlotRatio(extents, value, valueAxisReversed);
             double x;
             double y;
             double width;
@@ -2304,7 +2307,7 @@ internal sealed partial class PptxRenderer
 
         ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(rightSceneAxis, rightValueAxis, fallback);
         ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(rightSceneAxis, rightValueAxis);
-        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisUnits, horizontalBars: false, rightSide: true);
+        return RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, rightValueAxis, rightSceneAxis, extents, axisUnits, ReadSceneOrXmlValueAxisReversed(rightSceneAxis, rightValueAxis), horizontalBars: false, rightSide: true);
     }
 
     private static XElement? ReadSecondaryRightValueAxis(XDocument chartXml)
@@ -2430,11 +2433,26 @@ internal sealed partial class PptxRenderer
         return extents.Min > 0d ? extents.Min : extents.Max;
     }
 
-    private static double ChartValueToPlotCoordinate(ChartValueExtents extents, double? value, double plotStart, double plotLength)
+    private static bool ReadSceneOrXmlValueAxisReversed(PptxSceneChartAxis? sceneAxis, XElement? valueAxis)
+    {
+        return sceneAxis?.IsReversed ??
+            string.Equals(
+                (string?)valueAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val"),
+                "maxMin",
+                StringComparison.Ordinal);
+    }
+
+    private static double GetChartValuePlotRatio(ChartValueExtents extents, double value, bool reversed)
     {
         double range = Math.Max(1d, extents.Max - extents.Min);
-        double boundedValue = Math.Clamp(value ?? 0d, extents.Min, extents.Max);
-        return plotStart + plotLength * (boundedValue - extents.Min) / range;
+        double boundedValue = Math.Clamp(value, extents.Min, extents.Max);
+        double ratio = (boundedValue - extents.Min) / range;
+        return reversed ? 1d - ratio : ratio;
+    }
+
+    private static double ChartValueToPlotCoordinate(ChartValueExtents extents, double? value, double plotStart, double plotLength, bool reversed)
+    {
+        return plotStart + plotLength * GetChartValuePlotRatio(extents, value ?? 0d, reversed);
     }
 
     private static double ChooseChartAxisMajorUnit(double range)
@@ -3053,7 +3071,7 @@ internal sealed partial class PptxRenderer
         return ChartPalette(null, theme, index);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -3066,19 +3084,20 @@ internal sealed partial class PptxRenderer
         bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
         (double minValue, double maxValue) = (valueExtents.Min, valueExtents.Max);
         double valueRange = Math.Max(1d, maxValue - minValue);
+        valueAxisReversed = horizontalBars ? false : valueAxisReversed;
 
-        double zeroX = plotX + (-minValue) / valueRange * plotWidth;
-        double zeroY = plotY + (-minValue) / valueRange * plotHeight;
-        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight);
+        double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisReversed);
+        double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, valueAxisReversed);
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
         if (minorGridlines)
         {
             if (horizontalBars)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, major: false, gridlineStyle.Minor);
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
             }
             else
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, major: false, gridlineStyle.Minor);
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
             }
         }
 
@@ -3086,11 +3105,11 @@ internal sealed partial class PptxRenderer
         {
             if (horizontalBars)
             {
-                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, major: true, gridlineStyle.Major);
+                DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
             }
             else
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, major: true, gridlineStyle.Major);
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
             }
         }
 
@@ -3162,10 +3181,11 @@ internal sealed partial class PptxRenderer
                 }
 
                 double value = values[category];
-                double barHeight = Math.Abs(value) / valueRange * plotHeight;
                 ChartSeriesFill fill = ChartPointCategoryOrSeriesColor(theme, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills);
                 double barX = categoryX + seriesIndex * step;
-                double barY = value >= 0d ? zeroY : zeroY - barHeight;
+                double valueY = ChartValueToPlotCoordinate(valueExtents, value, plotY, plotHeight, valueAxisReversed);
+                double barY = Math.Min(zeroY, valueY);
+                double barHeight = Math.Abs(valueY - zeroY);
                 FillChartRectangle(graphics, barX, barY, barWidth, barHeight, fill);
                 StrokeChartPointRectangle(graphics, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight);
             }
@@ -3220,7 +3240,7 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(min, max);
     }
 
-    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool major, ChartSeriesStroke? gridlineStroke)
+    private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke)
     {
         ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
         if (stroke.Alpha <= 0.001d)
@@ -3239,7 +3259,7 @@ internal sealed partial class PptxRenderer
         bool hasPath = false;
         foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue))
         {
-            double y = plotY + plotHeight * (value - extents.Min) / range;
+            double y = ChartValueToPlotCoordinate(extents, value, plotY, plotHeight, reversed);
             graphics.MoveTo(plotX, y);
             graphics.LineTo(plotX + plotWidth, y);
             hasPath = true;
@@ -3256,7 +3276,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool major, ChartSeriesStroke? gridlineStroke)
+    private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke)
     {
         ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
         if (stroke.Alpha <= 0.001d)
@@ -3275,7 +3295,7 @@ internal sealed partial class PptxRenderer
         bool hasPath = false;
         foreach (double value in GetChartGridlineValues(extents, explicitUnit, crossingValue))
         {
-            double x = plotX + plotWidth * (value - extents.Min) / range;
+            double x = ChartValueToPlotCoordinate(extents, value, plotX, plotWidth, reversed);
             graphics.MoveTo(x, plotY);
             graphics.LineTo(x, plotY + plotHeight);
             hasPath = true;
@@ -3643,7 +3663,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -3654,16 +3674,16 @@ internal sealed partial class PptxRenderer
         double maxValue = valueExtents.Max;
         double minValue = valueExtents.Min;
         double valueRange = Math.Max(1d, maxValue - minValue);
-        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight);
+        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
 
         if (minorGridlines)
         {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, major: false, gridlineStyle.Minor);
+            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
         }
 
         if (majorGridlines)
         {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, major: true, gridlineStyle.Major);
+            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
         }
 
         ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
@@ -3715,7 +3735,7 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < values.Count; i++)
             {
                 double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
-                double pointY = plotY + (values[i] - minValue) / valueRange * plotHeight;
+                double pointY = ChartValueToPlotCoordinate(valueExtents, values[i], plotY, plotHeight, valueAxisReversed);
                 points.Add((pointX, pointY));
             }
 

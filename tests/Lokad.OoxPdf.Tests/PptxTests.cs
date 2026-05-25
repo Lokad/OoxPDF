@@ -7332,6 +7332,76 @@ internal static class PptxTests
             "When c:crosses is max, the category-axis line should be placed at the value-axis maximum.");
     }
 
+    public static void PptxSyntheticChartValueAxisReversedOrientationInvertsLineGeometry()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea>
+                  <c:lineChart>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>0</c:v></c:pt><c:pt idx="1"><c:v>30</c:v></c:pt></c:numLit></c:val></c:ser>
+                    <c:axId val="1"/><c:axId val="2"/>
+                  </c:lineChart>
+                  <c:catAx>
+                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+                  </c:catAx>
+                  <c:valAx>
+                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="30"/></c:scaling>
+                  </c:valAx>
+                  </c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        Match diagonalLine = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+S")
+            .Cast<Match>()
+            .FirstOrDefault(match =>
+            {
+                double x1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture);
+                double y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture);
+                double x2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture);
+                double y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture);
+                return Math.Abs(x2 - x1) > 100d && Math.Abs(y2 - y1) > 100d;
+            }) ?? Match.Empty;
+        TestAssert.True(diagonalLine.Success, "Expected a diagonal two-point line-series stroke.");
+        double firstY = double.Parse(diagonalLine.Groups["y1"].Value, CultureInfo.InvariantCulture);
+        double secondY = double.Parse(diagonalLine.Groups["y2"].Value, CultureInfo.InvariantCulture);
+        TestAssert.True(firstY > secondY,
+            "With c:scaling/c:orientation maxMin, the lower value should plot above the higher value.");
+    }
+
     public static void PptxSyntheticChartManualLayoutEdgeModesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
