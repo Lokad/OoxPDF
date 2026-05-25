@@ -13,10 +13,10 @@
     "maxChangedPixelRatioAtThreshold16": 0.033,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
-    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate"],
+    "compareChartGraphicsStructureKinds": ["GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "HorizontalLine"],
     "maxChartTextStructurePositionDelta": 1.0,
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"]
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

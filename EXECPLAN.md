@@ -5205,3 +5205,14 @@ locks `autoTitleDeleted=true` as an explicit suppression of inferred titles, and
 `PptxChartAutoTitleDoesNotInventAmbiguousMultiSeriesTitle` keeps multi-series charts titleless until public
 Office evidence defines a broader rule. A small chart-scene fixture helper now keeps these probes model-level and
 independent of renderer pixel tolerances. Focused chart tests passed with 30/30.
+
+Revision note, 2026-05-25: Resolved the public line-chart right-legend structural gap with Office-PDF-observed
+side stroke legend metrics. The renderer now uses a side-stroke legend path for vertical line legends: the text
+baseline block is centered against the plot area, line-swatch width/gap follows the Office PDF structure, and the
+swatch strokes are emitted as comparable horizontal lines instead of short marker-sized segments. The stricter
+`pptx-ladder-11-chart-line-3series-port` gate now compares `LegendText` plus `HorizontalLine` legend swatches;
+the public visual passed at `artifacts/visual/pptx-ladder-11-chart-line-3series-port/20260525-122105` with legend
+text deltas bounded by X `0.01 pt` and Y `0.35 pt`, and focused chart tests passed with 30/30. Long-term gap:
+legend layout should move from observed metric constants into a typed legend layout model that can cover manual
+layouts, overlay, fill-marker legends, top/bottom packing, and chart-family differences without additional
+renderer-local branches.
