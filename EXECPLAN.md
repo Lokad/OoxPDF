@@ -6395,3 +6395,10 @@ and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minim
 Remaining long-term gap: workbook resolution is still an in-renderer helper with simple cell/range formulas and
 string/double vectors. It is not yet a reusable chart-data object with source freshness, blank-cell policy, table/
 defined-name support, multi-sheet unions, date/category typing, or explicit stale-cache reconciliation.
+
+Private validation note, 2026-05-25: Re-ran `private-cases/lokad-value-based.json` after the scene/workbook chart
+resolution change. The run `artifacts/private-visual/lokad-value-based/20260525-221126` compared 84/84 pages with
+zero dimension mismatches, deck MAE `8.946935`, changed16 `0.115528`, and the same single
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 remained unchanged at MAE `2.880739`, changed16
+`0.044888`, SSIM `0.920083`, so the current chart data-source work neither fixes nor worsens the known slide-17
+schema/text-placement issue.
