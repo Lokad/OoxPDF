@@ -5189,3 +5189,13 @@ at `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-120518` wi
 and Y `0.00 pt`; focused chart tests passed with 27/27. Remaining long-term gap: auto-title text derivation is
 still narrow and bar-oriented in `ReadChartTitleText`; it should become a typed chart-scene rule that handles
 Office's title inference across chart families instead of a renderer-local single-series bar special case.
+
+Revision note, 2026-05-25: Promoted auto-chart-title inference into the typed chart scene model. `PptxSceneChartTitle`
+now records whether a title was inferred by Office-style auto-title behavior, the scene builder infers the title
+from a single named series across chart families, and the renderer consumes that provenance instead of re-reading
+raw XML or carrying a bar-only title fallback. `PptxSyntheticChartAutoTitleUsesOfficeScaledSize` now asserts the
+scene-owned inferred title, and `PptxChartAutoTitleUsesSingleSeriesNameForLineCharts` prevents the rule from
+regressing back to bar-only logic. Focused chart tests passed with 28/28. Remaining evidence gap: the typed rule is
+currently the observed single-series-name case; public Office-PDF probes are still needed for multi-series charts,
+blank series names, explicit title deletion, and chart families where Office may use a default title string rather
+than a series name.
