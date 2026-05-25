@@ -6065,3 +6065,14 @@ passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
 long-term gap: the new frame type is still produced from metric constants. The next structural improvement should
 feed radar label frames from layout evidence such as chart title/legend reserves, marker envelope, and Office PDF
 text/frame observations, then apply the same frame contract to non-radar chart labels.
+
+Revision note, 2026-05-25: Removed an obsolete loose radar graphics oracle gate. After the radar center/radius and
+grouped path work, the compared `RadarRingGridGroupCandidate` and `RadarSpokeGroupCandidate` bounds no longer need
+the old `36 pt` tolerance: the marker fixture is effectively exact, and the filled fixture's largest ring/spoke
+bounds drift is `0.61 pt`. Both public radar manifests now require `maxChartGraphicsStructureBoundsDelta` of
+`0.75 pt` while keeping the stricter path-geometry, operator, segment-count, command-count, stroke color, cap, and
+join gates. Validation: the marker radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-200443`; the filled radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-200443`. Remaining long-term gap: this tightens
+the existing radar grid/spoke oracle but does not yet model filled radar area/series paths, marker envelopes, or
+chart title/legend reserve structurally.

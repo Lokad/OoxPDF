@@ -11,7 +11,7 @@
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 3.3,
     "maxChangedPixelRatioAtThreshold16": 0.04,
-    "maxChartGraphicsStructureBoundsDelta": 36,
+    "maxChartGraphicsStructureBoundsDelta": 0.75,
     "maxChartGraphicsStructureLineWidthDelta": 0.01,
     "compareChartGraphicsStructureKinds": [
       "RadarRingGridGroupCandidate",
