@@ -582,6 +582,8 @@ internal sealed record PdfTextOperation(
     }
 }
 
+internal sealed record PdfPathCommand(string Operator, IReadOnlyList<double> Values);
+
 internal sealed record PdfGraphicsOperation(
     int? PageNumber,
     int ObjectNumber,
@@ -602,7 +604,8 @@ internal sealed record PdfGraphicsOperation(
     string FillColor,
     string Dash,
     int LineCap,
-    int LineJoin)
+    int LineJoin,
+    IReadOnlyList<PdfPathCommand> PathCommands)
 {
     private static readonly Regex TokenRegex = new(
         @"(?s)\[[^\]]*\]|\((?:\\.|[^\\)])*\)|<[^>]*>|/[^\s\[\]()<>{}%]+|-?(?:\d+\.?\d*|\.\d+)|[A-Za-z\*]+",
@@ -690,12 +693,14 @@ internal sealed record PdfGraphicsOperation(
                         state.CurrentMatrix.Transform(cubic[4], cubic[5]));
                     break;
                 case "v" when TryReadNumbers(operands, 4, out double[] cubicV):
-                    path.CurveTo(
+                    path.ShorthandCurveTo(
+                        "v",
                         state.CurrentMatrix.Transform(cubicV[0], cubicV[1]),
                         state.CurrentMatrix.Transform(cubicV[2], cubicV[3]));
                     break;
                 case "y" when TryReadNumbers(operands, 4, out double[] cubicY):
-                    path.CurveTo(
+                    path.ShorthandCurveTo(
+                        "y",
                         state.CurrentMatrix.Transform(cubicY[0], cubicY[1]),
                         state.CurrentMatrix.Transform(cubicY[2], cubicY[3]));
                     break;
@@ -782,7 +787,8 @@ internal sealed record PdfGraphicsOperation(
             state.FillColor,
             state.Dash,
             state.LineCap,
-            state.LineJoin));
+            state.LineJoin,
+            path.GetCommands()));
     }
 
     private static bool TryReadNumbers(IReadOnlyList<string> operands, int count, out double[] values)
@@ -827,6 +833,7 @@ internal sealed record PdfGraphicsOperation(
     private sealed class PdfPathBuilder
     {
         private readonly List<PdfPoint> points = new();
+        private readonly List<PdfPathCommand> commands = new();
         private int segments;
         private int moves;
         private int lines;
@@ -838,6 +845,7 @@ internal sealed record PdfGraphicsOperation(
         public void MoveTo(PdfPoint point)
         {
             points.Add(point);
+            commands.Add(new PdfPathCommand("m", new[] { Round(point.X), Round(point.Y) }));
             moves++;
             startPoint = point;
             currentPoint = point;
@@ -846,6 +854,7 @@ internal sealed record PdfGraphicsOperation(
         public void LineTo(PdfPoint point)
         {
             points.Add(point);
+            commands.Add(new PdfPathCommand("l", new[] { Round(point.X), Round(point.Y) }));
             currentPoint = point;
             segments++;
             lines++;
@@ -856,15 +865,35 @@ internal sealed record PdfGraphicsOperation(
             points.Add(firstControl);
             points.Add(secondControl);
             points.Add(endPoint);
+            commands.Add(new PdfPathCommand(
+                "c",
+                new[]
+                {
+                    Round(firstControl.X),
+                    Round(firstControl.Y),
+                    Round(secondControl.X),
+                    Round(secondControl.Y),
+                    Round(endPoint.X),
+                    Round(endPoint.Y)
+                }));
             currentPoint = endPoint;
             segments++;
             curves++;
         }
 
-        public void CurveTo(PdfPoint control, PdfPoint endPoint)
+        public void ShorthandCurveTo(string op, PdfPoint control, PdfPoint endPoint)
         {
             points.Add(control);
             points.Add(endPoint);
+            commands.Add(new PdfPathCommand(
+                op,
+                new[]
+                {
+                    Round(control.X),
+                    Round(control.Y),
+                    Round(endPoint.X),
+                    Round(endPoint.Y)
+                }));
             currentPoint = endPoint;
             segments++;
             curves++;
@@ -874,6 +903,7 @@ internal sealed record PdfGraphicsOperation(
         {
             if (startPoint is not null)
             {
+                commands.Add(new PdfPathCommand("h", Array.Empty<double>()));
                 currentPoint = startPoint;
                 segments++;
                 closes++;
@@ -918,9 +948,12 @@ internal sealed record PdfGraphicsOperation(
             return true;
         }
 
+        public IReadOnlyList<PdfPathCommand> GetCommands() => commands.ToArray();
+
         public void Clear()
         {
             points.Clear();
+            commands.Clear();
             segments = 0;
             moves = 0;
             lines = 0;

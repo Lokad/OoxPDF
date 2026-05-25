@@ -2022,6 +2022,15 @@ High-priority actions:
     samples outside the inferred plot box. The line-chart gate now compares the three right-legend line
     swatches, and the composite-chart gate now compares the three top-legend marker swatches instead of the
     generic marker bucket.
+  - [x] Preserve transformed PDF path commands in `PdfInspect` graphics-operation JSON and derive radar spoke
+    center/radius from repeated move/line pairs in `ClassifyPdfChartGraphics.ps1`. The filled-radar public
+    manifest now gates this path-derived geometry within `0.5 pt`; the two-series radar case intentionally
+    remains open because Office's spoke center/radius are `432,288 / 182.56 pt` while the candidate still emits
+    `432,270 / 165.24 pt`.
+  - [ ] Explain and replace the two-series radar center/radius mismatch with a typed polar chart layout rule.
+    Do not change the shared radar center/radius constants blindly: the filled-radar fixture is already aligned
+    within `0.5 pt`, so the two-series mismatch is layout-context-specific evidence, not a generic radar-scale
+    correction.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
@@ -4093,6 +4102,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   chart drawing. Derived structures such as gridline-plus-axis plot boxes, legend marker rectangles, and typed
   tick/legend text buckets are closer to the chart semantics needed to eliminate renderer heuristics.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Preserve transformed PDF path commands in the inspection oracle when bounds are not enough, and use
+  those commands to derive semantic chart geometry before changing renderer constants.
+  Rationale: Radar spoke bounds obscure the actual polar center because a five-sided polygon is asymmetric.
+  Repeated `m`/`l` path commands reveal the Office center and radius directly. This showed that filled radar is
+  already structurally aligned while two-series radar is not, so a shared center/radius tweak would regress a
+  passing public case and would not be an Office-aligned rule.
+  Date/Author: 2026-05-25 / Codex.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is
   feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation
   targets.
@@ -5889,3 +5905,19 @@ changed-pixel ratio `0.1055`; the full public `pptx-charts` family passed 28/28 
 `artifacts/visual/reports/pptx-charts.json` generated `2026-05-25T19:03:17.7309827+02:00`; and `dotnet pack`
 succeeded. Remaining long-term radar gap is now almost entirely geometry and labels: derive the radar
 center/radius/label frame from Office-PDF evidence instead of the current polar metric ratios.
+
+Revision note, 2026-05-25: Extended the chart structural oracle from path counts and bounds to actual
+transformed path commands. `PdfInspect` now writes compact `PathCommands` for graphics operations, the chart
+classifier derives `PathCenterX`, `PathCenterY`, and `PathRadius` for radar spoke groups, and
+`ComparePdfGraphicsOperations.ps1` plus `CheckVisualCase.ps1` can opt into path-geometry gates. This avoided a
+bad generic radar-constant change: the filled radar fixture is already aligned at Office `432,270.36 / 164.88 pt`
+versus candidate `432,270 / 165.24 pt`, while the two-series radar fixture remains misaligned at Office
+`432,288 / 182.56 pt` versus candidate `432,270 / 165.24 pt`. The filled radar public manifest now gates the
+path-derived geometry within `0.5 pt`; the two-series manifest keeps the existing structural/style gates and
+records the center/radius mismatch as a layout-context-specific open item. Validation: `dotnet build
+tools\Lokad.OoxPdf.PdfInspect\Lokad.OoxPdf.PdfInspect.csproj --tl:off --nologo -v minimal` succeeded; focused
+`pptx-charts` tests passed 38/38; the two-series radar case passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-191019`; the filled radar path-geometry gate
+passed at `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-191024`; the full public
+`pptx-charts` family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T19:12:20.4710183+02:00`; and `dotnet pack` succeeded.

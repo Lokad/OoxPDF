@@ -25,7 +25,11 @@ param(
 
     [switch] $MatchLineCap,
 
-    [switch] $MatchLineJoin
+    [switch] $MatchLineJoin,
+
+    [switch] $MatchPathGeometry,
+
+    [double] $PathGeometryTolerance = 0.25
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,6 +63,7 @@ function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function Delta([double] $left, [double] $right) { return [Math]::Round($right - $left, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+function HasValue($value) { return $null -ne $value -and [string]$value -ne "" }
 function ColorValues($value) {
     $text = [string]$value
     if ($text -match '^G:(?<g>[0-9.]+)$') {
@@ -182,7 +187,21 @@ foreach ($pair in $pairs) {
     $strokeColorOk = (-not $MatchStrokeColor) -or (StrokeColorEqual $ref.StrokeColor $cand.StrokeColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
     $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk) { "ok" } else { "delta" }
+    $pathGeometryAvailable = (HasValue $ref.PathCenterX) -and (HasValue $cand.PathCenterX) -and
+        (HasValue $ref.PathCenterY) -and (HasValue $cand.PathCenterY) -and
+        (HasValue $ref.PathRadius) -and (HasValue $cand.PathRadius)
+    $pathGeometryRelevant = (HasValue $ref.PathCenterX) -or (HasValue $cand.PathCenterX) -or
+        (HasValue $ref.PathCenterY) -or (HasValue $cand.PathCenterY) -or
+        (HasValue $ref.PathRadius) -or (HasValue $cand.PathRadius)
+    $deltaPathCenterX = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterX) ([double]$cand.PathCenterX) } else { $null }
+    $deltaPathCenterY = if ($pathGeometryAvailable) { Delta ([double]$ref.PathCenterY) ([double]$cand.PathCenterY) } else { $null }
+    $deltaPathRadius = if ($pathGeometryAvailable) { Delta ([double]$ref.PathRadius) ([double]$cand.PathRadius) } else { $null }
+    $pathGeometryOk = (-not $MatchPathGeometry) -or (-not $pathGeometryRelevant) -or (
+        $pathGeometryAvailable -and
+        [Math]::Abs($deltaPathCenterX) -le $PathGeometryTolerance -and
+        [Math]::Abs($deltaPathCenterY) -le $PathGeometryTolerance -and
+        [Math]::Abs($deltaPathRadius) -le $PathGeometryTolerance)
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -210,6 +229,14 @@ foreach ($pair in $pairs) {
         RefLineJoin = $ref.LineJoin
         CandLineJoin = $cand.LineJoin
         LineJoinOk = $lineJoinOk
+        RefPathCenter = if (HasValue $ref.PathCenterX) { "$($ref.PathCenterX),$($ref.PathCenterY)" } else { $null }
+        CandPathCenter = if (HasValue $cand.PathCenterX) { "$($cand.PathCenterX),$($cand.PathCenterY)" } else { $null }
+        DeltaPathCenterX = $deltaPathCenterX
+        DeltaPathCenterY = $deltaPathCenterY
+        RefPathRadius = $ref.PathRadius
+        CandPathRadius = $cand.PathRadius
+        DeltaPathRadius = $deltaPathRadius
+        PathGeometryOk = $pathGeometryOk
         DeltaMinX = $deltaMinX
         DeltaMinY = $deltaMinY
         DeltaMaxX = $deltaMaxX

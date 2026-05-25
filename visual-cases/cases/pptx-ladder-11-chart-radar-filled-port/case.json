@@ -22,6 +22,8 @@
     "compareChartGraphicsStructurePathCommandCounts": true,
     "compareChartGraphicsStructureStrokeColors": true,
     "compareChartGraphicsStructureLineCaps": true,
-    "compareChartGraphicsStructureLineJoins": true
+    "compareChartGraphicsStructureLineJoins": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 0.5
   }
 }

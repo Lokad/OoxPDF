@@ -382,6 +382,12 @@ if ($manifest.expected.maxChartGraphicsStructureBoundsDelta -ne $null) {
     if ($manifest.expected.compareChartGraphicsStructureLineJoins -eq $true) {
         $compareChartArgs.MatchLineJoin = $true
     }
+    if ($manifest.expected.compareChartGraphicsStructurePathGeometry -eq $true) {
+        $compareChartArgs.MatchPathGeometry = $true
+    }
+    if ($manifest.expected.maxChartGraphicsStructurePathGeometryDelta -ne $null) {
+        $compareChartArgs.PathGeometryTolerance = [double]$manifest.expected.maxChartGraphicsStructurePathGeometryDelta
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
     if ($LASTEXITCODE -ne 0) {

@@ -37,6 +37,63 @@ function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Round([double]$value) { return [Math]::Round($value, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
 
+function Get-RadarSpokePathGeometry($op) {
+    if ($null -eq $op.PathCommands) {
+        return $null
+    }
+
+    $moves = New-Object System.Collections.Generic.List[object]
+    $lines = New-Object System.Collections.Generic.List[object]
+    foreach ($command in @($op.PathCommands)) {
+        if ($null -eq $command.Values -or $command.Values.Count -lt 2) {
+            continue
+        }
+
+        $point = [pscustomobject]@{
+            X = [double]$command.Values[0]
+            Y = [double]$command.Values[1]
+        }
+        if ([string]$command.Operator -eq "m") {
+            $moves.Add($point)
+        }
+        elseif ([string]$command.Operator -eq "l") {
+            $lines.Add($point)
+        }
+        else {
+            return $null
+        }
+    }
+
+    if ($moves.Count -lt 3 -or $moves.Count -ne $lines.Count) {
+        return $null
+    }
+
+    $centerX = ($moves | Measure-Object -Property X -Average).Average
+    $centerY = ($moves | Measure-Object -Property Y -Average).Average
+    $maxCenterDelta = 0d
+    foreach ($move in $moves) {
+        $maxCenterDelta = [Math]::Max($maxCenterDelta, [Math]::Abs([double]$move.X - [double]$centerX))
+        $maxCenterDelta = [Math]::Max($maxCenterDelta, [Math]::Abs([double]$move.Y - [double]$centerY))
+    }
+
+    $radii = @($lines | ForEach-Object {
+        [Math]::Sqrt(([double]$_.X - [double]$centerX) * ([double]$_.X - [double]$centerX) + ([double]$_.Y - [double]$centerY) * ([double]$_.Y - [double]$centerY))
+    })
+    if ($radii.Count -eq 0) {
+        return $null
+    }
+
+    [pscustomobject]@{
+        PathCenterX = Round $centerX
+        PathCenterY = Round $centerY
+        PathRadius = Round (($radii | Measure-Object -Average).Average)
+        PathMinRadius = Round (($radii | Measure-Object -Minimum).Minimum)
+        PathMaxRadius = Round (($radii | Measure-Object -Maximum).Maximum)
+        PathCenterMaxDelta = Round $maxCenterDelta
+        PathSpokeCount = $lines.Count
+    }
+}
+
 function BoundsDistance($a, $b) {
     return [Math]::Abs([double]$a.MinX - [double]$b.MinX) +
         [Math]::Abs([double]$a.MinY - [double]$b.MinY) +
@@ -45,6 +102,7 @@ function BoundsDistance($a, $b) {
 }
 
 function New-Structure($kind, $op) {
+    $radarSpokeGeometry = if ($kind -eq "RadarSpokeGroupCandidate") { Get-RadarSpokePathGeometry $op } else { $null }
     [pscustomobject]@{
         Kind = $kind
         PageNumber = $op.PageNumber
@@ -69,6 +127,13 @@ function New-Structure($kind, $op) {
         Dash = $op.Dash
         LineCap = $op.LineCap
         LineJoin = $op.LineJoin
+        PathCenterX = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterX }
+        PathCenterY = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterY }
+        PathRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathRadius }
+        PathMinRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathMinRadius }
+        PathMaxRadius = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathMaxRadius }
+        PathCenterMaxDelta = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathCenterMaxDelta }
+        PathSpokeCount = if ($null -eq $radarSpokeGeometry) { $null } else { $radarSpokeGeometry.PathSpokeCount }
     }
 }
 
@@ -97,6 +162,13 @@ function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount
         Dash = ""
         LineCap = 0
         LineJoin = 0
+        PathCenterX = $null
+        PathCenterY = $null
+        PathRadius = $null
+        PathMinRadius = $null
+        PathMaxRadius = $null
+        PathCenterMaxDelta = $null
+        PathSpokeCount = $null
     }
 }
 
@@ -125,6 +197,13 @@ function Copy-StructureAsKind($kind, $structure) {
         Dash = $structure.Dash
         LineCap = $structure.LineCap
         LineJoin = $structure.LineJoin
+        PathCenterX = $structure.PathCenterX
+        PathCenterY = $structure.PathCenterY
+        PathRadius = $structure.PathRadius
+        PathMinRadius = $structure.PathMinRadius
+        PathMaxRadius = $structure.PathMaxRadius
+        PathCenterMaxDelta = $structure.PathCenterMaxDelta
+        PathSpokeCount = $structure.PathSpokeCount
     }
 }
 
