@@ -2109,6 +2109,10 @@ High-priority actions:
   - [x] Classify radar chart text from spoke path geometry instead of broad plot-area clips. Radar category and
     value-axis labels are now separated on both public radar fixtures, and those fixtures gate the text structures
     within `15 pt` while the visible label placement deltas remain explicit.
+  - [x] Align radar value-axis label X anchors against the new text-structure oracle. `RadarValueLabelGapFactor`
+    now matches the Office PDF text matrices on both public radar fixtures within `0.03 pt` horizontally; the
+    remaining radar text slack is the vertical text baseline/anchor model, especially category-axis labels
+    (`13.79..14.55 pt` max Y drift on the public radar cases), so the shared `15 pt` radar text gate stays open.
 - [x] 2026-05-25: Tighten chart text classification for value-axis origin labels near plot-box edges.
   `ClassifyPdfChartText.ps1` now uses a slightly wider axis-label vertical band for text left/right of the
   plot box, so labels near the plot origin are classified as `ValueAxisTickLabel` instead of generic
@@ -5978,3 +5982,15 @@ gate passed at `artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525
 Remaining long-term gap: the gate is deliberately loose because candidate radar value labels still sit about
 `12.8 pt` right of Office and category labels still have visible vertical drift. The next renderer work should
 move radar label frame derivation into the typed radar layout resolver and then tighten this text gate.
+
+Revision note, 2026-05-25: Used the radar-specific text oracle to close the value-axis label X-anchor gap without
+changing the spoke geometry. `RadarValueLabelGapFactor` now matches Office's PDF text matrices horizontally on both
+public radar styles: the marker and filled radar cases both show max value-label X drift of `0.03 pt`. Focused
+`pptx-charts` tests passed 38/38; the marker radar gate passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-193513`; the filled radar gate passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-193524`; the full public `pptx-charts` family
+passed 28/28 at `artifacts/visual/reports/pptx-charts.json`; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: value-axis labels still have about `6 pt` vertical drift and radar category labels still have up to
+`13.79..14.55 pt` vertical drift, so the next durable slice is a typed radar text-frame/baseline model rather than
+more center/radius tuning.
