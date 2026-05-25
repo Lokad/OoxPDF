@@ -5639,3 +5639,24 @@ are still not structurally modeled; `GetStackedValueExtents` and `NormalizeStack
 percent totals. The durable target is a typed stacked-value model that separates positive and negative totals
 per category, exposes normalized signed extents to all chart families, and feeds the same axis/label semantics
 from that model instead of deriving them ad hoc in each renderer path.
+
+Revision note, 2026-05-25: Advanced the public negative-column chart case by separating three Office-observed
+semantics that were previously blurred together. Value axes with negative data and no explicit minimum now floor
+to a nice tick boundary, so the public negative column fixture exposes the Office `-15..25` axis instead of using
+the raw `-12` data minimum. Vertical category labels now anchor to the category axis crossing coordinate instead
+of always using the plot bottom, which matches Office's zero-axis label placement behavior even while the broader
+plot-box layout remains approximate. Negative rectangular bar segments now use Office's default inverted rendering
+when no point-level fill/stroke is present: white fill plus black outline, while explicit `c:dPt` styling still
+wins. Focused `pptx-charts` tests passed with 38/38. The tightened public
+`pptx-ladder-11-chart-column-negative-port` gate passed at
+`artifacts/visual/pptx-ladder-11-chart-column-negative-port/20260525-170541` with MAE `7.245312620563271`,
+changed16 `0.07928626543209877`, and empty diagnostics; the re-run after tightening passed at
+`artifacts/visual/pptx-ladder-11-chart-column-negative-port/20260525-170654` with the same metrics. The full
+public `pptx-charts` visual family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated
+`2026-05-25T17:09:28.3082679+02:00`, and `dotnet pack` succeeded. The manifest now rejects static fallback
+diagnostics.
+Remaining long-term gap: the title/no-legend vertical bar plot box is still encoded as renderer metric ratios,
+and Office's inside-crossing category axis should eventually reclaim bottom label reservation through a shared
+cartesian layout solver rather than a local bar-chart adjustment. A trial local bottom-reservation adjustment
+moved the minimum tick in the right direction but over-expanded the zero-axis position, confirming that this needs
+PDF structural oracle support for plot-area, axis-label, tick, and clip boxes before being made durable.
