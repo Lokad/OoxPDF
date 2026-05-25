@@ -394,7 +394,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills));
-                ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetBarChartLayout(document, bounds, chartXml, sceneChart, horizontalBars);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
@@ -3333,7 +3333,7 @@ internal sealed partial class PptxRenderer
             {
                 SetChartStroke(graphics, stroke);
                 double axisY = horizontalBars
-                    ? (axesStyle.ValueAxisBottomSide ? plotY + plotHeight : plotY)
+                    ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
                     : valueAxisCrossingY;
                 graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY);
             }
@@ -3409,16 +3409,16 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartLayout GetBarChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartLayout GetBarChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, bool horizontalBars)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
-        ChartPlotBox plotBox = GetBarChartPlotBox(frame, chartXml, sceneChart, title, legend);
+        ChartPlotBox plotBox = GetBarChartPlotBox(frame, chartXml, sceneChart, title, legend, horizontalBars);
         return new ChartLayout(frame, plotBox, title, legend);
     }
 
-    private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
+    private static ChartPlotBox GetBarChartPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, bool horizontalBars)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasLegend = legend.Visible && !legend.Overlay;
@@ -3438,6 +3438,14 @@ internal sealed partial class PptxRenderer
                 frame.Y + frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio,
                 frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxWidthRatio,
                 frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
+        }
+        else if (horizontalBars && hasTitle && !hasLegend)
+        {
+            defaultPlotBox = new ChartPlotBox(
+                frame.X + frame.Width * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxXRatio,
+                frame.Y + frame.Height * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxYRatio,
+                frame.Width * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxWidthRatio,
+                frame.Height * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxHeightRatio);
         }
         else
         {

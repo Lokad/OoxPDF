@@ -7791,9 +7791,9 @@ internal static class PptxTests
 
         TestAssert.True(horizontalLines.Length >= 1, "Expected a horizontal value-axis stroke.");
         TestAssert.True(verticalLines.Length >= 1, "Expected a vertical category-axis stroke.");
-        double categoryAxisTopY = verticalLines.Min(line => Math.Min(line.Y1, line.Y2));
-        double categoryAxisBottomY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
-        double valueAxisY = horizontalLines.Max(line => line.Y1);
+        double categoryAxisTopY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
+        double categoryAxisBottomY = verticalLines.Min(line => Math.Min(line.Y1, line.Y2));
+        double valueAxisY = horizontalLines.Min(line => line.Y1);
         TestAssert.True(Math.Abs(valueAxisY - categoryAxisBottomY) < 0.001d,
             "A horizontal bar value axis with c:axPos val=\"b\" should emit its horizontal stroke on the plot area's bottom edge.");
         TestAssert.True(Math.Abs(valueAxisY - categoryAxisTopY) > 100d,
