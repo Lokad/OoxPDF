@@ -2143,6 +2143,12 @@ High-priority actions:
   `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
   markers, title, legend, fills, strokes, and text styles are represented as typed data before PDF emission.
+  - [x] 2026-05-25: Promoted chart marker symbols from renderer-local strings to a typed
+    `PptxSceneChartMarkerSymbol` ladder on `PptxSceneChartMarker`, while preserving the raw OOXML symbol for
+    inspection and future diagnostics. The chart renderer now switches on the typed marker kind for none,
+    line-only markers (`dash`, `plus`, `x`), filled markers, and unknown-symbol fallback. Scene coverage locks
+    both raw `diamond` and typed `Diamond`; focused chart validation passed `39 passed, 0 failed, 0 skipped`,
+    the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.

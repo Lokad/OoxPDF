@@ -291,6 +291,7 @@ internal sealed partial class PptxRenderer
         ChartMarkerStyle[]? markers = plot?
             .Series
             .Select(series => new ChartMarkerStyle(
+                series.Marker.SymbolKind,
                 series.Marker.Symbol,
                 series.Marker.Size,
                 series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
@@ -3807,7 +3808,7 @@ internal sealed partial class PptxRenderer
                 TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double strokeWidth, out double strokeAlpha)
                     ? new ChartSeriesStroke(strokeColor, strokeAlpha, strokeWidth)
                     : null;
-            styles.Add(new ChartMarkerStyle(symbol, size, fill, stroke));
+            styles.Add(new ChartMarkerStyle(PptxSceneBuilder.ParseChartMarkerSymbol(symbol), symbol, size, fill, stroke));
         }
 
         return styles;
@@ -5507,15 +5508,15 @@ internal sealed partial class PptxRenderer
 
     private static void DrawChartMarker(PdfGraphicsBuilder graphics, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke)
     {
-        if (string.Equals(marker.Symbol, "none", StringComparison.Ordinal))
+        if (marker.SymbolKind == PptxSceneChartMarkerSymbol.None)
         {
             return;
         }
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
-        ChartSeriesStroke? stroke = marker.Stroke ?? (IsLineOnlyChartMarker(marker.Symbol) ? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d)) : null);
-        if (!IsLineOnlyChartMarker(marker.Symbol))
+        ChartSeriesStroke? stroke = marker.Stroke ?? (IsLineOnlyChartMarker(marker.SymbolKind) ? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d)) : null);
+        if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             if (fill.Alpha < 1d)
             {
@@ -5524,15 +5525,15 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            switch (marker.Symbol)
+            switch (marker.SymbolKind)
             {
-                case "dot":
+                case PptxSceneChartMarkerSymbol.Dot:
                     graphics.FillEllipse(x - size / 4d, y - size / 4d, size / 2d, size / 2d);
                     break;
-                case "square":
+                case PptxSceneChartMarkerSymbol.Square:
                     graphics.FillRectangle(x - size / 2d, y - size / 2d, size, size);
                     break;
-                case "diamond":
+                case PptxSceneChartMarkerSymbol.Diamond:
                     graphics.FillPolygon([
                         (x, y + size / 2d),
                         (x + size / 2d, y),
@@ -5540,14 +5541,14 @@ internal sealed partial class PptxRenderer
                         (x - size / 2d, y)
                     ]);
                     break;
-                case "triangle":
+                case PptxSceneChartMarkerSymbol.Triangle:
                     graphics.FillPolygon([
                         (x, y + size / 2d),
                         (x + size / 2d, y - size / 2d),
                         (x - size / 2d, y - size / 2d)
                     ]);
                     break;
-                case "star":
+                case PptxSceneChartMarkerSymbol.Star:
                     graphics.FillPolygon(BuildChartStarMarker(x, y, size));
                     break;
                 default:
@@ -5573,23 +5574,23 @@ internal sealed partial class PptxRenderer
         }
 
         SetChartStroke(graphics, markerStroke);
-        switch (marker.Symbol)
+        switch (marker.SymbolKind)
         {
-            case "dash":
+            case PptxSceneChartMarkerSymbol.Dash:
                 graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
                 break;
-            case "plus":
+            case PptxSceneChartMarkerSymbol.Plus:
                 graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
                 graphics.StrokeLine(x, y - size / 2d, x, y + size / 2d);
                 break;
-            case "x":
+            case PptxSceneChartMarkerSymbol.X:
                 graphics.StrokeLine(x - size / 2d, y - size / 2d, x + size / 2d, y + size / 2d);
                 graphics.StrokeLine(x - size / 2d, y + size / 2d, x + size / 2d, y - size / 2d);
                 break;
-            case "square":
+            case PptxSceneChartMarkerSymbol.Square:
                 graphics.StrokeRectangle(x - size / 2d, y - size / 2d, size, size);
                 break;
-            case "diamond":
+            case PptxSceneChartMarkerSymbol.Diamond:
                 graphics.StrokePolygon([
                     (x, y + size / 2d),
                     (x + size / 2d, y),
@@ -5597,14 +5598,14 @@ internal sealed partial class PptxRenderer
                     (x - size / 2d, y)
                 ]);
                 break;
-            case "triangle":
+            case PptxSceneChartMarkerSymbol.Triangle:
                 graphics.StrokePolygon([
                     (x, y + size / 2d),
                     (x + size / 2d, y - size / 2d),
                     (x - size / 2d, y - size / 2d)
                 ]);
                 break;
-            case "star":
+            case PptxSceneChartMarkerSymbol.Star:
                 graphics.StrokePolygon(BuildChartStarMarker(x, y, size));
                 break;
             default:
@@ -5618,11 +5619,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool IsLineOnlyChartMarker(string symbol)
+    private static bool IsLineOnlyChartMarker(PptxSceneChartMarkerSymbol symbol)
     {
-        return string.Equals(symbol, "plus", StringComparison.Ordinal) ||
-            string.Equals(symbol, "x", StringComparison.Ordinal) ||
-            string.Equals(symbol, "dash", StringComparison.Ordinal);
+        return symbol is PptxSceneChartMarkerSymbol.Plus or
+            PptxSceneChartMarkerSymbol.X or
+            PptxSceneChartMarkerSymbol.Dash;
     }
 
     private static (double X, double Y)[] BuildChartStarMarker(double x, double y, double size)
@@ -6459,8 +6460,8 @@ internal sealed partial class PptxRenderer
         public bool IsEmpty => Fill is null && Stroke is null;
     }
 
-    private readonly record struct ChartMarkerStyle(string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
+    private readonly record struct ChartMarkerStyle(PptxSceneChartMarkerSymbol SymbolKind, string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
     {
-        public static ChartMarkerStyle Default { get; } = new("circle", 4d, null, null);
+        public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", 4d, null, null);
     }
 }

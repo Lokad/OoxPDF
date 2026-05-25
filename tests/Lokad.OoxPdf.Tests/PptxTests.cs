@@ -448,6 +448,7 @@ internal static class PptxTests
         TestAssert.Equal(3d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Width ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.IsDefined == true, "Expected explicit chart marker ownership in the scene model.");
         TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Symbol ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.SymbolKind);
         TestAssert.Equal(7d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Size ?? 0d);
         TestAssert.Equal(new RgbColor(0, 170, 85), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(85, 0, 170), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Line.Color ?? default);

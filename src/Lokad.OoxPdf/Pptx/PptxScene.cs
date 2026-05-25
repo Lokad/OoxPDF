@@ -496,10 +496,26 @@ internal readonly record struct PptxSceneChartDataSource(
 
 internal sealed record PptxSceneChartMarker(
     bool IsDefined,
+    PptxSceneChartMarkerSymbol SymbolKind,
     string Symbol,
     double Size,
     PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line);
+
+internal enum PptxSceneChartMarkerSymbol
+{
+    Circle,
+    Dash,
+    Diamond,
+    Dot,
+    None,
+    Plus,
+    Square,
+    Star,
+    Triangle,
+    X,
+    Unknown
+}
 
 internal sealed record PptxSceneChartPointStyle(
     int Index,
@@ -801,6 +817,34 @@ internal sealed class PptxSceneBuilder
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+
+    internal static PptxSceneChartMarkerSymbol ParseChartMarkerSymbol(string? symbol)
+    {
+        return symbol switch
+        {
+            "circle" => PptxSceneChartMarkerSymbol.Circle,
+            "dash" => PptxSceneChartMarkerSymbol.Dash,
+            "diamond" => PptxSceneChartMarkerSymbol.Diamond,
+            "dot" => PptxSceneChartMarkerSymbol.Dot,
+            "none" => PptxSceneChartMarkerSymbol.None,
+            "plus" => PptxSceneChartMarkerSymbol.Plus,
+            "square" => PptxSceneChartMarkerSymbol.Square,
+            "star" => PptxSceneChartMarkerSymbol.Star,
+            "triangle" => PptxSceneChartMarkerSymbol.Triangle,
+            "x" => PptxSceneChartMarkerSymbol.X,
+            _ when symbol?.Equals("circle", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Circle,
+            _ when symbol?.Equals("dash", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Dash,
+            _ when symbol?.Equals("diamond", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Diamond,
+            _ when symbol?.Equals("dot", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Dot,
+            _ when symbol?.Equals("none", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.None,
+            _ when symbol?.Equals("plus", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Plus,
+            _ when symbol?.Equals("square", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Square,
+            _ when symbol?.Equals("star", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Star,
+            _ when symbol?.Equals("triangle", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Triangle,
+            _ when symbol?.Equals("x", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.X,
+            _ => PptxSceneChartMarkerSymbol.Unknown
+        };
+    }
     private const double MinimumStrokeWidth = 0.1d;
     private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
@@ -1330,7 +1374,7 @@ internal sealed class PptxSceneBuilder
         PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartMarker(marker is not null, symbol, size, fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, size, fill, ReadChartLine(shapeProperties, theme));
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
