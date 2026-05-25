@@ -1112,6 +1112,18 @@ High-priority actions:
   219 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal bar value-axis
   crossing placement still uses the current zero-line rule, and full category/value label placement under
   non-default axis sides needs Office-PDF evidence.
+- [x] 2026-05-25: Consume value-axis top/bottom metadata for supported horizontal bar axis strokes.
+  `ChartAxesStyle` now carries the resolved bottom/top side for value axes separately from value-axis
+  left/right side. On horizontal bar charts, where the value axis is the horizontal axis, the renderer places
+  that stroke from `valAx @axPos` instead of tying it to the value-space zero coordinate. A synthetic
+  horizontal bar chart with `c:valAx/c:axPos val="b"` locks the horizontal value-axis stroke on the bottom
+  edge of the category axis. Focused `pptx-charts` tests passed with 24 passed, 0 failed, 0 skipped; the
+  public clustered-bar visual gate passed at
+  `artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-103015`; the clustered-column guard
+  visual passed at `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-103028`; the full
+  suite passed with 220 passed, 0 failed, 0 skipped; and `dotnet pack` succeeded. Remaining gap: horizontal
+  bar category/value label placement under non-default axis sides still needs Office-PDF evidence; secondary
+  value-axis scale, series, and label binding remain separate combo-chart work.
 - [x] 2026-05-24: Make same-side secondary value-axis slotting scene-aware on the supported bar/combo path.
   The side-slot resolver now consumes scene-owned tick-label position when available instead of re-reading
   raw axis XML, keeping raw XML only as fallback. The full runner passed 187/187, `dotnet pack` succeeded,
@@ -1488,8 +1500,13 @@ High-priority actions:
     intervals.
   - [x] Consume value-axis reversed orientation for stacked horizontal bar accumulation through cumulative
     value intervals.
-  - [ ] Consume axis crossing/orientation metadata for value-axis side/cross-axis placement, series
-    coordinate baselines, and secondary axes instead of relying on right-side XML/layout assumptions.
+  - [x] Consume value-axis side metadata for supported vertical chart axis strokes.
+  - [x] Discover supported secondary value axes by axis identity before applying side metadata.
+  - [x] Consume category-axis side metadata for supported horizontal bar axis strokes.
+  - [x] Consume value-axis top/bottom metadata for supported horizontal bar axis strokes.
+  - [ ] Continue consuming axis crossing/orientation metadata for remaining series coordinate baselines,
+    label placement, and secondary-axis scale/geometry instead of relying on right-side XML/layout
+    assumptions.
   - [x] Add and consume scene-owned plot-area manual-layout factors for supported bar and line charts.
   - [x] Preserve scene-owned plot-area manual-layout target and mode fields.
   - [x] Consume scene/XML `wMode="edge"` and `hMode="edge"` manual-layout semantics for right/bottom plot-area
@@ -2787,8 +2804,8 @@ document-specific business content into public notes.
 - [ ] Tables: merged cells, vertical alignment, per-edge borders, table styles, cell margins, rich text
   inside cells, and precise row/column sizing.
 - [ ] Charts: cached chart images, chart XML rendering, secondary-axis scale binding for combo geometry and
-  labels, horizontal bar value-axis crossing placement, labels, legends, series styling, grouped/stacked
-  families, line charts, combo charts, and embedded chart data.
+  labels, non-default-axis-side label evidence, legends, series styling, grouped/stacked families, line
+  charts, combo charts, and embedded chart data.
 - [ ] SmartArt/diagrams: use fallback drawings when present; otherwise emit precise diagnostics.
 - [ ] Slide inheritance: deeper master/layout placeholder resolution, theme variants, background styles,
   footer/date/slide-number placeholders, and hidden placeholder semantics.
@@ -3881,6 +3898,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `ValueAxisVisible` branch. This made the existing left-edge coordinate look like value-axis placement until
   the code was read in context. The new category-axis side field is intentionally consumed only for the
   horizontal-bar vertical category-axis stroke.
+- Observation: Horizontal bar value-axis strokes were using a value coordinate as an axis-side proxy.
+  Evidence: before the current slice, the horizontal bar path drew the horizontal value-axis stroke at
+  `zeroY`, so `valAx @axPos="b"` or `valAx @axPos="t"` could not affect the visible axis line. The renderer
+  now keeps value-axis bottom/top side as structural axis metadata, while value-to-coordinate mapping remains
+  responsible for series, gridlines, and value label anchors.
 
 ## Decision Log
 
@@ -3932,6 +3954,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   the value axis is vertical. Separate fields make the orientation swap explicit and avoid a new heuristic
   that treats all vertical strokes as value axes.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Represent horizontal value-axis bottom/top side separately from vertical value-axis left/right side.
+  Rationale: `c:valAx/c:axPos` uses the same OOXML field for both vertical and horizontal value axes, but the
+  consumed geometry is different after chart orientation is known. Keeping bottom/top as its own resolved
+  style field prevents a left/right axis-line rule from leaking into horizontal bar charts and keeps value
+  coordinates out of axis-side selection.
   Date/Author: 2026-05-25 / Codex.
 - Decision: Add generic graphics-operation inspection before adding chart-semantic classification.
   Rationale: Plot areas, axes, gridlines, markers, and legend swatches all appear as ordinary PDF path,
@@ -4016,7 +4043,7 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-219 passed, 0 failed, 0 skipped
+220 passed, 0 failed, 0 skipped
 ```
 
 Latest private PPTX acceptance baseline:
@@ -4082,6 +4109,13 @@ passed with 23 passed, 0 failed, 0 skipped. Public visual cases
 `artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-102422`. The column visual was rerun
 serially after an intentional parallel run hit a build-output file lock. Full console suite passed with
 219 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
+succeeded.
+Horizontal bar value-axis side slice: `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 24 passed, 0 failed, 0 skipped. Public visual cases
+`pptx-ladder-11-chart-bar-clustered-port` and `pptx-ladder-11-chart-column-clustered-port` passed at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260525-103015` and
+`artifacts/visual/pptx-ladder-11-chart-column-clustered-port/20260525-103028`. Full console suite passed with
+220 passed, 0 failed, 0 skipped. `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore`
 succeeded.
 Chart text oracle probe: `ClassifyPdfChartText.ps1` classified public pie, doughnut, radar, scatter-cluster,
 and line-marker text operations relative to derived plot boxes; strict reference-vs-reference comparison of
@@ -4793,3 +4827,7 @@ secondary-axis work as scale/series/label binding rather than axis-stroke discov
 
 Revision note, 2026-05-25: Added the completed horizontal bar category-axis side slice, narrowing the
 remaining horizontal bar axis work to value-axis crossing placement and label evidence.
+
+Revision note, 2026-05-25: Added the completed horizontal bar value-axis side slice, narrowing the remaining
+horizontal bar side/cross-axis work to label placement evidence and preserving secondary-axis scale/series
+binding as open combo-chart work.
