@@ -6129,3 +6129,17 @@ only the exploded cases carry `c:explosion val="25"`. Remaining long-term gap: p
 typed pie/doughnut layout resolver that models chart kind, legend reserve, and explosion reserve from Office-PDF
 evidence. The current deltas argue against a single shared `PieCenterXRatio`, `PieCenterYRatio`, or
 `PieRadiusRatio` adjustment.
+
+Revision note, 2026-05-25: Took the first behavior-neutral production step toward that typed pie/doughnut layout
+resolver. `ChartPolarLayout` now carries an explicit `ChartPolarKind` (`Pie` or `Doughnut`), and the pie and
+doughnut renderers pass that kind into `ResolvePieOrDoughnutLayout`. The geometry still resolves to the previous
+shared metric constants, but center/radius rule selection now has a named ownership point instead of inferring chart
+kind from the caller. Validation: a first parallel validation attempt exposed a transient Debug build lock
+(`CS2012`, `Lokad.OoxPdf.dll` held by `VBCSCompiler`/Defender), so `dotnet build-server shutdown` was run and the
+checks were repeated sequentially. Focused `pptx-charts` tests passed 38/38; the focused polar visual cases passed
+at `artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260525-202222` and
+`artifacts/visual/pptx-ladder-11-chart-pie-5-categories-port/20260525-202227`; the full public `pptx-charts`
+family passed 28/28 at `artifacts/visual/reports/pptx-charts.json` generated from the `20260525-202241` run; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Remaining
+long-term gap: replace the still-shared pie/doughnut center/radius constants with Office-PDF-backed rules that use
+`ChartPolarKind`, legend overlay/position, and explosion reserve explicitly.

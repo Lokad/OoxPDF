@@ -906,7 +906,14 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartPolarGeometry(double CenterX, double CenterY, double Radius);
 
+    private enum ChartPolarKind
+    {
+        Pie,
+        Doughnut
+    }
+
     private readonly record struct ChartPolarLayout(
+        ChartPolarKind Kind,
         ChartPlotBox PlotBox,
         ChartPolarGeometry Geometry,
         double ExplosionReserve,

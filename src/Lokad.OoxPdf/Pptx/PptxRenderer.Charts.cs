@@ -851,7 +851,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 bool hasLegend = legend.Visible && !legend.Overlay;
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(plotBox, pointExplosions, hasLegend);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, hasLegend);
                 RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSeries[0], pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart));
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, pieSeries[0], pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -875,7 +875,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 bool hasLegend = legend.Visible && !legend.Overlay;
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(plotBox, pointExplosions, hasLegend);
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, hasLegend);
                 RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSeries[0], pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart));
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, doughnutSeries[0], pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, pointFills), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -974,29 +974,48 @@ internal sealed partial class PptxRenderer
             : defaultPlotBox;
     }
 
-    private static ChartPolarGeometry GetPieChartGeometry(ChartPlotBox plotBox, double explosionReserve = 0d, bool hasLegend = false)
+    private static ChartPolarGeometry GetPieOrDoughnutGeometry(ChartPolarKind kind, ChartPlotBox plotBox, double explosionReserve = 0d, bool hasLegend = false)
     {
-        double radius = Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.PieRadiusRatio;
+        double radius = Math.Min(plotBox.Width, plotBox.Height) * GetPieOrDoughnutRadiusRatio(kind);
         if (explosionReserve > 0d)
         {
             radius /= 1d + explosionReserve;
         }
 
-        double centerXRatio = hasLegend
-            ? PptxChartMetricRules.PieCenterXRatio
-            : PptxChartMetricRules.PieNoLegendCenterXRatio;
+        double centerXRatio = GetPieOrDoughnutCenterXRatio(kind, hasLegend);
         return new ChartPolarGeometry(
             plotBox.X + plotBox.Width * centerXRatio,
             plotBox.Y + plotBox.Height * PptxChartMetricRules.PieCenterYRatio,
             radius);
     }
 
-    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, bool hasLegend)
+    private static double GetPieOrDoughnutRadiusRatio(ChartPolarKind kind)
+    {
+        return kind switch
+        {
+            ChartPolarKind.Pie => PptxChartMetricRules.PieRadiusRatio,
+            ChartPolarKind.Doughnut => PptxChartMetricRules.PieRadiusRatio,
+            _ => PptxChartMetricRules.PieRadiusRatio
+        };
+    }
+
+    private static double GetPieOrDoughnutCenterXRatio(ChartPolarKind kind, bool hasLegend)
+    {
+        return kind switch
+        {
+            ChartPolarKind.Pie => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
+            ChartPolarKind.Doughnut => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio,
+            _ => hasLegend ? PptxChartMetricRules.PieCenterXRatio : PptxChartMetricRules.PieNoLegendCenterXRatio
+        };
+    }
+
+    private static ChartPolarLayout ResolvePieOrDoughnutLayout(ChartPolarKind kind, ChartPlotBox plotBox, IReadOnlyDictionary<int, double> pointExplosions, bool hasLegend)
     {
         double explosionReserve = pointExplosions.Count == 0 ? 0d : pointExplosions.Values.Max();
         return new ChartPolarLayout(
+            kind,
             plotBox,
-            GetPieChartGeometry(plotBox, explosionReserve, hasLegend),
+            GetPieOrDoughnutGeometry(kind, plotBox, explosionReserve, hasLegend),
             explosionReserve,
             hasLegend);
     }
