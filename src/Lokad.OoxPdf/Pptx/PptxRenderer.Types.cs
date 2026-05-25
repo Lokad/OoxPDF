@@ -801,8 +801,11 @@ internal sealed partial class PptxRenderer
         public const double PieDataLabelHeightFactor = 1.35d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
         public const double RadarCenterXRatio = 0.5d;
-        public const double RadarCenterYRatio = 0.52d;
-        public const double RadarRadiusRatio = 0.32d;
+        public const double RadarCenterYRatio = 0.4583333333333333d;
+        public const double RadarRadiusRatio = 0.3825d;
+        public const double RadarCategoryLabelGapFactor = 0.65d;
+        public const double RadarValueLabelGapFactor = 0.3d;
+        public const double RadarValueLabelWidthFactor = 3.0d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;
         public const double BarDataLabelHorizontalGap = 2d;

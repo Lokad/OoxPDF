@@ -713,9 +713,26 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(radarPlot, radarChart, theme);
-                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, radarChart);
+                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, radarChart);
+                PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, radarPlot, "valAx");
+                PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, radarPlot, "catAx");
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(radarSeries));
+                ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
+                ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
+                bool filledRadar = string.Equals((string?)radarChart.Element(ChartNamespace + "radarStyle")?.Attribute("val"), "filled", StringComparison.Ordinal);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderRadarChart(graphics, chartLayout.PlotBox, radarSeries, seriesFills, seriesStrokes);
+                RenderRadarChart(graphics, plotBox, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits, filledRadar);
+                if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                {
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart), radarSeries));
+                }
+
+                if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
+                {
+                    fonts.AddRange(RenderRadarValueAxisLabels(theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits));
+                }
+
                 return true;
             }
         }
@@ -4555,17 +4572,27 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits, bool filledRadar)
     {
         ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
         int pointCount = Math.Max(3, series.Max(values => values.Count));
-        double maxValue = Math.Max(1d, series.SelectMany(values => values).DefaultIfEmpty(1d).Max());
 
         graphics.SetStrokeRgb(180, 180, 180);
         graphics.SetLineWidth(0.5d);
+        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
+        {
+            double tickRatio = GetChartValuePlotRatio(extents, tickValue, false);
+            if (tickRatio <= PptxChartMetricRules.AxisValueEpsilon)
+            {
+                continue;
+            }
+
+            StrokeRadarPolygon(graphics, geometry, pointCount, geometry.Radius * tickRatio);
+        }
+
         for (int i = 0; i < pointCount; i++)
         {
-            double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
+            double angle = GetRadarPointAngle(i, pointCount);
             graphics.StrokeLine(geometry.CenterX, geometry.CenterY, geometry.CenterX + Math.Cos(angle) * geometry.Radius, geometry.CenterY + Math.Sin(angle) * geometry.Radius);
         }
 
@@ -4576,17 +4603,20 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < pointCount; i++)
             {
                 double value = i < values.Count ? Math.Max(0d, values[i]) : 0d;
-                double pointRadius = value / maxValue * geometry.Radius;
-                double angle = -Math.PI / 2d + i * Math.PI * 2d / pointCount;
+                double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
+                double angle = GetRadarPointAngle(i, pointCount);
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
             }
 
-            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
-            graphics.SaveState();
-            graphics.SetAlpha(fill.Alpha, 1d);
-            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            graphics.FillPolygon(points);
-            graphics.RestoreState();
+            if (filledRadar)
+            {
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills, series.Count == 1 ? 0.40d : 0.18d);
+                graphics.SaveState();
+                graphics.SetAlpha(fill.Alpha, 1d);
+                graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+                graphics.FillPolygon(points);
+                graphics.RestoreState();
+            }
             ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
             if (stroke.Alpha < 1d)
             {
@@ -4607,6 +4637,99 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
+
+    private static void StrokeRadarPolygon(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, double radius)
+    {
+        var points = new (double X, double Y)[pointCount];
+        for (int i = 0; i < pointCount; i++)
+        {
+            double angle = GetRadarPointAngle(i, pointCount);
+            points[i] = (geometry.CenterX + Math.Cos(angle) * radius, geometry.CenterY + Math.Sin(angle) * radius);
+        }
+
+        graphics.StrokePolygon(points);
+    }
+
+    private static double GetRadarPointAngle(int index, int pointCount)
+    {
+        return Math.PI / 2d - index * Math.PI * 2d / pointCount;
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderRadarCategoryLabels(
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ChartPlotBox plotBox,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart,
+        PptxSceneChartAxis? sceneAxis,
+        XElement? categoryAxis,
+        IReadOnlyList<string> labels,
+        IReadOnlyList<IReadOnlyList<double>> series)
+    {
+        if (labels.Count == 0)
+        {
+            return [];
+        }
+
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, categoryAxis, fallbackFontSize: PptxChartMetricRules.CategoryAxisFallbackFontSize);
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
+        int pointCount = Math.Max(labels.Count, Math.Max(3, series.Max(values => values.Count)));
+        double fontSize = style.FontSize;
+        double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
+        double gap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
+        var runs = new List<TextRun>(labels.Count);
+        for (int i = 0; i < labels.Count; i++)
+        {
+            double angle = GetRadarPointAngle(i, pointCount);
+            double anchorX = geometry.CenterX + Math.Cos(angle) * (geometry.Radius + gap);
+            double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + gap);
+            double width = Math.Max(fontSize * 2d, EstimateChartTextWidth(labels[i], fontSize) + fontSize);
+            TextAlignment alignment = Math.Cos(angle) > 0.25d
+                ? TextAlignment.Left
+                : Math.Cos(angle) < -0.25d
+                    ? TextAlignment.Right
+                    : TextAlignment.Center;
+            double x = alignment switch
+            {
+                TextAlignment.Left => anchorX,
+                TextAlignment.Right => anchorX - width,
+                _ => anchorX - width / 2d
+            };
+            double y = anchorY - height / 2d;
+            runs.Add(CreateChartLabelRun(labels[i], x, y, width, height, plotBox, style, alignment));
+        }
+
+        return RenderTextRuns(runs, graphics, "RCA");
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderRadarValueAxisLabels(
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ChartPlotBox plotBox,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart,
+        XElement? valueAxis,
+        PptxSceneChartAxis? sceneAxis,
+        ChartValueExtents extents,
+        ChartAxisUnits axisUnits)
+    {
+        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
+        ChartPolarGeometry geometry = GetRadarChartGeometry(plotBox);
+        double fontSize = style.FontSize;
+        double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
+        double width = fontSize * PptxChartMetricRules.RadarValueLabelWidthFactor;
+        double x = geometry.CenterX - width - fontSize * PptxChartMetricRules.RadarValueLabelGapFactor;
+        var runs = new List<TextRun>();
+        foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
+        {
+            double ratio = GetChartValuePlotRatio(extents, tickValue, false);
+            double y = geometry.CenterY + geometry.Radius * ratio - height / 2d;
+            string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis);
+            runs.Add(CreateChartLabelRun(label, x, y, width, height, plotBox, style, TextAlignment.Right));
+        }
+
+        return RenderTextRuns(runs, graphics, "RVA");
     }
 
     private static void RenderPieChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions)

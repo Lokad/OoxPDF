@@ -8793,7 +8793,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("201.6 394.56 m 201.6 360 l S", pdf);
+        TestAssert.Contains("201.6 387.9 m 201.6 429.21 l S", pdf);
         TestAssert.DoesNotContain("216 364.32 m 216 295.2 l S", pdf);
     }
 
@@ -9199,6 +9199,7 @@ internal static class PptxTests
             ["ppt/charts/chart3.xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:radarChart>
+                  <c:radarStyle val="filled"/>
                   <c:ser><c:spPr><a:solidFill><a:srgbClr val="AAAA00"/></a:solidFill></c:spPr><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt><c:pt idx="2"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
                 </c:radarChart></c:plotArea></c:chart></c:chartSpace>
                 """),

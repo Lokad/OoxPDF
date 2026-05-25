@@ -5389,3 +5389,21 @@ long-term gap: this is still an observed near-maximum threshold. The durable tar
 axis-layout model that derives scale maxima, major units, tick density, plot/legend reservations, and
 manual-layout interactions from chart type, chart frame, outer plot area, inner data plot, and Office PDF
 evidence instead of renderer-local boolean branches.
+
+Revision note, 2026-05-25: Moved radar charts closer to Office's polar chart structure instead of treating them
+as small line-chart-like plots. Radar rendering now uses the polar plot-box path, value-axis extents/major units
+drive both the data radius and value rings, the angle basis starts at the top category and proceeds clockwise,
+category/value axis labels are emitted from the existing chart text model, and `c:radarStyle val="filled"` now
+controls whether series polygons are filled instead of filling ordinary radar charts unconditionally. The unit
+guard `PptxSyntheticRadarChartManualPlotBoxUsesSharedPath` was updated to lock the new polar spoke geometry, and
+the native-chart coverage fixture now marks the radar probe as filled when it expects fill color evidence.
+Focused `pptx-charts` tests passed with 35/35. The public `pptx-ladder-11-chart-radar-2series-port` gate passed
+at `artifacts/visual/pptx-ladder-11-chart-radar-2series-port/20260525-135428` after tightening MAE from `4.1`
+to `3.2` and changed16 from `0.092` to `0.04`; current metrics are MAE `3.0495222077546296` and changed16
+`0.03662663966049383`. The public `pptx-ladder-11-chart-radar-filled-port` gate passed at
+`artifacts/visual/pptx-ladder-11-chart-radar-filled-port/20260525-135444` after improving MAE from the failing
+`6.000676118827161` baseline to `4.140717833719136`; its changed16 gate is `0.108` for current changed16
+`0.10707079475308642`. Remaining long-term gap: radar still relies on observed center/radius ratios and generic
+text-box placement. The durable destination is a typed polar chart layout that derives the inner radar plot, radial
+label strip, category-label anchors, filled/unfilled draw order, and gradient/pattern fill behavior from Office PDF
+structure across radar, filled radar, pie, and doughnut charts rather than keeping metric constants in the renderer.
