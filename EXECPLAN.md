@@ -6097,3 +6097,14 @@ explicit per-kind tolerances for the compared text classes. Validation: marker r
 passed 28/28 at `artifacts/visual/reports/pptx-charts.json`. Remaining long-term gap: several non-radar chart
 manifests still use broad global text tolerances where the better contract is likely a per-kind one backed by
 Office-PDF text evidence.
+
+Revision note, 2026-05-25: Converted the remaining public chart text gates that used broad global tolerances into
+explicit per-kind tolerances. The updated cases are `pptx-ladder-11-chart-column-100-stacked-port`,
+`pptx-ladder-11-chart-column-negative-port`, `pptx-ladder-11-composite-chart-port`,
+`pptx-ladder-11-chart-bar-clustered-port`, `pptx-ladder-11-chart-column-clustered-port`, and
+`pptx-ladder-11-chart-line-3series-port`. The tolerances now reflect the observed Office/candidate PDF text
+structure deltas by text class instead of allowing a single coarse fallback across category labels, value labels,
+legend text, and chart titles. Validation: the full public `pptx-charts` family passed 28/28 at
+`artifacts/visual/reports/pptx-charts.json` after the manifest conversion. Remaining long-term gap: this makes the
+text oracle more honest, but several chart families still have broad raster MAE gates because plot area, series
+shape, legend reserve, and fallback chart rendering are not structurally aligned yet.

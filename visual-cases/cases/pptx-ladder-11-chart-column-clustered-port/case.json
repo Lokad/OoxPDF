@@ -14,9 +14,12 @@
     "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "PlotAreaClipBoxCandidate"],
-    "maxChartTextStructurePositionDelta": 1,
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"]
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.1,
+      "ValueAxisTickLabel": 0.1
+    }
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

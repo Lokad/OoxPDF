@@ -15,8 +15,12 @@
     "maxChartGraphicsStructureBoundsDelta": 1,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": ["CrossingAxisPlotBoxCandidate", "PlotAreaClipBoxCandidate", "HorizontalLine", "VerticalLine"],
-    "maxChartTextStructurePositionDelta": 2,
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "ChartTitleText"]
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "ChartTitleText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.25,
+      "ValueAxisTickLabel": 0.25,
+      "ChartTitleText": 1.7
+    }
   }
 }

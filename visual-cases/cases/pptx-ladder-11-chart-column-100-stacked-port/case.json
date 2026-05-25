@@ -20,11 +20,14 @@
       "HorizontalGridlineGroupCandidate",
       "PlotAreaClipBoxCandidate"
     ],
-    "maxChartTextStructurePositionDelta": 2,
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": [
       "CategoryAxisTickLabel",
       "ValueAxisTickLabel"
-    ]
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 1.35,
+      "ValueAxisTickLabel": 1.6
+    }
   }
 }
