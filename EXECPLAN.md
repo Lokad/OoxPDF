@@ -7778,6 +7778,17 @@ Validation: focused `PptxSyntheticPngPictureRendersImageXObject`,
 passed. An earlier parallel test attempt hit shared `obj` file locks; the same checks passed when rerun
 sequentially.
 
+Revision note, 2026-05-26: Added a PDF-writer primitive for open even-odd rectangle clipping. The primitive
+emits a top-left -> top-right -> bottom-right -> bottom-left path followed by `W* n` without `re` or `h`,
+matching the shape of the remaining private Office-observed open slide-sized clip. This is deliberately only
+writer capability: no PPTX renderer call site has been changed to use it.
+
+The long-term purpose is to separate "can emit the PDF structure Office uses" from "knows when Office uses
+that structure." The latter still needs public Office-PDF evidence by rendering surface before OOXPDF should
+replace any existing slide, object, text, picture, or chart clip emission.
+
+Validation: focused `WritesOpenEvenOddClippingOperators` passed.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The

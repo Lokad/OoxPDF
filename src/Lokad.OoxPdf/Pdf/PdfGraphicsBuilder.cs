@@ -158,6 +158,12 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W* n");
     }
 
+    public void ClipOpenRectangleEvenOdd(double x, double y, double width, double height)
+    {
+        AppendOpenRectanglePath(x, y, width, height);
+        builder.AppendLine("W* n");
+    }
+
     public void ClipEllipse(double x, double y, double width, double height)
     {
         AppendEllipsePath(x, y, width, height);
@@ -404,6 +410,16 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y + r)).AppendLine(" l");
         Curve(x, y + r - ox, x + r - ox, y, x + r, y);
         builder.AppendLine("h");
+    }
+
+    private void AppendOpenRectanglePath(double x, double y, double width, double height)
+    {
+        double right = x + width;
+        double top = y + height;
+        builder.Append(N(x)).Append(' ').Append(N(top)).AppendLine(" m");
+        builder.Append(N(right)).Append(' ').Append(N(top)).AppendLine(" l");
+        builder.Append(N(right)).Append(' ').Append(N(y)).AppendLine(" l");
+        builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" l");
     }
 
     private void AppendPolygonPath((double X, double Y)[] points)

@@ -60,6 +60,22 @@ internal static class PdfWriterTests
         TestAssert.Contains("10 20 30 40 re W* n", pdf);
     }
 
+    public static void WritesOpenEvenOddClippingOperators()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.ClipOpenRectangleEvenOdd(10, 20, 30, 40);
+
+        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
+
+        TestAssert.Contains("10 60 m", pdf);
+        TestAssert.Contains("40 60 l", pdf);
+        TestAssert.Contains("40 20 l", pdf);
+        TestAssert.Contains("10 20 l", pdf);
+        TestAssert.Contains("W* n", pdf);
+        TestAssert.DoesNotContain(" h", pdf);
+        TestAssert.DoesNotContain(" re W* n", pdf);
+    }
+
     public static void WritesEvenOddFillOperators()
     {
         var graphics = new PdfGraphicsBuilder();
