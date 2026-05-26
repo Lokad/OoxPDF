@@ -343,7 +343,8 @@ internal readonly record struct PptxSceneShapePictureFill(
     string RelationshipId,
     string? TargetPartName,
     PptxSceneRect Crop,
-    PptxSceneRect Fill);
+    PptxSceneRect Fill,
+    PptxScenePictureTile Tile);
 
 internal readonly record struct PptxSceneGlow(
     bool HasGlow,
@@ -411,7 +412,8 @@ internal sealed record PptxScenePicture(
     PptxSceneRect Crop,
     PptxSceneRect Fill,
     double Alpha,
-    PptxSceneImageRecolor Recolor);
+    PptxSceneImageRecolor Recolor,
+    PptxScenePictureTile Tile);
 
 internal sealed record PptxSceneChart(
     string? RelationshipId,
@@ -1007,6 +1009,16 @@ internal readonly record struct PptxSceneRect(
 {
     public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
 }
+
+internal readonly record struct PptxScenePictureTile(
+    bool HasTile,
+    string? TileValue,
+    string? AlignmentValue,
+    string? FlipValue,
+    string? ScaleXValue,
+    string? ScaleYValue,
+    string? OffsetXValue,
+    string? OffsetYValue);
 
 internal enum PptxSceneImageRecolorKind
 {
@@ -1733,7 +1745,8 @@ internal sealed class PptxSceneBuilder
             ReadPictureCrop(picture),
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
-            ReadImageRecolor(picture, theme));
+            ReadImageRecolor(picture, theme),
+            ReadPictureTile(picture));
     }
 
     private static PptxSceneChart ReadChart(
@@ -3368,7 +3381,8 @@ internal sealed class PptxSceneBuilder
                 relationshipId,
                 ResolveRelationshipTarget(relationshipId, relationships),
                 ReadPictureCrop(shapeProperties!),
-                ReadPictureFill(shapeProperties!));
+                ReadPictureFill(shapeProperties!),
+                ReadPictureTile(shapeProperties!));
     }
 
     private static string? ResolveRelationshipTarget(
@@ -3703,6 +3717,24 @@ internal sealed class PptxSceneBuilder
         return fillRectangle is null
             ? default
             : ReadPercentageRectangle(fillRectangle);
+    }
+
+    internal static PptxScenePictureTile ReadPictureTile(XElement picture)
+    {
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        XElement? tile = blipFill?.Element(DrawingNamespace + "tile");
+        return tile is null
+            ? default
+            : new PptxScenePictureTile(
+                true,
+                tile.Name.LocalName,
+                (string?)tile.Attribute("algn"),
+                (string?)tile.Attribute("flip"),
+                (string?)tile.Attribute("sx"),
+                (string?)tile.Attribute("sy"),
+                (string?)tile.Attribute("tx"),
+                (string?)tile.Attribute("ty"));
     }
 
     internal static double ReadPictureAlpha(XElement picture)

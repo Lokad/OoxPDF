@@ -840,6 +840,28 @@ internal static class PptxTests
         TestAssert.Equal(0.625d, biLevel.Threshold);
     }
 
+    public static void PptxImageTilePreservesRawOoxmlTokens()
+    {
+        XElement tiledPicture = XElement.Parse("""
+            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:blipFill>
+                <a:blip/>
+                <a:tile algn="tl" flip="xy" sx="75000" sy="125000" tx="12700" ty="-25400"/>
+              </p:blipFill>
+            </p:pic>
+            """);
+        PptxScenePictureTile tile = PptxSceneBuilder.ReadPictureTile(tiledPicture);
+        TestAssert.True(tile.HasTile, "Expected scene model to preserve image tile mode.");
+        TestAssert.Equal("tile", tile.TileValue ?? string.Empty);
+        TestAssert.Equal("tl", tile.AlignmentValue ?? string.Empty);
+        TestAssert.Equal("xy", tile.FlipValue ?? string.Empty);
+        TestAssert.Equal("75000", tile.ScaleXValue ?? string.Empty);
+        TestAssert.Equal("125000", tile.ScaleYValue ?? string.Empty);
+        TestAssert.Equal("12700", tile.OffsetXValue ?? string.Empty);
+        TestAssert.Equal("-25400", tile.OffsetYValue ?? string.Empty);
+    }
+
     public static void PptxSyntheticShapesProduceDrawingOperators()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

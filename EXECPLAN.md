@@ -8096,6 +8096,20 @@ without re-reading raw XML. Tile-mode rendering and Office-perfect image fill pl
 Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed
 (`16 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`257 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved PPTX image tile-mode tokens in the scene model without pretending
+tiling is rendered. `PptxScenePicture` and `PptxSceneShapePictureFill` now carry a `PptxScenePictureTile`
+record that preserves the `a:tile` element token plus raw `algn`, `flip`, `sx`, `sy`, `tx`, and `ty`
+attributes. A direct parser test locks those raw tokens.
+
+Current rendering remains unchanged and the existing unsupported tiled-image diagnostic remains the public
+behavior. The long-term gain is that tile mode is no longer only discoverable through a renderer diagnostic
+raw-XML scan; scene-level image fill ownership can now distinguish stretch fill, crop, and tile source
+structure before any Office-PDF tiling strategy is designed.
+
+Validation: focused `PptxImageTilePreservesRawOoxmlTokens` passed; focused
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed (`17 passed, 0
+failed, 0 skipped`); full non-slow console runner passed (`258 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Split PPTX text layout bounds from PDF clipping bounds for default text-box
 overflow. Office PDF evidence from public `pptx-ladder-03-text-anchor-overflow` shows default overflowing
 text boxes clipped to the full slide, while `vertOverflow="clip"` text keeps a local frame clip. The text
