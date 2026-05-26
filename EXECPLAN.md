@@ -7145,3 +7145,21 @@ test. Targeted scatter visuals passed for `pptx-ladder-11-chart-scatter-smooth-p
 (`MAE 2.21`, changed16 `0.0202`) that is explicitly backed by the new structural gates. The full public
 `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated `2026-05-26T13:04:42.6055440+02:00`.
+
+Revision note, 2026-05-26: Added a stable structural subset gate to the public composite two-chart case
+without changing renderer behavior. The manifest now locks the first chart's legend swatch and legend text,
+plus the stable outer chart text, while deliberately leaving the multi-chart plot/axis buckets ungated.
+This is a narrow structural ratchet: `LegendSwatchCandidate` is within about `5.36 pt`, `LegendText` within
+about `5.38 pt`, and `OuterChartText` within about `0.53 pt`; the remaining `AxisPairPlotBoxCandidate`,
+`PlotBox`, `PlotAreaClipBoxCandidate`, category/value tick labels, and candidate-only data-label bucket still
+need multi-chart-aware classification before they can carry long-term gates.
+
+Validation: targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-11-composite-two-charts-port` at
+`artifacts/visual/pptx-ladder-11-composite-two-charts-port/20260526-130611`, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-26T13:09:58.6237888+02:00`. After this gate, only two public chart cases still have
+neither chart graphics nor chart text structural gates: the automatic horizontal stacked bar case, whose
+real gap is still the Office automatic plot-area/category-label/value-axis reserve model, and the compact
+stacked secondary-axis probe, whose real gap is missing data-label rendering/classification plus secondary
+axis/marker false positives.

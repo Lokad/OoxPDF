@@ -10,7 +10,15 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 16.1,
-    "maxChangedPixelRatioAtThreshold16": 0.203
+    "maxChangedPixelRatioAtThreshold16": 0.203,
+    "maxChartGraphicsStructureBoundsDelta": 6.0,
+    "compareChartGraphicsStructureKinds": ["LegendSwatchCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["LegendText", "OuterChartText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 6.0,
+      "OuterChartText": 1.0
+    }
   },
   "allowedUnsupportedFeatures": [
     "PPTX_UNSUPPORTED_CHART",
