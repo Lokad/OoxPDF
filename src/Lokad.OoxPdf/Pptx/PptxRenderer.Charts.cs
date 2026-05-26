@@ -4603,7 +4603,7 @@ internal sealed partial class PptxRenderer
         }
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars);
-        defaultPlotBox = AdjustBarChartPlotBoxForPercentStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, horizontalBars);
+        defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, horizontalBars);
         ChartPlotBox manualDefaultPlotBox = horizontalBars && HasExplicitManualPlotLayoutTarget(sceneChart, chartXml)
             ? GetHorizontalBarManualLayoutTargetDefaultPlotBox(frame, defaultPlotBox)
             : defaultPlotBox;
@@ -4799,7 +4799,7 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
     }
 
-    private static ChartPlotBox AdjustBarChartPlotBoxForPercentStackedValueAxisLabels(
+    private static ChartPlotBox AdjustBarChartPlotBoxForStackedValueAxisLabels(
         PptxTheme theme,
         ChartPlotBox plotBox,
         ChartFrameBox frame,
@@ -4815,7 +4815,8 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(barPlot, barChart, PptxSceneChartGrouping.Clustered);
-        if (!IsPercentStackedChartGrouping(grouping))
+        bool percentStacked = IsPercentStackedChartGrouping(grouping);
+        if (!IsStackedChartGrouping(grouping))
         {
             return plotBox;
         }
@@ -4837,9 +4838,10 @@ internal sealed partial class PptxRenderer
             valueSceneAxis,
             valueAxis,
             GetBarChartValueExtents(series, grouping),
-            percentStacked: true);
-        ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked: true);
-        double requiredReserve = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, axisUnits, "0%");
+            percentStacked);
+        ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
+        string? defaultNumberFormat = percentStacked ? "0%" : null;
+        double requiredReserve = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis, valueSceneAxis, valueExtents, axisUnits, defaultNumberFormat);
         double leftReserve = plotBox.X - frame.X;
         double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
         bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(valueSceneAxis, valueAxis, defaultRightSide: false);

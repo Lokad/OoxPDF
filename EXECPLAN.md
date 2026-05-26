@@ -7071,3 +7071,20 @@ Tooling note, 2026-05-26: `tools/SummarizeChartStructureDeltas.ps1 -ShowBounds` 
 reference/candidate bounds for singleton structural buckets. This makes plot-box work less dependent on
 manual JSON inspection; for example, the stacked column gap is visibly a left-edge-only delta
 `(122.58,111.9)-(781,488.01)` vs `(113.47,111.92)-(781.06,488.02)`.
+
+Revision note, 2026-05-26: Generalized the vertical stacked bar/column value-axis label reserve path.
+`AdjustBarChartPlotBoxForPercentStackedValueAxisLabels` is now the broader
+`AdjustBarChartPlotBoxForStackedValueAxisLabels`: percent-stacked charts keep their percent-aware extents,
+axis units, and `0%` default number format, while ordinary stacked vertical columns now use the same
+scene/XML value-axis label strip estimate with their native number format. This avoids a new
+stacked-column coordinate constant and moves the layout rule toward observable axis-label reserve
+structure. Public `pptx-ladder-11-chart-column-stacked-port` improved from MAE `2.738837` and
+`9.11 pt` plot-box left-edge delta to MAE `1.810096` and `3.96 pt` plot-box delta; the remaining overshoot
+is deliberately still visible in the structural gate rather than hidden. The manifest now gates the stable
+axis/plot-box graphics buckets and category/value tick-label text buckets.
+
+Validation: focused `pptx-charts` tests passed 39/39; targeted visual checks passed for
+`pptx-ladder-11-chart-column-stacked-port`,
+`pptx-ladder-11-chart-column-100-stacked-port`, and `pptx-ladder-11-chart-column-clustered-port`; the full
+public `pptx-charts` visual family passed 37/37 with zero failures at
+`artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:36 local run.
