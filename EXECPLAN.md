@@ -7792,14 +7792,28 @@ nonblank labels, so this is behavior-neutral today. The long-term effect is that
 implementation can align category and value cache points structurally instead of inferring missing labels
 after the scene parser has already discarded their indices.
 
-This still does not close workbook-derived chart data. Category, value, and bubble vectors hydrated from
-embedded workbook ranges are still collapsed at the workbook-read boundary, and multi-level category levels
-need their own point ownership before Office-perfect category-axis and blank-cell behavior can be modeled
-without heuristics.
+This still does not close workbook-derived chart data. Direct workbook-backed renderer arrays remain
+collapsed for current rendering, and multi-level category levels need their own point ownership before
+Office-perfect category-axis and blank-cell behavior can be modeled without heuristics.
 
 Validation: focused non-slow `pptx-model` passed (`15 passed, 0 failed, 1 skipped`); focused non-slow
 `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner passed
 (`245 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-26: Moved embedded-workbook chart cache hydration onto range-cell records instead of
+dense filtered arrays. `ChartWorkbookData.ReadRangeCells` now emits every coordinate in a requested range
+with a zero-based range index, cell reference, text, and `HasCell` flag; `HydrateChartReferenceCaches` filters
+visible numeric/string values but preserves the original range index when creating `c:pt/@idx` and uses the
+range cardinality for `c:ptCount`. This prevents workbook-backed missing cells from shifting later point
+indices during fallback cache construction.
+
+This is still not full workbook semantics. The native renderer's direct workbook path still consumes
+flattened numeric/text arrays, date serials still need `date1904` interpretation, and table/name references
+are not yet structural range sources. The useful closure here is narrower: when OOXPDF materializes a chart
+cache from an embedded workbook, it no longer invents dense point indices after blanks.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`246 passed, 0 failed, 7 skipped`).
 
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership

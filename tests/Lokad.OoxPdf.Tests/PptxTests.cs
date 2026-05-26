@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -10138,6 +10139,47 @@ internal static class PptxTests
         TestAssert.True(CountTextMatrices(pdf) >= 3, "Expected workbook-backed category references to feed native legend text without requiring chart-side string caches.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Charts with formulas and embedded workbook data should not require chart-side caches.");
+    }
+
+    public static void PptxChartWorkbookHydrationPreservesRangePointIndices()
+    {
+        Type workbookType = typeof(PptxRenderer).GetNestedType(
+            "ChartWorkbookData",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["A2"] = "North",
+                ["A4"] = "West",
+                ["B2"] = "8.2",
+                ["B4"] = "1.4"
+            }
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        var chartXml = XDocument.Parse("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart><c:ser>
+                <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
+                <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f></c:numRef></c:val>
+              </c:ser></c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        var hydrate = typeof(PptxRenderer).GetMethod(
+            "HydrateChartReferenceCaches",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected cache hydration helper.");
+
+        hydrate.Invoke(null, [workbook, chartXml]);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement numCache = chartXml.Descendants(c + "numCache").Single();
+        TestAssert.Equal("3", numCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("0", numCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
+        TestAssert.Equal("2", numCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);
+        XElement strCache = chartXml.Descendants(c + "strCache").Single();
+        TestAssert.Equal("3", strCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("0", strCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
+        TestAssert.Equal("2", strCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()

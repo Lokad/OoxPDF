@@ -1107,9 +1107,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string? formula = reference.Element(ChartNamespace + "f")?.Value;
-            string[] values = workbook.ReadRange(formula)
-                .Where(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+            ChartWorkbookRangeCell[] values = workbook.ReadRangeCells(reference.Element(ChartNamespace + "f")?.Value)
+                .Where(cell => double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
                 .ToArray();
             if (values.Length == 0)
             {
@@ -1129,8 +1128,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string[] values = workbook.ReadRange(reference.Element(ChartNamespace + "f")?.Value)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
+            ChartWorkbookRangeCell[] values = workbook.ReadRangeCells(reference.Element(ChartNamespace + "f")?.Value)
+                .Where(cell => !string.IsNullOrWhiteSpace(cell.Text))
                 .ToArray();
             if (values.Length == 0)
             {
@@ -1149,8 +1148,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string[] values = workbook.ReadRange(reference.Element(ChartNamespace + "f")?.Value)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
+            ChartWorkbookRangeCell[] values = workbook.ReadRangeCells(reference.Element(ChartNamespace + "f")?.Value)
+                .Where(cell => !string.IsNullOrWhiteSpace(cell.Text))
                 .ToArray();
             if (values.Length == 0)
             {
@@ -1159,8 +1158,8 @@ internal sealed partial class PptxRenderer
 
             InsertChartReferenceCache(reference, new XElement(
                 ChartNamespace + "multiLvlStrCache",
-                new XElement(ChartNamespace + "ptCount", new XAttribute("val", values.Length.ToString(CultureInfo.InvariantCulture))),
-                new XElement(ChartNamespace + "lvl", values.Select((value, index) => BuildChartCachePoint(index, value)))));
+                new XElement(ChartNamespace + "ptCount", new XAttribute("val", (values.Max(cell => cell.Index) + 1).ToString(CultureInfo.InvariantCulture))),
+                new XElement(ChartNamespace + "lvl", values.Select(cell => BuildChartCachePoint(cell.Index, cell.Text)))));
         }
     }
 
@@ -1183,6 +1182,20 @@ internal sealed partial class PptxRenderer
         for (int index = 0; index < values.Count; index++)
         {
             elements[index + 1] = BuildChartCachePoint(index, values[index]);
+        }
+
+        return elements;
+    }
+
+    private static object[] BuildChartCachePoints(IReadOnlyList<ChartWorkbookRangeCell> values)
+    {
+        var elements = new object[values.Count + 1];
+        int pointCount = values.Count == 0 ? 0 : values.Max(cell => cell.Index) + 1;
+        elements[0] = new XElement(ChartNamespace + "ptCount", new XAttribute("val", pointCount.ToString(CultureInfo.InvariantCulture)));
+        for (int index = 0; index < values.Count; index++)
+        {
+            ChartWorkbookRangeCell cell = values[index];
+            elements[index + 1] = BuildChartCachePoint(cell.Index, cell.Text);
         }
 
         return elements;
@@ -1350,9 +1363,23 @@ internal sealed partial class PptxRenderer
         return cells;
     }
 
+    private readonly record struct ChartWorkbookRangeCell(
+        int Index,
+        string Reference,
+        string Text,
+        bool HasCell);
+
     private sealed class ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
     {
         public string[] ReadRange(string? formula)
+        {
+            return ReadRangeCells(formula)
+                .Where(cell => cell.HasCell)
+                .Select(cell => cell.Text)
+                .ToArray();
+        }
+
+        public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
             if (!TryParseRange(formula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out Dictionary<string, string>? cells))
@@ -1360,19 +1387,20 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
-            var values = new List<string>();
+            var values = new List<ChartWorkbookRangeCell>();
             int minColumn = Math.Min(firstColumn, lastColumn);
             int maxColumn = Math.Max(firstColumn, lastColumn);
             int minRow = Math.Min(firstRow, lastRow);
             int maxRow = Math.Max(firstRow, lastRow);
+            int index = 0;
             for (int row = minRow; row <= maxRow; row++)
             {
                 for (int column = minColumn; column <= maxColumn; column++)
                 {
-                    if (cells.TryGetValue(ToCellReference(column, row), out string? value))
-                    {
-                        values.Add(value);
-                    }
+                    string reference = ToCellReference(column, row);
+                    bool hasCell = cells.TryGetValue(reference, out string? value);
+                    values.Add(new ChartWorkbookRangeCell(index, reference, value ?? string.Empty, hasCell));
+                    index++;
                 }
             }
 
