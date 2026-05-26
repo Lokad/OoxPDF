@@ -10333,6 +10333,23 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!$B$2:$B$2,$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
         TestAssert.Equal("Sheet1!$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("ResolvedFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
         TestAssert.Equal("1.4", (string?)secondParsedUnionCell.GetType().GetProperty("RawValue")?.GetValue(secondParsedUnionCell) ?? string.Empty);
+        var commaSheetSheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Q,1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["A1"] = "3",
+                ["A2"] = "5"
+            }
+        };
+        object commaSheetWorkbook = Activator.CreateInstance(workbookType, [commaSheetSheets]) ?? throw new InvalidOperationException("Expected quoted comma-sheet workbook instance.");
+        Array commaSheetUnionCells = (Array)(readRangeCells.Invoke(commaSheetWorkbook, ["'Q,1'!$A$1:$A$1,$A$2:$A$2"]) ?? throw new InvalidOperationException("Expected quoted comma-sheet multi-area range cells."));
+        object firstCommaSheetUnionCell = commaSheetUnionCells.GetValue(0) ?? throw new InvalidOperationException("Expected first quoted comma-sheet multi-area range cell.");
+        object secondCommaSheetUnionCell = commaSheetUnionCells.GetValue(1) ?? throw new InvalidOperationException("Expected second quoted comma-sheet multi-area range cell.");
+        TestAssert.True(commaSheetUnionCells.Length == 2, "Expected multi-area range parsing not to split commas inside quoted sheet names.");
+        TestAssert.Equal("Q,1", (string?)sheetNameProperty.GetValue(firstCommaSheetUnionCell) ?? string.Empty);
+        TestAssert.Equal("'Q,1'!$A$1:$A$1,$A$2:$A$2", (string?)secondCommaSheetUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondCommaSheetUnionCell) ?? string.Empty);
+        TestAssert.Equal("'Q,1'!$A$2:$A$2", (string?)secondCommaSheetUnionCell.GetType().GetProperty("ResolvedFormula")?.GetValue(secondCommaSheetUnionCell) ?? string.Empty);
+        TestAssert.True((int?)secondCommaSheetUnionCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondCommaSheetUnionCell) == 1, "Expected quoted comma-sheet range unions to preserve area ownership.");
         var readNumericRange = workbookType.GetMethod("ReadNumericRange") ?? throw new InvalidOperationException("Expected typed numeric range reader.");
         Array parsedNumericValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected typed workbook numeric values."));
         object firstParsedNumericValue = parsedNumericValues.GetValue(0) ?? throw new InvalidOperationException("Expected first typed numeric value.");

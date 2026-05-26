@@ -7759,6 +7759,21 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Locked another chart workbook range-parser edge case before broadening renderer
+semantics. The workbook hydration tests now cover a multi-area formula whose sheet token is quoted and
+contains a comma, with the second area relying on the leading sheet token from the first area. This preserves
+the current structural invariant: top-level range unions split only on range separators, not on punctuation
+inside quoted sheet names, and each hydrated range cell keeps the original source formula plus its per-area
+resolved formula and area index.
+
+This is coverage, not a formula-engine expansion. Parenthesized unions, intersections, dynamic arrays,
+external workbook loading, stale cache/source freshness policy, and visible `dispBlanksAs`/`plotVisOnly`
+semantics remain open. The reason to lock this now is architectural: future chart data vectors need a
+trustworthy workbook range source layer, so the renderer should not grow fixture-specific range parsing when
+Office-authored formulas contain quoted sheet syntax.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
 structure instead of treating every table reference as a single column or whole-table shortcut.
 `SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps
