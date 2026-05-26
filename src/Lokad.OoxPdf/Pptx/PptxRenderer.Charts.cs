@@ -1917,6 +1917,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartWorkbookRangeCell(
         int Index,
+        int RangeAreaIndex,
+        int RangeAreaCount,
         int RangeRowIndex,
         int RangeColumnIndex,
         int RangeRowCount,
@@ -2144,13 +2146,35 @@ internal sealed partial class PptxRenderer
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
             ChartWorkbookRangeResolution resolution = ResolveRangeFormula(formula);
-            if (!TryParseRange(resolution.ResolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
-                !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
+            string[] rangeAreas = SplitRangeAreas(resolution.ResolvedFormula);
+            if (rangeAreas.Length == 0)
             {
                 return [];
             }
 
             var values = new List<ChartWorkbookRangeCell>();
+            int index = 0;
+            for (int areaIndex = 0; areaIndex < rangeAreas.Length; areaIndex++)
+            {
+                AddRangeAreaCells(values, resolution with { ResolvedFormula = rangeAreas[areaIndex] }, areaIndex, rangeAreas.Length, ref index);
+            }
+
+            return values.ToArray();
+        }
+
+        private void AddRangeAreaCells(
+            List<ChartWorkbookRangeCell> values,
+            ChartWorkbookRangeResolution resolution,
+            int rangeAreaIndex,
+            int rangeAreaCount,
+            ref int index)
+        {
+            if (!TryParseRange(resolution.ResolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
+                !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
+            {
+                return;
+            }
+
             int minColumn = Math.Min(firstColumn, lastColumn);
             int maxColumn = Math.Max(firstColumn, lastColumn);
             int minRow = Math.Min(firstRow, lastRow);
@@ -2160,7 +2184,6 @@ internal sealed partial class PptxRenderer
             ChartWorkbookTable sourceTable = default;
             bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&
                 tables.TryGetValue(resolution.TableName, out sourceTable);
-            int index = 0;
             for (int row = minRow; row <= maxRow; row++)
             {
                 for (int column = minColumn; column <= maxColumn; column++)
@@ -2195,6 +2218,8 @@ internal sealed partial class PptxRenderer
 
                     values.Add(new ChartWorkbookRangeCell(
                         index,
+                        rangeAreaIndex,
+                        rangeAreaCount,
                         row - minRow,
                         column - minColumn,
                         rangeRowCount,
@@ -2250,8 +2275,6 @@ internal sealed partial class PptxRenderer
                     index++;
                 }
             }
-
-            return values.ToArray();
         }
 
         private ChartWorkbookRangeResolution ResolveRangeFormula(string? formula)
@@ -2712,6 +2735,52 @@ internal sealed partial class PptxRenderer
             }
 
             return TryParseCellReference(references[1], out lastColumn, out lastRow);
+        }
+
+        private static string[] SplitRangeAreas(string formula)
+        {
+            if (string.IsNullOrWhiteSpace(formula))
+            {
+                return [];
+            }
+
+            var areas = new List<string>();
+            int areaStart = 0;
+            bool inQuotedSheetName = false;
+            for (int index = 0; index < formula.Length; index++)
+            {
+                char current = formula[index];
+                if (current == '\'')
+                {
+                    if (inQuotedSheetName && index + 1 < formula.Length && formula[index + 1] == '\'')
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    inQuotedSheetName = !inQuotedSheetName;
+                    continue;
+                }
+
+                if (current == ',' && !inQuotedSheetName)
+                {
+                    string area = formula[areaStart..index].Trim();
+                    if (area.Length > 0)
+                    {
+                        areas.Add(area);
+                    }
+
+                    areaStart = index + 1;
+                }
+            }
+
+            string lastArea = formula[areaStart..].Trim();
+            if (lastArea.Length > 0)
+            {
+                areas.Add(lastArea);
+            }
+
+            return areas.ToArray();
         }
 
         private static string NormalizeSheetName(string sheetName)

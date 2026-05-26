@@ -7867,6 +7867,19 @@ parts of a table a structured reference meant.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved discontiguous chart workbook range shape instead of treating every
+source formula as a single rectangle. `ChartWorkbookData.ReadRangeCells` now splits top-level comma-separated
+range areas, reads each area in Office formula order, keeps point indices continuous across areas, and adds
+`RangeAreaIndex` / `RangeAreaCount` to every materialized range cell. The embedded workbook regression locks
+both raw range cells and typed numeric values for a two-area value source.
+
+This is still not a formula engine. Parenthesized unions, intersections, dynamic arrays, external workbook
+loading, and source/cache freshness policy remain open. The structural improvement is narrower: chart-data
+hydration can now carry discontiguous source shape and global point order without pretending that a union was
+one rectangular sheet range.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved shared-string structure for embedded chart workbook text sources.
 `ReadWorkbookSharedStrings` now builds typed shared-string records with resolved text, direct rich-text run
 count, rich-text presence, phonetic-text presence, and `xml:space="preserve"` metadata. Shared-string backed
