@@ -2233,6 +2233,13 @@ High-priority actions:
     `pptx-ladder-11-chart-radar-filled-port/20260526-165625`. The broader radar item intentionally stays open:
     label frames, marker envelopes, axis text anchors, and plot-box reserve semantics still need structural
     resolver ownership instead of ad hoc metric constants.
+  - [x] Move radar category/value label-frame evidence into the typed radar layout path:
+    `ChartRadarLayout` now carries `ChartRadarLabelRules`, so category label gaps/baseline factors and value-axis
+    label width/gap/baseline factors are owned by the radar resolver instead of generic `PptxChartMetricRules`.
+    Validated with `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`, focused `pptx-charts` tests at
+    `40/40`, and targeted radar visual runs `pptx-ladder-11-chart-radar-2series-port/20260526-165921` plus
+    `pptx-ladder-11-chart-radar-filled-port/20260526-165921`. Remaining radar layout debt: marker envelopes and
+    plot-box reserve semantics are still not inferred from Office-visible structure.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing

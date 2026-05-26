@@ -900,15 +900,6 @@ internal sealed partial class PptxRenderer
         public const double PieDataLabelMinimumWidth = 18d;
         public const double PieDataLabelHeightFactor = 1.35d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
-        public const double RadarCategoryLabelGapFactor = 0.65d;
-        public const double MarkerRadarCategoryLabelHorizontalGapFactor = 0.41d;
-        public const double FilledRadarCategoryLabelHorizontalGapFactor = 0.35d;
-        public const double RadarCategoryLabelBaselineBaseFactor = -0.309d;
-        public const double RadarCategoryLabelBaselineSineFactor = -0.005d;
-        public const double RadarCategoryLabelBaselineSineSquaredFactor = 0.397d;
-        public const double RadarValueLabelGapFactor = 1.01d;
-        public const double RadarValueLabelBaselineOffsetFactor = 0.25d;
-        public const double RadarValueLabelWidthFactor = 3.0d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;
         public const double BarDataLabelHorizontalGap = 2d;
@@ -1000,11 +991,22 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartRadarGeometryRule(double CenterXRatio, double CenterYRatio, double RadiusRatio);
 
+    private readonly record struct ChartRadarLabelRules(
+        double CategoryVerticalGapFactor,
+        double CategoryHorizontalGapFactor,
+        double CategoryBaselineBaseFactor,
+        double CategoryBaselineSineFactor,
+        double CategoryBaselineSineSquaredFactor,
+        double ValueGapFactor,
+        double ValueBaselineOffsetFactor,
+        double ValueWidthFactor);
+
     private readonly record struct ChartRadarLayout(
         ChartPlotBox PlotBox,
         ChartPolarGeometry Geometry,
         ChartRadarStyle Style,
-        int PointCount)
+        int PointCount,
+        ChartRadarLabelRules LabelRules)
     {
         public bool IsFilled => Style == ChartRadarStyle.Filled;
     }

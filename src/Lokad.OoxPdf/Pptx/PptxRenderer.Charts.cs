@@ -1639,7 +1639,8 @@ internal sealed partial class PptxRenderer
             plotBox,
             GetRadarChartGeometry(plotBox, style),
             style,
-            Math.Max(3, series.Max(values => values.Count)));
+            Math.Max(3, series.Max(values => values.Count)),
+            ResolveRadarLabelRules(style));
     }
 
     private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, ChartRadarStyle style)
@@ -1656,6 +1657,20 @@ internal sealed partial class PptxRenderer
         return style == ChartRadarStyle.Filled
             ? new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.4583333333333333d, RadiusRatio: 0.3825d)
             : new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.5d, RadiusRatio: 0.4226d);
+    }
+
+    private static ChartRadarLabelRules ResolveRadarLabelRules(ChartRadarStyle style)
+    {
+        double categoryHorizontalGapFactor = style == ChartRadarStyle.Filled ? 0.35d : 0.41d;
+        return new ChartRadarLabelRules(
+            CategoryVerticalGapFactor: 0.65d,
+            CategoryHorizontalGapFactor: categoryHorizontalGapFactor,
+            CategoryBaselineBaseFactor: -0.309d,
+            CategoryBaselineSineFactor: -0.005d,
+            CategoryBaselineSineSquaredFactor: 0.397d,
+            ValueGapFactor: 1.01d,
+            ValueBaselineOffsetFactor: 0.25d,
+            ValueWidthFactor: 3.0d);
     }
 
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)
@@ -6406,8 +6421,9 @@ internal sealed partial class PptxRenderer
         ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-        double verticalGap = fontSize * PptxChartMetricRules.RadarCategoryLabelGapFactor;
-        double horizontalGap = fontSize * ResolveRadarCategoryLabelHorizontalGapFactor(layout.Style);
+        ChartRadarLabelRules labelRules = layout.LabelRules;
+        double verticalGap = fontSize * labelRules.CategoryVerticalGapFactor;
+        double horizontalGap = fontSize * labelRules.CategoryHorizontalGapFactor;
         double angle = GetRadarPointAngle(index, pointCount);
         double cosine = Math.Cos(angle);
         double anchorX = geometry.CenterX + cosine * (geometry.Radius + horizontalGap);
@@ -6424,23 +6440,16 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => anchorX - width,
             _ => anchorX - width / 2d
         };
-        double y = ResolveRadarCategoryLabelBaselineY(anchorY, angle, height);
+        double y = ResolveRadarCategoryLabelBaselineY(anchorY, angle, height, labelRules);
         return new ChartRadarLabelFrame(x, y, width, height, alignment);
     }
 
-    private static double ResolveRadarCategoryLabelHorizontalGapFactor(ChartRadarStyle style)
-    {
-        return style == ChartRadarStyle.Filled
-            ? PptxChartMetricRules.FilledRadarCategoryLabelHorizontalGapFactor
-            : PptxChartMetricRules.MarkerRadarCategoryLabelHorizontalGapFactor;
-    }
-
-    private static double ResolveRadarCategoryLabelBaselineY(double anchorY, double angle, double labelHeight)
+    private static double ResolveRadarCategoryLabelBaselineY(double anchorY, double angle, double labelHeight, ChartRadarLabelRules labelRules)
     {
         double sine = Math.Sin(angle);
-        double baselineFactor = PptxChartMetricRules.RadarCategoryLabelBaselineBaseFactor +
-            PptxChartMetricRules.RadarCategoryLabelBaselineSineFactor * sine +
-            PptxChartMetricRules.RadarCategoryLabelBaselineSineSquaredFactor * sine * sine;
+        double baselineFactor = labelRules.CategoryBaselineBaseFactor +
+            labelRules.CategoryBaselineSineFactor * sine +
+            labelRules.CategoryBaselineSineSquaredFactor * sine * sine;
         return anchorY + labelHeight * baselineFactor;
     }
 
@@ -6474,15 +6483,16 @@ internal sealed partial class PptxRenderer
         ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
-        double width = fontSize * PptxChartMetricRules.RadarValueLabelWidthFactor;
-        double x = geometry.CenterX - width - fontSize * PptxChartMetricRules.RadarValueLabelGapFactor;
+        ChartRadarLabelRules labelRules = layout.LabelRules;
+        double width = fontSize * labelRules.ValueWidthFactor;
+        double x = geometry.CenterX - width - fontSize * labelRules.ValueGapFactor;
         double y = ResolveRadarValueAxisLabelBaselineY(layout, ratio, height);
         return new ChartRadarLabelFrame(x, y, width, height, TextAlignment.Right);
     }
 
     private static double ResolveRadarValueAxisLabelBaselineY(ChartRadarLayout layout, double ratio, double labelHeight)
     {
-        return layout.Geometry.CenterY + layout.Geometry.Radius * ratio - labelHeight * PptxChartMetricRules.RadarValueLabelBaselineOffsetFactor;
+        return layout.Geometry.CenterY + layout.Geometry.Radius * ratio - labelHeight * layout.LabelRules.ValueBaselineOffsetFactor;
     }
 
     private static void RenderPieChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<double> values, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes, IReadOnlyDictionary<int, double> pointExplosions, double firstSliceAngle)
