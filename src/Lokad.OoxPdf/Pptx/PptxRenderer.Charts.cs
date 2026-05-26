@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
@@ -2344,15 +2345,11 @@ internal sealed partial class PptxRenderer
 
             if (trimmed[0] != '[')
             {
-                columnName = trimmed;
+                columnName = UnescapeStructuredReferenceText(trimmed);
                 return true;
             }
 
-            string[] segments = trimmed
-                .Split("],[", StringSplitOptions.TrimEntries)
-                .Select(segment => segment.Trim('[', ']'))
-                .ToArray();
-            foreach (string segment in segments)
+            foreach (string segment in ParseStructuredReferenceSegments(trimmed))
             {
                 if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
                 {
@@ -2371,6 +2368,78 @@ internal sealed partial class PptxRenderer
             }
 
             return !string.IsNullOrWhiteSpace(columnName);
+        }
+
+        private static string[] ParseStructuredReferenceSegments(string body)
+        {
+            var segments = new List<string>();
+            int index = 0;
+            while (index < body.Length)
+            {
+                while (index < body.Length && (char.IsWhiteSpace(body[index]) || body[index] == ','))
+                {
+                    index++;
+                }
+
+                if (index >= body.Length)
+                {
+                    break;
+                }
+
+                if (body[index] != '[')
+                {
+                    int nextComma = body.IndexOf(',', index);
+                    string segment = nextComma < 0 ? body[index..] : body[index..nextComma];
+                    segments.Add(UnescapeStructuredReferenceText(segment.Trim()));
+                    index = nextComma < 0 ? body.Length : nextComma + 1;
+                    continue;
+                }
+
+                index++;
+                var segmentBuilder = new StringBuilder();
+                while (index < body.Length)
+                {
+                    char current = body[index];
+                    if (current == '\'' && index + 1 < body.Length)
+                    {
+                        segmentBuilder.Append(body[index + 1]);
+                        index += 2;
+                        continue;
+                    }
+
+                    if (current == ']')
+                    {
+                        index++;
+                        break;
+                    }
+
+                    segmentBuilder.Append(current);
+                    index++;
+                }
+
+                segments.Add(segmentBuilder.ToString().Trim());
+            }
+
+            return segments.ToArray();
+        }
+
+        private static string UnescapeStructuredReferenceText(string text)
+        {
+            var builder = new StringBuilder(text.Length);
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '\'' && i + 1 < text.Length)
+                {
+                    builder.Append(text[i + 1]);
+                    i++;
+                }
+                else
+                {
+                    builder.Append(text[i]);
+                }
+            }
+
+            return builder.ToString().Trim();
         }
 
         private static string QuoteSheetName(string sheetName)

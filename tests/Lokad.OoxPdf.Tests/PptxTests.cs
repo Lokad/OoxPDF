@@ -10347,6 +10347,11 @@ internal static class PptxTests
         TestAssert.Equal("SalesTable", (string?)firstParsedStructuredCell.GetType().GetProperty("TableName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference source column id to survive resolution.");
+        Array parsedEscapedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Quoted ']' Amount]"]) ?? throw new InvalidOperationException("Expected parsed escaped structured-reference range cells."));
+        object firstParsedEscapedStructuredCell = parsedEscapedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first escaped structured-reference range cell.");
+        TestAssert.Equal("Sheet1!C2:C4", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
+        TestAssert.Equal("Quoted ] Amount", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedEscapedStructuredCell) == 3, "Expected escaped structured-reference source column id to survive resolution.");
         Array parsedBlankCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$C$2:$C$2"]) ?? throw new InvalidOperationException("Expected parsed blank workbook range cell."));
         object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");
@@ -10401,7 +10406,7 @@ internal static class PptxTests
             .Cast<object>()
             .First(table => (string?)table.GetType().GetProperty("Name")?.GetValue(table) == "SalesTable");
         TestAssert.Equal(1, (int?)salesTable.GetType().GetProperty("HeaderRowCount")?.GetValue(salesTable) ?? 0);
-        TestAssert.Equal("A1:B4", (string?)salesTable.GetType().GetProperty("AutoFilterReference")?.GetValue(salesTable) ?? string.Empty);
+        TestAssert.Equal("A1:C4", (string?)salesTable.GetType().GetProperty("AutoFilterReference")?.GetValue(salesTable) ?? string.Empty);
         object filterColumnIds = salesTable.GetType().GetProperty("FilterColumnIds")?.GetValue(salesTable) ?? throw new InvalidOperationException("Expected table filter column ids.");
         TestAssert.True(((System.Collections.IEnumerable)filterColumnIds).Cast<int>().SequenceEqual([0, 1]), "Expected table filter column ids to survive workbook parsing.");
         object[] filterColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("FilterColumns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table filter column records.")).Cast<object>().ToArray();
@@ -10415,11 +10420,14 @@ internal static class PptxTests
         TestAssert.Equal("greaterThan", (string?)customFilter.GetType().GetProperty("Operator")?.GetValue(customFilter) ?? string.Empty);
         TestAssert.Equal("3", (string?)customFilter.GetType().GetProperty("Value")?.GetValue(customFilter) ?? string.Empty);
         object[] salesTableColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("Columns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table column records.")).Cast<object>().ToArray();
-        TestAssert.True(salesTableColumns.Length == 2, "Expected table column records to survive workbook parsing.");
+        TestAssert.True(salesTableColumns.Length == 3, "Expected table column records to survive workbook parsing.");
         object amountColumn = salesTableColumns[1];
         TestAssert.True((int?)amountColumn.GetType().GetProperty("Id")?.GetValue(amountColumn) == 2, "Expected table column id metadata to survive workbook parsing.");
         TestAssert.Equal("Amount", (string?)amountColumn.GetType().GetProperty("Name")?.GetValue(amountColumn) ?? string.Empty);
         TestAssert.Equal("B2", (string?)amountColumn.GetType().GetProperty("CalculatedColumnFormula")?.GetValue(amountColumn) ?? string.Empty);
+        object escapedColumn = salesTableColumns[2];
+        TestAssert.True((int?)escapedColumn.GetType().GetProperty("Id")?.GetValue(escapedColumn) == 3, "Expected escaped table column id metadata to survive workbook parsing.");
+        TestAssert.Equal("Quoted ] Amount", (string?)escapedColumn.GetType().GetProperty("Name")?.GetValue(escapedColumn) ?? string.Empty);
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10763,6 +10771,7 @@ internal static class PptxTests
                   <si><t>South</t></si>
                   <si><t>West</t></si>
                   <si><t>Share</t></si>
+                  <si><t>Quoted ] Amount</t></si>
                 </sst>
                 """,
             ["xl/styles.xml"] = """
@@ -10785,10 +10794,10 @@ internal static class PptxTests
                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <cols><col min="2" max="2" hidden="1"/></cols>
                   <sheetData>
-                    <row r="1"><c r="B1" t="s"><v>3</v></c></row>
+                    <row r="1"><c r="B1" t="s"><v>3</v></c><c r="C1" t="s"><v>4</v></c></row>
                     <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c><c r="C2" s="4"><f t="array" ref="C2:C2" ca="1">NA()</f></c></row>
-                    <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
-                    <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f t="shared" ref="B4:B4" si="7">B2-B3</f><v>1.4</v></c></row>
+                    <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c><c r="C3"><v>7.5</v></c></row>
+                    <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f t="shared" ref="B4:B4" si="7">B2-B3</f><v>1.4</v></c><c r="C4"><v>9.1</v></c></row>
                   </sheetData>
                   <tableParts count="2"><tablePart r:id="rId1"/><tablePart r:id="rId2"/></tableParts>
                 </worksheet>
@@ -10796,14 +10805,15 @@ internal static class PptxTests
             ["xl/tables/table1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-                       id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4" headerRowCount="1" totalsRowShown="0">
-                  <autoFilter ref="A1:B4">
+                       id="1" name="SalesTable" displayName="Sales_Table" ref="A1:C4" headerRowCount="1" totalsRowShown="0">
+                  <autoFilter ref="A1:C4">
                     <filterColumn colId="0" showButton="1"><filters><filter val="North"/></filters></filterColumn>
                     <filterColumn colId="1"><customFilters><customFilter operator="greaterThan" val="3"/></customFilters></filterColumn>
                   </autoFilter>
-                  <tableColumns count="2">
+                  <tableColumns count="3">
                     <tableColumn id="1" name="Region" totalsRowFunction="none"/>
                     <tableColumn id="2" name="Amount"><calculatedColumnFormula>B2</calculatedColumnFormula></tableColumn>
+                    <tableColumn id="3" name="Quoted ] Amount"/>
                   </tableColumns>
                 </table>
                 """,

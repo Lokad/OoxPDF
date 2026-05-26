@@ -7867,6 +7867,19 @@ formatting decisions anchored in workbook-owned cell metadata.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Parsed escaped single-column structured references in chart workbook ranges.
+The structured-reference resolver now tokenizes bracketed sections instead of splitting on raw `],[`, and it
+removes OOXML structured-reference apostrophe escapes before matching table-column names. The embedded workbook
+fixture now includes a table column named `Quoted ] Amount` and proves that `SalesTable[Quoted ']' Amount]`
+resolves to the table-owned data-body range with the correct column id.
+
+This remains a narrow table-source grammar step. Multi-column spans, whole-table references, totals-only
+references, filter visibility, calculated-column evaluation, and Office cache/source freshness remain open. The
+long-term benefit is that renderer data hydration no longer relies on a column-name subset that silently fails
+when Office escapes legal table-column characters.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved explicitly qualified sheet-local chart workbook defined names.
 `ReadRangeCells` now resolves formulas such as `Sheet1!SheetLocalValues` by matching the preserved
 `DefinedNameRecords` scope (`localSheetId` plus sheet name), and range cells carry `DefinedNameSheetName` and
