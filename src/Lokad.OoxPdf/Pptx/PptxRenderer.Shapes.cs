@@ -1559,9 +1559,11 @@ internal sealed partial class PptxRenderer
         }
 
         string? relationshipId;
+        string? targetPartName = null;
         if (pictureFillOverride is { } resolvedPictureFill)
         {
             relationshipId = resolvedPictureFill.RelationshipId;
+            targetPartName = resolvedPictureFill.TargetPartName;
             crop = resolvedPictureFill.Crop;
             fillRect = resolvedPictureFill.Fill;
         }
@@ -1575,21 +1577,27 @@ internal sealed partial class PptxRenderer
             fillRect = ReadFillRect(shapeProperties);
         }
 
-        if (relationshipId is null ||
-            !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) ||
-            relationship.ResolvedTarget is null)
+        if (targetPartName is null &&
+            relationshipId is not null &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+            !relationship.IsExternal)
+        {
+            targetPartName = relationship.ResolvedTarget;
+        }
+
+        if (targetPartName is null)
         {
             return false;
         }
 
-        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        OoxPart? imagePart = package.GetPart(targetPartName);
         if (imagePart is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_PART",
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
-                relationship.ResolvedTarget,
+                targetPartName,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));
@@ -2313,7 +2321,7 @@ internal sealed partial class PptxRenderer
     private static ShapePictureFill? ToShapePictureFill(PptxSceneShapePictureFill fill)
     {
         return fill.HasPicture
-            ? new ShapePictureFill(fill.RelationshipId, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
+            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
             : null;
     }
 

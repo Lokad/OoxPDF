@@ -234,6 +234,15 @@ High-priority actions:
   access is a workbook-resource ownership item, not chart XML ownership. Validation: focused non-slow
   `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`256 passed, 0 failed, 7 skipped`).
+- [x] Move PPTX image target resolution into the scene:
+  `PptxScenePicture` and `PptxSceneShapePictureFill` now carry the resolved media target part name next to the
+  source relationship id, and the normal picture/picture-fill render paths use those scene-owned targets before
+  falling back to relationship lookup. The scene test fixture now includes explicit media relationships and
+  asserts both standalone picture and grouped shape picture-fill targets. This is still not a full media
+  resource abstraction: image decoding, SVG parsing, recolor transforms, and `PdfImageXObject` caching still
+  happen in the renderer through `context.Package`. Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists`
+  passed (`1 passed, 0 failed, 0 skipped`); focused non-slow `pptx-images` passed
+  (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit

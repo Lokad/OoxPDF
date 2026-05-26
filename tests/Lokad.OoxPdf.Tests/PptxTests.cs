@@ -97,6 +97,8 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                  <Relationship Id="rIdImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
+                  <Relationship Id="rIdShapeImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
                   <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """,
@@ -287,10 +289,10 @@ internal static class PptxTests
         TestAssert.True(slideSnapshot.HasSlideXml, "Expected scene inspection to expose slide XML ownership without XML content.");
         TestAssert.Equal(1, slide.MasterRelationships.Count);
         TestAssert.Equal(1, slide.LayoutRelationships.Count);
-        TestAssert.Equal(2, slide.SlideRelationships.Count);
+        TestAssert.Equal(4, slide.SlideRelationships.Count);
         TestAssert.Equal(1, slideSnapshot.MasterRelationshipCount);
         TestAssert.Equal(1, slideSnapshot.LayoutRelationshipCount);
-        TestAssert.Equal(2, slideSnapshot.SlideRelationshipCount);
+        TestAssert.Equal(4, slideSnapshot.SlideRelationshipCount);
         TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
         TestAssert.True(slideSnapshot.HasSlideBackground, "Expected scene inspection to expose slide background ownership.");
         TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);
@@ -329,6 +331,7 @@ internal static class PptxTests
         TestAssert.Equal(7.2d, slide.SlideNodes[0].Shape?.OuterShadow.OffsetX ?? 0d);
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
         TestAssert.Equal("rIdImage", slide.SlideNodes[1].Picture?.RelationshipId ?? string.Empty);
+        TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[1].Picture?.TargetPartName ?? string.Empty);
         TestAssert.Equal(0.1d, slide.SlideNodes[1].Picture?.Crop.Left ?? 0d);
         TestAssert.Equal(0.4d, slide.SlideNodes[1].Picture?.Crop.Bottom ?? 0d);
         TestAssert.Equal(0.05d, slide.SlideNodes[1].Picture?.Fill.Left ?? 0d);
@@ -694,6 +697,7 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(238, 238, 238), slide.SlideNodes[5].Children[0].Shape?.PatternFill.Background ?? default);
         TestAssert.True(slide.SlideNodes[5].Children[0].Shape?.PictureFill.HasPicture == true, "Expected grouped shape picture fill in the scene model.");
         TestAssert.Equal("rIdShapeImage", slide.SlideNodes[5].Children[0].Shape?.PictureFill.RelationshipId ?? string.Empty);
+        TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.TargetPartName ?? string.Empty);
         TestAssert.Equal(0.05d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Left ?? 0d);
         TestAssert.Equal(0.2d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Bottom ?? 0d);
         TestAssert.Equal(0.025d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.Left ?? 0d);

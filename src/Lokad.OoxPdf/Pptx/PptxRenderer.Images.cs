@@ -37,6 +37,7 @@ internal sealed partial class PptxRenderer
             context.ImageCache,
             ref index,
             picture.Picture.RelationshipId,
+            picture.Picture.TargetPartName,
             ToShapeBounds(picture.Bounds),
             ToCropRect(picture.Picture.Crop),
             ToFillRect(picture.Picture.Fill),
@@ -57,25 +58,34 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int index,
         string? relationshipId,
+        string? targetPartName,
         ShapeBounds rawBounds,
         CropRect crop,
         FillRect fillRect,
         double alpha,
         ImageRecolor recolor)
     {
-        if (relationshipId is null || !relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) || relationship.ResolvedTarget is null)
+        if (targetPartName is null &&
+            relationshipId is not null &&
+            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
+            !relationship.IsExternal)
+        {
+            targetPartName = relationship.ResolvedTarget;
+        }
+
+        if (targetPartName is null)
         {
             return;
         }
 
-        OoxPart? imagePart = package.GetPart(relationship.ResolvedTarget);
+        OoxPart? imagePart = package.GetPart(targetPartName);
         if (imagePart is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_PART",
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
-                relationship.ResolvedTarget,
+                targetPartName,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));

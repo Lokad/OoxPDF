@@ -1112,7 +1112,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ShapePatternFill(string Preset, RgbColor Foreground, RgbColor Background, double Alpha);
 
-    private readonly record struct ShapePictureFill(string RelationshipId, CropRect Crop, FillRect Fill);
+    private readonly record struct ShapePictureFill(string RelationshipId, string? TargetPartName, CropRect Crop, FillRect Fill);
 
     private readonly record struct Glow(RgbColor Color, double Alpha, double Radius);
 
