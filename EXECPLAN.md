@@ -7759,6 +7759,37 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Split PPTX text layout bounds from PDF clipping bounds for default text-box
+overflow. Office PDF evidence from public `pptx-ladder-03-text-anchor-overflow` shows default overflowing
+text boxes clipped to the full slide, while `vertOverflow="clip"` text keeps a local frame clip. The text
+frame model now carries separate `TextClipX/TextClipWidth` values, and text flow boxes carry the resolved PDF
+clip bounds separately from layout and wrap width. Default overflowing text boxes without `noAutofit` or
+`spAutoFit` now emit slide-wide text clips; explicit vertical clipping and local autofit/no-autofit frames
+stay local. Multi-column local frames keep column-local clip bounds so widening the default-overflow path does
+not erase per-column clipping.
+
+Public structural validation improved on `pptx-ladder-03-text-anchor-overflow`: the Office reference has five
+full-slide `W*` text-clip rectangles and one local clip bucket, and candidate run `20260526-233316` now also
+has five full-slide `W*` clips. The remaining candidate local bucket is still offset/numerically different
+from Office (`72..288` versus Office `0..336` on that synthetic case), so horizontal text-rectangle inheritance
+and local text-box clip origins remain open.
+
+Private-safe evidence on `lokad-value-based` run `20260526-233127`: 84/84 pages compared, no dimension
+mismatches, deck MAE `7.535915`, mean changed16 `0.101052`, with only the existing
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 stayed numerically unchanged from the saved
+baseline (MAE `2.785167`, changed16 `0.044117`, SSIM `0.923374`), which means this slice did not address the
+slide-17 schema issue directly. The private page-36 regression seen during the first broad attempt was traced
+to treating local multi-column frames as slide-level clips; restoring local column clips removed that large
+regression. Remaining private structural summaries still show many candidate frame-wide vertical clip strips
+where Office emits full-slide text clips, especially around inherited/default text surfaces, so the next text
+clip work should classify inherited placeholder/layout/master text and autofit/overflow combinations with
+public synthetic fixtures before broadening the rule further.
+
+Validation: focused non-slow `pptx-typography` passed (`78 passed, 0 failed, 2 skipped`); public
+`pptx-ladder-03-text-anchor-overflow` run `20260526-233316` passed; private `lokad-value-based` run
+`20260526-233127` passed with the metrics above; full non-slow console runner passed (`252 passed, 0 failed,
+7 skipped`).
+
 Revision note, 2026-05-26: Centralized PPTX slide-bound clipping without changing emitted PDF operators.
 The private page-17 clip investigation showed that Office uses more than one slide-sized clip path shape:
 many clips are closed rectangle-style paths, while one remaining unmatched reference clip is an open

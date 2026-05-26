@@ -4962,7 +4962,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 0 72 540 re W* n", pdf);
+        TestAssert.Contains("0 0 720 540 re W* n", pdf);
     }
 
     public static void PptxJustifiedTextLayoutDistributesWrappedLines()
@@ -6812,7 +6812,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 0 288 540 re W* n", pdf);
+        TestAssert.Contains("0 0 720 540 re W* n", pdf);
         AssertContainsTextMatrixAtX(pdf, 72d);
     }
 
