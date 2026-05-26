@@ -7163,3 +7163,22 @@ neither chart graphics nor chart text structural gates: the automatic horizontal
 real gap is still the Office automatic plot-area/category-label/value-axis reserve model, and the compact
 stacked secondary-axis probe, whose real gap is missing data-label rendering/classification plus secondary
 axis/marker false positives.
+
+Revision note, 2026-05-26: Fixed the compact stacked secondary-axis probe's structural classifier path
+without changing renderer output. The chart graphics classifier now rejects geometrically implausible
+axis-pair plot boxes under `40 pt` in either dimension and, when there is no axis/gridline-derived plot
+box, prefers a non-page clip whose left/right edges align with an observed horizontal axis line. This removes
+the false right-side `AxisPairPlotBoxCandidate` that previously hid the real plot-area clip, and it makes the
+reference/candidate text classifier agree on the Office structure: 2 category labels and 22 value-axis
+labels, instead of reference-only `DataLabelText` versus candidate-only axis/outer text buckets. The manifest
+now gates only the stable `HorizontalLine`/`PlotAreaClipBoxCandidate` graphics buckets and the
+category/value tick-label text buckets. The remaining candidate-only marker and vertical-line buckets are
+still deliberately ungated; they require a better secondary-axis/legend false-positive classifier.
+
+Validation: targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-11-compact-stacked-secondary-axis-probe` at
+`artifacts/visual/pptx-ladder-11-compact-stacked-secondary-axis-probe/20260526-131402`, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-26T13:16:45.2747688+02:00`. `SummarizeChartStructureDeltas.ps1 -UngatedOnly -ShowBounds`
+now reports only `pptx-ladder-11-chart-bar-stacked-port` as a public chart case with neither chart graphics
+nor chart text structural gates.

@@ -38,6 +38,10 @@ function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
 function Round([double]$value) { return [Math]::Round($value, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
+function Is-ReasonableAxisPairBounds([double]$minX, [double]$minY, [double]$maxX, [double]$maxY) {
+    return ($maxX - $minX) -ge 40d -and ($maxY - $minY) -ge 40d
+}
+
 function PathOperators($op) {
     if ($null -eq $op.PathCommands) {
         return ""
@@ -526,12 +530,13 @@ if ($horizontalLines.Count -ge 1 -and $verticalLines.Count -ge 1) {
     $minY = [double]$topAxis.MinY
     $maxX = [double]$topAxis.MaxX
     $maxY = [double]$leftAxis.MaxY
-    if ($maxX -gt $minX -and $maxY -gt $minY) {
+    if ($maxX -gt $minX -and $maxY -gt $minY -and (Is-ReasonableAxisPairBounds $minX $minY $maxX $maxY)) {
         $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
         $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $minY $maxX $maxY))
     }
     elseif ((Is-Near ([double]$topAxis.MinY) ([double]$leftAxis.MaxY) $GridlineBoundsTolerance) -and
-        $maxX -gt $minX -and [double]$leftAxis.MaxY -gt [double]$leftAxis.MinY) {
+        $maxX -gt $minX -and [double]$leftAxis.MaxY -gt [double]$leftAxis.MinY -and
+        (Is-ReasonableAxisPairBounds $minX ([double]$leftAxis.MinY) $maxX ([double]$topAxis.MinY))) {
         $page = if ($PageNumber -gt 0) { $PageNumber } else { $leftAxis.PageNumber }
         $structures.Add((New-DerivedStructure "AxisPairPlotBoxCandidate" $page "AxisLinePairBounds" 2 $minX $leftAxis.MinY $maxX $topAxis.MinY))
     }
@@ -661,6 +666,33 @@ if ($clipBoxes.Count -gt 0) {
             $nearestClip = @($dominantGroup.Group)[0]
             if ((BoundsDistance $nearestClip $plotBoxForGridlines) -gt 10d) {
                 $dominantGroup = $null
+            }
+        }
+
+        if ($null -eq $dominantGroup -and $null -eq $plotBoxForGridlines) {
+            $axisAlignedGroup = $clipGroups |
+                Where-Object {
+                    $clip = @($_.Group)[0]
+                    foreach ($line in $horizontalLines) {
+                        if ((Is-Near ([double]$clip.MinX) ([double]$line.MinX) $GridlineBoundsTolerance) -and
+                            (Is-Near ([double]$clip.MaxX) ([double]$line.MaxX) $GridlineBoundsTolerance)) {
+                            return $true
+                        }
+                    }
+
+                    return $false
+                } |
+                Sort-Object -Property @{
+                    Expression = { -[int]$_.Count }
+                }, @{
+                    Expression = {
+                        $clip = @($_.Group)[0]
+                        -((Width $clip) * (Height $clip))
+                    }
+                } |
+                Select-Object -First 1
+            if ($null -ne $axisAlignedGroup) {
+                $dominantGroup = $axisAlignedGroup
             }
         }
 
