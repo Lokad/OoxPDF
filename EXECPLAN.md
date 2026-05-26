@@ -1043,6 +1043,11 @@ High-priority actions:
     with the resolved line style instead of retaining only the `showLeaderLines` boolean flag. The
     scene-builder fixture locks the source element plus stroke color, alpha, width, dash pattern, and cap.
     Validation: focused `pptx-charts` tests passed `40/40`; the full console runner passed `251/251`.
+  - [x] Carry preserved leader-line style through renderer data-label options:
+    `ChartDataLabelOptions` now includes a `LeaderLines` payload, populated from typed scene data when
+    available and from raw XML fallback otherwise. Rendering still does not draw leader lines, but future
+    leader-line geometry no longer needs to re-scan `c:leaderLines` at the drawing site. Validation:
+    focused `pptx-charts` tests passed `40/40`; the full console runner passed `251/251`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
