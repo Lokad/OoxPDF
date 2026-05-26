@@ -7827,6 +7827,21 @@ with zero dimension mismatches, deck MAE `7.555419`, max page MAE `16.778011`, m
 and the single expected `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. The refreshed baseline confirms the
 recolor ladder work improved observability and public coverage without changing private visual output.
 
+Revision note, 2026-05-26: Added `tools/SummarizePdfGraphicsOperations.ps1` to group inspected PDF graphics
+operations by page, kind, operator, path command counts, and rounded bounds. This makes clip and fill/stroke
+structure visible before writing another one-off comparison script.
+
+Private-safe page-17 clip summary over the existing inspected run `20260526-225413` shows the remaining
+Office/candidate difference more clearly: reference `W*` clips have 68 operations across 6 rounded buckets,
+including 58 closed slide-sized clips and 4 open slide-sized clips; candidate `W*` clips have 67 operations
+across 6 rounded buckets, including 21 closed slide-sized clips and no open slide-sized bucket, plus several
+column-height slide-bounded buckets. This supports the long-term clip-ownership path: decide which rendering
+surface owns page/open/column clips from public Office-PDF evidence instead of globally changing rectangle
+emission.
+
+Validation: `tools/SummarizePdfGraphicsOperations.ps1` succeeded on private-safe reference and candidate
+page-17 inspected graphics JSON for clip `W*` operations.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The
