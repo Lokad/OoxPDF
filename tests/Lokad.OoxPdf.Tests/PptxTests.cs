@@ -3933,7 +3933,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.502 0 0.502 rg", pdf);
-        TestAssert.Contains(" re f", pdf);
+        TestAssert.Contains(" re f*", pdf);
     }
 
     public static void PptxSyntheticTextBoxRendersStrikethrough()

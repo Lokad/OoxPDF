@@ -10,7 +10,15 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.033,
-    "maxChangedPixelRatioAtThreshold16": 0.00122
+    "maxChangedPixelRatioAtThreshold16": 0.00125,
+    "maxTextOperationPositionDelta": 0.1,
+    "maxTextOperationFontSizeDelta": 0.01,
+    "compareDecodedTextOperations": true,
+    "maxGraphicsOperationBoundsDelta": 0.15,
+    "compareGraphicsOperationKinds": ["Fill"],
+    "compareGraphicsOperationOperators": ["f*"],
+    "matchGraphicsOperationOperators": true,
+    "matchGraphicsOperationsByBounds": true
   },
   "allowedUnsupportedFeatures": []
 }

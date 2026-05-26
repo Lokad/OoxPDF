@@ -571,6 +571,12 @@ High-priority actions:
   Shape-text highlights now consume positioned spans and line-box baselines while highlighted text emission
   remains on the legacy text path. `highlight-single` stays locked at MAE `0.032134`, and the boundary
   invariance probe passes its text-operation gate with MAE `0.921847`.
+- [x] Align PPTX highlight rectangle fill structure with Office:
+  Office paints the public `pptx-ladder-04-highlight-single` highlight rectangle with an even-odd `f*` fill.
+  PPTX highlight rectangles now use `FillRectangleEvenOdd`, and `CheckVisualCase.ps1` can pass generic graphics
+  operator filters/matching through to `ComparePdfGraphicsOperations.ps1`. The highlight manifest now gates
+  decoded text operations plus `f*` fill bounds, keeping the remaining tiny text-baseline/raster residual visible
+  without treating a normal `f` highlight fill as structurally acceptable.
 - [x] Next PPTX typography sequence: add and lock repeated-space, tab/space, non-breaking-space, and
   narrow-space interaction cases because these are direct bottom-up probes for phantom inter-letter gaps.
   Split public cases now exist for repeated spaces, NBSP/narrow spaces, punctuation boundaries, and

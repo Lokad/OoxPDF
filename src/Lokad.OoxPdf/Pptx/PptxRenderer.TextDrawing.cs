@@ -998,7 +998,7 @@ internal sealed partial class PptxRenderer
         double highlightDescent = PptxTextMetricRules.HighlightDescent(embedded, run.FontSize, fontScale);
         double highlightHeight = PptxTextMetricRules.HighlightHeight(embedded, run.FontSize, fontScale);
         double highlightY = baselineY - highlightDescent;
-        graphics.FillRectangle(run.X, highlightY, lineWidth, highlightHeight);
+        graphics.FillRectangleEvenOdd(run.X, highlightY, lineWidth, highlightHeight);
         graphics.RestoreState();
     }
 

@@ -272,11 +272,17 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     if ($manifest.expected.compareGraphicsOperationKinds -ne $null) {
         $compareGraphicsArgs.Kinds = @($manifest.expected.compareGraphicsOperationKinds)
     }
+    if ($manifest.expected.compareGraphicsOperationOperators -ne $null) {
+        $compareGraphicsArgs.Operators = @($manifest.expected.compareGraphicsOperationOperators)
+    }
     if ($manifest.expected.compareGraphicsOperationPageNumber -ne $null) {
         $compareGraphicsArgs.PageNumber = [int]$manifest.expected.compareGraphicsOperationPageNumber
     }
     if ($manifest.expected.matchGraphicsOperationsByBounds -eq $true) {
         $compareGraphicsArgs.MatchByBounds = $true
+    }
+    if ($manifest.expected.matchGraphicsOperationOperators -eq $true) {
+        $compareGraphicsArgs.MatchOperator = $true
     }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareGraphicsArgs
