@@ -10,7 +10,14 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 2.8,
-    "maxChangedPixelRatioAtThreshold16": 0.025
+    "maxChangedPixelRatioAtThreshold16": 0.025,
+    "maxChartGraphicsStructureBoundsDelta": 11.0,
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotBoxCandidate", "VerticalLine"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["LegendText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 1.0
+    }
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

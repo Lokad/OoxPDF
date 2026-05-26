@@ -7123,3 +7123,25 @@ shows the real remaining automatic horizontal-bar interval gap: category labels 
 value-axis labels and plot/axis bounds by about `31.75 pt`. The full public `pptx-charts` visual family
 passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json` generated during the
 2026-05-26 12:50 local run.
+
+Revision note, 2026-05-26: Moved the first scatter chart slice from missing renderer surfaces toward
+Office-like plot structure. Scatter rendering now uses the chart's bottom/left value-axis XML to derive the
+same nice value extents used by bubble charts, feeds scatter plots into the existing no-title/right-legend
+Cartesian reserve rule, and renders stroke-style legend entries instead of dropping the OOXML legend. The
+scene chart title model was also tightened: an inferred auto-title now requires explicit
+`c:autoTitleDeleted val="0"`, while a missing element remains titleless and distinct from `false`. This
+matches the public scatter fixtures, where Office shows the series name in the legend but does not reserve
+title space. The change is intentionally still staged: scatter axis tick labels, gridlines, plot clipping,
+legend swatch structure, and stroke-marker parity remain open rather than being dumped into one risky pass.
+
+Validation: focused `pptx-charts` tests passed 40/40, including the new missing-`autoTitleDeleted` scene
+test. Targeted scatter visuals passed for `pptx-ladder-11-chart-scatter-smooth-port` at
+`artifacts/visual/pptx-ladder-11-chart-scatter-smooth-port/20260526-130046` and
+`pptx-ladder-11-chart-scatter-clusters-port` at
+`artifacts/visual/pptx-ladder-11-chart-scatter-clusters-port/20260526-130103`. Smooth scatter's
+`AxisPairPlotBoxCandidate` delta improved from about `54.07 pt` to `10.49 pt`, `PlotBoxCandidate` to
+`8.05 pt`, and legend text to `0.69 pt`. Clustered scatter's axis-pair delta improved from about
+`27.29 pt` to `18.48 pt` and now gates legend text, at the cost of a narrow raster-gate update
+(`MAE 2.21`, changed16 `0.0202`) that is explicitly backed by the new structural gates. The full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-26T13:04:42.6055440+02:00`.

@@ -2249,7 +2249,7 @@ internal sealed class PptxSceneBuilder
     {
         if (title is null)
         {
-            if (isAutoDeleted == true || plots is null)
+            if (isAutoDeleted != false || plots is null)
             {
                 return EmptyChartTitle(isAutoDeleted);
             }
