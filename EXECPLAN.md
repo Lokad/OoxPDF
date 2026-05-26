@@ -196,6 +196,11 @@ High-priority actions:
   and arrowhead presets, preset geometries and adjustments, fills/color transforms, picture crop/tile/recolor
   modes, table borders/anchors, chart types/marker styles, and DOCX alignment, breaks, table layout,
   numbering, underline/border/shading, drawing wrap, and section/page settings.
+- [x] Start the OOXML enum ladder with PPTX text-body properties:
+  unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
+  `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering
+  still falls back conservatively, but structural tests can now expose unsupported values before private-deck
+  tuning turns them into invisible heuristics.
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
   paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
 - [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF

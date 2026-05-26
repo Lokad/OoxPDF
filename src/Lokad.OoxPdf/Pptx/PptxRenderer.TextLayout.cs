@@ -2154,7 +2154,7 @@ internal sealed partial class PptxRenderer
             _ when orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.MongolianVertical,
             _ when orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVertical,
             _ when orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase) => PptxTextOrientation.WordArtVerticalRightToLeft,
-            _ => PptxTextOrientation.Horizontal
+            _ => PptxTextOrientation.Unknown
         };
     }
 
@@ -2239,9 +2239,15 @@ internal sealed partial class PptxRenderer
         string? wrap = (string?)textBody
             .Element(DrawingNamespace + "bodyPr")
             ?.Attribute("wrap");
-        return wrap?.Equals("none", StringComparison.OrdinalIgnoreCase) == true
-            ? PptxTextWrapMode.None
-            : PptxTextWrapMode.Square;
+        return wrap switch
+        {
+            null or "" => PptxTextWrapMode.Square,
+            "none" => PptxTextWrapMode.None,
+            "square" => PptxTextWrapMode.Square,
+            _ when wrap.Equals("none", StringComparison.OrdinalIgnoreCase) => PptxTextWrapMode.None,
+            _ when wrap.Equals("square", StringComparison.OrdinalIgnoreCase) => PptxTextWrapMode.Square,
+            _ => PptxTextWrapMode.Unknown
+        };
     }
 
     private static PptxTextVerticalOverflow ReadTextVerticalOverflow(XElement textBody)
@@ -2255,6 +2261,8 @@ internal sealed partial class PptxRenderer
             "ellipsis" => PptxTextVerticalOverflow.Ellipsis,
             _ when overflow?.Equals("clip", StringComparison.OrdinalIgnoreCase) == true => PptxTextVerticalOverflow.Clip,
             _ when overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true => PptxTextVerticalOverflow.Ellipsis,
+            _ when overflow?.Equals("overflow", StringComparison.OrdinalIgnoreCase) == true => PptxTextVerticalOverflow.Overflow,
+            _ when !string.IsNullOrEmpty(overflow) => PptxTextVerticalOverflow.Unknown,
             _ => PptxTextVerticalOverflow.Overflow
         };
     }
@@ -2748,6 +2756,9 @@ internal sealed partial class PptxRenderer
         {
             "ctr" => TextVerticalAnchor.Middle,
             "b" => TextVerticalAnchor.Bottom,
+            _ when anchor?.Equals("ctr", StringComparison.OrdinalIgnoreCase) == true => TextVerticalAnchor.Middle,
+            _ when anchor?.Equals("b", StringComparison.OrdinalIgnoreCase) == true => TextVerticalAnchor.Bottom,
+            _ when !string.IsNullOrEmpty(anchor) => TextVerticalAnchor.Unknown,
             _ => TextVerticalAnchor.Top
         };
     }

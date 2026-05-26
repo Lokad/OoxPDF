@@ -1044,6 +1044,7 @@ internal sealed partial class PptxRenderer
 
     private enum TextVerticalAnchor
     {
+        Unknown,
         Top,
         Middle,
         Bottom
@@ -1051,12 +1052,14 @@ internal sealed partial class PptxRenderer
 
     private enum PptxTextWrapMode
     {
+        Unknown,
         Square,
         None
     }
 
     private enum PptxTextVerticalOverflow
     {
+        Unknown,
         Overflow,
         Clip,
         Ellipsis
@@ -1064,6 +1067,7 @@ internal sealed partial class PptxRenderer
 
     private enum PptxTextOrientation
     {
+        Unknown,
         Horizontal,
         Vertical,
         Vertical270,

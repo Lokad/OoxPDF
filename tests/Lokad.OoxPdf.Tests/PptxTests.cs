@@ -2227,6 +2227,40 @@ internal static class PptxTests
         TestAssert.Equal(0.8d, frame.FontScale);
     }
 
+    public static void PptxTextModelKeepsUnknownBodyPropertyEnumsObservable()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr vert="futureVert" anchor="futureAnchor" wrap="futureWrap" vertOverflow="futureOverflow"/>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"/><a:t>Unknown body properties</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal("Unknown", frame.Orientation);
+        TestAssert.Equal("Unknown", frame.VerticalAnchor);
+        TestAssert.Equal("Unknown", frame.WrapMode);
+        TestAssert.Equal("Unknown", frame.VerticalOverflow);
+    }
+
     public static void PptxSyntheticTextBoxHonorsLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
