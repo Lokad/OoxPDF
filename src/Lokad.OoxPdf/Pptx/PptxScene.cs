@@ -484,6 +484,7 @@ internal sealed record PptxSceneChartDataLabelOverride(
     bool? ShowSeriesName,
     bool? ShowLeaderLines,
     string CustomText,
+    IReadOnlyList<PptxSceneChartTextRun> CustomTextRuns,
     PptxSceneChartDataLabelPosition PositionKind,
     string Position,
     string Separator,
@@ -491,6 +492,10 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
+
+internal sealed record PptxSceneChartTextRun(
+    string Text,
+    PptxSceneChartTextStyleOverride TextStyle);
 
 internal enum PptxSceneChartDataLabelPosition
 {
@@ -1711,6 +1716,7 @@ internal sealed class PptxSceneBuilder
                 ReadOptionalOoxmlBooleanElement(label, "showSerName"),
                 ReadOptionalOoxmlBooleanElement(label, "showLeaderLines"),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
+                ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme),
                 ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
@@ -1989,6 +1995,35 @@ internal sealed class PptxSceneBuilder
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
+    private static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
+    {
+        XElement? rich = text?.Element(ChartNamespace + "rich");
+        if (rich is null)
+        {
+            string? literal = text?
+                .Descendants(ChartNamespace + "v")
+                .Select(value => value.Value)
+                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            return string.IsNullOrWhiteSpace(literal)
+                ? []
+                : [new PptxSceneChartTextRun(literal!, default)];
+        }
+
+        var runs = new List<PptxSceneChartTextRun>();
+        foreach (XElement run in rich.Descendants(DrawingNamespace + "r"))
+        {
+            string runText = run.Element(DrawingNamespace + "t")?.Value ?? string.Empty;
+            if (runText.Length == 0)
+            {
+                continue;
+            }
+
+            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(run.Element(DrawingNamespace + "rPr"), theme)));
+        }
+
+        return runs;
+    }
+
     private static IReadOnlyList<double> ReadChartSeriesValues(XElement series)
     {
         return ReadChartSeriesNumbers(series, "val");
@@ -2128,6 +2163,32 @@ internal sealed class PptxSceneBuilder
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
         bool? italic = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
+    }
+
+    private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme)
+    {
+        if (runProperties is null)
+        {
+            return default;
+        }
+
+        string? typeface = (string?)runProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
+            (string?)runProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
+            (string?)runProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
+            ? null
+            : theme.ResolveTypeface(typeface);
+        double? fontSize = runProperties.Attribute("sz") is { } sizeAttribute &&
+            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
+            sizeHundredths > 0
+                ? sizeHundredths / 100d
+                : null;
+        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out _)
+            ? parsedColor
+            : null;
+        bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");
+        bool? italic = ReadOptionalOoxmlBooleanAttribute(runProperties, "i");
         return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
     }
 

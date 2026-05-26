@@ -1032,6 +1032,12 @@ High-priority actions:
   custom label text, leader lines, exact Office label-box geometry/auto-fit, and richer position semantics
   still need typed ownership before data-label layout can be aligned structurally with Office instead of
   renderer heuristics.
+  - [x] Preserve per-label custom rich-text run boundaries in the scene model:
+    `PptxSceneChartDataLabelOverride` now carries `CustomTextRuns` with per-run text and chart text-style
+    overrides, while retaining the existing flattened `CustomText` for current rendering. The scene-builder
+    fixture locks two custom label runs with distinct size/color/bold and font/italic evidence. Validation:
+    focused `pptx-charts` tests passed `40/40`; a serial console run passed `251/251` after an initial
+    transient parallel build-file lock.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
