@@ -2252,7 +2252,7 @@ High-priority actions:
   gridline group, and axis lines, plus text gates for 11 category tick labels, 5 value tick labels, and the
   chart title. This preserves the original long-term oracle item as a coverage-expansion track instead of
   duplicating existing tools.
-- [ ] 2026-05-26: Expand chart structural gates to the public chart cases that currently have neither chart
+- [x] 2026-05-26: Expand chart structural gates to the public chart cases that currently have neither chart
   graphics nor chart text gates. The starting inventory had 14 ungated cases: area 2-series, area stacked, bar
   stacked, bubble, column stacked, line markers, line stacked, line trend, scatter clusters, scatter smooth,
   compact stacked secondary axis, composite two charts, dashboard table/chart, and secondary-axis overlay. Add
