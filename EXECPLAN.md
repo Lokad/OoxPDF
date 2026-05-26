@@ -7802,6 +7802,20 @@ not have to rediscover package relationships or rely on the already-flattened pa
 Validation: focused `pptx-model` passed with slow tests included (`18 passed, 0 failed, 0 skipped`);
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
 
+Revision note, 2026-05-26: Preserved chart text-style alpha at the scene and renderer-option boundaries.
+`PptxSceneChartTextStyleOverride` now carries the alpha parsed from `a:defRPr/a:solidFill`, and
+`ChartTextStyleOverride` carries the same value through scene-backed and XML-fallback chart text-style
+resolution. The existing emitted chart text still uses the legacy RGB-only `ChartTextStyle`, so this is a
+behavior-neutral metadata slice. The slow scene fixture now locks chart-level default-run alpha.
+
+This does not implement Office-perfect transparent chart text. Text alpha still needs to be connected to PDF
+text alpha emission with public Office-PDF evidence for chart titles, legends, axis labels, data labels, and
+rich-text run overrides. The value of this slice is that future chart text rendering can consume source-owned
+transparency instead of re-reading `txPr` or losing it during override merging.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused `pptx-model`
+passed with slow tests included after a transient parallel build-file lock (`18 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
 structure instead of treating every table reference as a single column or whole-table shortcut.
 `SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps

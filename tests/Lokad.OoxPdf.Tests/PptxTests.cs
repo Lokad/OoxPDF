@@ -143,7 +143,7 @@ internal static class PptxTests
                   <c:roundedCorners val="0"/>
                   <c:style val="10"/>
                   <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln><a:effectLst><a:outerShdw dist="12700" dir="0"><a:srgbClr val="010203"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></c:spPr>
-                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:plotVisOnly val="0"/>
                   <c:dispBlanksAs val="span"/>
@@ -396,6 +396,7 @@ internal static class PptxTests
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(16, 17, 18), slide.SlideNodes[4].Chart?.TextStyle.Color ?? default);
+        TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.TextStyle.Alpha ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Bold == true, "Expected chart-level default run bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Italic == true, "Expected chart-level default run italic style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaLayout.HasLayout == true, "Expected chart plot-area manual layout in the scene model.");

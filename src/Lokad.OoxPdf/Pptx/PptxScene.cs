@@ -586,6 +586,7 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
     double? FontSize,
     RgbColor? Color,
+    double? Alpha,
     bool? Bold,
     bool? Italic);
 
@@ -1815,7 +1816,7 @@ internal sealed class PptxSceneBuilder
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
                 NumberFormatInfo: default,
-                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null),
+                TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null),
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
                 Overrides: [],
                 IsDefined: false);
@@ -2428,12 +2429,12 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out _)
+        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
         bool? italic = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic);
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme)
@@ -2454,12 +2455,12 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out _)
+        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");
         bool? italic = ReadOptionalOoxmlBooleanAttribute(runProperties, "i");
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic);
     }
 
     private static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)

@@ -4465,6 +4465,7 @@ internal sealed partial class PptxRenderer
             dataLabel.TextStyle.FontFamily ?? options.TextStyle.FontFamily,
             dataLabel.TextStyle.FontSize ?? options.TextStyle.FontSize,
             dataLabel.TextStyle.Color ?? options.TextStyle.Color,
+            dataLabel.TextStyle.Alpha ?? options.TextStyle.Alpha,
             dataLabel.TextStyle.Bold ?? options.TextStyle.Bold,
             dataLabel.TextStyle.Italic ?? options.TextStyle.Italic);
         return options with
@@ -4616,7 +4617,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
     {
-        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color, style.Bold, style.Italic);
+        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color, style.Alpha, style.Bold, style.Italic);
     }
 
     private static string? ResolveChartThemeFontFamily(PptxTheme theme)
@@ -4652,7 +4653,7 @@ internal sealed partial class PptxRenderer
             fontSize = sizeHundredths / 100d;
         }
 
-        RgbColor? color = TryReadSolidColor(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor)
+        RgbColor? color = TryReadSolidColorWithAlpha(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = defRunProperties.Attribute("b") is { } boldAttribute
@@ -4661,7 +4662,7 @@ internal sealed partial class PptxRenderer
         bool? italic = defRunProperties.Attribute("i") is { } italicAttribute
             ? IsOoxmlTrue(italicAttribute.Value)
             : null;
-        return new ChartTextStyleOverride(fontFamily, fontSize, color, bold, italic);
+        return new ChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic);
     }
 
     private static ChartTextStyle MergeChartTextStyle(ChartTextStyle style, ChartTextStyleOverride next)
@@ -8359,9 +8360,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color, bool Bold, bool Italic);
 
-    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color, bool? Bold, bool? Italic)
+    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color, double? Alpha, bool? Bold, bool? Italic)
     {
-        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null);
+        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null, null);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();
