@@ -1401,11 +1401,71 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetDefaultChartPlotBox(ChartFrameBox frame)
     {
+        return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.DefaultCartesian);
+    }
+
+    private static ChartPlotBox GetChartPlotBoxPreset(ChartFrameBox frame, ChartPlotBoxPreset preset)
+    {
+        ChartPlotBoxRatios ratios = preset switch
+        {
+            ChartPlotBoxPreset.DefaultCartesian => new ChartPlotBoxRatios(
+                PptxChartMetricRules.DefaultPlotBoxXRatio,
+                PptxChartMetricRules.DefaultPlotBoxYRatio,
+                PptxChartMetricRules.DefaultPlotBoxWidthRatio,
+                PptxChartMetricRules.DefaultPlotBoxHeightRatio),
+            ChartPlotBoxPreset.BarDefault => new ChartPlotBoxRatios(
+                PptxChartMetricRules.BarDefaultPlotBoxXRatio,
+                PptxChartMetricRules.BarDefaultPlotBoxYRatio,
+                PptxChartMetricRules.BarDefaultPlotBoxWidthRatio,
+                PptxChartMetricRules.BarDefaultPlotBoxHeightRatio),
+            ChartPlotBoxPreset.BarOverlayOnly => new ChartPlotBoxRatios(
+                PptxChartMetricRules.BarOverlayOnlyPlotBoxXRatio,
+                PptxChartMetricRules.BarOverlayOnlyPlotBoxYRatio,
+                PptxChartMetricRules.BarOverlayOnlyPlotBoxWidthRatio,
+                PptxChartMetricRules.BarOverlayOnlyPlotBoxHeightRatio),
+            ChartPlotBoxPreset.BarNoTitleBottomLegend => new ChartPlotBoxRatios(
+                PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxXRatio,
+                PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio,
+                PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxWidthRatio,
+                PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio),
+            ChartPlotBoxPreset.BarTitleNoLegend => new ChartPlotBoxRatios(
+                PptxChartMetricRules.BarTitleNoLegendPlotBoxXRatio,
+                PptxChartMetricRules.BarTitleNoLegendPlotBoxYRatio,
+                PptxChartMetricRules.BarTitleNoLegendPlotBoxWidthRatio,
+                PptxChartMetricRules.BarTitleNoLegendPlotBoxHeightRatio),
+            ChartPlotBoxPreset.BarTitleNoLegendInsideCrossing => new ChartPlotBoxRatios(
+                PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxXRatio,
+                PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxYRatio,
+                PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxWidthRatio,
+                PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxHeightRatio),
+            ChartPlotBoxPreset.HorizontalBarTitleNoLegend => new ChartPlotBoxRatios(
+                PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxXRatio,
+                PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxYRatio,
+                PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxWidthRatio,
+                PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxHeightRatio),
+            ChartPlotBoxPreset.LineNoTitleRightLegend => new ChartPlotBoxRatios(
+                PptxChartMetricRules.LineNoTitleRightLegendPlotBoxXRatio,
+                PptxChartMetricRules.LineNoTitleRightLegendPlotBoxYRatio,
+                PptxChartMetricRules.LineNoTitleRightLegendPlotBoxWidthRatio,
+                PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio),
+            ChartPlotBoxPreset.LineTitleRightLegend => new ChartPlotBoxRatios(
+                PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio,
+                PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio,
+                PptxChartMetricRules.LineTitleRightLegendPlotBoxWidthRatio,
+                PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio),
+            _ => throw new ArgumentOutOfRangeException(nameof(preset), preset, null)
+        };
+
+        return GetChartPlotBox(frame, ratios);
+    }
+
+    private static ChartPlotBox GetChartPlotBox(ChartFrameBox frame, ChartPlotBoxRatios ratios)
+    {
         return new ChartPlotBox(
-            frame.X + frame.Width * PptxChartMetricRules.DefaultPlotBoxXRatio,
-            frame.Y + frame.Height * PptxChartMetricRules.DefaultPlotBoxYRatio,
-            frame.Width * PptxChartMetricRules.DefaultPlotBoxWidthRatio,
-            frame.Height * PptxChartMetricRules.DefaultPlotBoxHeightRatio);
+            frame.X + frame.Width * ratios.Left,
+            frame.Y + frame.Height * ratios.Top,
+            frame.Width * ratios.Width,
+            frame.Height * ratios.Height);
     }
 
     private static ChartPlotBox GetPolarChartPlotBox(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
@@ -4462,51 +4522,27 @@ internal sealed partial class PptxRenderer
         ChartPlotBox defaultPlotBox;
         if (!hasTitle && !hasLegend)
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.BarOverlayOnlyPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.BarOverlayOnlyPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarOverlayOnly);
         }
         else if (!hasTitle && legend.PositionKind == PptxSceneChartLegendPosition.Bottom)
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.BarNoTitleBottomLegendPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarNoTitleBottomLegend);
         }
         else if (horizontalBars && hasTitle && !hasLegend)
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.HorizontalBarTitleNoLegendPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.HorizontalBarTitleNoLegend);
         }
         else if (hasTitle && !hasLegend && HasInsideValueAxisCrossing(sceneChart, barPlot, barChart, chartXml))
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.BarTitleNoLegendInsideCrossingPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarTitleNoLegendInsideCrossing);
         }
         else if (hasTitle && !hasLegend)
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.BarTitleNoLegendPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.BarTitleNoLegendPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.BarTitleNoLegendPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.BarTitleNoLegendPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarTitleNoLegend);
         }
         else
         {
-            defaultPlotBox = new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.BarDefaultPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.BarDefaultPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.BarDefaultPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.BarDefaultPlotBoxHeightRatio);
+            defaultPlotBox = GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.BarDefault);
         }
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars);
@@ -5394,11 +5430,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetLineTitleRightLegendPlotBox(ChartFrameBox frame)
     {
-        return new ChartPlotBox(
-            frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio,
-            frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio,
-            frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxWidthRatio,
-            frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio);
+        return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
     }
 
     private static ChartPlotBox GetLineNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
@@ -5406,11 +5438,7 @@ internal sealed partial class PptxRenderer
         XElement? lineChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).FirstOrDefault();
         if (lineChart is null)
         {
-            return new ChartPlotBox(
-                frame.X + frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxXRatio,
-                frame.Y + frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxYRatio,
-                frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxWidthRatio,
-                frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio);
+            return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
         }
 
         PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);

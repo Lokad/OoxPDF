@@ -986,6 +986,19 @@ internal sealed partial class PptxRenderer
         double Height,
         TextAlignment Alignment);
 
+    private enum ChartPlotBoxPreset
+    {
+        DefaultCartesian,
+        BarDefault,
+        BarOverlayOnly,
+        BarNoTitleBottomLegend,
+        BarTitleNoLegend,
+        BarTitleNoLegendInsideCrossing,
+        HorizontalBarTitleNoLegend,
+        LineNoTitleRightLegend,
+        LineTitleRightLegend
+    }
+
     private readonly record struct ChartPlotBoxRatios(double Left, double Top, double Width, double Height)
     {
         public double Right => Left + Width;

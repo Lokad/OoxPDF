@@ -6975,3 +6975,16 @@ structurally locked because marker/legend false positives still appear.
 Validation: `pwsh tools/SummarizeChartStructureDeltas.ps1 -UngatedOnly` generated the public probes for the
 remaining ungated cases, and `pwsh tools/SummarizeChartStructureDeltas.ps1 -UngatedOnly -SkipProbe` replayed the
 summaries without regenerating them. This is a tooling-only slice; no production renderer behavior changed.
+
+Revision note, 2026-05-26: Added the first production boundary for chart plot-box presets without changing
+geometry. The bar, line, and default Cartesian ratio presets are now selected through explicit
+`ChartPlotBoxPreset` names and one `GetChartPlotBoxPreset` helper instead of repeating frame-relative
+coordinate arithmetic at each branch. This does not make the ratios Office-perfect, but it gives the remaining
+chart-layout work a single structural replacement point: future Office-PDF-derived plot-box rules can replace a
+named preset or reserve calculation instead of adding another narrow constant branch.
+
+Validation: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 39/39 tests, and `pwsh tools\CheckVisualFamily.ps1 -Family pptx-charts` passed 37/37 at
+`artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:04 local run. The remaining
+direct ratio uses are dynamic reserve calculations for line/bubble right legends and value-axis labels, which
+should be replaced by measured layout/reserve rules rather than folded into the preset wrapper prematurely.
