@@ -5504,7 +5504,7 @@ internal sealed partial class PptxRenderer
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         bool hasLineChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).Count != 0;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-            ? GetLineNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
+            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
             : hasTitle && hasRightLegend && hasLineChart
                 ? GetLineTitleRightLegendPlotBox(frame)
             : GetDefaultChartPlotBox(frame);
@@ -5518,16 +5518,23 @@ internal sealed partial class PptxRenderer
         return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
     }
 
-    private static ChartPlotBox GetLineNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
     {
-        XElement? lineChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).FirstOrDefault();
-        if (lineChart is null)
+        XElement? plotElement = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).FirstOrDefault();
+        PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
+        if (plotElement is null)
+        {
+            plotElement = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Area).FirstOrDefault();
+            plotKind = PptxSceneChartPlotKind.Area;
+        }
+
+        if (plotElement is null)
         {
             return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineNoTitleRightLegend);
         }
 
-        PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
-        IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(linePlot, lineChart);
+        PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind);
+        IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(plot, plotElement);
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
@@ -5544,30 +5551,27 @@ internal sealed partial class PptxRenderer
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
-        if (lineChart is not null)
+        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, plotElement, PptxSceneChartGrouping.Standard);
+        bool stacked = IsStackedChartGrouping(grouping);
+        bool percentStacked = IsPercentStackedChartGrouping(grouping);
+        IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(plot, plotElement);
+        if (series.Count > 0)
         {
-            PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(linePlot, lineChart, PptxSceneChartGrouping.Standard);
-            bool stacked = IsStackedChartGrouping(grouping);
-            bool percentStacked = IsPercentStackedChartGrouping(grouping);
-            IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(linePlot, lineChart);
-            if (series.Count > 0)
-            {
-                XElement? valueAxis = ReadChartValueAxisForChart(chartXml, lineChart) ??
-                    chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
-                PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, PptxSceneChartAxisKind.Value);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(series, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
-                ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
-                IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
-                string[] tickLabels = tickValues
-                    .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueSceneAxis, valueAxis, percentStacked ? "0%" : null))
-                    .ToArray();
-                maxValueLabelWidth = tickLabels.Length == 0
-                    ? 0d
-                    : tickLabels.Max(label => EstimateChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
-                maxValueLabelLength = tickLabels.Length == 0
-                    ? 0
-                    : tickLabels.Max(label => label.Length);
-            }
+            XElement? valueAxis = ReadChartValueAxisForChart(chartXml, plotElement) ??
+                chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+            PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, plot, PptxSceneChartAxisKind.Value);
+            ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(series, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
+            ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
+            IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
+            string[] tickLabels = tickValues
+                .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueSceneAxis, valueAxis, percentStacked ? "0%" : null))
+                .ToArray();
+            maxValueLabelWidth = tickLabels.Length == 0
+                ? 0d
+                : tickLabels.Max(label => EstimateChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+            maxValueLabelLength = tickLabels.Length == 0
+                ? 0
+                : tickLabels.Max(label => label.Length);
         }
 
         double leftInset = maxValueLabelWidth > 0d

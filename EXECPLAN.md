@@ -7009,3 +7009,22 @@ label/gridline/legend helpers in one step made the candidate structurally richer
 was removed. Do not solve this by loosening the visual gate or by dumping all missing surfaces into the scatter
 branch at once. The next scatter pass should first derive Office/candidate scatter plot bounds and axis scales,
 then add one surface at a time with public structural gates.
+
+Revision note, 2026-05-26: Generalized the existing no-title/right-legend Cartesian plot-box reserve from line
+charts to area charts. The previous line/area shared layout only used the reserve formula when a `lineChart`
+element was present, so right-legend area charts fell back to the generic Cartesian box. Area charts now feed the
+same reserve path with their scene/XML plot, series names, value-axis labels, and grouping. This improves the
+public area cases without introducing an area-specific coordinate constant: two-series area MAE is now
+`2.788157`, stacked area MAE is `1.664476`, value-axis label structural deltas are about `0.91 pt`, and the
+vertical value-axis stroke delta is about `0.86 pt`. The remaining area gaps are still real and deliberately
+ungated: plot width/right edge, category-label count, and legend placement.
+
+Validation: focused `pptx-charts` tests passed 39/39; targeted visual checks passed for
+`pptx-ladder-11-chart-area-2series-port` at
+`artifacts/visual/pptx-ladder-11-chart-area-2series-port/20260526-121414` and
+`pptx-ladder-11-chart-area-stacked-port` at
+`artifacts/visual/pptx-ladder-11-chart-area-stacked-port/20260526-121425`; the full public `pptx-charts` family
+passed 37/37 at `artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:17 local run.
+Both manifests now gate only the stable `VerticalLine` graphics bucket and `ValueAxisTickLabel` text bucket.
+Current public chart coverage is 30/37 graphics-gated and 18/37 text-gated; 7 chart cases still have neither
+chart graphics nor chart text structural gates.

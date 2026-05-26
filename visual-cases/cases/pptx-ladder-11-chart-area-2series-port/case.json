@@ -10,6 +10,21 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 3.8,
-    "maxChangedPixelRatioAtThreshold16": 0.04
+    "maxChangedPixelRatioAtThreshold16": 0.04,
+    "maxChartGraphicsStructureBoundsDelta": 0.9,
+    "compareChartGraphicsStructureKinds": [
+      "VerticalLine"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "ValueAxisTickLabel"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "ValueAxisTickLabel": 1.0
+    }
   }
 }
