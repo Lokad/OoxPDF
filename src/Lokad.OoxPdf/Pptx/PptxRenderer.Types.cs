@@ -506,6 +506,7 @@ internal sealed partial class PptxRenderer
         private readonly WindowsFontResolver resolver = new();
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FontResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, bool> requestedMathTables = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
 
         public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
@@ -623,6 +624,28 @@ internal sealed partial class PptxRenderer
             return ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
         }
 
+        public bool RequestedTypefaceHasMathTable(string? familyName, bool bold = false, bool italic = false)
+        {
+            string requestedFamily = string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName;
+            string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
+            if (requestedMathTables.TryGetValue(key, out bool cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                cached = resolver.Resolve(new FontRequest(requestedFamily, bold, italic)).HasMathTable;
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or ArgumentOutOfRangeException)
+            {
+                cached = false;
+            }
+
+            requestedMathTables[key] = cached;
+            return cached;
+        }
+
         private OpenTypeFont? ResolveFont(string familyName, bool bold, bool italic)
         {
             return LoadFont(ResolveFontResolution(familyName, bold, italic));
@@ -703,6 +726,7 @@ internal sealed partial class PptxRenderer
         public const double OfficeBaselineFallback = 0.974d;
         public const double MinimumBaselineMetricRatio = 0.75d;
         public const double MaximumBaselineMetricRatio = 1.05d;
+        public const double OfficeBaselineFloorMetricThreshold = 0.94d;
         public const double MinimumFontLineBoxMetricRatio = 0.75d;
         public const double MaximumFontLineBoxMetricRatio = 1.5d;
         public const double AbsoluteLineBaselineGapFallback = 0.374d;

@@ -2492,7 +2492,7 @@ internal sealed partial class PptxRenderer
         }
 
         double metricRatio = Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio);
-        if (useOfficeBaselineFloor)
+        if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
         {
             metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
         }
@@ -2519,7 +2519,7 @@ internal sealed partial class PptxRenderer
         double ratio = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
             ? Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio)
             : fallbackRatio;
-        if (useOfficeBaselineFloor)
+        if (useOfficeBaselineFloor && TextMetricUsesOfficeBaselineFloor(font, runStyle, advanceEstimator, ascenderRatio))
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }
@@ -2539,6 +2539,15 @@ internal sealed partial class PptxRenderer
             font.Os2.TypographicAscender,
             font.Os2.TypographicDescender,
             font.Os2.TypographicLineGap);
+    }
+
+    private static bool TextMetricUsesOfficeBaselineFloor(OpenTypeFont font, ResolvedRunTextStyle runStyle, TextAdvanceEstimator advanceEstimator, double ascenderRatio)
+    {
+        return font.TableTags.Contains("MATH") ||
+            advanceEstimator.RequestedTypefaceHasMathTable(runStyle.Typeface, runStyle.Bold, runStyle.Italic) ||
+            ascenderRatio <= 0d ||
+            ascenderRatio > PptxTextMetricRules.MaximumBaselineMetricRatio ||
+            ascenderRatio < PptxTextMetricRules.OfficeBaselineFloorMetricThreshold;
     }
 
     private static string? ReadBulletText(XElement? paragraphProperties, ref int autoNumberValue)

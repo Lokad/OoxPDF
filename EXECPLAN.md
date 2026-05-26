@@ -7464,3 +7464,29 @@ Validation: focused non-slow `pptx-typography` tests passed (`75 passed, 0 faile
 baseline-cluster cases at `20260526-154136`, `20260526-154142`, `20260526-154149`, `20260526-154155`, and
 `20260526-154201`. The full public `pptx-typography` family passed 77/77 at
 `artifacts/visual/reports/pptx-typography.json`, generated `2026-05-26T15:49:50+02:00`.
+
+Revision note, 2026-05-26: Refined the rectangular baseline floor from a shape-only rule into a font-profile
+rule. Public evidence from `pptx-ladder-04-line-spacing-port` showed that the Calibri case had no explicit
+`a:lnSpc`, matching Office's line advance exactly while carrying a uniform first-baseline offset. Applying the
+same `0.974` floor that fixes low-ascender Arial/Times and math-font rectangular frames made Calibri too low;
+keeping Calibri's resolved `usWinAscent / unitsPerEm` metric reduced the text-operation Y residual from about
+`-0.71 pt` to `-0.32 pt` without changing the exact `39.6 pt` interline advance.
+
+The implementation still stays structural: the floor applies only when the rectangular/top/default-line-spacing
+frame rule is active and the resolved/requested font profile needs it. The classifier uses the OpenType MATH
+table on either the resolved face or the originally requested OOXML typeface before the presentation text-face
+substitution, plus the existing low/out-of-range ascender profile. This preserves Cambria Math behavior even
+though the presentation renderer deliberately substitutes a non-math collection face for glyph emission.
+Synthetic tests now lock both sides: Calibri rectangular text must remain below the Office fallback floor, and
+Cambria Math rectangular text must still use the Office floor.
+
+Validation: focused non-slow `pptx-typography` tests passed (`77 passed, 0 failed, 2 skipped`). Targeted
+visual checks passed for `pptx-ladder-04-line-spacing-port` at `20260526-155857`,
+`pptx-ladder-04-spautofit-overflow` at `20260526-155910`, and the Arial/Times/small-label/anchor guard cases
+around `20260526-155922` through `20260526-155947`. `pptx-ladder-04-line-spacing-port` was tightened to MAE
+`1.7`, changed16 `0.0200`, and text-position delta `0.35 pt` after the new artifact measured MAE
+`1.44322265625`, changed16 `0.018170331790123458`, and max Y delta `0.32 pt`. The full public
+`pptx-typography` family passed 77/77 at `artifacts/visual/reports/pptx-typography.json`, generated
+`2026-05-26T16:04:44.9844289+02:00`. The remaining long-term baseline work is to derive the residual Calibri first-line
+offset and the bottom/middle-anchor residuals from Office line-box math, not to add another family-specific
+coordinate adjustment.
