@@ -1906,10 +1906,17 @@ High-priority actions:
     inside the renderer.
   - [x] Extend `PptxSceneTable` to row/cell layout metadata: column spans, row spans, and horizontal/vertical
     merge continuations are now parsed into scene records and consumed by ordered table rendering.
-  - [x] Move table-cell text margins and vertical anchors into scene records. Ordered table text rendering now
-    consumes scene-owned insets/anchors at the text-shape bridge instead of re-reading `tcPr` at draw time.
-  - [x] Move direct table-cell solid fills into `PptxSceneTableCell`. Ordered table rendering now consumes
-    scene-owned `tcPr` fills; built-in table-style fallback fills remain renderer-side until table-style
+    - [x] Move table-cell text margins and vertical anchors into scene records. Ordered table text rendering now
+      consumes scene-owned insets/anchors at the text-shape bridge instead of re-reading `tcPr` at draw time.
+    - [x] Preserve raw table-cell vertical-anchor tokens in the scene model:
+      `PptxSceneTableCell` now keeps the source `a:tcPr @anchor` value next to the normalized
+      `PptxSceneTableCellVerticalAnchor` enum. The scene-builder table fixture locks `anchor="ctr"` as a raw
+      token, making future table text alignment work observable before changing the table text-shape bridge.
+      Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed (`1 passed, 0 failed, 0 skipped`);
+      focused non-slow `pptx-tables` passed (`7 passed, 0 failed, 0 skipped`); full non-slow console runner
+      passed (`256 passed, 0 failed, 7 skipped`).
+    - [x] Move direct table-cell solid fills into `PptxSceneTableCell`. Ordered table rendering now consumes
+      scene-owned `tcPr` fills; built-in table-style fallback fills remain renderer-side until table-style
     conditional formatting is represented as a typed style-resolution model.
   - [x] Move explicit table-cell borders into `PptxSceneTableCell`. The scene now distinguishes explicit
     border presence from drawable border lines, preserving the current behavior where explicit `noFill`

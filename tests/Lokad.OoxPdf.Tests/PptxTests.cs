@@ -357,6 +357,7 @@ internal static class PptxTests
         TestAssert.Equal(1, slide.SlideNodes[2].Table?.Rows[0].Cells[0].RowSpan ?? 0);
         TestAssert.Equal(14.4d, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsets.Left ?? 0d);
         TestAssert.Equal(PptxSceneTableCellVerticalAnchor.Middle, slide.SlideNodes[2].Table?.Rows[0].Cells[0].VerticalAnchor ?? PptxSceneTableCellVerticalAnchor.Top);
+        TestAssert.Equal("ctr", slide.SlideNodes[2].Table?.Rows[0].Cells[0].VerticalAnchorValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].Fill.HasFill == true, "Expected direct table-cell fill in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), slide.SlideNodes[2].Table?.Rows[0].Cells[0].Fill.Color ?? default);
         TestAssert.Equal(0.5d, slide.SlideNodes[2].Table?.Rows[0].Cells[0].Fill.Alpha ?? 0d);

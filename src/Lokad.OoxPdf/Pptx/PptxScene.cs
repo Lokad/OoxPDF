@@ -950,6 +950,7 @@ internal readonly record struct PptxSceneTableCell(
     bool IsMergedContinuation,
     PptxSceneTextInsets TextInsets,
     PptxSceneTableCellVerticalAnchor VerticalAnchor,
+    string? VerticalAnchorValue,
     PptxSceneFillStyle Fill,
     PptxSceneTableCellBorders Borders,
     PptxSceneFillStyle StyleFill,
@@ -2924,6 +2925,7 @@ internal sealed class PptxSceneBuilder
             IsMergedTableCellContinuation(cell),
             ReadTableCellTextInsets(cell),
             ReadTableCellVerticalAnchor(cell),
+            ReadTableCellVerticalAnchorValue(cell),
             ReadTableCellFill(cell, theme),
             ReadTableCellBorders(cell, theme),
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
@@ -2989,15 +2991,20 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneTableCellVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
     {
-        string? anchor = (string?)cell
-            .Element(DrawingNamespace + "tcPr")
-            ?.Attribute("anchor");
+        string? anchor = ReadTableCellVerticalAnchorValue(cell);
         return anchor switch
         {
             "ctr" => PptxSceneTableCellVerticalAnchor.Middle,
             "b" => PptxSceneTableCellVerticalAnchor.Bottom,
             _ => PptxSceneTableCellVerticalAnchor.Top
         };
+    }
+
+    internal static string? ReadTableCellVerticalAnchorValue(XElement cell)
+    {
+        return (string?)cell
+            .Element(DrawingNamespace + "tcPr")
+            ?.Attribute("anchor");
     }
 
     internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme)
