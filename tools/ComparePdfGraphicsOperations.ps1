@@ -152,40 +152,62 @@ $referenceOps = Select-Ops (Read-JsonArray $Reference)
 $candidateOps = Select-Ops (Read-JsonArray $Candidate)
 
 if ($MatchByBounds) {
-    $unmatched = New-Object System.Collections.Generic.List[object]
-    foreach ($op in $referenceOps) {
-        $unmatched.Add($op)
-    }
-
-    $pairs = New-Object System.Collections.Generic.List[object]
-    for ($i = 0; $i -lt $candidateOps.Count; $i++) {
-        $cand = $candidateOps[$i]
-        $bestIndex = -1
-        $bestScore = [double]::PositiveInfinity
-        for ($j = 0; $j -lt $unmatched.Count; $j++) {
-            $ref = $unmatched[$j]
+    $candidatesByScore = New-Object System.Collections.Generic.List[object]
+    for ($candidateIndex = 0; $candidateIndex -lt $candidateOps.Count; $candidateIndex++) {
+        $cand = $candidateOps[$candidateIndex]
+        for ($referenceIndex = 0; $referenceIndex -lt $referenceOps.Count; $referenceIndex++) {
+            $ref = $referenceOps[$referenceIndex]
             $kindPenalty = if ([string]$cand.Kind -eq [string]$ref.Kind) { 0d } else { 1000000d }
+            $operatorPenalty = if (-not $MatchOperator -or (OperationSourceOperator $cand) -eq (OperationSourceOperator $ref)) { 0d } else { 100000d }
+            $segmentPenalty = if (-not $MatchSegmentCount -or [int]$cand.SegmentCount -eq [int]$ref.SegmentCount) { 0d } else { 10000d }
+            $pathCountPenalty = if (-not $MatchPathCommandCounts -or (
+                    (IntValue $cand.MoveCount) -eq (IntValue $ref.MoveCount) -and
+                    (IntValue $cand.LineCount) -eq (IntValue $ref.LineCount) -and
+                    (IntValue $cand.CurveCount) -eq (IntValue $ref.CurveCount) -and
+                    (IntValue $cand.CloseCount) -eq (IntValue $ref.CloseCount))) { 0d } else { 1000d }
             $score = $kindPenalty +
+                $operatorPenalty +
+                $segmentPenalty +
+                $pathCountPenalty +
                 [Math]::Abs((CenterX $cand) - (CenterX $ref)) +
                 [Math]::Abs((CenterY $cand) - (CenterY $ref)) +
                 [Math]::Abs((Width $cand) - (Width $ref)) +
                 [Math]::Abs((Height $cand) - (Height $ref))
-            if ($score -lt $bestScore) {
-                $bestScore = $score
-                $bestIndex = $j
-            }
+            $candidatesByScore.Add([pscustomobject]@{
+                ReferenceIndex = $referenceIndex
+                CandidateIndex = $candidateIndex
+                Score = $score
+            })
         }
-
-        $ref = if ($bestIndex -ge 0) { $unmatched[$bestIndex] } else { $null }
-        if ($bestIndex -ge 0) {
-            $unmatched.RemoveAt($bestIndex)
-        }
-
-        $pairs.Add([pscustomobject]@{ Index = $i; Reference = $ref; Candidate = $cand })
     }
 
-    foreach ($ref in $unmatched) {
-        $pairs.Add([pscustomobject]@{ Index = $pairs.Count; Reference = $ref; Candidate = $null })
+    $matchedReference = New-Object bool[] $referenceOps.Count
+    $matchedCandidate = New-Object bool[] $candidateOps.Count
+    $matchedPairs = New-Object System.Collections.Generic.List[object]
+    foreach ($match in ($candidatesByScore | Sort-Object Score, CandidateIndex, ReferenceIndex)) {
+        if ($matchedReference[$match.ReferenceIndex] -or $matchedCandidate[$match.CandidateIndex]) {
+            continue
+        }
+
+        $matchedReference[$match.ReferenceIndex] = $true
+        $matchedCandidate[$match.CandidateIndex] = $true
+        $matchedPairs.Add($match)
+    }
+
+    $pairs = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $candidateOps.Count; $i++) {
+        $match = $matchedPairs | Where-Object { $_.CandidateIndex -eq $i } | Select-Object -First 1
+        $pairs.Add([pscustomobject]@{
+            Index = $i
+            Reference = if ($null -eq $match) { $null } else { $referenceOps[$match.ReferenceIndex] }
+            Candidate = $candidateOps[$i]
+        })
+    }
+
+    for ($i = 0; $i -lt $referenceOps.Count; $i++) {
+        if (-not $matchedReference[$i]) {
+            $pairs.Add([pscustomobject]@{ Index = $pairs.Count; Reference = $referenceOps[$i]; Candidate = $null })
+        }
     }
 }
 else {

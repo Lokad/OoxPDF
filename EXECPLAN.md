@@ -7779,6 +7779,20 @@ ad hoc renderer-local `ClipRectangle*` calls.
 Validation: focused `PptxSyntheticPngPictureClipIntersectsSlideBounds` passed; full non-slow console runner
 passed (`250 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Tightened `tools/ComparePdfGraphicsOperations.ps1` matching so clip evidence is
+less order-sensitive. The previous `-MatchByBounds` mode greedily matched each candidate against the nearest
+remaining reference in candidate order. On private slide 17 this made a broad slide/page clip consume a
+candidate that should have matched a later, more specific object clip, so the report kept presenting the
+already-fixed top-edge clip as the missing item. The tool now scores all reference/candidate pairs first,
+including penalties for requested operator, segment-count, and path-command-count mismatches, then accepts
+the lowest-cost non-conflicting pairs globally.
+
+Re-running the same private-safe page-17 clip comparison on run `20260526-225413` reduces reported deltas from
+48 to 45. The remaining unmatched reference clip is now correctly identified as a slide-sized `W*` page clip
+with three line segments and no explicit close path, not the small top-edge picture clip. This keeps the next
+clip-ownership work focused on Office page/local clip structure and close-path variants rather than reworking
+the picture/text bound intersection that already matches the target edge.
+
 Revision note, 2026-05-26: Locked another chart workbook range-parser edge case before broadening renderer
 semantics. The workbook hydration tests now cover a multi-area formula whose sheet token is quoted and
 contains a comma, with the second area relying on the leading sheet token from the first area. This preserves
