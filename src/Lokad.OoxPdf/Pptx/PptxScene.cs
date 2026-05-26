@@ -586,6 +586,7 @@ internal sealed record PptxSceneChartPointStyle(
 
 internal sealed record PptxSceneChartAxis(
     string Id,
+    PptxSceneChartAxisKind AxisKind,
     string Kind,
     PptxSceneChartAxisPosition PositionKind,
     string Position,
@@ -620,6 +621,15 @@ internal sealed record PptxSceneChartAxis(
     bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartTitle Title);
+
+internal enum PptxSceneChartAxisKind
+{
+    Category,
+    Date,
+    Series,
+    Value,
+    Unknown
+}
 
 internal enum PptxSceneChartAxisCrosses
 {
@@ -1094,6 +1104,22 @@ internal sealed class PptxSceneBuilder
             _ when position?.Equals("r", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Right,
             _ when position?.Equals("t", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisPosition.Top,
             _ => PptxSceneChartAxisPosition.Unknown
+        };
+    }
+
+    internal static PptxSceneChartAxisKind ParseChartAxisKind(string? kind)
+    {
+        return kind switch
+        {
+            "catAx" => PptxSceneChartAxisKind.Category,
+            "dateAx" => PptxSceneChartAxisKind.Date,
+            "serAx" => PptxSceneChartAxisKind.Series,
+            "valAx" => PptxSceneChartAxisKind.Value,
+            _ when kind?.Equals("catAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Category,
+            _ when kind?.Equals("dateAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Date,
+            _ when kind?.Equals("serAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Series,
+            _ when kind?.Equals("valAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Value,
+            _ => PptxSceneChartAxisKind.Unknown
         };
     }
 
@@ -1885,6 +1911,7 @@ internal sealed class PptxSceneBuilder
             string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
             axes.Add(new PptxSceneChartAxis(
                 id,
+                ParseChartAxisKind(axis.Name.LocalName),
                 axis.Name.LocalName,
                 ParseChartAxisPosition(axisPosition),
                 axisPosition,
