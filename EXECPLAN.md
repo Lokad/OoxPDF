@@ -7867,6 +7867,19 @@ formatting decisions anchored in workbook-owned cell metadata.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Resolved totals-only structured references from table-owned totals-row metadata.
+`SalesTotalsTable[[#Totals],[Amount]]` now hydrates the declared totals row instead of falling back to the
+data-body range because `#Totals` was parsed but ignored. The resolver derives the totals span from
+`ChartWorkbookTable.TotalsRowCount`, and the embedded workbook regression locks the resulting one-cell range
+and column identity.
+
+This still does not implement calculated-column or totals-row formula evaluation, table filter visibility,
+multi-column structured-reference spans, whole-table references, or Office cache/source freshness. It does
+remove another hidden heuristic: totals-only chart sources now consume the table's structural row roles rather
+than sharing the default data-body path.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Parsed escaped single-column structured references in chart workbook ranges.
 The structured-reference resolver now tokenizes bracketed sections instead of splitting on raw `],[`, and it
 removes OOXML structured-reference apostrophe escapes before matching table-column names. The embedded workbook

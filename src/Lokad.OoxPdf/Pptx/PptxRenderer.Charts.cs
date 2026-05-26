@@ -2293,7 +2293,7 @@ internal sealed partial class PptxRenderer
             }
 
             string body = trimmed[(open + 1)..^1];
-            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader) ||
+            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals) ||
                 string.IsNullOrWhiteSpace(columnName))
             {
                 return trimmed;
@@ -2319,8 +2319,20 @@ internal sealed partial class PptxRenderer
             int column = table.FirstColumn + columnOffset;
             int headerRowCount = Math.Max(0, table.HeaderRowCount);
             int totalsRowCount = Math.Max(0, table.TotalsRowCount);
-            int firstRow = onlyHeader ? table.FirstRow : includeHeader ? table.FirstRow : table.FirstRow + headerRowCount;
-            int lastRow = onlyHeader ? table.FirstRow + headerRowCount - 1 : includeHeader ? table.LastRow : table.LastRow - totalsRowCount;
+            int firstRow = onlyHeader
+                ? table.FirstRow
+                : onlyTotals
+                    ? table.LastRow - totalsRowCount + 1
+                    : includeHeader
+                        ? table.FirstRow
+                        : table.FirstRow + headerRowCount;
+            int lastRow = onlyHeader
+                ? table.FirstRow + headerRowCount - 1
+                : onlyTotals
+                    ? table.LastRow
+                    : includeHeader
+                        ? table.LastRow
+                        : table.LastRow - totalsRowCount;
             if (firstRow > lastRow)
             {
                 return trimmed;
@@ -2332,11 +2344,12 @@ internal sealed partial class PptxRenderer
             return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}");
         }
 
-        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader)
+        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals)
         {
             columnName = string.Empty;
             includeHeader = false;
             onlyHeader = false;
+            onlyTotals = false;
             string trimmed = body.Trim();
             if (trimmed.Length == 0)
             {
@@ -2359,6 +2372,10 @@ internal sealed partial class PptxRenderer
                 {
                     includeHeader = true;
                     onlyHeader = true;
+                }
+                else if (string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
+                {
+                    onlyTotals = true;
                 }
                 else if (!string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))

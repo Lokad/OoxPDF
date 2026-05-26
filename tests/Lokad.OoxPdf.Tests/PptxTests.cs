@@ -10352,6 +10352,12 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!C2:C4", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
         TestAssert.Equal("Quoted ] Amount", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedEscapedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedEscapedStructuredCell) == 3, "Expected escaped structured-reference source column id to survive resolution.");
+        Array parsedTotalsStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTotalsTable[[#Totals],[Amount]]"]) ?? throw new InvalidOperationException("Expected parsed totals structured-reference range cells."));
+        object firstParsedTotalsStructuredCell = parsedTotalsStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first totals structured-reference range cell.");
+        TestAssert.True(parsedTotalsStructuredCells.Length == 1, "Expected totals-only structured reference to hydrate only the declared totals row.");
+        TestAssert.Equal("Sheet1!B4:B4", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
+        TestAssert.Equal("Amount", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedTotalsStructuredCell) == 2, "Expected totals structured-reference source column id to survive resolution.");
         Array parsedBlankCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$C$2:$C$2"]) ?? throw new InvalidOperationException("Expected parsed blank workbook range cell."));
         object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");
