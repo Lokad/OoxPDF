@@ -310,13 +310,14 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Retire renderer-local XML fallback for scene-owned chart plot scalars:
   `PptxRenderer.Charts` now treats a present `PptxSceneChartPlot` as authoritative for grouping,
-  bar direction, scatter style, radar style, doughnut hole size, and first-slice angle. XML fallback remains
-  only for non-scene chart paths, while scene-backed paths consume the typed/raw plot tokens already preserved
-  by `PptxSceneBuilder`. This is deliberately narrow: series data, per-point styling, labels, axes, legends,
-  layout, and workbook cache hydration still have separate `ReadSceneOrXml*` bridges that need their own
+  bar direction, scatter style, radar style, doughnut hole size, first-slice angle, bar vary-colors,
+  gap-width, and overlap values. XML fallback remains only for non-scene chart paths, while scene-backed paths
+  consume the typed/raw plot tokens already preserved by `PptxSceneBuilder`. This is deliberately narrow:
+  series data, per-point styling, labels, axes, legends, layout, and workbook cache hydration still have
+  separate `ReadSceneOrXml*` bridges that need their own
   evidence and tests before removal. Validation: focused non-slow `pptx-charts` passed
   (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
-  (`259 passed, 0 failed, 7 skipped`); private run `20260527-015318` remained behavior-neutral with 84/84
+  (`259 passed, 0 failed, 7 skipped`); private run `20260527-015642` remained behavior-neutral with 84/84
   compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Retire renderer-local background XML fallback:

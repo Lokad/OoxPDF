@@ -283,6 +283,27 @@ internal sealed partial class PptxRenderer
         return ReadDoughnutHoleSize(doughnutChart);
     }
 
+    private static bool ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        return plot is not null
+            ? plot.VaryColors ?? true
+            : ReadChartVaryColors(chartElement);
+    }
+
+    private static double ReadSceneOrXmlChartGapWidth(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        return plot is not null
+            ? plot.GapWidth ?? 150d
+            : ReadChartGapWidth(chartElement);
+    }
+
+    private static double ReadSceneOrXmlChartOverlap(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        return plot is not null
+            ? plot.Overlap ?? 0d
+            : ReadChartOverlap(chartElement);
+    }
+
     private static double ReadSceneOrXmlFirstSliceAngle(PptxSceneChartPlot? plot, XElement chartElement)
     {
         if (plot is not null)
@@ -577,7 +598,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeries, grouping), percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
-                bool varyColors = barPlot?.VaryColors ?? ReadChartVaryColors(barChart);
+                bool varyColors = ReadSceneOrXmlChartVaryColors(barPlot, barChart);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
                 var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills, workbook: workbook));
@@ -586,7 +607,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, varyColors, barPlot?.GapWidth ?? ReadChartGapWidth(barChart), barPlot?.Overlap ?? ReadChartOverlap(barChart));
+                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeries, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, varyColors, ReadSceneOrXmlChartGapWidth(barPlot, barChart), ReadSceneOrXmlChartOverlap(barPlot, barChart));
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -646,9 +667,9 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
-                        extraBarPlot?.VaryColors ?? ReadChartVaryColors(extraBarChart),
-                        extraBarPlot?.GapWidth ?? ReadChartGapWidth(extraBarChart),
-                        extraBarPlot?.Overlap ?? ReadChartOverlap(extraBarChart));
+                        ReadSceneOrXmlChartVaryColors(extraBarPlot, extraBarChart),
+                        ReadSceneOrXmlChartGapWidth(extraBarPlot, extraBarChart),
+                        ReadSceneOrXmlChartOverlap(extraBarPlot, extraBarChart));
                     fonts.AddRange(RenderBarDataLabels(
                         theme,
                         graphics,
