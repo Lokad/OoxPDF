@@ -2248,11 +2248,17 @@ High-priority actions:
   classification tolerances for future manifests. Validation on `pptx-ladder-11-chart-column-clustered-port`
   showed Office with zero horizontal gridline candidates and the candidate with six, exposing a real
   Office/candidate structural mismatch for future renderer work instead of hiding it behind raster metrics.
-- [ ] 2026-05-25: Decide the Office-aligned gridline rendering rule before gating gridline candidates. The
+- [x] 2026-05-25: Decide the Office-aligned gridline rendering rule before gating gridline candidates. The
   public clustered-column case shows that Office does not expose candidate-like horizontal gridline strokes
   for that default chart even though the candidate currently does; the next chart renderer slice should
   inspect Office's path/clip/fill strategy and determine whether gridlines should be suppressed, restyled,
   reordered, clipped differently, or represented through another Office-like PDF structure.
+  Rechecked on 2026-05-26 after the chart classifier/gate expansion: the original zero-gridline observation is
+  obsolete. `pptx-ladder-11-chart-column-clustered-port` now gates `HorizontalGridlineGroupCandidate`,
+  `AxisPairPlotBoxCandidate`, and `PlotAreaClipBoxCandidate`; the fresh visual run
+  `pptx-ladder-11-chart-column-clustered-port/20260526-170036` passed with matching seven-segment Office and
+  candidate horizontal gridline groups, and `pwsh tools/SummarizeChartStructureDeltas.ps1 -Case
+  pptx-ladder-11-chart-column-clustered-port -SkipProbe` reports both graphics and text gates enabled.
 - [x] 2026-05-25: Add a chart text-structure oracle slice. `ClassifyPdfChartText.ps1` now classifies inspected
   PDF text operations relative to derived chart plot boxes as `AbovePlotText`, `BelowPlotText`,
   `InsidePlotText`, `LeftAxisText`, `RightSideText`, `OuterChartText`, or generic `ChartText`; it records
