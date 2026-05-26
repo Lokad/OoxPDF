@@ -396,8 +396,7 @@ internal sealed partial class PptxRenderer
                 series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
                 ToChartSeriesStroke(series.Marker.Line)))
             .ToArray();
-        bool hasSceneMarkerOwnership = plot?.Series.Any(series => series.Marker.IsDefined) == true;
-        return markers is { Length: > 0 } && hasSceneMarkerOwnership
+        return markers is { Length: > 0 }
             ? markers
             : ReadChartMarkerStyles(chartElement, theme, plot?.PlotKind ?? PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName));
     }

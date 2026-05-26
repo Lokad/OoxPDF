@@ -8074,6 +8074,20 @@ existing normalized size, and the scene fixture asserts the token without changi
 Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed
 (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`258 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Closed the mixed line-chart marker ownership gap found while reviewing marker
+tokens. `PptxSceneChartPlot` now preserves chart-level marker enablement, and scene marker records compute
+the same effective line-chart auto marker sequence and default size that the renderer fallback previously
+derived from raw chart XML. The renderer now consumes scene marker styles whenever a scene plot is available,
+instead of falling back to XML unless at least one series marker was explicit. Missing series-level marker XML
+still remains observable through `PptxSceneChartMarker.IsDefined == false`, so later Office-PDF marker geometry
+work can distinguish authored marker elements from chart-level automatic markers.
+
+Validation: focused `PptxSceneLineChartMarkerDefaultsUsePlotMarkerState` passed; focused
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-model` passed
+(`18 passed, 0 failed, 1 skipped`); focused non-slow `pptx-charts` passed
+(`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`259 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved PPTX image recolor OOXML tokens in the scene model instead of keeping
 only normalized renderer values. `PptxSceneImageRecolor` now carries the source recolor element token
 (`grayscl`, `biLevel`, `lum`, or `duotone`) plus raw `lum/@bright`, `lum/@contrast`, and `biLevel/@thresh`

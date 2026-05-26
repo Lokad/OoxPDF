@@ -486,6 +486,7 @@ internal sealed record PptxSceneChartPlot(
     string ScatterStyle,
     PptxSceneChartRadarStyle RadarStyleKind,
     string RadarStyle,
+    bool? MarkersEnabled,
     bool? VaryColors,
     double? GapWidth,
     double? Overlap,
@@ -1838,19 +1839,21 @@ internal sealed class PptxSceneBuilder
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
+            bool? markersEnabled = ReadChartPlotMarkersEnabled(plot);
+            PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
                 .Where(value => value.Length != 0)
                 .ToArray();
             plots.Add(new PptxSceneChartPlot(
-                ParseChartPlotKind(kind),
+                plotKind,
                 kind,
                 plots.Count,
                 kindIndex,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
-                ReadChartSeries(plot, theme),
+                ReadChartSeries(plot, theme, plotKind, markersEnabled == true),
                 ParseChartGrouping(grouping),
                 grouping,
                 ParseChartBarDirection(barDirection),
@@ -1859,6 +1862,7 @@ internal sealed class PptxSceneBuilder
                 scatterStyle,
                 ParseChartRadarStyle(radarStyle),
                 radarStyle,
+                markersEnabled,
                 ReadChartPlotVaryColors(plot),
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),
@@ -2019,11 +2023,20 @@ internal sealed class PptxSceneBuilder
             : IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true);
     }
 
-    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme)
+    private static bool? ReadChartPlotMarkersEnabled(XElement plot)
+    {
+        XElement? marker = plot.Element(ChartNamespace + "marker");
+        return marker is null
+            ? null
+            : IsOoxmlBooleanElementEnabled(marker);
+    }
+
+    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
     {
         var series = new List<PptxSceneChartSeries>();
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
         {
+            int seriesIndex = series.Count;
             series.Add(new PptxSceneChartSeries(
                 ReadChartElementInt(seriesElement, "idx"),
                 ReadChartElementInt(seriesElement, "order"),
@@ -2052,7 +2065,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesFill(seriesElement, theme),
                 ReadChartSeriesPatternFill(seriesElement, theme),
                 ReadChartSeriesLine(seriesElement, theme),
-                ReadChartMarker(seriesElement, theme),
+                ReadChartMarker(seriesElement, theme, plotKind, chartMarkersEnabled, seriesIndex),
                 ReadChartPointStyles(seriesElement, theme),
                 ReadChartElementDouble(seriesElement, "explosion"),
                 ReadChartSeriesSmooth(seriesElement),
@@ -2102,20 +2115,37 @@ internal sealed class PptxSceneBuilder
             Alpha: 1d);
     }
 
-    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme)
+    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
         XElement? marker = series.Element(ChartNamespace + "marker");
-        string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ?? "circle";
+        string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
+            ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
         string? sizeValue = (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val");
         double size = sizeValue is not null &&
             double.TryParse(sizeValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                 ? Math.Clamp(parsed, 2d, 30d)
-                : 4d;
+                : plotKind == PptxSceneChartPlotKind.Line && chartMarkersEnabled && marker is null ? 5d : 4d;
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
         PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
         return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme));
+    }
+
+    private static string ReadDefaultChartMarkerSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
+    {
+        if (plotKind == PptxSceneChartPlotKind.Line)
+        {
+            return chartMarkersEnabled ? AutoLineChartMarkerSymbol(seriesIndex) : "none";
+        }
+
+        return "circle";
+    }
+
+    private static string AutoLineChartMarkerSymbol(int seriesIndex)
+    {
+        ReadOnlySpan<string> symbols = ["diamond", "square", "triangle", "x", "star", "circle"];
+        return symbols[seriesIndex % symbols.Length];
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
