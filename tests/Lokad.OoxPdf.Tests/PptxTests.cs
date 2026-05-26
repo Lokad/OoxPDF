@@ -9735,6 +9735,52 @@ internal static class PptxTests
         TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
     }
 
+    public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:dispBlanksAs val="gap"/><c:plotArea>
+                <c:lineChart><c:ser>
+                  <c:val><c:numLit>
+                    <c:pt idx="0"><c:v>1.25</c:v></c:pt>
+                    <c:pt idx="2"><c:v></c:v></c:pt>
+                    <c:pt idx="4"><c:v>missing</c:v></c:pt>
+                    <c:pt idx="5"><c:v>3.5</c:v></c:pt>
+                  </c:numLit></c:val>
+                </c:ser></c:lineChart>
+                <c:scatterChart><c:ser>
+                  <c:xVal><c:numLit><c:pt idx="7"><c:v>9</c:v></c:pt></c:numLit></c:xVal>
+                  <c:yVal><c:numLit><c:pt idx="7"><c:v></c:v></c:pt></c:numLit></c:yVal>
+                  <c:bubbleSize><c:numLit><c:pt idx="7"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
+                </c:ser></c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
+        TestAssert.Equal(2, lineSeries.Values.Count);
+        TestAssert.Equal(4, lineSeries.ValuePoints.Count);
+        TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
+        TestAssert.Equal(1.25d, lineSeries.ValuePoints[0].Value ?? 0d);
+        TestAssert.Equal(2, lineSeries.ValuePoints[1].Index);
+        TestAssert.True(lineSeries.ValuePoints[1].Value is null, "Expected blank numeric point value to remain explicit.");
+        TestAssert.Equal(string.Empty, lineSeries.ValuePoints[1].Text);
+        TestAssert.Equal(4, lineSeries.ValuePoints[2].Index);
+        TestAssert.True(lineSeries.ValuePoints[2].Value is null, "Expected non-numeric point value to remain explicit.");
+        TestAssert.Equal("missing", lineSeries.ValuePoints[2].Text);
+        TestAssert.Equal(5, lineSeries.ValuePoints[3].Index);
+        TestAssert.Equal(3.5d, lineSeries.ValuePoints[3].Value ?? 0d);
+
+        PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
+        TestAssert.Equal(7, scatterSeries.XValuePoints[0].Index);
+        TestAssert.Equal(9d, scatterSeries.XValuePoints[0].Value ?? 0d);
+        TestAssert.Equal(7, scatterSeries.YValuePoints[0].Index);
+        TestAssert.True(scatterSeries.YValuePoints[0].Value is null, "Expected blank y-value point to remain explicit.");
+        TestAssert.Equal(7, scatterSeries.BubbleSizePoints[0].Index);
+        TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
+    }
+
     public static void PptxChartAutoTitleDeletedSuppressesSingleSeriesName()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

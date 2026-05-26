@@ -7771,6 +7771,19 @@ toward package/model ownership instead of draw-site XML rediscovery.
 Validation: focused non-slow `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`244 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Extended chart series data ownership for blank-cell semantics instead of trying to
+implement `dispBlanksAs` from collapsed numeric arrays. `PptxSceneChartSeries` now preserves numeric point
+records for `val`, `xVal`, `yVal`, and `bubbleSize`, including the OOXML `idx`, parsed nullable numeric
+value, and raw text. The existing flattened `Values`, `XValues`, `YValues`, and `BubbleSizes` arrays remain
+for current rendering, so this is behavior-neutral today. The important long-term effect is that future
+Office-PDF-backed `gap`/`span`/`zero` rendering can align categories and values by explicit point index
+instead of guessing after blanks and non-numeric cache values have been filtered out. Workbook-derived point
+vectors, string/category point indices, and actual blank-cell rendering rules remain open.
+
+Validation: focused non-slow `pptx-model` passed (`15 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`245 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
 shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme

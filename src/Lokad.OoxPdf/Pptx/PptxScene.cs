@@ -616,10 +616,14 @@ internal sealed record PptxSceneChartSeries(
     string? Name,
     PptxSceneChartSeriesDataSources DataSources,
     IReadOnlyList<double> Values,
+    IReadOnlyList<PptxSceneChartNumberPoint> ValuePoints,
     IReadOnlyList<string> Categories,
     IReadOnlyList<double> XValues,
+    IReadOnlyList<PptxSceneChartNumberPoint> XValuePoints,
     IReadOnlyList<double> YValues,
+    IReadOnlyList<PptxSceneChartNumberPoint> YValuePoints,
     IReadOnlyList<double> BubbleSizes,
+    IReadOnlyList<PptxSceneChartNumberPoint> BubbleSizePoints,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
@@ -628,6 +632,11 @@ internal sealed record PptxSceneChartSeries(
     double? Explosion,
     bool? Smooth,
     PptxSceneChartDataLabels DataLabels);
+
+internal readonly record struct PptxSceneChartNumberPoint(
+    int Index,
+    double? Value,
+    string Text);
 
 internal sealed record PptxSceneChartSeriesDataSources(
     PptxSceneChartDataSource Name,
@@ -1898,10 +1907,14 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesDataSources(seriesElement),
                 ReadChartSeriesValues(seriesElement),
+                ReadChartSeriesNumberPoints(seriesElement, "val"),
                 ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
+                ReadChartSeriesNumberPoints(seriesElement, "xVal"),
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
+                ReadChartSeriesNumberPoints(seriesElement, "yVal"),
                 ReadChartSeriesNumbers(seriesElement, "bubbleSize"),
+                ReadChartSeriesNumberPoints(seriesElement, "bubbleSize"),
                 ReadChartSeriesFill(seriesElement, theme),
                 ReadChartSeriesPatternFill(seriesElement, theme),
                 ReadChartSeriesLine(seriesElement, theme),
@@ -2138,6 +2151,28 @@ internal sealed class PptxSceneBuilder
     private static IReadOnlyList<double> ReadChartSeriesValues(XElement series)
     {
         return ReadChartSeriesNumbers(series, "val");
+    }
+
+    private static IReadOnlyList<PptxSceneChartNumberPoint> ReadChartSeriesNumberPoints(XElement series, string elementName)
+    {
+        var points = new List<PptxSceneChartNumberPoint>();
+        int ordinal = 0;
+        foreach (XElement point in series
+            .Elements(ChartNamespace + elementName)
+            .Descendants(ChartNamespace + "pt"))
+        {
+            int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
+                ? parsedIndex
+                : ordinal;
+            string text = (string?)point.Element(ChartNamespace + "v") ?? string.Empty;
+            double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+                ? parsed
+                : null;
+            points.Add(new PptxSceneChartNumberPoint(index, value, text));
+            ordinal++;
+        }
+
+        return points;
     }
 
     private static IReadOnlyList<double> ReadChartSeriesNumbers(XElement series, string elementName)
