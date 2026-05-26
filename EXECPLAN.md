@@ -8088,3 +8088,20 @@ XML re-scan or a fixture-specific drawing path to honor that frame. The public l
 now locks the legend frame fill and stroke colors at the PDF operator level.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Introduced a renderer-facing typed value bridge for embedded chart workbooks.
+`ChartWorkbookData.ReadNumericRange` and `ReadTextRange` now project range-cell records into typed
+numeric/text values while keeping the source `ChartWorkbookRangeCell` attached, including point index, cell
+reference, style, formula, visibility, and other workbook metadata. Direct native-chart fallback readers and
+missing-cache hydration now consume these typed values before projecting to the existing dense
+`double[]`/`string[]` compatibility surfaces or `c:pt` elements.
+
+This closes the specific blind spot where renderer code parsed raw `ReadRange()` strings as its first-class
+workbook data model. It does not yet make chart layout or formatting Office-perfect: visible rendering still
+uses dense compatibility arrays, and source-linked number formats, date serials, `plotVisOnly`,
+`dispBlanksAs`, stale caches, and multi-area formulas still need Office-PDF evidence before changing emitted
+PDF behavior. The useful long-term invariant is narrower but important: workbook provenance is now preserved
+through the value-selection layer instead of being recoverable only by re-reading range cells.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
