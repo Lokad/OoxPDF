@@ -7490,3 +7490,17 @@ around `20260526-155922` through `20260526-155947`. `pptx-ladder-04-line-spacing
 `2026-05-26T16:04:44.9844289+02:00`. The remaining long-term baseline work is to derive the residual Calibri first-line
 offset and the bottom/middle-anchor residuals from Office line-box math, not to add another family-specific
 coordinate adjustment.
+
+Discovery note, 2026-05-26: A public anchor experiment ruled out a tempting text-box shortcut. For
+`pptx-ladder-03-text-anchor-overflow`, replacing the current font-metric vertical-anchor height estimate with
+the default `1.2x` line advance only for true DrawingML text boxes (`cNvSpPr txBox="1"`) moved both centered
+and bottom-anchored text upward by about `1.25 pt`. That worsened the case from the previous mixed residuals
+(`+0.24 pt` for the middle anchor and `-0.73 pt` for the bottom anchor) to same-direction deltas around
+`+1.25 pt`, and the raster MAE rose to `0.151845` against the `0.06` gate. The change was reverted before
+commit.
+
+This matters for the long-term typography model: vertical anchoring is not explained by a single text-box
+line-height switch. The next attempt should inspect Office's anchor box top/bottom conventions and baseline
+containment separately for `anchor="ctr"` and `anchor="b"`, likely using a public matrix of text box versus
+auto-shape, one-line versus multi-line, and default versus explicit line spacing. Keep the current small-label
+ellipse guard intact while doing that work.
