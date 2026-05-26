@@ -7103,3 +7103,23 @@ Validation: targeted `CheckVisualCase.ps1` passed for
 `artifacts/visual/pptx-ladder-11-secondary-axis-overlay-probe/20260526-123847`, and the full public
 `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated during the 2026-05-26 12:41 local run.
+
+Revision note, 2026-05-26: Fixed the public chart text classifier's horizontal-bar axis orientation.
+`ClassifyPdfChartText.ps1` now uses the existing `VerticalGridlineGroupCandidate` structural signal to treat
+left-of-plot text as category-axis labels and above/below-plot text as value-axis labels for horizontal bar
+charts. This corrects the stacked horizontal bar inventory from swapped 7/3 buckets to the Office-expected
+3 category labels and 7 value labels, and it prevents future horizontal-bar gates from encoding the old
+vertical-chart assumption. The clustered horizontal bar manifest tolerance ownership was corrected to match
+the renamed buckets: category labels keep the real left-label tolerance, while value labels keep the tighter
+top-axis tolerance. `tools/SummarizeChartStructureDeltas.ps1 -ShowBounds` now also reports the worst matched
+reference/candidate bounds for multi-item buckets, making text-axis plot-interval failures visible without
+manual JSON inspection.
+
+Validation: focused `pptx-charts` tests passed 39/39; targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-11-chart-bar-clustered-port` at
+`artifacts/visual/pptx-ladder-11-chart-bar-clustered-port/20260526-124739`; targeted
+`pptx-ladder-11-chart-bar-stacked-port` still passed its loose visual manifest while the corrected summary
+shows the real remaining automatic horizontal-bar interval gap: category labels are left by `21.61 pt`,
+value-axis labels and plot/axis bounds by about `31.75 pt`. The full public `pptx-charts` visual family
+passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json` generated during the
+2026-05-26 12:50 local run.

@@ -17,8 +17,8 @@
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "ChartTitleText"],
     "maxChartTextStructurePositionDeltaByKind": {
-      "CategoryAxisTickLabel": 0.25,
-      "ValueAxisTickLabel": 0.8,
+      "CategoryAxisTickLabel": 0.8,
+      "ValueAxisTickLabel": 0.25,
       "ChartTitleText": 1.0
     }
   },

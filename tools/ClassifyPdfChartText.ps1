@@ -201,6 +201,16 @@ function Is-PolarChart($plotBox, $structures) {
     return $false
 }
 
+function Is-HorizontalValueAxisChart($structures) {
+    foreach ($structure in $structures) {
+        if ([string]$structure.Kind -eq "VerticalGridlineGroupCandidate") {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     if ($null -eq $radarGeometry) {
         return $null
@@ -284,28 +294,47 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
         return "DataLabelText"
     }
 
-    if ($x -lt ($minX - $tolerance) -and $axisLabelY) {
-        return "ValueAxisTickLabel"
-    }
-
-    if ($x -gt ($maxX + $tolerance) -and $axisLabelY) {
-        if (Has-LegendContainer $op $structures $plotBox $tolerance) {
-            return "LegendText"
+    if (Is-HorizontalValueAxisChart $structures) {
+        if ($x -lt ($minX - $tolerance) -and $axisLabelY) {
+            return "CategoryAxisTickLabel"
         }
 
-        return "RightSideText"
-    }
+        if ($x -gt ($maxX + $tolerance) -and $axisLabelY) {
+            if (Has-LegendContainer $op $structures $plotBox $tolerance) {
+                return "LegendText"
+            }
 
-    if ($insideX -and $y -lt ($minY - $tolerance)) {
-        return "CategoryAxisTickLabel"
-    }
-
-    if ($insideX -and $y -gt ($maxY + $tolerance)) {
-        if (Looks-LikeChartTitle $op $plotBox) {
-            return "ChartTitleText"
+            return "RightSideText"
         }
 
-        return "CategoryAxisTickLabel"
+        if ($insideX -and ($y -lt ($minY - $tolerance) -or $y -gt ($maxY + $tolerance))) {
+            return "ValueAxisTickLabel"
+        }
+    }
+    else {
+        if ($x -lt ($minX - $tolerance) -and $axisLabelY) {
+            return "ValueAxisTickLabel"
+        }
+
+        if ($x -gt ($maxX + $tolerance) -and $axisLabelY) {
+            if (Has-LegendContainer $op $structures $plotBox $tolerance) {
+                return "LegendText"
+            }
+
+            return "RightSideText"
+        }
+
+        if ($insideX -and $y -lt ($minY - $tolerance)) {
+            return "CategoryAxisTickLabel"
+        }
+
+        if ($insideX -and $y -gt ($maxY + $tolerance)) {
+            if (Looks-LikeChartTitle $op $plotBox) {
+                return "ChartTitleText"
+            }
+
+            return "CategoryAxisTickLabel"
+        }
     }
 
     return "OuterChartText"

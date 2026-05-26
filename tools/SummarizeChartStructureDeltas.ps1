@@ -136,6 +136,8 @@ function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
     $reference = @($referenceItems | Where-Object { $_.Kind -eq $kind })
     $candidate = @($candidateItems | Where-Object { $_.Kind -eq $kind })
     $maxDelta = $null
+    $maxReferenceItem = $null
+    $maxCandidateItem = $null
     $referenceBounds = ""
     $candidateBounds = ""
     if ($reference.Count -eq $candidate.Count -and $reference.Count -gt 0) {
@@ -163,16 +165,24 @@ function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
                 $delta = BoundsDelta $referenceItem $candidateItem
                 if ($null -eq $maxDelta -or $delta -gt $maxDelta) {
                     $maxDelta = $delta
+                    $maxReferenceItem = $referenceItem
+                    $maxCandidateItem = $candidateItem
                 }
             }
         }
     }
 
-    if ($reference.Count -eq 1) {
+    if ($null -ne $maxReferenceItem) {
+        $referenceBounds = Format-Bounds $maxReferenceItem
+    }
+    elseif ($reference.Count -eq 1) {
         $referenceBounds = Format-Bounds $reference[0]
     }
 
-    if ($candidate.Count -eq 1) {
+    if ($null -ne $maxCandidateItem) {
+        $candidateBounds = Format-Bounds $maxCandidateItem
+    }
+    elseif ($candidate.Count -eq 1) {
         $candidateBounds = Format-Bounds $candidate[0]
     }
 
