@@ -389,6 +389,7 @@ internal sealed record PptxSceneChart(
     string? RelationshipId,
     string? TargetPartName,
     XDocument? ChartXml,
+    PptxSceneChartExternalData ExternalData,
     IReadOnlyList<RgbColor>? PaletteColors,
     PptxSceneChartColorStyle ColorStyle,
     PptxSceneChartStyle StylePart,
@@ -401,6 +402,12 @@ internal sealed record PptxSceneChart(
     PptxSceneChartManualLayout PlotAreaLayout,
     PptxSceneChartShapeStyle ChartAreaStyle,
     PptxSceneChartShapeStyle PlotAreaStyle);
+
+internal readonly record struct PptxSceneChartExternalData(
+    bool IsDefined,
+    string? RelationshipId,
+    string? TargetPartName,
+    bool? AutoUpdate);
 
 internal readonly record struct PptxSceneChartColorStyle(
     bool IsDefined,
@@ -1350,6 +1357,7 @@ internal sealed class PptxSceneBuilder
     private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
+    private const string ChartExternalDataPackageRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
     private const string ChartStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
 
@@ -1618,6 +1626,9 @@ internal sealed class PptxSceneBuilder
             : null;
         OoxPart? chartPart = targetPartName is null ? null : package.GetPart(targetPartName);
         XDocument? chartXml = chartPart is null ? null : LoadXml(chartPart);
+        PptxSceneChartExternalData externalData = chartPart is null
+            ? default
+            : ReadChartExternalData(package, chartPart.Name, chartXml);
         PptxSceneChartColorStyle colorStyle = chartPart is null
             ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [])
             : ReadChartColorStyle(package, chartPart.Name, theme);
@@ -1631,6 +1642,7 @@ internal sealed class PptxSceneBuilder
             relationshipId,
             targetPartName,
             chartXml,
+            externalData,
             paletteColors,
             colorStyle,
             stylePart,
@@ -2452,6 +2464,32 @@ internal sealed class PptxSceneBuilder
             ReadChartManualLayout(legend),
             ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme),
             ReadChartTextStyleOverride(legend, theme));
+    }
+
+    private static PptxSceneChartExternalData ReadChartExternalData(OoxPackage package, string chartPartName, XDocument? chartXml)
+    {
+        XElement? externalData = chartXml?.Root?.Element(ChartNamespace + "externalData");
+        if (externalData is null)
+        {
+            return default;
+        }
+
+        string? relationshipId = (string?)externalData.Attribute(RelationshipsNamespace + "id");
+        string? targetPartName = null;
+        if (!string.IsNullOrWhiteSpace(relationshipId))
+        {
+            targetPartName = package.GetRelationships(chartPartName)
+                .FirstOrDefault(relationship => !relationship.IsExternal &&
+                    relationship.Id == relationshipId &&
+                    relationship.Type == ChartExternalDataPackageRelationshipType)
+                ?.ResolvedTarget;
+        }
+
+        return new PptxSceneChartExternalData(
+            true,
+            relationshipId,
+            targetPartName,
+            ReadOptionalOoxmlBooleanElement(externalData, "autoUpdate"));
     }
 
     private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme)

@@ -104,6 +104,7 @@ internal static class PptxTests
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
                   <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/package" Target="../embeddings/chart-data.xlsx"/>
                 </Relationships>
                 """,
             ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
@@ -193,6 +194,7 @@ internal static class PptxTests
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/><c:layout><c:manualLayout><c:x val="0.7"/><c:y val="0.68"/><c:w val="0.2"/><c:h val="0.15"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="EEF7FF"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="2211AA"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend>
                   </c:chart>
+                  <c:externalData r:id="rId3"><c:autoUpdate val="0"/></c:externalData>
                 </c:chartSpace>
                 """,
             ["ppt/charts/colors1.xml"] = """
@@ -362,6 +364,10 @@ internal static class PptxTests
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.IsDefined == true, "Expected chart external-data ownership in the scene model.");
+        TestAssert.Equal("rId3", slide.SlideNodes[4].Chart?.ExternalData.RelationshipId ?? string.Empty);
+        TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slide.SlideNodes[4].Chart?.ExternalData.TargetPartName ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);

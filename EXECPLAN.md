@@ -2061,6 +2061,12 @@ Composite oracle family map:
   relationship discovery. Validation: focused `pptx-model` passed (`14 passed, 0 failed, 1 skipped`), focused
   `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the full non-slow suite passed
   (`244 passed, 0 failed, 7 skipped`).
+- Chart external-data scene ownership now preserves workbook provenance: `PptxSceneChart.ExternalData` records
+  `c:externalData/@r:id`, the package-resolved embedded-workbook target, and the `autoUpdate` flag. Workbook
+  parsing still remains a renderer-side bridge and does not yet provide stale-cache reconciliation, blank-cell
+  policy, table/name support, or typed value vectors in the scene. Validation: focused `pptx-model` passed
+  (`14 passed, 0 failed, 1 skipped`), focused `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the
+  full non-slow suite passed (`244 passed, 0 failed, 7 skipped`).
 - Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
