@@ -926,11 +926,11 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.4 0.4 0.4 RG", pdf);
-        TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("108 468 144 432 144 396 c", pdf);
-        TestAssert.Contains("144 360 180 324 216 324 c", pdf);
-        TestAssert.Contains("S", pdf);
+        TestAssert.Contains("0.4 0.4 0.4 rg", pdf);
+        TestAssert.Contains("72 469 m", pdf);
+        TestAssert.Contains("216 324 l", pdf);
+        TestAssert.Contains("h\r\nf", pdf);
+        TestAssert.DoesNotContain("144 360 180 324 216 324 c\r\nS", pdf);
     }
 
     public static void PptxSyntheticCurvedConnector2RendersCurve()
@@ -963,13 +963,12 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.867 0.867 0.867 RG", pdf);
-        TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("111.765 468 144 435.765 144 396 c", pdf);
-        TestAssert.Contains("S", pdf);
-        TestAssert.Contains("144 396 m", pdf);
-        TestAssert.Contains("147.15 403 l", pdf);
-        TestAssert.Contains("140.85 403 l", pdf);
+        TestAssert.Contains("0.867 0.867 0.867 rg", pdf);
+        TestAssert.Contains("72 469 m", pdf);
+        TestAssert.Contains("144 396 l", pdf);
+        TestAssert.Contains("146.761 403.288 l", pdf);
+        TestAssert.Contains("h\r\nf", pdf);
+        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
 
     public static void PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents()
@@ -1010,10 +1009,11 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("-0 1 -1 -0", pdf);
-        TestAssert.Contains("72 468 m", pdf);
-        TestAssert.Contains("111.765 468 144 435.765 144 396 c", pdf);
-        TestAssert.Contains("144 396 m", pdf);
-        TestAssert.Contains("147.15 403 l", pdf);
+        TestAssert.Contains("72 469 m", pdf);
+        TestAssert.Contains("144 396 l", pdf);
+        TestAssert.Contains("146.761 403.288 l", pdf);
+        TestAssert.Contains("h\r\nf", pdf);
+        TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
 
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()

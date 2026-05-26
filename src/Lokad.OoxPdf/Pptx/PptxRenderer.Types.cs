@@ -107,6 +107,12 @@ internal sealed partial class PptxRenderer
         double EndX,
         double EndY);
 
+    private readonly record struct CurveSample(
+        double X,
+        double Y,
+        double TangentX,
+        double TangentY);
+
     private readonly record struct TextRun(
         string Text,
         double X,

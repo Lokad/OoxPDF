@@ -241,6 +241,21 @@ High-priority actions:
   much closer to Office `f:4,f*:14,S:4,W*:68` on filled-region operators. Remaining public work should
   target extra Office clip regions, stroke/path decomposition, and the separate fractional/derived font-size
   differences, not another broad fill-operator sweep.
+- [x] Render solid curved connectors with triangle tails as filled connector outlines:
+  private slide-17 inspection showed four `curvedConnector2` connectors emitted as candidate stroked Beziers
+  plus separate triangle fills, while Office represented the same connector regions as fills and kept the page
+  stroke count lower. Solid, undashed curved connectors with no head marker and a triangle tail now emit one
+  filled outline path sampled from the connector Bezier plus tail marker, leaving dashed/capped/non-triangle
+  connector paths on the existing stroke path. Public curved-connector tests now lock the filled `f` emission
+  and the absence of the former `c S` stroke sequence.
+- [x] Re-check private slide-17 after filled curved-connector emission:
+  private run `artifacts/private-visual/lokad-value-based/20260526-090623` compared 84/84 pages with zero
+  dimension mismatches, deck MAE `8.945151`, changed16 `0.115512`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide/page 17 improved slightly to MAE `2.877938`, changed16 `0.044695`,
+  changed32 `0.035255`, SSIM `0.920089`. Page-filtered graphics inspection now shows candidate
+  `f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count and preserving the previous fill-operator
+  convergence toward Office `f:4,f*:14,S:4,W*:68`. Remaining public work should target the extra Office clip
+  regions and the derived fractional font-size differences.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -6607,3 +6622,23 @@ operations on both sides. The private-safe graphics-operator structure improved 
 after text clipping to candidate `f:4,f*:13,S:8,W*:44`, close to Office `f:4,f*:14,S:4,W*:68` for fill operators.
 Remaining structural gaps are the extra Office clip regions, the candidate's higher stroke/path count, and the
 derived fractional font sizes still absent from candidate page-17 text operations.
+
+Revision note, 2026-05-26: Closed the private-safe slide-17 stroke/path-count gap with a public connector rule
+instead of a slide-specific tweak. The private page contained four `curvedConnector2` connectors with solid lines
+and triangle tail markers; Office's PDF represented those connector regions as fills, while candidate output had
+four extra stroked Beziers plus separate triangle fills. Solid, undashed curved connectors with no head marker and a
+triangle tail now emit a sampled filled connector outline through `f`. Dashed connectors, capped connectors, other
+marker families, and ordinary shape strokes remain on the existing stroke path until separately evidenced. Public
+guards updated `PptxSyntheticCurvedConnectorRendersCurve`, `PptxSyntheticCurvedConnector2RendersCurve`, and
+`PptxSyntheticCurvedConnector2LoopUsesQuarterTurnTangents` to require filled connector regions and reject the former
+`c S` stroke sequence.
+
+Validation: focused `pptx-shapes` tests passed 14/14; the full non-slow test runner passed 234/234 with 7 skipped;
+and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. The
+private `lokad-value-based` run `artifacts/private-visual/lokad-value-based/20260526-090623` compared 84/84 pages
+with zero dimension mismatches, deck MAE `8.945151`, changed16 `0.115512`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 improved slightly to MAE `2.877938`, changed16 `0.044695`,
+changed32 `0.035255`, SSIM `0.920089`. Page-filtered graphics inspection now shows candidate
+`f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count while remaining one `f*` fill and 24 `W*` clips away
+from Office `f:4,f*:14,S:4,W*:68`. Remaining structural targets are Office-style clip-region emission and the
+derived fractional font-size differences still visible in page-17 text operations.

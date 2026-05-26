@@ -403,20 +403,57 @@ internal sealed partial class PptxRenderer
 
                 LineEndStyle headEnd = headEndOverride ?? ReadLineEnd(shapeProperties, "headEnd");
                 LineEndStyle tailEnd = tailEndOverride ?? ReadLineEnd(shapeProperties, "tailEnd");
-                DrawCurvedConnectorPreset(
-                    graphics,
-                    shapeProperties,
-                    preset,
-                    x,
-                    yTop,
-                    width,
-                    height,
-                    document.SlideHeightPoints,
-                    stroke,
-                    lineWidth,
-                    headEnd,
-                    tailEnd,
-                    presetAdjustmentsOverride);
+                if (!hasDash &&
+                    lineCap is null &&
+                    headEnd.IsNone &&
+                    tailEnd.Kind == LineEndKind.Triangle)
+                {
+                    graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
+                    if (!TryFillCurvedConnectorPreset(
+                        graphics,
+                        shapeProperties,
+                        preset,
+                        x,
+                        yTop,
+                        width,
+                        height,
+                        document.SlideHeightPoints,
+                        lineWidth,
+                        presetAdjustmentsOverride))
+                    {
+                        DrawCurvedConnectorPreset(
+                            graphics,
+                            shapeProperties,
+                            preset,
+                            x,
+                            yTop,
+                            width,
+                            height,
+                            document.SlideHeightPoints,
+                            stroke,
+                            lineWidth,
+                            headEnd,
+                            tailEnd,
+                            presetAdjustmentsOverride);
+                    }
+                }
+                else
+                {
+                    DrawCurvedConnectorPreset(
+                        graphics,
+                        shapeProperties,
+                        preset,
+                        x,
+                        yTop,
+                        width,
+                        height,
+                        document.SlideHeightPoints,
+                        stroke,
+                        lineWidth,
+                        headEnd,
+                        tailEnd,
+                        presetAdjustmentsOverride);
+                }
 
                 if (hasDash)
                 {
@@ -1864,6 +1901,172 @@ internal sealed partial class PptxRenderer
                 ResolveEndpointDirection(last.EndX, last.EndY, last.Control2X, last.Control2Y, last.Control1X, last.Control1Y),
                 lineWidth);
         }
+    }
+
+    private static bool TryFillCurvedConnectorPreset(
+        PdfGraphicsBuilder graphics,
+        XElement shapeProperties,
+        string preset,
+        double x,
+        double yTop,
+        double width,
+        double height,
+        double slideHeight,
+        double lineWidth,
+        IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
+    {
+        List<BezierSegment> segments = preset switch
+        {
+            "curvedConnector2" => CreateCurvedConnector2Segments(x, yTop, width, height, slideHeight),
+            "curvedConnector3" => CreateCurvedConnector3Segments(shapeProperties, presetAdjustmentsOverride, x, yTop, width, height, slideHeight),
+            _ => []
+        };
+        if (segments.Count == 0)
+        {
+            return false;
+        }
+
+        const int samplesPerSegment = 24;
+        var samples = new List<CurveSample>(segments.Count * samplesPerSegment + 1);
+        foreach (BezierSegment segment in segments)
+        {
+            int start = samples.Count == 0 ? 0 : 1;
+            for (int i = start; i <= samplesPerSegment; i++)
+            {
+                samples.Add(SampleBezierSegment(segment, i / (double)samplesPerSegment));
+            }
+        }
+
+        if (samples.Count < 2)
+        {
+            return false;
+        }
+
+        double totalLength = 0d;
+        double[] cumulativeLengths = new double[samples.Count];
+        for (int i = 1; i < samples.Count; i++)
+        {
+            totalLength += Distance(samples[i - 1].X, samples[i - 1].Y, samples[i].X, samples[i].Y);
+            cumulativeLengths[i] = totalLength;
+        }
+
+        double markerLength = Math.Max(5d, lineWidth * 3.5d);
+        double baseDistance = Math.Max(0d, totalLength - markerLength);
+        CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
+        double halfWidth = Math.Max(0.1d, lineWidth / 2d);
+        var bodySamples = new List<CurveSample>();
+        for (int i = 0; i < samples.Count && cumulativeLengths[i] < baseDistance; i++)
+        {
+            bodySamples.Add(samples[i]);
+        }
+
+        bodySamples.Add(baseSample);
+        if (bodySamples.Count < 2)
+        {
+            return false;
+        }
+
+        (double X, double Y) direction = Normalize(baseSample.TangentX, baseSample.TangentY);
+        if (Math.Abs(direction.X) <= 0.000001d && Math.Abs(direction.Y) <= 0.000001d)
+        {
+            return false;
+        }
+
+        (double X, double Y) normal = (-direction.Y, direction.X);
+        (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
+        double arrowHalfWidth = Math.Max(5d, lineWidth * 3.5d) * 0.45d;
+        (double X, double Y) leftShoulder = (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth);
+        (double X, double Y) rightShoulder = (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth);
+
+        var points = new List<(double X, double Y)>(bodySamples.Count * 2 + 3);
+        foreach (CurveSample sample in bodySamples)
+        {
+            (double X, double Y) sampleNormal = NormalForSample(sample);
+            points.Add((sample.X + sampleNormal.X * halfWidth, sample.Y + sampleNormal.Y * halfWidth));
+        }
+
+        points.Add(leftShoulder);
+        points.Add(tip);
+        points.Add(rightShoulder);
+        for (int i = bodySamples.Count - 1; i >= 0; i--)
+        {
+            CurveSample sample = bodySamples[i];
+            (double X, double Y) sampleNormal = NormalForSample(sample);
+            points.Add((sample.X - sampleNormal.X * halfWidth, sample.Y - sampleNormal.Y * halfWidth));
+        }
+
+        graphics.FillPolygon(points.ToArray());
+        return true;
+    }
+
+    private static CurveSample SampleBezierSegment(BezierSegment segment, double t)
+    {
+        double mt = 1d - t;
+        double mt2 = mt * mt;
+        double t2 = t * t;
+        double x = mt2 * mt * segment.StartX +
+            3d * mt2 * t * segment.Control1X +
+            3d * mt * t2 * segment.Control2X +
+            t2 * t * segment.EndX;
+        double y = mt2 * mt * segment.StartY +
+            3d * mt2 * t * segment.Control1Y +
+            3d * mt * t2 * segment.Control2Y +
+            t2 * t * segment.EndY;
+        double dx = 3d * mt2 * (segment.Control1X - segment.StartX) +
+            6d * mt * t * (segment.Control2X - segment.Control1X) +
+            3d * t2 * (segment.EndX - segment.Control2X);
+        double dy = 3d * mt2 * (segment.Control1Y - segment.StartY) +
+            6d * mt * t * (segment.Control2Y - segment.Control1Y) +
+            3d * t2 * (segment.EndY - segment.Control2Y);
+        return new CurveSample(x, y, dx, dy);
+    }
+
+    private static CurveSample SampleAtDistance(IReadOnlyList<CurveSample> samples, IReadOnlyList<double> cumulativeLengths, double distance)
+    {
+        for (int i = 1; i < samples.Count; i++)
+        {
+            if (cumulativeLengths[i] < distance)
+            {
+                continue;
+            }
+
+            double previousLength = cumulativeLengths[i - 1];
+            double segmentLength = cumulativeLengths[i] - previousLength;
+            double t = segmentLength <= 0.000001d ? 0d : (distance - previousLength) / segmentLength;
+            CurveSample a = samples[i - 1];
+            CurveSample b = samples[i];
+            return new CurveSample(
+                Lerp(a.X, b.X, t),
+                Lerp(a.Y, b.Y, t),
+                Lerp(a.TangentX, b.TangentX, t),
+                Lerp(a.TangentY, b.TangentY, t));
+        }
+
+        return samples[^1];
+    }
+
+    private static (double X, double Y) NormalForSample(CurveSample sample)
+    {
+        (double X, double Y) tangent = Normalize(sample.TangentX, sample.TangentY);
+        return (-tangent.Y, tangent.X);
+    }
+
+    private static (double X, double Y) Normalize(double x, double y)
+    {
+        double length = Math.Sqrt(x * x + y * y);
+        return length <= 0.000001d ? (0d, 0d) : (x / length, y / length);
+    }
+
+    private static double Distance(double x1, double y1, double x2, double y2)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
+
+    private static double Lerp(double a, double b, double t)
+    {
+        return a + (b - a) * t;
     }
 
     private static void FillCurvedConnectorEndMarker(
