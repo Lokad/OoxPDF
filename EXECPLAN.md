@@ -1048,6 +1048,11 @@ High-priority actions:
     available and from raw XML fallback otherwise. Rendering still does not draw leader lines, but future
     leader-line geometry no longer needs to re-scan `c:leaderLines` at the drawing site. Validation:
     focused `pptx-charts` tests passed `40/40`; the full console runner passed `251/251`.
+  - [x] Carry custom label rich-text runs through renderer data-label overrides:
+    `ChartDataLabelOverride` now preserves scene-owned `CustomTextRuns` as text plus per-run chart text-style
+    overrides while retaining the flattened `CustomText` rendering path. This keeps the future rich label
+    renderer from having to re-read `c:dLbl/c:tx` at the draw site. Validation: focused `pptx-charts` tests
+    passed `40/40`; the full console runner passed `251/251`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
