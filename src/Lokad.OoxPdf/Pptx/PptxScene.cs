@@ -619,6 +619,7 @@ internal sealed record PptxSceneChartSeries(
     IReadOnlyList<PptxSceneChartNumberPoint> ValuePoints,
     IReadOnlyList<string> Categories,
     IReadOnlyList<PptxSceneChartStringPoint> CategoryPoints,
+    IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> CategoryLevels,
     IReadOnlyList<double> XValues,
     IReadOnlyList<PptxSceneChartNumberPoint> XValuePoints,
     IReadOnlyList<double> YValues,
@@ -1916,6 +1917,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesNumberPoints(seriesElement, "val"),
                 ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesStringPoints(seriesElement, "cat"),
+                ReadChartSeriesStringLevels(seriesElement, "cat"),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "xVal"),
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
@@ -2207,11 +2209,26 @@ internal sealed class PptxSceneBuilder
 
     private static IReadOnlyList<PptxSceneChartStringPoint> ReadChartSeriesStringPoints(XElement series, string elementName)
     {
+        return ReadChartStringPoints(series
+            .Elements(ChartNamespace + elementName)
+            .Descendants(ChartNamespace + "pt"));
+    }
+
+    private static IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> ReadChartSeriesStringLevels(XElement series, string elementName)
+    {
+        return series
+            .Elements(ChartNamespace + elementName)
+            .Descendants(ChartNamespace + "lvl")
+            .Select(level => ReadChartStringPoints(level.Elements(ChartNamespace + "pt")))
+            .Where(points => points.Count != 0)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<PptxSceneChartStringPoint> ReadChartStringPoints(IEnumerable<XElement> sourcePoints)
+    {
         var points = new List<PptxSceneChartStringPoint>();
         int ordinal = 0;
-        foreach (XElement point in series
-            .Elements(ChartNamespace + elementName)
-            .Descendants(ChartNamespace + "pt"))
+        foreach (XElement point in sourcePoints)
         {
             int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
                 ? parsedIndex

@@ -9801,6 +9801,44 @@ internal static class PptxTests
         TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
     }
 
+    public static void PptxScenePreservesChartMultiLevelCategoryPoints()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart><c:ser>
+                <c:cat><c:multiLvlStrRef><c:f>Sheet1!$A$2:$B$4</c:f><c:multiLvlStrCache>
+                  <c:ptCount val="3"/>
+                  <c:lvl>
+                    <c:pt idx="0"><c:v>FY26</c:v></c:pt>
+                    <c:pt idx="2"><c:v>FY27</c:v></c:pt>
+                  </c:lvl>
+                  <c:lvl>
+                    <c:pt idx="0"><c:v>Q1</c:v></c:pt>
+                    <c:pt idx="1"><c:v></c:v></c:pt>
+                    <c:pt idx="2"><c:v>Q3</c:v></c:pt>
+                  </c:lvl>
+                </c:multiLvlStrCache></c:multiLvlStrRef></c:cat>
+                <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+              </c:ser></c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
+        TestAssert.Equal(5, series.CategoryPoints.Count);
+        TestAssert.Equal(2, series.CategoryLevels.Count);
+        TestAssert.Equal(2, series.CategoryLevels[0].Count);
+        TestAssert.Equal(0, series.CategoryLevels[0][0].Index);
+        TestAssert.Equal("FY26", series.CategoryLevels[0][0].Text);
+        TestAssert.Equal(2, series.CategoryLevels[0][1].Index);
+        TestAssert.Equal("FY27", series.CategoryLevels[0][1].Text);
+        TestAssert.Equal(3, series.CategoryLevels[1].Count);
+        TestAssert.Equal(1, series.CategoryLevels[1][1].Index);
+        TestAssert.Equal(string.Empty, series.CategoryLevels[1][1].Text);
+        TestAssert.True(series.CategoryLevels[1][1].HasText, "Expected blank multi-level category value to preserve its value element.");
+    }
+
     public static void PptxChartAutoTitleDeletedSuppressesSingleSeriesName()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

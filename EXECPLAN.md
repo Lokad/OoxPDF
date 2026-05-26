@@ -7815,6 +7815,21 @@ cache from an embedded workbook, it no longer invents dense point indices after 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`246 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Added scene ownership for multi-level chart category caches. The scene already
+classified `multiLvlStrRef` and `multiLvlStrCache` as datasource kinds, but category text was still exposed
+only as a flattened label list. `PptxSceneChartSeries.CategoryLevels` now preserves each `c:lvl` as its own
+ordered point list, reusing the category point record so level-local `idx`, blank text, and value-element
+presence survive parsing. The flattened `Categories` and `CategoryPoints` surfaces remain for current
+rendering compatibility.
+
+This does not yet render hierarchical category axes. The next Office-PDF-backed step is to learn how
+PowerPoint lays out multi-level axis label bands, separators, `noMultiLvlLbl`, skip/offset interaction, and
+workbook-derived multi-level references before emitting hierarchy-specific PDF text structure.
+
+Validation: focused non-slow `pptx-model` passed (`16 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`247 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
 shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme
