@@ -2780,6 +2780,20 @@ internal sealed partial class PptxRenderer
                 areas.Add(lastArea);
             }
 
+            string currentSheetPrefix = string.Empty;
+            for (int index = 0; index < areas.Count; index++)
+            {
+                int separator = areas[index].LastIndexOf('!');
+                if (separator > 0)
+                {
+                    currentSheetPrefix = areas[index][..(separator + 1)];
+                }
+                else if (currentSheetPrefix.Length > 0)
+                {
+                    areas[index] = currentSheetPrefix + areas[index];
+                }
+            }
+
             return areas.ToArray();
         }
 

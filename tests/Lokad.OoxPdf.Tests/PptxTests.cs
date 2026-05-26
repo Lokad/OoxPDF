@@ -10321,7 +10321,7 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
         TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
         TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
-        Array parsedUnionCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,Sheet1!$B$4:$B$4"]) ?? throw new InvalidOperationException("Expected parsed multi-area workbook range cells."));
+        Array parsedUnionCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,$B$4:$B$4"]) ?? throw new InvalidOperationException("Expected parsed multi-area workbook range cells."));
         object firstParsedUnionCell = parsedUnionCells.GetValue(0) ?? throw new InvalidOperationException("Expected first multi-area workbook range cell.");
         object secondParsedUnionCell = parsedUnionCells.GetValue(1) ?? throw new InvalidOperationException("Expected second multi-area workbook range cell.");
         TestAssert.True(parsedUnionCells.Length == 2, "Expected multi-area workbook range to preserve cells from both areas.");
@@ -10330,7 +10330,7 @@ internal static class PptxTests
         TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondParsedUnionCell) == 1, "Expected second multi-area cell to preserve its range-area index.");
         TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("RangeAreaCount")?.GetValue(secondParsedUnionCell) == 2, "Expected multi-area cells to preserve the total range-area count.");
         TestAssert.True((int?)secondParsedUnionCell.GetType().GetProperty("Index")?.GetValue(secondParsedUnionCell) == 1, "Expected multi-area range to keep point indices continuous across areas.");
-        TestAssert.Equal("Sheet1!$B$2:$B$2,Sheet1!$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!$B$2:$B$2,$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("SourceFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
         TestAssert.Equal("Sheet1!$B$4:$B$4", (string?)secondParsedUnionCell.GetType().GetProperty("ResolvedFormula")?.GetValue(secondParsedUnionCell) ?? string.Empty);
         TestAssert.Equal("1.4", (string?)secondParsedUnionCell.GetType().GetProperty("RawValue")?.GetValue(secondParsedUnionCell) ?? string.Empty);
         var readNumericRange = workbookType.GetMethod("ReadNumericRange") ?? throw new InvalidOperationException("Expected typed numeric range reader.");
@@ -10341,7 +10341,7 @@ internal static class PptxTests
         System.Reflection.PropertyInfo numericCellProperty = firstParsedNumericValue.GetType().GetProperty("Cell") ?? throw new InvalidOperationException("Expected typed numeric range-cell ownership.");
         object firstParsedNumericCell = numericCellProperty.GetValue(firstParsedNumericValue) ?? throw new InvalidOperationException("Expected typed numeric range cell.");
         TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedNumericCell) == true, "Expected typed numeric value to preserve its source range-cell metadata.");
-        Array parsedUnionNumericValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,Sheet1!$B$4:$B$4"]) ?? throw new InvalidOperationException("Expected typed multi-area workbook numeric values."));
+        Array parsedUnionNumericValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$2,$B$4:$B$4"]) ?? throw new InvalidOperationException("Expected typed multi-area workbook numeric values."));
         TestAssert.True(parsedUnionNumericValues.Length == 2, "Expected typed numeric range reader to preserve multi-area workbook values.");
         object secondParsedUnionNumericValue = parsedUnionNumericValues.GetValue(1) ?? throw new InvalidOperationException("Expected second typed multi-area numeric value.");
         TestAssert.Equal(1.4d, (double?)numericValueProperty.GetValue(secondParsedUnionNumericValue) ?? 0d);

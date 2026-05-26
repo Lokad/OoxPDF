@@ -7869,9 +7869,10 @@ Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipp
 
 Revision note, 2026-05-26: Preserved discontiguous chart workbook range shape instead of treating every
 source formula as a single rectangle. `ChartWorkbookData.ReadRangeCells` now splits top-level comma-separated
-range areas, reads each area in Office formula order, keeps point indices continuous across areas, and adds
-`RangeAreaIndex` / `RangeAreaCount` to every materialized range cell. The embedded workbook regression locks
-both raw range cells and typed numeric values for a two-area value source.
+range areas, carries the leading sheet token across subsequent same-sheet areas, reads each area in Office
+formula order, keeps point indices continuous across areas, and adds `RangeAreaIndex` / `RangeAreaCount` to
+every materialized range cell. The embedded workbook regression locks both raw range cells and typed numeric
+values for a two-area value source with an omitted sheet token in the second area.
 
 This is still not a formula engine. Parenthesized unions, intersections, dynamic arrays, external workbook
 loading, and source/cache freshness policy remain open. The structural improvement is narrower: chart-data
