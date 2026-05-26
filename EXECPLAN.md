@@ -7775,6 +7775,20 @@ can now carry rectangular table source provenance without renderer-local heurist
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added rectangular source coordinates to chart workbook range cells.
+`ChartWorkbookRangeCell` now carries zero-based `RangeRowIndex` and `RangeColumnIndex`, total
+`RangeRowCount` and `RangeColumnCount`, and absolute worksheet `SheetRow` and `SheetColumn` alongside the
+existing flat point index and cell reference. Direct ranges and structured-reference table spans are covered
+by the embedded workbook regression.
+
+This is deliberately behavior-neutral for rendering. Native chart rendering still projects workbook-backed
+values to dense numeric/text compatibility arrays, and Office-backed work remains to decide how rectangular
+workbook sources feed multi-level categories, blank-cell behavior, hidden rows/columns, and `dispBlanksAs`.
+The structural gain is that future chart-data vectors no longer need to recover rectangle shape from
+`A1`-style strings or point-index arithmetic.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Fixed chart workbook sheet-name normalization for quoted formulas that include
 an external workbook prefix. A source like `'[Book.xlsx]Sheet1'!$B$2:$B$4` now unquotes the sheet token before
 removing the `[Book.xlsx]` qualifier, so the embedded workbook bridge resolves it to the local `Sheet1`

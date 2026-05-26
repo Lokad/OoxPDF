@@ -1917,6 +1917,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartWorkbookRangeCell(
         int Index,
+        int RangeRowIndex,
+        int RangeColumnIndex,
+        int RangeRowCount,
+        int RangeColumnCount,
+        int SheetRow,
+        int SheetColumn,
         string Reference,
         string SheetName,
         string SourceFormula,
@@ -2139,6 +2145,8 @@ internal sealed partial class PptxRenderer
             int maxColumn = Math.Max(firstColumn, lastColumn);
             int minRow = Math.Min(firstRow, lastRow);
             int maxRow = Math.Max(firstRow, lastRow);
+            int rangeRowCount = maxRow - minRow + 1;
+            int rangeColumnCount = maxColumn - minColumn + 1;
             int index = 0;
             for (int row = minRow; row <= maxRow; row++)
             {
@@ -2149,6 +2157,12 @@ internal sealed partial class PptxRenderer
                     ChartWorkbookCellFormat format = hasCell ? styles.ResolveCellFormat(cell.StyleIndex) : default;
                     values.Add(new ChartWorkbookRangeCell(
                         index,
+                        row - minRow,
+                        column - minColumn,
+                        rangeRowCount,
+                        rangeColumnCount,
+                        row,
+                        column,
                         reference,
                         sheetName,
                         resolution.SourceFormula,

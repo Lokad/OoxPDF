@@ -10295,6 +10295,12 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedCell) ?? string.Empty);
         TestAssert.Equal("DirectRange", firstParsedCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         TestAssert.Equal(string.Empty, (string?)firstParsedCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeRowIndex")?.GetValue(firstParsedCell) == 0, "Expected range-local row index to survive range-cell projection.");
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeColumnIndex")?.GetValue(firstParsedCell) == 0, "Expected range-local column index to survive range-cell projection.");
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeRowCount")?.GetValue(firstParsedCell) == 3, "Expected range row count to survive range-cell projection.");
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("RangeColumnCount")?.GetValue(firstParsedCell) == 1, "Expected range column count to survive range-cell projection.");
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("SheetRow")?.GetValue(firstParsedCell) == 2, "Expected absolute worksheet row to survive range-cell projection.");
+        TestAssert.True((int?)firstParsedCell.GetType().GetProperty("SheetColumn")?.GetValue(firstParsedCell) == 2, "Expected absolute worksheet column to survive range-cell projection.");
         TestAssert.Equal("Number", firstParsedCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("8.2", (string?)firstParsedCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedCell) ?? string.Empty);
         TestAssert.True((bool?)firstParsedCell.GetType().GetProperty("HasValueElement")?.GetValue(firstParsedCell) == true, "Expected numeric worksheet cell to preserve its cached value element.");
@@ -10369,8 +10375,13 @@ internal static class PptxTests
         TestAssert.True((int?)firstParsedWholeTableCell.GetType().GetProperty("TableLastColumnId")?.GetValue(firstParsedWholeTableCell) == 3, "Expected whole-table last source column id to survive resolution.");
         Array parsedColumnSpanCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[[Region]:[Amount]]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference column-span range cells."));
         object firstParsedColumnSpanCell = parsedColumnSpanCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference column-span range cell.");
+        object secondParsedColumnSpanCell = parsedColumnSpanCells.GetValue(1) ?? throw new InvalidOperationException("Expected second structured-reference column-span range cell.");
         TestAssert.True(parsedColumnSpanCells.Length == 6, "Expected structured-reference column span to hydrate the selected data-body rectangle.");
         TestAssert.Equal("Sheet1!A2:B4", (string?)firstParsedColumnSpanCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("RangeRowCount")?.GetValue(firstParsedColumnSpanCell) == 3, "Expected structured-reference column span row count to survive range projection.");
+        TestAssert.True((int?)firstParsedColumnSpanCell.GetType().GetProperty("RangeColumnCount")?.GetValue(firstParsedColumnSpanCell) == 2, "Expected structured-reference column span column count to survive range projection.");
+        TestAssert.True((int?)secondParsedColumnSpanCell.GetType().GetProperty("RangeColumnIndex")?.GetValue(secondParsedColumnSpanCell) == 1, "Expected structured-reference column span to preserve range-local column coordinates.");
+        TestAssert.True((int?)secondParsedColumnSpanCell.GetType().GetProperty("SheetColumn")?.GetValue(secondParsedColumnSpanCell) == 2, "Expected structured-reference column span to preserve absolute worksheet column coordinates.");
         TestAssert.Equal("SalesTable", (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
         TestAssert.Equal(string.Empty, (string?)firstParsedColumnSpanCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedColumnSpanCell) ?? string.Empty);
         TestAssert.True(firstParsedColumnSpanCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedColumnSpanCell) is null, "Expected multi-column structured references to keep single column id empty.");
