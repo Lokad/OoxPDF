@@ -2339,6 +2339,14 @@ High-priority actions:
     `2026-05-26T16:39:30.4276885+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 35/37
     text-gated; the two remaining graphics-only chart cases are the no-legend doughnut probes with no text
     structures to gate.
+  - [x] Normalize the remaining manual plot-layout title oracle: `ClassifyPdfChartText.ps1` now treats
+    title-sized text above the plot as `ChartTitleText` even when a horizontal bar auto title sits slightly
+    outside the plot X span. This keeps `layoutTarget=outer` from hiding the title in the generic
+    `OuterChartText` bucket while preserving the existing plot-centered title path for ordinary charts.
+    Fresh probes for the inner and outer plot-layout cases now show the same real renderer backlog explicitly:
+    `ChartTitleText` Y drift is `~56.98 pt` for `layoutTarget=inner` and `~91.75 pt` for `layoutTarget=outer`.
+    The full public `pptx-charts` family still passed 37/37 at `artifacts/visual/reports/pptx-charts.json`,
+    generated `2026-05-26T16:48:37.4081855+02:00`.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest

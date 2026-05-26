@@ -173,6 +173,34 @@ function Looks-LikeChartTitle($op, $plotBox) {
         [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.45d)
 }
 
+function Looks-LikeAbovePlotChartTitle($op, $plotBox, [double]$tolerance) {
+    if ($null -eq $plotBox) {
+        return $false
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $minX = [double]$plotBox.MinX
+    $maxX = [double]$plotBox.MaxX
+    $maxY = [double]$plotBox.MaxY
+    $plotBoxWidth = StructureWidth $plotBox
+    $plotWidth = [Math]::Max(1d, $plotBoxWidth)
+    if ($y -le ($maxY + $tolerance)) {
+        return $false
+    }
+
+    if (Looks-LikeChartTitle $op $plotBox) {
+        return $true
+    }
+
+    $text = TextValue $op
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    return $text.Length -gt 6 -and
+        $fontSize -ge 10d -and
+        $x -ge ($minX - $plotWidth * 0.25d) -and
+        $x -le ($maxX + $plotWidth * 0.25d)
+}
+
 function Find-RadarSpokeGeometry($structures) {
     $spoke = @($structures | Where-Object {
         $_.Kind -eq "RadarSpokeGroupCandidate" -and
@@ -271,7 +299,7 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
     $axisLabelY = $y -ge ($minY - ($tolerance * 2d)) -and $y -le ($maxY + ($tolerance * 2d))
 
-    if ($insideX -and $y -gt ($maxY + $tolerance) -and (Looks-LikeChartTitle $op $plotBox)) {
+    if (Looks-LikeAbovePlotChartTitle $op $plotBox $tolerance) {
         return "ChartTitleText"
     }
 
