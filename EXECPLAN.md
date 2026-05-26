@@ -1918,11 +1918,19 @@ High-priority actions:
     - [x] Move direct table-cell solid fills into `PptxSceneTableCell`. Ordered table rendering now consumes
       scene-owned `tcPr` fills; built-in table-style fallback fills remain renderer-side until table-style
     conditional formatting is represented as a typed style-resolution model.
-  - [x] Move explicit table-cell borders into `PptxSceneTableCell`. The scene now distinguishes explicit
-    border presence from drawable border lines, preserving the current behavior where explicit `noFill`
-    borders suppress the default grid while rendered border strokes are emitted from typed line data.
-  - [x] Move built-in table-style descriptors into `PptxSceneTable`: style id, supported style family/accent,
-    and conditional-format flags are now scene-owned inputs for table fills, text defaults, and default grid
+    - [x] Move explicit table-cell borders into `PptxSceneTableCell`. The scene now distinguishes explicit
+      border presence from drawable border lines, preserving the current behavior where explicit `noFill`
+      borders suppress the default grid while rendered border strokes are emitted from typed line data.
+    - [x] Preserve table-cell border line-style tokens in the scene model:
+      `a:tcPr` border elements (`lnL`, `lnR`, `lnT`, `lnB`) now reuse the same raw dash, compound, cap, and
+      join token preservation used by scene shape lines, while retaining the existing table-border width rule.
+      The scene-builder fixture locks `dash`, `dbl`, `rnd`, and `bevel` on a table-cell border so table border
+      styling can move toward the shared line renderer without losing OOXML source evidence. Validation:
+      focused `PptxSceneBuilderBuildsResolvedNodeLists` passed (`1 passed, 0 failed, 0 skipped`); focused
+      non-slow `pptx-tables` passed (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+      (`256 passed, 0 failed, 7 skipped`).
+    - [x] Move built-in table-style descriptors into `PptxSceneTable`: style id, supported style family/accent,
+      and conditional-format flags are now scene-owned inputs for table fills, text defaults, and default grid
     behavior. The Office table-style cascade itself remains a future typed resolver.
   - [x] Materialize per-cell built-in table-style outputs in `PptxSceneTableCell`: the renderer now consumes
     scene-owned style fills and text defaults after direct cell formatting. The current limited built-in

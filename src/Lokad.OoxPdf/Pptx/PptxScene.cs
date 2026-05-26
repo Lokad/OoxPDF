@@ -3041,9 +3041,38 @@ internal sealed class PptxSceneBuilder
         double lineWidth = line.Attribute("w") is { } widthAttribute
             ? Math.Max(1d, OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture)) / 2d)
             : 0.75d;
+        XElement shapeProperties = WrapTableCellBorderLine(line);
+        IReadOnlyList<double> dashPattern = TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> parsedDashPattern)
+            ? parsedDashPattern
+            : [];
+        string? lineCap = ReadLineCap(shapeProperties);
         return new PptxSceneTableCellBorder(
             IsSpecified: true,
-            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null, null, null, null, null, null));
+            new PptxSceneLineStyle(
+                true,
+                color,
+                lineWidth,
+                alpha,
+                dashPattern,
+                ReadPresetDashValue(shapeProperties),
+                ReadLineCompound(shapeProperties),
+                ReadLineCompoundValue(shapeProperties),
+                lineCap switch
+                {
+                    "rnd" => 1,
+                    "sq" => 2,
+                    _ => null
+                },
+                lineCap,
+                ReadLineJoin(shapeProperties),
+                ReadLineJoinValue(shapeProperties)));
+    }
+
+    private static XElement WrapTableCellBorderLine(XElement line)
+    {
+        return new XElement(
+            DrawingNamespace + "spPr",
+            new XElement(DrawingNamespace + "ln", line.Attributes(), line.Nodes()));
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
