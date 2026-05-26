@@ -1654,14 +1654,16 @@ internal sealed partial class PptxRenderer
 
             string[] columnNames = columns.Select(column => column.Name).ToArray();
 
-            string autoFilterReference = (string?)tableElement.Element(SpreadsheetNamespace + "autoFilter")?.Attribute("ref") ?? string.Empty;
-            int[] filterColumnIds = tableElement
-                .Element(SpreadsheetNamespace + "autoFilter")?
+            XElement? autoFilter = tableElement.Element(SpreadsheetNamespace + "autoFilter");
+            string autoFilterReference = (string?)autoFilter?.Attribute("ref") ?? string.Empty;
+            ChartWorkbookTableFilterColumn[] filterColumns = autoFilter?
                 .Elements(SpreadsheetNamespace + "filterColumn")
-                .Select(column => ReadSpreadsheetIntegerAttribute(column, "colId"))
-                .Where(id => id is not null)
-                .Select(id => id!.Value)
+                .Select(ReadWorkbookTableFilterColumn)
                 .ToArray() ?? [];
+            int[] filterColumnIds = filterColumns
+                .Where(column => column.ColumnId is not null)
+                .Select(column => column.ColumnId!.Value)
+                .ToArray();
             int headerRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "headerRowCount") ?? 1;
             int totalsRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "totalsRowCount") ?? 0;
             bool totalsRowShown = IsOoxmlTrue((string?)tableElement.Attribute("totalsRowShown"));
@@ -1680,10 +1682,37 @@ internal sealed partial class PptxRenderer
                 totalsRowCount,
                 totalsRowShown,
                 autoFilterReference,
-                filterColumnIds));
+                filterColumnIds,
+                filterColumns));
         }
 
         return tables;
+    }
+
+    private static ChartWorkbookTableFilterColumn ReadWorkbookTableFilterColumn(XElement column)
+    {
+        XElement? filters = column.Element(SpreadsheetNamespace + "filters");
+        XElement? customFilters = column.Element(SpreadsheetNamespace + "customFilters");
+        XElement? dynamicFilter = column.Element(SpreadsheetNamespace + "dynamicFilter");
+        XElement? top10 = column.Element(SpreadsheetNamespace + "top10");
+        string filterKind = column.Elements().FirstOrDefault()?.Name.LocalName ?? string.Empty;
+        return new ChartWorkbookTableFilterColumn(
+            ReadSpreadsheetIntegerAttribute(column, "colId"),
+            ReadOoxmlBooleanAttribute(column, "hiddenButton"),
+            ReadOoxmlBooleanAttribute(column, "showButton"),
+            filterKind,
+            filters?.Elements(SpreadsheetNamespace + "filter")
+                .Select(filter => (string?)filter.Attribute("val") ?? string.Empty)
+                .ToArray() ?? [],
+            (string?)dynamicFilter?.Attribute("type") ?? string.Empty,
+            (string?)top10?.Attribute("val") ?? string.Empty,
+            ReadOoxmlBooleanAttribute(top10, "percent"),
+            ReadOoxmlBooleanAttribute(top10, "top"),
+            customFilters?.Elements(SpreadsheetNamespace + "customFilter")
+                .Select(filter => new ChartWorkbookTableCustomFilter(
+                    (string?)filter.Attribute("operator") ?? string.Empty,
+                    (string?)filter.Attribute("val") ?? string.Empty))
+                .ToArray() ?? []);
     }
 
     private static bool TryParseTableReference(string reference, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)
@@ -1815,7 +1844,24 @@ internal sealed partial class PptxRenderer
         int TotalsRowCount,
         bool TotalsRowShown,
         string AutoFilterReference,
-        IReadOnlyList<int> FilterColumnIds);
+        IReadOnlyList<int> FilterColumnIds,
+        IReadOnlyList<ChartWorkbookTableFilterColumn> FilterColumns);
+
+    private readonly record struct ChartWorkbookTableFilterColumn(
+        int? ColumnId,
+        bool? HiddenButton,
+        bool? ShowButton,
+        string FilterKind,
+        IReadOnlyList<string> FilterValues,
+        string DynamicFilterType,
+        string Top10Value,
+        bool? Top10Percent,
+        bool? Top10Top,
+        IReadOnlyList<ChartWorkbookTableCustomFilter> CustomFilters);
+
+    private readonly record struct ChartWorkbookTableCustomFilter(
+        string Operator,
+        string Value);
 
     private readonly record struct ChartWorkbookTableColumn(
         int? Id,
@@ -3712,6 +3758,13 @@ internal sealed partial class PptxRenderer
     private static bool IsOoxmlTrue(string? value)
     {
         return OoxBoolean.IsTrue(value);
+    }
+
+    private static bool? ReadOoxmlBooleanAttribute(XElement? element, string name)
+    {
+        return element?.Attribute(name) is { } attribute
+            ? IsOoxmlTrue(attribute.Value)
+            : null;
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)

@@ -7759,6 +7759,20 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved table filter structure in embedded chart workbook metadata.
+`ChartWorkbookTable` still exposes the compatibility `FilterColumnIds`, but now also carries typed
+`FilterColumns` with column id, button flags, filter kind, explicit filter values, dynamic/top10 metadata, and
+custom filter operator/value records. The embedded workbook regression now locks both normal value filters and
+custom filters instead of accepting only a bare `colId` list.
+
+This remains behavior-neutral. OOXPDF still does not decide whether Office should feed charts from filtered
+table rows, hidden worksheet rows, cached chart points, or raw workbook data for a given `plotVisOnly` and
+source/cache freshness state. The useful closure is that those future decisions can consult workbook-owned
+filter records rather than reparsing table XML or guessing from missing chart points.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved shared-string structure for embedded chart workbook text sources.
 `ReadWorkbookSharedStrings` now builds typed shared-string records with resolved text, direct rich-text run
 count, rich-text presence, phonetic-text presence, and `xml:space="preserve"` metadata. Shared-string backed

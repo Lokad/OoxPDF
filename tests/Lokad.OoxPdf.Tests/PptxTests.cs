@@ -10393,7 +10393,17 @@ internal static class PptxTests
         TestAssert.Equal(1, (int?)salesTable.GetType().GetProperty("HeaderRowCount")?.GetValue(salesTable) ?? 0);
         TestAssert.Equal("A1:B4", (string?)salesTable.GetType().GetProperty("AutoFilterReference")?.GetValue(salesTable) ?? string.Empty);
         object filterColumnIds = salesTable.GetType().GetProperty("FilterColumnIds")?.GetValue(salesTable) ?? throw new InvalidOperationException("Expected table filter column ids.");
-        TestAssert.True(((System.Collections.IEnumerable)filterColumnIds).Cast<int>().Single() == 1, "Expected table filter column metadata to survive workbook parsing.");
+        TestAssert.True(((System.Collections.IEnumerable)filterColumnIds).Cast<int>().SequenceEqual([0, 1]), "Expected table filter column ids to survive workbook parsing.");
+        object[] filterColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("FilterColumns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table filter column records.")).Cast<object>().ToArray();
+        TestAssert.True(filterColumns.Length == 2, "Expected table filter column records to survive workbook parsing.");
+        TestAssert.Equal("filters", (string?)filterColumns[0].GetType().GetProperty("FilterKind")?.GetValue(filterColumns[0]) ?? string.Empty);
+        object filterValues = filterColumns[0].GetType().GetProperty("FilterValues")?.GetValue(filterColumns[0]) ?? throw new InvalidOperationException("Expected filter values.");
+        TestAssert.True(((System.Collections.IEnumerable)filterValues).Cast<string>().Single() == "North", "Expected table filter value to survive workbook parsing.");
+        TestAssert.Equal("customFilters", (string?)filterColumns[1].GetType().GetProperty("FilterKind")?.GetValue(filterColumns[1]) ?? string.Empty);
+        object customFilters = filterColumns[1].GetType().GetProperty("CustomFilters")?.GetValue(filterColumns[1]) ?? throw new InvalidOperationException("Expected custom filters.");
+        object customFilter = ((System.Collections.IEnumerable)customFilters).Cast<object>().Single();
+        TestAssert.Equal("greaterThan", (string?)customFilter.GetType().GetProperty("Operator")?.GetValue(customFilter) ?? string.Empty);
+        TestAssert.Equal("3", (string?)customFilter.GetType().GetProperty("Value")?.GetValue(customFilter) ?? string.Empty);
         object[] salesTableColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("Columns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table column records.")).Cast<object>().ToArray();
         TestAssert.True(salesTableColumns.Length == 2, "Expected table column records to survive workbook parsing.");
         object amountColumn = salesTableColumns[1];
@@ -10777,7 +10787,10 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                        id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4" headerRowCount="1" totalsRowShown="0">
-                  <autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>
+                  <autoFilter ref="A1:B4">
+                    <filterColumn colId="0" showButton="1"><filters><filter val="North"/></filters></filterColumn>
+                    <filterColumn colId="1"><customFilters><customFilter operator="greaterThan" val="3"/></customFilters></filterColumn>
+                  </autoFilter>
                   <tableColumns count="2">
                     <tableColumn id="1" name="Region" totalsRowFunction="none"/>
                     <tableColumn id="2" name="Amount"><calculatedColumnFormula>B2</calculatedColumnFormula></tableColumn>
