@@ -7803,6 +7803,15 @@ slide-specific suppression of `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 
 Validation: `pwsh tools/InventoryPptxSlides.ps1 -Case private-cases/lokad-value-based.json` succeeded.
 
+Revision note, 2026-05-26: Made the unsupported JPEG recolor diagnostic identify the generic unsupported
+profile. `PPTX_UNSUPPORTED_IMAGE_RECOLOR` keeps the stable `Feature="image recolor"` bucket and
+`Fallback="Original image"`, but its message now includes the recolor kind and source image content type,
+for example `duotone` and `image/jpeg`. The public JPEG duotone diagnostic test locks this so future
+diagnostic summaries can distinguish unsupported JPEG recolor from supported PNG/BMP recolor without
+inspecting private content.
+
+Validation: focused `PptxSyntheticJpegPictureDuotoneRecolorEmitsDiagnostic` passed.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The

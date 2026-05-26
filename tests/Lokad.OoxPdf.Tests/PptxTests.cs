@@ -6172,7 +6172,9 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d =>
             d.Id == "PPTX_UNSUPPORTED_IMAGE_RECOLOR" &&
             d.Feature == "image recolor" &&
-            d.Fallback == "Original image"), "JPEG duotone recolor should keep a public diagnostic until a structural JPEG/PDF recolor path exists.");
+            d.Fallback == "Original image" &&
+            d.Message.Contains("duotone", StringComparison.Ordinal) &&
+            d.Message.Contains("image/jpeg", StringComparison.Ordinal)), "JPEG duotone recolor should keep a public diagnostic until a structural JPEG/PDF recolor path exists.");
     }
 
     public static void PptxSyntheticPngPictureAppliesGrayAndBilevelRecolor()

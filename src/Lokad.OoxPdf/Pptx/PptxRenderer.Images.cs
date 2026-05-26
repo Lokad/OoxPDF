@@ -716,7 +716,7 @@ internal sealed partial class PptxRenderer
                     diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                         "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
                         OoxPdfSeverity.Warning,
-                        "PPTX image recolor could not be applied to JPEG image data and was ignored.",
+                        $"PPTX {recolor.KindName} image recolor could not be applied to {imagePart.ContentType} image data and was ignored.",
                         imagePart.Name,
                         SlideIndex: slideIndex,
                         Feature: "image recolor",
@@ -880,6 +880,15 @@ internal sealed partial class PptxRenderer
         public static ImageRecolor None { get; } = new(ImageRecolorKind.None, 0d, 0d, default, default, 0d);
 
         public bool IsNone => Kind == ImageRecolorKind.None;
+
+        public string KindName => Kind switch
+        {
+            ImageRecolorKind.Luminance => "luminance",
+            ImageRecolorKind.Duotone => "duotone",
+            ImageRecolorKind.Grayscale => "grayscale",
+            ImageRecolorKind.BiLevel => "bi-level",
+            _ => "none"
+        };
 
         public string CacheKey => Kind switch
         {
