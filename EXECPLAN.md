@@ -152,6 +152,15 @@ Initial survey findings:
   nodes, while placeholders are inheritance templates rather than directly rendered content.
 - Its model parsers keep raw XML attached to typed nodes. This is a useful compromise for `ooxpdf`: parse
   stable fields into records while keeping source XML available until every OOXML edge case has a typed home.
+- Its chart support is not a direct architectural target for `ooxpdf`. `src/model/nodes/ChartNode.ts` only
+  resolves a `chartPath`, `PresentationData.charts` stores chart XML as `SafeXmlNode`, and
+  `src/renderer/ChartRenderer.ts` turns that XML into ECharts options. That is useful as an OOXML feature
+  inventory, but it does not provide Office-like PDF structure for plot boxes, data-label boxes, gridlines,
+  legend reserves, clipping, or resource reuse. OOXPDF's typed chart scene model is already closer to the
+  long-term goal and should keep moving chart semantics out of renderer-local XML reads.
+- Its testing documentation is more reusable than its chart renderer for OOXPDF's PDF target: the useful
+  import is the discipline of generated public cases, PowerPoint ground truth, structural checks before
+  visual thresholds, and explicit support catalogs, not browser/ECharts layout behavior.
 
 High-priority actions:
 
@@ -161,6 +170,12 @@ High-priority actions:
 - [ ] Inspect `pptx-renderer` architecturally, not just feature-by-feature: package parsing boundaries,
   normalized model ownership, render context lifetime, per-node renderers, style/color resolvers,
   diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
+- [x] Record the first `pptx-renderer` architectural boundary survey:
+  the external repo lives at `C:\Users\JoannesVermorel\code\pptx-renderer`; its useful long-term lessons are
+  the parse/model/render split, explicit slide -> layout -> master -> theme relationship maps, render-context
+  lifetime, placeholder/bodyPr inheritance, and Office-oracle test discipline. Its chart renderer should not
+  be ported as layout authority because it is ECharts-backed and raw-XML-driven rather than PDF-structure
+  driven.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
@@ -7707,6 +7722,15 @@ routes through the typed scene parser, reducing duplicate heuristics while keepi
 explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
+The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
+shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme
+maps, per-slide render contexts, specialized renderers, and an Office-oracle validation loop. It also confirms
+a chart-specific non-goal for OOXPDF: `pptx-renderer` keeps chart payloads as raw XML and renders them through
+ECharts options, so it should be treated as feature inventory and testing prior art rather than a PDF-level
+chart layout authority. OOXPDF should keep pushing its typed chart scene and Office-PDF structural gates
+instead of importing browser chart layout behavior.
 
 Revision note, 2026-05-26: Consumed explicit per-label chart data-label layout without treating automatic
 label placement as solved. `ChartDataLabelOptions.Layout` and `ChartDataLabelOverride.Layout` were already
