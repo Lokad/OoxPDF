@@ -306,9 +306,11 @@ High-priority actions:
   a new ignored probe under `artifacts/probes/font-size-quantization-cambria` rewrote the no-autofit quantization
   deck to use Cambria Math, then rendered it through Office. The result still mapped `9 pt -> 9` and `13 pt -> 12.96`,
   so the private page-17 secondary `9.024` and `12.984` sizes are not explained by Cambria/Cambria Math alone. The
-  next probe should vary line wrapping/operation splitting, text-frame height, and paragraph/run grouping, because
-  the private evidence shows the secondary sizes on position-matched operations rather than on every run of a given
-  source size or font family.
+  follow-up ignored wrap probes under `artifacts/probes/font-size-quantization-wrap*` reproduced both branches:
+  a wrapped 9 pt run emitted a mix of `9` and `9.024`, and a narrow wrapped 13 pt run emitted a mix of `12.96` and
+  `12.984`. The remaining rule is therefore not font-family-specific; it is tied to Office's wrapped/split text-line
+  PDF emission. Do not change `PptxPdfTextEmissionProfile` until the per-line condition is known well enough to lock
+  with a public probe instead of a private slide-specific branch.
 - [x] Implement the dominant Office `/Tf` font-size grid at the PDF emission boundary:
   a second ignored public-safe probe rewrote the font-size quantization deck from `spAutoFit` to `noAutofit`
   and Office still emitted the same main sizes, so the dominant behavior is not autofit. `PptxPdfTextEmissionProfile`
