@@ -7855,6 +7855,18 @@ filter records rather than reparsing table XML or guessing from missing chart po
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Locked structured-reference row-scope provenance for embedded chart workbook
+tables. The workbook regression now covers `SalesTable[#Headers]` and `SalesTotalsTable[#All]` in addition to
+data-body and totals-only references, proving that resolved ranges keep their rectangular coordinates,
+per-cell table column identity, and explicit header/data/totals row-role flags across all table row scopes.
+
+This is still not chart filtering, cache freshness, or formula evaluation. The useful long-term invariant is
+that future typed chart-data vectors can distinguish table headers, data rows, and totals rows directly from
+the materialized source-cell records, without hardcoded row offsets or renderer-local guesses about which
+parts of a table a structured reference meant.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved shared-string structure for embedded chart workbook text sources.
 `ReadWorkbookSharedStrings` now builds typed shared-string records with resolved text, direct rich-text run
 count, rich-text presence, phonetic-text presence, and `xml:space="preserve"` metadata. Shared-string backed
