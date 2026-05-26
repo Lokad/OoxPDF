@@ -16,7 +16,6 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         GroupTransform transform,
         List<PdfImageResource> images,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
         ref int index)
     {
         if (picture.Picture is null || picture.Bounds is null)
@@ -25,7 +24,6 @@ internal sealed partial class PptxRenderer
         }
 
         RenderPicture(
-            relationships,
             context.Package,
             context.Document,
             context.Theme,
@@ -36,7 +34,6 @@ internal sealed partial class PptxRenderer
             images,
             context.ImageCache,
             ref index,
-            picture.Picture.RelationshipId,
             picture.Picture.TargetPartName,
             ToShapeBounds(picture.Bounds),
             ToCropRect(picture.Picture.Crop),
@@ -46,7 +43,6 @@ internal sealed partial class PptxRenderer
     }
 
     private static void RenderPicture(
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
         OoxPackage package,
         PptxDocument document,
         PptxTheme theme,
@@ -57,7 +53,6 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         Dictionary<string, PdfImageXObject?> imageCache,
         ref int index,
-        string? relationshipId,
         string? targetPartName,
         ShapeBounds rawBounds,
         CropRect crop,
@@ -65,14 +60,6 @@ internal sealed partial class PptxRenderer
         double alpha,
         ImageRecolor recolor)
     {
-        if (targetPartName is null &&
-            relationshipId is not null &&
-            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
-            !relationship.IsExternal)
-        {
-            targetPartName = relationship.ResolvedTarget;
-        }
-
         if (targetPartName is null)
         {
             return;

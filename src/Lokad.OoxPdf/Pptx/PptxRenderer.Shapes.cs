@@ -1560,6 +1560,7 @@ internal sealed partial class PptxRenderer
 
         string? relationshipId;
         string? targetPartName = null;
+        bool useRelationshipFallback = false;
         if (pictureFillOverride is { } resolvedPictureFill)
         {
             relationshipId = resolvedPictureFill.RelationshipId;
@@ -1573,11 +1574,13 @@ internal sealed partial class PptxRenderer
                 .Element(DrawingNamespace + "blipFill")
                 ?.Element(DrawingNamespace + "blip")
                 ?.Attribute(RelationshipsNamespace + "embed");
+            useRelationshipFallback = true;
             crop = ReadCrop(shapeProperties);
             fillRect = ReadFillRect(shapeProperties);
         }
 
         if (targetPartName is null &&
+            useRelationshipFallback &&
             relationshipId is not null &&
             relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
             !relationship.IsExternal)

@@ -78,7 +78,6 @@ internal sealed partial class PptxRenderer
                         graphics,
                         transform,
                         images,
-                        relationships,
                         ref imageIndex);
                     break;
                 case PptxSceneNodeKind.Table:
