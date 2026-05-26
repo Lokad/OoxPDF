@@ -2347,6 +2347,21 @@ High-priority actions:
     `ChartTitleText` Y drift is `~56.98 pt` for `layoutTarget=inner` and `~91.75 pt` for `layoutTarget=outer`.
     The full public `pptx-charts` family still passed 37/37 at `artifacts/visual/reports/pptx-charts.json`,
     generated `2026-05-26T16:48:37.4081855+02:00`.
+  - [x] Align horizontal-bar auto-title baselines when the plot area has a manual layout. Office keeps the
+    auto-generated series title anchored to the normal title-bearing bar plot box even when
+    `c:plotArea/c:layout/c:manualLayout` moves or shrinks the data plot. `ResolveChartTitleBaselineY` now keeps
+    the manual plot box for chart geometry, axes, and gridlines, but asks `GetBarChartPlotLayout` for the
+    default non-manual title anchor box when rendering a horizontal-bar auto title. This removes the previous
+    `~56.98 pt` and `~91.75 pt` title Y drift in the `layoutTarget=inner` and `layoutTarget=outer` probes.
+
+    Both public plot-layout manifests now gate `ChartTitleText` at `1.0 pt`: inner still gates category labels
+    at `20 pt` and value labels at `0.2 pt`; outer still gates value labels at `3.0 pt` while leaving its
+    `~44.83 pt` category-label X residual as layout work. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
+    --nologo -v minimal` passed, focused `pptx-charts` tests passed 40/40, targeted visual runs passed at
+    `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260526-165111` and
+    `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260526-165111`, and the full public
+    `pptx-charts` family passed 37/37 at `artifacts/visual/reports/pptx-charts.json`, generated
+    `2026-05-26T16:54:02.8320649+02:00`.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest

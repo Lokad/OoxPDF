@@ -15,8 +15,9 @@
     "maxChartGraphicsStructureBoundsDelta": 3.0,
     "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"],
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["ValueAxisTickLabel"],
+    "compareChartTextStructureKinds": ["ChartTitleText", "ValueAxisTickLabel"],
     "maxChartTextStructurePositionDeltaByKind": {
+      "ChartTitleText": 1.0,
       "ValueAxisTickLabel": 3.0
     }
   }
