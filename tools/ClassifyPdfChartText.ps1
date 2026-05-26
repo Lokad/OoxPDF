@@ -89,11 +89,12 @@ function Find-PlotBox($structures) {
     return $null
 }
 
-function Has-LegendSwatch($op, $structures, $plotBox) {
+function Has-LegendSwatch($op, $structures, $plotBox, [bool]$isPolarChart = $false) {
     $x = TextX $op
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
-    $verticalTolerance = [Math]::Max(8d, $fontSize * 0.75d)
+    $verticalScale = if ($isPolarChart) { 0.85d } else { 0.75d }
+    $verticalTolerance = [Math]::Max(8d, $fontSize * $verticalScale)
     $horizontalTolerance = [Math]::Max(36d, $fontSize * 4d)
 
     foreach ($structure in $structures) {
@@ -269,12 +270,13 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
         return $radarKind
     }
 
-    if (-not ($insideX -and $insideY) -and
-        (Has-LegendSwatch $op $structures $plotBox)) {
+    $isPolarChart = Is-PolarChart $plotBox $structures
+    if (($isPolarChart -or -not ($insideX -and $insideY)) -and
+        (Has-LegendSwatch $op $structures $plotBox $isPolarChart)) {
         return "LegendText"
     }
 
-    if (Is-PolarChart $plotBox $structures) {
+    if ($isPolarChart) {
         return "DataLabelText"
     }
 

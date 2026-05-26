@@ -6909,3 +6909,18 @@ Validation: targeted `CheckVisualCase.ps1` runs passed for both updated pie mani
 `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated `2026-05-26T11:35:06.6891080+02:00`. Current public chart coverage is 26/37 graphics-gated and 13/37
 text-gated.
+
+Revision note, 2026-05-26: Narrowed the remaining polar text classifier gap for doughnut legends. Office and
+candidate doughnut legends can place legend labels inside the polar plot-box candidate, so the generic
+"legend text must be outside the plot box" rule misclassified one candidate legend entry as `DataLabelText`.
+`ClassifyPdfChartText.ps1` now relaxes the swatch-to-label association only for polar charts, with a
+polar-specific baseline tolerance, while preserving the stricter outside-plot rule for Cartesian data labels.
+The public `pptx-ladder-11-chart-doughnut-port` manifest now gates the stable `DataLabelText` bucket at `0.8 pt`.
+Doughnut legend text remains ungated because the remaining legend delta is a real placement/layout gap, not just
+a classifier count problem.
+
+Validation: targeted `CheckVisualCase.ps1` runs passed for `pptx-ladder-11-chart-doughnut-port`,
+`pptx-ladder-11-chart-doughnut-bottom-legend-probe`, and `pptx-ladder-11-chart-pie-exploded-port`; the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated during the 2026-05-26 11:41 local run. Current public chart coverage is 26/37 graphics-gated and 14/37
+text-gated; 11 chart cases still have neither chart graphics nor chart text structural gates.
