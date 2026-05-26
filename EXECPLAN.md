@@ -252,6 +252,15 @@ High-priority actions:
   (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`);
   private run `20260527-003730` remained behavior-neutral with 84/84 compared pages, zero dimension
   mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Retire renderer-local background XML fallback:
+  slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
+  reparses raw background XML after the scene has been built, so missing or unsupported background data remains
+  visible as a scene/model gap. This is intentionally behavior-neutral for currently supported solid
+  backgrounds because `PptxSceneBuilder.ReadBackground` uses the same color-and-alpha resolver that the
+  renderer fallback used. Validation: the console test runner completed with `263 passed, 0 failed, 0 skipped`
+  when invoked with the attempted focused command; private run `20260527-004132` remained behavior-neutral with
+  84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
@@ -2395,6 +2404,12 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-27: Retired the renderer-local PPTX background XML fallback. `RenderBackground` now consumes the
+  scene-owned `PptxSceneBackground` record for master, layout, and slide backgrounds, preserving default white
+  slide fallback while keeping unsupported background forms as scene/model debt rather than renderer-side XML
+  repair. Validation so far: the console runner completed at `263 passed, 0 failed, 0 skipped` after an
+  attempted focused invocation, and private run `20260527-004132` matched the previous baseline at deck MAE
+  `7.702155` with only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
@@ -4596,6 +4611,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The dependency-free console test runner does not support a `--filter` option even though it
+  supports capability groups and slow-test switches.
+  Evidence: Running `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --filter
+  PptxSceneBuilderBuildsResolvedNodeLists` executed the whole suite, including slow tests, and completed with
+  `263 passed, 0 failed, 0 skipped`. Future focused runs should use `--group`, `--skip-slow`, `--only-slow`, or
+  a supported test-specific switch if one is added later.
 - Observation: The Office baseline floor is not a universal "Arial baseline" rule.
   Evidence: Applying the floor broadly fixed top-anchored rectangular wrap cases, but moved the public
   non-rect small-label probe by about `-1.24 pt` and moved middle/bottom anchored rectangular text in
@@ -4812,6 +4833,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Remove renderer-local XML fallback once the scene already owns an equivalent typed record.
+  Rationale: The scene builder and renderer background fallback used the same solid-color-and-alpha resolver.
+  Keeping both paths lets incomplete scene records be silently repaired during PDF emission, which works
+  against the long-term goal of making parse/model/render ownership explicit and testable. Unsupported
+  background variants should be added to `PptxSceneBackground` rather than reparsed in `RenderBackground`.
+  Date/Author: 2026-05-27 / Codex.
 - Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
   spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved
   font metrics until separate Office-PDF evidence justifies a broader rule.

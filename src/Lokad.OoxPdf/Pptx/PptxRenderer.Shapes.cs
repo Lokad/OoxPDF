@@ -9,9 +9,9 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderBackground(PptxRenderContext context, PptxSceneBackground? sceneBackground, XDocument slideXml, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
+    private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
-        if (sceneBackground is { HasFill: true } background)
+        if (background.HasFill)
         {
             graphics.SaveState();
             ClipSlideBoundsEvenOdd(context.Document, graphics);
@@ -21,20 +21,6 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
-            graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
-            graphics.RestoreState();
-            return;
-        }
-
-        XElement? backgroundXml = slideXml.Root?
-            .Element(PresentationNamespace + "cSld")?
-            .Element(PresentationNamespace + "bg")?
-            .Element(PresentationNamespace + "bgPr");
-        if (TryReadSolidColor(backgroundXml, context.Theme, out RgbColor color))
-        {
-            graphics.SaveState();
-            ClipSlideBoundsEvenOdd(context.Document, graphics);
-            graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
             graphics.RestoreState();
             return;
