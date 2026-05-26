@@ -1284,7 +1284,7 @@ internal sealed partial class PptxRenderer
             .GetRelationships(workbookPart.Name)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
             .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
-        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        var sheets = new Dictionary<string, Dictionary<string, ChartWorkbookCell>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (XElement sheet in workbookXml.Descendants(SpreadsheetNamespace + "sheet"))
         {
@@ -1340,11 +1340,11 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static Dictionary<string, string> ReadWorksheetCells(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
+    private static Dictionary<string, ChartWorkbookCell> ReadWorksheetCells(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
     {
         using Stream stream = worksheetPart.OpenRead();
         XDocument document = SafeXml.Load(stream);
-        var cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
         foreach (XElement cell in document.Descendants(SpreadsheetNamespace + "c"))
         {
             string? reference = (string?)cell.Attribute("r");
@@ -1373,21 +1373,36 @@ internal sealed partial class PptxRenderer
                 value = sharedStrings[sharedStringIndex];
             }
 
-            cells[reference] = value;
+            cells[reference] = new ChartWorkbookCell(value, ReadSpreadsheetCellStyleIndex(cell), cellType ?? string.Empty);
         }
 
         return cells;
     }
 
+    private static int? ReadSpreadsheetCellStyleIndex(XElement cell)
+    {
+        string? value = (string?)cell.Attribute("s");
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
+            ? parsed
+            : null;
+    }
+
+    private readonly record struct ChartWorkbookCell(
+        string Text,
+        int? StyleIndex,
+        string CellType);
+
     private readonly record struct ChartWorkbookRangeCell(
         int Index,
         string Reference,
         string Text,
-        bool HasCell);
+        bool HasCell,
+        int? StyleIndex,
+        string CellType);
 
     private sealed class ChartWorkbookData
     {
-        private readonly IReadOnlyDictionary<string, Dictionary<string, string>> sheets;
+        private readonly IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets;
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
             : this(sheets, date1904: false)
@@ -1395,6 +1410,12 @@ internal sealed partial class PptxRenderer
         }
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904)
+        {
+            this.sheets = ConvertWorkbookSheets(sheets);
+            Date1904 = date1904;
+        }
+
+        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904)
         {
             this.sheets = sheets;
             Date1904 = date1904;
@@ -1413,7 +1434,7 @@ internal sealed partial class PptxRenderer
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
             if (!TryParseRange(formula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
-                !sheets.TryGetValue(sheetName, out Dictionary<string, string>? cells))
+                !sheets.TryGetValue(sheetName, out Dictionary<string, ChartWorkbookCell>? cells))
             {
                 return [];
             }
@@ -1429,13 +1450,37 @@ internal sealed partial class PptxRenderer
                 for (int column = minColumn; column <= maxColumn; column++)
                 {
                     string reference = ToCellReference(column, row);
-                    bool hasCell = cells.TryGetValue(reference, out string? value);
-                    values.Add(new ChartWorkbookRangeCell(index, reference, value ?? string.Empty, hasCell));
+                    bool hasCell = cells.TryGetValue(reference, out ChartWorkbookCell cell);
+                    values.Add(new ChartWorkbookRangeCell(
+                        index,
+                        reference,
+                        hasCell ? cell.Text : string.Empty,
+                        hasCell,
+                        hasCell ? cell.StyleIndex : null,
+                        hasCell ? cell.CellType : string.Empty));
                     index++;
                 }
             }
 
             return values.ToArray();
+        }
+
+        private static IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> ConvertWorkbookSheets(
+            IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
+        {
+            var converted = new Dictionary<string, Dictionary<string, ChartWorkbookCell>>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, Dictionary<string, string>> sheet in sheets)
+            {
+                var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
+                foreach (KeyValuePair<string, string> cell in sheet.Value)
+                {
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty);
+                }
+
+                converted[sheet.Key] = cells;
+            }
+
+            return converted;
         }
 
         private static bool TryParseRange(string? formula, out string sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)

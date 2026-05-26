@@ -7744,6 +7744,21 @@ explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved worksheet cell metadata through the embedded chart-workbook range
+bridge. `ReadWorksheetCells` now records each cell's raw text, `c/@s` style index, and raw spreadsheet cell
+type; `ChartWorkbookData.ReadRangeCells` carries that metadata next to the existing range index, cell
+reference, and `HasCell` flag. The embedded workbook fixture now proves that `workbookPr/@date1904` and a
+worksheet cell style index survive parsing before cache hydration consumes the range.
+
+This is intentionally still not workbook formatting. OOXPDF does not yet read `styles.xml`, map built-in or
+custom number-format IDs, interpret date serials under `date1904`, or decide Office's priority between
+cell styles, chart cache `formatCode`, chart/axis/data-label `numFmt`, `sourceLinked`, and locale sections.
+The useful long-term effect is narrower but structural: future chart value/category formatting can consume
+cell-owned metadata from the workbook bridge instead of rediscovering cells or guessing from rendered text.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved numeric chart-cache format codes next to the point metadata already
 owned by the scene model. `PptxSceneChartSeries` now carries `c:numLit/c:formatCode` or
 `c:numCache/c:formatCode` for value, x-value, y-value, and bubble-size caches, while leaving category

@@ -10269,6 +10269,18 @@ internal static class PptxTests
         TestAssert.True((bool?)date1904Property.GetValue(workbook) == false, "Expected workbook date1904 metadata to default to false.");
         object date1904Workbook = Activator.CreateInstance(workbookType, [sheets, true]) ?? throw new InvalidOperationException("Expected date1904 workbook instance.");
         TestAssert.True((bool?)date1904Property.GetValue(date1904Workbook) == true, "Expected workbook date1904 metadata to survive construction.");
+        using MemoryStream embeddedWorkbookStream = new(EmbeddedChartWorkbook());
+        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream);
+        var readWorkbookData = typeof(PptxRenderer).GetMethod(
+            "ReadWorkbookData",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
+        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
+        TestAssert.True((bool?)date1904Property.GetValue(parsedWorkbook) == true, "Expected parsed workbookPr/date1904 to survive workbook parsing.");
+        var readRangeCells = workbookType.GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range-cell reader.");
+        Array parsedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed workbook range cells."));
+        object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
+        System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
+        TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10536,6 +10548,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <workbookPr date1904="1"/>
                   <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
                 </workbook>
                 """,
@@ -10553,7 +10566,7 @@ internal static class PptxTests
                 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
                   <sheetData>
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
-                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2"><v>8.2</v></c></row>
+                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
                     <row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
                     <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><v>1.4</v></c></row>
                   </sheetData>
