@@ -2008,8 +2008,55 @@ internal sealed partial class PptxRenderer
             points.Add((sample.X - sampleNormal.X * halfWidth, sample.Y - sampleNormal.Y * halfWidth));
         }
 
-        graphics.FillPolygon(points.ToArray());
+        if (tailKind == LineEndKind.Arrow)
+        {
+            AppendSmoothClosedPath(graphics, points);
+            graphics.FillCurrentPath();
+        }
+        else
+        {
+            graphics.FillPolygon(points.ToArray());
+        }
+
         return true;
+    }
+
+    private static void AppendSmoothClosedPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    {
+        if (points.Count == 0)
+        {
+            return;
+        }
+
+        if (points.Count < 4)
+        {
+            graphics.MoveTo(points[0].X, points[0].Y);
+            for (int i = 1; i < points.Count; i++)
+            {
+                graphics.LineTo(points[i].X, points[i].Y);
+            }
+
+            graphics.ClosePath();
+            return;
+        }
+
+        graphics.MoveTo(points[0].X, points[0].Y);
+        for (int i = 0; i < points.Count; i++)
+        {
+            (double X, double Y) p0 = points[(i - 1 + points.Count) % points.Count];
+            (double X, double Y) p1 = points[i];
+            (double X, double Y) p2 = points[(i + 1) % points.Count];
+            (double X, double Y) p3 = points[(i + 2) % points.Count];
+            graphics.CurveTo(
+                p1.X + (p2.X - p0.X) / 6d,
+                p1.Y + (p2.Y - p0.Y) / 6d,
+                p2.X - (p3.X - p1.X) / 6d,
+                p2.Y - (p3.Y - p1.Y) / 6d,
+                p2.X,
+                p2.Y);
+        }
+
+        graphics.ClosePath();
     }
 
     private static CurveSample SampleBezierSegment(BezierSegment segment, double t)

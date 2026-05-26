@@ -270,9 +270,16 @@ High-priority actions:
   `f:4,f*:14,S:4,W*:67` against Office `f:4,f*:14,S:4,W*:68`.
 - [ ] Replace sampled curved-connector filled outlines with analytical Office-like curve-rich paths:
   the public connector transform probe now matches Office at the high-level fill/clip/stroke operator count, but
-  PDF inspection still shows candidate filled connector paths as sampled polygons (`seg=99,line=98,curve=0`) while
-  Office keeps curve-bearing connector regions (`seg=250,line=244,curve=4`). This is a long-term structural
+  PDF inspection still shows candidate filled connector paths as sampled outlines. Arrow-tail connectors now emit
+  curve-bearing PDF paths through the sampled boundary (`seg=100,line=0,curve=99`), but this is still not Office's
+  own connector geometry (`seg=250,line=244,curve=4` in the public probe). This remains a long-term structural
   alignment gap, not a raster emergency.
+- [x] Make public arrow-tail connector filled outlines curve-bearing without changing triangle-tail behavior:
+  the public connector transform probe uses `tailEnd type="arrow"` and Office emits curve-bearing filled regions
+  there. Candidate arrow-tail fills now emit smooth cubic PDF segments through the sampled outline, preserving the
+  public visual gate and high-level operator parity. Triangle-tail connector fills intentionally stay on the prior
+  polygon route because private page-17 Office evidence for those connectors is line-only and the polygon path keeps
+  the private raster/graphics-operator improvement stable.
 - [ ] Close the remaining private page-17 slide-clip and derived font-size gaps:
   after the page/background clipping pass, private page 17 is down to one missing high-level `W*` clip and still
   differs on derived/fractional font sizes: Office reports `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while
@@ -6692,3 +6699,26 @@ changed32 `0.035255`, SSIM `0.920089`; page-filtered graphics inspection now sho
 `f:4,f*:14,S:4,W*:67` versus Office `f:4,f*:14,S:4,W*:68`, with 44 text operations on both sides. Remaining
 long-term gaps are one missing Office-style clip, analytical curve-bearing connector outlines instead of sampled
 polygons, and derived/fractional font sizes from Office text-style inheritance or autoscale behavior.
+
+Revision note, 2026-05-26: Narrowed the next connector-structure step to the public arrow-tail evidence without
+pretending the full analytical geometry problem is solved. Arrow-tail curved connector fills now keep the same
+sampled boundary used for the passing raster gate, but emit it as a smooth closed cubic PDF path instead of a
+line-only polygon. This gives the public `tailEnd type="arrow"` transform probe curve-bearing filled regions while
+preserving exact high-level Office operator parity (`f:4,f*:1,W*:6`). Triangle-tail filled connectors stay on the
+prior polygon route because private page-17 Office inspection for those connector fills is line-only and changing
+them to smoothed curves caused a measurable private raster regression. The comprehensive scene-builder fixture was
+also made explicit about `c:tickLblPos val="low"` instead of expecting a missing chart axis value to parse as `low`;
+the typed model should continue preserving missing enum metadata as `Unknown`.
+
+Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused `pptx-shapes` tests passed 15/15; the
+full non-slow test runner passed 235/235 with 7 skipped; `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off
+--nologo -v minimal --no-restore` succeeded; and the full public `pptx-shapes` visual family passed 30/30 at
+`artifacts/visual/reports/pptx-shapes.json` generated `2026-05-26T10:02:12` local time. The public connector probe
+run `artifacts/visual/pptx-ladder-06-curved-connector-transform-probe/20260526-095631` passed with MAE `0.214048`,
+changed16 `0.002704`, changed32 `0.002284`, SSIM `0.885158`, and candidate filled connector paths now inspect as
+`seg=100,line=0,curve=99` while keeping `f:4,f*:1,W*:6`. The private `lokad-value-based` run
+`artifacts/private-visual/lokad-value-based/20260526-095715` compared 84/84 pages with zero dimension mismatches,
+deck MAE `8.945151`, max MAE `19.097502`, mean changed16 `0.115512`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 stayed at MAE `2.877938`, changed16 `0.044695`, changed32
+`0.035255`, SSIM `0.920089`. Remaining connector work is still true Office-like analytical connector outlines,
+not merely smoothed samples.

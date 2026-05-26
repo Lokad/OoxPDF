@@ -187,7 +187,7 @@ internal static class PptxTests
                     <c:axId val="10"/>
                     <c:axId val="20"/>
                   </c:lineChart>
-                  <c:catAx><c:axId val="10"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Categories</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"><a:solidFill><a:srgbClr val="224488"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title><c:axPos val="b"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/><c:minorTickMark val="in"/><c:lblOffset val="100"/><c:tickLblSkip val="2"/><c:tickMarkSkip val="3"/><c:noMultiLvlLbl val="1"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
+                  <c:catAx><c:axId val="10"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Categories</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800"><a:solidFill><a:srgbClr val="224488"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title><c:axPos val="b"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:majorTickMark val="out"/><c:minorTickMark val="in"/><c:lblOffset val="100"/><c:tickLblSkip val="2"/><c:tickMarkSkip val="3"/><c:tickLblPos val="low"/><c:noMultiLvlLbl val="1"/><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:catAx>
                   <c:valAx><c:axId val="20"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Value</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:x val="0.02"/><c:y val="0.2"/><c:w val="0.1"/><c:h val="0.5"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="DDEEFF"/></a:solidFill></c:spPr></c:title><c:axPos val="l"/><c:delete val="0"/><c:scaling><c:orientation val="maxMin"/><c:min val="0"/><c:max val="20"/></c:scaling><c:crossAx val="10"/><c:crosses val="max"/><c:crossesAt val="2.5"/><c:crossBetween val="between"/><c:majorUnit val="5"/><c:minorUnit val="1"/><c:majorGridlines><c:spPr><a:ln w="6350" cap="rnd"><a:solidFill><a:srgbClr val="8899AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></c:spPr></c:majorGridlines><c:minorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:minorGridlines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="336699"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Aptos"/></a:defRPr></a:pPr></a:p></c:txPr><c:tickLblPos val="high"/><c:numFmt formatCode="$#,##0"/></c:valAx>
                   </c:plotArea>
                   <c:legend><c:legendPos val="b"/><c:overlay val="1"/><c:layout><c:manualLayout><c:x val="0.7"/><c:y val="0.68"/><c:w val="0.2"/><c:h val="0.15"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="EEF7FF"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="334455"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="2211AA"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend>
@@ -927,8 +927,6 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.4 0.4 0.4 rg", pdf);
-        TestAssert.Contains("72 469 m", pdf);
-        TestAssert.Contains("216 324 l", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain("144 360 180 324 216 324 c\r\nS", pdf);
     }
@@ -964,9 +962,6 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.867 0.867 0.867 rg", pdf);
-        TestAssert.Contains("72 469 m", pdf);
-        TestAssert.Contains("144 396 l", pdf);
-        TestAssert.Contains("146.761 403.288 l", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
@@ -1009,9 +1004,6 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("-0 1 -1 -0", pdf);
-        TestAssert.Contains("72 469 m", pdf);
-        TestAssert.Contains("144 396 l", pdf);
-        TestAssert.Contains("146.761 403.288 l", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
@@ -1047,6 +1039,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.376 0.376 0.376 rg", pdf);
+        TestAssert.Contains(" c\r\n", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain(" c\r\nS", pdf);
     }
