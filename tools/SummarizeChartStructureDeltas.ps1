@@ -3,7 +3,9 @@ param(
 
     [switch] $UngatedOnly,
 
-    [switch] $SkipProbe
+    [switch] $SkipProbe,
+
+    [switch] $ShowBounds
 )
 
 $ErrorActionPreference = "Stop"
@@ -118,10 +120,24 @@ function BoundsDelta($reference, $candidate) {
         Select-Object -ExpandProperty Maximum
 }
 
+function Format-Bounds($item) {
+    if ($null -eq $item) {
+        return ""
+    }
+
+    return "({0},{1})-({2},{3})" -f `
+        [Math]::Round([double]$item.MinX, 2),
+        [Math]::Round([double]$item.MinY, 2),
+        [Math]::Round([double]$item.MaxX, 2),
+        [Math]::Round([double]$item.MaxY, 2)
+}
+
 function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
     $reference = @($referenceItems | Where-Object { $_.Kind -eq $kind })
     $candidate = @($candidateItems | Where-Object { $_.Kind -eq $kind })
     $maxDelta = $null
+    $referenceBounds = ""
+    $candidateBounds = ""
     if ($reference.Count -eq $candidate.Count -and $reference.Count -gt 0) {
         $unmatched = New-Object System.Collections.Generic.List[object]
         foreach ($item in $candidate) {
@@ -152,12 +168,22 @@ function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
         }
     }
 
+    if ($reference.Count -eq 1) {
+        $referenceBounds = Format-Bounds $reference[0]
+    }
+
+    if ($candidate.Count -eq 1) {
+        $candidateBounds = Format-Bounds $candidate[0]
+    }
+
     [pscustomobject]@{
         Set = $setName
         Kind = $kind
         ReferenceCount = $reference.Count
         CandidateCount = $candidate.Count
         MaxBoundsDelta = if ($null -eq $maxDelta) { $null } else { [Math]::Round($maxDelta, 2) }
+        ReferenceBounds = $referenceBounds
+        CandidateBounds = $candidateBounds
     }
 }
 
@@ -206,6 +232,15 @@ foreach ($caseFile in $caseFiles) {
             Summarize-Kind $kind $referenceItems $candidateItems $set.Name
         }
 
-        $rows | Sort-Object Set, Kind | Format-Table -AutoSize
+        if ($ShowBounds) {
+            $rows |
+                Sort-Object Set, Kind |
+                Format-List Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+        }
+        else {
+            $rows |
+                Sort-Object Set, Kind |
+                Format-Table Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta -AutoSize
+        }
     }
 }

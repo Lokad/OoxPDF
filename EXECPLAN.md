@@ -28,7 +28,8 @@ keep diagnostics honest when a feature is still missing.
 - `tools/InspectPdf.ps1`: Office/candidate PDF object and stream inspection wrapper.
 - `tools/SummarizeChartStructureDeltas.ps1`: public chart structural-delta sweep over latest visual runs.
   It accepts repeated PowerShell array values and comma/semicolon-separated `-Case` values for focused
-  multi-case comparisons.
+  multi-case comparisons, and `-ShowBounds` prints reference/candidate bounds for singleton structural
+  buckets when edge-level plot-box evidence is needed.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -7065,3 +7066,8 @@ from about `4.23` to `13.70`, and `AxisPairPlotBoxCandidate`/axis label deltas w
 about `141 pt`. The code was reverted. The long-term fix should derive automatic horizontal bar reserves
 from Office-observed chart layout phases, with separate plot-area and inner-plot semantics, instead of
 feeding the automatic preset through a helper built for manual outer boxes.
+
+Tooling note, 2026-05-26: `tools/SummarizeChartStructureDeltas.ps1 -ShowBounds` now prints full
+reference/candidate bounds for singleton structural buckets. This makes plot-box work less dependent on
+manual JSON inspection; for example, the stacked column gap is visibly a left-edge-only delta
+`(122.58,111.9)-(781,488.01)` vs `(113.47,111.92)-(781.06,488.02)`.
