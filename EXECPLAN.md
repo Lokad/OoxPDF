@@ -7821,6 +7821,12 @@ or unsupported image diagnostics.
 Validation: focused `PptxSyntheticBmpPictureAppliesDuotoneRecolor` passed; focused non-slow `pptx-images`
 passed (`15 passed, 0 failed, 0 skipped`).
 
+Private validation note, 2026-05-26: Re-ran `private-cases/lokad-value-based.json` after the recolor
+inventory, diagnostic precision, and BMP recolor coverage slices. Run `20260526-231005` compared 84/84 pages
+with zero dimension mismatches, deck MAE `7.555419`, max page MAE `16.778011`, mean changed16 `0.101440`,
+and the single expected `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. The refreshed baseline confirms the
+recolor ladder work improved observability and public coverage without changing private visual output.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The
