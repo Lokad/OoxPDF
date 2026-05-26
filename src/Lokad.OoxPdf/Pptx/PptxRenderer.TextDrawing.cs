@@ -1009,6 +1009,12 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
+        if (run.StrictClip)
+        {
+            return baselineY >= run.ClipY - PptxTextMetricRules.TextStateTolerance &&
+                baselineY <= run.ClipY + run.ClipHeight + PptxTextMetricRules.TextStateTolerance;
+        }
+
         return baselineY + run.FontSize >= run.ClipY &&
             baselineY - run.FontSize <= run.ClipY + run.ClipHeight;
     }

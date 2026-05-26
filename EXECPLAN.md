@@ -7369,3 +7369,25 @@ text-operation parity (`7` reference, `7` candidate). Full `dotnet build Lokad.O
 `pptx-ladder-04-typography-boundary-invariance-probe` from the failure set without introducing a new family
 failure. Remaining typography failures are still the baseline/highlight/wrap stack, not this text-operation
 coalescing slice.
+
+Revision note, 2026-05-26: Fixed the public `pptx-ladder-03-text-anchor-overflow` schema mismatch by making
+`a:bodyPr vertOverflow="clip"` a layout-owned text emission rule instead of a broad glyph-intersection
+heuristic. Office drops text whose baseline is outside the text rectangle for explicit vertical clipping:
+the reference PDF emits `Middle`, `Bottom`, `Clip one`, `Flow one`, and `Flow two`, with no `Clip two`.
+`TextRun` now carries a `StrictClip` flag from the resolved text-frame body properties into glyph/highlight
+PDF emission, so explicit vertical clipping uses baseline containment while rotated/flipped text and default
+overflow paths keep the existing permissive clipping behavior needed by earlier public probes.
+
+The visual manifest now gates decoded PDF text-operation parity for this case: the passing artifact
+`artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260526-151010` has five reference text operations
+and five candidate text operations with zero decoded-text deltas. The remaining raster residual is explicit:
+MAE `0.0559`, changed16 `0.00107`, with text-position deltas bounded at `0.8 pt` and font-size parity
+within `0.03 pt`. The largest remaining position delta is the pre-existing bottom-anchor baseline residual
+(`-0.73 pt`), so the next long-term work is still Office baseline/line-box derivation, not another
+overflow-specific exception.
+
+Validation: focused non-slow `pptx-typography` tests passed (`74 passed, 0 failed, 2 skipped`) with the new
+fixture-backed regression `PptxTextFrameVerticalClipDropsBaselinesOutsideClip`. Targeted
+`CheckVisualCase.ps1` passed for `pptx-ladder-03-text-anchor-overflow` at
+`artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260526-151010`, including decoded text-operation
+comparison.

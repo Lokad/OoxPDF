@@ -142,7 +142,8 @@ internal sealed partial class PptxRenderer
         bool FlipHorizontal,
         bool FlipVertical,
         bool PreventCoalesce = false,
-        TextOutline? Outline = null);
+        TextOutline? Outline = null,
+        bool StrictClip = false);
 
     private sealed record TextGlyphRun(
         TextRun Source,

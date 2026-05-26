@@ -4630,6 +4630,36 @@ internal static class PptxTests
         TestAssert.Contains("72 432 72 36 re W* n", pdf);
     }
 
+    public static void PptxTextFrameVerticalClipDropsBaselinesOutsideClip()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-03-text-anchor-overflow.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        string[] glyphRunTexts = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .Select(run => run.Text)
+            .ToArray();
+
+        TestAssert.True(
+            glyphRunTexts.Contains("Clip one", StringComparer.Ordinal),
+            "Expected first clipped line to remain visible.");
+        TestAssert.True(
+            !glyphRunTexts.Contains("Clip two", StringComparer.Ordinal),
+            "Expected vertOverflow=\"clip\" to drop text whose baseline is outside the text rectangle.");
+        TestAssert.True(
+            glyphRunTexts.Contains("Flow one", StringComparer.Ordinal),
+            "Expected overflow-enabled companion frame to keep its first line.");
+        TestAssert.True(
+            glyphRunTexts.Contains("Flow two", StringComparer.Ordinal),
+            "Expected overflow-enabled companion frame to keep its second line.");
+    }
+
     public static void PptxSyntheticTextBoxAllowsVerticalOverflowByDefault()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
