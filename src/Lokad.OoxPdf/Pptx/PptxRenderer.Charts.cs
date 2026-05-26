@@ -1526,11 +1526,28 @@ internal sealed partial class PptxRenderer
                 value,
                 ReadSpreadsheetCellStyleIndex(cell),
                 cellType ?? string.Empty,
+                ReadWorkbookCellValueKind(cellType, value),
                 formula?.Value ?? string.Empty,
                 (string?)formula?.Attribute("t") ?? string.Empty);
         }
 
         return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
+    }
+
+    private static ChartWorkbookCellValueKind ReadWorkbookCellValueKind(string? cellType, string value)
+    {
+        return cellType switch
+        {
+            null or "" => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _)
+                ? ChartWorkbookCellValueKind.Number
+                : ChartWorkbookCellValueKind.Other,
+            "s" => ChartWorkbookCellValueKind.SharedString,
+            "inlineStr" => ChartWorkbookCellValueKind.InlineString,
+            "str" => ChartWorkbookCellValueKind.FormulaString,
+            "b" => ChartWorkbookCellValueKind.Boolean,
+            "e" => ChartWorkbookCellValueKind.Error,
+            _ => ChartWorkbookCellValueKind.Other
+        };
     }
 
     private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName)
@@ -1677,8 +1694,21 @@ internal sealed partial class PptxRenderer
         string Text,
         int? StyleIndex,
         string CellType,
+        ChartWorkbookCellValueKind ValueKind,
         string Formula,
         string FormulaType);
+
+    private enum ChartWorkbookCellValueKind
+    {
+        Blank,
+        Number,
+        SharedString,
+        InlineString,
+        FormulaString,
+        Boolean,
+        Error,
+        Other
+    }
 
     private sealed class ChartWorksheetData
     {
@@ -1786,6 +1816,7 @@ internal sealed partial class PptxRenderer
         bool HasCell,
         int? StyleIndex,
         string CellType,
+        ChartWorkbookCellValueKind ValueKind,
         string Formula,
         string FormulaType,
         int? StyleNumberFormatId,
@@ -1996,6 +2027,7 @@ internal sealed partial class PptxRenderer
                         hasCell,
                         hasCell ? cell.StyleIndex : null,
                         hasCell ? cell.CellType : string.Empty,
+                        hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
                         hasCell ? cell.Formula : string.Empty,
                         hasCell ? cell.FormulaType : string.Empty,
                         format.NumberFormatId,
@@ -2168,7 +2200,7 @@ internal sealed partial class PptxRenderer
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, string> cell in sheet.Value)
                 {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty, string.Empty, string.Empty);
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value), string.Empty, string.Empty);
                 }
 
                 converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());

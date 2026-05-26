@@ -10295,6 +10295,7 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedCell) ?? string.Empty);
         TestAssert.Equal("DirectRange", firstParsedCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         TestAssert.Equal(string.Empty, (string?)firstParsedCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.Equal("Number", firstParsedCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
         TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
         System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");
@@ -10326,6 +10327,10 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!$A$2:$A$4", (string?)firstParsedTextCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTextCell) ?? string.Empty);
         TestAssert.Equal("DefinedName", firstParsedTextCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("SalesLabels", (string?)firstParsedTextCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedTextCell) ?? string.Empty);
+        TestAssert.Equal("SharedString", firstParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
+        object lastParsedTextValue = parsedTextValues.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string typed text value.");
+        object lastParsedTextCell = textCellProperty.GetValue(lastParsedTextValue) ?? throw new InvalidOperationException("Expected inline-string range cell.");
+        TestAssert.Equal("InlineString", lastParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(lastParsedTextCell)?.ToString() ?? string.Empty);
         Array parsedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Amount]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference range cells."));
         object firstParsedStructuredCell = parsedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference range cell.");
         TestAssert.Equal("SalesTable[Amount]", (string?)firstParsedStructuredCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
@@ -10740,7 +10745,7 @@ internal static class PptxTests
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
                     <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
                     <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
-                    <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
+                    <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
                   </sheetData>
                   <tableParts count="2"><tablePart r:id="rId1"/><tablePart r:id="rId2"/></tableParts>
                 </worksheet>

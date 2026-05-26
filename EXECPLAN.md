@@ -7786,6 +7786,18 @@ alignment needs to compare or reconcile sources.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added typed workbook cell value-kind metadata to chart workbook range cells.
+`ChartWorkbookCell` and `ChartWorkbookRangeCell` now classify raw SpreadsheetML cell values as number,
+shared string, inline string, formula string, boolean, error, blank, or other while preserving the existing raw
+`t` attribute and text. The embedded workbook regression now uses both shared-string and inline-string category
+cells and proves that numeric and string value kinds survive range reading.
+
+This is not date serial formatting or boolean/error rendering. It is the structural prerequisite for doing that
+work without reinterpreting raw cell type strings at each chart renderer call site, and it keeps source-linked
+formatting decisions anchored in workbook-owned cell metadata.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Carried defined-name and table-column identity through chart workbook range
 resolution. `ChartWorkbookRangeCell` now records the resolved workbook-level defined name when applicable and
 the source table name, table column name, and table column id for structured references. Structured-reference
