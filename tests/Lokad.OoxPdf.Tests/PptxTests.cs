@@ -400,6 +400,7 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartGrouping.Stacked, slide.SlideNodes[4].Chart?.Plots[0].GroupingKind);
         TestAssert.Equal("bar", slide.SlideNodes[4].Chart?.Plots[0].BarDirection ?? string.Empty);
         TestAssert.Equal(PptxSceneChartBarDirection.Bar, slide.SlideNodes[4].Chart?.Plots[0].BarDirectionKind);
+        TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, slide.SlideNodes[4].Chart?.Plots[0].RadarStyleKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].VaryColors == false, "Expected chart plot varyColors in the scene model.");
         TestAssert.Equal(175d, slide.SlideNodes[4].Chart?.Plots[0].GapWidth ?? 0d);
         TestAssert.Equal(25d, slide.SlideNodes[4].Chart?.Plots[0].Overlap ?? 0d);
@@ -475,6 +476,7 @@ internal static class PptxTests
         TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[1].KindIndex ?? -1);
         TestAssert.Equal(PptxSceneChartGrouping.Unknown, slide.SlideNodes[4].Chart?.Plots[1].GroupingKind);
         TestAssert.Equal(PptxSceneChartBarDirection.Unknown, slide.SlideNodes[4].Chart?.Plots[1].BarDirectionKind);
+        TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, slide.SlideNodes[4].Chart?.Plots[1].RadarStyleKind);
         TestAssert.Equal(8, slide.SlideNodes[4].Chart?.Plots[1].Series[0].Index ?? -1);
         TestAssert.Equal(4, slide.SlideNodes[4].Chart?.Plots[1].Series[0].Order ?? -1);
         TestAssert.Equal("Scatter", slide.SlideNodes[4].Chart?.Plots[1].Series[0].Name ?? string.Empty);

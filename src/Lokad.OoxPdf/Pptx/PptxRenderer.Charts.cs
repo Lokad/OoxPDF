@@ -191,6 +191,13 @@ internal sealed partial class PptxRenderer
             : PptxSceneBuilder.ParseChartScatterStyle((string?)plotElement.Element(ChartNamespace + "scatterStyle")?.Attribute("val"));
     }
 
+    private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
+    {
+        return !string.IsNullOrEmpty(scenePlot?.RadarStyle)
+            ? scenePlot.RadarStyleKind
+            : PptxSceneBuilder.ParseChartRadarStyle((string?)plotElement.Element(ChartNamespace + "radarStyle")?.Attribute("val"));
+    }
+
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
         return plot?.HoleSize is { } rawHoleSize
@@ -883,7 +890,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(radarSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
-                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, radarChart, radarSeries);
+                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, ReadSceneOrXmlChartRadarStyle(radarPlot, radarChart), radarSeries);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -1482,21 +1489,16 @@ internal sealed partial class PptxRenderer
             hasLegend);
     }
 
-    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, XElement radarChart, IReadOnlyList<IReadOnlyList<double>> series)
+    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<IReadOnlyList<double>> series)
     {
-        ChartRadarStyle style = ReadRadarStyle(radarChart);
+        ChartRadarStyle style = radarStyle == PptxSceneChartRadarStyle.Filled
+            ? ChartRadarStyle.Filled
+            : ChartRadarStyle.Marker;
         return new ChartRadarLayout(
             plotBox,
             GetRadarChartGeometry(plotBox, style),
             style,
             Math.Max(3, series.Max(values => values.Count)));
-    }
-
-    private static ChartRadarStyle ReadRadarStyle(XElement radarChart)
-    {
-        return string.Equals((string?)radarChart.Element(ChartNamespace + "radarStyle")?.Attribute("val"), "filled", StringComparison.Ordinal)
-            ? ChartRadarStyle.Filled
-            : ChartRadarStyle.Marker;
     }
 
     private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, ChartRadarStyle style)

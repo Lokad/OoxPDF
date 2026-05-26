@@ -404,6 +404,8 @@ internal sealed record PptxSceneChartPlot(
     string BarDirection,
     PptxSceneChartScatterStyle ScatterStyleKind,
     string ScatterStyle,
+    PptxSceneChartRadarStyle RadarStyleKind,
+    string RadarStyle,
     bool? VaryColors,
     double? GapWidth,
     double? Overlap,
@@ -435,6 +437,14 @@ internal enum PptxSceneChartScatterStyle
     None,
     Smooth,
     SmoothMarker,
+    Unknown
+}
+
+internal enum PptxSceneChartRadarStyle
+{
+    Filled,
+    Marker,
+    Standard,
     Unknown
 }
 
@@ -1110,6 +1120,20 @@ internal sealed class PptxSceneBuilder
         };
     }
 
+    internal static PptxSceneChartRadarStyle ParseChartRadarStyle(string? style)
+    {
+        return style switch
+        {
+            "filled" => PptxSceneChartRadarStyle.Filled,
+            "marker" => PptxSceneChartRadarStyle.Marker,
+            "standard" => PptxSceneChartRadarStyle.Standard,
+            _ when style?.Equals("filled", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartRadarStyle.Filled,
+            _ when style?.Equals("marker", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartRadarStyle.Marker,
+            _ when style?.Equals("standard", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartRadarStyle.Standard,
+            _ => PptxSceneChartRadarStyle.Unknown
+        };
+    }
+
     internal static PptxSceneChartAxisPosition ParseChartAxisPosition(string? position)
     {
         return position switch
@@ -1537,6 +1561,7 @@ internal sealed class PptxSceneBuilder
             string grouping = ReadChartElementValue(plot, "grouping");
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
+            string radarStyle = ReadChartElementValue(plot, "radarStyle");
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
@@ -1556,6 +1581,8 @@ internal sealed class PptxSceneBuilder
                 barDirection,
                 ParseChartScatterStyle(scatterStyle),
                 scatterStyle,
+                ParseChartRadarStyle(radarStyle),
+                radarStyle,
                 ReadChartPlotVaryColors(plot),
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),

@@ -2209,6 +2209,12 @@ High-priority actions:
     comparisons. Scene coverage locks `Inner`, `Outer`, and `Factor`; focused chart validation passed
     `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
     `dotnet pack` succeeded.
+  - [x] 2026-05-26: Promoted radar chart style from raw `radarStyle` strings to a typed
+    `PptxSceneChartRadarStyle` ladder on `PptxSceneChartPlot`, while preserving the raw OOXML value. Radar
+    geometry and category-label gap resolution now consume the typed scene/XML value for filled-vs-marker
+    layout behavior. Scene coverage locks missing radar style as `Unknown`; focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
