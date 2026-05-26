@@ -1059,6 +1059,10 @@ High-priority actions:
     label style. Generated value/category/series labels stay on the existing single-run path, while custom
     label rendering no longer discards scene-owned run styling after parsing. Validation: focused
     `pptx-charts` tests passed `40/40`.
+  - [x] Reuse the scene chart-text-run parser for raw XML data-label fallback:
+    `ReadChartDataLabelOverrides` now populates `CustomTextRuns` through
+    `PptxSceneBuilder.ReadChartTextRuns` instead of flattening fallback labels to text-only overrides. This
+    keeps scene and fallback label semantics aligned while raw XML fallback remains present.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient

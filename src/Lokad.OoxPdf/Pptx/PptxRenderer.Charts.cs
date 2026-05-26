@@ -3220,7 +3220,7 @@ internal sealed partial class PptxRenderer
                 ReadOptionalChartLabelFlagEnabled(label, "showLeaderLines"),
                 ChartDataLabelLeaderLines.Empty,
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
-                [],
+                ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme)),
                 PptxSceneBuilder.ParseChartDataLabelPosition(label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty),
                 label.Element(ChartNamespace + "dLblPos")?.Attribute("val")?.Value ?? string.Empty,
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,

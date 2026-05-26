@@ -2024,7 +2024,7 @@ internal sealed class PptxSceneBuilder
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
-    private static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
+    internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
     {
         XElement? rich = text?.Element(ChartNamespace + "rich");
         if (rich is null)
