@@ -1539,9 +1539,14 @@ internal sealed partial class PptxRenderer
             using Stream stream = tablePart.OpenRead();
             XDocument tableXml = SafeXml.Load(stream);
             XElement? tableElement = tableXml.Root;
-            string name = (string?)tableElement?.Attribute("name") ?? string.Empty;
-            string displayName = (string?)tableElement?.Attribute("displayName") ?? name;
-            string? reference = (string?)tableElement?.Attribute("ref");
+            if (tableElement is null)
+            {
+                continue;
+            }
+
+            string name = (string?)tableElement.Attribute("name") ?? string.Empty;
+            string displayName = (string?)tableElement.Attribute("displayName") ?? name;
+            string? reference = (string?)tableElement.Attribute("ref");
             if (string.IsNullOrWhiteSpace(name) ||
                 string.IsNullOrWhiteSpace(reference) ||
                 !TryParseTableReference(reference, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow))
@@ -1549,7 +1554,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string[] columnNames = tableElement?
+            string[] columnNames = tableElement
                 .Element(SpreadsheetNamespace + "tableColumns")?
                 .Elements(SpreadsheetNamespace + "tableColumn")
                 .Select(column => (string?)column.Attribute("name") ?? string.Empty)
@@ -1559,7 +1564,32 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            tables.Add(new ChartWorkbookTable(name, displayName, sheetName, firstColumn, firstRow, lastColumn, lastRow, columnNames));
+            string autoFilterReference = (string?)tableElement.Element(SpreadsheetNamespace + "autoFilter")?.Attribute("ref") ?? string.Empty;
+            int[] filterColumnIds = tableElement
+                .Element(SpreadsheetNamespace + "autoFilter")?
+                .Elements(SpreadsheetNamespace + "filterColumn")
+                .Select(column => ReadSpreadsheetIntegerAttribute(column, "colId"))
+                .Where(id => id is not null)
+                .Select(id => id!.Value)
+                .ToArray() ?? [];
+            int headerRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "headerRowCount") ?? 1;
+            int totalsRowCount = ReadSpreadsheetIntegerAttribute(tableElement, "totalsRowCount") ?? 0;
+            bool totalsRowShown = IsOoxmlTrue((string?)tableElement.Attribute("totalsRowShown"));
+
+            tables.Add(new ChartWorkbookTable(
+                name,
+                displayName,
+                sheetName,
+                firstColumn,
+                firstRow,
+                lastColumn,
+                lastRow,
+                columnNames,
+                headerRowCount,
+                totalsRowCount,
+                totalsRowShown,
+                autoFilterReference,
+                filterColumnIds));
         }
 
         return tables;
@@ -1659,7 +1689,12 @@ internal sealed partial class PptxRenderer
         int FirstRow,
         int LastColumn,
         int LastRow,
-        IReadOnlyList<string> ColumnNames);
+        IReadOnlyList<string> ColumnNames,
+        int HeaderRowCount,
+        int TotalsRowCount,
+        bool TotalsRowShown,
+        string AutoFilterReference,
+        IReadOnlyList<int> FilterColumnIds);
 
     private readonly record struct ChartWorkbookCalculationProperties(
         string CalculationMode,

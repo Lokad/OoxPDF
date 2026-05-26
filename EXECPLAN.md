@@ -7774,6 +7774,20 @@ instead of treating missing local names as absent workbook data.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved workbook table filter/header/totals metadata in the chart workbook
+bridge. `ChartWorkbookTable` now carries `headerRowCount`, `totalsRowCount`, `totalsRowShown`, the
+`autoFilter/@ref`, and the declared filter-column ids, while retaining the existing table name/display-name,
+range, sheet, and column-name data used by simple structured-reference resolution. The embedded workbook
+fixture now includes an `autoFilter` and asserts that the table filter reference, filter column, and header
+row count survive parsing.
+
+This is intentionally not table filtering behavior. OOXPDF still does not decide whether a chart should use
+filtered table rows, hidden worksheet rows, cached chart points, or raw workbook data for a given Office
+scenario. The structural gain is that future `plotVisOnly`, table-filter, and stale-cache decisions can be
+made from workbook-owned table metadata rather than from ad hoc structured-reference parsing.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Added workbook `styles.xml` ownership to the chart workbook bridge without
 changing chart rendering. The embedded workbook reader now loads the spreadsheet styles part, preserves custom
 `numFmt` entries, preserves ordered `cellXfs` records, and resolves a range cell's `StyleIndex` into

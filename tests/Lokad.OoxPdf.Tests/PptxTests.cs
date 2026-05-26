@@ -10328,6 +10328,14 @@ internal static class PptxTests
         object tables = tablesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook tables.");
         System.Reflection.PropertyInfo tableCountProperty = tables.GetType().GetProperty("Count") ?? throw new InvalidOperationException("Expected workbook table count.");
         TestAssert.True((int?)tableCountProperty.GetValue(tables) == 2, "Expected table name and display name to index the parsed workbook table.");
+        System.Reflection.PropertyInfo tableValuesProperty = tables.GetType().GetProperty("Values") ?? throw new InvalidOperationException("Expected workbook table values.");
+        object salesTable = (((System.Collections.IEnumerable?)tableValuesProperty.GetValue(tables)) ?? throw new InvalidOperationException("Expected workbook table values."))
+            .Cast<object>()
+            .First(table => (string?)table.GetType().GetProperty("Name")?.GetValue(table) == "SalesTable");
+        TestAssert.Equal(1, (int?)salesTable.GetType().GetProperty("HeaderRowCount")?.GetValue(salesTable) ?? 0);
+        TestAssert.Equal("A1:B4", (string?)salesTable.GetType().GetProperty("AutoFilterReference")?.GetValue(salesTable) ?? string.Empty);
+        object filterColumnIds = salesTable.GetType().GetProperty("FilterColumnIds")?.GetValue(salesTable) ?? throw new InvalidOperationException("Expected table filter column ids.");
+        TestAssert.True(((System.Collections.IEnumerable)filterColumnIds).Cast<int>().Single() == 1, "Expected table filter column metadata to survive workbook parsing.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10688,7 +10696,8 @@ internal static class PptxTests
             ["xl/tables/table1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-                       id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4">
+                       id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4" headerRowCount="1" totalsRowShown="0">
+                  <autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>
                   <tableColumns count="2">
                     <tableColumn id="1" name="Region"/>
                     <tableColumn id="2" name="Amount"/>
