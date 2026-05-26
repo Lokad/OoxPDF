@@ -1119,9 +1119,14 @@ High-priority actions:
   84/84 compared pages, zero dimension mismatches, deck MAE `9.043200`, changed16 `0.116408`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join lines: compound lines,
-  theme style references, and chart-style inherited defaults still need typed ownership before gridlines can
-  be considered fully structurally aligned with Office.
+- [x] 2026-05-26: Preserve line compound style in the typed scene/stroke handoff. `PptxSceneLineStyle`
+  now parses `a:ln @cmpd` for chart gridlines and shape/connector strokes, and `ChartSeriesStroke` carries
+  the value forward so future compound-stroke rendering does not need to re-scan source XML. The renderer
+  still emits simple PDF strokes for compound lines; theme line style references and chart-style inherited
+  defaults remain open before gridlines can be considered fully structurally aligned with Office.
+- [ ] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join/compound lines: theme style
+  references and chart-style inherited defaults still need typed ownership before gridlines can be considered
+  fully structurally aligned with Office.
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
   and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
   font size, and solid text color, and supported category/value axis labels consume those scene styles before
@@ -1749,8 +1754,9 @@ High-priority actions:
     is present.
   - [x] Preserve and consume scene-owned chart line dash/cap/join fields through chart strokes, including
     gridlines, axes, series, markers, points, and chart/plot-area borders.
-  - [ ] Extend scene-owned gridline style records to cover compound lines, theme style references, and
-    chart-style inherited defaults.
+  - [x] Preserve scene-owned line compound style through chart gridlines and the renderer stroke adapter.
+  - [ ] Extend scene-owned gridline style records to cover theme style references and chart-style inherited
+    defaults.
   - [x] Add scene-owned chart-level, axis-level, title, and legend text-style overrides for the supported
     `txPr/defRPr` subset: font family, font size, solid color, bold, and italic.
   - [ ] Extend chart text-style records to cover rich text runs, rotation, full non-default tick-label offset

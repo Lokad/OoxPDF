@@ -347,10 +347,20 @@ internal readonly record struct PptxSceneLineStyle(
     double Width,
     double Alpha,
     IReadOnlyList<double> DashPattern,
+    PptxSceneLineCompound? Compound,
     int? Cap,
     int? Join)
 {
     public bool HasDash => DashPattern is { Count: > 0 };
+}
+
+internal enum PptxSceneLineCompound
+{
+    Single,
+    Double,
+    ThickThin,
+    ThinThick,
+    Triple
 }
 
 internal enum PptxSceneLineEndKind
@@ -1929,6 +1939,7 @@ internal sealed class PptxSceneBuilder
                     lineWidth,
                     alpha,
                     TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                    ReadLineCompound(shapeProperties),
                     ReadLineCap(shapeProperties) switch
                     {
                         "rnd" => 1,
@@ -2145,7 +2156,7 @@ internal sealed class PptxSceneBuilder
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
-            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null);
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null);
         }
 
         return ReadChartLine(shapeProperties, theme);
@@ -2267,7 +2278,7 @@ internal sealed class PptxSceneBuilder
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
-            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null);
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null);
         }
 
         return ReadChartLine(shapeProperties, theme);
@@ -2682,7 +2693,7 @@ internal sealed class PptxSceneBuilder
             : 0.75d;
         return new PptxSceneTableCellBorder(
             IsSpecified: true,
-            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null));
+            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null, null));
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
@@ -2727,6 +2738,7 @@ internal sealed class PptxSceneBuilder
                 lineWidth,
                 lineAlpha,
                 TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                ReadLineCompound(shapeProperties),
                 ReadLineCap(shapeProperties) switch
                 {
                     "rnd" => 1,
@@ -3126,6 +3138,22 @@ internal sealed class PptxSceneBuilder
             _ => []
         };
         return dashPattern.Count > 0;
+    }
+
+    private static PptxSceneLineCompound? ReadLineCompound(XElement? shapeProperties)
+    {
+        string? compound = (string?)shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Attribute("cmpd");
+        return compound switch
+        {
+            "sng" => PptxSceneLineCompound.Single,
+            "dbl" => PptxSceneLineCompound.Double,
+            "thickThin" => PptxSceneLineCompound.ThickThin,
+            "thinThick" => PptxSceneLineCompound.ThinThick,
+            "tri" => PptxSceneLineCompound.Triple,
+            _ => null
+        };
     }
 
     private static string? ReadLineCap(XElement? shapeProperties)

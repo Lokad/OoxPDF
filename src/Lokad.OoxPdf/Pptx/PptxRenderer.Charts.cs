@@ -536,7 +536,7 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke? ToChartSeriesStroke(PptxSceneLineStyle line)
     {
         return line.HasLine
-            ? new ChartSeriesStroke(line.Color, line.Alpha, line.Width, line.DashPattern, line.Cap, line.Join)
+            ? new ChartSeriesStroke(line.Color, line.Alpha, line.Width, line.DashPattern, line.Cap, line.Join, line.Compound)
             : null;
     }
 
@@ -6671,7 +6671,8 @@ internal sealed partial class PptxRenderer
         double Width,
         IReadOnlyList<double>? DashPattern = null,
         int? Cap = null,
-        int? Join = null);
+        int? Join = null,
+        PptxSceneLineCompound? Compound = null);
 
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
