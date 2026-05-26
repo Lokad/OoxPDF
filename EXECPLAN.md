@@ -8065,6 +8065,23 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved PPTX image recolor OOXML tokens in the scene model instead of keeping
+only normalized renderer values. `PptxSceneImageRecolor` now carries the source recolor element token
+(`grayscl`, `biLevel`, `lum`, or `duotone`) plus raw `lum/@bright`, `lum/@contrast`, and `biLevel/@thresh`
+attribute strings next to the clamped numeric values used by current rendering. The scene-builder fixture
+locks the standalone picture's `grayscl` token, and a direct parser test locks luminance and bi-level raw
+attribute preservation.
+
+This is behavior-neutral for current PNG/BMP/JPEG rendering and diagnostics. The value is long-term
+structural alignment: future dependency-free JPEG recolor or PDF-level color-transform work can reason from
+the Office-authored tokens instead of reconstructing intent from clamped values or private-slide diagnostics.
+The remaining open image work is still the real rendering strategy for unsupported JPEG recolor and broader
+crop/tile/fill-rectangle token preservation.
+
+Validation: focused `PptxImageRecolorPreservesRawOoxmlTokens` passed; focused
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed (`16 passed, 0
+failed, 0 skipped`); full non-slow console runner passed (`257 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Split PPTX text layout bounds from PDF clipping bounds for default text-box
 overflow. Office PDF evidence from public `pptx-ladder-03-text-anchor-overflow` shows default overflowing
 text boxes clipped to the full slide, while `vertOverflow="clip"` text keeps a local frame clip. The text

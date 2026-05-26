@@ -1015,11 +1015,20 @@ internal readonly record struct PptxSceneImageRecolor(
     double Contrast,
     RgbColor Dark,
     RgbColor Light,
-    double Threshold)
+    double Threshold,
+    string? KindValue,
+    string? BrightnessValue,
+    string? ContrastValue,
+    string? ThresholdValue)
 {
-    public static PptxSceneImageRecolor None { get; } = new(PptxSceneImageRecolorKind.None, 0d, 0d, default, default, 0d);
+    public static PptxSceneImageRecolor None { get; } = new(PptxSceneImageRecolorKind.None, 0d, 0d, default, default, 0d, null, null, null, null);
 
-    public static PptxSceneImageRecolor Luminance(double brightness, double contrast)
+    public static PptxSceneImageRecolor Luminance(
+        double brightness,
+        double contrast,
+        string? kindValue = "lum",
+        string? brightnessValue = null,
+        string? contrastValue = null)
     {
         return new PptxSceneImageRecolor(
             PptxSceneImageRecolorKind.Luminance,
@@ -1027,22 +1036,26 @@ internal readonly record struct PptxSceneImageRecolor(
             Math.Clamp(contrast, -1d, 1d),
             default,
             default,
-            0d);
+            0d,
+            kindValue,
+            brightnessValue,
+            contrastValue,
+            null);
     }
 
-    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light)
+    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light, string? kindValue = "duotone")
     {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d);
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d, kindValue, null, null, null);
     }
 
-    public static PptxSceneImageRecolor Grayscale()
+    public static PptxSceneImageRecolor Grayscale(string? kindValue = "grayscl")
     {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d);
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d, kindValue, null, null, null);
     }
 
-    public static PptxSceneImageRecolor BiLevel(double threshold)
+    public static PptxSceneImageRecolor BiLevel(double threshold, string? kindValue = "biLevel", string? thresholdValue = null)
     {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d));
+        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d), kindValue, null, null, thresholdValue);
     }
 }
 
@@ -3717,30 +3730,34 @@ internal sealed class PptxSceneBuilder
             return PptxSceneImageRecolor.None;
         }
 
-        if (blip.Element(DrawingNamespace + "grayscl") is not null)
+        XElement? grayscale = blip.Element(DrawingNamespace + "grayscl");
+        if (grayscale is not null)
         {
-            return PptxSceneImageRecolor.Grayscale();
+            return PptxSceneImageRecolor.Grayscale(grayscale.Name.LocalName);
         }
 
         XElement? biLevel = blip.Element(DrawingNamespace + "biLevel");
         if (biLevel is not null)
         {
-            double threshold = biLevel.Attribute("thresh") is { } thresholdAttribute
-                ? Math.Clamp(int.Parse(thresholdAttribute.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
+            string? thresholdValue = (string?)biLevel.Attribute("thresh");
+            double threshold = thresholdValue is not null
+                ? Math.Clamp(int.Parse(thresholdValue, CultureInfo.InvariantCulture) / 100000d, 0d, 1d)
                 : 0.5d;
-            return PptxSceneImageRecolor.BiLevel(threshold);
+            return PptxSceneImageRecolor.BiLevel(threshold, biLevel.Name.LocalName, thresholdValue);
         }
 
         XElement? luminance = blip.Element(DrawingNamespace + "lum");
         if (luminance is not null)
         {
-            double brightness = luminance.Attribute("bright") is { } brightnessAttribute
-                ? Math.Clamp(int.Parse(brightnessAttribute.Value, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+            string? brightnessValue = (string?)luminance.Attribute("bright");
+            string? contrastValue = (string?)luminance.Attribute("contrast");
+            double brightness = brightnessValue is not null
+                ? Math.Clamp(int.Parse(brightnessValue, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
                 : 0d;
-            double contrast = luminance.Attribute("contrast") is { } contrastAttribute
-                ? Math.Clamp(int.Parse(contrastAttribute.Value, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
+            double contrast = contrastValue is not null
+                ? Math.Clamp(int.Parse(contrastValue, CultureInfo.InvariantCulture) / 100000d, -1d, 1d)
                 : 0d;
-            return PptxSceneImageRecolor.Luminance(brightness, contrast);
+            return PptxSceneImageRecolor.Luminance(brightness, contrast, luminance.Name.LocalName, brightnessValue, contrastValue);
         }
 
         XElement? duotone = blip.Element(DrawingNamespace + "duotone");
@@ -3751,7 +3768,7 @@ internal sealed class PptxSceneBuilder
                 TryReadImageRecolorColor(colors[0], theme, out RgbColor dark) &&
                 TryReadImageRecolorColor(colors[1], theme, out RgbColor light))
             {
-                return PptxSceneImageRecolor.Duotone(dark, light);
+                return PptxSceneImageRecolor.Duotone(dark, light, duotone.Name.LocalName);
             }
         }
 

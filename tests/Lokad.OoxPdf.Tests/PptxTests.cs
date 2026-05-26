@@ -337,6 +337,7 @@ internal static class PptxTests
         TestAssert.Equal(0.05d, slide.SlideNodes[1].Picture?.Fill.Left ?? 0d);
         TestAssert.Equal(0.5d, slide.SlideNodes[1].Picture?.Alpha ?? 0d);
         TestAssert.Equal(PptxSceneImageRecolorKind.Grayscale, slide.SlideNodes[1].Picture?.Recolor.Kind ?? PptxSceneImageRecolorKind.None);
+        TestAssert.Equal("grayscl", slide.SlideNodes[1].Picture?.Recolor.KindValue ?? string.Empty);
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.ColumnWidths.Count ?? 0);
         TestAssert.Equal(914400d, slide.SlideNodes[2].Table?.ColumnWidths[0] ?? 0d);
@@ -792,6 +793,43 @@ internal static class PptxTests
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].Advance > 0d, "Expected layout line boxes to expose line advance before paragraph stacking.");
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].BaselineOffset > 0d, "Expected layout line boxes to own baseline offset separately from text spans.");
         TestAssert.Equal("Default", layoutFrame.Paragraphs[0].Lines[0].LineSpacingKind);
+    }
+
+    public static void PptxImageRecolorPreservesRawOoxmlTokens()
+    {
+        XElement luminancePicture = XElement.Parse("""
+            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:blipFill>
+                <a:blip>
+                  <a:lum bright="25000" contrast="-15000"/>
+                </a:blip>
+              </p:blipFill>
+            </p:pic>
+            """);
+        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminancePicture, PptxTheme.Empty);
+        TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, luminance.Kind);
+        TestAssert.Equal("lum", luminance.KindValue ?? string.Empty);
+        TestAssert.Equal("25000", luminance.BrightnessValue ?? string.Empty);
+        TestAssert.Equal("-15000", luminance.ContrastValue ?? string.Empty);
+        TestAssert.Equal(0.25d, luminance.Brightness);
+        TestAssert.Equal(-0.15d, luminance.Contrast);
+
+        XElement biLevelPicture = XElement.Parse("""
+            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:blipFill>
+                <a:blip>
+                  <a:biLevel thresh="62500"/>
+                </a:blip>
+              </p:blipFill>
+            </p:pic>
+            """);
+        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelPicture, PptxTheme.Empty);
+        TestAssert.Equal(PptxSceneImageRecolorKind.BiLevel, biLevel.Kind);
+        TestAssert.Equal("biLevel", biLevel.KindValue ?? string.Empty);
+        TestAssert.Equal("62500", biLevel.ThresholdValue ?? string.Empty);
+        TestAssert.Equal(0.625d, biLevel.Threshold);
     }
 
     public static void PptxSyntheticShapesProduceDrawingOperators()
