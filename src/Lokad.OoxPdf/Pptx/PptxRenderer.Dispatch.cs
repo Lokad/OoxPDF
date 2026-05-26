@@ -145,31 +145,6 @@ internal sealed partial class PptxRenderer
         graphics.RestoreState();
     }
 
-    private static void RenderShapeNode(
-        PptxSceneNode node,
-        PptxRenderContext context,
-        PdfGraphicsBuilder graphics,
-        IReadOnlyDictionary<string, RenderedFont> fonts,
-        List<PdfImageResource> images,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
-        GroupTransform transform,
-        ref int imageIndex,
-        bool renderPlaceholders)
-    {
-        RenderShape(
-            node,
-            context.Document,
-            graphics,
-            context.DiagnosticSink,
-            context.SlideNumber,
-            context.Theme,
-            transform,
-            images,
-            context.ImageCache,
-            ref imageIndex);
-        RenderTextNode(node, context, graphics, fonts, renderPlaceholders);
-    }
-
     private static void RenderTextNode(
         PptxSceneNode node,
         PptxRenderContext context,

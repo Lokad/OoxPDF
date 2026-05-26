@@ -358,6 +358,14 @@ High-priority actions:
   `PptxRenderer.Tables` still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image
   cache keys still live in rendering. Each future slice should move one of those fields into `PptxScene*` records,
   add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
+- [ ] Replace the PPTX table-cell synthetic-shape text bridge with a typed scene text-frame adapter:
+  `PptxSceneTableCell` already carries text insets, vertical anchor metadata, style-fill/text defaults,
+  borders, spans, and the raw `a:txBody`, but table-cell text layout still reaches `ReadTextSpansForShape`
+  by building a temporary `p:sp` element and injecting the internal `ooxpdf:wrapWidth` attribute. The long-term
+  fix is not to remove that wrapper blindly; it is to introduce a typed table-cell text frame that carries
+  bounds, effective body properties, explicit wrap width, table-style run defaults, and placeholder policy into
+  the shared text model without XML surgery. Until that exists, table text remains a renderer-local structural
+  gap even though table geometry, fills, borders, spans, and row/column sizes are scene-owned.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
