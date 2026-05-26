@@ -2767,7 +2767,7 @@ internal sealed class PptxSceneBuilder
             ReadLineEnd(shapeProperties, "tailEnd"));
     }
 
-    private static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)
+    internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)
     {
         XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");

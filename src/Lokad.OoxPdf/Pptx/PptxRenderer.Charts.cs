@@ -2059,13 +2059,17 @@ internal sealed partial class PptxRenderer
             return ChartShapeStyle.Empty;
         }
 
-        ChartSeriesFill? fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+        bool noFill = shapeProperties.Element(DrawingNamespace + "noFill") is not null;
+        ChartSeriesFill? fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new ChartSeriesFill(fillColor, fillAlpha)
+            : null;
+        GradientFill? gradientFill = !noFill && PptxSceneBuilder.TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill sceneGradientFill)
+            ? ToGradientFill(sceneGradientFill)
             : null;
         ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
             ? new ChartSeriesStroke(strokeColor, strokeAlpha, lineWidth)
             : null;
-        return new ChartShapeStyle(fill, null, stroke);
+        return new ChartShapeStyle(fill, gradientFill, stroke);
     }
 
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)

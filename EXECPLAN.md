@@ -1101,8 +1101,9 @@ High-priority actions:
   - [x] Preserve and consume linear gradient fills in chart shape styles:
     `PptxSceneChartShapeStyle` now carries a nullable `PptxSceneGradientFill`, and chart-area, plot-area,
     title, legend, and data-label shape-style conversion passes it through to the existing PDF axial-shading
-    renderer. Raw XML chart-style fallback still handles only the older solid/pattern subset, and gradient
-    alpha/effect inheritance remain open. Validation: focused `pptx-charts` tests passed `40/40`.
+    renderer. The raw XML chart-style fallback reuses the same gradient parser instead of a separate
+    chart-local parser. Gradient alpha/effect inheritance remain open. Validation: focused `pptx-charts`
+    tests passed `40/40`.
 - [x] 2026-05-24: Move explicit chart-axis line style ownership into `PptxSceneChartAxis`. Supported bar
   and line chart rendering now consumes scene-owned value/category axis strokes first, including the existing
   explicit `a:ln/a:noFill` hidden-axis-line case represented as a transparent zero-width stroke, while raw
