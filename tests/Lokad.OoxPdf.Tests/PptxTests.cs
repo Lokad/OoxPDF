@@ -9772,7 +9772,7 @@ internal static class PptxTests
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <c:spPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="F0F0F0"/></a:gs><a:gs pos="100000"><a:srgbClr val="D0E0F0"/></a:gs></a:gsLst><a:lin ang="2700000"/></a:gradFill><a:ln><a:solidFill><a:srgbClr val="444444"/></a:solidFill></a:ln></c:spPr>
                   <c:chart>
-                  <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1150"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>Rev</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>enue</a:t></a:r></a:p></c:rich></c:tx><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="123456"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
+                  <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1150"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>Rev</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>enue</a:t></a:r></a:p></c:rich></c:tx><c:spPr><a:solidFill><a:srgbClr val="E6F8D0"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="301020"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="123456"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
                   <c:plotArea>
                   <c:layout><c:manualLayout><c:x val="0.2"/><c:y val="0.2"/><c:w val="0.5"/><c:h val="0.5"/></c:manualLayout></c:layout>
                   <c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
@@ -9823,6 +9823,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/ShadingType 2", pdf);
         TestAssert.Contains(" sh", pdf);
+        TestAssert.Contains("0.902 0.973 0.816 rg", pdf);
+        TestAssert.Contains("0.188 0.063 0.125 RG", pdf);
         TestAssert.Contains("0.973 0.902 0.816 rg", pdf);
         TestAssert.Contains("0.063 0.125 0.188 RG", pdf);
         TestAssert.Contains("0.267 0.267 0.267 RG", pdf);

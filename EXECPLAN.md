@@ -2066,9 +2066,10 @@ Composite oracle family map:
   shared line resolver. Remaining slice work is data labels, exact Office explosion scaling, and chart
   style/color-style inherited defaults.
 - Supported chart renderer now render simple chart titles through the shared PPTX text/font pipeline.
-  `PptxSceneChartTitle` preserves title overlay/manual layout and shape styling, but rendering still needs
-  Office-PDF evidence before consuming those fields for exact placement. Remaining title work is exact Office
-  title layout, rich text styling, and inherited chart style defaults.
+  `PptxSceneChartTitle` preserves title overlay/manual layout and shape styling. Rendering now consumes
+  explicit title fill/stroke in the currently computed title rectangle, but still needs Office-PDF evidence
+  before changing exact placement, overlay reserve, or title box sizing. Remaining title work is exact Office
+  title layout and inherited chart style defaults.
 - Bar and line chart renderer now honor `c:plotArea/c:spPr` fill and border styling through the shared
   chart shape-style helper. Remaining plot-area work is full manual-layout mode semantics, rounded
   corners/effects, and extending exact plot bounds to area/scatter/radar/pie/doughnut families.
@@ -7689,6 +7690,19 @@ This is intentionally not chart-title layout closure. Axis titles are still pres
 leader-line geometry and exact data-label boxes are still open, and chart-style inherited defaults still need
 a structural owner. The useful long-term effect is narrower: another legacy XML read now routes through the
 typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt explicit.
+
+Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Consumed the preserved chart-title `c:spPr` path without adding another
+placement rule. `RenderChartTitle` now resolves title shape styling from the scene-owned
+`PptxSceneChartTitle.ShapeStyle`, or from the raw XML fallback through the shared chart shape-style parser,
+and draws that fill/stroke in the title rectangle it was already using for text. The public line/pie chart
+rendering test now locks the title frame fill and stroke PDF colors alongside the existing rich-text title
+checks.
+
+This is deliberately not title layout closure. The remaining long-term issue is still Office's exact title
+box construction, overlay reserve interaction, and chart-style inherited defaults; this slice only removes a
+structural blind spot where preserved title formatting was dropped before PDF emission.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 

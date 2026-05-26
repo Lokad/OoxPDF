@@ -2169,6 +2169,7 @@ internal sealed partial class PptxRenderer
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
             : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize);
+        RenderChartShapeStyle(graphics, x, y, width, height, ReadSceneOrXmlChartTitleShapeStyle(theme, sceneChart, chartXml));
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
         double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
@@ -2188,6 +2189,13 @@ internal sealed partial class PptxRenderer
             style,
             TextAlignment.Center);
         return RenderTextRuns(runs, graphics, "CT");
+    }
+
+    private static ChartShapeStyle ReadSceneOrXmlChartTitleShapeStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        return sceneChart is null
+            ? ReadChartShapeStyle(chartXml.Descendants(ChartNamespace + "title").FirstOrDefault()?.Element(ChartNamespace + "spPr"), theme)
+            : ToChartShapeStyle(sceneChart.Title.ShapeStyle);
     }
 
     private static bool HasPolarChart(XDocument chartXml)
