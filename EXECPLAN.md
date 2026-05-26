@@ -7812,6 +7812,15 @@ inspecting private content.
 
 Validation: focused `PptxSyntheticJpegPictureDuotoneRecolorEmitsDiagnostic` passed.
 
+Revision note, 2026-05-26: Closed a public coverage gap in the picture recolor ladder. BMP recolor already
+used the same decoded-RGB path as PNG, but only plain BMP rendering and PNG recolor were locked by tests.
+`PptxSyntheticBmpPictureAppliesDuotoneRecolor` now renders one BMP image part both plain and duotone-recolored,
+asserts distinct image XObjects, and confirms the supported BMP path does not emit either unsupported recolor
+or unsupported image diagnostics.
+
+Validation: focused `PptxSyntheticBmpPictureAppliesDuotoneRecolor` passed; focused non-slow `pptx-images`
+passed (`15 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The
