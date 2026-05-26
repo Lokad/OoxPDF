@@ -2188,6 +2188,14 @@ High-priority actions:
     string literals, and scene coverage locks typed `Bar`, `Bubble`, and `Line`; focused chart validation
     passed `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
     `dotnet pack` succeeded.
+  - [x] 2026-05-26: Promoted plot-level grouping, bar direction, and scatter style from raw `grouping`,
+    `barDir`, and `scatterStyle` strings to typed `PptxSceneChartGrouping`,
+    `PptxSceneChartBarDirection`, and `PptxSceneChartScatterStyle` ladders on `PptxSceneChartPlot`, while
+    preserving the raw OOXML values. Bar/line/area stacking decisions, horizontal-bar detection,
+    percent-stacked axis handling, and scatter line-connection decisions now branch on typed plot values.
+    Scene coverage locks explicit `Stacked`/`Bar` and missing-value `Unknown`; focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.

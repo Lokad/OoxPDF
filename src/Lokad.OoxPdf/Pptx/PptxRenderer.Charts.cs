@@ -166,6 +166,31 @@ internal sealed partial class PptxRenderer
             : (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? defaultValue;
     }
 
+    private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
+    {
+        return !string.IsNullOrEmpty(scenePlot?.Grouping)
+            ? scenePlot.GroupingKind
+            : PptxSceneBuilder.ParseChartGrouping((string?)plotElement.Element(ChartNamespace + "grouping")?.Attribute("val")) switch
+            {
+                PptxSceneChartGrouping.Unknown => defaultGrouping,
+                PptxSceneChartGrouping parsed => parsed
+            };
+    }
+
+    private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)
+    {
+        return !string.IsNullOrEmpty(scenePlot?.BarDirection)
+            ? scenePlot.BarDirectionKind
+            : PptxSceneBuilder.ParseChartBarDirection((string?)plotElement.Element(ChartNamespace + "barDir")?.Attribute("val"));
+    }
+
+    private static PptxSceneChartScatterStyle ReadSceneOrXmlChartScatterStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
+    {
+        return !string.IsNullOrEmpty(scenePlot?.ScatterStyle)
+            ? scenePlot.ScatterStyleKind
+            : PptxSceneBuilder.ParseChartScatterStyle((string?)plotElement.Element(ChartNamespace + "scatterStyle")?.Attribute("val"));
+    }
+
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
         return plot?.HoleSize is { } rawHoleSize
@@ -449,8 +474,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> barSeries = ReadSceneOrXmlChartSeries(barPlot, barChart, workbook);
             if (barSeries.Count != 0)
             {
-                bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
-                string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
+                PptxSceneChartBarDirection barDirection = ReadSceneOrXmlChartBarDirection(barPlot, barChart);
+                bool horizontalBars = barDirection == PptxSceneChartBarDirection.Bar;
+                PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(barPlot, barChart, PptxSceneChartGrouping.Clustered);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
@@ -487,8 +513,9 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    string extraGrouping = ReadSceneOrXmlChartValue(extraBarPlot?.Grouping, extraBarChart, "grouping", "clustered");
-                    bool extraHorizontalBars = string.Equals(ReadSceneOrXmlChartValue(extraBarPlot?.BarDirection, extraBarChart, "barDir"), "bar", StringComparison.Ordinal);
+                    PptxSceneChartGrouping extraGrouping = ReadSceneOrXmlChartGrouping(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
+                    PptxSceneChartBarDirection extraBarDirection = ReadSceneOrXmlChartBarDirection(extraBarPlot, extraBarChart);
+                    bool extraHorizontalBars = extraBarDirection == PptxSceneChartBarDirection.Bar;
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     PptxSceneChartAxis? extraValueSceneAxis = ReadSceneChartAxis(sceneChart, extraBarPlot, "valAx");
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraGrouping);
@@ -562,10 +589,9 @@ internal sealed partial class PptxRenderer
                     XElement? lineValueAxis = ReadChartValueAxisForChart(chartXml, comboLineChart);
                     XElement? lineValueAxisForScale = lineValueAxis ?? valueAxis;
                     PptxSceneChartAxis? lineValueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, "valAx");
-                    string lineGrouping = ReadSceneOrXmlChartValue(linePlot?.Grouping, comboLineChart, "grouping", "standard");
-                    bool lineStacked = string.Equals(lineGrouping, "stacked", StringComparison.Ordinal) ||
-                        string.Equals(lineGrouping, "percentStacked", StringComparison.Ordinal);
-                    bool linePercentStacked = string.Equals(lineGrouping, "percentStacked", StringComparison.Ordinal);
+                    PptxSceneChartGrouping lineGrouping = ReadSceneOrXmlChartGrouping(linePlot, comboLineChart, PptxSceneChartGrouping.Standard);
+                    bool lineStacked = IsStackedChartGrouping(lineGrouping);
+                    bool linePercentStacked = IsPercentStackedChartGrouping(lineGrouping);
                     ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeries, lineStacked, linePercentStacked), linePercentStacked, useNearMaximumHeadroom: !linePercentStacked);
                     ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueSceneAxis, lineValueAxisForScale), linePercentStacked);
                     bool lineValueAxisReversed = ReadSceneOrXmlValueAxisReversed(lineValueSceneAxis, lineValueAxisForScale);
@@ -685,10 +711,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, lineChart, workbook);
             if (lineSeries.Count != 0)
             {
-                string grouping = ReadSceneOrXmlChartValue(linePlot?.Grouping, lineChart, "grouping", "standard");
-                bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-                    string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-                bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+                PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(linePlot, lineChart, PptxSceneChartGrouping.Standard);
+                bool stacked = IsStackedChartGrouping(grouping);
+                bool percentStacked = IsPercentStackedChartGrouping(grouping);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, lineChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(linePlot, lineChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(linePlot, lineChart);
@@ -740,11 +765,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<IReadOnlyList<double>> areaSeries = ReadSceneOrXmlChartSeries(areaPlot, areaChart, workbook);
             if (areaSeries.Count != 0)
             {
-                string grouping = (string?)areaChart.Element(ChartNamespace + "grouping")?.Attribute("val") ?? "standard";
-                grouping = string.IsNullOrEmpty(areaPlot?.Grouping) ? grouping : areaPlot.Grouping;
-                bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-                    string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-                bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+                PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(areaPlot, areaChart, PptxSceneChartGrouping.Standard);
+                bool stacked = IsStackedChartGrouping(grouping);
+                bool percentStacked = IsPercentStackedChartGrouping(grouping);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme);
                 ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
@@ -802,8 +825,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook);
             if (scatterSeries.Count != 0)
             {
-                string scatterStyle = ReadSceneOrXmlChartValue(scatterPlot?.ScatterStyle, scatterChart, "scatterStyle");
-                bool connectLines = scatterStyle.Contains("Line", StringComparison.OrdinalIgnoreCase);
+                PptxSceneChartScatterStyle scatterStyle = ReadSceneOrXmlChartScatterStyle(scatterPlot, scatterChart);
+                bool connectLines = scatterStyle is PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
@@ -2010,7 +2033,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
-        bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
+        bool horizontalBars = ReadSceneOrXmlChartBarDirection(barPlot, barChart) == PptxSceneChartBarDirection.Bar;
         ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, horizontalBars);
         double offsetFactor = !horizontalBars && IsAutoGeneratedChartTitle(sceneChart)
             ? PptxChartMetricRules.AutoBarTitleAbovePlotBaselineOffsetFactor
@@ -4237,7 +4260,7 @@ internal sealed partial class PptxRenderer
         return ChartPalette(null, theme, index);
     }
 
-    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, string grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied, bool varyColors, double gapWidthPercent, double overlapPercent)
+    private static void RenderBarChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool horizontalBars, PptxSceneChartGrouping grouping, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills, IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, bool valueAxisLabelsVisible, bool manualPlotLayoutApplied, bool varyColors, double gapWidthPercent, double overlapPercent)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -4249,8 +4272,7 @@ internal sealed partial class PptxRenderer
         {
             ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             int categoryCount = Math.Max(1, series.Max(values => values.Count));
-            bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-                IsPercentStackedChartGrouping(grouping);
+            bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
             double zeroX = ChartValueToPlotCoordinate(valueExtents, 0d, plotX, plotWidth, valueAxisReversed);
             double zeroY = ChartValueToPlotCoordinate(valueExtents, 0d, plotY, plotHeight, horizontalBars ? false : valueAxisReversed);
@@ -4471,7 +4493,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
+        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(barPlot, barChart, PptxSceneChartGrouping.Clustered);
         XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
         PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, "valAx");
         ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
@@ -4634,7 +4656,7 @@ internal sealed partial class PptxRenderer
             return plotBox;
         }
 
-        string grouping = ReadSceneOrXmlChartValue(barPlot?.Grouping, barChart, "grouping", "clustered");
+        PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(barPlot, barChart, PptxSceneChartGrouping.Clustered);
         if (!IsPercentStackedChartGrouping(grouping))
         {
             return plotBox;
@@ -4703,11 +4725,10 @@ internal sealed partial class PptxRenderer
         return labelWidth + sideGap;
     }
 
-    private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, string grouping)
+    private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, PptxSceneChartGrouping grouping)
     {
         int categoryCount = Math.Max(1, series.Max(values => values.Count));
-        bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-            IsPercentStackedChartGrouping(grouping);
+        bool stacked = IsStackedChartGrouping(grouping);
         bool percentStacked = IsPercentStackedChartGrouping(grouping);
         (double min, double max) = stacked
             ? GetStackedValueExtents(series, categoryCount, percentStacked)
@@ -4715,9 +4736,14 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(min, max);
     }
 
-    private static bool IsPercentStackedChartGrouping(string grouping)
+    private static bool IsStackedChartGrouping(PptxSceneChartGrouping grouping)
     {
-        return string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+        return grouping is PptxSceneChartGrouping.Stacked or PptxSceneChartGrouping.PercentStacked;
+    }
+
+    private static bool IsPercentStackedChartGrouping(PptxSceneChartGrouping grouping)
+    {
+        return grouping == PptxSceneChartGrouping.PercentStacked;
     }
 
     private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke)
@@ -5370,10 +5396,9 @@ internal sealed partial class PptxRenderer
         int maxValueLabelLength = 0;
         if (lineChart is not null)
         {
-            string grouping = ReadSceneOrXmlChartValue(linePlot?.Grouping, lineChart, "grouping", "standard");
-            bool stacked = string.Equals(grouping, "stacked", StringComparison.Ordinal) ||
-                string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
-            bool percentStacked = string.Equals(grouping, "percentStacked", StringComparison.Ordinal);
+            PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(linePlot, lineChart, PptxSceneChartGrouping.Standard);
+            bool stacked = IsStackedChartGrouping(grouping);
+            bool percentStacked = IsPercentStackedChartGrouping(grouping);
             IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(linePlot, lineChart);
             if (series.Count > 0)
             {

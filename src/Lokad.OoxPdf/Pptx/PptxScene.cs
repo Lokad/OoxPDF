@@ -398,8 +398,11 @@ internal sealed record PptxSceneChartPlot(
     int SeriesCount,
     IReadOnlyList<string> AxisIds,
     IReadOnlyList<PptxSceneChartSeries> Series,
+    PptxSceneChartGrouping GroupingKind,
     string Grouping,
+    PptxSceneChartBarDirection BarDirectionKind,
     string BarDirection,
+    PptxSceneChartScatterStyle ScatterStyleKind,
     string ScatterStyle,
     bool? VaryColors,
     double? GapWidth,
@@ -407,6 +410,33 @@ internal sealed record PptxSceneChartPlot(
     double? HoleSize,
     double? FirstSliceAngle,
     PptxSceneChartDataLabels DataLabels);
+
+internal enum PptxSceneChartGrouping
+{
+    Clustered,
+    PercentStacked,
+    Stacked,
+    Standard,
+    Unknown
+}
+
+internal enum PptxSceneChartBarDirection
+{
+    Bar,
+    Column,
+    Unknown
+}
+
+internal enum PptxSceneChartScatterStyle
+{
+    Line,
+    LineMarker,
+    Marker,
+    None,
+    Smooth,
+    SmoothMarker,
+    Unknown
+}
 
 internal enum PptxSceneChartPlotKind
 {
@@ -1003,6 +1033,54 @@ internal sealed class PptxSceneBuilder
         };
     }
 
+    internal static PptxSceneChartGrouping ParseChartGrouping(string? grouping)
+    {
+        return grouping switch
+        {
+            "clustered" => PptxSceneChartGrouping.Clustered,
+            "percentStacked" => PptxSceneChartGrouping.PercentStacked,
+            "stacked" => PptxSceneChartGrouping.Stacked,
+            "standard" => PptxSceneChartGrouping.Standard,
+            _ when grouping?.Equals("clustered", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartGrouping.Clustered,
+            _ when grouping?.Equals("percentStacked", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartGrouping.PercentStacked,
+            _ when grouping?.Equals("stacked", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartGrouping.Stacked,
+            _ when grouping?.Equals("standard", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartGrouping.Standard,
+            _ => PptxSceneChartGrouping.Unknown
+        };
+    }
+
+    internal static PptxSceneChartBarDirection ParseChartBarDirection(string? direction)
+    {
+        return direction switch
+        {
+            "bar" => PptxSceneChartBarDirection.Bar,
+            "col" => PptxSceneChartBarDirection.Column,
+            _ when direction?.Equals("bar", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartBarDirection.Bar,
+            _ when direction?.Equals("col", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartBarDirection.Column,
+            _ => PptxSceneChartBarDirection.Unknown
+        };
+    }
+
+    internal static PptxSceneChartScatterStyle ParseChartScatterStyle(string? style)
+    {
+        return style switch
+        {
+            "line" => PptxSceneChartScatterStyle.Line,
+            "lineMarker" => PptxSceneChartScatterStyle.LineMarker,
+            "marker" => PptxSceneChartScatterStyle.Marker,
+            "none" => PptxSceneChartScatterStyle.None,
+            "smooth" => PptxSceneChartScatterStyle.Smooth,
+            "smoothMarker" => PptxSceneChartScatterStyle.SmoothMarker,
+            _ when style?.Equals("line", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.Line,
+            _ when style?.Equals("lineMarker", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.LineMarker,
+            _ when style?.Equals("marker", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.Marker,
+            _ when style?.Equals("none", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.None,
+            _ when style?.Equals("smooth", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.Smooth,
+            _ when style?.Equals("smoothMarker", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartScatterStyle.SmoothMarker,
+            _ => PptxSceneChartScatterStyle.Unknown
+        };
+    }
+
     internal static PptxSceneChartAxisPosition ParseChartAxisPosition(string? position)
     {
         return position switch
@@ -1387,6 +1465,9 @@ internal sealed class PptxSceneBuilder
             string kind = plot.Name.LocalName;
             int kindIndex = kindIndexes.TryGetValue(kind, out int nextKindIndex) ? nextKindIndex : 0;
             kindIndexes[kind] = kindIndex + 1;
+            string grouping = ReadChartElementValue(plot, "grouping");
+            string barDirection = ReadChartElementValue(plot, "barDir");
+            string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string[] axisIds = plot
                 .Elements(ChartNamespace + "axId")
                 .Select(axis => (string?)axis.Attribute("val") ?? string.Empty)
@@ -1400,9 +1481,12 @@ internal sealed class PptxSceneBuilder
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
                 ReadChartSeries(plot, theme),
-                ReadChartElementValue(plot, "grouping"),
-                ReadChartElementValue(plot, "barDir"),
-                ReadChartElementValue(plot, "scatterStyle"),
+                ParseChartGrouping(grouping),
+                grouping,
+                ParseChartBarDirection(barDirection),
+                barDirection,
+                ParseChartScatterStyle(scatterStyle),
+                scatterStyle,
                 ReadChartPlotVaryColors(plot),
                 ReadChartElementDouble(plot, "gapWidth"),
                 ReadChartElementDouble(plot, "overlap"),
