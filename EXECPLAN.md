@@ -208,6 +208,11 @@ High-priority actions:
   locks the solid-outline path.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
+- [x] Add a public fractional-font-size guard for PPTX text:
+  `PptxSyntheticTextBoxPreservesFractionalFontSize` proves that an explicit DrawingML run size such as
+  `a:rPr sz="996"` survives into the text-frame model, text layout, and PDF `/Tf` emission as `9.96 pt`.
+  This locks the private slide-17 structural clue as public coverage without closing the separate
+  even-odd clipping/fill gap.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -3756,6 +3761,12 @@ paths, and ExecPlan references together.
   - [ ] Continue residual slide-17 text parity from public PDF evidence: the small-label probe is now tightly
     bounded, but remaining page drift still includes broader text metrics, non-label typography, and the
     typed scene structure now exposed by the private-safe diagnostic.
+    2026-05-26 update: page-filtered PDF inspection now shows the residual slide-17 structural gap without
+    exposing content. Office and candidate both emit 44 text operations, so the next public probe should not
+    chase missing text. The remaining structural differences are fractional Office font sizes versus candidate
+    integer sizes, plus Office's even-odd clipping/fill operators around text regions versus candidate
+    non-even-odd clipping. Keep the connector/group/picture inventory intact, but steer the next public
+    fixture toward fractional text-size emission and clip-rule structure.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape
