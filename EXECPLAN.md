@@ -261,6 +261,13 @@ High-priority actions:
   when invoked with the attempted focused command; private run `20260527-004132` remained behavior-neutral with
   84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Retire the old renderer-local inheritance wrapper:
+  `PptxRenderContext` no longer carries a `PptxSlideInheritance` record. The remaining inherited XML source
+  list used by legacy text-model paths is derived directly from the scene-owned master/layout XML records,
+  making `PptxSceneSlide` the only owner of loaded inheritance parts. This does not yet remove raw XML from
+  text fallback models; it removes the duplicate ownership shell that outlived the scene migration.
+  Validation: focused non-slow `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow
+  console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
@@ -2410,6 +2417,10 @@ High-priority actions:
   repair. Validation so far: the console runner completed at `263 passed, 0 failed, 0 skipped` after an
   attempted focused invocation, and private run `20260527-004132` matched the previous baseline at deck MAE
   `7.702155` with only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-27: Removed the obsolete `PptxSlideInheritance` context wrapper. Text-model fallback paths still
+  receive the same inherited master/layout XML source list, but that list is now derived directly from
+  `PptxSceneSlide` during context creation. Validation: `pptx-typography --skip-slow` passed at
+  `82 passed, 0 failed, 2 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
@@ -4838,6 +4849,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Keeping both paths lets incomplete scene records be silently repaired during PDF emission, which works
   against the long-term goal of making parse/model/render ownership explicit and testable. Unsupported
   background variants should be added to `PptxSceneBackground` rather than reparsed in `RenderBackground`.
+  Date/Author: 2026-05-27 / Codex.
+- Decision: Keep the legacy inherited XML source list only as an explicit text fallback input, not as a
+  separate inheritance owner.
+  Rationale: Text snapshots and layout still need raw inherited XML until the style cascade is fully typed, but
+  the scene already owns the loaded master and layout documents. Removing `PptxSlideInheritance` avoids a
+  second ownership abstraction while preserving behavior for the remaining text migration.
   Date/Author: 2026-05-27 / Codex.
 - Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
   spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved

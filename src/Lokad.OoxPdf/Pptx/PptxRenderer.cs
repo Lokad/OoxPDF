@@ -98,9 +98,19 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        PptxSlideInheritance inheritance = new(sceneSlide.MasterXml, sceneSlide.LayoutXml);
         IReadOnlyDictionary<string, OoxRelationship> slideRelationships = sceneSlide.SlideRelationships;
-        return new PptxRenderContext(package, document, theme, slide, slideXml, sceneSlide, inheritance, inheritance.Sources, slideRelationships, imageCache, diagnosticSink);
+        return new PptxRenderContext(package, document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), slideRelationships, imageCache, diagnosticSink);
+    }
+
+    private static IReadOnlyList<XDocument> BuildInheritedXmlSources(PptxSceneSlide sceneSlide)
+    {
+        return (sceneSlide.MasterXml, sceneSlide.LayoutXml) switch
+        {
+            ({ } master, { } layout) => [master, layout],
+            ({ } master, null) => [master],
+            (null, { } layout) => [layout],
+            _ => []
+        };
     }
 
     private static ShapeBounds? ReadBounds(XElement shapeProperties)
