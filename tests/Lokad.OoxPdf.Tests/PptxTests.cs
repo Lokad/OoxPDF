@@ -9229,6 +9229,7 @@ internal static class PptxTests
                       <c:lineChart>
                         <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
                       </c:lineChart>
+                      <c:valAx><c:axId val="2"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Axis Manual</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:x val="0.05"/><c:y val="0.15"/><c:w val="0.35"/><c:h val="0.12"/></c:manualLayout></c:layout><c:spPr><a:solidFill><a:srgbClr val="BADA55"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="5533AA"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="442288"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title></c:valAx>
                     </c:plotArea>
                   </c:chart>
                 </c:chartSpace>
@@ -9239,6 +9240,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.729 0.855 0.333 rg", pdf);
+        TestAssert.Contains("0.333 0.2 0.667 RG", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 9 Tf"), "Expected explicit manual-layout axis title txPr to drive axis-title rendering.");
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 354\.816 Tm"), "Expected explicit chart title manualLayout to drive the title text baseline.");
         TestAssert.True(!Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 442\.[0-9]+ Tm"), "Expected chart title rendering not to fall back to the full-frame title box.");
     }

@@ -1167,9 +1167,15 @@ High-priority actions:
   match Office without renderer heuristics.
   - [ ] Render scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
-    style, but supported native chart rendering still omits category/value axis titles. This is distinct from
-    tick-label styling and should be solved with Office-PDF-backed placement evidence for horizontal and
-    rotated axis-title boxes, not with frame-relative text nudges.
+    style. Supported native chart rendering now consumes explicit manual-layout axis-title boxes, including
+    their text, rich-text runs, `txPr`, fill, and stroke, but default category/value axis-title placement is
+    still open. This is distinct from tick-label styling and should be solved with Office-PDF-backed placement
+    evidence for horizontal and rotated axis-title boxes, not with frame-relative text nudges.
+  - [x] Consume explicit manual-layout axis titles:
+    the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
+    a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.
+    The public manual chart-title test now also locks manual axis-title fill, stroke, and `txPr` font-size
+    emission. Validation: focused `pptx-charts` tests passed `40/40`.
   - [x] Preserve chart and axis title rich-text run boundaries in the scene model:
     `PptxSceneChartTitle` now carries `TextRuns` with per-run text and chart text-style overrides while
     retaining the flattened `Text` value for existing rendering. Explicit titles read runs from `c:tx`, and
@@ -7686,10 +7692,24 @@ XML-only title fallback still passed an empty rich-run list into `RenderChartTit
 text even though the shared scene parser could read it. The renderer now uses a single scene-or-XML helper for
 title runs, and the fallback path reuses `PptxSceneBuilder.ReadChartTextRuns`.
 
-This is intentionally not chart-title layout closure. Axis titles are still preserved but not rendered,
-leader-line geometry and exact data-label boxes are still open, and chart-style inherited defaults still need
-a structural owner. The useful long-term effect is narrower: another legacy XML read now routes through the
-typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt explicit.
+This is intentionally not chart-title layout closure. Default-placement axis titles are still preserved but
+not rendered, leader-line geometry and exact data-label boxes are still open, and chart-style inherited
+defaults still need a structural owner. The useful long-term effect is narrower: another legacy XML read now
+routes through the typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt
+explicit.
+
+Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Started axis-title rendering at the structural edge instead of adding a default
+placement heuristic. Supported native chart rendering now consumes `PptxSceneChartAxis.Title` when the axis
+title has an explicit `c:layout/c:manualLayout` box; the same path carries rich text, chart/title text style,
+and title shape fill/stroke, with a raw XML fallback routed through the shared chart title parsers. The public
+manual chart-title rendering test now also locks a manual axis-title frame fill/stroke and `txPr` font-size
+at the PDF operator level.
+
+This does not close Office-perfect axis-title placement. Axis titles without explicit manual layout still need
+public Office-PDF evidence for horizontal versus rotated boxes, overlay/reserve interaction, and chart-style
+inherited defaults before they should be emitted by default.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
