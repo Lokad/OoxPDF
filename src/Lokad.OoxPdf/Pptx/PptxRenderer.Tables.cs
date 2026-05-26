@@ -30,9 +30,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneTableTextSpans(context.SceneSlide?.MasterNodes ?? [], context, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide?.SlideNodes ?? [], context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity);
 
         return textSpans;
     }

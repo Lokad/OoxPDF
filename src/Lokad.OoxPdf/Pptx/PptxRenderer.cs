@@ -47,24 +47,24 @@ internal sealed partial class PptxRenderer
 
             if (context.Inheritance.MasterXml is not null)
             {
-                RenderBackground(context, context.SceneSlide?.MasterBackground, context.Inheritance.MasterXml, graphics, defaultWhenMissing: false);
+                RenderBackground(context, context.SceneSlide.MasterBackground, context.Inheritance.MasterXml, graphics, defaultWhenMissing: false);
             }
 
             if (context.Inheritance.LayoutXml is not null)
             {
-                RenderBackground(context, context.SceneSlide?.LayoutBackground, context.Inheritance.LayoutXml, graphics, defaultWhenMissing: false);
+                RenderBackground(context, context.SceneSlide.LayoutBackground, context.Inheritance.LayoutXml, graphics, defaultWhenMissing: false);
             }
 
-            RenderBackground(context, context.SceneSlide?.SlideBackground, context.SlideXml, graphics, defaultWhenMissing: true);
+            RenderBackground(context, context.SceneSlide.SlideBackground, context.SlideXml, graphics, defaultWhenMissing: true);
             var orderedImages = new List<PdfImageResource>();
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray());
-            RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.MasterRelationships ?? EmptyRelationships, context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-            RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.LayoutRelationships ?? EmptyRelationships, context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-            RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.SlideRelationships ?? context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
+            RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.MasterRelationships, context.SceneSlide.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.LayoutRelationships, context.SceneSlide.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
         }
@@ -95,8 +95,6 @@ internal sealed partial class PptxRenderer
 
         return CreateRenderContext(package, document, scene.Theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
     }
-
-    private static IReadOnlyDictionary<string, OoxRelationship> EmptyRelationships { get; } = new Dictionary<string, OoxRelationship>();
 
     private static PptxRenderContext CreateRenderContext(
         OoxPackage package,

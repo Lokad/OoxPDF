@@ -244,9 +244,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneShapeTextSpans(context.SceneSlide?.MasterNodes ?? [], context, textSpans, renderPlaceholders: false);
-        AddSceneShapeTextSpans(context.SceneSlide?.LayoutNodes ?? [], context, textSpans, renderPlaceholders: false);
-        AddSceneShapeTextSpans(context.SceneSlide?.SlideNodes ?? [], context, textSpans, renderPlaceholders: true);
+        AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide.SlideNodes, context, textSpans, renderPlaceholders: true);
         return textSpans;
     }
 

@@ -219,6 +219,12 @@ High-priority actions:
   single owner for normal PPTX slide inheritance XML and relationship discovery, and `PptxRenderContext`
   receives that state from the scene. Validation: focused non-slow `pptx-typography` passed
   (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
+- [x] Make scene ownership mandatory in `PptxRenderContext`:
+  `PptxRenderContext.SceneSlide` is no longer nullable, and rendering, shape-text layout, and table-text
+  layout consume scene-owned node lists, relationship maps, backgrounds, and part names without null
+  fallbacks. This turns the scene/context boundary from a convention into a compile-time requirement for new
+  PPTX render contexts. Validation: focused non-slow `pptx-typography` passed
+  (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
