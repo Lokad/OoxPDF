@@ -7786,6 +7786,19 @@ alignment needs to compare or reconcile sources.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved the embedded chart workbook sheet catalog as typed metadata.
+`ChartWorkbookData.Sheets` now records each workbook sheet's name, `sheetId`, relationship id, raw `state`,
+zero-based workbook order, and resolved worksheet part name, and sheet-local defined-name mapping now uses that
+catalog instead of rebuilding a parallel name array from raw XML. The embedded workbook regression marks
+`Sheet1` hidden and proves that the sheet catalog survives parsing without changing chart rendering.
+
+This is intentionally not hidden-sheet or `plotVisOnly` behavior. A chart may still need Office-PDF evidence to
+choose between hidden-sheet workbook data, hidden rows/columns, cached chart points, and external-data freshness.
+The structural gain is that OOXPDF no longer discards workbook-owned sheet identity and visibility state before
+those decisions can be made.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Used preserved workbook table header/totals metadata when resolving simple
 structured references. `Table[Column]` and `[[#Data],[Column]]` now start after the declared header rows and
 end before declared totals rows, while `[[#Headers],[Column]]` and `[[#All],[Column]]` keep their structural

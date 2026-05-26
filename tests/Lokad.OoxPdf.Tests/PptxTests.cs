@@ -10276,6 +10276,16 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
         object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
         TestAssert.True((bool?)date1904Property.GetValue(parsedWorkbook) == true, "Expected parsed workbookPr/date1904 to survive workbook parsing.");
+        System.Reflection.PropertyInfo sheetsProperty = workbookType.GetProperty("Sheets") ?? throw new InvalidOperationException("Expected workbook sheet records.");
+        object[] parsedSheets = (((System.Collections.IEnumerable?)sheetsProperty.GetValue(parsedWorkbook)) ?? throw new InvalidOperationException("Expected parsed workbook sheet records.")).Cast<object>().ToArray();
+        TestAssert.True(parsedSheets.Length == 1, "Expected workbook sheet catalog to preserve the declared sheet.");
+        object parsedSheet = parsedSheets[0];
+        TestAssert.Equal("Sheet1", (string?)parsedSheet.GetType().GetProperty("Name")?.GetValue(parsedSheet) ?? string.Empty);
+        TestAssert.Equal("1", (string?)parsedSheet.GetType().GetProperty("SheetId")?.GetValue(parsedSheet) ?? string.Empty);
+        TestAssert.Equal("rId1", (string?)parsedSheet.GetType().GetProperty("RelationshipId")?.GetValue(parsedSheet) ?? string.Empty);
+        TestAssert.Equal("hidden", (string?)parsedSheet.GetType().GetProperty("State")?.GetValue(parsedSheet) ?? string.Empty);
+        TestAssert.True((int?)parsedSheet.GetType().GetProperty("Index")?.GetValue(parsedSheet) == 0, "Expected workbook sheet order to survive parsing.");
+        TestAssert.Equal("/xl/worksheets/sheet1.xml", (string?)parsedSheet.GetType().GetProperty("TargetPartName")?.GetValue(parsedSheet) ?? string.Empty);
         var readRangeCells = workbookType.GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range-cell reader.");
         Array parsedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed workbook range cells."));
         object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
@@ -10665,7 +10675,7 @@ internal static class PptxTests
                 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <workbookPr date1904="1"/>
-                  <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+                  <sheets><sheet name="Sheet1" sheetId="1" state="hidden" r:id="rId1"/></sheets>
                   <definedNames>
                     <definedName name="SalesLabels">Sheet1!$A$2:$A$4</definedName>
                     <definedName name="SalesValues">Sheet1!$B$2:$B$4</definedName>
