@@ -7088,3 +7088,18 @@ Validation: focused `pptx-charts` tests passed 39/39; targeted visual checks pas
 `pptx-ladder-11-chart-column-100-stacked-port`, and `pptx-ladder-11-chart-column-clustered-port`; the full
 public `pptx-charts` visual family passed 37/37 with zero failures at
 `artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:36 local run.
+
+Revision note, 2026-05-26: Added a stable structural gate subset to the public secondary-axis overlay probe
+without changing renderer behavior. The probe is now locked on the stable chart plot-box and axis-line
+structures (`GridlineAxisPlotBoxCandidate`, `HorizontalLine`, `PlotAreaClipBoxCandidate`) and on
+category/value tick-label text positions. A first attempt also gated `HorizontalGridlineGroupCandidate`, but
+the manifest correctly failed because that bucket still exposes lower-level comparator instability even when
+the derived bounds are close; it remains ungated until the gridline-group classifier/comparator is made more
+structural. `VerticalLine`, marker, and legend-swatch buckets also remain ungated because the current
+classification still mixes real chart structure with false positives on this case.
+
+Validation: targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-11-secondary-axis-overlay-probe` at
+`artifacts/visual/pptx-ladder-11-secondary-axis-overlay-probe/20260526-123847`, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated during the 2026-05-26 12:41 local run.

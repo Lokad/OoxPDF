@@ -10,7 +10,20 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 2.1,
-    "maxChangedPixelRatioAtThreshold16": 0.03
+    "maxChangedPixelRatioAtThreshold16": 0.03,
+    "maxChartGraphicsStructureBoundsDelta": 4.6,
+    "maxChartGraphicsStructureLineWidthDelta": 0.05,
+    "compareChartGraphicsStructureKinds": [
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate"
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 3.8,
+      "ValueAxisTickLabel": 3.5
+    }
   },
   "allowedUnsupportedFeatures": []
 }
