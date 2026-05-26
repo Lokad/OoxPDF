@@ -818,8 +818,8 @@ internal sealed partial class PptxRenderer
                         IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
                         paragraphStyle.Alignment == TextAlignment.Distributed
                         ? PptxTextMetricRules.CoordinateTolerance
-                        : PptxTextMetricRules.WrapFitTolerance(fragmentFontSize);
-                    if (isFinalShortWordSegment)
+                        : PptxTextMetricRules.CoordinateTolerance;
+                    if (isFinalShortWordSegment && HasShapeAutoFit(frame.TextBody))
                     {
                         wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }

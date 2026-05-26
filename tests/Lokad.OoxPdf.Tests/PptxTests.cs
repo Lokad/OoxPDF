@@ -3326,6 +3326,32 @@ internal static class PptxTests
             $"Expected Office-compatible first-line wrap. Lines: {string.Join(" | ", texts.Take(4))}. Widths: {string.Join(" | ", lines.Take(4).Select(line => (line.EndX - line.StartX).ToString("0.###", CultureInfo.InvariantCulture)))}");
     }
 
+    public static void PptxHighlightedHeadlineTextWrapsBeforeFinalWord()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-04-highlighted-headline-runs.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+        string[] texts = lines.Select(line => string.Concat(line.Spans.Select(span => span.Text))).ToArray();
+
+        TestAssert.True(
+            texts.Length == 2,
+            $"Expected Office-compatible two-line wrap before the final word. Lines: {string.Join(" | ", texts)}. Widths: {string.Join(" | ", lines.Select(line => (line.EndX - line.StartX).ToString("0.###", CultureInfo.InvariantCulture)))}.");
+        TestAssert.Equal("Public headline uses highlighted terms and normal ", texts[0]);
+        TestAssert.Equal("text", texts[1]);
+    }
+
     public static void PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

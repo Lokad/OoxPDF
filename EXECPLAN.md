@@ -7281,3 +7281,35 @@ The full public `pptx-typography` family now passes 65/77 at
 `artifacts/visual/reports/pptx-typography.json` generated `2026-05-26T14:08:47.3027035+02:00`, retiring
 `pptx-ladder-04-empty-paragraph-gap` from the failure set; the remaining 12 failures are the pre-existing
 typography baseline/highlight/wrap stack items rather than new regressions from this line-spacing change.
+
+Revision note, 2026-05-26: Tightened the public highlighted-headline run stack structurally without hiding
+the remaining font-width problem. Office wraps `pptx-ladder-04-highlighted-headline-runs` before the final
+word even though the renderer's previous measured first line only exceeded the noAutoFit text width by about
+`0.5 pt`; the broad noAutoFit/final-short-word wrap tolerance was therefore too permissive outside the
+Office-observed `spAutoFit` slack path. `BuildTextFrameLayout` now uses a strict coordinate tolerance for
+ordinary noAutoFit wrapping and keeps the special final-short-word tolerance scoped to shape autofit. A public
+unit test locks the Office-observed line contents:
+`Public headline uses highlighted terms and normal ` / `text`.
+
+The same fixture exposed a PDF-structure gap: Office emits highlighted headline text as seven text
+operations split at highlight boundaries and at the leading separator after a highlighted run, while the
+candidate used to coalesce the first line. Positioned PPTX text emission is now highlight-aware, and leading
+spaces at highlight-style boundaries are split into their own positioned span before coalescing. The passing
+artifact `artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260526-142037` has exact decoded
+text-operation parity (`7` reference, `7` candidate, `0` deltas) with X deltas of roughly `-2.5` to `-2.9 pt`
+on the first line and `0.05 pt` on the wrapped final word.
+
+Do not mistake this for pixel-perfect text. The manifest now gates the improved structure while retaining the
+observed raster residual (`MAE 1.96`, changed16 `0.0184`) as an explicit limitation. The persistent uniform
+first-line X delta means the centered line is still measured about `5.4 pt` too wide, likely because the
+current Cambria Math presentation text advance/profile does not yet match Office's export path. The next
+long-term typography step is to derive Office's resolved presentation font/advance rule for Cambria Math and
+similar collection/math faces from public PDF text evidence, not to add a case-specific centering offset.
+
+Validation: focused non-slow `pptx-typography` tests passed (`73 passed, 0 failed, 2 skipped`). Targeted
+`CheckVisualCase.ps1` passed for `pptx-ladder-04-highlighted-headline-runs` at
+`artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260526-142037`. The full public
+`pptx-typography` family remained at 65/77 with 12 known failures in
+`artifacts/visual/reports/pptx-typography.json` generated `2026-05-26T14:25:44+02:00`; the highlighted
+headline case is no longer in the failure set, and no new family failure was introduced by the stricter
+noAutoFit wrap boundary.
