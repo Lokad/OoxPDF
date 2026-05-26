@@ -160,6 +160,7 @@ internal sealed partial class PptxRenderer
     private sealed record PptxPositionedTextSpan(
         PptxTextRunModel? SourceRun,
         PptxTextLineBoxLayout? LineBox,
+        TextAlignment SourceAlignment,
         TextRun Run,
         double EndX,
         IReadOnlyList<PptxTextAtomLayout> Atoms,

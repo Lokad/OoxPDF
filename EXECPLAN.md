@@ -7313,3 +7313,27 @@ Validation: focused non-slow `pptx-typography` tests passed (`73 passed, 0 faile
 `artifacts/visual/reports/pptx-typography.json` generated `2026-05-26T14:25:44+02:00`; the highlighted
 headline case is no longer in the failure set, and no new family failure was introduced by the stricter
 noAutoFit wrap boundary.
+
+Revision note, 2026-05-26: Narrowed the highlighted-text structural rule after the locked
+`pptx-ladder-04-typography-boundary-invariance-probe` exposed an over-broad coalescing split.
+Office does not preserve highlight boundaries as independent PDF text operations in every context: the
+left-aligned Arial boundary-invariance probe exports one decoded text operation per visual line even when a
+line crosses highlight run boundaries, while centered Cambria Math highlight cases and the public highlighted
+headline export split at highlight boundaries and at the following separator. The renderer now carries the
+source line alignment through `PptxPositionedTextSpan` and uses that layout-owned alignment, not the flattened
+absolute `TextRun` coordinates, to decide whether highlight boundaries should block text-operation coalescing.
+This keeps the Office-observed centered highlight split without turning the locked left-aligned run-boundary
+probe into a case-specific exception.
+
+Validation: focused non-slow `pptx-typography` tests passed (`73 passed, 0 failed, 2 skipped`). The targeted
+boundary-invariance visual case passed at
+`artifacts/visual/pptx-ladder-04-typography-boundary-invariance-probe/20260526-143312`, with exact decoded
+text-operation parity (`4` reference, `4` candidate) and line-start parity (`4` reference, `4` candidate).
+The targeted highlighted-headline visual case passed again at
+`artifacts/visual/pptx-ladder-04-highlighted-headline-runs/20260526-143255`, preserving exact decoded
+text-operation parity (`7` reference, `7` candidate). Full `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+-v minimal` passed. The full public `pptx-typography` family now passes 66/77 at
+`artifacts/visual/reports/pptx-typography.json` generated `2026-05-26T14:37:57+02:00`, retiring
+`pptx-ladder-04-typography-boundary-invariance-probe` from the failure set without introducing a new family
+failure. Remaining typography failures are still the baseline/highlight/wrap stack, not this text-operation
+coalescing slice.

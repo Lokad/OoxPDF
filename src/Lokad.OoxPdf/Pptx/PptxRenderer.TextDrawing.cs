@@ -214,6 +214,7 @@ internal sealed partial class PptxRenderer
             if (split.Count == 0 ||
                 leadingSpaceCount == 0 ||
                 leadingSpaceCount >= span.Run.Text.Length ||
+                !PreservesHighlightTextOperationBoundaries(split[^1], span) ||
                 split[^1].Run.HighlightColor.Equals(span.Run.HighlightColor))
             {
                 split.Add(span);
@@ -328,7 +329,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            if (coalesced.Count != 0 && CanCoalesceTextRun(coalesced[^1].Run, run, compareHighlight))
+            if (coalesced.Count != 0 && CanCoalesceTextSpan(coalesced[^1], span, compareHighlight))
             {
                 PptxPositionedTextSpan previous = coalesced[^1];
                 TextRun mergedRun = previous.Run with
@@ -353,7 +354,12 @@ internal sealed partial class PptxRenderer
         return coalesced;
     }
 
-    private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight = true)
+    private static bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right, bool compareHighlight = true)
+    {
+        return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));
+    }
+
+    private static bool CanCoalesceTextRun(TextRun left, TextRun right, bool compareHighlight = true, bool preserveHighlightBoundary = true)
     {
         return Math.Abs(left.Y - right.Y) < PptxTextMetricRules.CoordinateTolerance &&
             Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
@@ -371,7 +377,7 @@ internal sealed partial class PptxRenderer
             left.Color.Equals(right.Color) &&
             Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
             TextOutlinesEqual(left.Outline, right.Outline) &&
-            (!compareHighlight || left.HighlightColor.Equals(right.HighlightColor)) &&
+            (!compareHighlight || !preserveHighlightBoundary || left.HighlightColor.Equals(right.HighlightColor)) &&
             !left.PreventCoalesce &&
             !right.PreventCoalesce &&
             left.Bold == right.Bold &&
@@ -383,6 +389,11 @@ internal sealed partial class PptxRenderer
             string.Equals(left.FontFamily, right.FontFamily, StringComparison.OrdinalIgnoreCase) &&
             right.X >= left.X &&
             Math.Abs(right.X - (left.X + left.Width)) < PptxTextMetricRules.TextCoalesceGap(left.FontSize);
+    }
+
+    private static bool PreservesHighlightTextOperationBoundaries(PptxPositionedTextSpan left, PptxPositionedTextSpan right)
+    {
+        return left.SourceAlignment != TextAlignment.Left || right.SourceAlignment != TextAlignment.Left;
     }
 
     private static void DrawHighlightRunsWithFonts(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, IReadOnlyDictionary<string, RenderedFont> fonts)

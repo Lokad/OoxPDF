@@ -3350,6 +3350,43 @@ internal static class PptxTests
             $"Expected Office-compatible two-line wrap before the final word. Lines: {string.Join(" | ", texts)}. Widths: {string.Join(" | ", lines.Select(line => (line.EndX - line.StartX).ToString("0.###", CultureInfo.InvariantCulture)))}.");
         TestAssert.Equal("Public headline uses highlighted terms and normal ", texts[0]);
         TestAssert.Equal("text", texts[1]);
+
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        string[] glyphRunTexts = glyphRuns.Select(run => run.Text).ToArray();
+        TestAssert.Equal(7, glyphRunTexts.Length);
+        TestAssert.Equal("Public headline uses ", glyphRunTexts[0]);
+        TestAssert.Equal("highlighted", glyphRunTexts[1]);
+        TestAssert.Equal(" ", glyphRunTexts[2]);
+        TestAssert.Equal("terms and ", glyphRunTexts[3]);
+        TestAssert.Equal("normal", glyphRunTexts[4]);
+        TestAssert.Equal(" ", glyphRunTexts[5]);
+        TestAssert.Equal("text", glyphRunTexts[6]);
+    }
+
+    public static void PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries()
+    {
+        string input = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "tests",
+            "Lokad.OoxPdf.Tests",
+            "Cases",
+            "pptx-ladder-04-typography-boundary-invariance-probe.pptx");
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        IReadOnlyList<PptxTextGlyphRunSnapshot> glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0);
+        string[] glyphRunTexts = glyphRuns.Select(run => run.Text).ToArray();
+
+        TestAssert.Equal(4, glyphRunTexts.Length);
+        TestAssert.Equal("The scale and growth", glyphRunTexts[0]);
+        TestAssert.Equal("The scale and growth", glyphRunTexts[1]);
+        TestAssert.Equal("Large Global Supply", glyphRunTexts[2]);
+        TestAssert.True(
+            glyphRunTexts[3].StartsWith("D", StringComparison.Ordinal) &&
+            glyphRunTexts[3].Contains("pendance", StringComparison.Ordinal) &&
+            glyphRunTexts[3].EndsWith("e", StringComparison.Ordinal),
+            $"Expected the accented left-aligned line to remain one glyph run, got '{glyphRunTexts[3]}'.");
     }
 
     public static void PptxSyntheticCenteredLogoBoxWrapsDefaultTypefaceText()

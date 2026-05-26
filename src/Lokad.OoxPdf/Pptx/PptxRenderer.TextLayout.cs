@@ -634,7 +634,7 @@ internal sealed partial class PptxRenderer
         return layout.Frames
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
-            .SelectMany(line => line.Spans.Select(span => new PptxPositionedTextSpan(span.SourceRun, line.Box, span.Run, span.EndX, span.Atoms, span.GlyphSpan)))
+            .SelectMany(line => line.Spans.Select(span => new PptxPositionedTextSpan(span.SourceRun, line.Box, line.Alignment, span.Run, span.EndX, span.Atoms, span.GlyphSpan)))
             .ToArray();
     }
 
