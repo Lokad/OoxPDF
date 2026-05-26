@@ -7789,6 +7789,20 @@ replace any existing slide, object, text, picture, or chart clip emission.
 
 Validation: focused `WritesOpenEvenOddClippingOperators` passed.
 
+Revision note, 2026-05-26: Extended private-safe PPTX inventory to classify picture recolors by DrawingML
+recolor kind and image content type. `tools/InventoryPptxSlides.ps1` now reports `PictureRecolors`,
+`PictureRecolorKinds`, and `PictureRecolorProfiles` for slide, layout, and master parts, resolving image
+relationship content types without recording private filenames, text, or image content.
+
+Private-safe run `artifacts/private-visual/lokad-value-based/inventory/20260526-230559.json` reports
+`SlidesWithPictureRecolor=3` and `TotalSlidePictureRecolors=3`. The aggregate recolor profiles are
+`duotone|image/jpeg=1`, `duotone|image/png=1`, and `lum|image/png=1`, which explains why the persistent
+private diagnostic is specifically JPEG-bound while PNG recolors remain supported. The long-term fix should
+therefore be a dependency-free JPEG recolor strategy or a PDF-level color-transform strategy, not a
+slide-specific suppression of `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+
+Validation: `pwsh tools/InventoryPptxSlides.ps1 -Case private-cases/lokad-value-based.json` succeeded.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The

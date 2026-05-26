@@ -115,6 +115,50 @@ function Get-Relationships([System.IO.Compression.ZipArchive] $Zip, [string] $Pa
     return $relationships
 }
 
+function Get-ContentTypeMap([System.IO.Compression.ZipArchive] $Zip) {
+    $contentTypes = Read-ZipXml $Zip "/[Content_Types].xml"
+    $defaults = @{}
+    $overrides = @{}
+    if ($contentTypes -eq $null) {
+        return [pscustomobject]@{
+            Defaults = $defaults
+            Overrides = $overrides
+        }
+    }
+
+    foreach ($default in $contentTypes.Types.Default) {
+        $extension = [string]$default.Extension
+        if (-not [string]::IsNullOrWhiteSpace($extension)) {
+            $defaults[$extension.ToLowerInvariant()] = [string]$default.ContentType
+        }
+    }
+
+    foreach ($override in $contentTypes.Types.Override) {
+        $partName = [string]$override.PartName
+        if (-not [string]::IsNullOrWhiteSpace($partName)) {
+            $overrides[$partName] = [string]$override.ContentType
+        }
+    }
+
+    return [pscustomobject]@{
+        Defaults = $defaults
+        Overrides = $overrides
+    }
+}
+
+function Get-PartContentType($ContentTypes, [string] $PartName) {
+    if ($ContentTypes.Overrides.ContainsKey($PartName)) {
+        return $ContentTypes.Overrides[$PartName]
+    }
+
+    $extension = [System.IO.Path]::GetExtension($PartName).TrimStart(".").ToLowerInvariant()
+    if ($ContentTypes.Defaults.ContainsKey($extension)) {
+        return $ContentTypes.Defaults[$extension]
+    }
+
+    return "(unknown)"
+}
+
 function Count-XPath([xml] $Xml, [string] $XPath) {
     if ($Xml -eq $null) {
         return 0
@@ -144,6 +188,19 @@ function Get-AttributeHistogram([xml] $Xml, [string] $XPath, [string] $Attribute
         }
 
         $histogram[$value]++
+    }
+
+    return [pscustomobject]$histogram
+}
+
+function Get-ElementNameHistogram([xml] $Xml, [string] $XPath) {
+    $histogram = [ordered]@{}
+    if ($Xml -eq $null) {
+        return [pscustomobject]$histogram
+    }
+
+    foreach ($node in $Xml.SelectNodes($XPath)) {
+        Add-HistogramValue $histogram $node.LocalName
     }
 
     return [pscustomobject]$histogram
@@ -199,7 +256,58 @@ function Get-PresetShapeProfiles([xml] $Xml) {
     return [pscustomobject]$profiles
 }
 
-function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $PartName) {
+function Get-BlipRecolorKind($Blip) {
+    if ($Blip -eq $null) {
+        return "none"
+    }
+
+    if ($Blip.SelectSingleNode("*[local-name()='grayscl']") -ne $null) {
+        return "grayscl"
+    }
+
+    if ($Blip.SelectSingleNode("*[local-name()='biLevel']") -ne $null) {
+        return "biLevel"
+    }
+
+    if ($Blip.SelectSingleNode("*[local-name()='lum']") -ne $null) {
+        return "lum"
+    }
+
+    if ($Blip.SelectSingleNode("*[local-name()='duotone']") -ne $null) {
+        return "duotone"
+    }
+
+    return "none"
+}
+
+function Get-PictureRecolorProfiles([xml] $Xml, $Relationships, $ContentTypes) {
+    $profiles = [ordered]@{}
+    if ($Xml -eq $null) {
+        return [pscustomobject]$profiles
+    }
+
+    foreach ($blip in $Xml.SelectNodes("//*[local-name()='blip']")) {
+        $kind = Get-BlipRecolorKind $blip
+        if ($kind -eq "none") {
+            continue
+        }
+
+        $relationshipId = [string]$blip.GetAttribute("embed", "http://schemas.openxmlformats.org/officeDocument/2006/relationships")
+        $relationship = $Relationships | Where-Object { $_.Id -eq $relationshipId } | Select-Object -First 1
+        $contentType = if ($relationship -ne $null -and $relationship.Type.EndsWith("/image", [System.StringComparison]::OrdinalIgnoreCase)) {
+            Get-PartContentType $ContentTypes $relationship.ResolvedTarget
+        }
+        else {
+            "(unresolved)"
+        }
+
+        Add-HistogramValue $profiles "$kind|$contentType"
+    }
+
+    return [pscustomobject]$profiles
+}
+
+function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $PartName, $Relationships, $ContentTypes) {
     $xml = Read-ZipXml $Zip $PartName
     if ($xml -eq $null) {
         return $null
@@ -223,6 +331,9 @@ function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $Pa
         GradientFills = Count-XPath $xml "//*[local-name()='gradFill']"
         PatternFills = Count-XPath $xml "//*[local-name()='pattFill']"
         PictureFills = Count-XPath $xml "//*[local-name()='blipFill']"
+        PictureRecolors = Count-XPath $xml "//*[local-name()='blip']/*[local-name()='grayscl' or local-name()='biLevel' or local-name()='lum' or local-name()='duotone']"
+        PictureRecolorKinds = Get-ElementNameHistogram $xml "//*[local-name()='blip']/*[local-name()='grayscl' or local-name()='biLevel' or local-name()='lum' or local-name()='duotone']"
+        PictureRecolorProfiles = Get-PictureRecolorProfiles $xml $Relationships $ContentTypes
         Transparency = Count-XPath $xml "//*[local-name()='alpha']"
         Effects = Count-XPath $xml "//*[local-name()='effectLst' or local-name()='effectDag']"
         Clips = Count-XPath $xml "//*[local-name()='srcRect']"
@@ -342,6 +453,7 @@ New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 
 $zip = [System.IO.Compression.ZipFile]::OpenRead($inputFull)
 try {
+    $contentTypes = Get-ContentTypeMap $zip
     $presentationPart = "/ppt/presentation.xml"
     $presentation = Read-ZipXml $zip $presentationPart
     if ($presentation -eq $null) {
@@ -366,9 +478,10 @@ try {
         $masterRel = $layoutRels | Where-Object { $_.Type.EndsWith("/slideMaster", [System.StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
         $masterPart = if ($masterRel -ne $null) { $masterRel.ResolvedTarget } else { $null }
 
-        $slideInventory = Get-PartInventory $zip $slidePart
-        $layoutInventory = if ($layoutPart -ne $null) { Get-PartInventory $zip $layoutPart } else { $null }
-        $masterInventory = if ($masterPart -ne $null) { Get-PartInventory $zip $masterPart } else { $null }
+        $slideInventory = Get-PartInventory $zip $slidePart $slideRels $contentTypes
+        $layoutInventory = if ($layoutPart -ne $null) { Get-PartInventory $zip $layoutPart $layoutRels $contentTypes } else { $null }
+        $masterRels = if ($masterPart -ne $null) { @(Get-Relationships $zip $masterPart) } else { @() }
+        $masterInventory = if ($masterPart -ne $null) { Get-PartInventory $zip $masterPart $masterRels $contentTypes } else { $null }
 
         $slides += [pscustomobject]@{
             SlideNumber = $slideIndex
@@ -395,9 +508,11 @@ try {
         SlidesWithGroups = @($slides | Where-Object { $_.SlideContent.GroupShapes -gt 0 }).Count
         SlidesWithEffects = @($slides | Where-Object { $_.SlideContent.Effects -gt 0 -or $_.Layout.Effects -gt 0 -or $_.Master.Effects -gt 0 }).Count
         SlidesWithTransparency = @($slides | Where-Object { $_.SlideContent.Transparency -gt 0 -or $_.Layout.Transparency -gt 0 -or $_.Master.Transparency -gt 0 }).Count
+        SlidesWithPictureRecolor = @($slides | Where-Object { $_.SlideContent.PictureRecolors -gt 0 -or $_.Layout.PictureRecolors -gt 0 -or $_.Master.PictureRecolors -gt 0 }).Count
         SlidesWithInheritedContent = @($slides | Where-Object { ($_.Layout.Shapes + $_.Layout.Pictures + $_.Master.Shapes + $_.Master.Pictures) -gt 0 }).Count
         TotalSlideShapes = ($slides | ForEach-Object { $_.SlideContent.Shapes } | Measure-Object -Sum).Sum
         TotalSlidePictures = ($slides | ForEach-Object { $_.SlideContent.Pictures } | Measure-Object -Sum).Sum
+        TotalSlidePictureRecolors = ($slides | ForEach-Object { $_.SlideContent.PictureRecolors } | Measure-Object -Sum).Sum
         TotalSlideTables = ($slides | ForEach-Object { $_.SlideContent.Tables } | Measure-Object -Sum).Sum
         TotalSlideCharts = ($slides | ForEach-Object { $_.SlideContent.Charts } | Measure-Object -Sum).Sum
     }
