@@ -658,6 +658,11 @@ High-priority actions:
   text operations differ by a uniform `0.3 pt` baseline offset plus the second-line secondary `+0.024 pt` `/Tf`
   branch. The manifest now gates decoded text operations, positions, and font sizes while preserving that residual
   for the broader baseline/emission-profile backlog instead of leaving the case as a pure raster threshold failure.
+- [x] Reclassify the simple fontRef centered-text case as structurally locked with an explicit residual:
+  `pptx-ladder-04-fontref-centered-text` resolves the expected decoded text and center position within about
+  `0.1 pt` on X, while retaining a `~0.58 pt` center-anchor baseline residual and Office's secondary
+  `39.984 pt` `/Tf` branch. The manifest now gates decoded text operations and preserves those residuals for the
+  shared center-anchor line-box and emission-profile tracks.
 - [x] Add the first `pptx-renderer`-style cascade lock for shape `fontRef` color precedence:
   explicit run `solidFill` now has a focused unit test proving it overrides the shape-level fallback color.
 - [x] Port `pptx-renderer`'s `a:kern` threshold behavior into PPTX text layout and PDF emission:
