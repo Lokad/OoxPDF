@@ -2227,6 +2227,12 @@ High-priority actions:
   labels, axis titles, and multi-chart documents, while keeping text hashes and geometry public-safe. The goal is
   to make chart text placement a reusable Office-PDF structural surface before replacing more
   `PptxChartMetricRules` constants.
+  - [x] Add polar-chart text semantics to `ClassifyPdfChartText.ps1`: after title and legend detection, pie and
+    doughnut chart labels are now classified as `DataLabelText` rather than `CategoryAxisTickLabel`, because
+    polar charts have no category-axis tick labels in the structural PDF sense. This enabled text gates for
+    `pptx-ladder-11-chart-pie-5-categories-port` (`ChartTitleText`) and
+    `pptx-ladder-11-chart-pie-exploded-port` (`DataLabelText`). Doughnut legend/data-label counts still diverge,
+    so doughnut text remains ungated until legend detection is stronger.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest
@@ -4204,6 +4210,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   reference classifies its upper text as `ChartTitleText` while the candidate classifies the comparable item as
   `DataLabelText`. The manifest now gates the stable tick/legend structures and leaves this title/data-label
   ambiguity as future classifier/model work instead of hiding it behind a broad text gate.
+- Observation: Pie and doughnut labels should not reuse the category-axis text bucket just because their labels
+  sit outside the polar plot box.
+  Evidence: The polar graphics classifier already exposes `PolarPlotBoxCandidate` and `PolarSliceCandidate`
+  structures. After title and legend detection, remaining polar text is data-label text, not axis text. The
+  updated classifier makes the public pie-exploded label gateable as `DataLabelText`; doughnut labels remain
+  open because legend detection still disagrees on some legend entries.
 - Observation: The chart title scene model preserved title text and `txPr` style, but not the sibling title
   structure that will matter for Office-like placement: `c:overlay`, `c:layout/c:manualLayout`, and `c:spPr`.
   Evidence: `PptxSceneChartTitle` had only `Text`, `IsAutoDeleted`, and `TextStyle`; the scene-builder test now
@@ -6885,3 +6897,15 @@ Validation: targeted `pwsh tools/CheckVisualCase.ps1 -Case ...` runs passed for 
 manifests, and the full public `pptx-charts` visual family passed 37/37 with zero failures at
 `artifacts/visual/reports/pptx-charts.json` generated `2026-05-26T11:28:36.9415619+02:00`. No production code changed
 in this slice.
+
+Revision note, 2026-05-26: Strengthened the chart text oracle for polar charts. `ClassifyPdfChartText.ps1` now
+recognizes polar chart structure from `PolarPlotBoxCandidate` or `PolarSliceCandidate` and classifies non-title,
+non-legend polar text as `DataLabelText` rather than generic category-axis text. The public
+`pptx-ladder-11-chart-pie-5-categories-port` manifest now gates `ChartTitleText`, and
+`pptx-ladder-11-chart-pie-exploded-port` now gates its polar data label. Doughnut text remains an explicit gap
+because legend/data-label counts are not yet stable enough to gate without hiding a classifier problem.
+
+Validation: targeted `CheckVisualCase.ps1` runs passed for both updated pie manifests, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-26T11:35:06.6891080+02:00`. Current public chart coverage is 26/37 graphics-gated and 13/37
+text-gated.

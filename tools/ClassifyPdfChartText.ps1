@@ -186,6 +186,20 @@ function Find-RadarSpokeGeometry($structures) {
     return $spoke[0]
 }
 
+function Is-PolarChart($plotBox, $structures) {
+    if ($null -ne $plotBox -and [string]$plotBox.Kind -eq "PolarPlotBoxCandidate") {
+        return $true
+    }
+
+    foreach ($structure in $structures) {
+        if ([string]$structure.Kind -eq "PolarSliceCandidate") {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     if ($null -eq $radarGeometry) {
         return $null
@@ -258,6 +272,10 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     if (-not ($insideX -and $insideY) -and
         (Has-LegendSwatch $op $structures $plotBox)) {
         return "LegendText"
+    }
+
+    if (Is-PolarChart $plotBox $structures) {
+        return "DataLabelText"
     }
 
     if ($insideX -and $insideY) {
