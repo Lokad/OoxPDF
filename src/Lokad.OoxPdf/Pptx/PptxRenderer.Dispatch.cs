@@ -31,8 +31,6 @@ internal sealed partial class PptxRenderer
                             BeginSlideNodeClip(context, graphics);
                             RenderShape(
                                 node,
-                                relationships,
-                                context.Package,
                                 context.Document,
                                 graphics,
                                 context.DiagnosticSink,
@@ -58,8 +56,6 @@ internal sealed partial class PptxRenderer
                     BeginSlideNodeClip(context, graphics);
                     RenderShape(
                         node,
-                        relationships,
-                        context.Package,
                         context.Document,
                         graphics,
                         context.DiagnosticSink,
@@ -162,8 +158,6 @@ internal sealed partial class PptxRenderer
     {
         RenderShape(
             node,
-            relationships,
-            context.Package,
             context.Document,
             graphics,
             context.DiagnosticSink,

@@ -275,13 +275,24 @@ High-priority actions:
   name, content type, and bytes. Normal standalone picture rendering and scene-backed shape picture-fill
   rendering consume those resources directly instead of reopening image parts through `context.Package`.
   Scene inspection exposes only resource presence and content type, not media bytes, so public tests can lock
-  ownership without leaking document content. The remaining package-backed image path is the legacy raw-XML
-  shape picture-fill fallback where no scene picture-fill record is available. The remaining private
-  `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic is therefore a real JPEG/PDF recolor architecture gap, not an
-  image relationship/resource ownership gap. Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists`
+  ownership without leaking document content. A later cleanup removed the legacy raw-XML shape picture-fill
+  package fallback, so scene-backed picture fills now fail as model/resource gaps instead of reopening image
+  parts at draw time. The remaining private `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic is therefore a real
+  JPEG/PDF recolor architecture gap, not an image relationship/resource ownership gap. Validation: focused
+  `PptxSceneBuilderBuildsResolvedNodeLists`
   passed (`1 passed, 0 failed, 0 skipped`); focused non-slow `pptx-images` passed
   (`17 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`259 passed, 0 failed, 7 skipped`); private run `20260527-013804` remained behavior-neutral with 84/84
+  compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Retire renderer-local shape picture-fill package fallback:
+  `PptxRenderer.Shapes` no longer accepts slide relationship maps or the presentation package when resolving
+  shape picture fills. It consumes the scene-owned `PptxSceneShapePictureFill.Resource` only; if the scene did
+  not hydrate the image resource, the renderer emits the existing missing-image diagnostic instead of repairing
+  the model from raw XML and package relationships. This keeps the package/model boundary honest for future
+  picture-fill semantics such as tile, crop/fill modes, recolor, and PDF image reuse. Validation: focused
+  non-slow `pptx-images` passed (`17 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`259 passed, 0 failed, 7 skipped`); private run `20260527-014741` remained behavior-neutral with 84/84
   compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Move PPTX chart embedded workbook package resources into the scene:

@@ -40,8 +40,6 @@ internal sealed partial class PptxRenderer
 
     private static void RenderShape(
         PptxSceneNode shape,
-        IReadOnlyDictionary<string, OoxRelationship>? relationships,
-        OoxPackage? package,
         PptxDocument document,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -59,8 +57,6 @@ internal sealed partial class PptxRenderer
 
         RenderShape(
             shape.Source,
-            relationships,
-            package,
             document,
             graphics,
             diagnosticSink,
@@ -88,8 +84,6 @@ internal sealed partial class PptxRenderer
 
     private static void RenderShape(
         XElement shape,
-        IReadOnlyDictionary<string, OoxRelationship>? relationships,
-        OoxPackage? package,
         PptxDocument document,
         PdfGraphicsBuilder graphics,
         Action<OoxPdfDiagnostic>? diagnosticSink,
@@ -193,8 +187,6 @@ internal sealed partial class PptxRenderer
         }
         bool hasPictureFill = TryReadShapePictureFill(
             shapeProperties,
-            relationships,
-            package,
             diagnosticSink,
             slideIndex,
             images,
@@ -1522,8 +1514,6 @@ internal sealed partial class PptxRenderer
 
     private static bool TryReadShapePictureFill(
         XElement shapeProperties,
-        IReadOnlyDictionary<string, OoxRelationship>? relationships,
-        OoxPackage? package,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         int slideIndex,
         List<PdfImageResource>? images,
@@ -1539,75 +1529,33 @@ internal sealed partial class PptxRenderer
         image = null;
         crop = default;
         fillRect = default;
-        if (relationships is null || package is null || images is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
+        if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
         {
             return false;
         }
 
-        string? relationshipId;
-        string? targetPartName = null;
-        PptxSceneImageResource? imageResource = null;
-        bool useRelationshipFallback = false;
-        if (pictureFillOverride is { } resolvedPictureFill)
-        {
-            relationshipId = resolvedPictureFill.RelationshipId;
-            targetPartName = resolvedPictureFill.TargetPartName;
-            imageResource = resolvedPictureFill.Resource;
-            crop = resolvedPictureFill.Crop;
-            fillRect = resolvedPictureFill.Fill;
-        }
-        else
-        {
-            relationshipId = (string?)shapeProperties
-                .Element(DrawingNamespace + "blipFill")
-                ?.Element(DrawingNamespace + "blip")
-                ?.Attribute(RelationshipsNamespace + "embed");
-            useRelationshipFallback = true;
-            crop = ReadCrop(shapeProperties);
-            fillRect = ReadFillRect(shapeProperties);
-        }
-
-        if (targetPartName is null &&
-            useRelationshipFallback &&
-            relationshipId is not null &&
-            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship) &&
-            !relationship.IsExternal)
-        {
-            targetPartName = relationship.ResolvedTarget;
-        }
-
-        if (targetPartName is null)
-        {
-            return false;
-        }
-
-        if (imageResource is null && useRelationshipFallback)
-        {
-            OoxPart? imagePart = package.GetPart(targetPartName);
-            imageResource = imagePart is null
-                ? null
-                : new PptxSceneImageResource(imagePart.Name, imagePart.ContentType, imagePart.Bytes);
-        }
-
-        if (imageResource is null)
+        ShapePictureFill resolvedPictureFill = pictureFillOverride.Value;
+        if (resolvedPictureFill.Resource is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_PART",
                 OoxPdfSeverity.Error,
                 "Referenced image part was missing and the image was ignored.",
-                targetPartName,
+                resolvedPictureFill.TargetPartName,
                 SlideIndex: slideIndex,
                 Feature: "image",
                 Fallback: "Ignored"));
             return false;
         }
 
-        image = GetOrCreateImage(imageResource, ImageRecolor.None, imageCache, diagnosticSink, slideIndex);
+        image = GetOrCreateImage(resolvedPictureFill.Resource, ImageRecolor.None, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return false;
         }
 
+        crop = resolvedPictureFill.Crop;
+        fillRect = resolvedPictureFill.Fill;
         name = "Im" + imageIndex++;
         return true;
     }
