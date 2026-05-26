@@ -26,6 +26,7 @@ keep diagnostics honest when a feature is still missing.
 - `tools/RenderReference.ps1`: Office COM reference renderer.
 - `tools/RasterizePdf.ps1`: PDFium rasterization wrapper.
 - `tools/InspectPdf.ps1`: Office/candidate PDF object and stream inspection wrapper.
+- `tools/SummarizeChartStructureDeltas.ps1`: public chart structural-delta sweep over latest visual runs.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -2220,9 +2221,19 @@ High-priority actions:
     classifiers already expose comparable Office/candidate structure: line markers, line stacked, and line
     trend. The gates cover plot/axis/gridline structures and chart tick/legend text while deliberately leaving
     marker buckets and the trendline title/data-label ambiguity ungated.
-  - [ ] Continue the remaining 11 ungated chart cases: area 2-series, area stacked, bar stacked, bubble, column
-    stacked, scatter clusters, scatter smooth, compact stacked secondary axis, composite two charts, dashboard
-    table/chart, and secondary-axis overlay.
+  - [x] Add a repeatable public-safe chart structural-delta summarizer so the remaining ungated cases can be
+    ranked by Office/candidate PDF structure rather than by ad hoc visual impressions. `tools/SummarizeChartStructureDeltas.ps1`
+    scans the latest public `pptx-ladder-11-*` visual runs, optionally filters to cases without chart
+    structural gates, generates PDF inspection/classifier probes when needed, and reports per-kind
+    reference/candidate counts plus max geometry deltas without exposing document text.
+  - [ ] Continue the remaining 9 ungated chart cases: area 2-series, area stacked, bar stacked, column stacked,
+    scatter clusters, scatter smooth, compact stacked secondary axis, composite two charts, and secondary-axis
+    overlay. The current sweep shows these are mostly real layout/model gaps, not missing manifest entries:
+    area/stacked/column/bar families have plot-box/tick deltas around `8..32 pt`; scatter cases are missing
+    chart text, gridline/plot-clip buckets, and stroke-marker structure; compact secondary-axis classification
+    is not yet reliable because candidate marker/legend false positives dominate; composite two-charts needs a
+    multi-chart-aware classifier before isolated text/axis buckets are safe to gate; secondary-axis overlay has
+    smaller `3..4.5 pt` deltas but still has marker/legend false positives.
 - [ ] 2026-05-26: Strengthen chart text gates beyond the current 8 cases. Prioritize legend entries, data
   labels, axis titles, and multi-chart documents, while keeping text hashes and geometry public-safe. The goal is
   to make chart text placement a reusable Office-PDF structural surface before replacing more
@@ -6949,3 +6960,18 @@ Validation: targeted `CheckVisualCase.ps1` passed for `pptx-ladder-11-chart-bubb
 `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated during the 2026-05-26 11:52 local run. Current public chart coverage is 28/37 graphics-gated and 16/37
 text-gated; 9 chart cases still have neither chart graphics nor chart text structural gates.
+
+Revision note, 2026-05-26: Added a public-safe chart structural-delta summarizer to keep the remaining oracle
+work systematic. `tools/SummarizeChartStructureDeltas.ps1` walks the latest public `pptx-ladder-11-*` visual
+runs, can restrict output to cases without chart structural gates, generates PDF inspection plus chart
+graphics/text classifier probes when needed, and reports only structural kind counts and max geometry deltas.
+This preserves the exact gap inventory before changing chart layout code: area, stacked area, stacked bar, and
+stacked column cases still show plot-box/tick deltas around `8..32 pt`; scatter cases are missing chart text,
+gridline/plot-clip, legend-swatch, and stroke-marker structure; compact secondary-axis classification is
+polluted by candidate marker/legend false positives; the composite two-chart case needs multi-chart-aware
+classification before isolated buckets are safe to gate; and secondary-axis overlay remains close but not yet
+structurally locked because marker/legend false positives still appear.
+
+Validation: `pwsh tools/SummarizeChartStructureDeltas.ps1 -UngatedOnly` generated the public probes for the
+remaining ungated cases, and `pwsh tools/SummarizeChartStructureDeltas.ps1 -UngatedOnly -SkipProbe` replayed the
+summaries without regenerating them. This is a tooling-only slice; no production renderer behavior changed.
