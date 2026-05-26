@@ -7842,6 +7842,13 @@ emission.
 Validation: `tools/SummarizePdfGraphicsOperations.ps1` succeeded on private-safe reference and candidate
 page-17 inspected graphics JSON for clip `W*` operations.
 
+Public evidence note, 2026-05-26: Ran `visual-cases/cases/pptx-images/case.json` as a small Office-backed
+clip-shape probe. Run `artifacts/visual/pptx-images/20260526-231341` is pixel-perfect (`MAE=0`,
+`changed16=0`, `SSIM=1`). Inspected reference and candidate PDFs both summarize to two page-1 `W*` clip
+buckets: one closed slide-sized bucket and one closed picture-sized bucket, both with `SegmentCount=4` and
+`CloseCount=1`. This public case supports keeping normal slide and picture clips on the existing closed
+rectangle path; the private open slide-sized clips need a more specific owner than "all image/page clips."
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The
