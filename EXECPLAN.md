@@ -7759,6 +7759,22 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
+structure instead of treating every table reference as a single column or whole-table shortcut.
+`SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps
+single-column identity empty for multi-column spans, and preserves `TableFirstColumn*` and
+`TableLastColumn*` provenance on every range cell. The structured-reference parser now treats bracketed
+colon separators as span separators, so it no longer folds a legitimate table span into an unresolvable
+column-name string.
+
+This remains a range-source parser, not a full Excel formula engine. Multi-area unions, arbitrary formula
+evaluation, filter visibility, table calculated-column formulas, workbook style/date formatting, and
+source-cache freshness policy still need Office-PDF evidence before they affect rendered chart text or
+geometry. The closed gap is narrower but important for the long-term architecture: chart workbook hydration
+can now carry rectangular table source provenance without renderer-local heuristics.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved table filter structure in embedded chart workbook metadata.
 `ChartWorkbookTable` still exposes the compatibility `FilterColumnIds`, but now also carries typed
 `FilterColumns` with column id, button flags, filter kind, explicit filter values, dynamic/top10 metadata, and

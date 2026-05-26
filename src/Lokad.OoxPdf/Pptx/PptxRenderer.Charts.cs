@@ -2325,7 +2325,14 @@ internal sealed partial class PptxRenderer
             }
 
             string body = trimmed[(open + 1)..^1];
-            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals, out bool wholeTable))
+            if (!TryParseStructuredReferenceBody(
+                body,
+                out string? firstColumnName,
+                out string? lastColumnName,
+                out bool includeHeader,
+                out bool onlyHeader,
+                out bool onlyTotals,
+                out bool wholeTable))
             {
                 return trimmed;
             }
@@ -2337,31 +2344,42 @@ internal sealed partial class PptxRenderer
             ChartWorkbookTableColumn lastTableColumn = table.Columns.Count > 0 ? table.Columns[^1] : default;
             if (!wholeTable)
             {
-                if (string.IsNullOrWhiteSpace(columnName))
+                if (string.IsNullOrWhiteSpace(firstColumnName))
                 {
                     return trimmed;
                 }
 
-                int columnOffset = -1;
+                lastColumnName = string.IsNullOrWhiteSpace(lastColumnName) ? firstColumnName : lastColumnName;
+                int firstColumnOffset = -1;
+                int lastColumnOffset = -1;
                 for (int i = 0; i < table.Columns.Count; i++)
                 {
-                    if (string.Equals(table.Columns[i].Name, columnName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(table.Columns[i].Name, firstColumnName, StringComparison.OrdinalIgnoreCase))
                     {
-                        columnOffset = i;
-                        tableColumn = table.Columns[i];
-                        break;
+                        firstColumnOffset = i;
+                    }
+
+                    if (string.Equals(table.Columns[i].Name, lastColumnName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lastColumnOffset = i;
                     }
                 }
 
-                if (columnOffset < 0)
+                if (firstColumnOffset < 0 || lastColumnOffset < 0)
                 {
                     return trimmed;
                 }
 
-                firstColumn = table.FirstColumn + columnOffset;
-                lastColumn = firstColumn;
-                firstTableColumn = tableColumn;
-                lastTableColumn = tableColumn;
+                int minColumnOffset = Math.Min(firstColumnOffset, lastColumnOffset);
+                int maxColumnOffset = Math.Max(firstColumnOffset, lastColumnOffset);
+                firstColumn = table.FirstColumn + minColumnOffset;
+                lastColumn = table.FirstColumn + maxColumnOffset;
+                firstTableColumn = table.Columns[minColumnOffset];
+                lastTableColumn = table.Columns[maxColumnOffset];
+                if (minColumnOffset == maxColumnOffset)
+                {
+                    tableColumn = firstTableColumn;
+                }
             }
 
             int headerRowCount = Math.Max(0, table.HeaderRowCount);
@@ -2386,8 +2404,9 @@ internal sealed partial class PptxRenderer
             }
 
             tableName = table.Name;
-            tableColumnName = wholeTable ? string.Empty : tableColumn.Name;
-            tableColumnId = wholeTable ? null : tableColumn.Id;
+            bool singleColumn = !wholeTable && firstColumn == lastColumn;
+            tableColumnName = singleColumn ? tableColumn.Name : string.Empty;
+            tableColumnId = singleColumn ? tableColumn.Id : null;
             tableFirstColumnName = firstTableColumn.Name;
             tableFirstColumnId = firstTableColumn.Id;
             tableLastColumnName = lastTableColumn.Name;
@@ -2395,9 +2414,17 @@ internal sealed partial class PptxRenderer
             return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(firstColumn, firstRow)}:{ToCellReference(lastColumn, lastRow)}");
         }
 
-        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals, out bool wholeTable)
+        private static bool TryParseStructuredReferenceBody(
+            string body,
+            out string firstColumnName,
+            out string lastColumnName,
+            out bool includeHeader,
+            out bool onlyHeader,
+            out bool onlyTotals,
+            out bool wholeTable)
         {
-            columnName = string.Empty;
+            firstColumnName = string.Empty;
+            lastColumnName = string.Empty;
             includeHeader = false;
             onlyHeader = false;
             onlyTotals = false;
@@ -2416,7 +2443,8 @@ internal sealed partial class PptxRenderer
                     return true;
                 }
 
-                columnName = segment;
+                firstColumnName = segment;
+                lastColumnName = segment;
                 return true;
             }
 
@@ -2427,11 +2455,16 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                columnName = segment;
+                if (string.IsNullOrWhiteSpace(firstColumnName))
+                {
+                    firstColumnName = segment;
+                }
+
+                lastColumnName = segment;
                 wholeTable = false;
             }
 
-            return wholeTable || !string.IsNullOrWhiteSpace(columnName);
+            return wholeTable || !string.IsNullOrWhiteSpace(firstColumnName);
         }
 
         private static bool ApplyStructuredReferenceItem(string segment, ref bool includeHeader, ref bool onlyHeader, ref bool onlyTotals, ref bool wholeTable)
@@ -2473,7 +2506,7 @@ internal sealed partial class PptxRenderer
             int index = 0;
             while (index < body.Length)
             {
-                while (index < body.Length && (char.IsWhiteSpace(body[index]) || body[index] == ','))
+                while (index < body.Length && (char.IsWhiteSpace(body[index]) || body[index] == ',' || body[index] == ':'))
                 {
                     index++;
                 }
