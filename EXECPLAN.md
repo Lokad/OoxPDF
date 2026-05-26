@@ -6937,3 +6937,15 @@ Validation: targeted `CheckVisualCase.ps1` passed for `pptx-ladder-11-dashboard-
 public `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated during the 2026-05-26 11:48 local run. Current public chart coverage is 27/37 graphics-gated and 15/37
 text-gated; 10 chart cases still have neither chart graphics nor chart text structural gates.
+
+Revision note, 2026-05-26: Added a stable structural subset gate to the public bubble chart case. The sweep showed
+that `pptx-ladder-11-chart-bubble-port` has Office/candidate parity for the axis-pair and axis-line structures,
+plus category and value tick labels, while gridline/plot-clip buckets and title/legend text still expose real
+classifier/layout gaps. The manifest therefore gates only `AxisPairPlotBoxCandidate`, `HorizontalLine`,
+`VerticalLine`, `CategoryAxisTickLabel`, and `ValueAxisTickLabel`; it does not gate bubble markers, legend text,
+chart title text, or plot clipping yet.
+
+Validation: targeted `CheckVisualCase.ps1` passed for `pptx-ladder-11-chart-bubble-port`, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated during the 2026-05-26 11:52 local run. Current public chart coverage is 28/37 graphics-gated and 16/37
+text-gated; 9 chart cases still have neither chart graphics nor chart text structural gates.
