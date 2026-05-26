@@ -9742,6 +9742,12 @@ internal static class PptxTests
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:dispBlanksAs val="gap"/><c:plotArea>
                 <c:lineChart><c:ser>
+                  <c:cat><c:strLit>
+                    <c:pt idx="0"><c:v>Alpha</c:v></c:pt>
+                    <c:pt idx="2"><c:v></c:v></c:pt>
+                    <c:pt idx="4"/>
+                    <c:pt idx="5"><c:v>Omega</c:v></c:pt>
+                  </c:strLit></c:cat>
                   <c:val><c:numLit>
                     <c:pt idx="0"><c:v>1.25</c:v></c:pt>
                     <c:pt idx="2"><c:v></c:v></c:pt>
@@ -9759,6 +9765,19 @@ internal static class PptxTests
             """);
 
         PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
+        TestAssert.Equal(2, lineSeries.Categories.Count);
+        TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
+        TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
+        TestAssert.Equal("Alpha", lineSeries.CategoryPoints[0].Text);
+        TestAssert.True(lineSeries.CategoryPoints[0].HasText, "Expected category cache point text presence to be explicit.");
+        TestAssert.Equal(2, lineSeries.CategoryPoints[1].Index);
+        TestAssert.Equal(string.Empty, lineSeries.CategoryPoints[1].Text);
+        TestAssert.True(lineSeries.CategoryPoints[1].HasText, "Expected blank category cache point to preserve its value element.");
+        TestAssert.Equal(4, lineSeries.CategoryPoints[2].Index);
+        TestAssert.Equal(string.Empty, lineSeries.CategoryPoints[2].Text);
+        TestAssert.True(!lineSeries.CategoryPoints[2].HasText, "Expected missing category value element to remain distinguishable from an empty value.");
+        TestAssert.Equal(5, lineSeries.CategoryPoints[3].Index);
+        TestAssert.Equal("Omega", lineSeries.CategoryPoints[3].Text);
         TestAssert.Equal(2, lineSeries.Values.Count);
         TestAssert.Equal(4, lineSeries.ValuePoints.Count);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);

@@ -7784,6 +7784,23 @@ Validation: focused non-slow `pptx-model` passed (`15 passed, 0 failed, 1 skippe
 `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner passed
 (`245 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Closed the adjacent category-cache preservation gap found after numeric point
+ownership. `PptxSceneChartSeries` now keeps `CategoryPoints` with the OOXML point `idx`, category text, and
+an explicit `HasText` flag so an empty `<c:v/>` and a missing `c:v` element do not collapse into the same
+state. The existing flattened `Categories` list remains for current rendering and still contains only
+nonblank labels, so this is behavior-neutral today. The long-term effect is that future `dispBlanksAs`
+implementation can align category and value cache points structurally instead of inferring missing labels
+after the scene parser has already discarded their indices.
+
+This still does not close workbook-derived chart data. Category, value, and bubble vectors hydrated from
+embedded workbook ranges are still collapsed at the workbook-read boundary, and multi-level category levels
+need their own point ownership before Office-perfect category-axis and blank-cell behavior can be modeled
+without heuristics.
+
+Validation: focused non-slow `pptx-model` passed (`15 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`245 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
 shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme

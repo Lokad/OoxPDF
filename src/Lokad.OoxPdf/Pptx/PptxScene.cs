@@ -618,6 +618,7 @@ internal sealed record PptxSceneChartSeries(
     IReadOnlyList<double> Values,
     IReadOnlyList<PptxSceneChartNumberPoint> ValuePoints,
     IReadOnlyList<string> Categories,
+    IReadOnlyList<PptxSceneChartStringPoint> CategoryPoints,
     IReadOnlyList<double> XValues,
     IReadOnlyList<PptxSceneChartNumberPoint> XValuePoints,
     IReadOnlyList<double> YValues,
@@ -637,6 +638,11 @@ internal readonly record struct PptxSceneChartNumberPoint(
     int Index,
     double? Value,
     string Text);
+
+internal readonly record struct PptxSceneChartStringPoint(
+    int Index,
+    string Text,
+    bool HasText);
 
 internal sealed record PptxSceneChartSeriesDataSources(
     PptxSceneChartDataSource Name,
@@ -1909,6 +1915,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesValues(seriesElement),
                 ReadChartSeriesNumberPoints(seriesElement, "val"),
                 ReadChartSeriesCategories(seriesElement),
+                ReadChartSeriesStringPoints(seriesElement, "cat"),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "xVal"),
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
@@ -2196,6 +2203,25 @@ internal sealed class PptxSceneBuilder
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Select(value => value!)
             .ToArray();
+    }
+
+    private static IReadOnlyList<PptxSceneChartStringPoint> ReadChartSeriesStringPoints(XElement series, string elementName)
+    {
+        var points = new List<PptxSceneChartStringPoint>();
+        int ordinal = 0;
+        foreach (XElement point in series
+            .Elements(ChartNamespace + elementName)
+            .Descendants(ChartNamespace + "pt"))
+        {
+            int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
+                ? parsedIndex
+                : ordinal;
+            XElement? valueElement = point.Element(ChartNamespace + "v");
+            points.Add(new PptxSceneChartStringPoint(index, valueElement?.Value ?? string.Empty, valueElement is not null));
+            ordinal++;
+        }
+
+        return points;
     }
 
     private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme)
