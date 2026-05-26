@@ -2210,12 +2210,19 @@ High-priority actions:
   gridline group, and axis lines, plus text gates for 11 category tick labels, 5 value tick labels, and the
   chart title. This preserves the original long-term oracle item as a coverage-expansion track instead of
   duplicating existing tools.
-- [ ] 2026-05-26: Expand chart structural gates to the 14 public chart cases that currently have neither chart
-  graphics nor chart text gates: area 2-series, area stacked, bar stacked, bubble, column stacked, line markers,
-  line stacked, line trend, scatter clusters, scatter smooth, compact stacked secondary axis, composite two
-  charts, dashboard table/chart, and secondary-axis overlay. Add gates only where Office/candidate PDF structure
-  can be compared with the existing classifiers or a clearly justified classifier extension; do not use raster
-  closeness alone as a structural oracle.
+- [ ] 2026-05-26: Expand chart structural gates to the public chart cases that currently have neither chart
+  graphics nor chart text gates. The starting inventory had 14 ungated cases: area 2-series, area stacked, bar
+  stacked, bubble, column stacked, line markers, line stacked, line trend, scatter clusters, scatter smooth,
+  compact stacked secondary axis, composite two charts, dashboard table/chart, and secondary-axis overlay. Add
+  gates only where Office/candidate PDF structure can be compared with the existing classifiers or a clearly
+  justified classifier extension; do not use raster closeness alone as a structural oracle.
+  - [x] Add manifest-driven chart graphics and text gates to the three line-chart cases where the existing
+    classifiers already expose comparable Office/candidate structure: line markers, line stacked, and line
+    trend. The gates cover plot/axis/gridline structures and chart tick/legend text while deliberately leaving
+    marker buckets and the trendline title/data-label ambiguity ungated.
+  - [ ] Continue the remaining 11 ungated chart cases: area 2-series, area stacked, bar stacked, bubble, column
+    stacked, scatter clusters, scatter smooth, compact stacked secondary axis, composite two charts, dashboard
+    table/chart, and secondary-axis overlay.
 - [ ] 2026-05-26: Strengthen chart text gates beyond the current 8 cases. Prioritize legend entries, data
   labels, axis titles, and multi-chart documents, while keeping text hashes and geometry public-safe. The goal is
   to make chart text placement a reusable Office-PDF structural surface before replacing more
@@ -4191,6 +4198,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The current chart text classifier is strong enough for tick labels and legend entries in several
+  line-chart cases, but not yet robust enough to distinguish every title-like text placement from data labels.
+  Evidence: `pptx-ladder-11-chart-line-trend-port` has tight category/value/legend text parity, yet the
+  reference classifies its upper text as `ChartTitleText` while the candidate classifies the comparable item as
+  `DataLabelText`. The manifest now gates the stable tick/legend structures and leaves this title/data-label
+  ambiguity as future classifier/model work instead of hiding it behind a broad text gate.
 - Observation: The chart title scene model preserved title text and `txPr` style, but not the sibling title
   structure that will matter for Office-like placement: `c:overlay`, `c:layout/c:manualLayout`, and `c:spPr`.
   Evidence: `PptxSceneChartTitle` had only `Text`, `IsAutoDeleted`, and `TextStyle`; the scene-builder test now
@@ -6857,3 +6870,18 @@ Office `seg=250,line=244,curve=4`, so the long-term connector item remains open.
 `artifacts/private-visual/lokad-value-based/20260526-105035` stayed stable with 84/84 compared pages, zero dimension
 mismatches, deck MAE `8.942959`, mean changed16 `0.115525`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; private
 page 17 stayed at MAE `2.860480`, changed16 `0.044525`, changed32 `0.035023`, SSIM `0.920379`.
+
+Revision note, 2026-05-26: Expanded public chart structural gates without changing renderer behavior. The
+starting chart-oracle inventory had 37 public `pptx-ladder-11-*` chart cases, 23 graphics-gated cases, 8 text-gated
+cases, and 14 cases with neither chart graphics nor chart text gates. The three line-chart cases
+`pptx-ladder-11-chart-line-markers-port`, `pptx-ladder-11-chart-line-stacked-port`, and
+`pptx-ladder-11-chart-line-trend-port` now opt into manifest-driven chart graphics gates for the plot/axis/gridline
+structures the existing classifiers can compare, and into chart text gates for category tick labels, value tick
+labels, and legend text. Marker buckets remain ungated where Office/candidate counts still differ, and the
+line-trend title/data-label classifier ambiguity is recorded as a future model/classifier gap rather than hidden by
+a broad tolerance.
+
+Validation: targeted `pwsh tools/CheckVisualCase.ps1 -Case ...` runs passed for the three updated line-chart
+manifests, and the full public `pptx-charts` visual family passed 37/37 with zero failures at
+`artifacts/visual/reports/pptx-charts.json` generated `2026-05-26T11:28:36.9415619+02:00`. No production code changed
+in this slice.
