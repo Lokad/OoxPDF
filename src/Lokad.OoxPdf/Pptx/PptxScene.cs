@@ -431,7 +431,8 @@ internal readonly record struct PptxSceneChartColorStyle(
     string? PartName,
     string Method,
     string Id,
-    IReadOnlyList<RgbColor> Colors);
+    IReadOnlyList<RgbColor> Colors,
+    XDocument? ColorStyleXml);
 
 internal sealed record PptxSceneChartStyle(
     bool IsDefined,
@@ -1696,7 +1697,7 @@ internal sealed class PptxSceneBuilder
             ? default
             : ReadChartExternalData(package, chartPart.Name, chartXml);
         PptxSceneChartColorStyle colorStyle = chartPart is null
-            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [])
+            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], null)
             : ReadChartColorStyle(package, chartPart.Name, theme);
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null)
@@ -2704,13 +2705,13 @@ internal sealed class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (colorRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, []);
+            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], null);
         }
 
         OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
         if (colorPart is null)
         {
-            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, []);
+            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], null);
         }
 
         XDocument document = LoadXml(colorPart);
@@ -2729,7 +2730,8 @@ internal sealed class PptxSceneBuilder
             colorPart.Name,
             (string?)document.Root?.Attribute("meth") ?? string.Empty,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
-            colors);
+            colors,
+            document);
     }
 
     private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName)

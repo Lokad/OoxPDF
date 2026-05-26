@@ -7789,6 +7789,19 @@ longer truncate effect metadata at the scene boundary while normal shapes preser
 Validation: focused `pptx-model` passed with slow tests included (`18 passed, 0 failed, 0 skipped`);
 focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved chart color-style XML in the scene model. `PptxSceneChartColorStyle`
+still exposes the resolved RGB palette used by current rendering, but it now also carries the loaded
+color-style part as `ColorStyleXml`, mirroring the existing chart-style-part ownership. The slow scene fixture
+locks this raw color-style ownership next to `meth`, `id`, part name, and the compatibility palette.
+
+This does not implement Office chart-style default resolution. Color-style variation semantics, `phClr`
+replacement, alpha/color transforms, chart-style `fillRef`/`lnRef`/`effectRef`, and inherited defaults remain
+open. The point is to keep the full source part available for the future resolver so that renderer code does
+not have to rediscover package relationships or rely on the already-flattened palette.
+
+Validation: focused `pptx-model` passed with slow tests included (`18 passed, 0 failed, 0 skipped`);
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+
 Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
 structure instead of treating every table reference as a single column or whole-table shortcut.
 `SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps

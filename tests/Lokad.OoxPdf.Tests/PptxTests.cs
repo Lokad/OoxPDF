@@ -386,6 +386,8 @@ internal static class PptxTests
         TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.ColorStyle.Id ?? string.Empty);
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ColorStyle.Colors[0] ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml is not null, "Expected chart color-style XML ownership in the scene model.");
+        TestAssert.Equal("10", (string?)slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml?.Root?.Attribute("id") ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
