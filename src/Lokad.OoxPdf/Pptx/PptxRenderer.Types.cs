@@ -770,6 +770,14 @@ internal sealed partial class PptxRenderer
         }
     }
 
+    private static class PptxPdfTextEmissionProfile
+    {
+        public static double FontSize(double layoutFontSize)
+        {
+            return layoutFontSize;
+        }
+    }
+
     private static class PptxChartMetricRules
     {
         public const double TitleFallbackFontSize = 12d;

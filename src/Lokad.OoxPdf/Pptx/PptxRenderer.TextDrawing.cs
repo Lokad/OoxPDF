@@ -882,11 +882,12 @@ internal sealed partial class PptxRenderer
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
     {
         TextRun run = glyphRun.Source;
+        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
         if (glyphRun.PositioningArray is null)
         {
             graphics.DrawGlyphText(
                 glyphRun.ResourceName,
-                run.FontSize,
+                pdfFontSize,
                 glyphRun.X,
                 glyphRun.BaselineY,
                 run.Color.Red,
@@ -904,7 +905,7 @@ internal sealed partial class PptxRenderer
         {
             graphics.DrawGlyphPositionedText(
                 glyphRun.ResourceName,
-                run.FontSize,
+                pdfFontSize,
                 glyphRun.X,
                 glyphRun.BaselineY,
                 run.Color.Red,

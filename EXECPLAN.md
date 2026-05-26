@@ -284,8 +284,22 @@ High-priority actions:
   after the page/background clipping pass, private page 17 is down to one missing high-level `W*` clip and still
   differs on derived/fractional font sizes: Office reports `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while
   candidate reports `9,10,12,13,14,16,18`. The fractional-font public guard covers explicit `a:rPr sz`, so the
-  remaining work should investigate theme/body style, placeholder inheritance, and autoscale-derived sizes rather
-  than another narrow page-specific patch.
+  remaining work must split two independent issues instead of applying another narrow page-specific patch:
+  the source slide has whole-point `a:rPr/@sz` values and no `normAutofit`, while Office's PDF export applies a
+  repeatable text-emission quantization before writing `/Tf`; a separate graphics-structure gap still accounts
+  for the missing even-odd clip.
+- [ ] Model the Office PPTX-to-PDF text font-size emission profile explicitly:
+  ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
+  outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,
+  `19->18.96`, `20->20.04`, while `6`, `9`, `12`, `18`, and `30` remain exact). Do not hide this behind
+  per-size lookups. Add a public Office-backed fixture/structural PDF test once the conversion formula is
+  identified, then route PPTX text emission through a named Office PDF text-profile layer so layout-owned
+  font sizes stay OOXML-exact and only PDF emission adopts Office's exported `/Tf` quantization.
+- [x] Introduce the PPTX PDF text-emission profile boundary:
+  `PptxPdfTextEmissionProfile.FontSize` is now the single boundary between layout-owned OOXML font sizes and
+  the `/Tf` operand emitted to PDF. It is intentionally identity until the Office quantization formula is
+  proven by public fixtures, but it prevents the eventual fix from contaminating cascade, line layout, glyph
+  measurement, underline, highlight, or strike geometry.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
