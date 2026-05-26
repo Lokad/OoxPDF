@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-small-centered-highlight-box.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "highlight", "anchor", "insets"],
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "anchor", "insets", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

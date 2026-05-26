@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-tab-stop.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "tabs"],
+  "tags": ["pptx", "ladder", "styled-text", "tabs", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

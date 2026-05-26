@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-square-wrap-mixed-small.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text", "wrap", "small-text", "mixed-runs"],
+  "tags": ["pptx", "ladder", "text", "wrap", "small-text", "mixed-runs", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

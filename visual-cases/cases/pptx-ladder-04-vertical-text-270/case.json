@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-vertical-text-270.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text", "orientation", "vertical-text"],
+  "tags": ["pptx", "ladder", "text", "orientation", "vertical-text", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-character-spacing.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "character-spacing"],
+  "tags": ["pptx", "ladder", "styled-text", "character-spacing", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

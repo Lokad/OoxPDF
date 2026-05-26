@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bullet-wrap.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "bullet-wrap"],
+  "tags": ["pptx", "ladder", "styled-text", "bullet-wrap", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

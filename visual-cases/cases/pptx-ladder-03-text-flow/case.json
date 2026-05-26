@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-03-text-flow.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text-flow"],
+  "tags": ["pptx", "ladder", "text-flow", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

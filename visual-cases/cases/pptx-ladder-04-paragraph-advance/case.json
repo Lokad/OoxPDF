@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-paragraph-advance.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "paragraph-advance"],
+  "tags": ["pptx", "ladder", "styled-text", "paragraph-advance", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

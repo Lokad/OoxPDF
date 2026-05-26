@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-empty-paragraph-gap.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "empty-paragraph"],
+  "tags": ["pptx", "ladder", "styled-text", "empty-paragraph", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

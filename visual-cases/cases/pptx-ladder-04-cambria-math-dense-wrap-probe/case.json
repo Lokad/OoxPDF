@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-cambria-math-dense-wrap-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "wrap", "cambria-math"],
+  "tags": ["pptx", "ladder", "typography", "wrap", "cambria-math", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

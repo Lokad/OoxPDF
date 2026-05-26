@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bullet-size-percent.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "bullet"],
+  "tags": ["pptx", "ladder", "styled-text", "bullet", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

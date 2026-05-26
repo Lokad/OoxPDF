@@ -328,8 +328,14 @@ High-priority actions:
   operation. A public synthetic `PptxTypographyTextEmDashBoundariesRemainSeparateSpans` regression locks the
   generic behavior without using private content. Remaining slide-17 gap: text placement/order comparison is
   still broader than dash segmentation.
-- [ ] Classify typography visual cases as `approximate`, `needs-review`, or `locked`. Only `locked` cases
-  should enforce near-pixel-perfect thresholds; approximate gates should not mask text readability bugs.
+- [x] Classify typography visual cases as `approximate`, `needs-review`, or `locked`:
+  every public `pptx-ladder-02-*`, `pptx-ladder-03-*`, and `pptx-ladder-04-*` visual manifest now carries
+  one explicit evidence-status tag. Existing `locked` and `locked-text-ops` cases remain the only cases
+  claiming structural text-operation lock; focused non-perfect cases are tagged `approximate`; broad ports,
+  loose probes, weak rating gates, and known large-drift typography cases are tagged `needs-review`.
+  `CheckVisualFamily.ps1` now surfaces the classification in JSON/CSV reports and in the support catalog.
+  Remaining long-term work is to promote `approximate` or `needs-review` cases only after public Office-PDF
+  evidence justifies tighter structural gates.
 - [x] Lock the first exact typography cases with PDF text-operation gates:
   `pptx-ladder-04-all-caps`, `pptx-ladder-04-field-text`,
   `pptx-ladder-04-nonbreaking-space`, `pptx-ladder-04-soft-hyphen`, and

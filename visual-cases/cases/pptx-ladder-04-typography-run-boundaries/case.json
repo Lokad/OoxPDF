@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-run-boundaries.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "run-boundaries", "kerning", "accent"],
+  "tags": ["pptx", "ladder", "typography", "run-boundaries", "kerning", "accent", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

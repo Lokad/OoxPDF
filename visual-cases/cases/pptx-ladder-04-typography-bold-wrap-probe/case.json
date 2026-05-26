@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-bold-wrap-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "bold", "wrap", "probe"],
+  "tags": ["pptx", "ladder", "typography", "bold", "wrap", "probe", "needs-review"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,

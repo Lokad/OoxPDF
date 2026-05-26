@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-alignment-values-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "spacing", "alignment", "probe"],
+  "tags": ["pptx", "ladder", "typography", "spacing", "alignment", "probe", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

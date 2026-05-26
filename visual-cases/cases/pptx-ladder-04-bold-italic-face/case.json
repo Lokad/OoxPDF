@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-bold-italic-face.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "font-face"],
+  "tags": ["pptx", "ladder", "styled-text", "font-face", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

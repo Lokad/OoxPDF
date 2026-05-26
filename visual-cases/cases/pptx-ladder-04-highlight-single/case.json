@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-highlight-single.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "highlight"],
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

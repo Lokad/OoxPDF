@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-cambria-math-run-boundaries-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "spacing", "cambria", "run-boundaries", "highlight", "probe"],
+  "tags": ["pptx", "ladder", "typography", "spacing", "cambria", "run-boundaries", "highlight", "probe", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

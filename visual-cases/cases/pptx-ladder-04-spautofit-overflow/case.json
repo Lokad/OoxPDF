@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-spautofit-overflow.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text", "autofit", "spautofit"],
+  "tags": ["pptx", "ladder", "text", "autofit", "spautofit", "needs-review"],
   "expected": {
     "minAgentRating": 2,
     "pageCountMustMatch": true,

@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-typography-dense-column-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "typography", "spacing", "accent", "dense-column", "probe"],
+  "tags": ["pptx", "ladder", "typography", "spacing", "accent", "dense-column", "probe", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

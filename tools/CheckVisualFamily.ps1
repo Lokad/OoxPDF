@@ -99,6 +99,27 @@ function Get-ManifestDouble($object, [string] $name, $defaultValue) {
     return $defaultValue
 }
 
+function Get-CaseClassification($caseManifest) {
+    $tags = @($caseManifest.tags)
+    if ($tags -contains "locked") {
+        return "locked"
+    }
+
+    if ($tags -contains "locked-text-ops") {
+        return "locked-text-ops"
+    }
+
+    if ($tags -contains "approximate") {
+        return "approximate"
+    }
+
+    if ($tags -contains "needs-review") {
+        return "needs-review"
+    }
+
+    return "unclassified"
+}
+
 function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
     $caseManifestPath = Join-Path $case.FullName "case.json"
     $caseManifest = Get-Content -Raw -LiteralPath $caseManifestPath | ConvertFrom-Json
@@ -148,6 +169,7 @@ function New-ReportRow($case, [bool] $passed, [string] $errorMessage) {
         id = $caseManifest.id
         family = $Family
         kind = $caseManifest.kind
+        classification = Get-CaseClassification $caseManifest
         passed = $passed
         status = $status
         runPath = if ($latestRun -ne $null) { Convert-ToRepoPath $latestRun.FullName } else { $null }
@@ -252,6 +274,7 @@ if ($UpdateCatalog) {
             id = $row.id
             family = $row.family
             kind = $row.kind
+            classification = $row.classification
             status = $row.status
             lastRunAt = $report.generatedAt
             lastRunPath = $row.runPath

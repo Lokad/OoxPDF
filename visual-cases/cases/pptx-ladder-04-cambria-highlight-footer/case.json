@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-cambria-highlight-footer.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "highlight", "cambria", "footer"],
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "cambria", "footer", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

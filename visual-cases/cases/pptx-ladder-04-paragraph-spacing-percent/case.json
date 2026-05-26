@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-paragraph-spacing-percent.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "paragraph-spacing"],
+  "tags": ["pptx", "ladder", "styled-text", "paragraph-spacing", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

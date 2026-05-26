@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-kerning-accent-highlight.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "kerning", "accent", "highlight"],
+  "tags": ["pptx", "ladder", "styled-text", "kerning", "accent", "highlight", "approximate"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,

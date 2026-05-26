@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-02-plain-text.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "text"],
+  "tags": ["pptx", "ladder", "text", "approximate"],
   "expected": {
     "minAgentRating": 4,
     "pageCountMustMatch": true,

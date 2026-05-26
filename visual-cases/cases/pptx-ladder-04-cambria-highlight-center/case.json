@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-cambria-highlight-center.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "highlight", "cambria", "center"],
+  "tags": ["pptx", "ladder", "styled-text", "highlight", "cambria", "center", "needs-review"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
