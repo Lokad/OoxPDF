@@ -2349,7 +2349,7 @@ internal sealed partial class PptxRenderer
     private static LineSpacing ApplyCompatibleLineSpacing(LineSpacing lineSpacing, bool compatibleLineSpacing)
     {
         return compatibleLineSpacing && !lineSpacing.IsExplicit
-            ? LineSpacing.Multiple(PptxTextMetricRules.OfficeCompatibleDefaultLineSpacingFactor, isExplicit: true)
+            ? LineSpacing.Multiple(PptxTextMetricRules.OfficeCompatibleDefaultLineSpacingFactor, isExplicit: true, useNormalLineAdvance: false)
             : lineSpacing;
     }
 
@@ -2367,7 +2367,7 @@ internal sealed partial class PptxRenderer
 
         double normalAdvance = fontSize * PptxTextMetricRules.CssNormalLineHeightFallback;
         return lineSpacing.IsExplicit
-            ? fontSize * lineSpacing.Value
+            ? (lineSpacing.UseNormalLineAdvance ? normalAdvance : fontSize) * lineSpacing.Value
             : normalAdvance;
     }
 
@@ -2438,7 +2438,7 @@ internal sealed partial class PptxRenderer
         }
 
         return lineSpacing.IsExplicit
-            ? ReadLineAdvance(lineSpacing, fontSize)
+            ? ReadExplicitMultipleBaselineOffset(lineSpacing, fontSize)
             : BaselineOffset(fontSize);
     }
 
@@ -2450,13 +2450,18 @@ internal sealed partial class PptxRenderer
         }
 
         return lineSpacing.IsExplicit
-            ? ReadLineAdvance(lineSpacing, fontSize)
+            ? ReadExplicitMultipleBaselineOffset(lineSpacing, fontSize)
             : BaselineOffset(fontSize, style, advanceEstimator);
     }
 
     private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing)
     {
         return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
+    }
+
+    private static double ReadExplicitMultipleBaselineOffset(LineSpacing lineSpacing, double fontSize)
+    {
+        return BaselineOffset(fontSize) * lineSpacing.Value;
     }
 
     private static double BaselineOffset(double fontSize)

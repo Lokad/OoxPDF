@@ -3688,8 +3688,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 36 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 428.4 Tm", pdf);
-        TestAssert.Contains("1 0 0 1 79.2 392.4 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 429.336 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 386.136 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesShapeFontRefColor()
@@ -3944,7 +3944,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 0 0 1 79.2 446.4 Tm", pdf);
+        TestAssert.Contains("1 0 0 1 79.2 446.868 Tm", pdf);
     }
 
     public static void PptxSyntheticTextBoxHonorsPercentParagraphSpacing()
@@ -4394,8 +4394,8 @@ internal static class PptxTests
             .ToArray();
 
         TestAssert.Equal(2, lines.Count);
-        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 27d) < 0.01d), "Expected normAutofit line spacing reduction to scale explicit percentage line spacing over the font size.");
-        TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 27d) < 0.01d, "Expected reduced line spacing to drive manual-break baseline steps.");
+        TestAssert.True(lines.All(line => Math.Abs(line.Advance - 32.4d) < 0.01d), "Expected normAutofit line spacing reduction to scale explicit percentage line spacing over the normal line box.");
+        TestAssert.True(Math.Abs((lines[0].BaselineY - lines[1].BaselineY) - 32.4d) < 0.01d, "Expected reduced line spacing to drive manual-break baseline steps.");
     }
 
     public static void PptxSyntheticTextBoxInheritsParagraphIndentFromListStyle()

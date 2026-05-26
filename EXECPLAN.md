@@ -7251,3 +7251,33 @@ bold-wrap line-content test. Targeted `CheckVisualCase.ps1` passed for
 `pptx-ladder-04-typography-bold-wrap-probe` at
 `artifacts/visual/pptx-ladder-04-typography-bold-wrap-probe/20260526-134652`, with two matching decoded text
 operations and exact X/font-size/tracking parity.
+
+Revision note, 2026-05-26: Fixed the largest refreshed public typography drift in
+`pptx-ladder-04-empty-paragraph-gap` by separating DrawingML percentage line-spacing advance from the
+first-baseline offset. Office PDF evidence from both the empty-paragraph fixture and the dense-column probe
+shows `a:lnSpc/a:spcPct` stacking lines by `normal line advance * percentage`, not by
+`font size * percentage`; the previous model compressed the title/body stack and made the empty paragraph
+look far too small. `LineSpacing` now records whether a multiple is based on the normal line box, while
+`compatLnSpc` remains on its older font-size-compatible base. Explicit percentage first baselines are now
+scaled from the same Office baseline fallback used elsewhere instead of being treated as a full line
+advance.
+
+This is intentionally not the end of the baseline work. The empty-paragraph text operations now have exact
+decoded text parity and the paragraph gaps are structurally aligned, but a residual Y offset of about
+`1.2 pt` for the 40 pt title lines and `0.78 pt` for the 26 pt body remains. The dense-column probe shows
+the same residual class at about `0.82-0.89 pt` after the advance fix. The long-term item is to replace the
+fallback explicit-percentage baseline ratio with an Office-derived font metric rule, likely tied to the PDF
+baseline emitted for resolved font faces rather than to a global constant. The public gates now preserve the
+improved state without hiding that remaining baseline item.
+
+Validation: focused non-slow `pptx-typography` tests passed (`72 passed, 0 failed, 2 skipped`). The targeted
+empty-paragraph visual comparison at
+`artifacts/visual/pptx-ladder-04-empty-paragraph-gap/20260526-140016` improved from MAE `2.63` and
+changed16 `0.0209` to MAE `0.9812` and changed16 `0.01063`; decoded text operations match, with residual
+position deltas bounded at `1.3 pt`. The dense-column probe at
+`artifacts/visual/pptx-ladder-04-typography-dense-column-probe/20260526-140036` now has decoded text parity
+with all Y deltas under `0.9 pt`, down from cumulative line-stack deltas as high as `8.6 pt`.
+The full public `pptx-typography` family now passes 65/77 at
+`artifacts/visual/reports/pptx-typography.json` generated `2026-05-26T14:08:47.3027035+02:00`, retiring
+`pptx-ladder-04-empty-paragraph-gap` from the failure set; the remaining 12 failures are the pre-existing
+typography baseline/highlight/wrap stack items rather than new regressions from this line-spacing change.
