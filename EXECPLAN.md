@@ -7775,6 +7775,19 @@ can now carry rectangular table source provenance without renderer-local heurist
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Fixed chart workbook sheet-name normalization for quoted formulas that include
+an external workbook prefix. A source like `'[Book.xlsx]Sheet1'!$B$2:$B$4` now unquotes the sheet token before
+removing the `[Book.xlsx]` qualifier, so the embedded workbook bridge resolves it to the local `Sheet1`
+catalog entry instead of looking for a malformed `Sheet1'` name. The workbook regression locks this through
+`ReadRangeCells` while preserving the original source and resolved formulas for provenance.
+
+This is still not external workbook loading or source freshness policy. OOXPDF does not open linked
+workbooks, evaluate external formulas, or decide whether an embedded chart should trust workbook cells over
+chart caches. The closed gap is purely parser ownership: local embedded workbook data can now be read when
+Office leaves an external-workbook-qualified sheet token in a chart formula.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved table filter structure in embedded chart workbook metadata.
 `ChartWorkbookTable` still exposes the compatibility `FilterColumnIds`, but now also carries typed
 `FilterColumns` with column id, button flags, filter kind, explicit filter values, dynamic/top10 metadata, and

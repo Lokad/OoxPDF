@@ -2654,16 +2654,16 @@ internal sealed partial class PptxRenderer
 
         private static string NormalizeSheetName(string sheetName)
         {
-            int workbookEnd = sheetName.LastIndexOf(']');
-            if (workbookEnd >= 0 && workbookEnd < sheetName.Length - 1)
-            {
-                sheetName = sheetName[(workbookEnd + 1)..];
-            }
-
             sheetName = sheetName.Trim();
             if (sheetName.Length >= 2 && sheetName[0] == '\'' && sheetName[^1] == '\'')
             {
                 sheetName = sheetName[1..^1].Replace("''", "'", StringComparison.Ordinal);
+            }
+
+            int workbookEnd = sheetName.LastIndexOf(']');
+            if (workbookEnd >= 0 && workbookEnd < sheetName.Length - 1)
+            {
+                sheetName = sheetName[(workbookEnd + 1)..];
             }
 
             return sheetName;

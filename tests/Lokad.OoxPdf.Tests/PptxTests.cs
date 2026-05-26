@@ -10310,6 +10310,11 @@ internal static class PptxTests
         System.Reflection.PropertyInfo columnHiddenProperty = firstParsedCell.GetType().GetProperty("ColumnHidden") ?? throw new InvalidOperationException("Expected range-cell column-hidden flag.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(firstParsedCell) == false, "Expected visible worksheet row to remain visible in range metadata.");
         TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedCell) == true, "Expected hidden worksheet column to survive workbook parsing.");
+        Array parsedExternalQuotedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["'[Book.xlsx]Sheet1'!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed external-workbook-qualified range cells."));
+        object firstParsedExternalQuotedCell = parsedExternalQuotedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first external-workbook-qualified range cell.");
+        TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
+        TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
+        TestAssert.Equal("'[Book.xlsx]Sheet1'!$B$2:$B$4", (string?)firstParsedExternalQuotedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedExternalQuotedCell) ?? string.Empty);
         var readNumericRange = workbookType.GetMethod("ReadNumericRange") ?? throw new InvalidOperationException("Expected typed numeric range reader.");
         Array parsedNumericValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected typed workbook numeric values."));
         object firstParsedNumericValue = parsedNumericValues.GetValue(0) ?? throw new InvalidOperationException("Expected first typed numeric value.");
