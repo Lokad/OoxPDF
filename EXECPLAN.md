@@ -325,6 +325,14 @@ High-priority actions:
   tests (`0 passed, 0 failed, 0 skipped`); focused non-slow `pptx-shapes` passed
   (`15 passed, 0 failed, 0 skipped`); focused non-slow `pptx-charts` passed
   (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
+- [x] Extend the OOXML enum ladder to PPTX line-end marker tokens:
+  `PptxSceneLineEnd` now preserves raw `type`, `w`, and `len` values alongside the normalized marker kind and
+  width/length scales. Existing scene-builder assertions lock `arrow`/`triangle` marker kinds and `lg`/`sm`
+  scale tokens so future marker work can distinguish absent, unknown, and currently supported OOXML values
+  before renderer geometry is changed. Validation: focused non-slow `pptx-model` passed
+  (`17 passed, 0 failed, 1 skipped`); focused non-slow `pptx-shapes` passed
+  (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`256 passed, 0 failed, 7 skipped`).
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
   paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
 - [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF
@@ -2496,6 +2504,11 @@ High-priority actions:
   zero tests. `--group pptx-scene --skip-slow` now exits non-zero and prints the available group list;
   `pptx-shapes --skip-slow` still passes at `15 passed, 0 failed, 0 skipped`; full non-slow passes at
   `256 passed, 0 failed, 7 skipped`.
+- [x] 2026-05-27: Preserved raw PPTX line-end marker tokens in `PptxSceneLineEnd`. The scene now keeps
+  `headEnd`/`tailEnd` `type`, `w`, and `len` values next to the normalized marker kind and width/length
+  scales, closing another enum-ladder gap without changing renderer output. Focused non-slow `pptx-model`
+  passed at `17 passed, 0 failed, 1 skipped`; focused non-slow `pptx-shapes` passed at
+  `15 passed, 0 failed, 0 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved

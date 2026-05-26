@@ -382,9 +382,13 @@ internal static class PptxTests
         TestAssert.Equal(2, slide.SlideNodes[3].Shape?.Line.Join ?? 0);
         TestAssert.Equal("bevel", slide.SlideNodes[3].Shape?.Line.JoinValue ?? string.Empty);
         TestAssert.Equal(PptxSceneLineEndKind.Arrow, slide.SlideNodes[3].Shape?.HeadEnd.Kind ?? PptxSceneLineEndKind.None);
+        TestAssert.Equal("arrow", slide.SlideNodes[3].Shape?.HeadEnd.TypeValue ?? string.Empty);
         TestAssert.Equal(1.5d, slide.SlideNodes[3].Shape?.HeadEnd.WidthScale ?? 0d);
+        TestAssert.Equal("lg", slide.SlideNodes[3].Shape?.HeadEnd.WidthValue ?? string.Empty);
         TestAssert.Equal(PptxSceneLineEndKind.Triangle, slide.SlideNodes[3].Shape?.TailEnd.Kind ?? PptxSceneLineEndKind.None);
         TestAssert.Equal(0.5d, slide.SlideNodes[3].Shape?.TailEnd.LengthScale ?? 0d);
+        TestAssert.Equal("triangle", slide.SlideNodes[3].Shape?.TailEnd.TypeValue ?? string.Empty);
+        TestAssert.Equal("sm", slide.SlideNodes[3].Shape?.TailEnd.LengthValue ?? string.Empty);
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);

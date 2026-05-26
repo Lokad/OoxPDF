@@ -389,7 +389,13 @@ internal enum PptxSceneLineEndKind
     Oval
 }
 
-internal readonly record struct PptxSceneLineEnd(PptxSceneLineEndKind Kind, double WidthScale, double LengthScale)
+internal readonly record struct PptxSceneLineEnd(
+    PptxSceneLineEndKind Kind,
+    string? TypeValue,
+    double WidthScale,
+    string? WidthValue,
+    double LengthScale,
+    string? LengthValue)
 {
     public bool IsNone => Kind == PptxSceneLineEndKind.None;
 }
@@ -3580,10 +3586,16 @@ internal sealed class PptxSceneBuilder
         XElement? end = shapeProperties
             ?.Element(DrawingNamespace + "ln")
             ?.Element(DrawingNamespace + elementName);
+        string? type = (string?)end?.Attribute("type");
+        string? width = (string?)end?.Attribute("w");
+        string? length = (string?)end?.Attribute("len");
         return new PptxSceneLineEnd(
-            ReadLineEndKind((string?)end?.Attribute("type")),
-            ReadLineEndScale((string?)end?.Attribute("w")),
-            ReadLineEndScale((string?)end?.Attribute("len")));
+            ReadLineEndKind(type),
+            type,
+            ReadLineEndScale(width),
+            width,
+            ReadLineEndScale(length),
+            length);
     }
 
     private static PptxSceneLineEndKind ReadLineEndKind(string? type)
