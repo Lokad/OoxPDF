@@ -2285,6 +2285,16 @@ High-priority actions:
     `pptx-ladder-11-chart-pie-5-categories-port` (`ChartTitleText`) and
     `pptx-ladder-11-chart-pie-exploded-port` (`DataLabelText`). Doughnut legend/data-label counts still diverge,
     so doughnut text remains ungated until legend detection is stronger.
+  - [x] Add the first exploded-doughnut text gate where the existing polar text classifier is stable:
+    `pptx-ladder-11-chart-doughnut-exploded-port` now gates the single `DataLabelText` structure with a
+    `1.0 pt` position tolerance. The gate deliberately excludes the three `LegendText` records because the
+    same public artifact still shows about `11 pt` legend drift, which belongs to the legend layout backlog
+    rather than the data-label oracle. Targeted validation passed at
+    `artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260526-161332`; the full
+    `pptx-charts` family passed 37/37 at `artifacts/visual/reports/pptx-charts.json`, generated
+    `2026-05-26T16:16:35.0983270+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 26/37
+    text-gated; the remaining graphics-only cases are doughnut legend-position probes plus the two plot
+    layout-target probes.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest
