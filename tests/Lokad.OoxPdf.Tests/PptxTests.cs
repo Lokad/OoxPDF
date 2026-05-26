@@ -10299,6 +10299,12 @@ internal static class PptxTests
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
+        System.Reflection.PropertyInfo calculationProperty = workbookType.GetProperty("Calculation") ?? throw new InvalidOperationException("Expected workbook calculation metadata.");
+        object calculation = calculationProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook calculation metadata.");
+        System.Reflection.PropertyInfo calculationModeProperty = calculation.GetType().GetProperty("CalculationMode") ?? throw new InvalidOperationException("Expected workbook calculation mode.");
+        TestAssert.Equal("auto", (string?)calculationModeProperty.GetValue(calculation) ?? string.Empty);
+        System.Reflection.PropertyInfo fullCalculationOnLoadProperty = calculation.GetType().GetProperty("FullCalculationOnLoad") ?? throw new InvalidOperationException("Expected full-calc-on-load metadata.");
+        TestAssert.True((bool?)fullCalculationOnLoadProperty.GetValue(calculation) == true, "Expected workbook fullCalcOnLoad metadata to survive parsing.");
         System.Reflection.PropertyInfo tablesProperty = workbookType.GetProperty("Tables") ?? throw new InvalidOperationException("Expected workbook tables.");
         object tables = tablesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook tables.");
         System.Reflection.PropertyInfo tableCountProperty = tables.GetType().GetProperty("Count") ?? throw new InvalidOperationException("Expected workbook table count.");
@@ -10619,6 +10625,7 @@ internal static class PptxTests
                     <definedName name="SalesLabels">Sheet1!$A$2:$A$4</definedName>
                     <definedName name="SalesValues">Sheet1!$B$2:$B$4</definedName>
                   </definedNames>
+                  <calcPr calcId="191029" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="0"/>
                 </workbook>
                 """,
             ["xl/sharedStrings.xml"] = """

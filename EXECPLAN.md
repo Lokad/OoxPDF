@@ -7774,6 +7774,17 @@ made from workbook-owned metadata instead of hard-coded label heuristics or work
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved workbook calculation metadata next to chart workbook source data.
+`ChartWorkbookData` now carries `calcPr` fields for calculation mode, calculation ID, `fullCalcOnLoad`, and
+`forceFullCalc`. The embedded workbook fixture locks `calcMode="auto"` and `fullCalcOnLoad="1"` through the
+private workbook parser.
+
+This still does not implement cache freshness policy. The metadata only gives future Office-PDF-backed work
+the raw signals needed to reason about workbook cached values, formula cells, chart caches, `externalData`
+`autoUpdate`, and stale source data without guessing from rendered labels.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved worksheet cell formula provenance next to cached workbook values in
 the chart workbook bridge. `ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the raw spreadsheet
 formula text and formula type from `c:f` while keeping existing cached `v` text behavior unchanged. The

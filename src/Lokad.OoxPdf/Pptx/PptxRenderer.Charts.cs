@@ -1285,6 +1285,7 @@ internal sealed partial class PptxRenderer
         string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
         IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(workbookXml);
+        ChartWorkbookCalculationProperties calculation = ReadWorkbookCalculationProperties(workbookXml);
         var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
             .GetRelationships(workbookPart.Name)
@@ -1322,7 +1323,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables);
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, calculation);
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -1331,6 +1332,18 @@ internal sealed partial class PptxRenderer
             .Root?
             .Element(SpreadsheetNamespace + "workbookPr")
             ?.Attribute("date1904"));
+    }
+
+    private static ChartWorkbookCalculationProperties ReadWorkbookCalculationProperties(XDocument workbookXml)
+    {
+        XElement? calculation = workbookXml.Root?.Element(SpreadsheetNamespace + "calcPr");
+        return calculation is null
+            ? default
+            : new ChartWorkbookCalculationProperties(
+                (string?)calculation.Attribute("calcMode") ?? string.Empty,
+                (string?)calculation.Attribute("calcId") ?? string.Empty,
+                IsOoxmlTrue((string?)calculation.Attribute("fullCalcOnLoad")),
+                IsOoxmlTrue((string?)calculation.Attribute("forceFullCalc")));
     }
 
     private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
@@ -1629,6 +1642,12 @@ internal sealed partial class PptxRenderer
         int LastRow,
         IReadOnlyList<string> ColumnNames);
 
+    private readonly record struct ChartWorkbookCalculationProperties(
+        string CalculationMode,
+        string CalculationId,
+        bool FullCalculationOnLoad,
+        bool ForceFullCalculation);
+
     private sealed class ChartWorkbookStyles
     {
         public ChartWorkbookStyles(
@@ -1674,6 +1693,7 @@ internal sealed partial class PptxRenderer
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
+        private readonly ChartWorkbookCalculationProperties calculation;
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
             : this(sheets, date1904: false)
@@ -1686,6 +1706,7 @@ internal sealed partial class PptxRenderer
             styles = ChartWorkbookStyles.Empty;
             definedNames = new Dictionary<string, string>();
             tables = new Dictionary<string, ChartWorkbookTable>();
+            calculation = default;
             Date1904 = date1904;
         }
 
@@ -1714,11 +1735,23 @@ internal sealed partial class PptxRenderer
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables)
+            : this(sheets, date1904, styles, definedNames, tables, default)
+        {
+        }
+
+        public ChartWorkbookData(
+            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
+            bool date1904,
+            ChartWorkbookStyles styles,
+            IReadOnlyDictionary<string, string> definedNames,
+            IReadOnlyDictionary<string, ChartWorkbookTable> tables,
+            ChartWorkbookCalculationProperties calculation)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
             this.tables = tables;
+            this.calculation = calculation;
             Date1904 = date1904;
         }
 
@@ -1727,6 +1760,8 @@ internal sealed partial class PptxRenderer
         public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
 
         public IReadOnlyDictionary<string, ChartWorkbookTable> Tables => tables;
+
+        public ChartWorkbookCalculationProperties Calculation => calculation;
 
         public string[] ReadRange(string? formula)
         {
