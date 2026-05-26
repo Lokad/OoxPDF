@@ -2815,8 +2815,9 @@ internal sealed partial class PptxRenderer
             string label = FormatPieDataLabel(values[i], total, effectiveOptions);
             if (!string.IsNullOrEmpty(label))
             {
-                RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                AddChartLabelRuns(runs, label, effectiveOptions, labelX, labelY, labelWidth, labelHeight, plotBox, style, TextAlignment.Center);
+                ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                AddChartLabelRuns(runs, label, effectiveOptions, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, plotBox, style, TextAlignment.Center);
             }
             angle += sweep;
         }
@@ -2874,8 +2875,9 @@ internal sealed partial class PptxRenderer
                     string label = FormatCartesianDataLabel(value, seriesIndex, category, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label))
                     {
-                        RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        AddChartLabelRuns(runs, label, effectiveOptions, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Left);
+                        ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
+                        RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                        AddChartLabelRuns(runs, label, effectiveOptions, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, plotBox, style, TextAlignment.Left);
                     }
                 }
             }
@@ -2908,8 +2910,9 @@ internal sealed partial class PptxRenderer
                     if (!string.IsNullOrEmpty(label))
                     {
                         double labelWidth = Math.Max(1d, barSlot * PptxChartMetricRules.VerticalBarDataLabelWidthRatio);
-                        RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        AddChartLabelRuns(runs, label, effectiveOptions, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Center);
+                        ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
+                        RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                        AddChartLabelRuns(runs, label, effectiveOptions, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, plotBox, style, TextAlignment.Center);
                     }
                 }
             }
@@ -2960,15 +2963,16 @@ internal sealed partial class PptxRenderer
                         pointY,
                         labelWidth,
                         labelHeight);
-                    RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
+                    ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                    RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                     AddChartLabelRuns(
                         runs,
                         label,
                         effectiveOptions,
-                        labelX,
-                        labelY,
-                        labelWidth,
-                        labelHeight,
+                        labelBox.X,
+                        labelBox.Y,
+                        labelBox.Width,
+                        labelBox.Height,
                         plotBox,
                         style,
                         alignment);
@@ -2977,6 +2981,20 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CLD");
+    }
+
+    private static ChartLayoutBox ResolveDataLabelBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
+    {
+        ChartLayoutBox defaultBox = new(x, y, width, height);
+        if (!options.Layout.HasLayout)
+        {
+            return defaultBox;
+        }
+
+        ChartFrameBox frame = new(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
+        return TryBuildManualLayoutBox(options.Layout, frame, defaultBox, out ChartLayoutBox manualBox)
+            ? manualBox
+            : defaultBox;
     }
 
     private static double ResolveHorizontalBarDataLabelX(PptxSceneChartDataLabelPosition position, double barBase, double barEnd, double labelWidth)

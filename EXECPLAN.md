@@ -1029,9 +1029,8 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
 - [ ] Extend the chart data-label scene model beyond the currently consumed subset: leader-line geometry,
-  exact Office label-box geometry/auto-fit, richer position semantics, and label layout ownership still need
-  typed renderer support before data-label layout can be aligned structurally with Office instead of renderer
-  heuristics.
+  exact Office label-box geometry/auto-fit, and richer position semantics still need typed renderer support
+  before automatic data-label layout can be aligned structurally with Office instead of renderer heuristics.
   - [x] Preserve per-label custom rich-text run boundaries in the scene model:
     `PptxSceneChartDataLabelOverride` now carries `CustomTextRuns` with per-run text and chart text-style
     overrides, while retaining the existing flattened `CustomText` for current rendering. The scene-builder
@@ -1063,6 +1062,12 @@ High-priority actions:
     `ReadChartDataLabelOverrides` now populates `CustomTextRuns` through
     `PptxSceneBuilder.ReadChartTextRuns` instead of flattening fallback labels to text-only overrides. This
     keeps scene and fallback label semantics aligned while raw XML fallback remains present.
+  - [x] Consume explicit per-data-label manual-layout boxes:
+    supported bar, line, pie, and doughnut data-label rendering now applies `ChartDataLabelOptions.Layout`
+    through the shared chart manual-layout box resolver before drawing label shape styles and text runs.
+    This consumes preserved `c:dLbl/c:layout/c:manualLayout` only when Office gives an explicit box; default
+    Office label-box construction, auto-fit, richer position semantics, and leader-line geometry remain open.
+    Validation: focused `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
@@ -1218,16 +1223,18 @@ High-priority actions:
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
   value/percent subset, but the richer Office label contract is no longer discarded at scene build time.
   Later on 2026-05-24, supported bar/line renderers also began consuming the preserved category-name and
-  series-name flags for label text composition; leader-line geometry, position semantics, per-label
-  manual-layout/box overrides, and data-label shape styles remain open.
+  series-name flags for label text composition; later work consumed explicit per-label manual-layout boxes and
+  data-label shape styles. Leader-line geometry, automatic Office label-box geometry/auto-fit, and richer
+  position semantics remain open.
   Focused model/chart tests passed after a transient parallel build lock was rerun serially, the full runner
   passed 186/186, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-161747` stayed stable: 84/84 compared pages, zero
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader-line geometry, exact
-  label-box geometry/auto-fit, and richer position semantics still need renderer support and visual cases.
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader-line geometry,
+  automatic Office label-box geometry/auto-fit, and richer position semantics still need renderer support and
+  visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
   Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
   visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
@@ -2538,8 +2545,9 @@ High-priority actions:
 - [x] 2026-05-25: Preserve per-data-label manual layout in the typed chart scene model.
   `PptxSceneChartDataLabelOverride` now carries `c:layout/c:manualLayout` alongside per-label visibility flags,
   custom text, position, separator, number format, text style, and shape style. The scene-builder fixture locks
-  per-label `x/y/w/h` factors without changing renderer behavior; the remaining work is to consume label layout
-  only after public Office-PDF text/label-box evidence defines the placement rule. Validation: the focused
+  per-label `x/y/w/h` factors. Later renderer work consumes explicit manual label boxes through the shared
+  chart manual-layout resolver; the remaining work is Office-derived automatic label-box construction,
+  auto-fit, leader-line geometry, and richer position semantics. Validation: the focused
   scene test passed `1 passed, 0 failed, 0 skipped`; the full console suite passed
   `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
 - [ ] 2026-05-25: Complete the chart scene model so chart kinds, plot areas, axes, series, data labels,
@@ -7697,6 +7705,20 @@ not rendered, leader-line geometry and exact data-label boxes are still open, an
 defaults still need a structural owner. The useful long-term effect is narrower: another legacy XML read now
 routes through the typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt
 explicit.
+
+Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Consumed explicit per-label chart data-label layout without treating automatic
+label placement as solved. `ChartDataLabelOptions.Layout` and `ChartDataLabelOverride.Layout` were already
+populated from scene-owned chart data and raw XML fallback, but the label rendering paths still drew the
+computed fallback rectangle. Bar, line, pie, and doughnut data-label emission now resolves an explicit
+`c:dLbl/c:layout/c:manualLayout` through the shared manual-layout box resolver before drawing the label
+fill/stroke and text. The public line/pie chart rendering test now includes a per-label manual layout and
+asserts the resulting PDF rectangle and text baseline.
+
+This is a structural explicit-box slice, not Office-perfect data-label layout closure. Leader-line geometry,
+automatic Office label-box construction/auto-fit, and richer `dLblPos` semantics remain open and need public
+Office-PDF evidence before they should drive default label placement.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
