@@ -10269,7 +10269,7 @@ internal static class PptxTests
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
                 <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
-                <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f></c:numRef></c:val>
+                <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:formatCode>0.0</c:formatCode><c:ptCount val="0"/></c:numCache></c:numRef></c:val>
               </c:ser></c:doughnutChart></c:plotArea></c:chart>
             </c:chartSpace>
             """);
@@ -10281,6 +10281,7 @@ internal static class PptxTests
 
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement numCache = chartXml.Descendants(c + "numCache").Single();
+        TestAssert.Equal("0.0", numCache.Element(c + "formatCode")?.Value ?? string.Empty);
         TestAssert.Equal("3", numCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("0", numCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
         TestAssert.Equal("2", numCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);

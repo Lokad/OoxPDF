@@ -1117,7 +1117,7 @@ internal sealed partial class PptxRenderer
 
             InsertChartReferenceCache(reference, new XElement(
                 ChartNamespace + "numCache",
-                new XElement(ChartNamespace + "formatCode", "General"),
+                new XElement(ChartNamespace + "formatCode", ReadChartReferenceNumberCacheFormatCode(reference)),
                 BuildChartCachePoints(values)));
         }
 
@@ -1165,6 +1165,7 @@ internal sealed partial class PptxRenderer
 
     private static void InsertChartReferenceCache(XElement reference, XElement cache)
     {
+        reference.Elements(cache.Name).Remove();
         XElement? formula = reference.Element(ChartNamespace + "f");
         if (formula is not null)
         {
@@ -1173,6 +1174,13 @@ internal sealed partial class PptxRenderer
         }
 
         reference.AddFirst(cache);
+    }
+
+    private static string ReadChartReferenceNumberCacheFormatCode(XElement reference)
+    {
+        return (string?)reference
+            .Element(ChartNamespace + "numCache")
+            ?.Element(ChartNamespace + "formatCode") ?? "General";
     }
 
     private static object[] BuildChartCachePoints(IReadOnlyList<string> values)

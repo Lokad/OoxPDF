@@ -7759,6 +7759,20 @@ Validation: focused non-slow `pptx-model` passed (`17 passed, 0 failed, 1 skippe
 `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
 (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Tightened the workbook-backed cache hydration bridge after preserving cache
+format codes in the scene model. `HydrateChartReferenceCaches` no longer always writes `General` when it
+materializes a missing numeric `c:numCache`; if a formula reference already carries an empty `numCache` with
+`c:formatCode`, the hydrated cache preserves that format code and replaces the empty same-kind cache instead
+of appending a duplicate cache node. String and multi-level string hydration share the same replacement rule
+for empty same-kind caches.
+
+This still is not workbook style resolution. The hydration bridge preserves chart-side cache metadata that is
+already present, but it does not inspect workbook cell styles, built-in number formats, locale, table/defined
+name sources, stale-cache policy, or `date1904` before building cache points from workbook cells.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart number-format metadata at the scene boundary instead of leaving
 format ownership as renderer-local string handling. `PptxSceneChartNumberFormat` now captures whether a
 `c:numFmt` element is present, its `formatCode`, and its `sourceLinked` flag for plot data labels,
