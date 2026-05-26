@@ -391,6 +391,7 @@ internal sealed record PptxSceneChart(
     XDocument? ChartXml,
     IReadOnlyList<RgbColor>? PaletteColors,
     PptxSceneChartColorStyle ColorStyle,
+    PptxSceneChartStyle StylePart,
     string StyleId,
     IReadOnlyList<PptxSceneChartPlot> Plots,
     IReadOnlyList<PptxSceneChartAxis> Axes,
@@ -407,6 +408,12 @@ internal readonly record struct PptxSceneChartColorStyle(
     string Method,
     string Id,
     IReadOnlyList<RgbColor> Colors);
+
+internal sealed record PptxSceneChartStyle(
+    bool IsDefined,
+    string? PartName,
+    string Id,
+    XDocument? StyleXml);
 
 internal sealed record PptxSceneChartPlot(
     PptxSceneChartPlotKind PlotKind,
@@ -1344,6 +1351,7 @@ internal sealed class PptxSceneBuilder
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
     private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
     private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
+    private const string ChartStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartStyle";
 
     public PptxScene Build(PptxDocument document, OoxPackage package)
     {
@@ -1613,6 +1621,9 @@ internal sealed class PptxSceneBuilder
         PptxSceneChartColorStyle colorStyle = chartPart is null
             ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [])
             : ReadChartColorStyle(package, chartPart.Name, theme);
+        PptxSceneChartStyle stylePart = chartPart is null
+            ? new PptxSceneChartStyle(false, null, string.Empty, null)
+            : ReadChartStylePart(package, chartPart.Name);
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme);
         IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme);
@@ -1622,6 +1633,7 @@ internal sealed class PptxSceneBuilder
             chartXml,
             paletteColors,
             colorStyle,
+            stylePart,
             (string?)chartXml?.Root?.Element(ChartNamespace + "style")?.Attribute("val") ?? string.Empty,
             plots,
             axes,
@@ -2476,6 +2488,31 @@ internal sealed class PptxSceneBuilder
             (string?)document.Root?.Attribute("meth") ?? string.Empty,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
             colors);
+    }
+
+    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName)
+    {
+        OoxRelationship? styleRelationship = package.GetRelationships(chartPartName)
+            .FirstOrDefault(relationship => !relationship.IsExternal &&
+                relationship.Type == ChartStyleRelationshipType &&
+                relationship.ResolvedTarget is not null);
+        if (styleRelationship?.ResolvedTarget is null)
+        {
+            return new PptxSceneChartStyle(false, null, string.Empty, null);
+        }
+
+        OoxPart? stylePart = package.GetPart(styleRelationship.ResolvedTarget);
+        if (stylePart is null)
+        {
+            return new PptxSceneChartStyle(false, styleRelationship.ResolvedTarget, string.Empty, null);
+        }
+
+        XDocument document = LoadXml(stylePart);
+        return new PptxSceneChartStyle(
+            true,
+            stylePart.Name,
+            (string?)document.Root?.Attribute("id") ?? string.Empty,
+            document);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)

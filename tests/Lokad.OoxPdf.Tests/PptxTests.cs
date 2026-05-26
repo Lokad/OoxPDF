@@ -103,6 +103,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
                 </Relationships>
                 """,
             ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
@@ -201,6 +202,12 @@ internal static class PptxTests
                                meth="cycle" id="10">
                   <a:srgbClr val="010203"/>
                 </cs:colorStyle>
+                """,
+            ["ppt/charts/style1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle" id="10">
+                  <cs:chartStyle/>
+                </cs:style>
                 """,
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -361,6 +368,10 @@ internal static class PptxTests
         TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.ColorStyle.Id ?? string.Empty);
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ColorStyle.Colors[0] ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
+        TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
+        TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.StyleXml is not null, "Expected chart style XML ownership in the scene model.");
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StyleId ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);

@@ -2055,6 +2055,12 @@ Composite oracle family map:
   renderer. Validation: focused `pptx-model` passed (`14 passed, 0 failed, 1 skipped`), focused
   `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the full non-slow suite passed
   (`244 passed, 0 failed, 7 skipped`).
+- Chart style-part scene ownership is now explicit: `PptxSceneChart.StylePart` records the package-resolved
+  `chartStyle` relationship target, the style-part `id`, and the loaded style XML. This still does not interpret
+  Office chart-style defaults; it gives future default resolvers a single typed source instead of renderer-local
+  relationship discovery. Validation: focused `pptx-model` passed (`14 passed, 0 failed, 1 skipped`), focused
+  `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the full non-slow suite passed
+  (`244 passed, 0 failed, 7 skipped`).
 - Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
