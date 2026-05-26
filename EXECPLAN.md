@@ -7744,6 +7744,22 @@ explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved chart-wide option metadata in the typed scene model before attempting
+to render its semantics. `PptxSceneChartOptions` now owns chart-space `date1904` and `roundedCorners`,
+chart-level `plotVisOnly` and `showDLblsOverMax`, and the explicit `dispBlanksAs` value with a typed
+`gap`/`span`/`zero` enum plus the raw OOXML string for unsupported values. This extends the chart scene
+model in the same direction as series, axes, title, legend, color-style, style-part, external-data, and
+manual-layout ownership: future rendering should consume scene-owned chart options rather than re-reading
+raw XML at the draw site. The rendering behavior for blank cells, hidden rows/columns, date-system workbook
+interpretation, rounded chart-area corners, and over-maximum label visibility remains open until public
+Office-PDF evidence defines the visible and structural rules. While making the slow scene fixture execute
+these assertions, the synthetic chart fixture also had to declare the `r` namespace already used by its
+`c:externalData r:id`; this was a fixture hygiene gap hidden by the previous non-slow model run.
+
+Validation: focused `pptx-model` passed with slow tests included (`15 passed, 0 failed, 0 skipped`);
+focused non-slow `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner
+passed (`244 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
 shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme

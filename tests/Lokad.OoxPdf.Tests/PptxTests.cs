@@ -137,11 +137,16 @@ internal static class PptxTests
                 """,
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <c:date1904 val="1"/>
+                  <c:roundedCorners val="0"/>
                   <c:style val="10"/>
                   <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
+                  <c:plotVisOnly val="0"/>
+                  <c:dispBlanksAs val="span"/>
+                  <c:showDLblsOverMax val="1"/>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
                   <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:noFill/><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
                     <c:barDir val="bar"/>
@@ -368,6 +373,12 @@ internal static class PptxTests
         TestAssert.Equal("rId3", slide.SlideNodes[4].Chart?.ExternalData.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slide.SlideNodes[4].Chart?.ExternalData.TargetPartName ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Options.RoundedCorners == false, "Expected chart rounded-corners flag ownership in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximum == true, "Expected show-data-labels-over-maximum flag ownership in the scene model.");
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
+        TestAssert.Equal("span", slide.SlideNodes[4].Chart?.Options.DisplayBlanksAs ?? string.Empty);
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);

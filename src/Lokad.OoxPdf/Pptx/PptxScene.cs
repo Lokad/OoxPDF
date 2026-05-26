@@ -390,6 +390,7 @@ internal sealed record PptxSceneChart(
     string? TargetPartName,
     XDocument? ChartXml,
     PptxSceneChartExternalData ExternalData,
+    PptxSceneChartOptions Options,
     IReadOnlyList<RgbColor>? PaletteColors,
     PptxSceneChartColorStyle ColorStyle,
     PptxSceneChartStyle StylePart,
@@ -408,6 +409,22 @@ internal readonly record struct PptxSceneChartExternalData(
     string? RelationshipId,
     string? TargetPartName,
     bool? AutoUpdate);
+
+internal readonly record struct PptxSceneChartOptions(
+    bool? Date1904,
+    bool? RoundedCorners,
+    bool? PlotVisibleOnly,
+    bool? ShowDataLabelsOverMaximum,
+    PptxSceneChartDisplayBlanksAs DisplayBlanksAsKind,
+    string DisplayBlanksAs);
+
+internal enum PptxSceneChartDisplayBlanksAs
+{
+    Unknown,
+    Gap,
+    Span,
+    Zero
+}
 
 internal readonly record struct PptxSceneChartColorStyle(
     bool IsDefined,
@@ -1097,6 +1114,20 @@ internal sealed class PptxSceneBuilder
         };
     }
 
+    internal static PptxSceneChartDisplayBlanksAs ParseChartDisplayBlanksAs(string? displayBlanksAs)
+    {
+        return displayBlanksAs switch
+        {
+            "gap" => PptxSceneChartDisplayBlanksAs.Gap,
+            "span" => PptxSceneChartDisplayBlanksAs.Span,
+            "zero" => PptxSceneChartDisplayBlanksAs.Zero,
+            _ when displayBlanksAs?.Equals("gap", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDisplayBlanksAs.Gap,
+            _ when displayBlanksAs?.Equals("span", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDisplayBlanksAs.Span,
+            _ when displayBlanksAs?.Equals("zero", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartDisplayBlanksAs.Zero,
+            _ => PptxSceneChartDisplayBlanksAs.Unknown
+        };
+    }
+
     internal static PptxSceneChartDataLabelPosition ParseChartDataLabelPosition(string? position)
     {
         return position switch
@@ -1643,6 +1674,7 @@ internal sealed class PptxSceneBuilder
             targetPartName,
             chartXml,
             externalData,
+            ReadChartOptions(chartXml),
             paletteColors,
             colorStyle,
             stylePart,
@@ -1658,6 +1690,20 @@ internal sealed class PptxSceneBuilder
                 .Descendants(ChartNamespace + "plotArea")
                 .FirstOrDefault()
                 ?.Element(ChartNamespace + "spPr"), theme));
+    }
+
+    private static PptxSceneChartOptions ReadChartOptions(XDocument? chartXml)
+    {
+        XElement? chartSpace = chartXml?.Root;
+        XElement? chart = chartSpace?.Element(ChartNamespace + "chart");
+        string displayBlanksAs = chart is null ? string.Empty : ReadChartElementValue(chart, "dispBlanksAs");
+        return new PptxSceneChartOptions(
+            chartSpace is null ? null : ReadOptionalOoxmlBooleanElement(chartSpace, "date1904"),
+            chartSpace is null ? null : ReadOptionalOoxmlBooleanElement(chartSpace, "roundedCorners"),
+            chart is null ? null : ReadOptionalOoxmlBooleanElement(chart, "plotVisOnly"),
+            chart is null ? null : ReadOptionalOoxmlBooleanElement(chart, "showDLblsOverMax"),
+            ParseChartDisplayBlanksAs(displayBlanksAs),
+            displayBlanksAs);
     }
 
     private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme)
