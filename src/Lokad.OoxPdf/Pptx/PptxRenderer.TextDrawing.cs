@@ -700,8 +700,10 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        string? positioningArray = embedded.EncodeGlyphPositioningArray(run.Text, run.CharacterSpacing, run.FontSize, forcePositioningArray: true, run.KerningEnabled);
-        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, BuildTextGlyphAtoms(embedded, run), x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+        IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms(embedded, run);
+        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+        string? positioningArray = EncodeGlyphPositioningArray(glyphs, run.FontSize, pdfFontSize, forcePositioningArray: true);
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
     }
 
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
@@ -721,7 +723,8 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, forcePositioningArray: true);
+        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+        string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
@@ -739,7 +742,7 @@ internal sealed partial class PptxRenderer
         return builder.ToString();
     }
 
-    private static string? EncodeGlyphPositioningArray(PptxTextGlyphSpanLayout span, bool forcePositioningArray)
+    private static string? EncodeGlyphPositioningArray(PptxTextGlyphSpanLayout span, double pdfFontSize, bool forcePositioningArray)
     {
         if (span.Glyphs.Count == 0)
         {
@@ -753,7 +756,13 @@ internal sealed partial class PptxRenderer
             PptxTextGlyphLayout glyph = span.Glyphs[i];
             if (i > 0)
             {
-                double adjustment = span.FontSize <= 0d ? 0d : -glyph.AdjustmentBefore * 1000d / span.FontSize;
+                PptxTextGlyphLayout previousGlyph = span.Glyphs[i - 1];
+                double adjustmentBefore = PdfTextAdjustmentBefore(
+                    glyph.AdjustmentBefore,
+                    previousGlyph.Advance,
+                    span.FontSize,
+                    pdfFontSize);
+                double adjustment = pdfFontSize <= 0d ? 0d : -adjustmentBefore * 1000d / pdfFontSize;
                 if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
                 {
                     builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
@@ -766,6 +775,52 @@ internal sealed partial class PptxRenderer
 
         builder.Append(']');
         return hasPositioning || forcePositioningArray ? builder.ToString() : null;
+    }
+
+    private static string? EncodeGlyphPositioningArray(IReadOnlyList<TextGlyphAtom> glyphs, double layoutFontSize, double pdfFontSize, bool forcePositioningArray)
+    {
+        if (glyphs.Count == 0)
+        {
+            return null;
+        }
+
+        bool hasPositioning = false;
+        var builder = new StringBuilder("[");
+        for (int i = 0; i < glyphs.Count; i++)
+        {
+            TextGlyphAtom glyph = glyphs[i];
+            if (i > 0)
+            {
+                TextGlyphAtom previousGlyph = glyphs[i - 1];
+                double adjustmentBefore = PdfTextAdjustmentBefore(
+                    glyph.AdjustmentBefore,
+                    previousGlyph.Advance,
+                    layoutFontSize,
+                    pdfFontSize);
+                double adjustment = pdfFontSize <= 0d ? 0d : -adjustmentBefore * 1000d / pdfFontSize;
+                if (Math.Abs(adjustment) > PptxTextMetricRules.TextStateTolerance)
+                {
+                    builder.Append(' ').Append(adjustment.ToString("0.###", CultureInfo.InvariantCulture)).Append(' ');
+                    hasPositioning = true;
+                }
+            }
+
+            builder.Append('<').Append(glyph.GlyphId.ToString("X4", CultureInfo.InvariantCulture)).Append('>');
+        }
+
+        builder.Append(']');
+        return hasPositioning || forcePositioningArray ? builder.ToString() : null;
+    }
+
+    private static double PdfTextAdjustmentBefore(double layoutAdjustmentBefore, double previousLayoutAdvance, double layoutFontSize, double pdfFontSize)
+    {
+        if (layoutFontSize <= 0d || pdfFontSize <= 0d)
+        {
+            return layoutAdjustmentBefore;
+        }
+
+        double previousPdfAdvance = previousLayoutAdvance * pdfFontSize / layoutFontSize;
+        return layoutAdjustmentBefore + previousLayoutAdvance - previousPdfAdvance;
     }
 
     private static IReadOnlyList<TextGlyphAtom> BuildTextGlyphAtoms(PdfEmbeddedFont embedded, TextRun run)

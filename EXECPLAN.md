@@ -288,18 +288,27 @@ High-priority actions:
   the source slide has whole-point `a:rPr/@sz` values and no `normAutofit`, while Office's PDF export applies a
   repeatable text-emission quantization before writing `/Tf`; a separate graphics-structure gap still accounts
   for the missing even-odd clip.
-- [ ] Model the Office PPTX-to-PDF text font-size emission profile explicitly:
+- [ ] Complete the Office PPTX-to-PDF text font-size emission profile:
   ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
   outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,
   `19->18.96`, `20->20.04`, while `6`, `9`, `12`, `18`, and `30` remain exact). Do not hide this behind
-  per-size lookups. Add a public Office-backed fixture/structural PDF test once the conversion formula is
-  identified, then route PPTX text emission through a named Office PDF text-profile layer so layout-owned
-  font sizes stay OOXML-exact and only PDF emission adopts Office's exported `/Tf` quantization.
+  per-size lookups. The dominant 600-DPI emission grid is now implemented, but the remaining secondary
+  `+0.024 pt` anomalies in public probes and the private `9.024` / `12.984` sizes still need a structural
+  explanation before adding another rule.
+- [x] Implement the dominant Office `/Tf` font-size grid at the PDF emission boundary:
+  a second ignored public-safe probe rewrote the font-size quantization deck from `spAutoFit` to `noAutofit`
+  and Office still emitted the same main sizes, so the dominant behavior is not autofit. `PptxPdfTextEmissionProfile`
+  now snaps emitted font sizes to Office's observed 600-DPI point grid (`10 pt -> 9.96 pt`, `13 pt -> 12.96 pt`,
+  `14 pt -> 14.04 pt`, `16 pt -> 15.96 pt`) while leaving the text-frame model and layout font sizes
+  OOXML-exact. `TJ` positioning arrays now compensate for the emitted font-size grid so glyph starts keep
+  layout-owned advances instead of accidentally shrinking text runs. A synthetic unit test locks the separation
+  by requiring layout `10 pt` but PDF `/Tf 9.96`.
+  Remaining open evidence: some larger Office probe sizes still show a secondary `+0.024 pt` anomaly
+  (`15.024`, `21.024`, `24.024`, `36.024`) that must be explained structurally before adding another rule.
 - [x] Introduce the PPTX PDF text-emission profile boundary:
   `PptxPdfTextEmissionProfile.FontSize` is now the single boundary between layout-owned OOXML font sizes and
-  the `/Tf` operand emitted to PDF. It is intentionally identity until the Office quantization formula is
-  proven by public fixtures, but it prevents the eventual fix from contaminating cascade, line layout, glyph
-  measurement, underline, highlight, or strike geometry.
+  the `/Tf` operand emitted to PDF. The boundary prevents the Office export profile from contaminating
+  cascade, line layout, glyph measurement, underline, highlight, or strike geometry.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -6742,3 +6751,19 @@ deck MAE `8.945151`, max MAE `19.097502`, mean changed16 `0.115512`, and only
 `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 stayed at MAE `2.877938`, changed16 `0.044695`, changed32
 `0.035255`, SSIM `0.920089`. Remaining connector work is still true Office-like analytical connector outlines,
 not merely smoothed samples.
+
+Revision note, 2026-05-26: Added the first real PPTX PDF text-emission profile rule. Public-safe Office probes
+showed that whole-point source sizes are commonly emitted to PDF on a 600-DPI point grid, and a no-autofit variant
+confirmed this is not just `spAutoFit`. `PptxPdfTextEmissionProfile.FontSize` now applies that grid only at PDF
+emission, and the `TJ` arrays compensate for the quantized `/Tf` value so layout-owned advances remain stable.
+
+Validation: focused `PptxSyntheticTextBoxAppliesOfficePdfFontSizeGridOnlyAtEmission` passed; focused
+`pptx-typography` passed 72/72 with 2 skipped; full non-slow tests passed 236/236 with 7 skipped; and
+`dotnet pack src\Lokad.OoxPdf\Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. Private
+`lokad-value-based` run `artifacts/private-visual/lokad-value-based/20260526-103326` compared 84/84 pages with
+zero dimension mismatches, deck MAE `8.942959`, mean changed16 `0.115525`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 improved to MAE `2.860480`, changed16 `0.044525`, changed32
+`0.035023`, SSIM `0.920379`; page-17 candidate font-size structure moved to
+`9:3,9.96:11,12:8,12.96:6,14.04:5,15.96:6,18:5` while Office still has the secondary `9.024` and `12.984`
+sizes. Remaining long-term gaps are explaining those secondary PDF font-size anomalies and the one missing page-17
+`W*` clip structurally.

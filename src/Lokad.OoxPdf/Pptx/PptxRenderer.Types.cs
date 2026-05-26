@@ -772,9 +772,16 @@ internal sealed partial class PptxRenderer
 
     private static class PptxPdfTextEmissionProfile
     {
+        private const double OfficeExportFontGridDpi = 600d;
+        private const double PointsPerInch = 72d;
+
         public static double FontSize(double layoutFontSize)
         {
-            return layoutFontSize;
+            double deviceUnits = Math.Round(
+                layoutFontSize * OfficeExportFontGridDpi / PointsPerInch,
+                MidpointRounding.AwayFromZero);
+
+            return deviceUnits * PointsPerInch / OfficeExportFontGridDpi;
         }
     }
 

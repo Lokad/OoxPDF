@@ -1784,6 +1784,63 @@ internal static class PptxTests
         TestAssert.Equal(9.96d, layoutFrame.Paragraphs[0].Lines[0].Spans[0].FontSize);
     }
 
+    public static void PptxSyntheticTextBoxAppliesOfficePdfFontSizeGridOnlyAtEmission()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr><a:noAutofit/></a:bodyPr>
+                          <a:lstStyle/>
+                          <a:p>
+                            <a:r>
+                              <a:rPr sz="1000"><a:latin typeface="Arial"/></a:rPr>
+                              <a:t>Office grid</a:t>
+                            </a:r>
+                          </a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("/F1 9.96 Tf", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal(10d, frame.Paragraphs[0].Runs[0].FontSize);
+
+        PptxTextFrameLayoutSnapshot layoutFrame = PptxRenderer.InspectTextLayout(document, package, 0).Frames.Single();
+        TestAssert.Equal(10d, layoutFrame.Paragraphs[0].Lines[0].Spans[0].FontSize);
+    }
+
     public static void PptxSyntheticTextBoxHonorsNoFillText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
@@ -5359,7 +5416,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/F1 40 Tf", pdf);
+        TestAssert.Contains("/F1 39.96 Tf", pdf);
         AssertContainsTextMatrixAtX(pdf, 79.2d);
     }
 
@@ -9472,19 +9529,19 @@ internal static class PptxTests
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
         TestAssert.Contains("/CLD1 9 Tf", pdf);
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 13 Tf"), "Expected chart title txPr font size to drive title rendering.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 12\.96 Tf"), "Expected chart title txPr font size to drive title rendering.");
         TestAssert.Contains("0.396 0.263 0.129 rg", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 7 Tf"), "Expected chart legend txPr font size to drive legend rendering.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 6\.96 Tf"), "Expected chart legend txPr font size to drive legend rendering.");
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 400\.725 Tm"), "Expected the centered custom data label to keep the Office-derived label-box baseline.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <005A>") &&
             Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0058>") &&
             Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0051>"),
             "Expected per-label custom rich text to be emitted in the chart data label ToUnicode map.");
         TestAssert.Contains("0 0.4 0.667 rg", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8 Tf"), "Expected second-series data labels to consume the series-level font size.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8\.04 Tf"), "Expected second-series data labels to consume the series-level font size.");
         TestAssert.Contains("/ItalicAngle -12", pdf);
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
-        TestAssert.Contains("/CLD1 10 Tf", pdf);
+        TestAssert.Contains("/CLD1 9.96 Tf", pdf);
         TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
