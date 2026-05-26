@@ -10339,6 +10339,12 @@ internal static class PptxTests
         TestAssert.Equal("SalesTable", (string?)firstParsedStructuredCell.GetType().GetProperty("TableName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference source column id to survive resolution.");
+        Array parsedBlankCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$C$2:$C$2"]) ?? throw new InvalidOperationException("Expected parsed blank workbook range cell."));
+        object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
+        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");
+        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValue")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached value to preserve missing value state.");
+        TestAssert.Equal("Blank", parsedBlankCell.GetType().GetProperty("ValueKind")?.GetValue(parsedBlankCell)?.ToString() ?? string.Empty);
+        TestAssert.Equal("NA()", (string?)parsedBlankCell.GetType().GetProperty("Formula")?.GetValue(parsedBlankCell) ?? string.Empty);
         object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
         object thirdParsedCell = parsedCells.GetValue(2) ?? throw new InvalidOperationException("Expected third parsed workbook range cell.");
@@ -10743,7 +10749,7 @@ internal static class PptxTests
                   <cols><col min="2" max="2" hidden="1"/></cols>
                   <sheetData>
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
-                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
+                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c><c r="C2" s="4"><f>NA()</f></c></row>
                     <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
                     <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
                   </sheetData>

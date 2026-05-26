@@ -7759,6 +7759,21 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved physical blank/formula cells in embedded chart workbooks before
+attempting `dispBlanksAs` or stale-cache policy. `ReadWorksheetData` no longer drops a worksheet `<c>` just
+because it lacks a cached `<v>` value when the cell still carries formula, style, or type metadata.
+`ChartWorkbookCell` and `ChartWorkbookRangeCell` now expose `HasValue`, so the renderer-facing range layer
+can distinguish a missing cell, a physical blank cell, and a physical cell with cached text/number.
+
+This is not a visible blank-cell rendering change. Existing numeric/text projections still filter through the
+same compatibility paths, and formula cells without cached values do not invent chart points. The long-term
+closure is structural: future Office-PDF-backed rules for `gap`/`span`/`zero`, formula-cache freshness, and
+source-linked formatting can be implemented from workbook facts instead of from dense arrays that have already
+collapsed blanks away.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved sheet-local chart workbook defined names instead of silently dropping
 them during workbook parsing. `ReadWorkbookDefinedNameRecords` now records every nonblank defined name with
 its formula, optional `localSheetId`, and resolved sheet name from workbook sheet order; the existing
