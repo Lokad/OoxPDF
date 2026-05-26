@@ -7759,6 +7759,21 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved sheet-local chart workbook defined names instead of silently dropping
+them during workbook parsing. `ReadWorkbookDefinedNameRecords` now records every nonblank defined name with
+its formula, optional `localSheetId`, and resolved sheet name from workbook sheet order; the existing
+`DefinedNames` dictionary remains workbook-level only so current cache hydration behavior is unchanged. The
+embedded workbook regression now includes a `localSheetId="0"` name and proves that it survives in
+`DefinedNameRecords` while staying out of workbook-level name resolution.
+
+This is another metadata-only structural slice. OOXPDF still does not resolve sheet-local names from chart
+formulas because the correct scope depends on the chart source context and Office cache/source freshness
+rules. The long-term value is that this scope information is no longer lost at parse time, so future
+workbook-backed chart-data resolution can choose between workbook-level and sheet-local names explicitly
+instead of treating missing local names as absent workbook data.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Added workbook `styles.xml` ownership to the chart workbook bridge without
 changing chart rendering. The embedded workbook reader now loads the spreadsheet styles part, preserves custom
 `numFmt` entries, preserves ordered `cellXfs` records, and resolves a range cell's `StyleIndex` into

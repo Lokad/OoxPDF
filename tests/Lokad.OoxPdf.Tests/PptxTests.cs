@@ -10312,6 +10312,12 @@ internal static class PptxTests
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
+        TestAssert.True(!definedNames.ContainsKey("SheetLocalValues"), "Expected sheet-local defined names to stay out of workbook-level name resolution.");
+        System.Reflection.PropertyInfo definedNameRecordsProperty = workbookType.GetProperty("DefinedNameRecords") ?? throw new InvalidOperationException("Expected workbook defined-name records.");
+        var definedNameRecords = ((System.Collections.IEnumerable?)definedNameRecordsProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined-name records.")).Cast<object>().ToArray();
+        object localDefinedName = definedNameRecords.Single(record => (string?)record.GetType().GetProperty("Name")?.GetValue(record) == "SheetLocalValues");
+        TestAssert.True((int?)localDefinedName.GetType().GetProperty("LocalSheetId")?.GetValue(localDefinedName) == 0, "Expected sheet-local defined-name scope to survive workbook parsing.");
+        TestAssert.Equal("Sheet1", (string?)localDefinedName.GetType().GetProperty("SheetName")?.GetValue(localDefinedName) ?? string.Empty);
         System.Reflection.PropertyInfo calculationProperty = workbookType.GetProperty("Calculation") ?? throw new InvalidOperationException("Expected workbook calculation metadata.");
         object calculation = calculationProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook calculation metadata.");
         System.Reflection.PropertyInfo calculationModeProperty = calculation.GetType().GetProperty("CalculationMode") ?? throw new InvalidOperationException("Expected workbook calculation mode.");
@@ -10637,6 +10643,7 @@ internal static class PptxTests
                   <definedNames>
                     <definedName name="SalesLabels">Sheet1!$A$2:$A$4</definedName>
                     <definedName name="SalesValues">Sheet1!$B$2:$B$4</definedName>
+                    <definedName name="SheetLocalValues" localSheetId="0">Sheet1!$B$2:$B$4</definedName>
                   </definedNames>
                   <calcPr calcId="191029" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="0"/>
                 </workbook>

@@ -1279,7 +1279,8 @@ internal sealed partial class PptxRenderer
         XDocument workbookXml = SafeXml.Load(workbookStream);
         string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
-        IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(workbookXml);
+        ChartWorkbookDefinedName[] definedNameRecords = ReadWorkbookDefinedNameRecords(workbookXml);
+        IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(definedNameRecords);
         ChartWorkbookCalculationProperties calculation = ReadWorkbookCalculationProperties(workbookXml);
         var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
@@ -1318,7 +1319,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, calculation);
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables, calculation, definedNameRecords);
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -1362,20 +1363,43 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyDictionary<string, string> ReadWorkbookDefinedNames(XDocument workbookXml)
+    private static ChartWorkbookDefinedName[] ReadWorkbookDefinedNameRecords(XDocument workbookXml)
     {
-        var definedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string[] sheetNames = workbookXml.Root?
+            .Element(SpreadsheetNamespace + "sheets")
+            ?.Elements(SpreadsheetNamespace + "sheet")
+            .Select(sheet => ((string?)sheet.Attribute("name") ?? string.Empty).Trim())
+            .ToArray() ?? [];
+
+        var definedNames = new List<ChartWorkbookDefinedName>();
         foreach (XElement definedName in workbookXml.Root?.Element(SpreadsheetNamespace + "definedNames")?.Elements(SpreadsheetNamespace + "definedName") ?? [])
         {
             string? name = (string?)definedName.Attribute("name");
-            if (string.IsNullOrWhiteSpace(name) ||
-                definedName.Attribute("localSheetId") is not null ||
-                string.IsNullOrWhiteSpace(definedName.Value))
+            string formula = definedName.Value.Trim();
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(formula))
             {
                 continue;
             }
 
-            definedNames[name] = definedName.Value.Trim();
+            int? localSheetId = ReadSpreadsheetIntegerAttribute(definedName, "localSheetId");
+            string sheetName = localSheetId is { } index && index < sheetNames.Length
+                ? sheetNames[index]
+                : string.Empty;
+            definedNames.Add(new ChartWorkbookDefinedName(name.Trim(), formula, localSheetId, sheetName));
+        }
+
+        return definedNames.ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadWorkbookDefinedNames(IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
+    {
+        var definedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (ChartWorkbookDefinedName definedName in definedNameRecords)
+        {
+            if (definedName.LocalSheetId is null)
+            {
+                definedNames[definedName.Name] = definedName.Formula;
+            }
         }
 
         return definedNames;
@@ -1643,6 +1667,12 @@ internal sealed partial class PptxRenderer
         bool FullCalculationOnLoad,
         bool ForceFullCalculation);
 
+    private readonly record struct ChartWorkbookDefinedName(
+        string Name,
+        string Formula,
+        int? LocalSheetId,
+        string SheetName);
+
     private sealed class ChartWorkbookStyles
     {
         public ChartWorkbookStyles(
@@ -1695,6 +1725,7 @@ internal sealed partial class PptxRenderer
         private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
+        private readonly IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
         private readonly ChartWorkbookCalculationProperties calculation;
 
@@ -1708,6 +1739,7 @@ internal sealed partial class PptxRenderer
             this.sheets = ConvertWorkbookSheets(sheets);
             styles = ChartWorkbookStyles.Empty;
             definedNames = new Dictionary<string, string>();
+            definedNameRecords = [];
             tables = new Dictionary<string, ChartWorkbookTable>();
             calculation = default;
             Date1904 = date1904;
@@ -1749,10 +1781,23 @@ internal sealed partial class PptxRenderer
             IReadOnlyDictionary<string, string> definedNames,
             IReadOnlyDictionary<string, ChartWorkbookTable> tables,
             ChartWorkbookCalculationProperties calculation)
+            : this(sheets, date1904, styles, definedNames, tables, calculation, [])
+        {
+        }
+
+        public ChartWorkbookData(
+            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
+            bool date1904,
+            ChartWorkbookStyles styles,
+            IReadOnlyDictionary<string, string> definedNames,
+            IReadOnlyDictionary<string, ChartWorkbookTable> tables,
+            ChartWorkbookCalculationProperties calculation,
+            IReadOnlyList<ChartWorkbookDefinedName> definedNameRecords)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
+            this.definedNameRecords = definedNameRecords;
             this.tables = tables;
             this.calculation = calculation;
             Date1904 = date1904;
@@ -1761,6 +1806,8 @@ internal sealed partial class PptxRenderer
         public bool Date1904 { get; }
 
         public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
+
+        public IReadOnlyList<ChartWorkbookDefinedName> DefinedNameRecords => definedNameRecords;
 
         public IReadOnlyDictionary<string, ChartWorkbookTable> Tables => tables;
 
