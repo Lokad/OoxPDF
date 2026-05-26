@@ -339,6 +339,16 @@ High-priority actions:
   improved from many frame-wide text-strip buckets to one remaining frame-wide candidate bucket; the page still has
   Office `W*:68` versus candidate `W*:67`, so the unresolved clip work is now a narrower non-textbox/explicit-clip
   or path-shape issue, not ordinary single-column text-box overflow.
+- [x] Align single-column non-textbox shape text clips with Office's slide-level overflow export:
+  private page-17 evidence localized the last frame-wide candidate text strip to a non-textbox shape with text and
+  no explicit `vertOverflow="clip"`. A public-safe ignored probe with the same structural class showed Office
+  emits slide-sized `W*` clips for that case as well, so the renderer now lets any single-column text frame use the
+  slide-sized PDF text clip unless vertical overflow is explicitly clipped. Local layout bounds are unchanged, and
+  explicit `vertOverflow="clip"` frames, multi-column frames, and small clipped labels stay local. Public text-shape
+  checks stayed green (`pptx-ladder-04-typography-small-label-origin-probe`,
+  `pptx-ladder-04-fontref-centered-text`, and `pptx-ladder-08-text-shape-zorder`). Private page-17 no longer has
+  the frame-wide candidate strip bucket; the remaining page-17 `W*` difference is Office's open full-slide clip
+  form/count and the already-known small object bounds/font-size gaps.
 - [ ] Complete the Office PPTX-to-PDF text font-size emission profile:
   ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
   outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,
@@ -355,6 +365,12 @@ High-priority actions:
   `12.984`. The remaining rule is therefore not font-family-specific; it is tied to Office's wrapped/split text-line
   PDF emission. Do not change `PptxPdfTextEmissionProfile` until the per-line condition is known well enough to lock
   with a public probe instead of a private slide-specific branch.
+- [ ] Explain Office `/Tf` dependence on text-frame geometry before extending the font-size profile:
+  denser ignored public-safe font-size probes showed that the secondary `+0.024 pt` branch is not a pure function
+  of requested point size. The same nominal sizes can emit exact values or `+0.024`/nearby branches depending on
+  frame geometry, insets, generated textbox height, and wrapped-line state. Treat the current 600-DPI grid as the
+  stable first-order export approximation, but do not add per-size exceptions for `15`, `21`, `24`, `36`, or wrapped
+  `9`/`13` until the renderer can derive the same context from the text-frame layout/export model.
 - [x] Prepare PPTX text glyph emission for context-sensitive Office `/Tf` rules without changing behavior:
   `TextGlyphRun` now owns the already-resolved PDF emission font size, and `DrawGlyphText` consumes that value
   instead of recomputing `/Tf` from the layout font size. This keeps the four-stage text pipeline explicit:
