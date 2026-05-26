@@ -1038,6 +1038,11 @@ High-priority actions:
     fixture locks two custom label runs with distinct size/color/bold and font/italic evidence. Validation:
     focused `pptx-charts` tests passed `40/40`; a serial console run passed `251/251` after an initial
     transient parallel build-file lock.
+  - [x] Preserve data-label leader-line source/style in the scene model:
+    `PptxSceneChartDataLabels` now carries a typed `LeaderLines` record populated from `c:leaderLines`
+    with the resolved line style instead of retaining only the `showLeaderLines` boolean flag. The
+    scene-builder fixture locks the source element plus stroke color, alpha, width, dash pattern, and cap.
+    Validation: focused `pptx-charts` tests passed `40/40`; the full console runner passed `251/251`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient

@@ -467,6 +467,7 @@ internal sealed record PptxSceneChartDataLabels(
     bool? ShowCategoryName,
     bool? ShowSeriesName,
     bool? ShowLeaderLines,
+    PptxSceneChartLeaderLines LeaderLines,
     PptxSceneChartDataLabelPosition PositionKind,
     string Position,
     string Separator,
@@ -492,6 +493,10 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
+
+internal readonly record struct PptxSceneChartLeaderLines(
+    bool IsDefined,
+    PptxSceneLineStyle Line);
 
 internal sealed record PptxSceneChartTextRun(
     string Text,
@@ -1674,6 +1679,7 @@ internal sealed class PptxSceneBuilder
                 ShowCategoryName: null,
                 ShowSeriesName: null,
                 ShowLeaderLines: null,
+                LeaderLines: default,
                 PositionKind: PptxSceneChartDataLabelPosition.Unknown,
                 Position: string.Empty,
                 Separator: string.Empty,
@@ -1688,6 +1694,7 @@ internal sealed class PptxSceneBuilder
                 ReadOptionalOoxmlBooleanElement(labels, "showCatName"),
                 ReadOptionalOoxmlBooleanElement(labels, "showSerName"),
                 ReadOptionalOoxmlBooleanElement(labels, "showLeaderLines"),
+                ReadChartLeaderLines(labels, theme),
                 ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
@@ -1696,6 +1703,14 @@ internal sealed class PptxSceneBuilder
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
                 ReadChartDataLabelOverrides(labels, theme),
                 IsDefined: true);
+    }
+
+    private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme)
+    {
+        XElement? leaderLines = labels.Element(ChartNamespace + "leaderLines");
+        return leaderLines is null
+            ? default
+            : new PptxSceneChartLeaderLines(true, ReadChartLine(leaderLines.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
