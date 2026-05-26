@@ -225,6 +225,15 @@ High-priority actions:
   fallbacks. This turns the scene/context boundary from a convention into a compile-time requirement for new
   PPTX render contexts. Validation: focused non-slow `pptx-typography` passed
   (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
+- [x] Retire renderer-local chart XML and palette reloads:
+  `PptxRenderer.Charts` no longer reopens chart parts, chart color-style parts, or chart external-data
+  relationships to recover chart XML/palettes during rendering. The normal chart render path now consumes the
+  scene-owned `PptxSceneChart.ChartXml`, `PaletteColors`, and `ExternalData` records, and a missing chart XML
+  is reported as a scene/model gap instead of silently duplicating package traversal in the renderer. The
+  embedded workbook parser still opens the scene-resolved workbook package target; that remaining package
+  access is a workbook-resource ownership item, not chart XML ownership. Validation: focused non-slow
+  `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit

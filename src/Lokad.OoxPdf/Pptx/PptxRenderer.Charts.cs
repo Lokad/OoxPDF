@@ -9,8 +9,6 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private const string ChartColorStyleRelationshipType = "http://schemas.microsoft.com/office/2011/relationships/chartColorStyle";
-    private const string ChartExternalDataPackageRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
     private const string WorkbookRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string WorksheetRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
     private const string SharedStringsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings";
@@ -85,23 +83,13 @@ internal sealed partial class PptxRenderer
 
         XDocument? resolvedChartXml = chartXml;
         IReadOnlyList<RgbColor>? resolvedChartPalette = chartPalette;
-        OoxPart? chartPart = context.Package.GetPart(chartPartName);
         if (resolvedChartXml is null)
         {
-            if (chartPart is null)
-            {
-                EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing and was ignored.", chartPartName, context.SlideNumber, "Ignored");
-                return;
-            }
-
-            using Stream chartStream = chartPart.OpenRead();
-            resolvedChartXml = SafeXml.Load(chartStream);
-            resolvedChartPalette = ReadChartPaletteColors(context.Package, chartPart, context.Theme);
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Chart part was missing from the scene model and was ignored.", chartPartName, context.SlideNumber, "Ignored");
+            return;
         }
 
-        ChartWorkbookData? chartWorkbook = chartPart is not null
-            ? ReadEmbeddedChartWorkbookData(context.Package, chartPart, resolvedChartXml, sceneChart?.ExternalData ?? default)
-            : null;
+        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(context.Package, sceneChart?.ExternalData ?? default);
 
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts))
         {
@@ -1046,38 +1034,6 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static IReadOnlyList<RgbColor>? ReadChartPaletteColors(OoxPackage package, OoxPart chartPart, PptxTheme theme)
-    {
-        OoxRelationship? colorRelationship = package.GetRelationships(chartPart.Name)
-            .FirstOrDefault(relationship => !relationship.IsExternal &&
-                relationship.Type == ChartColorStyleRelationshipType &&
-                relationship.ResolvedTarget is not null);
-        if (colorRelationship?.ResolvedTarget is null)
-        {
-            return null;
-        }
-
-        OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
-        if (colorPart is null)
-        {
-            return null;
-        }
-
-        using Stream stream = colorPart.OpenRead();
-        XDocument document = SafeXml.Load(stream);
-        var colors = new List<RgbColor>();
-        foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
-        {
-            var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-            if (TryReadSolidColor(wrapper, theme, out RgbColor color))
-            {
-                colors.Add(color);
-            }
-        }
-
-        return colors.Count == 0 ? null : colors;
-    }
-
     private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XDocument chartXml, string chartElementName)
     {
         XElement? chartElement = chartXml.Descendants(ChartNamespace + chartElementName).FirstOrDefault();
@@ -1223,20 +1179,15 @@ internal sealed partial class PptxRenderer
 
     private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(
         OoxPackage package,
-        OoxPart chartPart,
-        XDocument chartXml,
         PptxSceneChartExternalData sceneExternalData)
     {
-        string? targetPartName = sceneExternalData.IsDefined &&
-            !string.IsNullOrWhiteSpace(sceneExternalData.TargetPartName)
-            ? sceneExternalData.TargetPartName
-            : ReadEmbeddedChartWorkbookTargetPartName(package, chartPart, chartXml);
-        if (targetPartName is null)
+        if (!sceneExternalData.IsDefined ||
+            string.IsNullOrWhiteSpace(sceneExternalData.TargetPartName))
         {
             return null;
         }
 
-        OoxPart? workbookPackagePart = package.GetPart(targetPartName);
+        OoxPart? workbookPackagePart = package.GetPart(sceneExternalData.TargetPartName);
         if (workbookPackagePart is null)
         {
             return null;
@@ -1245,27 +1196,6 @@ internal sealed partial class PptxRenderer
         using Stream stream = workbookPackagePart.OpenRead();
         OoxPackage workbookPackage = OoxPackage.Open(stream);
         return ReadWorkbookData(workbookPackage);
-    }
-
-    private static string? ReadEmbeddedChartWorkbookTargetPartName(OoxPackage package, OoxPart chartPart, XDocument chartXml)
-    {
-        string? relationshipId = (string?)chartXml
-            .Descendants(ChartNamespace + "externalData")
-            .FirstOrDefault()?
-            .Attribute(RelationshipsNamespace + "id");
-        if (relationshipId is null)
-        {
-            return null;
-        }
-
-        return package
-            .GetRelationships(chartPart.Name)
-            .FirstOrDefault(item =>
-                item.Id == relationshipId &&
-                !item.IsExternal &&
-                item.Type == ChartExternalDataPackageRelationshipType &&
-                item.ResolvedTarget is not null)
-            ?.ResolvedTarget;
     }
 
     private static ChartWorkbookData? ReadWorkbookData(OoxPackage workbookPackage)
