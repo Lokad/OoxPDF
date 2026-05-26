@@ -10,7 +10,21 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 16.1,
-    "maxChangedPixelRatioAtThreshold16": 0.190
+    "maxChangedPixelRatioAtThreshold16": 0.190,
+    "maxChartGraphicsStructureBoundsDelta": 32.0,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate",
+      "VerticalGridlineGroupCandidate",
+      "VerticalLine"
+    ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 22.0,
+      "ValueAxisTickLabel": 32.0
+    }
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"

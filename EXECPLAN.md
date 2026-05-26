@@ -7182,3 +7182,30 @@ Validation: targeted `CheckVisualCase.ps1` passed for
 generated `2026-05-26T13:16:45.2747688+02:00`. `SummarizeChartStructureDeltas.ps1 -UngatedOnly -ShowBounds`
 now reports only `pptx-ladder-11-chart-bar-stacked-port` as a public chart case with neither chart graphics
 nor chart text structural gates.
+
+Revision note, 2026-05-26: Added a stable structural gap gate to the public automatic horizontal stacked
+bar case without changing renderer behavior. This is intentionally not a claim that the layout gap is
+closed: Office/reference still places the automatic plot/axis interval at roughly
+`(145.2,111.9)-(767.31,493)`, while the candidate remains around
+`(113.47,111.92)-(781.06,488.02)`, so the remaining horizontal-bar reserve error is about `32 pt` on the
+left/right interval and about `22 pt` for category labels. The manifest now locks the stable singleton
+graphics structures (`AxisPairPlotBoxCandidate`, `HorizontalLine`, `PlotAreaClipBoxCandidate`,
+`VerticalGridlineGroupCandidate`, `VerticalLine`) and the horizontal-bar-oriented category/value tick-label
+text buckets with wide tolerances that preserve the current gap as an explicit regression boundary.
+`FilledRegion`, raw `ClipBox`, and lower-level fill/clip counts remain ungated because they still reflect
+different renderer decomposition rather than a clean Office structural contract.
+
+The upstream `pptx-renderer` comparison did not reveal a reusable Office-level rule to port here:
+`C:\Users\JoannesVermorel\code\pptx-renderer\src\renderer\ChartRenderer.ts` relies on ECharts grid
+containment for automatic horizontal stacked bars rather than an explicit plot-area/category-label/value-axis
+reserve model. The long-term OOXPDF fix should therefore be derived from Office-observed public fixture
+structure, with separate automatic horizontal-bar plot-area and inner-plot semantics, not from the reverted
+`DeriveHorizontalBarInnerPlotBox` experiment and not from a new fixture-specific coordinate constant.
+
+Validation: targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-11-chart-bar-stacked-port` at
+`artifacts/visual/pptx-ladder-11-chart-bar-stacked-port/20260526-132024`, and the full public
+`pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated `2026-05-26T13:23:14.1357509+02:00`. `pwsh tools\SummarizeChartStructureDeltas.ps1
+-UngatedOnly -ShowBounds` now returns no public chart cases, so every public `pptx-charts` case has at
+least one chart graphics or chart text structural gate.
