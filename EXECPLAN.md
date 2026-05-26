@@ -268,8 +268,26 @@ High-priority actions:
   text fallback models; it removes the duplicate ownership shell that outlived the scene migration.
   Validation: focused non-slow `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow
   console runner passed (`256 passed, 0 failed, 7 skipped`).
-- [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
-  scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
+- [x] Convert the architectural survey into an `ooxpdf` migration design:
+  OOXPDF should continue as a scene-first PDF renderer, not as a port of `pptx-renderer`'s browser/ECharts
+  stack. The scene/model layer owns package XML loading, relationship discovery, inheritance parts, resolved
+  part targets, stable OOXML fields, style cascades that can be inspected without rendering, and unsupported
+  enum/feature diagnostics. The render layer owns PDF graphics emission, font embedding, glyph placement,
+  image XObject creation, clipping, transparency, and draw order, but should not repair missing model fields by
+  walking package relationships or raw XML in normal scene-backed paths.
+
+  Current migration boundaries, based on source inspection after the scene ownership slices:
+  `PptxSceneSlide` owns master/layout/slide XML, relationship maps, backgrounds, and node order; standalone
+  pictures and shape picture fills carry scene-resolved media targets; charts carry chart XML, palette data,
+  many typed plot/axis/series/legend/title records, and scene-resolved workbook package targets; text bodies
+  carry typed body, paragraph, and run snapshots but still keep source XML for unported cascade details.
+  Remaining renderer-local XML/package work is now explicit debt: `PptxRenderer.Charts` still has
+  `ReadSceneOrXml*` helpers and workbook hydration in the renderer; `PptxRenderer.TextModel` and
+  `PptxRenderer.TextLayout` still build much of the cascade from raw `XElement` sources; `PptxRenderer.Shapes`
+  still passes source XML and relationship maps for legacy picture-fill/style fallback; `PptxRenderer.Tables`
+  still synthesizes shape XML for table-cell text; image decoding/SVG parsing/cache keys still read package
+  parts directly from rendering. Each future slice should move one of those fields into `PptxScene*` records,
+  add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -2421,6 +2439,11 @@ High-priority actions:
   receive the same inherited master/layout XML source list, but that list is now derived directly from
   `PptxSceneSlide` during context creation. Validation: `pptx-typography --skip-slow` passed at
   `82 passed, 0 failed, 2 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
+- [x] 2026-05-27: Converted the `pptx-renderer` architecture survey into an OOXPDF-specific migration design
+  in the high-priority action list. The design keeps the existing scene-first PDF architecture and enumerates
+  the remaining renderer-local XML/package debt by file: chart `ReadSceneOrXml*` helpers and workbook
+  hydration, text cascade XML, shape source-XML fallback, table-cell synthetic text XML, and image/SVG package
+  resource decoding.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
@@ -4855,6 +4878,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: Text snapshots and layout still need raw inherited XML until the style cascade is fully typed, but
   the scene already owns the loaded master and layout documents. Removing `PptxSlideInheritance` avoids a
   second ownership abstraction while preserving behavior for the remaining text migration.
+  Date/Author: 2026-05-27 / Codex.
+- Decision: Use the current `PptxScene` spine as the migration target instead of introducing a second normalized
+  presentation model.
+  Rationale: Source inspection shows the scene already owns slide inheritance, relationship maps, draw-order
+  nodes, backgrounds, image targets, typed table/chart/text records, and inspection snapshots. The long-term
+  gap is field ownership and fallback retirement, not a missing top-level model. Adding another model would
+  duplicate ownership and delay removal of renderer XML/package heuristics.
   Date/Author: 2026-05-27 / Codex.
 - Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
   spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved
