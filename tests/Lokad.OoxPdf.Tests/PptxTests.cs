@@ -367,10 +367,15 @@ internal static class PptxTests
         TestAssert.Equal(0.72d, slide.SlideNodes[4].Chart?.PlotAreaLayout.Width ?? 0d);
         TestAssert.Equal(0.66d, slide.SlideNodes[4].Chart?.PlotAreaLayout.Height ?? 0d);
         TestAssert.Equal("inner", slide.SlideNodes[4].Chart?.PlotAreaLayout.LayoutTarget ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutTarget.Inner, slide.SlideNodes[4].Chart?.PlotAreaLayout.LayoutTargetKind);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.XMode ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.XModeKind);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.YMode ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.YModeKind);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.WidthMode ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.WidthModeKind);
         TestAssert.Equal("factor", slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightMode ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Factor, slide.SlideNodes[4].Chart?.PlotAreaLayout.HeightModeKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.NoFill == false, "Expected chart area noFill to be absent in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.HasPattern == true, "Expected chart area pattern fill in the scene model.");
         TestAssert.Equal("pct25", slide.SlideNodes[4].Chart?.ChartAreaStyle.PatternFill.Preset ?? string.Empty);
@@ -562,6 +567,7 @@ internal static class PptxTests
         TestAssert.Equal(0.55d, slide.SlideNodes[4].Chart?.Title.Layout.Width ?? 0d);
         TestAssert.Equal(0.12d, slide.SlideNodes[4].Chart?.Title.Layout.Height ?? 0d);
         TestAssert.Equal("outer", slide.SlideNodes[4].Chart?.Title.Layout.LayoutTarget ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartManualLayoutTarget.Outer, slide.SlideNodes[4].Chart?.Title.Layout.LayoutTargetKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.ShapeStyle.Fill.HasFill == true, "Expected chart title fill in the scene model.");
         TestAssert.Equal(new RgbColor(254, 220, 186), slide.SlideNodes[4].Chart?.Title.ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(15, 30, 45), slide.SlideNodes[4].Chart?.Title.ShapeStyle.Line.Color);

@@ -1575,7 +1575,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartPlotBox plotBox = new(layoutBox.X, layoutBox.Y, layoutBox.Width, layoutBox.Height);
-        plotLayout = new ChartPlotLayout(layoutBox, plotBox, layout.LayoutTarget);
+        plotLayout = new ChartPlotLayout(layoutBox, plotBox, layout.LayoutTargetKind);
         return true;
     }
 
@@ -1589,10 +1589,10 @@ internal sealed partial class PptxRenderer
 
         ChartPlotBoxRatios defaults = GetLayoutBoxRatios(frame, defaultBox);
         double left = layout.X is { } x
-            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XMode, defaultBox.X, frame.X, frame.Width), 0d, 1d)
+            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XModeKind, defaultBox.X, frame.X, frame.Width), 0d, 1d)
             : defaults.Left;
         double top = layout.Y is { } y
-            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YMode, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), 0d, 1d)
+            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YModeKind, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), 0d, 1d)
             : defaults.Top;
         double width = layout.Width is { } layoutWidth
             ? Math.Clamp(layoutWidth, 0.02d, 1d)
@@ -1600,10 +1600,10 @@ internal sealed partial class PptxRenderer
         double height = layout.Height is { } layoutHeight
             ? Math.Clamp(layoutHeight, 0.02d, 1d)
             : defaults.Height;
-        double right = IsManualLayoutEdgeMode(layout.WidthMode)
+        double right = IsManualLayoutEdgeMode(layout.WidthModeKind)
             ? Math.Clamp(layout.Width ?? defaults.Right, left, 1d)
             : left + width;
-        double bottom = IsManualLayoutEdgeMode(layout.HeightMode)
+        double bottom = IsManualLayoutEdgeMode(layout.HeightModeKind)
             ? Math.Clamp(layout.Height ?? defaults.Bottom, top, 1d)
             : top + height;
         double boxWidth = Math.Max(0d, right - left) * frame.Width;
@@ -1633,7 +1633,7 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBoxRatios(left, top, width, height);
     }
 
-    private static double ResolveManualLayoutStartRatio(double value, string mode, double defaultStart, double frameStart, double frameLength)
+    private static double ResolveManualLayoutStartRatio(double value, PptxSceneChartManualLayoutMode mode, double defaultStart, double frameStart, double frameLength)
     {
         if (IsManualLayoutFactorMode(mode) && frameLength > 0d)
         {
@@ -1643,14 +1643,14 @@ internal sealed partial class PptxRenderer
         return value;
     }
 
-    private static bool IsManualLayoutEdgeMode(string mode)
+    private static bool IsManualLayoutEdgeMode(PptxSceneChartManualLayoutMode mode)
     {
-        return string.Equals(mode, "edge", StringComparison.Ordinal);
+        return mode == PptxSceneChartManualLayoutMode.Edge;
     }
 
-    private static bool IsManualLayoutFactorMode(string mode)
+    private static bool IsManualLayoutFactorMode(PptxSceneChartManualLayoutMode mode)
     {
-        return string.Equals(mode, "factor", StringComparison.Ordinal);
+        return mode == PptxSceneChartManualLayoutMode.Factor;
     }
 
     private static PptxSceneChartManualLayout ReadManualLayout(XElement parent)
@@ -1658,19 +1658,32 @@ internal sealed partial class PptxRenderer
         XElement? manualLayout = parent
             .Element(ChartNamespace + "layout")
             ?.Element(ChartNamespace + "manualLayout");
-        return manualLayout is null
-            ? default
-            : new PptxSceneChartManualLayout(
-                true,
-                ReadManualLayoutFactor(manualLayout, "x"),
-                ReadManualLayoutFactor(manualLayout, "y"),
-                ReadManualLayoutFactor(manualLayout, "w"),
-                ReadManualLayoutFactor(manualLayout, "h"),
-                ReadManualLayoutValue(manualLayout, "layoutTarget"),
-                ReadManualLayoutValue(manualLayout, "xMode"),
-                ReadManualLayoutValue(manualLayout, "yMode"),
-                ReadManualLayoutValue(manualLayout, "wMode"),
-                ReadManualLayoutValue(manualLayout, "hMode"));
+        if (manualLayout is null)
+        {
+            return default;
+        }
+
+        string layoutTarget = ReadManualLayoutValue(manualLayout, "layoutTarget");
+        string xMode = ReadManualLayoutValue(manualLayout, "xMode");
+        string yMode = ReadManualLayoutValue(manualLayout, "yMode");
+        string widthMode = ReadManualLayoutValue(manualLayout, "wMode");
+        string heightMode = ReadManualLayoutValue(manualLayout, "hMode");
+        return new PptxSceneChartManualLayout(
+            true,
+            ReadManualLayoutFactor(manualLayout, "x"),
+            ReadManualLayoutFactor(manualLayout, "y"),
+            ReadManualLayoutFactor(manualLayout, "w"),
+            ReadManualLayoutFactor(manualLayout, "h"),
+            PptxSceneBuilder.ParseChartManualLayoutTarget(layoutTarget),
+            layoutTarget,
+            PptxSceneBuilder.ParseChartManualLayoutMode(xMode),
+            xMode,
+            PptxSceneBuilder.ParseChartManualLayoutMode(yMode),
+            yMode,
+            PptxSceneBuilder.ParseChartManualLayoutMode(widthMode),
+            widthMode,
+            PptxSceneBuilder.ParseChartManualLayoutMode(heightMode),
+            heightMode);
     }
 
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
@@ -4406,7 +4419,7 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, barPlot, barChart, title, legend, horizontalBars);
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTarget is not null, title, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
 
     private static ChartPlotLayout GetBarChartPlotLayout(
@@ -4538,13 +4551,13 @@ internal sealed partial class PptxRenderer
         ChartPlotLayout layout,
         bool horizontalBars)
     {
-        if (!horizontalBars || !string.Equals(layout.ManualLayoutTarget, "outer", StringComparison.Ordinal))
+        if (!horizontalBars || layout.ManualLayoutTargetKind != PptxSceneChartManualLayoutTarget.Outer)
         {
             return layout;
         }
 
         ChartPlotBox plotBox = DeriveHorizontalBarInnerPlotBox(theme, chartXml, sceneChart, barPlot, barChart, layout.PlotAreaBox);
-        return new ChartPlotLayout(layout.PlotAreaBox, plotBox, layout.ManualLayoutTarget);
+        return new ChartPlotLayout(layout.PlotAreaBox, plotBox, layout.ManualLayoutTargetKind);
     }
 
     private static ChartPlotBox DeriveHorizontalBarInnerPlotBox(
@@ -5337,7 +5350,7 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend);
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTarget is not null, title, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
 
     private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
@@ -5438,7 +5451,7 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend);
-        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTarget is not null, title, legend);
+        return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
 
     private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend)
@@ -6440,7 +6453,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
 
-    private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, string? ManualLayoutTarget)
+    private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)
     {
         public static ChartPlotLayout FromPlotBox(ChartPlotBox plotBox)
         {

@@ -515,11 +515,30 @@ internal readonly record struct PptxSceneChartManualLayout(
     double? Y,
     double? Width,
     double? Height,
+    PptxSceneChartManualLayoutTarget LayoutTargetKind,
     string LayoutTarget,
+    PptxSceneChartManualLayoutMode XModeKind,
     string XMode,
+    PptxSceneChartManualLayoutMode YModeKind,
     string YMode,
+    PptxSceneChartManualLayoutMode WidthModeKind,
     string WidthMode,
+    PptxSceneChartManualLayoutMode HeightModeKind,
     string HeightMode);
+
+internal enum PptxSceneChartManualLayoutTarget
+{
+    Inner,
+    Outer,
+    Unknown
+}
+
+internal enum PptxSceneChartManualLayoutMode
+{
+    Edge,
+    Factor,
+    Unknown
+}
 
 internal sealed record PptxSceneChartSeries(
     int? Index,
@@ -1120,6 +1139,30 @@ internal sealed class PptxSceneBuilder
             _ when kind?.Equals("serAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Series,
             _ when kind?.Equals("valAx", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisKind.Value,
             _ => PptxSceneChartAxisKind.Unknown
+        };
+    }
+
+    internal static PptxSceneChartManualLayoutTarget ParseChartManualLayoutTarget(string? target)
+    {
+        return target switch
+        {
+            "inner" => PptxSceneChartManualLayoutTarget.Inner,
+            "outer" => PptxSceneChartManualLayoutTarget.Outer,
+            _ when target?.Equals("inner", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartManualLayoutTarget.Inner,
+            _ when target?.Equals("outer", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartManualLayoutTarget.Outer,
+            _ => PptxSceneChartManualLayoutTarget.Unknown
+        };
+    }
+
+    internal static PptxSceneChartManualLayoutMode ParseChartManualLayoutMode(string? mode)
+    {
+        return mode switch
+        {
+            "edge" => PptxSceneChartManualLayoutMode.Edge,
+            "factor" => PptxSceneChartManualLayoutMode.Factor,
+            _ when mode?.Equals("edge", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartManualLayoutMode.Edge,
+            _ when mode?.Equals("factor", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartManualLayoutMode.Factor,
+            _ => PptxSceneChartManualLayoutMode.Unknown
         };
     }
 
@@ -2019,17 +2062,27 @@ internal sealed class PptxSceneBuilder
         double? y = ReadChartManualLayoutFactor(manualLayout, "y");
         double? width = ReadChartManualLayoutFactor(manualLayout, "w");
         double? height = ReadChartManualLayoutFactor(manualLayout, "h");
+        string layoutTarget = ReadChartElementValue(manualLayout, "layoutTarget");
+        string xMode = ReadChartElementValue(manualLayout, "xMode");
+        string yMode = ReadChartElementValue(manualLayout, "yMode");
+        string widthMode = ReadChartElementValue(manualLayout, "wMode");
+        string heightMode = ReadChartElementValue(manualLayout, "hMode");
         return new PptxSceneChartManualLayout(
             true,
             x,
             y,
             width,
             height,
-            ReadChartElementValue(manualLayout, "layoutTarget"),
-            ReadChartElementValue(manualLayout, "xMode"),
-            ReadChartElementValue(manualLayout, "yMode"),
-            ReadChartElementValue(manualLayout, "wMode"),
-            ReadChartElementValue(manualLayout, "hMode"));
+            ParseChartManualLayoutTarget(layoutTarget),
+            layoutTarget,
+            ParseChartManualLayoutMode(xMode),
+            xMode,
+            ParseChartManualLayoutMode(yMode),
+            yMode,
+            ParseChartManualLayoutMode(widthMode),
+            widthMode,
+            ParseChartManualLayoutMode(heightMode),
+            heightMode);
     }
 
     private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)
