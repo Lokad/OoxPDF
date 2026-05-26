@@ -9193,23 +9193,35 @@ internal static class PptxTests
 
         PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
         TestAssert.Equal("Sheet1!$B$1", lineSeries.DataSources.Name.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, lineSeries.DataSources.Name.ReferenceKindValue);
         TestAssert.Equal("strRef", lineSeries.DataSources.Name.ReferenceKind);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, lineSeries.DataSources.Name.CacheKindValue);
         TestAssert.Equal("strCache", lineSeries.DataSources.Name.CacheKind);
         TestAssert.True(!lineSeries.DataSources.Name.HasCachedPoints, "Expected empty string cache to preserve the formula without inventing cached points.");
         TestAssert.Equal("Sheet1!$A$2:$A$4", lineSeries.DataSources.Categories.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, lineSeries.DataSources.Categories.ReferenceKindValue);
         TestAssert.Equal("multiLvlStrRef", lineSeries.DataSources.Categories.ReferenceKind);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.MultiLevelStringCache, lineSeries.DataSources.Categories.CacheKindValue);
         TestAssert.Equal("multiLvlStrCache", lineSeries.DataSources.Categories.CacheKind);
         TestAssert.Equal("Sheet1!$B$2:$B$4", lineSeries.DataSources.Values.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, lineSeries.DataSources.Values.ReferenceKindValue);
         TestAssert.Equal("numRef", lineSeries.DataSources.Values.ReferenceKind);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, lineSeries.DataSources.Values.CacheKindValue);
         TestAssert.Equal("numCache", lineSeries.DataSources.Values.CacheKind);
         TestAssert.True(!lineSeries.DataSources.Values.HasCachedPoints, "Expected formula-only numeric references to remain distinguishable from cached values.");
 
         PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
         TestAssert.Equal("Sheet2!$A$2:$A$4", scatterSeries.DataSources.XValues.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.XValues.ReferenceKindValue);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.XValues.CacheKindValue);
         TestAssert.True(scatterSeries.DataSources.XValues.HasCachedPoints, "Expected x-value cache point presence in the scene model.");
         TestAssert.Equal("Sheet2!$B$2:$B$4", scatterSeries.DataSources.YValues.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.YValues.ReferenceKindValue);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.YValues.CacheKindValue);
         TestAssert.True(scatterSeries.DataSources.YValues.HasCachedPoints, "Expected y-value cache point presence in the scene model.");
         TestAssert.Equal("Sheet2!$C$2:$C$4", scatterSeries.DataSources.BubbleSizes.Formula ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.BubbleSizes.ReferenceKindValue);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.BubbleSizes.CacheKindValue);
         TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
     }
 

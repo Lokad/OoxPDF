@@ -579,9 +579,27 @@ internal sealed record PptxSceneChartSeriesDataSources(
 
 internal readonly record struct PptxSceneChartDataSource(
     string? Formula,
+    PptxSceneChartDataSourceReferenceKind ReferenceKindValue,
     string ReferenceKind,
+    PptxSceneChartDataSourceCacheKind CacheKindValue,
     string CacheKind,
     bool HasCachedPoints);
+
+internal enum PptxSceneChartDataSourceReferenceKind
+{
+    Unknown,
+    StringReference,
+    NumberReference,
+    MultiLevelStringReference
+}
+
+internal enum PptxSceneChartDataSourceCacheKind
+{
+    Unknown,
+    StringCache,
+    NumberCache,
+    MultiLevelStringCache
+}
 
 internal sealed record PptxSceneChartMarker(
     bool IsDefined,
@@ -1001,6 +1019,28 @@ internal sealed class PptxSceneBuilder
             _ when symbol?.Equals("triangle", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.Triangle,
             _ when symbol?.Equals("x", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartMarkerSymbol.X,
             _ => PptxSceneChartMarkerSymbol.Unknown
+        };
+    }
+
+    internal static PptxSceneChartDataSourceReferenceKind ParseChartDataSourceReferenceKind(string? referenceKind)
+    {
+        return referenceKind switch
+        {
+            "strRef" => PptxSceneChartDataSourceReferenceKind.StringReference,
+            "numRef" => PptxSceneChartDataSourceReferenceKind.NumberReference,
+            "multiLvlStrRef" => PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference,
+            _ => PptxSceneChartDataSourceReferenceKind.Unknown
+        };
+    }
+
+    internal static PptxSceneChartDataSourceCacheKind ParseChartDataSourceCacheKind(string? cacheKind)
+    {
+        return cacheKind switch
+        {
+            "strCache" => PptxSceneChartDataSourceCacheKind.StringCache,
+            "numCache" => PptxSceneChartDataSourceCacheKind.NumberCache,
+            "multiLvlStrCache" => PptxSceneChartDataSourceCacheKind.MultiLevelStringCache,
+            _ => PptxSceneChartDataSourceCacheKind.Unknown
         };
     }
 
@@ -1901,7 +1941,9 @@ internal sealed class PptxSceneBuilder
                 .Any() == true;
             return new PptxSceneChartDataSource(
                 (string?)reference.Element(ChartNamespace + "f"),
+                ParseChartDataSourceReferenceKind(referenceKind),
                 referenceKind,
+                ParseChartDataSourceCacheKind(cache?.Name.LocalName),
                 cache?.Name.LocalName ?? string.Empty,
                 hasCachedPoints);
         }
