@@ -2256,6 +2256,14 @@ High-priority actions:
 - [ ] 2026-05-25: Continue the private slide-17 typography investigation through public fixtures: use private
   evidence only to identify generic missing text behavior, then lock the behavior with synthetic
   Office-backed cases.
+  - [x] 2026-05-26: Re-ran the private-safe `lokad-value-based` acceptance on the current renderer at
+    `artifacts/private-visual/lokad-value-based/20260526-083256`. The deck still compares 84/84 pages with
+    zero dimension mismatches, one unrelated JPEG recolor diagnostic on a different slide, and slide 17 at
+    MAE `2.881015`, changed16 `0.044900`, changed32 `0.035255`, SSIM `0.920075`. Candidate-only PDF text
+    inspection for slide 17 has 44 text operations, 7 distinct fonts, font sizes 9-18 pt, and graphics
+    operations limited to clip/fill/stroke classes (`W` 44, `f` 17, `S` 8). The large Office reference PDF
+    text-only inspection timed out when run as a whole, so the remaining action is a narrower public or
+    page-targeted structural text comparison rather than a private-content-driven renderer tweak.
 - [ ] 2026-05-25: Migrate PPTX text frames fully to the model-first path where style cascade, line layout,
   glyph positioning, and PDF emission are separate observable stages.
   - [x] 2026-05-25: Introduced a typed `PptxTextBodyProperties` record for text-frame body properties instead
