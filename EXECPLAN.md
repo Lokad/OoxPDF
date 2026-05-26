@@ -7744,6 +7744,22 @@ explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved chart number-format metadata at the scene boundary instead of leaving
+format ownership as renderer-local string handling. `PptxSceneChartNumberFormat` now captures whether a
+`c:numFmt` element is present, its `formatCode`, and its `sourceLinked` flag for plot data labels,
+per-point data-label overrides, and axes, while the existing `NumberFormat` strings remain in place for
+current rendering compatibility. The new model test locks both `sourceLinked="0"` and `sourceLinked="1"` so
+future workbook-aware formatting can distinguish explicit OOXML format codes from source-linked Office
+behavior without re-scanning chart XML.
+
+This is still metadata preservation, not Office-perfect number formatting. The long-term gap remains to
+connect `sourceLinked`, workbook cell styles, `date1904`, locale-sensitive date/number sections, and Office's
+axis/data-label default format selection against public Office-PDF evidence before changing emitted labels.
+
+Validation: focused non-slow `pptx-model` passed (`17 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart-wide option metadata in the typed scene model before attempting
 to render its semantics. `PptxSceneChartOptions` now owns chart-space `date1904` and `roundedCorners`,
 chart-level `plotVisOnly` and `showDLblsOverMax`, and the explicit `dispBlanksAs` value with a typed

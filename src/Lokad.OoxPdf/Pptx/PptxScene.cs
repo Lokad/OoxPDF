@@ -521,6 +521,7 @@ internal sealed record PptxSceneChartDataLabels(
     string Position,
     string Separator,
     string NumberFormat,
+    PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle,
     IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
@@ -539,9 +540,15 @@ internal sealed record PptxSceneChartDataLabelOverride(
     string Position,
     string Separator,
     string NumberFormat,
+    PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle);
+
+internal readonly record struct PptxSceneChartNumberFormat(
+    bool IsDefined,
+    string FormatCode,
+    bool? SourceLinked);
 
 internal readonly record struct PptxSceneChartLeaderLines(
     bool IsDefined,
@@ -745,6 +752,7 @@ internal sealed record PptxSceneChartAxis(
     int? TickMarkSkip,
     bool? NoMultiLevelLabels,
     string? NumberFormat,
+    PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartTitle Title);
 
 internal enum PptxSceneChartAxisKind
@@ -1781,8 +1789,9 @@ internal sealed class PptxSceneBuilder
             plot.Elements(ChartNamespace + "ser")
                 .Select(series => series.Element(ChartNamespace + "dLbls"))
                 .FirstOrDefault(element => element is not null);
-        return labels is null
-            ? new PptxSceneChartDataLabels(
+        if (labels is null)
+        {
+            return new PptxSceneChartDataLabels(
                 ShowValue: null,
                 ShowPercent: null,
                 ShowCategoryName: null,
@@ -1793,11 +1802,15 @@ internal sealed class PptxSceneBuilder
                 Position: string.Empty,
                 Separator: string.Empty,
                 NumberFormat: string.Empty,
+                NumberFormatInfo: default,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null),
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default),
                 Overrides: [],
-                IsDefined: false)
-            : new PptxSceneChartDataLabels(
+                IsDefined: false);
+        }
+
+        PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
+        return new PptxSceneChartDataLabels(
                 ReadOptionalOoxmlBooleanElement(labels, "showVal"),
                 ReadOptionalOoxmlBooleanElement(labels, "showPercent"),
                 ReadOptionalOoxmlBooleanElement(labels, "showCatName"),
@@ -1807,7 +1820,8 @@ internal sealed class PptxSceneBuilder
                 ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                labels.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                numberFormat.FormatCode,
+                numberFormat,
                 ReadChartTextStyleOverride(labels, theme),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
                 ReadChartDataLabelOverrides(labels, theme),
@@ -1833,6 +1847,7 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
+            PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 ReadOptionalOoxmlBooleanElement(label, "showVal"),
@@ -1845,7 +1860,8 @@ internal sealed class PptxSceneBuilder
                 ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
-                label.Element(ChartNamespace + "numFmt")?.Attribute("formatCode")?.Value ?? string.Empty,
+                numberFormat.FormatCode,
+                numberFormat,
                 ReadChartManualLayout(label),
                 ReadChartTextStyleOverride(label, theme),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme)));
@@ -1858,6 +1874,17 @@ internal sealed class PptxSceneBuilder
     {
         XElement? element = parent.Element(ChartNamespace + elementName);
         return element is null ? null : IsOoxmlBooleanElementEnabled(element);
+    }
+
+    private static PptxSceneChartNumberFormat ReadChartNumberFormat(XElement parent)
+    {
+        XElement? numberFormat = parent.Element(ChartNamespace + "numFmt");
+        return numberFormat is null
+            ? default
+            : new PptxSceneChartNumberFormat(
+                IsDefined: true,
+                FormatCode: (string?)numberFormat.Attribute("formatCode") ?? string.Empty,
+                SourceLinked: ReadOptionalOoxmlBooleanAttribute(numberFormat, "sourceLinked"));
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
@@ -2306,6 +2333,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementInt(axis, "tickMarkSkip"),
                 ReadOptionalOoxmlBooleanElement(axis, "noMultiLvlLbl"),
                 ReadChartAxisNumberFormat(axis),
+                ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme)));
         }
 

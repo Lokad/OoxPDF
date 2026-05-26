@@ -9839,6 +9839,63 @@ internal static class PptxTests
         TestAssert.True(series.CategoryLevels[1][1].HasText, "Expected blank multi-level category value to preserve its value element.");
     }
 
+    public static void PptxScenePreservesChartNumberFormatMetadata()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:dLbls>
+                    <c:numFmt formatCode="#,##0.00" sourceLinked="0"/>
+                    <c:dLbl>
+                      <c:idx val="1"/>
+                      <c:numFmt formatCode="0%" sourceLinked="1"/>
+                    </c:dLbl>
+                  </c:dLbls>
+                  <c:ser>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                </c:lineChart>
+                <c:catAx>
+                  <c:axId val="10"/>
+                  <c:numFmt formatCode="m/d/yy" sourceLinked="1"/>
+                </c:catAx>
+                <c:valAx>
+                  <c:axId val="20"/>
+                  <c:numFmt formatCode="0.0%" sourceLinked="0"/>
+                </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartDataLabels labels = chart?.Plots[0].DataLabels ?? throw new InvalidOperationException("Expected plot data labels.");
+        TestAssert.Equal("#,##0.00", labels.NumberFormat);
+        TestAssert.True(labels.NumberFormatInfo.IsDefined, "Expected plot data-label number format metadata to be explicit.");
+        TestAssert.Equal("#,##0.00", labels.NumberFormatInfo.FormatCode);
+        TestAssert.True(labels.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive data-label parsing.");
+
+        PptxSceneChartDataLabelOverride label = labels.Overrides[0];
+        TestAssert.Equal(1, label.Index);
+        TestAssert.Equal("0%", label.NumberFormat);
+        TestAssert.True(label.NumberFormatInfo.IsDefined, "Expected per-label number format metadata to be explicit.");
+        TestAssert.Equal("0%", label.NumberFormatInfo.FormatCode);
+        TestAssert.True(label.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive data-label override parsing.");
+
+        PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.Kind == "catAx");
+        TestAssert.Equal("m/d/yy", categoryAxis.NumberFormat ?? string.Empty);
+        TestAssert.True(categoryAxis.NumberFormatInfo.IsDefined, "Expected category-axis number format metadata to be explicit.");
+        TestAssert.Equal("m/d/yy", categoryAxis.NumberFormatInfo.FormatCode);
+        TestAssert.True(categoryAxis.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive category-axis parsing.");
+
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.Kind == "valAx");
+        TestAssert.Equal("0.0%", valueAxis.NumberFormat ?? string.Empty);
+        TestAssert.True(valueAxis.NumberFormatInfo.IsDefined, "Expected value-axis number format metadata to be explicit.");
+        TestAssert.Equal("0.0%", valueAxis.NumberFormatInfo.FormatCode);
+        TestAssert.True(valueAxis.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive value-axis parsing.");
+    }
+
     public static void PptxChartAutoTitleDeletedSuppressesSingleSeriesName()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""
