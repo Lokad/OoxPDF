@@ -328,6 +328,17 @@ High-priority actions:
   repeatable text-emission quantization before writing `/Tf`; a separate non-picture graphics-structure gap still
   accounts for the missing even-odd clip. Public image evidence rules out normal stretched raster pictures as the
   remaining source.
+- [x] Align single-column PPTX text-box PDF clips across default, `spAutoFit`, and `noAutofit` overflow modes:
+  public Office probes now show that single-column text boxes with default body properties, explicit
+  `a:spAutoFit`, and explicit `a:noAutofit` all emit slide-sized `W*` text clips when `vertOverflow` is not
+  `clip`; the PDF clip is an export structure and must not be inferred from the local layout text rectangle.
+  `PptxTextFrameModel` now lets any single-column text-box overflow to the slide clip while preserving local
+  frame/column clips for vertical clipping, non-textbox shapes, and multi-column text. Public structural checks are
+  exact for `pptx-ladder-04-spautofit-overflow` (`W*` bucket 5/5 full-slide on both Office and candidate) and
+  `pptx-ladder-04-typography-bold-wrap-probe` (`W*` bucket 3/3 full-slide on both). Private page-17 evidence
+  improved from many frame-wide text-strip buckets to one remaining frame-wide candidate bucket; the page still has
+  Office `W*:68` versus candidate `W*:67`, so the unresolved clip work is now a narrower non-textbox/explicit-clip
+  or path-shape issue, not ordinary single-column text-box overflow.
 - [ ] Complete the Office PPTX-to-PDF text font-size emission profile:
   ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
   outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,

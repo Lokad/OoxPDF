@@ -4965,6 +4965,78 @@ internal static class PptxTests
         TestAssert.Contains("0 0 720 540 re W* n", pdf);
     }
 
+    public static void PptxSyntheticNoAutoFitTextBoxUsesSlideWidthTextClip()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"/><a:t>No autofit text wraps with Office slide clip.</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+    }
+
+    public static void PptxSyntheticShapeAutoFitTextBoxUsesSlideWidthTextClip()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:nvSpPr><p:cNvPr id="2" name="TextBox"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="457200"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" vertOverflow="overflow"><a:spAutoFit/></a:bodyPr><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400"/><a:t>Shape autofit text wraps with Office slide clip.</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0 0 720 540 re W* n", pdf);
+    }
+
     public static void PptxJustifiedTextLayoutDistributesWrappedLines()
     {
         string input = Path.GetFullPath(Path.Combine(

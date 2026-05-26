@@ -178,7 +178,7 @@ internal sealed partial class PptxRenderer
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
         bool clipsVerticalOverflow = bodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
-        bool canOverflowToSlideClip = IsTextBoxShape(shape) && !HasNoAutoFit(textBody) && !HasShapeAutoFit(textBody);
+        bool canOverflowToSlideClip = IsTextBoxShape(shape) && columnCount == 1;
         bool clipsTextLocally = clipsVerticalOverflow || !canOverflowToSlideClip;
         double textClipX = clipsTextLocally ? textX : 0d;
         double textClipWidth = clipsTextLocally ? textWidth : document.SlideWidthPoints;
