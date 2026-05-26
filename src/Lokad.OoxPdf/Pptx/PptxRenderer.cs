@@ -51,15 +51,15 @@ internal sealed partial class PptxRenderer
 
             if (context.Inheritance.MasterXml is not null)
             {
-                RenderBackground(context, context.SceneSlide?.MasterBackground, context.Inheritance.MasterXml, graphics);
+                RenderBackground(context, context.SceneSlide?.MasterBackground, context.Inheritance.MasterXml, graphics, defaultWhenMissing: false);
             }
 
             if (context.Inheritance.LayoutXml is not null)
             {
-                RenderBackground(context, context.SceneSlide?.LayoutBackground, context.Inheritance.LayoutXml, graphics);
+                RenderBackground(context, context.SceneSlide?.LayoutBackground, context.Inheritance.LayoutXml, graphics, defaultWhenMissing: false);
             }
 
-            RenderBackground(context, context.SceneSlide?.SlideBackground, context.SlideXml, graphics);
+            RenderBackground(context, context.SceneSlide?.SlideBackground, context.SlideXml, graphics, defaultWhenMissing: true);
             var orderedImages = new List<PdfImageResource>();
             var orderedChartFonts = new List<PdfFontResource>();
             int imageIndex = 1;

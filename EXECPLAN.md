@@ -256,6 +256,29 @@ High-priority actions:
   `f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count and preserving the previous fill-operator
   convergence toward Office `f:4,f*:14,S:4,W*:68`. Remaining public work should target the extra Office clip
   regions and the derived fractional font-size differences.
+- [x] Extend filled curved-connector outlines to Office `tailEnd type="arrow"`:
+  the public curved-connector transform probe showed Office representing arrow-tail curved connectors as filled
+  connector regions too, not as stroked curves plus independent markers. Solid, undashed curved connectors with
+  no head marker and an `arrow` tail now use the same filled-outline route as triangle tails, with Office-like
+  arrow marker dimensions and a public synthetic guard that rejects the former `c S` stroke sequence.
+- [x] Emit Office-like page/background clipping and slide drawing clips:
+  PPTX slide rendering now emits the explicit clipped white/default or solid page fill at the slide layer, while
+  master and layout backgrounds no longer synthesize their own default white fills. Non-text drawing nodes are
+  wrapped with a full-slide even-odd clip, and text-only shapes keep their existing text-frame clip so the renderer
+  does not add extra page clips around pure text. The public connector transform probe now has exact high-level
+  graphics-operator parity with Office (`f:4,f*:1,W*:6`), and private page 17 moved to candidate
+  `f:4,f*:14,S:4,W*:67` against Office `f:4,f*:14,S:4,W*:68`.
+- [ ] Replace sampled curved-connector filled outlines with analytical Office-like curve-rich paths:
+  the public connector transform probe now matches Office at the high-level fill/clip/stroke operator count, but
+  PDF inspection still shows candidate filled connector paths as sampled polygons (`seg=99,line=98,curve=0`) while
+  Office keeps curve-bearing connector regions (`seg=250,line=244,curve=4`). This is a long-term structural
+  alignment gap, not a raster emergency.
+- [ ] Close the remaining private page-17 slide-clip and derived font-size gaps:
+  after the page/background clipping pass, private page 17 is down to one missing high-level `W*` clip and still
+  differs on derived/fractional font sizes: Office reports `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while
+  candidate reports `9,10,12,13,14,16,18`. The fractional-font public guard covers explicit `a:rPr sz`, so the
+  remaining work should investigate theme/body style, placeholder inheritance, and autoscale-derived sizes rather
+  than another narrow page-specific patch.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -6643,3 +6666,29 @@ slightly to MAE `2.877938`, changed16 `0.044695`, changed32 `0.035255`, SSIM `0.
 inspection now shows candidate `f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count while remaining one `f*`
 fill and 24 `W*` clips away from Office `f:4,f*:14,S:4,W*:68`. Remaining structural targets are Office-style
 clip-region emission and the derived fractional font-size differences still visible in page-17 text operations.
+
+Revision note, 2026-05-26: Continued the private-safe slide-17 structural alignment path by extending the filled
+curved-connector rule from triangle tails to `tailEnd type="arrow"` and by moving PPTX slide/background emission
+toward Office's clipped page-object structure. Explicit slide backgrounds now emit an even-odd full-page clip and
+fill, missing slide backgrounds synthesize exactly one clipped white page fill, and master/layout backgrounds no
+longer synthesize default white fills independently. Dispatch now wraps non-text drawing nodes in full-slide clips
+while leaving text-only shapes on the existing text-frame clip path. This avoids the over-clipping observed when all
+shape nodes were blindly wrapped, and it keeps the change structural rather than keyed to a private page. The public
+synthetic guard `PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline` locks arrow-tail filled connector output,
+and older PDF operator assertions were refreshed so explicit white page fills and text-only shape behavior are no
+longer treated as failures.
+
+Validation: focused formerly failing typography/chart assertions passed individually; focused `pptx-shapes` tests
+passed 15/15; the full non-slow test runner passed 235/235 with 7 skipped; and the full public `pptx-shapes` visual
+family passed 30/30 at `artifacts/visual/reports/pptx-shapes.json` generated
+`2026-05-26T09:41:14.3276407+02:00`. The public connector transform probe
+`artifacts/visual/pptx-ladder-06-curved-connector-transform-probe/20260526-092926` passed with MAE `0.212650`,
+changed16 `0.002648`, changed32 `0.002245`, SSIM `0.885464`, and exact high-level graphics-operator parity
+(`f:4,f*:1,W*:6` on both Office and candidate). The private `lokad-value-based` run
+`artifacts/private-visual/lokad-value-based/20260526-093014` compared 84/84 pages with zero dimension mismatches,
+deck MAE `8.945151`, max MAE `19.097502`, mean changed16 `0.115512`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 stayed visually stable at MAE `2.877938`, changed16 `0.044695`,
+changed32 `0.035255`, SSIM `0.920089`; page-filtered graphics inspection now shows candidate
+`f:4,f*:14,S:4,W*:67` versus Office `f:4,f*:14,S:4,W*:68`, with 44 text operations on both sides. Remaining
+long-term gaps are one missing Office-style clip, analytical curve-bearing connector outlines instead of sampled
+polygons, and derived/fractional font sizes from Office text-style inheritance or autoscale behavior.

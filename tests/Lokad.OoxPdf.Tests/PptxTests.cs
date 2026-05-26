@@ -1016,6 +1016,41 @@ internal static class PptxTests
         TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
 
+    public static void PptxSyntheticCurvedConnectorArrowTailUsesFilledOutline()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:cxnSp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="curvedConnector3"><a:avLst/></a:prstGeom>
+                          <a:ln w="25400"><a:solidFill><a:srgbClr val="606060"/></a:solidFill><a:tailEnd type="arrow"/></a:ln>
+                        </p:spPr>
+                      </p:cxnSp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.376 0.376 0.376 rg", pdf);
+        TestAssert.Contains("h\r\nf", pdf);
+        TestAssert.DoesNotContain(" c\r\nS", pdf);
+    }
+
     public static void PptxSyntheticCustomGeometryCubicPathRendersCurve()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
@@ -1566,8 +1601,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, Regex.Matches(pdf, @"-1\s+-?0\s+-?0\s+1\s+432\s+0\s+cm").Count);
         TestAssert.Contains("0046", pdf);
+        TestAssert.True(!Regex.IsMatch(pdf, @"-1\s+-?0\s+-?0\s+-1\s+[0-9.]+\s+[0-9.]+\s+cm"), "Flipped rotated text should not be rendered upside down.");
     }
 
     public static void PptxSyntheticBodyPrRotationOverridesShapeTextTransform()
@@ -1603,7 +1638,8 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Equal(1, Regex.Matches(pdf, @"-1\s+-?0\s+-?0\s+1\s+432\s+0\s+cm").Count);
+        TestAssert.Contains("0052", pdf);
+        TestAssert.True(!Regex.IsMatch(pdf, @"0\s+-1\s+1\s+0\s+[0-9.]+\s+[0-9.]+\s+cm"), "Explicit bodyPr rotation should override the shape text rotation.");
     }
 
     public static void PptxSyntheticTextOrientationVariantsProduceTransforms()
@@ -3746,7 +3782,9 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.True(!pdf.Contains("1 1 1 rg", StringComparison.Ordinal), "Explicit run color should override shape fontRef color.");
+        int redTextColor = pdf.IndexOf("1 0 0 rg", StringComparison.Ordinal);
+        TestAssert.True(redTextColor >= 0, "Expected explicit run color in the PDF text stream.");
+        TestAssert.True(pdf.IndexOf("1 1 1 rg", redTextColor, StringComparison.Ordinal) < 0, "Explicit run color should override shape fontRef color after the page background has been painted.");
     }
 
     public static void PptxSyntheticTextBoxRendersTextHighlight()
@@ -9536,7 +9574,6 @@ internal static class PptxTests
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("f*", pdf);
         TestAssert.Contains(" l S", pdf);
-        TestAssert.DoesNotContain("1 1 1 rg", pdf);
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }

@@ -26,20 +26,36 @@ internal sealed partial class PptxRenderer
                 case PptxSceneNodeKind.Shape:
                     if (renderPlaceholders || !node.IsPlaceholder)
                     {
-                        RenderShapeNode(
+                        if (HasDrawableShape(node))
+                        {
+                            BeginSlideNodeClip(context, graphics);
+                            RenderShape(
+                                node,
+                                relationships,
+                                context.Package,
+                                context.Document,
+                                graphics,
+                                context.DiagnosticSink,
+                                context.SlideNumber,
+                                context.Theme,
+                                transform,
+                                images,
+                                context.ImageCache,
+                                ref imageIndex);
+                            EndSlideNodeClip(graphics);
+                        }
+
+                        RenderTextNode(
                             node,
                             context,
                             graphics,
                             fonts,
-                            images,
-                            relationships,
-                            transform,
-                            ref imageIndex,
                             renderPlaceholders);
                     }
 
                     break;
                 case PptxSceneNodeKind.Connector:
+                    BeginSlideNodeClip(context, graphics);
                     RenderShape(
                         node,
                         relationships,
@@ -53,8 +69,10 @@ internal sealed partial class PptxRenderer
                         images,
                         context.ImageCache,
                         ref imageIndex);
+                    EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.Picture:
+                    BeginSlideNodeClip(context, graphics);
                     RenderPicture(
                         node,
                         context,
@@ -63,13 +81,18 @@ internal sealed partial class PptxRenderer
                         images,
                         relationships,
                         ref imageIndex);
+                    EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.Table:
+                    BeginSlideNodeClip(context, graphics);
                     IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform);
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
+                    EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.Chart:
+                    BeginSlideNodeClip(context, graphics);
                     RenderChartFrame(context, graphics, chartFonts, node, transform, relationships);
+                    EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.UnknownGraphicFrame:
                     RenderUnsupportedGraphicFrame(node, context, sourcePartName);
@@ -90,6 +113,43 @@ internal sealed partial class PptxRenderer
                     break;
             }
         }
+    }
+
+    private static bool HasDrawableShape(PptxSceneNode node)
+    {
+        return node.Shape is
+        {
+            Fill.HasFill: true
+        } or
+        {
+            GradientFill.HasGradient: true
+        } or
+        {
+            PatternFill.HasPattern: true
+        } or
+        {
+            PictureFill.HasPicture: true
+        } or
+        {
+            Glow.HasGlow: true
+        } or
+        {
+            OuterShadow.HasShadow: true
+        } or
+        {
+            Line.HasLine: true
+        };
+    }
+
+    private static void BeginSlideNodeClip(PptxRenderContext context, PdfGraphicsBuilder graphics)
+    {
+        graphics.SaveState();
+        graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+    }
+
+    private static void EndSlideNodeClip(PdfGraphicsBuilder graphics)
+    {
+        graphics.RestoreState();
     }
 
     private static void RenderShapeNode(

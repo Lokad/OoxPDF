@@ -9,24 +9,20 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void RenderBackground(PptxRenderContext context, PptxSceneBackground? sceneBackground, XDocument slideXml, PdfGraphicsBuilder graphics)
+    private static void RenderBackground(PptxRenderContext context, PptxSceneBackground? sceneBackground, XDocument slideXml, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
         if (sceneBackground is { HasFill: true } background)
         {
             graphics.SaveState();
+            graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
             if (background.Alpha < 0.999d)
             {
                 graphics.SetAlpha(background.Alpha, 1d);
             }
 
             graphics.SetFillRgb(background.Color.Red, background.Color.Green, background.Color.Blue);
-            graphics.FillRectangle(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
             graphics.RestoreState();
-            return;
-        }
-
-        if (sceneBackground is not null)
-        {
             return;
         }
 
@@ -36,9 +32,24 @@ internal sealed partial class PptxRenderer
             .Element(PresentationNamespace + "bgPr");
         if (TryReadSolidColor(backgroundXml, context.Theme, out RgbColor color))
         {
+            graphics.SaveState();
+            graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
             graphics.SetFillRgb(color.Red, color.Green, color.Blue);
-            graphics.FillRectangle(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            graphics.RestoreState();
+            return;
         }
+
+        if (!defaultWhenMissing)
+        {
+            return;
+        }
+
+        graphics.SaveState();
+        graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+        graphics.SetFillRgb(255, 255, 255);
+        graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+        graphics.RestoreState();
     }
 
     private static void RenderShape(
@@ -406,7 +417,7 @@ internal sealed partial class PptxRenderer
                 if (!hasDash &&
                     lineCap is null &&
                     headEnd.IsNone &&
-                    tailEnd.Kind == LineEndKind.Triangle)
+                    tailEnd.Kind is LineEndKind.Triangle or LineEndKind.Arrow)
                 {
                     graphics.SetFillRgb(stroke.Red, stroke.Green, stroke.Blue);
                     if (!TryFillCurvedConnectorPreset(
@@ -419,6 +430,7 @@ internal sealed partial class PptxRenderer
                         height,
                         document.SlideHeightPoints,
                         lineWidth,
+                        tailEnd.Kind,
                         presetAdjustmentsOverride))
                     {
                         DrawCurvedConnectorPreset(
@@ -1913,6 +1925,7 @@ internal sealed partial class PptxRenderer
         double height,
         double slideHeight,
         double lineWidth,
+        LineEndKind tailKind,
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride)
     {
         List<BezierSegment> segments = preset switch
@@ -1950,7 +1963,7 @@ internal sealed partial class PptxRenderer
             cumulativeLengths[i] = totalLength;
         }
 
-        double markerLength = Math.Max(5d, lineWidth * 3.5d);
+        double markerLength = tailKind == LineEndKind.Arrow ? lineWidth * 4.423333d : Math.Max(5d, lineWidth * 3.5d);
         double baseDistance = Math.Max(0d, totalLength - markerLength);
         CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
         double halfWidth = Math.Max(0.1d, lineWidth / 2d);
@@ -1974,7 +1987,7 @@ internal sealed partial class PptxRenderer
 
         (double X, double Y) normal = (-direction.Y, direction.X);
         (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
-        double arrowHalfWidth = Math.Max(5d, lineWidth * 3.5d) * 0.45d;
+        double arrowHalfWidth = tailKind == LineEndKind.Arrow ? lineWidth * 2.181667d : Math.Max(5d, lineWidth * 3.5d) * 0.45d;
         (double X, double Y) leftShoulder = (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth);
         (double X, double Y) rightShoulder = (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth);
 
