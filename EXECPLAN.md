@@ -2267,7 +2267,7 @@ High-priority actions:
     scans the latest public `pptx-ladder-11-*` visual runs, optionally filters to cases without chart
     structural gates, generates PDF inspection/classifier probes when needed, and reports per-kind
     reference/candidate counts plus max geometry deltas without exposing document text.
-  - [ ] Continue the remaining 9 ungated chart cases: area 2-series, area stacked, bar stacked, column stacked,
+  - [x] Continue the remaining 9 ungated chart cases: area 2-series, area stacked, bar stacked, column stacked,
     scatter clusters, scatter smooth, compact stacked secondary axis, composite two charts, and secondary-axis
     overlay. The current sweep shows these are mostly real layout/model gaps, not missing manifest entries:
     area/stacked/column/bar families have plot-box/tick deltas around `8..32 pt`; scatter cases are missing
@@ -2275,7 +2275,11 @@ High-priority actions:
     is not yet reliable because candidate marker/legend false positives dominate; composite two-charts needs a
     multi-chart-aware classifier before isolated text/axis buckets are safe to gate; secondary-axis overlay has
     smaller `3..4.5 pt` deltas but still has marker/legend false positives.
-- [ ] 2026-05-26: Strengthen chart text gates beyond the current 8 cases. Prioritize legend entries, data
+    Subsequent graphics and text gate slices consumed this backlog without deleting the evidence above:
+    `pwsh tools/SummarizeChartStructureDeltas.ps1 -UngatedOnly -SkipProbe` now returns no chart cases, and a
+    manifest inventory finds 37/37 public chart cases with chart graphics gates and 35/37 with chart text
+    gates. The only two graphics-only chart cases are no-legend doughnut probes with no text structures.
+- [x] 2026-05-26: Strengthen chart text gates beyond the current 8 cases. Prioritize legend entries, data
   labels, axis titles, and multi-chart documents, while keeping text hashes and geometry public-safe. The goal is
   to make chart text placement a reusable Office-PDF structural surface before replacing more
   `PptxChartMetricRules` constants.
