@@ -546,8 +546,10 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneChartAxisPosition PositionKind,
     string Position,
     string CrossAxisId,
+    PptxSceneChartAxisCrosses CrossesKind,
     string Crosses,
     double? CrossesAt,
+    PptxSceneChartAxisCrossBetween CrossBetweenKind,
     string CrossBetween,
     bool IsReversed,
     bool? IsDeleted,
@@ -564,7 +566,9 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartTickLabelPosition TickLabelPositionKind,
     string TickLabelPosition,
+    PptxSceneChartAxisTickMark MajorTickMarkKind,
     string MajorTickMark,
+    PptxSceneChartAxisTickMark MinorTickMarkKind,
     string MinorTickMark,
     int? LabelOffset,
     int? TickLabelSkip,
@@ -572,6 +576,30 @@ internal sealed record PptxSceneChartAxis(
     bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartTitle Title);
+
+internal enum PptxSceneChartAxisCrosses
+{
+    AutoZero,
+    Maximum,
+    Minimum,
+    Unknown
+}
+
+internal enum PptxSceneChartAxisCrossBetween
+{
+    Between,
+    MidpointCategory,
+    Unknown
+}
+
+internal enum PptxSceneChartAxisTickMark
+{
+    Cross,
+    Inside,
+    None,
+    Outside,
+    Unknown
+}
 
 internal enum PptxSceneChartTickLabelPosition
 {
@@ -968,6 +996,49 @@ internal sealed class PptxSceneBuilder
             _ => PptxSceneChartTickLabelPosition.Unknown
         };
     }
+
+    internal static PptxSceneChartAxisCrosses ParseChartAxisCrosses(string? crosses)
+    {
+        return crosses switch
+        {
+            "autoZero" => PptxSceneChartAxisCrosses.AutoZero,
+            "max" => PptxSceneChartAxisCrosses.Maximum,
+            "min" => PptxSceneChartAxisCrosses.Minimum,
+            _ when crosses?.Equals("autoZero", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrosses.AutoZero,
+            _ when crosses?.Equals("max", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrosses.Maximum,
+            _ when crosses?.Equals("min", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrosses.Minimum,
+            _ => PptxSceneChartAxisCrosses.Unknown
+        };
+    }
+
+    internal static PptxSceneChartAxisCrossBetween ParseChartAxisCrossBetween(string? crossBetween)
+    {
+        return crossBetween switch
+        {
+            "between" => PptxSceneChartAxisCrossBetween.Between,
+            "midCat" => PptxSceneChartAxisCrossBetween.MidpointCategory,
+            _ when crossBetween?.Equals("between", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrossBetween.Between,
+            _ when crossBetween?.Equals("midCat", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrossBetween.MidpointCategory,
+            _ => PptxSceneChartAxisCrossBetween.Unknown
+        };
+    }
+
+    internal static PptxSceneChartAxisTickMark ParseChartAxisTickMark(string? tickMark)
+    {
+        return tickMark switch
+        {
+            "cross" => PptxSceneChartAxisTickMark.Cross,
+            "in" => PptxSceneChartAxisTickMark.Inside,
+            "none" => PptxSceneChartAxisTickMark.None,
+            "out" => PptxSceneChartAxisTickMark.Outside,
+            _ when tickMark?.Equals("cross", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisTickMark.Cross,
+            _ when tickMark?.Equals("in", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisTickMark.Inside,
+            _ when tickMark?.Equals("none", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisTickMark.None,
+            _ when tickMark?.Equals("out", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisTickMark.Outside,
+            _ => PptxSceneChartAxisTickMark.Unknown
+        };
+    }
+
     private const double MinimumStrokeWidth = 0.1d;
     private const double SceneEffectTolerance = 0.001d;
     private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
@@ -1683,15 +1754,23 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
+            string axisPosition = (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty;
+            string crosses = (string?)axis.Element(ChartNamespace + "crosses")?.Attribute("val") ?? string.Empty;
+            string crossBetween = (string?)axis.Element(ChartNamespace + "crossBetween")?.Attribute("val") ?? string.Empty;
+            string tickLabelPosition = (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty;
+            string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
+            string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
             axes.Add(new PptxSceneChartAxis(
                 id,
                 axis.Name.LocalName,
-                ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty),
-                (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty,
+                ParseChartAxisPosition(axisPosition),
+                axisPosition,
                 (string?)axis.Element(ChartNamespace + "crossAx")?.Attribute("val") ?? string.Empty,
-                (string?)axis.Element(ChartNamespace + "crosses")?.Attribute("val") ?? string.Empty,
+                ParseChartAxisCrosses(crosses),
+                crosses,
                 ReadChartElementDouble(axis, "crossesAt"),
-                (string?)axis.Element(ChartNamespace + "crossBetween")?.Attribute("val") ?? string.Empty,
+                ParseChartAxisCrossBetween(crossBetween),
+                crossBetween,
                 string.Equals(
                     (string?)axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val"),
                     "maxMin",
@@ -1708,10 +1787,12 @@ internal sealed class PptxSceneBuilder
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
                 ReadChartTextStyleOverride(axis, theme),
-                ParseChartTickLabelPosition((string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty),
-                (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty,
-                ReadChartElementValue(axis, "majorTickMark"),
-                ReadChartElementValue(axis, "minorTickMark"),
+                ParseChartTickLabelPosition(tickLabelPosition),
+                tickLabelPosition,
+                ParseChartAxisTickMark(majorTickMark),
+                majorTickMark,
+                ParseChartAxisTickMark(minorTickMark),
+                minorTickMark,
                 ReadChartElementInt(axis, "lblOffset"),
                 ReadChartElementInt(axis, "tickLblSkip"),
                 ReadChartElementInt(axis, "tickMarkSkip"),

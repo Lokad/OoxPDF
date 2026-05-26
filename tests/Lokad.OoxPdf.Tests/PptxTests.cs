@@ -483,13 +483,18 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartAxisPosition.Left, slide.SlideNodes[4].Chart?.Axes[1].PositionKind);
         TestAssert.Equal("20", slide.SlideNodes[4].Chart?.Axes[0].CrossAxisId ?? string.Empty);
         TestAssert.Equal("autoZero", slide.SlideNodes[4].Chart?.Axes[0].Crosses ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisCrosses.AutoZero, slide.SlideNodes[4].Chart?.Axes[0].CrossesKind);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.Axes[1].CrossAxisId ?? string.Empty);
         TestAssert.Equal("max", slide.SlideNodes[4].Chart?.Axes[1].Crosses ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisCrosses.Maximum, slide.SlideNodes[4].Chart?.Axes[1].CrossesKind);
         TestAssert.Equal(2.5d, slide.SlideNodes[4].Chart?.Axes[1].CrossesAt ?? 0d);
         TestAssert.Equal("between", slide.SlideNodes[4].Chart?.Axes[1].CrossBetween ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisCrossBetween.Between, slide.SlideNodes[4].Chart?.Axes[1].CrossBetweenKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsReversed == true, "Expected chart axis orientation metadata in the scene model.");
         TestAssert.Equal("out", slide.SlideNodes[4].Chart?.Axes[0].MajorTickMark ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisTickMark.Outside, slide.SlideNodes[4].Chart?.Axes[0].MajorTickMarkKind);
         TestAssert.Equal("in", slide.SlideNodes[4].Chart?.Axes[0].MinorTickMark ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisTickMark.Inside, slide.SlideNodes[4].Chart?.Axes[0].MinorTickMarkKind);
         TestAssert.Equal(PptxSceneChartTickLabelPosition.Low, slide.SlideNodes[4].Chart?.Axes[0].TickLabelPositionKind);
         TestAssert.Equal(100, slide.SlideNodes[4].Chart?.Axes[0].LabelOffset ?? 0);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Axes[0].TickLabelSkip ?? 0);

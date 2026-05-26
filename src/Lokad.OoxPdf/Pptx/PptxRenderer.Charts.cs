@@ -3428,15 +3428,15 @@ internal sealed partial class PptxRenderer
             return explicitCrossing;
         }
 
-        string crosses = !string.IsNullOrEmpty(sceneAxis?.Crosses)
-            ? sceneAxis.Crosses
-            : (string?)valueAxis?.Element(ChartNamespace + "crosses")?.Attribute("val") ?? "autoZero";
-        if (string.Equals(crosses, "max", StringComparison.Ordinal))
+        PptxSceneChartAxisCrosses crosses = sceneAxis is not null
+            ? sceneAxis.CrossesKind
+            : PptxSceneBuilder.ParseChartAxisCrosses((string?)valueAxis?.Element(ChartNamespace + "crosses")?.Attribute("val") ?? "autoZero");
+        if (crosses == PptxSceneChartAxisCrosses.Maximum)
         {
             return extents.Max;
         }
 
-        if (string.Equals(crosses, "min", StringComparison.Ordinal))
+        if (crosses == PptxSceneChartAxisCrosses.Minimum)
         {
             return extents.Min;
         }
@@ -3971,14 +3971,14 @@ internal sealed partial class PptxRenderer
             : ReadChartAxisStroke(xmlAxis, theme);
     }
 
-    private static string ReadSceneOrXmlChartAxisMajorTickMark(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis)
+    private static PptxSceneChartAxisTickMark ReadSceneOrXmlChartAxisMajorTickMark(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis)
     {
-        if (sceneAxis is not null && !string.IsNullOrWhiteSpace(sceneAxis.MajorTickMark))
+        if (sceneAxis is not null)
         {
-            return sceneAxis.MajorTickMark;
+            return sceneAxis.MajorTickMarkKind;
         }
 
-        return ((string?)xmlAxis?.Element(ChartNamespace + "majorTickMark")?.Attribute("val")) ?? "none";
+        return PptxSceneBuilder.ParseChartAxisTickMark((string?)xmlAxis?.Element(ChartNamespace + "majorTickMark")?.Attribute("val") ?? "none");
     }
 
     private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
@@ -4545,7 +4545,7 @@ internal sealed partial class PptxRenderer
             leftReserve = plotAreaBox.Width * outsideFactor / (1d + outsideFactor);
         }
 
-        double rightReserve = string.Equals(ReadSceneOrXmlChartAxisMajorTickMark(categorySceneAxis, categoryAxis), "out", StringComparison.Ordinal)
+        double rightReserve = ReadSceneOrXmlChartAxisMajorTickMark(categorySceneAxis, categoryAxis) == PptxSceneChartAxisTickMark.Outside
             ? PptxChartMetricRules.CategoryAxisMajorTickLength + Math.Max(3d, PptxChartMetricRules.ValueAxisFallbackFontSize * 0.35d)
             : 0d;
         double topReserve = 0d;
@@ -6379,17 +6379,17 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1);
 
-    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, string majorTickMark)
+    private static void DrawLineChartCategoryAxisMajorTicks(PdfGraphicsBuilder graphics, double plotX, double plotWidth, int pointCount, double axisY, PptxSceneChartAxisTickMark majorTickMark)
     {
-        if (pointCount <= 0 || string.Equals(majorTickMark, "none", StringComparison.Ordinal))
+        if (pointCount <= 0 || majorTickMark == PptxSceneChartAxisTickMark.None)
         {
             return;
         }
 
-        double outward = string.Equals(majorTickMark, "cross", StringComparison.Ordinal)
+        double outward = majorTickMark == PptxSceneChartAxisTickMark.Cross
             ? PptxChartMetricRules.CategoryAxisMajorTickLength / 2d
             : PptxChartMetricRules.CategoryAxisMajorTickLength;
-        double inward = string.Equals(majorTickMark, "in", StringComparison.Ordinal) || string.Equals(majorTickMark, "cross", StringComparison.Ordinal)
+        double inward = majorTickMark == PptxSceneChartAxisTickMark.Inside || majorTickMark == PptxSceneChartAxisTickMark.Cross
             ? PptxChartMetricRules.CategoryAxisMajorTickLength / 2d
             : 0d;
         double slotWidth = plotWidth / pointCount;
@@ -6400,7 +6400,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisRightSide, bool SecondaryValueAxisRightSide, bool ValueAxisBottomSide, bool CategoryAxisRightSide, bool ValueAxisVisible, bool CategoryAxisVisible, string CategoryAxisMajorTickMark);
+    private readonly record struct ChartAxesStyle(ChartSeriesStroke? ValueAxis, ChartSeriesStroke? SecondaryValueAxis, ChartSeriesStroke? CategoryAxis, bool ValueAxisRightSide, bool SecondaryValueAxisRightSide, bool ValueAxisBottomSide, bool CategoryAxisRightSide, bool ValueAxisVisible, bool CategoryAxisVisible, PptxSceneChartAxisTickMark CategoryAxisMajorTickMark);
 
     private readonly record struct ChartGridlineStyle(ChartSeriesStroke? Major, ChartSeriesStroke? Minor)
     {
