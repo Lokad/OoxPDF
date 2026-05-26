@@ -7760,6 +7760,29 @@ Validation: focused non-slow `pptx-model` passed (`17 passed, 0 failed, 1 skippe
 `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
 (`248 passed, 0 failed, 7 skipped`).
 
+Private validation note, 2026-05-26: Re-ran `private-cases/lokad-value-based.json` after the chart
+metadata preservation work. The run `artifacts/private-visual/lokad-value-based/20260526-203347` compared
+84/84 pages with zero dimension mismatches, deck MAE `7.555419`, mean changed16 `0.101440`, and only the
+existing `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 now measures MAE `2.785167`,
+changed16 `0.044117`, changed32 `0.034126`, dimensions matched. PDF text-operation inspection still shows
+44 reference and 44 candidate text operations; nearest-position matching reduces most deltas to sub-point
+placement, with one remaining line/order outlier. The long-term slide-17 track is therefore still generic
+text placement/order and PDF structure, not a chart or private-slide-specific fix.
+
+Revision note, 2026-05-26: Kept the newly preserved chart number-format metadata alive through renderer
+data-label option resolution. `ChartDataLabelOptions` and `ChartDataLabelOverride` now carry a
+`ChartNumberFormat` alongside the existing format-code string, and override resolution inherits the parent
+metadata unless a per-label `c:numFmt` is defined. The raw XML fallback path also captures `sourceLinked`,
+so both scene-backed and XML-backed rendering preserve the same structural information before any future
+Office/workbook-aware formatting implementation.
+
+This intentionally remains behavior-neutral. OOXPDF still formats labels from the old format-code string;
+the semantic work remains to decide, with Office-PDF evidence, when `sourceLinked` should override explicit
+format codes and how workbook cell formats, date systems, and locale sections feed axis and data-label text.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart-wide option metadata in the typed scene model before attempting
 to render its semantics. `PptxSceneChartOptions` now owns chart-space `date1904` and `roundedCorners`,
 chart-level `plotVisOnly` and `showDLblsOverMax`, and the explicit `dispBlanksAs` value with a typed
