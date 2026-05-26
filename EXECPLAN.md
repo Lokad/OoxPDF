@@ -6924,3 +6924,16 @@ Validation: targeted `CheckVisualCase.ps1` runs passed for `pptx-ladder-11-chart
 `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
 generated during the 2026-05-26 11:41 local run. Current public chart coverage is 26/37 graphics-gated and 14/37
 text-gated; 11 chart cases still have neither chart graphics nor chart text structural gates.
+
+Revision note, 2026-05-26: Added structural gates to the public dashboard table/chart case after sweeping the
+remaining ungated chart fixtures. The `pptx-ladder-11-dashboard-table-chart-port` chart geometry is already
+sub-point aligned for axis-pair, crossing-axis, gridline-axis, horizontal gridline, horizontal/vertical line, and
+plot-box candidates, and its category/value tick labels are likewise stable. The manifest now gates only those
+stable buckets. `PlotAreaClipBoxCandidate` was deliberately left ungated on this mixed table/chart page because
+the classifier derives it from the dominant clip path and the regenerated Office/candidate pair exposed that as a
+tooling-sensitive bucket rather than a renderer contract.
+
+Validation: targeted `CheckVisualCase.ps1` passed for `pptx-ladder-11-dashboard-table-chart-port`, and the full
+public `pptx-charts` visual family passed 37/37 with zero failures at `artifacts/visual/reports/pptx-charts.json`
+generated during the 2026-05-26 11:48 local run. Current public chart coverage is 27/37 graphics-gated and 15/37
+text-gated; 10 chart cases still have neither chart graphics nor chart text structural gates.

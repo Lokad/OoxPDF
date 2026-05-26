@@ -12,6 +12,29 @@
     "maxMeanAbsoluteError": 1.0,
     "maxChangedPixelRatioAtThreshold16": 0.01,
     "minStructuralSimilarity": 0.96,
-    "minForegroundColorHistogramCorrelation": 0.999
+    "minForegroundColorHistogramCorrelation": 0.999,
+    "maxChartGraphicsStructureBoundsDelta": 0.8,
+    "compareChartGraphicsStructureKinds": [
+      "AxisPairPlotBoxCandidate",
+      "CrossingAxisPlotBoxCandidate",
+      "GridlineAxisPlotBoxCandidate",
+      "HorizontalGridlineGroupCandidate",
+      "HorizontalLine",
+      "PlotBoxCandidate",
+      "VerticalLine"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "CategoryAxisTickLabel",
+      "ValueAxisTickLabel"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 0.8,
+      "ValueAxisTickLabel": 0.4
+    }
   }
 }
