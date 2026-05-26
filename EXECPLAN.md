@@ -7775,6 +7775,20 @@ can now carry rectangular table source provenance without renderer-local heurist
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Carried table calculated-column and totals-row formula provenance onto chart
+workbook range cells. For table-backed cells, `ChartWorkbookRangeCell` now preserves the current table
+column's `TotalsRowFunction`, `TotalsRowFormula`, and `CalculatedColumnFormula` next to the per-cell table
+column identity. The embedded workbook regression locks both a calculated-column formula on a data-body cell
+and a `SUBTOTAL` totals-row formula on a totals-row cell.
+
+This is not formula evaluation. OOXPDF still uses cached workbook values and chart caches as before, and
+Office-PDF evidence is still needed before calculated columns, totals rows, filtered rows, or cache freshness
+change rendered chart values. The structural gain is narrower: later chart-data source policy can inspect
+formula ownership from the materialized cell record instead of re-opening table XML or guessing from table
+column names.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved per-cell table-column identity on chart workbook range cells. In
 addition to span-level `TableFirstColumn*` and `TableLastColumn*`, each table-backed `ChartWorkbookRangeCell`
 now carries `TableCellColumnIndex`, `TableCellColumnName`, and `TableCellColumnId`. The embedded workbook

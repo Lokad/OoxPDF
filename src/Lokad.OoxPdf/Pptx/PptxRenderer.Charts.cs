@@ -1945,6 +1945,9 @@ internal sealed partial class PptxRenderer
         int? TableCellColumnIndex,
         string TableCellColumnName,
         int? TableCellColumnId,
+        string TableCellTotalsRowFunction,
+        string TableCellTotalsRowFormula,
+        string TableCellCalculatedColumnFormula,
         string Text,
         string RawValue,
         bool HasCell,
@@ -2172,6 +2175,9 @@ internal sealed partial class PptxRenderer
                     int? tableCellColumnIndex = null;
                     string tableCellColumnName = string.Empty;
                     int? tableCellColumnId = null;
+                    string tableCellTotalsRowFunction = string.Empty;
+                    string tableCellTotalsRowFormula = string.Empty;
+                    string tableCellCalculatedColumnFormula = string.Empty;
                     if (hasSourceTable)
                     {
                         int columnIndex = column - sourceTable.FirstColumn;
@@ -2181,6 +2187,9 @@ internal sealed partial class PptxRenderer
                             tableCellColumnIndex = columnIndex;
                             tableCellColumnName = tableCellColumn.Name;
                             tableCellColumnId = tableCellColumn.Id;
+                            tableCellTotalsRowFunction = tableCellColumn.TotalsRowFunction;
+                            tableCellTotalsRowFormula = tableCellColumn.TotalsRowFormula;
+                            tableCellCalculatedColumnFormula = tableCellColumn.CalculatedColumnFormula;
                         }
                     }
 
@@ -2214,6 +2223,9 @@ internal sealed partial class PptxRenderer
                         tableCellColumnIndex,
                         tableCellColumnName,
                         tableCellColumnId,
+                        tableCellTotalsRowFunction,
+                        tableCellTotalsRowFormula,
+                        tableCellCalculatedColumnFormula,
                         hasCell ? cell.Text : string.Empty,
                         hasCell ? cell.RawValue : string.Empty,
                         hasCell,
