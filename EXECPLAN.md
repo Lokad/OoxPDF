@@ -192,7 +192,9 @@ High-priority actions:
   `PptxSceneSlide` now carries master, layout, and slide relationship maps built by `PptxSceneBuilder`, and
   PDF rendering uses those scene-owned maps for master/layout/slide nodes instead of re-reading relationships
   at dispatch time. Scene inspection exposes relationship counts so public tests can verify resource ownership
-  without leaking package contents.
+  without leaking package contents. Private validation run `20260527-001237` compared 84/84 pages with zero
+  dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
