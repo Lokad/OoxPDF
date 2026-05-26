@@ -2264,6 +2264,15 @@ High-priority actions:
     operations limited to clip/fill/stroke classes (`W` 44, `f` 17, `S` 8). The large Office reference PDF
     text-only inspection timed out when run as a whole, so the remaining action is a narrower public or
     page-targeted structural text comparison rather than a private-content-driven renderer tweak.
+  - [x] 2026-05-26: Added page-filtered PDF inspection (`tools/InspectPdf.ps1 -Page <n>` / PdfInspect
+    `--page <n>`) after the whole-reference private PDF inspection proved too expensive for slide-level
+    structural comparison. Page-targeted private-safe inspection of slide 17 now completes for both Office and
+    candidate PDFs: both have 44 text operations, while Office uses 6 font resources and fractional font sizes
+    (`9`, `9.024`, `9.96`, `12`, `12.96`, `12.984`, `14.04`, `15.96`, `18`) versus candidate integer sizes
+    (`9`, `10`, `12`, `13`, `14`, `16`, `18`). Office also emits 90 graphics operations with even-odd clips
+    (`W*` 68, `f*` 14, `S` 4, `f` 4), while the candidate emits 69 (`W` 44, `f` 17, `S` 8). This suggests
+    the remaining public reproduction should target Office fractional text-size/clip emission structure, not
+    missing text content.
 - [ ] 2026-05-25: Migrate PPTX text frames fully to the model-first path where style cascade, line layout,
   glyph positioning, and PDF emission are separate observable stages.
   - [x] 2026-05-25: Introduced a typed `PptxTextBodyProperties` record for text-frame body properties instead

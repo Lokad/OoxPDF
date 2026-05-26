@@ -4,7 +4,9 @@ param(
 
     [string] $OutputDirectory,
 
-    [switch] $TextOnly
+    [switch] $TextOnly,
+
+    [int[]] $Page
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +32,10 @@ if (-not [string]::IsNullOrWhiteSpace($OutputDirectory)) {
 
 if ($TextOnly) {
     $arguments += "--text-only"
+}
+foreach ($pageNumber in $Page) {
+    $arguments += "--page"
+    $arguments += $pageNumber.ToString([Globalization.CultureInfo]::InvariantCulture)
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {

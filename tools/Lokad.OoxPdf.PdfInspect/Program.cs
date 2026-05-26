@@ -5,17 +5,16 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-if (args.Length is < 1 or > 3)
+if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only]");
+    Console.Error.WriteLine("Usage: Lokad.OoxPdf.PdfInspect <input.pdf> [output-directory] [--text-only] [--page <number>]...");
     return 2;
 }
 
 string inputPath = Path.GetFullPath(args[0]);
 bool textOnly = args.Any(arg => string.Equals(arg, "--text-only", StringComparison.Ordinal));
-string? outputDirectory = args
-    .Skip(1)
-    .FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
+HashSet<int>? pageFilter = ReadPageFilter(args);
+string? outputDirectory = ReadOutputDirectory(args);
 outputDirectory = outputDirectory is null ? null : Path.GetFullPath(outputDirectory);
 if (outputDirectory is not null)
 {
@@ -27,11 +26,21 @@ string pdf = Encoding.Latin1.GetString(bytes);
 var objects = PdfObject.ParseAll(pdf, bytes, skipImageDecode: textOnly);
 Dictionary<int, int> contentPageNumbers = BuildContentPageMap(objects);
 Dictionary<string, IReadOnlyDictionary<int, string>> fontUnicodeMaps = BuildFontUnicodeMaps(objects);
+HashSet<int>? filteredContentObjects = pageFilter is null
+    ? null
+    : contentPageNumbers
+        .Where(pair => pageFilter.Contains(pair.Value))
+        .Select(pair => pair.Key)
+        .ToHashSet();
 var textOperations = new List<PdfTextOperation>();
 var graphicsOperations = new List<PdfGraphicsOperation>();
 
 Console.WriteLine(FormattableString.Invariant($"PDF: {inputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Objects: {objects.Count}"));
+if (pageFilter is not null)
+{
+    Console.WriteLine(FormattableString.Invariant($"Page filter: {string.Join(",", pageFilter.Order())}"));
+}
 
 foreach (PdfObject item in objects)
 {
@@ -41,6 +50,11 @@ foreach (PdfObject item in objects)
     Console.WriteLine(FormattableString.Invariant($"{item.Number} {item.Generation} obj: {Classify(item.Body)}{streamNote}"));
 
     if (outputDirectory is null || item.Stream is null)
+    {
+        continue;
+    }
+
+    if (filteredContentObjects is not null && !filteredContentObjects.Contains(item.Number))
     {
         continue;
     }
@@ -92,6 +106,63 @@ if (outputDirectory is not null && graphicsOperations.Count != 0)
 }
 
 return 0;
+
+static HashSet<int>? ReadPageFilter(string[] args)
+{
+    var pages = new HashSet<int>();
+    for (int i = 1; i < args.Length; i++)
+    {
+        if (!string.Equals(args[i], "--page", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (i + 1 >= args.Length ||
+            !int.TryParse(args[i + 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int page) ||
+            page <= 0)
+        {
+            throw new ArgumentException("--page expects a positive one-based page number.");
+        }
+
+        pages.Add(page);
+        i++;
+    }
+
+    return pages.Count == 0 ? null : pages;
+}
+
+static string? ReadOutputDirectory(string[] args)
+{
+    string? outputDirectory = null;
+    for (int i = 1; i < args.Length; i++)
+    {
+        string arg = args[i];
+        if (string.Equals(arg, "--text-only", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (string.Equals(arg, "--page", StringComparison.Ordinal))
+        {
+            i++;
+            continue;
+        }
+
+        if (arg.StartsWith("--", StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"Unknown option '{arg}'.");
+        }
+
+        if (outputDirectory is not null)
+        {
+            throw new ArgumentException("Only one output directory can be specified.");
+        }
+
+        outputDirectory = arg;
+    }
+
+    return outputDirectory;
+}
 
 static string Classify(string body)
 {
