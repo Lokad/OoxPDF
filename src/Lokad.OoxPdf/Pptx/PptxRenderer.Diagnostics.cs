@@ -6,7 +6,7 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
-    private static void EmitUnsupportedFeatureDiagnostics(XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink)
+    private static void EmitUnsupportedFeatureDiagnostics(PptxSceneSlide sceneSlide, XDocument slideXml, string partName, int slideIndex, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         if (diagnosticSink is null)
         {
@@ -93,9 +93,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
         }
 
-        if (slideXml.Descendants().Any(fill =>
-                fill.Name.LocalName == "blipFill" &&
-                fill.Element(DrawingNamespace + "tile") is not null))
+        if (HasTiledImageFill(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_IMAGE_TILE", "tiled image fill");
         }
@@ -121,6 +119,28 @@ internal sealed partial class PptxRenderer
         {
             Emit("PPTX_UNSUPPORTED_CALLOUT", "callout shape");
         }
+    }
+
+    private static bool HasTiledImageFill(PptxSceneSlide sceneSlide)
+    {
+        return HasTiledImageFill(sceneSlide.SlideNodes) ||
+            HasTiledImageFill(sceneSlide.LayoutNodes) ||
+            HasTiledImageFill(sceneSlide.MasterNodes);
+    }
+
+    private static bool HasTiledImageFill(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.Picture?.Tile.HasTile == true ||
+                node.Shape?.PictureFill.Tile.HasTile == true ||
+                HasTiledImageFill(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsUnsupportedCalloutPreset(string? preset)

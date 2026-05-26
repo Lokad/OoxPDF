@@ -41,7 +41,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
+            EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
 

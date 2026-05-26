@@ -8110,6 +8110,19 @@ Validation: focused `PptxImageTilePreservesRawOoxmlTokens` passed; focused
 `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed (`17 passed, 0
 failed, 0 skipped`); full non-slow console runner passed (`258 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Moved the tiled-image unsupported diagnostic onto the scene-owned image model.
+`EmitUnsupportedFeatureDiagnostics` now receives the built `PptxSceneSlide` and emits
+`PPTX_UNSUPPORTED_IMAGE_TILE` by traversing scene nodes for `PptxScenePicture.Tile` and shape
+`PictureFill.Tile`, including inherited/grouped nodes, instead of scanning raw `blipFill` XML for this one
+feature.
+
+This is not a full diagnostic migration. Other unsupported feature checks still inspect raw slide XML where
+the scene does not yet own enough structured data. The important invariant is narrower: once image tile mode
+is modeled structurally, the renderer no longer needs a parallel XML-only detector for that same feature.
+
+Validation: focused `PptxUnsupportedFeaturesEmitDiagnostics` passed; focused non-slow `pptx-images` passed
+(`17 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`258 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Split PPTX text layout bounds from PDF clipping bounds for default text-box
 overflow. Office PDF evidence from public `pptx-ladder-03-text-anchor-overflow` shows default overflowing
 text boxes clipped to the full slide, while `vertOverflow="clip"` text keeps a local frame clip. The text
