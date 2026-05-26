@@ -6988,3 +6988,16 @@ passed with 39/39 tests, and `pwsh tools\CheckVisualFamily.ps1 -Family pptx-char
 `artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:04 local run. The remaining
 direct ratio uses are dynamic reserve calculations for line/bubble right legends and value-axis labels, which
 should be replaced by measured layout/reserve rules rather than folded into the preset wrapper prematurely.
+
+Revision note, 2026-05-26: Moved the first chart reserve path toward typed scene-axis ownership. The
+multi-value-axis bar plot-box adjustment now reads value-axis sources as `(scene axis, XML axis)` pairs, using
+scene plot axis IDs and typed axis properties when available while retaining XML as source evidence during the
+migration. This is still behavior-preserving, but it removes one raw-XML-first branch from the layout reserve
+path and gives future Office-PDF reserve rules a typed axis input.
+
+Validation: `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-charts --skip-slow`
+passed with 39/39 tests. Targeted visual checks passed for
+`pptx-ladder-11-secondary-axis-overlay-probe` at `artifacts/visual/pptx-ladder-11-secondary-axis-overlay-probe/20260526-120729`
+and `pptx-ladder-11-compact-stacked-secondary-axis-probe` at
+`artifacts/visual/pptx-ladder-11-compact-stacked-secondary-axis-probe/20260526-120729`. The compact probe build
+had transient copy-lock warnings from parallel build-heavy checks, but completed successfully.

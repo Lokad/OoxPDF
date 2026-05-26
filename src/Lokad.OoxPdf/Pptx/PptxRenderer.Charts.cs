@@ -176,6 +176,63 @@ internal sealed partial class PptxRenderer
         return chart.Axes.FirstOrDefault(axis => axis.AxisKind == kind);
     }
 
+    private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
+    {
+        return chart?.Plots
+            .Where(plot => plot.PlotKind == kind)
+            .ToArray() ?? [];
+    }
+
+    private static IReadOnlyList<PptxSceneChartAxis> ReadSceneChartAxes(PptxSceneChart? chart, PptxSceneChartPlot? plot, PptxSceneChartAxisKind kind)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        if (plot is not null && plot.AxisIds.Count != 0)
+        {
+            return plot.AxisIds
+                .Select(axisId => chart.Axes.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
+                    candidate.AxisKind == kind))
+                .Where(axis => axis is not null)
+                .Select(axis => axis!)
+                .ToArray();
+        }
+
+        return chart.Axes
+            .Where(axis => axis.AxisKind == kind)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartAxisSource> ReadSceneOrXmlChartValueAxesForPlot(
+        PptxSceneChart? sceneChart,
+        PptxSceneChartPlot? scenePlot,
+        XDocument chartXml,
+        XElement? chartElement)
+    {
+        XElement[] xmlAxes = chartElement is null
+            ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
+            : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
+        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Value);
+        if (sceneAxes.Count == 0)
+        {
+            return xmlAxes
+                .Select(axis => new ChartAxisSource(null, axis))
+                .ToArray();
+        }
+
+        var sources = new List<ChartAxisSource>(sceneAxes.Count);
+        foreach (PptxSceneChartAxis sceneAxis in sceneAxes)
+        {
+            XElement? xmlAxis = xmlAxes.FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis.Id, StringComparison.Ordinal));
+            sources.Add(new ChartAxisSource(sceneAxis, xmlAxis));
+        }
+
+        return sources;
+    }
+
     private static string ReadSceneOrXmlChartValue(string? sceneValue, XElement element, string childName, string defaultValue = "")
     {
         return !string.IsNullOrEmpty(sceneValue)
@@ -4670,16 +4727,28 @@ internal sealed partial class PptxRenderer
         }
 
         IReadOnlyList<XElement> barCharts = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Bar);
-        if (barCharts.Count < 2)
+        IReadOnlyList<PptxSceneChartPlot> barPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
+        int plotCount = Math.Max(barCharts.Count, barPlots.Count);
+        if (plotCount < 2)
         {
             return plotBox;
         }
 
-        var valueAxes = new List<XElement>();
-        foreach (XElement barChart in barCharts)
+        var valueAxes = new List<ChartAxisSource>();
+        var valueAxisIds = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < plotCount; i++)
         {
-            XElement? valueAxis = ReadChartValueAxisForChart(chartXml, barChart);
-            if (valueAxis is not null && IsChartAxisLabelVisible(valueAxis) && !valueAxes.Any(axis => ReadChartAxisId(axis) == ReadChartAxisId(valueAxis)))
+            PptxSceneChartPlot? currentBarPlot = i < barPlots.Count ? barPlots[i] : null;
+            XElement? currentBarChart = i < barCharts.Count ? barCharts[i] : null;
+            ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, currentBarPlot, chartXml, currentBarChart)
+                .FirstOrDefault();
+            if (!IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
+            {
+                continue;
+            }
+
+            string axisId = valueAxis.SceneAxis?.Id ?? ReadChartAxisId(valueAxis.XmlAxis) ?? FormattableString.Invariant($"plot-{i}");
+            if (valueAxisIds.Add(axisId))
             {
                 valueAxes.Add(valueAxis);
             }
@@ -4694,10 +4763,26 @@ internal sealed partial class PptxRenderer
         double rightReserve = frame.X + frame.Width - plotBox.X - plotBox.Width;
         double requiredLeftReserve = leftReserve;
         double requiredRightReserve = rightReserve;
-        foreach (XElement valueAxis in valueAxes)
+        foreach (ChartAxisSource valueAxis in valueAxes)
         {
-            double stripWidth = EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis);
-            bool labelsRight = ResolveValueAxisLabelsRightSide(valueAxis, ResolveSceneOrXmlValueAxisRightSide(null, valueAxis, defaultRightSide: false));
+            ChartValueExtents extents = ReadSceneOrXmlChartValueAxisExtents(
+                valueAxis.SceneAxis,
+                valueAxis.XmlAxis,
+                new ChartValueExtents(0d, 1d));
+            ChartAxisUnits units = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
+            double stripWidth = EstimateVerticalValueAxisLabelStripWidth(
+                theme,
+                sceneChart,
+                chartXml,
+                valueAxis.XmlAxis,
+                valueAxis.SceneAxis,
+                extents,
+                units,
+                defaultNumberFormat: null);
+            bool labelsRight = ResolveSceneOrXmlValueAxisLabelsRightSide(
+                valueAxis.SceneAxis,
+                valueAxis.XmlAxis,
+                ResolveSceneOrXmlValueAxisRightSide(valueAxis.SceneAxis, valueAxis.XmlAxis, defaultRightSide: false));
             if (labelsRight)
             {
                 requiredRightReserve = Math.Max(requiredRightReserve, stripWidth * PptxChartMetricRules.BarMultiValueAxisSecondaryStripFactor);
@@ -6504,6 +6589,8 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartLayoutBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
+
+    private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 
     private readonly record struct ChartPlotLayout(ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, PptxSceneChartManualLayoutTarget? ManualLayoutTargetKind)
     {
