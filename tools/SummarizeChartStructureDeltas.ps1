@@ -41,6 +41,24 @@ function Has-AnyProperty($object, [string[]] $patterns) {
     return $false
 }
 
+function Normalize-CaseIds([string[]] $caseIds) {
+    $normalized = New-Object System.Collections.Generic.List[string]
+    foreach ($caseId in $caseIds) {
+        if ([string]::IsNullOrWhiteSpace($caseId)) {
+            continue
+        }
+
+        foreach ($part in ($caseId -split '[,;]')) {
+            $trimmed = $part.Trim()
+            if (-not [string]::IsNullOrWhiteSpace($trimmed)) {
+                $normalized.Add($trimmed)
+            }
+        }
+    }
+
+    return ,$normalized.ToArray()
+}
+
 function Get-LatestRun($caseId) {
     $root = Join-Path "artifacts/visual" $caseId
     if (-not (Test-Path -LiteralPath $root)) {
@@ -148,9 +166,10 @@ $caseFiles = Get-ChildItem "visual-cases/cases" -Directory |
     Sort-Object Name |
     ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -File -Filter "case.json" }
 
-if ($Case.Count -gt 0) {
+$normalizedCases = Normalize-CaseIds $Case
+if ($normalizedCases.Count -gt 0) {
     $selected = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-    foreach ($caseId in $Case) {
+    foreach ($caseId in $normalizedCases) {
         [void]$selected.Add($caseId)
     }
 

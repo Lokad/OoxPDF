@@ -27,6 +27,8 @@ keep diagnostics honest when a feature is still missing.
 - `tools/RasterizePdf.ps1`: PDFium rasterization wrapper.
 - `tools/InspectPdf.ps1`: Office/candidate PDF object and stream inspection wrapper.
 - `tools/SummarizeChartStructureDeltas.ps1`: public chart structural-delta sweep over latest visual runs.
+  It accepts repeated PowerShell array values and comma/semicolon-separated `-Case` values for focused
+  multi-case comparisons.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -7040,3 +7042,17 @@ plot/legend-region classifier, not a broader size threshold.
 Validation: the full public `pptx-charts` visual family passed 37/37 at
 `artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:21 local run, and
 `pwsh tools\SummarizeChartStructureDeltas.ps1 -UngatedOnly` confirmed the reduced marker false-positive counts.
+
+Revision note, 2026-05-26: Made the public chart structural-delta summarizer easier to use during focused
+layout investigations. `tools/SummarizeChartStructureDeltas.ps1 -Case` now accepts ordinary PowerShell
+array values as before and comma/semicolon-separated case lists, so stacked bar/column comparisons can be
+rerun without an awkward `-Command` array literal. Rechecking those two public cases confirmed the current
+shape of the gap: stacked column is primarily a left plot-box/tick-label delta around `9 pt`, while stacked
+horizontal bar still needs a larger category-label reserve plus right/top plot-box alignment. Because
+clustered bar/column cases with nearly the same axis XML are already structurally gated, this discovery
+argues against changing the shared no-title/no-legend bar preset directly; the next renderer slice should
+derive orientation/grouping-aware reserves from chart-axis and label structure.
+
+Validation: `pwsh tools\SummarizeChartStructureDeltas.ps1 -Case
+'pptx-ladder-11-chart-column-stacked-port,pptx-ladder-11-chart-bar-stacked-port' -SkipProbe` listed both
+cases from the latest public visual runs, and the single-case form still works.
