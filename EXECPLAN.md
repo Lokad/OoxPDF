@@ -74,11 +74,15 @@ PDFs, and it must remain dependency-free at runtime, but Office-exported PDFs sh
 
 The next architecture push is seven linked work tracks:
 
-1. Build chart structural oracle tooling. The current PDF inspection tools are strong for text; charts need
-   comparable public tooling that extracts and compares plot-area rectangles, axis/gridline line coordinates,
-   legend/title/data-label text positions, marker geometry, and clipping/resource structure from Office and
-   candidate PDFs. This should start with public synthetic chart fixtures and should not depend on private
-   deck content.
+1. Extend chart structural oracle coverage. The first public tooling slices already exist:
+   `tools/ClassifyPdfChartGraphics.ps1`, `tools/ClassifyPdfChartText.ps1`,
+   `tools/ComparePdfGraphicsOperations.ps1`, and manifest-driven gates in `tools/CheckVisualCase.ps1`
+   compare derived plot boxes, axis/gridline lines, legend swatches, chart text buckets, path geometry, line
+   attributes, and clipping/fill/stroke structure. The remaining work is not to invent a second oracle, but to
+   expand coverage across the ungated public chart cases, add first-class data-label, marker, legend-title,
+   plot clipping, and resource-structure classifications where the current buckets are still too generic, and
+   use those public gates to retire chart fallback geometry. This work must stay based on public synthetic chart
+   fixtures and must not depend on private deck content.
 2. Complete the chart scene model. Chart XML reads should move into typed scene/layout records for chart
    kinds, plot areas, axes, series, data labels, markers, title, legend, fills, strokes, and text styles.
    Raw XML may remain attached as source evidence while an OOXML surface is incomplete, but production
@@ -2198,6 +2202,24 @@ High-priority actions:
   `InsidePlotText`, `LeftAxisText`, `RightSideText`, `OuterChartText`, or generic `ChartText`; it records
   stable text hashes and effective text matrices without exposing private text content. `CheckVisualCase.ps1`
   can opt public manifests into this structural gate through `expected.maxChartTextStructurePositionDelta`.
+- [x] 2026-05-26: Rechecked the chart structural oracle state before extending the plan. The repository already
+  has a working public chart graphics/text oracle surface rather than a blank tooling gap: among the 37 public
+  `pptx-ladder-11-*` chart cases, 23 currently opt into chart graphics structural gates, 8 opt into chart text
+  structural gates, and the 8 text-gated cases are also graphics-gated. A representative run of
+  `pptx-ladder-11-chart-bar-clustered-port` passed with graphics gates for axis-pair plot box, vertical
+  gridline group, and axis lines, plus text gates for 11 category tick labels, 5 value tick labels, and the
+  chart title. This preserves the original long-term oracle item as a coverage-expansion track instead of
+  duplicating existing tools.
+- [ ] 2026-05-26: Expand chart structural gates to the 14 public chart cases that currently have neither chart
+  graphics nor chart text gates: area 2-series, area stacked, bar stacked, bubble, column stacked, line markers,
+  line stacked, line trend, scatter clusters, scatter smooth, compact stacked secondary axis, composite two
+  charts, dashboard table/chart, and secondary-axis overlay. Add gates only where Office/candidate PDF structure
+  can be compared with the existing classifiers or a clearly justified classifier extension; do not use raster
+  closeness alone as a structural oracle.
+- [ ] 2026-05-26: Strengthen chart text gates beyond the current 8 cases. Prioritize legend entries, data
+  labels, axis titles, and multi-chart documents, while keeping text hashes and geometry public-safe. The goal is
+  to make chart text placement a reusable Office-PDF structural surface before replacing more
+  `PptxChartMetricRules` constants.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest
@@ -4136,7 +4158,8 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 1. Make Office-PDF structure the primary fidelity oracle. Pixel metrics stay useful, but every serious fix
    should first ask what Office emitted: text matrices, glyph advances, clipping, image XObjects, paths,
    transparency groups, resources, and drawing order. Extend `PdfInspect`/comparison tooling when a mismatch
-   cannot be explained structurally.
+   cannot be explained structurally; for charts, first try to reuse and widen the existing
+   `ClassifyPdfChartGraphics.ps1` and `ClassifyPdfChartText.ps1` gates before creating a new oracle surface.
 2. Make the PPTX scene/render-context architecture authoritative in small slices. `PptxScene` now models
    slides, backgrounds, nodes, bounds, text bodies, picture intent, shape styles/geometry, group transforms,
    chart relationship ids, resolved chart part targets, chart XML, chart palettes, chart plot summaries,
@@ -4412,6 +4435,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   while preserving the filled-radar gate; the next architecture step is still a typed radar layout resolver that
   owns these values instead of renderer constants.
   Date/Author: 2026-05-25 / Codex.
+- Decision: Treat chart structural oracle work as coverage and classification expansion, not as a new tooling
+  greenfield.
+  Rationale: `ClassifyPdfChartGraphics.ps1`, `ClassifyPdfChartText.ps1`, `ComparePdfGraphicsOperations.ps1`, and
+  `CheckVisualCase.ps1` already provide public manifest-driven chart structure gates. The 2026-05-26 inventory
+  found 23 of 37 public chart cases graphics-gated and 8 of 37 text-gated. The durable architecture work is to
+  extend those gates to ungated chart families and refine semantic buckets until renderer constants can be
+  replaced by Office-observed structure, while preserving existing passing gates.
+  Date/Author: 2026-05-26 / Codex.
 - Private PPTX pages may regress while lower public rungs are rebuilt. Until the public ladder is
   feature-complete enough, private MAE and changed-pixel ratios are smoke evidence only, not implementation
   targets.
