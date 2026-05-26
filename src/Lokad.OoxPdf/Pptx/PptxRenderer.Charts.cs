@@ -1778,6 +1778,10 @@ internal sealed partial class PptxRenderer
         string SourceFormula,
         string ResolvedFormula,
         ChartWorkbookRangeSourceKind SourceKind,
+        string DefinedName,
+        string TableName,
+        string TableColumnName,
+        int? TableColumnId,
         string Text,
         bool HasCell,
         int? StyleIndex,
@@ -1802,7 +1806,11 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartWorkbookRangeResolution(
         string SourceFormula,
         string ResolvedFormula,
-        ChartWorkbookRangeSourceKind SourceKind);
+        ChartWorkbookRangeSourceKind SourceKind,
+        string DefinedName,
+        string TableName,
+        string TableColumnName,
+        int? TableColumnId);
 
     private readonly record struct ChartWorkbookNumericValue(
         ChartWorkbookRangeCell Cell,
@@ -1980,6 +1988,10 @@ internal sealed partial class PptxRenderer
                         resolution.SourceFormula,
                         resolution.ResolvedFormula,
                         resolution.SourceKind,
+                        resolution.DefinedName,
+                        resolution.TableName,
+                        resolution.TableColumnName,
+                        resolution.TableColumnId,
                         hasCell ? cell.Text : string.Empty,
                         hasCell,
                         hasCell ? cell.StyleIndex : null,
@@ -2003,19 +2015,25 @@ internal sealed partial class PptxRenderer
             string sourceFormula = formula?.Trim() ?? string.Empty;
             if (sourceFormula.Length == 0)
             {
-                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown);
+                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, string.Empty, null);
             }
 
             string resolvedFormula = sourceFormula;
+            string definedNameName = string.Empty;
             bool fromDefinedName = false;
             if (!sourceFormula.Contains('!', StringComparison.Ordinal) &&
                 definedNames.TryGetValue(sourceFormula, out string? definedFormula))
             {
                 resolvedFormula = definedFormula;
+                definedNameName = sourceFormula;
                 fromDefinedName = true;
             }
 
-            string structuredResolvedFormula = ResolveStructuredReferenceFormula(resolvedFormula) ?? string.Empty;
+            string structuredResolvedFormula = ResolveStructuredReferenceFormula(
+                resolvedFormula,
+                out string tableName,
+                out string tableColumnName,
+                out int? tableColumnId) ?? string.Empty;
             bool fromStructuredReference = !string.Equals(structuredResolvedFormula, resolvedFormula, StringComparison.Ordinal);
             resolvedFormula = structuredResolvedFormula;
 
@@ -2026,11 +2044,14 @@ internal sealed partial class PptxRenderer
                 (false, true) => ChartWorkbookRangeSourceKind.StructuredReference,
                 _ => ChartWorkbookRangeSourceKind.DirectRange
             };
-            return new ChartWorkbookRangeResolution(sourceFormula, resolvedFormula, sourceKind);
+            return new ChartWorkbookRangeResolution(sourceFormula, resolvedFormula, sourceKind, definedNameName, tableName, tableColumnName, tableColumnId);
         }
 
-        private string? ResolveStructuredReferenceFormula(string? formula)
+        private string? ResolveStructuredReferenceFormula(string? formula, out string tableName, out string tableColumnName, out int? tableColumnId)
         {
+            tableName = string.Empty;
+            tableColumnName = string.Empty;
+            tableColumnId = null;
             if (string.IsNullOrWhiteSpace(formula))
             {
                 return formula;
@@ -2043,8 +2064,8 @@ internal sealed partial class PptxRenderer
                 return trimmed;
             }
 
-            string tableName = trimmed[..open];
-            if (!tables.TryGetValue(tableName, out ChartWorkbookTable table))
+            string candidateTableName = trimmed[..open];
+            if (!tables.TryGetValue(candidateTableName, out ChartWorkbookTable table))
             {
                 return trimmed;
             }
@@ -2057,11 +2078,13 @@ internal sealed partial class PptxRenderer
             }
 
             int columnOffset = -1;
-            for (int i = 0; i < table.ColumnNames.Count; i++)
+            ChartWorkbookTableColumn tableColumn = default;
+            for (int i = 0; i < table.Columns.Count; i++)
             {
-                if (string.Equals(table.ColumnNames[i], columnName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(table.Columns[i].Name, columnName, StringComparison.OrdinalIgnoreCase))
                 {
                     columnOffset = i;
+                    tableColumn = table.Columns[i];
                     break;
                 }
             }
@@ -2076,9 +2099,15 @@ internal sealed partial class PptxRenderer
             int totalsRowCount = Math.Max(0, table.TotalsRowCount);
             int firstRow = onlyHeader ? table.FirstRow : includeHeader ? table.FirstRow : table.FirstRow + headerRowCount;
             int lastRow = onlyHeader ? table.FirstRow + headerRowCount - 1 : includeHeader ? table.LastRow : table.LastRow - totalsRowCount;
-            return firstRow <= lastRow
-                ? FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}")
-                : trimmed;
+            if (firstRow > lastRow)
+            {
+                return trimmed;
+            }
+
+            tableName = table.Name;
+            tableColumnName = tableColumn.Name;
+            tableColumnId = tableColumn.Id;
+            return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}");
         }
 
         private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader)

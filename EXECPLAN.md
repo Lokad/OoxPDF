@@ -7786,6 +7786,19 @@ alignment needs to compare or reconcile sources.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Carried defined-name and table-column identity through chart workbook range
+resolution. `ChartWorkbookRangeCell` now records the resolved workbook-level defined name when applicable and
+the source table name, table column name, and table column id for structured references. Structured-reference
+resolution now consumes `ChartWorkbookTable.Columns` instead of the legacy flattened `ColumnNames` list when
+matching a column. The embedded workbook regression locks direct-range, defined-name, and `SalesTable[Amount]`
+provenance at the range-cell level.
+
+This still does not resolve sheet-local names or evaluate table formulas. It removes another source-freshness
+blind spot: later cache reconciliation can tell whether a materialized point came from a direct range, a named
+range, or a specific table column without re-parsing the original chart formula or re-opening the table part.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved workbook table-column records instead of flattening tables to column
 names only. `ChartWorkbookTable.Columns` now keeps each table column's OOXML id, name, totals-row function,
 totals-row formula, and calculated-column formula while retaining the existing `ColumnNames` compatibility
