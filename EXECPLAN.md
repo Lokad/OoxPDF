@@ -588,8 +588,10 @@ High-priority actions:
   `pptx-ladder-04-typography-whitespace-controls-probe` covers repeated spaces, NBSP, narrow NBSP,
   punctuation-adjacent words, tab plus spaces, and accented Latin with spacing controls. `U+202F` narrow
   NBSP is now modeled as a hidden advance instead of a visible glyph, with a unit test locking the split
-  word spans. After the NBSP/narrow-space tightening, the probe passes approximate gates at MAE `0.583445`,
-  changed16 `0.007705`; Office still emits more granular accent text operations than the candidate.
+  word spans. After the later baseline/font-emission work, the probe now gates full decoded text-operation
+  parity, positions within `0.75 pt`, and the Office `0.03 Tc` branch on later lines; the remaining raster
+  drift is concentrated in the accented final line and is tracked as font/accent glyph metric parity, not
+  whitespace-control handling.
 - [x] Next PPTX typography sequence: attack accented Latin and punctuation-adjacent word cases after the
   spacing-control cases, using Office PDF text operations to separate fallback-font splits from positioning.
   Punctuation-adjacent hyphen boundaries are now represented as separate layout spans and locked by
