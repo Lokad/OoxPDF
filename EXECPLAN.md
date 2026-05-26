@@ -277,9 +277,10 @@ High-priority actions:
 - [ ] Replace sampled curved-connector filled outlines with analytical Office-like curve-rich paths:
   the public connector transform probe now matches Office at the high-level fill/clip/stroke operator count, but
   PDF inspection still shows candidate filled connector paths as sampled outlines. Arrow-tail connectors now emit
-  curve-bearing PDF paths through the sampled boundary (`seg=100,line=0,curve=99`), but this is still not Office's
-  own connector geometry (`seg=250,line=244,curve=4` in the public probe). This remains a long-term structural
-  alignment gap, not a raster emergency.
+  an Office-like two-subpath fill structure, with a line-sampled connector body plus separate curved arrowhead
+  subpath (`move=2,close=2`), instead of the previous single smoothed sampled path. This is still not Office's
+  exact connector geometry (`seg=250,line=244,curve=4` in Office versus candidate `seg=244,line=239,curve=3` in
+  the public probe), so the remaining work is structural parity rather than a raster emergency.
 - [x] Make public arrow-tail connector filled outlines curve-bearing without changing triangle-tail behavior:
   the public connector transform probe uses `tailEnd type="arrow"` and Office emits curve-bearing filled regions
   there. Candidate arrow-tail fills now emit smooth cubic PDF segments through the sampled outline, preserving the
@@ -6788,3 +6789,21 @@ now reports explicit `W*` operator parity for matched rows and the same structur
 67 candidate clips, and one missing reference-side clip after nearest-bounds matching. The public
 `pptx-ladder-11-chart-doughnut-bottom-legend-probe` visual case also passed, confirming existing chart-structure
 gates still consume classified `SourceOperator` fields correctly.
+
+Revision note, 2026-05-26: Replaced the arrow-tail curved-connector fill path with the next Office-structural slice.
+The previous candidate path was one smoothed closed curve through sampled outline points (`move=1,curve=99,close=1`).
+Office's public connector probe instead emits one fill operation with a line-sampled connector body and a separate
+arrowhead subpath. Candidate arrow-tail curved connectors now follow that two-subpath structure and reuse the shared
+Office-like arrowhead primitive; triangle-tail curved connectors remain on the prior polygon path because private
+page-17 evidence for those fills is line-only and raster-stable.
+
+Validation: focused `pptx-shapes` tests passed 15/15, full non-slow tests passed 236/236 with 7 skipped, and
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. The public
+`pptx-ladder-06-curved-connector-transform-probe` visual case passed at
+`artifacts/visual/pptx-ladder-06-curved-connector-transform-probe/20260526-104803` with MAE `0.214292`,
+changed16 `0.002685`, changed32 `0.002289`, and SSIM `0.882775`. PDF inspection moved candidate connector fills
+to `move=2,close=2` with a separate arrowhead subpath, but they still inspect as `seg=244,line=239,curve=3` versus
+Office `seg=250,line=244,curve=4`, so the long-term connector item remains open. Private `lokad-value-based` run
+`artifacts/private-visual/lokad-value-based/20260526-105035` stayed stable with 84/84 compared pages, zero dimension
+mismatches, deck MAE `8.942959`, mean changed16 `0.115525`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; private
+page 17 stayed at MAE `2.860480`, changed16 `0.044525`, changed32 `0.035023`, SSIM `0.920379`.

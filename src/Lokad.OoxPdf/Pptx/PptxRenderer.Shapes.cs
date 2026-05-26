@@ -1939,7 +1939,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        const int samplesPerSegment = 24;
+        int samplesPerSegment = tailKind == LineEndKind.Arrow ? 60 : 24;
         var samples = new List<CurveSample>(segments.Count * samplesPerSegment + 1);
         foreach (BezierSegment segment in segments)
         {
@@ -1987,10 +1987,6 @@ internal sealed partial class PptxRenderer
 
         (double X, double Y) normal = (-direction.Y, direction.X);
         (double X, double Y) tip = (samples[^1].X, samples[^1].Y);
-        double arrowHalfWidth = tailKind == LineEndKind.Arrow ? lineWidth * 2.181667d : Math.Max(5d, lineWidth * 3.5d) * 0.45d;
-        (double X, double Y) leftShoulder = (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth);
-        (double X, double Y) rightShoulder = (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth);
-
         var points = new List<(double X, double Y)>(bodySamples.Count * 2 + 3);
         foreach (CurveSample sample in bodySamples)
         {
@@ -1998,9 +1994,16 @@ internal sealed partial class PptxRenderer
             points.Add((sample.X + sampleNormal.X * halfWidth, sample.Y + sampleNormal.Y * halfWidth));
         }
 
-        points.Add(leftShoulder);
-        points.Add(tip);
-        points.Add(rightShoulder);
+        if (tailKind != LineEndKind.Arrow)
+        {
+            double arrowHalfWidth = Math.Max(5d, lineWidth * 3.5d) * 0.45d;
+            (double X, double Y) leftShoulder = (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth);
+            (double X, double Y) rightShoulder = (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth);
+            points.Add(leftShoulder);
+            points.Add(tip);
+            points.Add(rightShoulder);
+        }
+
         for (int i = bodySamples.Count - 1; i >= 0; i--)
         {
             CurveSample sample = bodySamples[i];
@@ -2010,7 +2013,8 @@ internal sealed partial class PptxRenderer
 
         if (tailKind == LineEndKind.Arrow)
         {
-            AppendSmoothClosedPath(graphics, points);
+            AppendClosedLinePath(graphics, points);
+            AppendOfficeArrowHeadPath(graphics, tip.X, tip.Y, -direction.X, -direction.Y, -normal.X, -normal.Y, lineWidth);
             graphics.FillCurrentPath();
         }
         else
@@ -2021,39 +2025,17 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static void AppendSmoothClosedPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
     {
         if (points.Count == 0)
         {
             return;
         }
 
-        if (points.Count < 4)
-        {
-            graphics.MoveTo(points[0].X, points[0].Y);
-            for (int i = 1; i < points.Count; i++)
-            {
-                graphics.LineTo(points[i].X, points[i].Y);
-            }
-
-            graphics.ClosePath();
-            return;
-        }
-
         graphics.MoveTo(points[0].X, points[0].Y);
-        for (int i = 0; i < points.Count; i++)
+        for (int i = 1; i < points.Count; i++)
         {
-            (double X, double Y) p0 = points[(i - 1 + points.Count) % points.Count];
-            (double X, double Y) p1 = points[i];
-            (double X, double Y) p2 = points[(i + 1) % points.Count];
-            (double X, double Y) p3 = points[(i + 2) % points.Count];
-            graphics.CurveTo(
-                p1.X + (p2.X - p0.X) / 6d,
-                p1.Y + (p2.Y - p0.Y) / 6d,
-                p2.X - (p3.X - p1.X) / 6d,
-                p2.Y - (p3.Y - p1.Y) / 6d,
-                p2.X,
-                p2.Y);
+            graphics.LineTo(points[i].X, points[i].Y);
         }
 
         graphics.ClosePath();
