@@ -7816,6 +7816,18 @@ transparency instead of re-reading `txPr` or losing it during override merging.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused `pptx-model`
 passed with slow tests included after a transient parallel build-file lock (`18 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Consumed preserved chart text alpha in the PDF text path for explicit chart text
+styles. `ChartTextStyle` now carries alpha, style merging preserves it, and chart text runs pass it to the
+shared `TextRun` emission path instead of forcing opaque chart text. A public manual chart-title test now
+uses a transparent `c:title/c:txPr` color and locks the emitted PDF graphics-state alpha resource while
+retaining the existing manual-layout placement checks.
+
+This is still a narrow explicit-style slice. It does not solve chart-style inherited text transparency,
+rich-text run alpha precedence across all chart labels, or Office's exact graphics-state grouping strategy,
+but it removes the RGB-only chart text bottleneck for directly authored transparent chart text.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
 structure instead of treating every table reference as a single column or whole-table shortcut.
 `SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps

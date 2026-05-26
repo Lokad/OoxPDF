@@ -4450,7 +4450,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), PptxChartMetricRules.DataLabelFallbackFontSize, fallbackColor, Bold: false, Italic: false);
+        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), PptxChartMetricRules.DataLabelFallbackFontSize, fallbackColor, Alpha: 1d, Bold: false, Italic: false);
         return MergeChartTextStyle(style, options.TextStyle);
     }
 
@@ -4568,7 +4568,7 @@ internal sealed partial class PptxRenderer
             0d,
             0d,
             style.Color,
-            1d,
+            style.Alpha,
             null,
             Bold: style.Bold,
             Italic: style.Italic,
@@ -4612,7 +4612,7 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        return new ChartTextStyle(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Bold: false, Italic: false);
+        return new ChartTextStyle(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Alpha: 1d, Bold: false, Italic: false);
     }
 
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
@@ -4671,6 +4671,7 @@ internal sealed partial class PptxRenderer
             next.FontFamily ?? style.FontFamily,
             next.FontSize ?? style.FontSize,
             next.Color ?? style.Color,
+            next.Alpha ?? style.Alpha,
             next.Bold ?? style.Bold,
             next.Italic ?? style.Italic);
     }
@@ -8358,7 +8359,7 @@ internal sealed partial class PptxRenderer
         public static ChartAxisUnits Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color, bool Bold, bool Italic);
+    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color, double Alpha, bool Bold, bool Italic);
 
     private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color, double? Alpha, bool? Bold, bool? Italic)
     {
