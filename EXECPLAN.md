@@ -213,6 +213,19 @@ High-priority actions:
   `a:rPr sz="996"` survives into the text-frame model, text layout, and PDF `/Tf` emission as `9.96 pt`.
   This locks the private slide-17 structural clue as public coverage without closing the separate
   even-odd clipping/fill gap.
+- [x] Route PPTX text-frame clipping through an explicit even-odd PDF clip operator:
+  `PdfGraphicsBuilder.ClipRectangleEvenOdd` emits `W* n`, and PPTX text drawing now uses it for text and
+  highlight clip rectangles. The single-rectangle raster outcome is unchanged, but the PDF operator now
+  matches the Office-like text-region structure observed in the private slide-17 page-filtered inspection.
+  Shape/image/chart clipping remains on `W n` until public evidence says those paths need even-odd clips.
+- [x] Re-check private slide-17 after the even-odd text-clip change:
+  private run `artifacts/private-visual/lokad-value-based/20260526-084819` stayed stable with 84/84 compared
+  pages, zero dimension mismatches, deck MAE `8.945316`, changed16 `0.115517`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide/page 17 remained at MAE `2.881015`, changed16 `0.044900`,
+  changed32 `0.035255`, SSIM `0.920075`. Page-filtered PDF inspection still shows 44 text ops on both
+  sides; graphics operators are now Office `f:4,f*:14,S:4,W*:68` versus candidate `f:17,S:8,W*:44`.
+  Remaining public work should target the missing filled-region `f*` structure and the extra Office clip
+  regions, not missing text.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -3764,9 +3777,9 @@ paths, and ExecPlan references together.
     2026-05-26 update: page-filtered PDF inspection now shows the residual slide-17 structural gap without
     exposing content. Office and candidate both emit 44 text operations, so the next public probe should not
     chase missing text. The remaining structural differences are fractional Office font sizes versus candidate
-    integer sizes, plus Office's even-odd clipping/fill operators around text regions versus candidate
-    non-even-odd clipping. Keep the connector/group/picture inventory intact, but steer the next public
-    fixture toward fractional text-size emission and clip-rule structure.
+    integer sizes, plus Office's even-odd clipping/fill operators around text regions. The explicit OOXML
+    fractional-size path and text-frame `W*` clipping path now have public guards; keep the connector/group/picture
+    inventory intact, and steer the next public fixture toward the remaining filled-region `f*` structure.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape

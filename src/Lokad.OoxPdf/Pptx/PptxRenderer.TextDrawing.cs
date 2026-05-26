@@ -599,7 +599,7 @@ internal sealed partial class PptxRenderer
             ApplyTextTransform(graphics, run);
         }
 
-        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, run, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
@@ -646,7 +646,7 @@ internal sealed partial class PptxRenderer
             ApplyTextTransform(graphics, run);
         }
 
-        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         TextGlyphRun? glyphRun = BuildTextGlyphRun(resourceName, embedded, span, syntheticBold, syntheticItalic);
         if (glyphRun is not null)
         {
@@ -835,7 +835,7 @@ internal sealed partial class PptxRenderer
             ApplyTextTransform(graphics, run);
         }
 
-        graphics.ClipRectangle(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
+        graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
         double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
         double highlightDescent = PptxTextMetricRules.HighlightDescent(embedded, run.FontSize, fontScale);

@@ -50,6 +50,16 @@ internal static class PdfWriterTests
         TestAssert.Contains(" c", pdf);
     }
 
+    public static void WritesEvenOddClippingOperators()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.ClipRectangleEvenOdd(10, 20, 30, 40);
+
+        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
+
+        TestAssert.Contains("10 20 30 40 re W* n", pdf);
+    }
+
     public static void WritesEmbeddedTrueTypeFontObjects()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

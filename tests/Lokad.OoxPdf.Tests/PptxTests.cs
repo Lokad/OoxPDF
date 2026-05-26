@@ -4442,7 +4442,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 432 72 36 re W n", pdf);
+        TestAssert.Contains("72 432 72 36 re W* n", pdf);
     }
 
     public static void PptxSyntheticTextBoxAllowsVerticalOverflowByDefault()
@@ -4477,7 +4477,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 0 72 540 re W n", pdf);
+        TestAssert.Contains("72 0 72 540 re W* n", pdf);
     }
 
     public static void PptxJustifiedTextLayoutDistributesWrappedLines()
@@ -6226,7 +6226,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("72 0 288 540 re W n", pdf);
+        TestAssert.Contains("72 0 288 540 re W* n", pdf);
         AssertContainsTextMatrixAtX(pdf, 72d);
     }
 
@@ -6626,7 +6626,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int lineStarts = Regex.Matches(pdf, $@"1 0 0 1 {Regex.Escape(FormatPdfNumber(79.2d))} [0-9.]+ Tm").Count;
         TestAssert.True(lineStarts >= 2, "Expected narrow table-cell text to wrap onto multiple lines at the cell text inset.");
-        TestAssert.Contains("79.2 399.6 57.6 64.8 re W n", pdf);
+        TestAssert.Contains("79.2 399.6 57.6 64.8 re W* n", pdf);
     }
 
     public static void PptxSyntheticTableKeepsSlide6HeaderOnOneLine()

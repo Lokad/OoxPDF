@@ -142,6 +142,11 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W n");
     }
 
+    public void ClipRectangleEvenOdd(double x, double y, double width, double height)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re W* n");
+    }
+
     public void ClipEllipse(double x, double y, double width, double height)
     {
         AppendEllipsePath(x, y, width, height);
