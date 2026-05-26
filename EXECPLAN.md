@@ -7786,6 +7786,19 @@ alignment needs to compare or reconcile sources.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved workbook table-column records instead of flattening tables to column
+names only. `ChartWorkbookTable.Columns` now keeps each table column's OOXML id, name, totals-row function,
+totals-row formula, and calculated-column formula while retaining the existing `ColumnNames` compatibility
+surface used by simple structured-reference resolution. The embedded workbook regression now proves that column
+ids and calculated formulas survive parsing.
+
+This does not make structured references complete. Escaped column names, multi-column references, totals-only
+references, filter semantics, and calculated-column formula evaluation remain open. The long-term value is that
+future table-aware chart source selection can consult table-owned column records instead of re-reading
+`table*.xml` or inferring formulas from cached values.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved range-source resolution provenance on chart workbook range cells.
 `ChartWorkbookRangeCell` now carries the original chart/workbook formula, the resolved cell-range formula, and
 a typed source kind distinguishing direct ranges, workbook-level defined names, structured references, and the

@@ -10361,6 +10361,12 @@ internal static class PptxTests
         TestAssert.Equal("A1:B4", (string?)salesTable.GetType().GetProperty("AutoFilterReference")?.GetValue(salesTable) ?? string.Empty);
         object filterColumnIds = salesTable.GetType().GetProperty("FilterColumnIds")?.GetValue(salesTable) ?? throw new InvalidOperationException("Expected table filter column ids.");
         TestAssert.True(((System.Collections.IEnumerable)filterColumnIds).Cast<int>().Single() == 1, "Expected table filter column metadata to survive workbook parsing.");
+        object[] salesTableColumns = (((System.Collections.IEnumerable?)salesTable.GetType().GetProperty("Columns")?.GetValue(salesTable)) ?? throw new InvalidOperationException("Expected table column records.")).Cast<object>().ToArray();
+        TestAssert.True(salesTableColumns.Length == 2, "Expected table column records to survive workbook parsing.");
+        object amountColumn = salesTableColumns[1];
+        TestAssert.True((int?)amountColumn.GetType().GetProperty("Id")?.GetValue(amountColumn) == 2, "Expected table column id metadata to survive workbook parsing.");
+        TestAssert.Equal("Amount", (string?)amountColumn.GetType().GetProperty("Name")?.GetValue(amountColumn) ?? string.Empty);
+        TestAssert.Equal("B2", (string?)amountColumn.GetType().GetProperty("CalculatedColumnFormula")?.GetValue(amountColumn) ?? string.Empty);
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10740,8 +10746,8 @@ internal static class PptxTests
                        id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4" headerRowCount="1" totalsRowShown="0">
                   <autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>
                   <tableColumns count="2">
-                    <tableColumn id="1" name="Region"/>
-                    <tableColumn id="2" name="Amount"/>
+                    <tableColumn id="1" name="Region" totalsRowFunction="none"/>
+                    <tableColumn id="2" name="Amount"><calculatedColumnFormula>B2</calculatedColumnFormula></tableColumn>
                   </tableColumns>
                 </table>
                 """,
@@ -10751,7 +10757,7 @@ internal static class PptxTests
                        id="2" name="SalesTotalsTable" displayName="Sales_Totals_Table" ref="A1:B4" headerRowCount="1" totalsRowCount="1" totalsRowShown="1">
                   <tableColumns count="2">
                     <tableColumn id="1" name="Region"/>
-                    <tableColumn id="2" name="Amount"/>
+                    <tableColumn id="2" name="Amount" totalsRowFunction="sum"><totalsRowFormula>SUBTOTAL(109,[Amount])</totalsRowFormula></tableColumn>
                   </tableColumns>
                 </table>
                 """

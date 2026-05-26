@@ -1569,15 +1569,22 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string[] columnNames = tableElement
+            ChartWorkbookTableColumn[] columns = tableElement
                 .Element(SpreadsheetNamespace + "tableColumns")?
                 .Elements(SpreadsheetNamespace + "tableColumn")
-                .Select(column => (string?)column.Attribute("name") ?? string.Empty)
+                .Select(column => new ChartWorkbookTableColumn(
+                    ReadSpreadsheetIntegerAttribute(column, "id"),
+                    (string?)column.Attribute("name") ?? string.Empty,
+                    (string?)column.Attribute("totalsRowFunction") ?? string.Empty,
+                    column.Element(SpreadsheetNamespace + "totalsRowFormula")?.Value ?? string.Empty,
+                    column.Element(SpreadsheetNamespace + "calculatedColumnFormula")?.Value ?? string.Empty))
                 .ToArray() ?? [];
-            if (columnNames.Length == 0)
+            if (columns.Length == 0)
             {
                 continue;
             }
+
+            string[] columnNames = columns.Select(column => column.Name).ToArray();
 
             string autoFilterReference = (string?)tableElement.Element(SpreadsheetNamespace + "autoFilter")?.Attribute("ref") ?? string.Empty;
             int[] filterColumnIds = tableElement
@@ -1600,6 +1607,7 @@ internal sealed partial class PptxRenderer
                 lastColumn,
                 lastRow,
                 columnNames,
+                columns,
                 headerRowCount,
                 totalsRowCount,
                 totalsRowShown,
@@ -1705,11 +1713,19 @@ internal sealed partial class PptxRenderer
         int LastColumn,
         int LastRow,
         IReadOnlyList<string> ColumnNames,
+        IReadOnlyList<ChartWorkbookTableColumn> Columns,
         int HeaderRowCount,
         int TotalsRowCount,
         bool TotalsRowShown,
         string AutoFilterReference,
         IReadOnlyList<int> FilterColumnIds);
+
+    private readonly record struct ChartWorkbookTableColumn(
+        int? Id,
+        string Name,
+        string TotalsRowFunction,
+        string TotalsRowFormula,
+        string CalculatedColumnFormula);
 
     private readonly record struct ChartWorkbookCalculationProperties(
         string CalculationMode,
