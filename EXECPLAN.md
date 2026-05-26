@@ -161,6 +161,13 @@ Initial survey findings:
 - Its testing documentation is more reusable than its chart renderer for OOXPDF's PDF target: the useful
   import is the discipline of generated public cases, PowerPoint ground truth, structural checks before
   visual thresholds, and explicit support catalogs, not browser/ECharts layout behavior.
+- Comparing against current OOXPDF shows the migration has already started, not merely been proposed:
+  `PptxScene`, scene snapshots, first-class text flow/layout/glyph records, and typed chart scene records
+  already provide more PDF-relevant structure than `pptx-renderer`'s DOM/ECharts render layer.
+- The main OOXPDF architectural gap is now ownership, not absence of models. `PptxRenderContext` still
+  carries freshly loaded slide XML, inherited XML, ad hoc relationship dictionaries, and a nullable
+  `SceneSlide`; long-term work should make the scene/context boundary own resolved part, inheritance,
+  relationship, and resource state so specialized PDF renderers no longer need renderer-local XML reads.
 
 High-priority actions:
 
@@ -176,6 +183,11 @@ High-priority actions:
   lifetime, placeholder/bodyPr inheritance, and Office-oracle test discipline. Its chart renderer should not
   be ported as layout authority because it is ECharts-backed and raw-XML-driven rather than PDF-structure
   driven.
+- [x] Compare that boundary against current OOXPDF architecture:
+  OOXPDF already has a typed `PptxScene`, render snapshots, staged text models, and typed native-chart
+  records, so the next architecture step is not a wholesale rewrite. The remaining structural gap is to move
+  resolved package/relationship/inheritance/resource ownership out of renderer-local XML traversal and into
+  scene/context records that are observable in public structural tests.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
