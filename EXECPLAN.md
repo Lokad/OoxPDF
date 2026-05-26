@@ -7759,6 +7759,21 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Added workbook `styles.xml` ownership to the chart workbook bridge without
+changing chart rendering. The embedded workbook reader now loads the spreadsheet styles part, preserves custom
+`numFmt` entries, preserves ordered `cellXfs` records, and resolves a range cell's `StyleIndex` into
+`StyleNumberFormatId`, `StyleNumberFormatCode`, and `StyleAppliesNumberFormat` metadata. The embedded
+workbook fixture now includes a real styles relationship and asserts that a styled chart value cell resolves
+to custom number format ID `165` and code `m/d/yy`.
+
+This still deliberately avoids formatting chart text from workbook styles. Built-in `numFmtId` expansion,
+date serial conversion, locale/calendar sections, style inheritance beyond `cellXfs`, and Office's priority
+between workbook styles, cache format codes, chart/axis/data-label `numFmt`, and `sourceLinked` remain open
+until public Office-PDF evidence pins them down. The structural gain is that those future decisions can be
+made from workbook-owned metadata instead of hard-coded label heuristics or workbook XML re-scans.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved numeric chart-cache format codes next to the point metadata already
 owned by the scene model. `PptxSceneChartSeries` now carries `c:numLit/c:formatCode` or
 `c:numCache/c:formatCode` for value, x-value, y-value, and bubble-size caches, while leaving category

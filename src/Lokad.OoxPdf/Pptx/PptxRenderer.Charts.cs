@@ -13,8 +13,10 @@ internal sealed partial class PptxRenderer
     private const string WorkbookRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
     private const string WorksheetRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
     private const string SharedStringsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings";
+    private const string SpreadsheetStylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
     private const string WorkbookContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml";
     private const string SharedStringsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml";
+    private const string SpreadsheetStylesContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
     private static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
@@ -1280,6 +1282,7 @@ internal sealed partial class PptxRenderer
         using Stream workbookStream = workbookPart.OpenRead();
         XDocument workbookXml = SafeXml.Load(workbookStream);
         string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
+        ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
             .GetRelationships(workbookPart.Name)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
@@ -1308,7 +1311,7 @@ internal sealed partial class PptxRenderer
             sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml));
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles);
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -1338,6 +1341,48 @@ internal sealed partial class PptxRenderer
             .Descendants(SpreadsheetNamespace + "si")
             .Select(item => string.Concat(item.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value)))
             .ToArray();
+    }
+
+    private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart)
+    {
+        OoxPart? stylesPart = workbookPackage
+            .GetRelationships(workbookPart.Name)
+            .Where(relationship => !relationship.IsExternal && relationship.Type == SpreadsheetStylesRelationshipType && relationship.ResolvedTarget is not null)
+            .Select(relationship => workbookPackage.GetPart(relationship.ResolvedTarget!))
+            .FirstOrDefault(part => part is not null);
+        stylesPart ??= workbookPackage.Parts.FirstOrDefault(part => part.ContentType == SpreadsheetStylesContentType);
+        if (stylesPart is null)
+        {
+            return ChartWorkbookStyles.Empty;
+        }
+
+        using Stream stream = stylesPart.OpenRead();
+        XDocument document = SafeXml.Load(stream);
+        var customNumberFormats = new Dictionary<int, string>();
+        foreach (XElement numberFormat in document.Root?.Element(SpreadsheetNamespace + "numFmts")?.Elements(SpreadsheetNamespace + "numFmt") ?? [])
+        {
+            if (numberFormat.Attribute("numFmtId") is { } idAttribute &&
+                int.TryParse(idAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id) &&
+                id >= 0)
+            {
+                customNumberFormats[id] = (string?)numberFormat.Attribute("formatCode") ?? string.Empty;
+            }
+        }
+
+        var cellFormats = new List<ChartWorkbookCellFormat>();
+        foreach (XElement format in document.Root?.Element(SpreadsheetNamespace + "cellXfs")?.Elements(SpreadsheetNamespace + "xf") ?? [])
+        {
+            int? numberFormatId = ReadSpreadsheetIntegerAttribute(format, "numFmtId");
+            bool? applyNumberFormat = format.Attribute("applyNumberFormat") is { } applyAttribute
+                ? IsOoxmlTrue(applyAttribute.Value)
+                : null;
+            string numberFormatCode = numberFormatId is { } id && customNumberFormats.TryGetValue(id, out string? customCode)
+                ? customCode
+                : string.Empty;
+            cellFormats.Add(new ChartWorkbookCellFormat(numberFormatId, numberFormatCode, applyNumberFormat));
+        }
+
+        return new ChartWorkbookStyles(customNumberFormats, cellFormats);
     }
 
     private static Dictionary<string, ChartWorkbookCell> ReadWorksheetCells(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
@@ -1381,7 +1426,12 @@ internal sealed partial class PptxRenderer
 
     private static int? ReadSpreadsheetCellStyleIndex(XElement cell)
     {
-        string? value = (string?)cell.Attribute("s");
+        return ReadSpreadsheetIntegerAttribute(cell, "s");
+    }
+
+    private static int? ReadSpreadsheetIntegerAttribute(XElement element, string attributeName)
+    {
+        string? value = (string?)element.Attribute(attributeName);
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
             ? parsed
             : null;
@@ -1392,17 +1442,50 @@ internal sealed partial class PptxRenderer
         int? StyleIndex,
         string CellType);
 
+    private readonly record struct ChartWorkbookCellFormat(
+        int? NumberFormatId,
+        string NumberFormatCode,
+        bool? ApplyNumberFormat);
+
+    private sealed class ChartWorkbookStyles
+    {
+        public ChartWorkbookStyles(
+            IReadOnlyDictionary<int, string> customNumberFormats,
+            IReadOnlyList<ChartWorkbookCellFormat> cellFormats)
+        {
+            CustomNumberFormats = customNumberFormats;
+            CellFormats = cellFormats;
+        }
+
+        public static ChartWorkbookStyles Empty { get; } = new(new Dictionary<int, string>(), []);
+
+        public IReadOnlyDictionary<int, string> CustomNumberFormats { get; }
+
+        public IReadOnlyList<ChartWorkbookCellFormat> CellFormats { get; }
+
+        public ChartWorkbookCellFormat ResolveCellFormat(int? styleIndex)
+        {
+            return styleIndex is { } index && index >= 0 && index < CellFormats.Count
+                ? CellFormats[index]
+                : default;
+        }
+    }
+
     private readonly record struct ChartWorkbookRangeCell(
         int Index,
         string Reference,
         string Text,
         bool HasCell,
         int? StyleIndex,
-        string CellType);
+        string CellType,
+        int? StyleNumberFormatId,
+        string StyleNumberFormatCode,
+        bool? StyleAppliesNumberFormat);
 
     private sealed class ChartWorkbookData
     {
         private readonly IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets;
+        private readonly ChartWorkbookStyles styles;
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
             : this(sheets, date1904: false)
@@ -1412,12 +1495,19 @@ internal sealed partial class PptxRenderer
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904)
         {
             this.sheets = ConvertWorkbookSheets(sheets);
+            styles = ChartWorkbookStyles.Empty;
             Date1904 = date1904;
         }
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904)
+            : this(sheets, date1904, ChartWorkbookStyles.Empty)
+        {
+        }
+
+        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904, ChartWorkbookStyles styles)
         {
             this.sheets = sheets;
+            this.styles = styles;
             Date1904 = date1904;
         }
 
@@ -1451,13 +1541,17 @@ internal sealed partial class PptxRenderer
                 {
                     string reference = ToCellReference(column, row);
                     bool hasCell = cells.TryGetValue(reference, out ChartWorkbookCell cell);
+                    ChartWorkbookCellFormat format = hasCell ? styles.ResolveCellFormat(cell.StyleIndex) : default;
                     values.Add(new ChartWorkbookRangeCell(
                         index,
                         reference,
                         hasCell ? cell.Text : string.Empty,
                         hasCell,
                         hasCell ? cell.StyleIndex : null,
-                        hasCell ? cell.CellType : string.Empty));
+                        hasCell ? cell.CellType : string.Empty,
+                        format.NumberFormatId,
+                        format.NumberFormatCode,
+                        format.ApplyNumberFormat));
                     index++;
                 }
             }

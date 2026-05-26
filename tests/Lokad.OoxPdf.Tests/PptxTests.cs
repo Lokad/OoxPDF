@@ -10281,6 +10281,12 @@ internal static class PptxTests
         object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
         System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
         TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
+        System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");
+        TestAssert.True((int?)styleNumberFormatIdProperty.GetValue(firstParsedCell) == 165, "Expected worksheet cell style to resolve its number-format ID.");
+        System.Reflection.PropertyInfo styleNumberFormatCodeProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatCode") ?? throw new InvalidOperationException("Expected range-cell style number-format code.");
+        TestAssert.Equal("m/d/yy", (string?)styleNumberFormatCodeProperty.GetValue(firstParsedCell) ?? string.Empty);
+        System.Reflection.PropertyInfo styleAppliesNumberFormatProperty = firstParsedCell.GetType().GetProperty("StyleAppliesNumberFormat") ?? throw new InvalidOperationException("Expected range-cell style number-format apply flag.");
+        TestAssert.True((bool?)styleAppliesNumberFormatProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to preserve applyNumberFormat.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10529,6 +10535,7 @@ internal static class PptxTests
                   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
                   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
                   <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+                  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -10542,6 +10549,7 @@ internal static class PptxTests
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
                   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+                  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
                 </Relationships>
                 """,
             ["xl/workbook.xml"] = """
@@ -10560,6 +10568,20 @@ internal static class PptxTests
                   <si><t>West</t></si>
                   <si><t>Share</t></si>
                 </sst>
+                """,
+            ["xl/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                  <numFmts count="1"><numFmt numFmtId="165" formatCode="m/d/yy"/></numFmts>
+                  <cellXfs count="6">
+                    <xf numFmtId="0"/>
+                    <xf numFmtId="1"/>
+                    <xf numFmtId="2"/>
+                    <xf numFmtId="14"/>
+                    <xf numFmtId="49"/>
+                    <xf numFmtId="165" applyNumberFormat="1"/>
+                  </cellXfs>
+                </styleSheet>
                 """,
             ["xl/worksheets/sheet1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
