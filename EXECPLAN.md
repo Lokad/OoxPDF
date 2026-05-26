@@ -148,6 +148,23 @@ Initial survey findings:
 - Its render context is the key dependency boundary. It resolves slide, layout, master, and theme once, then
   exposes relationship sets, media/cache state, color cache, group-fill context, and navigation hooks to
   specialized renderers.
+- Its feature survey confirms that the useful OOXPDF imports are structural, not mechanical:
+  `src/model/Presentation.ts` resolves placeholder geometry and inherited `bodyPr` from layout/master nodes;
+  `src/renderer/TextRenderer.ts` keeps a visible multi-layer paragraph/run cascade including default text
+  styles, placeholder list styles, paragraph properties, bullet properties, line spacing, tabs, capitalization,
+  baseline, no-fill, outline, highlight, and hyperlink handling; `src/renderer/StyleResolver.ts` applies
+  layout/master color-map remapping, `phClr`, system/preset/HSL/SCRGB colors, and modifier chains; group
+  rendering propagates `a:grpFill` through render context; image rendering inventories video/audio, crop,
+  alpha/luminance/duotone/bi-level effects, SVG/BMP/EMF/WMF distinctions, and media URL lifetime; table parsing
+  keeps grid spans, merge flags, table style IDs, cell properties, and cell text bodies; SmartArt support uses
+  `ppt/diagrams/drawing*.xml` fallback drawings as grouped shape trees; preset shape tests and baseline
+  evaluation emphasize spec-derived geometry before parameter tuning.
+- Feature gaps relative to OOXPDF's long-term PDF target are equally important: the TypeScript chart renderer
+  builds browser/ECharts/SVG structures rather than Office-like PDF plot boxes and text matrices; many feature
+  parsers keep `SafeXmlNode` raw fields as renderer inputs; image handling uses browser blob URLs and optional
+  PDF/EMF helpers that cannot become runtime dependencies; SmartArt fallback rendering contains
+  layout-specific diagram heuristics that are useful as an inventory but must be replaced by public
+  Office-PDF structural evidence before entering OOXPDF.
 - Its slide renderer treats master/layout non-placeholder shapes as template content rendered behind slide
   nodes, while placeholders are inheritance templates rather than directly rendered content.
 - Its model parsers keep raw XML attached to typed nodes. This is a useful compromise for `ooxpdf`: parse
@@ -171,10 +188,10 @@ Initial survey findings:
 
 High-priority actions:
 
-- [ ] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
+- [x] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
   text layout, group transforms, shape geometry, fills/strokes, images, tables, charts, SmartArt, and oracle
   tooling.
-- [ ] Inspect `pptx-renderer` architecturally, not just feature-by-feature: package parsing boundaries,
+- [x] Inspect `pptx-renderer` architecturally, not just feature-by-feature: package parsing boundaries,
   normalized model ownership, render context lifetime, per-node renderers, style/color resolvers,
   diagnostics/error isolation, asset lifetime, and test/oracle pipeline.
 - [x] Record the first `pptx-renderer` architectural boundary survey:
@@ -2458,6 +2475,11 @@ High-priority actions:
   connector and chart leader lines while leaving current rendering behavior unchanged. Validation:
   `pptx-shapes --skip-slow` passed at `15 passed, 0 failed, 0 skipped`; `pptx-charts --skip-slow` passed at
   `41 passed, 0 failed, 0 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
+- [x] 2026-05-27: Completed the `pptx-renderer` feature and architecture survey against OOXPDF. The useful
+  long-term imports are placeholder/bodyPr inheritance, color-map and `phClr` resolution, group-fill context,
+  media/EMF capability inventory, SmartArt drawing fallback inventory, shape oracle discipline, and explicit
+  text cascade coverage. The TypeScript chart renderer and browser media lifetime remain non-targets for
+  OOXPDF's dependency-free PDF runtime.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
