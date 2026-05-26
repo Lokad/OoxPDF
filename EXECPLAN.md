@@ -7774,6 +7774,21 @@ Office-authored formulas contain quoted sheet syntax.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Extended chart shape-style ownership to effects without changing chart drawing.
+`PptxSceneChartShapeStyle` now carries the same parsed glow and outer-shadow records already used by normal
+PPTX shapes, and the renderer-facing `ChartShapeStyle` bridge preserves those records through scene-backed
+and XML-fallback style resolution. The slow scene fixture now locks chart-area outer-shadow metadata and
+chart-title glow metadata so chart effect handling no longer needs to rediscover raw `a:effectLst` when a
+future Office-PDF-backed renderer consumes it.
+
+This is intentionally not effect rendering. Chart-area/title/legend/data-label effect geometry, blur
+approximation, transparency grouping, clipping interaction, and Office's emitted PDF structure still need
+public visual/PDF evidence before visible output changes. The structural closure is narrower: chart styles no
+longer truncate effect metadata at the scene boundary while normal shapes preserve it.
+
+Validation: focused `pptx-model` passed with slow tests included (`18 passed, 0 failed, 0 skipped`);
+focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved workbook-backed chart structured-reference column spans from table-owned
 structure instead of treating every table reference as a single column or whole-table shortcut.
 `SalesTable[[Region]:[Amount]]` now resolves to the table data-body rectangle `Sheet1!A2:B4`, keeps

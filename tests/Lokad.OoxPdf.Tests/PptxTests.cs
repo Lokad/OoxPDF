@@ -142,13 +142,13 @@ internal static class PptxTests
                   <c:date1904 val="1"/>
                   <c:roundedCorners val="0"/>
                   <c:style val="10"/>
-                  <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr>
+                  <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln><a:effectLst><a:outerShdw dist="12700" dir="0"><a:srgbClr val="010203"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></c:spPr>
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:plotVisOnly val="0"/>
                   <c:dispBlanksAs val="span"/>
                   <c:showDLblsOverMax val="1"/>
-                  <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
+                  <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln><a:effectLst><a:glow rad="25400"><a:srgbClr val="0A0B0C"><a:alpha val="40000"/></a:srgbClr></a:glow></a:effectLst></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
                   <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:noFill/><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
                     <c:barDir val="bar"/>
                     <c:grouping val="stacked"/>
@@ -419,6 +419,10 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.HasLine == true, "Expected chart area line in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Color ?? default);
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.ChartAreaStyle.Line.Width ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ChartAreaStyle.OuterShadow.HasShadow == true, "Expected chart area outer shadow in the scene model.");
+        TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ChartAreaStyle.OuterShadow.Color ?? default);
+        TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.ChartAreaStyle.OuterShadow.Alpha ?? 0d);
+        TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.ChartAreaStyle.OuterShadow.OffsetX ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.NoFill == true, "Expected plot area explicit noFill in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Fill.HasFill == false, "Expected plot area noFill to suppress solid fill in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.HasLine == true, "Expected plot area line in the scene model.");
@@ -635,6 +639,10 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.ShapeStyle.Fill.HasFill == true, "Expected chart title fill in the scene model.");
         TestAssert.Equal(new RgbColor(254, 220, 186), slide.SlideNodes[4].Chart?.Title.ShapeStyle.Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(15, 30, 45), slide.SlideNodes[4].Chart?.Title.ShapeStyle.Line.Color);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Title.ShapeStyle.Glow.HasGlow == true, "Expected chart title glow in the scene model.");
+        TestAssert.Equal(new RgbColor(10, 11, 12), slide.SlideNodes[4].Chart?.Title.ShapeStyle.Glow.Color ?? default);
+        TestAssert.Equal(0.4d, slide.SlideNodes[4].Chart?.Title.ShapeStyle.Glow.Alpha ?? 0d);
+        TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.Title.ShapeStyle.Glow.Radius ?? 0d);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Title.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(13d, slide.SlideNodes[4].Chart?.Title.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(17, 34, 170), slide.SlideNodes[4].Chart?.Title.TextStyle.Color ?? default);

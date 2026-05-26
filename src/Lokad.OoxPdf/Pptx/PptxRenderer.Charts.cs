@@ -547,7 +547,12 @@ internal sealed partial class PptxRenderer
 
     private static ChartShapeStyle ToChartShapeStyle(PptxSceneChartShapeStyle style)
     {
-        return new ChartShapeStyle(style.NoFill ? null : ToChartSeriesFill(style.Fill, style.PatternFill), style.NoFill || style.GradientFill is null ? null : ToGradientFill(style.GradientFill), ToChartSeriesStroke(style.Line));
+        return new ChartShapeStyle(
+            style.NoFill ? null : ToChartSeriesFill(style.Fill, style.PatternFill),
+            style.NoFill || style.GradientFill is null ? null : ToGradientFill(style.GradientFill),
+            ToChartSeriesStroke(style.Line),
+            style.Glow,
+            style.OuterShadow);
     }
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts)
@@ -3466,7 +3471,12 @@ internal sealed partial class PptxRenderer
         ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
             ? new ChartSeriesStroke(strokeColor, strokeAlpha, lineWidth)
             : null;
-        return new ChartShapeStyle(fill, gradientFill, stroke);
+        return new ChartShapeStyle(
+            fill,
+            gradientFill,
+            stroke,
+            PptxSceneBuilder.TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
+            PptxSceneBuilder.TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
     }
 
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
@@ -8385,11 +8395,11 @@ internal sealed partial class PptxRenderer
         public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default, ChartShapeStyle.Empty);
     }
 
-    private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, GradientFill? GradientFill, ChartSeriesStroke? Stroke)
+    private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, GradientFill? GradientFill, ChartSeriesStroke? Stroke, PptxSceneGlow Glow, PptxSceneOuterShadow OuterShadow)
     {
-        public static ChartShapeStyle Empty { get; } = new(null, null, null);
+        public static ChartShapeStyle Empty { get; } = new(null, null, null, default, default);
 
-        public bool IsEmpty => Fill is null && GradientFill is null && Stroke is null;
+        public bool IsEmpty => Fill is null && GradientFill is null && Stroke is null && !Glow.HasGlow && !OuterShadow.HasShadow;
     }
 
     private readonly record struct ChartMarkerStyle(PptxSceneChartMarkerSymbol SymbolKind, string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
