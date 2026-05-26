@@ -1798,8 +1798,8 @@ internal sealed partial class PptxRenderer
             return fallback;
         }
 
-        double min = ReadAxisScalingValue(scaling, "min") ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
-        double max = ReadAxisScalingValue(scaling, "max") ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
+        double min = ReadAxisScalingValue(scaling, ChartAxisScalingBound.Minimum) ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
+        double max = ReadAxisScalingValue(scaling, ChartAxisScalingBound.Maximum) ?? GetNiceChartAxisMax(fallback.Max, min, boundsTickTargetCount, useNearMaximumHeadroom, nearMaximumHeadroomRatio);
         return max > min
             ? new ChartValueExtents(min, max)
             : fallback;
@@ -1832,29 +1832,31 @@ internal sealed partial class PptxRenderer
             return extents;
         }
 
-        double min = HasSceneOrXmlAxisScalingValue(axis, valueAxis, "min") ? extents.Min : 0d;
-        double max = HasSceneOrXmlAxisScalingValue(axis, valueAxis, "max") ? extents.Max : 1d;
+        double min = HasSceneOrXmlAxisScalingValue(axis, valueAxis, ChartAxisScalingBound.Minimum) ? extents.Min : 0d;
+        double max = HasSceneOrXmlAxisScalingValue(axis, valueAxis, ChartAxisScalingBound.Maximum) ? extents.Max : 1d;
         return max > min
             ? new ChartValueExtents(min, max)
             : extents;
     }
 
-    private static bool HasSceneOrXmlAxisScalingValue(PptxSceneChartAxis? axis, XElement? valueAxis, string elementName)
+    private static bool HasSceneOrXmlAxisScalingValue(PptxSceneChartAxis? axis, XElement? valueAxis, ChartAxisScalingBound bound)
     {
         if (axis is not null)
         {
-            return string.Equals(elementName, "min", StringComparison.Ordinal)
+            return bound == ChartAxisScalingBound.Minimum
                 ? axis.Minimum is not null
                 : axis.Maximum is not null;
         }
 
+        string elementName = bound == ChartAxisScalingBound.Minimum ? "min" : "max";
         return valueAxis?
             .Element(ChartNamespace + "scaling")
             ?.Element(ChartNamespace + elementName) is not null;
     }
 
-    private static double? ReadAxisScalingValue(XElement scaling, string elementName)
+    private static double? ReadAxisScalingValue(XElement scaling, ChartAxisScalingBound bound)
     {
+        string elementName = bound == ChartAxisScalingBound.Minimum ? "min" : "max";
         string? value = (string?)scaling.Element(ChartNamespace + elementName)?.Attribute("val");
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? parsed
@@ -6484,6 +6486,12 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct ChartValueExtents(double Min, double Max);
+
+    private enum ChartAxisScalingBound
+    {
+        Minimum,
+        Maximum
+    }
 
     private readonly record struct ChartAxisUnits(double? MajorUnit, double? MinorUnit)
     {

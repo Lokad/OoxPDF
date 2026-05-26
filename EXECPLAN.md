@@ -2235,6 +2235,12 @@ High-priority actions:
     dispatch, combo-line lookup, polar detection, title/legend layout, and line-marker defaults use the typed
     scene plot family at call sites. Focused chart validation passed `39 passed, 0 failed, 0 skipped`, the
     non-slow suite passed `231 passed, 0 failed, 7 skipped`, and `dotnet pack` succeeded.
+  - [x] 2026-05-26: Replaced the renderer's free-form `min`/`max` selector for percent-stacked axis scaling
+    with a bounded `ChartAxisScalingBound` enum. This keeps the fallback XML access to OOXML element names,
+    but prevents internal axis-scaling read and presence logic from accepting arbitrary strings while
+    preserving the existing scene-first `Minimum`/`Maximum` checks. Focused chart validation passed
+    `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.
