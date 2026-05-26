@@ -7001,3 +7001,11 @@ passed with 39/39 tests. Targeted visual checks passed for
 and `pptx-ladder-11-compact-stacked-secondary-axis-probe` at
 `artifacts/visual/pptx-ladder-11-compact-stacked-secondary-axis-probe/20260526-120729`. The compact probe build
 had transient copy-lock warnings from parallel build-heavy checks, but completed successfully.
+
+Scatter discovery, 2026-05-26: The scatter branch still needs a staged structural implementation for value-axis
+labels, gridlines, legend entries, and stroke-marker structure. A direct attempt to reuse the existing value-axis
+label/gridline/legend helpers in one step made the candidate structurally richer, but regressed
+`pptx-ladder-11-chart-scatter-smooth-port` to MAE `4.297448` against its `2.8` gate, so that uncommitted change
+was removed. Do not solve this by loosening the visual gate or by dumping all missing surfaces into the scatter
+branch at once. The next scatter pass should first derive Office/candidate scatter plot bounds and axis scales,
+then add one surface at a time with public structural gates.
