@@ -9744,12 +9744,14 @@ internal static class PptxTests
               <c:chart><c:dispBlanksAs val="gap"/><c:plotArea>
                 <c:lineChart><c:ser>
                   <c:cat><c:strLit>
+                    <c:ptCount val="6"/>
                     <c:pt idx="0"><c:v>Alpha</c:v></c:pt>
                     <c:pt idx="2"><c:v></c:v></c:pt>
                     <c:pt idx="4"/>
                     <c:pt idx="5"><c:v>Omega</c:v></c:pt>
                   </c:strLit></c:cat>
                   <c:val><c:numLit>
+                    <c:ptCount val="6"/>
                     <c:pt idx="0"><c:v>1.25</c:v></c:pt>
                     <c:pt idx="2"><c:v></c:v></c:pt>
                     <c:pt idx="4"><c:v>missing</c:v></c:pt>
@@ -9757,9 +9759,9 @@ internal static class PptxTests
                   </c:numLit></c:val>
                 </c:ser></c:lineChart>
                 <c:scatterChart><c:ser>
-                  <c:xVal><c:numLit><c:pt idx="7"><c:v>9</c:v></c:pt></c:numLit></c:xVal>
-                  <c:yVal><c:numLit><c:pt idx="7"><c:v></c:v></c:pt></c:numLit></c:yVal>
-                  <c:bubbleSize><c:numLit><c:pt idx="7"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
+                  <c:xVal><c:numLit><c:ptCount val="8"/><c:pt idx="7"><c:v>9</c:v></c:pt></c:numLit></c:xVal>
+                  <c:yVal><c:numLit><c:ptCount val="8"/><c:pt idx="7"><c:v></c:v></c:pt></c:numLit></c:yVal>
+                  <c:bubbleSize><c:numLit><c:ptCount val="8"/><c:pt idx="7"><c:v>16</c:v></c:pt></c:numLit></c:bubbleSize>
                 </c:ser></c:scatterChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
@@ -9768,6 +9770,7 @@ internal static class PptxTests
         PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
         TestAssert.Equal(2, lineSeries.Categories.Count);
         TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
+        TestAssert.Equal(6, lineSeries.CategoryPointCount ?? 0);
         TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
         TestAssert.Equal("Alpha", lineSeries.CategoryPoints[0].Text);
         TestAssert.True(lineSeries.CategoryPoints[0].HasText, "Expected category cache point text presence to be explicit.");
@@ -9781,6 +9784,7 @@ internal static class PptxTests
         TestAssert.Equal("Omega", lineSeries.CategoryPoints[3].Text);
         TestAssert.Equal(2, lineSeries.Values.Count);
         TestAssert.Equal(4, lineSeries.ValuePoints.Count);
+        TestAssert.Equal(6, lineSeries.ValuePointCount ?? 0);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
         TestAssert.Equal(1.25d, lineSeries.ValuePoints[0].Value ?? 0d);
         TestAssert.Equal(2, lineSeries.ValuePoints[1].Index);
@@ -9793,10 +9797,13 @@ internal static class PptxTests
         TestAssert.Equal(3.5d, lineSeries.ValuePoints[3].Value ?? 0d);
 
         PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
+        TestAssert.Equal(8, scatterSeries.XValuePointCount ?? 0);
         TestAssert.Equal(7, scatterSeries.XValuePoints[0].Index);
         TestAssert.Equal(9d, scatterSeries.XValuePoints[0].Value ?? 0d);
+        TestAssert.Equal(8, scatterSeries.YValuePointCount ?? 0);
         TestAssert.Equal(7, scatterSeries.YValuePoints[0].Index);
         TestAssert.True(scatterSeries.YValuePoints[0].Value is null, "Expected blank y-value point to remain explicit.");
+        TestAssert.Equal(8, scatterSeries.BubbleSizePointCount ?? 0);
         TestAssert.Equal(7, scatterSeries.BubbleSizePoints[0].Index);
         TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
     }
@@ -9826,6 +9833,7 @@ internal static class PptxTests
 
         PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
+        TestAssert.Equal(3, series.CategoryPointCount ?? 0);
         TestAssert.Equal(5, series.CategoryPoints.Count);
         TestAssert.Equal(2, series.CategoryLevels.Count);
         TestAssert.Equal(2, series.CategoryLevels[0].Count);

@@ -7783,6 +7783,22 @@ format codes and how workbook cell formats, date systems, and locale sections fe
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved chart cache `c:ptCount` in the scene model alongside the explicit point
+records. `PptxSceneChartSeries` now carries declared point counts for value, category, x-value, y-value, and
+bubble-size caches, including nested `multiLvlStrCache` category caches. Existing flattened value/category
+arrays and explicit `idx` point records remain unchanged for current rendering. The model tests now cover
+the important blank-slot case: a cache can declare a cardinality larger than its explicit point elements,
+which is needed before future `dispBlanksAs`, trailing blanks, and workbook-backed gap/span/zero behavior can
+be implemented from OOXML structure instead of inferred dense arrays.
+
+This still does not render blank-cell semantics. It closes a narrower ownership gap: OOXPDF no longer loses
+the declared series/cache cardinality at parse time, so later Office-PDF-backed chart layout can reason about
+missing points without re-reading raw chart XML.
+
+Validation: focused non-slow `pptx-model` passed (`17 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart-wide option metadata in the typed scene model before attempting
 to render its semantics. `PptxSceneChartOptions` now owns chart-space `date1904` and `roundedCorners`,
 chart-level `plotVisOnly` and `showDLblsOverMax`, and the explicit `dispBlanksAs` value with a typed
