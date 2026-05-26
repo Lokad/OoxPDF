@@ -2182,6 +2182,12 @@ High-priority actions:
     `AutoZero`, `Maximum`, `Between`, `Outside`, and `Inside`; focused chart validation passed
     `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
     `dotnet pack` succeeded.
+  - [x] 2026-05-26: Promoted chart plot family names from raw `barChart`/`lineChart`/`bubbleChart` strings to a
+    typed `PptxSceneChartPlotKind` ladder on `PptxSceneChartPlot`, while preserving the raw chart element name
+    for diagnostics and unknown-family inventory. Scene plot lookup now matches typed plot families instead of
+    string literals, and scene coverage locks typed `Bar`, `Bubble`, and `Line`; focused chart validation
+    passed `39 passed, 0 failed, 0 skipped`, the non-slow suite passed `231 passed, 0 failed, 7 skipped`, and
+    `dotnet pack` succeeded.
 - [ ] 2026-05-25: Replace chart fallback geometry by turning each named `PptxChartMetricRules`
   approximation into an Office-PDF-observed rule or an explicitly classified temporary gap with a public
   visual case.

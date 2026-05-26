@@ -386,6 +386,7 @@ internal static class PptxTests
         TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Width ?? 0d);
         TestAssert.Equal(0.6d, slide.SlideNodes[4].Chart?.PlotAreaStyle.Line.Alpha ?? 0d);
         TestAssert.Equal("barChart", slide.SlideNodes[4].Chart?.Plots[0].Kind ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartPlotKind.Bar, slide.SlideNodes[4].Chart?.Plots[0].PlotKind);
         TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[0].PlotAreaIndex ?? -1);
         TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[0].KindIndex ?? -1);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].SeriesCount ?? 0);
@@ -462,6 +463,7 @@ internal static class PptxTests
         TestAssert.Equal(18d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Explosion ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartPlotKind.Bubble, slide.SlideNodes[4].Chart?.Plots[1].PlotKind);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[1].PlotAreaIndex ?? -1);
         TestAssert.Equal(0, slide.SlideNodes[4].Chart?.Plots[1].KindIndex ?? -1);
         TestAssert.Equal(8, slide.SlideNodes[4].Chart?.Plots[1].Series[0].Index ?? -1);
@@ -476,6 +478,7 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].VaryColors is null, "Expected missing varyColors metadata to remain distinct from the effective default.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].Series[0].Marker.IsDefined == false, "Expected a missing marker element to remain distinct from the effective marker default.");
         TestAssert.Equal("lineChart", slide.SlideNodes[4].Chart?.Plots[2].Kind ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartPlotKind.Line, slide.SlideNodes[4].Chart?.Plots[2].PlotKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.IsDefined == false, "Expected missing line-chart marker metadata to remain distinct from explicit default markers.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);

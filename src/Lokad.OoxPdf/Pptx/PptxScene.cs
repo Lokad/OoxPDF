@@ -391,6 +391,7 @@ internal sealed record PptxSceneChart(
     PptxSceneChartShapeStyle PlotAreaStyle);
 
 internal sealed record PptxSceneChartPlot(
+    PptxSceneChartPlotKind PlotKind,
     string Kind,
     int PlotAreaIndex,
     int KindIndex,
@@ -406,6 +407,19 @@ internal sealed record PptxSceneChartPlot(
     double? HoleSize,
     double? FirstSliceAngle,
     PptxSceneChartDataLabels DataLabels);
+
+internal enum PptxSceneChartPlotKind
+{
+    Area,
+    Bar,
+    Bubble,
+    Doughnut,
+    Line,
+    Pie,
+    Radar,
+    Scatter,
+    Unknown
+}
 
 internal sealed record PptxSceneChartDataLabels(
     bool? ShowValue,
@@ -965,6 +979,30 @@ internal sealed class PptxSceneBuilder
         };
     }
 
+    internal static PptxSceneChartPlotKind ParseChartPlotKind(string? kind)
+    {
+        return kind switch
+        {
+            "areaChart" => PptxSceneChartPlotKind.Area,
+            "barChart" => PptxSceneChartPlotKind.Bar,
+            "bubbleChart" => PptxSceneChartPlotKind.Bubble,
+            "doughnutChart" => PptxSceneChartPlotKind.Doughnut,
+            "lineChart" => PptxSceneChartPlotKind.Line,
+            "pieChart" => PptxSceneChartPlotKind.Pie,
+            "radarChart" => PptxSceneChartPlotKind.Radar,
+            "scatterChart" => PptxSceneChartPlotKind.Scatter,
+            _ when kind?.Equals("areaChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Area,
+            _ when kind?.Equals("barChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Bar,
+            _ when kind?.Equals("bubbleChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Bubble,
+            _ when kind?.Equals("doughnutChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Doughnut,
+            _ when kind?.Equals("lineChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Line,
+            _ when kind?.Equals("pieChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Pie,
+            _ when kind?.Equals("radarChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Radar,
+            _ when kind?.Equals("scatterChart", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartPlotKind.Scatter,
+            _ => PptxSceneChartPlotKind.Unknown
+        };
+    }
+
     internal static PptxSceneChartAxisPosition ParseChartAxisPosition(string? position)
     {
         return position switch
@@ -1355,6 +1393,7 @@ internal sealed class PptxSceneBuilder
                 .Where(value => value.Length != 0)
                 .ToArray();
             plots.Add(new PptxSceneChartPlot(
+                ParseChartPlotKind(kind),
                 kind,
                 plots.Count,
                 kindIndex,

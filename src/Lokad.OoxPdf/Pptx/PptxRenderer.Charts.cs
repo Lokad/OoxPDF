@@ -118,11 +118,11 @@ internal sealed partial class PptxRenderer
         EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached or embedded-workbook-backed numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
     }
 
-    private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, string kind, int index = 0)
+    private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, PptxSceneChartPlotKind kind, int index = 0)
     {
         return chart?
             .Plots
-            .Where(plot => string.Equals(plot.Kind, kind, StringComparison.Ordinal) && plot.KindIndex == index)
+            .Where(plot => plot.PlotKind == kind && plot.KindIndex == index)
             .FirstOrDefault();
     }
 
@@ -445,7 +445,7 @@ internal sealed partial class PptxRenderer
         XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
-            PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, "barChart");
+            PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
             IReadOnlyList<IReadOnlyList<double>> barSeries = ReadSceneOrXmlChartSeries(barPlot, barChart, workbook);
             if (barSeries.Count != 0)
             {
@@ -479,7 +479,7 @@ internal sealed partial class PptxRenderer
                 int barChartIndex = 1;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
-                    PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, "barChart", barChartIndex);
+                    PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
                     IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadSceneOrXmlChartSeries(extraBarPlot, extraBarChart, workbook);
                     if (extraSeries.Count == 0)
                     {
@@ -551,7 +551,7 @@ internal sealed partial class PptxRenderer
                 int lineChartIndex = 0;
                 foreach (XElement comboLineChart in ReadChartPlotElements(chartXml, "lineChart"))
                 {
-                    PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, "lineChart", lineChartIndex);
+                    PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
                     IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, comboLineChart, workbook);
                     if (lineSeries.Count == 0)
                     {
@@ -681,7 +681,7 @@ internal sealed partial class PptxRenderer
         XElement? lineChart = ReadChartPlotElements(chartXml, "lineChart").FirstOrDefault();
         if (lineChart is not null)
         {
-            PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, "lineChart");
+            PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
             IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, lineChart, workbook);
             if (lineSeries.Count != 0)
             {
@@ -736,7 +736,7 @@ internal sealed partial class PptxRenderer
         XElement? areaChart = ReadChartPlotElements(chartXml, "areaChart").FirstOrDefault();
         if (areaChart is not null)
         {
-            PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, "areaChart");
+            PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
             IReadOnlyList<IReadOnlyList<double>> areaSeries = ReadSceneOrXmlChartSeries(areaPlot, areaChart, workbook);
             if (areaSeries.Count != 0)
             {
@@ -798,7 +798,7 @@ internal sealed partial class PptxRenderer
         XElement? scatterChart = ReadChartPlotElements(chartXml, "scatterChart").FirstOrDefault();
         if (scatterChart is not null)
         {
-            PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, "scatterChart");
+            PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter);
             IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook);
             if (scatterSeries.Count != 0)
             {
@@ -818,7 +818,7 @@ internal sealed partial class PptxRenderer
         XElement? bubbleChart = ReadChartPlotElements(chartXml, "bubbleChart").FirstOrDefault();
         if (bubbleChart is not null)
         {
-            PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, "bubbleChart");
+            PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble);
             IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true, workbook: workbook);
             if (bubbleSeries.Count != 0)
             {
@@ -847,7 +847,7 @@ internal sealed partial class PptxRenderer
         XElement? radarChart = ReadChartPlotElements(chartXml, "radarChart").FirstOrDefault();
         if (radarChart is not null)
         {
-            PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, "radarChart");
+            PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
             IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadSceneOrXmlChartSeries(radarPlot, radarChart, workbook);
             if (radarSeries.Count != 0)
             {
@@ -880,7 +880,7 @@ internal sealed partial class PptxRenderer
         XElement? pieChart = ReadChartPlotElements(chartXml, "pieChart").FirstOrDefault();
         if (pieChart is not null)
         {
-            PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, "pieChart");
+            PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie);
             IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadSceneOrXmlChartSeries(piePlot, pieChart, workbook);
             if (pieSeries.Count != 0)
             {
@@ -902,7 +902,7 @@ internal sealed partial class PptxRenderer
         XElement? doughnutChart = ReadChartPlotElements(chartXml, "doughnutChart").FirstOrDefault();
         if (doughnutChart is not null)
         {
-            PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, "doughnutChart");
+            PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut);
             IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadSceneOrXmlChartSeries(doughnutPlot, doughnutChart, workbook);
             if (doughnutSeries.Count != 0)
             {
@@ -2009,7 +2009,7 @@ internal sealed partial class PptxRenderer
             return fallbackBaselineY;
         }
 
-        PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, "barChart");
+        PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
         bool horizontalBars = string.Equals(ReadSceneOrXmlChartValue(barPlot?.BarDirection, barChart, "barDir"), "bar", StringComparison.Ordinal);
         ChartLayout layout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, horizontalBars);
         double offsetFactor = !horizontalBars && IsAutoGeneratedChartTitle(sceneChart)
@@ -5350,7 +5350,7 @@ internal sealed partial class PptxRenderer
                 frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio);
         }
 
-        PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, "lineChart");
+        PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
         IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(linePlot, lineChart);
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
