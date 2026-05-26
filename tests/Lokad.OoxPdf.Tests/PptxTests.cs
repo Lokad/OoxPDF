@@ -10265,6 +10265,10 @@ internal static class PptxTests
             }
         };
         object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        System.Reflection.PropertyInfo date1904Property = workbookType.GetProperty("Date1904") ?? throw new InvalidOperationException("Expected workbook date1904 property.");
+        TestAssert.True((bool?)date1904Property.GetValue(workbook) == false, "Expected workbook date1904 metadata to default to false.");
+        object date1904Workbook = Activator.CreateInstance(workbookType, [sheets, true]) ?? throw new InvalidOperationException("Expected date1904 workbook instance.");
+        TestAssert.True((bool?)date1904Property.GetValue(date1904Workbook) == true, "Expected workbook date1904 metadata to survive construction.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>

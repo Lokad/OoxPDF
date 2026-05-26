@@ -1308,7 +1308,15 @@ internal sealed partial class PptxRenderer
             sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets);
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml));
+    }
+
+    private static bool ReadWorkbookDate1904(XDocument workbookXml)
+    {
+        return IsOoxmlTrue((string?)workbookXml
+            .Root?
+            .Element(SpreadsheetNamespace + "workbookPr")
+            ?.Attribute("date1904"));
     }
 
     private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
@@ -1377,8 +1385,23 @@ internal sealed partial class PptxRenderer
         string Text,
         bool HasCell);
 
-    private sealed class ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
+    private sealed class ChartWorkbookData
     {
+        private readonly IReadOnlyDictionary<string, Dictionary<string, string>> sheets;
+
+        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
+            : this(sheets, date1904: false)
+        {
+        }
+
+        public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets, bool date1904)
+        {
+            this.sheets = sheets;
+            Date1904 = date1904;
+        }
+
+        public bool Date1904 { get; }
+
         public string[] ReadRange(string? formula)
         {
             return ReadRangeCells(formula)

@@ -7773,6 +7773,20 @@ name sources, stale-cache policy, or `date1904` before building cache points fro
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved embedded-workbook date-system metadata in the chart workbook bridge.
+`ReadEmbeddedChartWorkbookData` now reads workbook-level `workbookPr/@date1904`, and `ChartWorkbookData`
+carries it as `Date1904` while retaining the existing default-false construction path used by focused unit
+tests. This aligns the renderer-side workbook bridge with the chart-scene `date1904` preservation already in
+place, without changing emitted chart labels or cache values.
+
+This still does not implement date serial semantics. Workbook cells are still exposed as raw text strings and
+numeric parsing still treats them as invariant doubles; Office-backed work remains to connect workbook cell
+styles, chart cache format codes, chart/axis/data-label `numFmt`, `sourceLinked`, and the workbook date
+system into a single renderer-facing typed chart-data object.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart number-format metadata at the scene boundary instead of leaving
 format ownership as renderer-local string handling. `PptxSceneChartNumberFormat` now captures whether a
 `c:numFmt` element is present, its `formatCode`, and its `sourceLinked` flag for plot data labels,
