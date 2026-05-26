@@ -7056,3 +7056,12 @@ derive orientation/grouping-aware reserves from chart-axis and label structure.
 Validation: `pwsh tools\SummarizeChartStructureDeltas.ps1 -Case
 'pptx-ladder-11-chart-column-stacked-port,pptx-ladder-11-chart-bar-stacked-port' -SkipProbe` listed both
 cases from the latest public visual runs, and the single-case form still works.
+
+Discovery, 2026-05-26: Do not reuse `DeriveHorizontalBarInnerPlotBox` for automatic horizontal stacked bar
+layout. A local experiment applied that helper to the automatic stacked bar path, using the existing
+category/value-axis label reserve logic that currently works for explicit manual outer-layout targets. The
+result passed the loose manifest but was structurally and visually wrong: stacked horizontal bar MAE worsened
+from about `4.23` to `13.70`, and `AxisPairPlotBoxCandidate`/axis label deltas widened from about `32 pt` to
+about `141 pt`. The code was reverted. The long-term fix should derive automatic horizontal bar reserves
+from Office-observed chart layout phases, with separate plot-area and inner-plot semantics, instead of
+feeding the automatic preset through a helper built for manual outer boxes.
