@@ -359,9 +359,13 @@ internal readonly record struct PptxSceneLineStyle(
     double Width,
     double Alpha,
     IReadOnlyList<double> DashPattern,
+    string? DashPreset,
     PptxSceneLineCompound? Compound,
+    string? CompoundValue,
     int? Cap,
-    int? Join)
+    string? CapValue,
+    int? Join,
+    string? JoinValue)
 {
     public bool HasDash => DashPattern is { Count: > 0 };
 }
@@ -2119,14 +2123,18 @@ internal sealed class PptxSceneBuilder
                     lineWidth,
                     alpha,
                     TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                    ReadPresetDashValue(shapeProperties),
                     ReadLineCompound(shapeProperties),
+                    ReadLineCompoundValue(shapeProperties),
                     ReadLineCap(shapeProperties) switch
                     {
                         "rnd" => 1,
                         "sq" => 2,
                         _ => null
                     },
-                    ReadLineJoin(shapeProperties))
+                    ReadLineCap(shapeProperties),
+                    ReadLineJoin(shapeProperties),
+                    ReadLineJoinValue(shapeProperties))
                 : default;
     }
 
@@ -2423,7 +2431,7 @@ internal sealed class PptxSceneBuilder
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
-            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null);
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null);
         }
 
         return ReadChartLine(shapeProperties, theme);
@@ -2545,7 +2553,7 @@ internal sealed class PptxSceneBuilder
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
         {
-            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null);
+            return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null);
         }
 
         return ReadChartLine(shapeProperties, theme);
@@ -3017,7 +3025,7 @@ internal sealed class PptxSceneBuilder
             : 0.75d;
         return new PptxSceneTableCellBorder(
             IsSpecified: true,
-            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null, null));
+            new PptxSceneLineStyle(true, color, lineWidth, alpha, [], null, null, null, null, null, null, null));
     }
 
     internal static PptxSceneGroupTransform ReadGroupTransform(XElement group)
@@ -3065,14 +3073,18 @@ internal sealed class PptxSceneBuilder
                 lineWidth,
                 lineAlpha,
                 TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+                ReadPresetDashValue(shapeProperties),
                 ReadLineCompound(shapeProperties),
+                ReadLineCompoundValue(shapeProperties),
                 ReadLineCap(shapeProperties) switch
                 {
                     "rnd" => 1,
                     "sq" => 2,
                     _ => null
                 },
-                ReadLineJoin(shapeProperties))
+                ReadLineCap(shapeProperties),
+                ReadLineJoin(shapeProperties),
+                ReadLineJoinValue(shapeProperties))
             : default;
         return new PptxSceneShape(
             ReadShapePreset(shapeProperties),
@@ -3463,10 +3475,7 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadPresetDash(XElement? shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
     {
-        string? presetDash = (string?)shapeProperties
-            ?.Element(DrawingNamespace + "ln")
-            ?.Element(DrawingNamespace + "prstDash")
-            ?.Attribute("val");
+        string? presetDash = ReadPresetDashValue(shapeProperties);
         double w = Math.Max(lineWidth, MinimumStrokeWidth);
         dashPattern = presetDash switch
         {
@@ -3481,11 +3490,17 @@ internal sealed class PptxSceneBuilder
         return dashPattern.Count > 0;
     }
 
+    private static string? ReadPresetDashValue(XElement? shapeProperties)
+    {
+        return (string?)shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Element(DrawingNamespace + "prstDash")
+            ?.Attribute("val");
+    }
+
     private static PptxSceneLineCompound? ReadLineCompound(XElement? shapeProperties)
     {
-        string? compound = (string?)shapeProperties
-            ?.Element(DrawingNamespace + "ln")
-            ?.Attribute("cmpd");
+        string? compound = ReadLineCompoundValue(shapeProperties);
         return compound switch
         {
             "sng" => PptxSceneLineCompound.Single,
@@ -3495,6 +3510,13 @@ internal sealed class PptxSceneBuilder
             "tri" => PptxSceneLineCompound.Triple,
             _ => null
         };
+    }
+
+    private static string? ReadLineCompoundValue(XElement? shapeProperties)
+    {
+        return (string?)shapeProperties
+            ?.Element(DrawingNamespace + "ln")
+            ?.Attribute("cmpd");
     }
 
     private static string? ReadLineCap(XElement? shapeProperties)
@@ -3520,6 +3542,27 @@ internal sealed class PptxSceneBuilder
         if (line?.Element(DrawingNamespace + "miter") is not null)
         {
             return 0;
+        }
+
+        return null;
+    }
+
+    private static string? ReadLineJoinValue(XElement? shapeProperties)
+    {
+        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        if (line?.Element(DrawingNamespace + "round") is not null)
+        {
+            return "round";
+        }
+
+        if (line?.Element(DrawingNamespace + "bevel") is not null)
+        {
+            return "bevel";
+        }
+
+        if (line?.Element(DrawingNamespace + "miter") is not null)
+        {
+            return "miter";
         }
 
         return null;

@@ -299,6 +299,15 @@ High-priority actions:
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering
   still falls back conservatively, but structural tests can now expose unsupported values before private-deck
   tuning turns them into invisible heuristics.
+- [x] Extend the OOXML enum ladder to PPTX line styles:
+  `PptxSceneLineStyle` now preserves the raw DrawingML values for `a:prstDash @val`, `a:ln @cmpd`,
+  `a:ln @cap`, and the line-join child (`round`, `bevel`, or `miter`) alongside the existing PDF-ready dash
+  array, compound enum, cap number, and join number. This makes unknown or unrendered dash/cap/join variants
+  observable in scene tests before they become renderer heuristics. Existing connector and chart leader-line
+  fixture assertions now lock those raw values. Validation: the attempted `pptx-scene` group selected no
+  tests (`0 passed, 0 failed, 0 skipped`); focused non-slow `pptx-shapes` passed
+  (`15 passed, 0 failed, 0 skipped`); focused non-slow `pptx-charts` passed
+  (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
   paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
 - [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF
@@ -2444,6 +2453,11 @@ High-priority actions:
   the remaining renderer-local XML/package debt by file: chart `ReadSceneOrXml*` helpers and workbook
   hydration, text cascade XML, shape source-XML fallback, table-cell synthetic text XML, and image/SVG package
   resource decoding.
+- [x] 2026-05-27: Extended the OOXML enum ladder to PPTX line styles by preserving raw dash preset, compound,
+  cap, and join values in `PptxSceneLineStyle`. Existing scene assertions now lock those raw values for a
+  connector and chart leader lines while leaving current rendering behavior unchanged. Validation:
+  `pptx-shapes --skip-slow` passed at `15 passed, 0 failed, 0 skipped`; `pptx-charts --skip-slow` passed at
+  `41 passed, 0 failed, 0 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
@@ -4651,6 +4665,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   PptxSceneBuilderBuildsResolvedNodeLists` executed the whole suite, including slow tests, and completed with
   `263 passed, 0 failed, 0 skipped`. Future focused runs should use `--group`, `--skip-slow`, `--only-slow`, or
   a supported test-specific switch if one is added later.
+- Observation: A nonexistent test group is accepted by the console runner and selects no tests.
+  Evidence: Running `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group
+  pptx-scene --skip-slow` completed with `0 passed, 0 failed, 0 skipped`. Use known groups from `--list` or
+  validate with adjacent groups plus full non-slow until a scene-specific group exists.
 - Observation: The Office baseline floor is not a universal "Arial baseline" rule.
   Evidence: Applying the floor broadly fixed top-anchored rectangular wrap cases, but moved the public
   non-rect small-label probe by about `-1.24 pt` and moved middle/bottom anchored rectangular text in
@@ -4885,6 +4903,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   nodes, backgrounds, image targets, typed table/chart/text records, and inspection snapshots. The long-term
   gap is field ownership and fallback retirement, not a missing top-level model. Adding another model would
   duplicate ownership and delay removal of renderer XML/package heuristics.
+  Date/Author: 2026-05-27 / Codex.
+- Decision: Preserve raw OOXML enum tokens in scene records whenever the renderer also needs a normalized or
+  PDF-ready value.
+  Rationale: A normalized value such as PDF line cap `1` is useful for emission but hides whether the source
+  token was `rnd`, unknown, or absent. Keeping the raw token next to the normalized value makes unsupported
+  enum variants visible in snapshots and public tests, which supports systematic ladders instead of one-off
+  rendering branches.
   Date/Author: 2026-05-27 / Codex.
 - Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
   spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved

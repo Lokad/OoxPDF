@@ -374,9 +374,13 @@ internal static class PptxTests
         TestAssert.Equal(2d, slide.SlideNodes[3].Shape?.Line.Width ?? 0d);
         TestAssert.Equal(0.5d, slide.SlideNodes[3].Shape?.Line.Alpha ?? 0d);
         TestAssert.Equal(8d, slide.SlideNodes[3].Shape?.Line.DashPattern[0] ?? 0d);
+        TestAssert.Equal("dash", slide.SlideNodes[3].Shape?.Line.DashPreset ?? string.Empty);
         TestAssert.Equal(PptxSceneLineCompound.Double, slide.SlideNodes[3].Shape?.Line.Compound);
+        TestAssert.Equal("dbl", slide.SlideNodes[3].Shape?.Line.CompoundValue ?? string.Empty);
         TestAssert.Equal(1, slide.SlideNodes[3].Shape?.Line.Cap ?? 0);
+        TestAssert.Equal("rnd", slide.SlideNodes[3].Shape?.Line.CapValue ?? string.Empty);
         TestAssert.Equal(2, slide.SlideNodes[3].Shape?.Line.Join ?? 0);
+        TestAssert.Equal("bevel", slide.SlideNodes[3].Shape?.Line.JoinValue ?? string.Empty);
         TestAssert.Equal(PptxSceneLineEndKind.Arrow, slide.SlideNodes[3].Shape?.HeadEnd.Kind ?? PptxSceneLineEndKind.None);
         TestAssert.Equal(1.5d, slide.SlideNodes[3].Shape?.HeadEnd.WidthScale ?? 0d);
         TestAssert.Equal(PptxSceneLineEndKind.Triangle, slide.SlideNodes[3].Shape?.TailEnd.Kind ?? PptxSceneLineEndKind.None);
@@ -472,7 +476,9 @@ internal static class PptxTests
         TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.Width ?? 0d);
         TestAssert.Equal(0.4d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.Alpha ?? 0d);
         TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.DashPattern[0] ?? 0d);
+        TestAssert.Equal("dash", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.DashPreset ?? string.Empty);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.Cap ?? 0);
+        TestAssert.Equal("sq", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.LeaderLines.Line.CapValue ?? string.Empty);
         TestAssert.Equal("outEnd", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Position ?? string.Empty);
         TestAssert.Equal("; ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal("#,##0.0", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.NumberFormat ?? string.Empty);
