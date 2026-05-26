@@ -142,7 +142,7 @@ internal sealed partial class PptxRenderer
     private static void BeginSlideNodeClip(PptxRenderContext context, PdfGraphicsBuilder graphics)
     {
         graphics.SaveState();
-        graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+        ClipSlideBoundsEvenOdd(context.Document, graphics);
     }
 
     private static void EndSlideNodeClip(PdfGraphicsBuilder graphics)

@@ -14,7 +14,7 @@ internal sealed partial class PptxRenderer
         if (sceneBackground is { HasFill: true } background)
         {
             graphics.SaveState();
-            graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            ClipSlideBoundsEvenOdd(context.Document, graphics);
             if (background.Alpha < 0.999d)
             {
                 graphics.SetAlpha(background.Alpha, 1d);
@@ -33,7 +33,7 @@ internal sealed partial class PptxRenderer
         if (TryReadSolidColor(backgroundXml, context.Theme, out RgbColor color))
         {
             graphics.SaveState();
-            graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+            ClipSlideBoundsEvenOdd(context.Document, graphics);
             graphics.SetFillRgb(color.Red, color.Green, color.Blue);
             graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
             graphics.RestoreState();
@@ -46,7 +46,7 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        graphics.ClipRectangleEvenOdd(0d, 0d, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
+        ClipSlideBoundsEvenOdd(context.Document, graphics);
         graphics.SetFillRgb(255, 255, 255);
         graphics.FillRectangleEvenOdd(0, 0, context.Document.SlideWidthPoints, context.Document.SlideHeightPoints);
         graphics.RestoreState();

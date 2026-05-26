@@ -7759,6 +7759,25 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Centralized PPTX slide-bound clipping without changing emitted PDF operators.
+The private page-17 clip investigation showed that Office uses more than one slide-sized clip path shape:
+many clips are closed rectangle-style paths, while one remaining unmatched reference clip is an open
+slide-sized path with three line segments and no explicit close. That evidence is not strong enough to
+globally rewrite OOXPDF's slide clipping. Instead, `PptxRenderer.Clips` now owns the shared
+`ClipSlideBoundsEvenOdd` and slide-bound intersection helper, and dispatch, background rendering, and bitmap
+picture clipping route through that shared boundary.
+
+This is a behavior-neutral architecture step. The long-term direction is to make clip ownership explicit
+before adding Office-specific PDF path variants, so a future open-rectangle clip primitive can be introduced
+only when public Office-PDF evidence identifies which rendering surface needs it. The current remaining
+private page-17 clip delta should stay classified as clip-structure evidence, not as permission for a broad
+renderer heuristic.
+
+Validation: focused `PptxSyntheticPngPictureRendersImageXObject`,
+`PptxSyntheticPngPictureClipIntersectsSlideBounds`, and `PptxSyntheticTextBoxClipIntersectsSlideBounds`
+passed. An earlier parallel test attempt hit shared `obj` file locks; the same checks passed when rerun
+sequentially.
+
 Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
 PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
 candidate path extended just above the page while Office's reference path stopped at the page boundary. The
