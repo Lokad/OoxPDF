@@ -10327,7 +10327,7 @@ internal static class PptxTests
         System.Reflection.PropertyInfo tablesProperty = workbookType.GetProperty("Tables") ?? throw new InvalidOperationException("Expected workbook tables.");
         object tables = tablesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook tables.");
         System.Reflection.PropertyInfo tableCountProperty = tables.GetType().GetProperty("Count") ?? throw new InvalidOperationException("Expected workbook table count.");
-        TestAssert.True((int?)tableCountProperty.GetValue(tables) == 2, "Expected table name and display name to index the parsed workbook table.");
+        TestAssert.True((int?)tableCountProperty.GetValue(tables) == 4, "Expected table names and display names to index the parsed workbook tables.");
         System.Reflection.PropertyInfo tableValuesProperty = tables.GetType().GetProperty("Values") ?? throw new InvalidOperationException("Expected workbook table values.");
         object salesTable = (((System.Collections.IEnumerable?)tableValuesProperty.GetValue(tables)) ?? throw new InvalidOperationException("Expected workbook table values."))
             .Cast<object>()
@@ -10394,6 +10394,20 @@ internal static class PptxTests
         XElement tableStrCache = tableChartXml.Descendants(c + "strCache").Single();
         TestAssert.Equal("3", tableStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("North", tableStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
+        var totalsTableChartXml = XDocument.Parse("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart><c:ser>
+                <c:cat><c:strRef><c:f>SalesTotalsTable[Region]</c:f></c:strRef></c:cat>
+                <c:val><c:numRef><c:f>SalesTotalsTable[Amount]</c:f></c:numRef></c:val>
+              </c:ser></c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        hydrate.Invoke(null, [parsedWorkbook, totalsTableChartXml]);
+
+        XElement totalsTableNumCache = totalsTableChartXml.Descendants(c + "numCache").Single();
+        TestAssert.Equal("2", totalsTableNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("3.2", totalsTableNumCache.Elements(c + "pt").Last().Element(c + "v")?.Value ?? string.Empty);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
@@ -10620,6 +10634,7 @@ internal static class PptxTests
                   <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
                   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
                   <Override PartName="/xl/tables/table1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>
+                  <Override PartName="/xl/tables/table2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -10640,6 +10655,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table2.xml"/>
                 </Relationships>
                 """,
             ["xl/workbook.xml"] = """
@@ -10690,7 +10706,7 @@ internal static class PptxTests
                     <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
                     <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
                   </sheetData>
-                  <tableParts count="1"><tablePart r:id="rId1"/></tableParts>
+                  <tableParts count="2"><tablePart r:id="rId1"/><tablePart r:id="rId2"/></tableParts>
                 </worksheet>
                 """,
             ["xl/tables/table1.xml"] = """
@@ -10698,6 +10714,16 @@ internal static class PptxTests
                 <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                        id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4" headerRowCount="1" totalsRowShown="0">
                   <autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>
+                  <tableColumns count="2">
+                    <tableColumn id="1" name="Region"/>
+                    <tableColumn id="2" name="Amount"/>
+                  </tableColumns>
+                </table>
+                """,
+            ["xl/tables/table2.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                       id="2" name="SalesTotalsTable" displayName="Sales_Totals_Table" ref="A1:B4" headerRowCount="1" totalsRowCount="1" totalsRowShown="1">
                   <tableColumns count="2">
                     <tableColumn id="1" name="Region"/>
                     <tableColumn id="2" name="Amount"/>

@@ -1981,8 +1981,10 @@ internal sealed partial class PptxRenderer
             }
 
             int column = table.FirstColumn + columnOffset;
-            int firstRow = onlyHeader ? table.FirstRow : includeHeader ? table.FirstRow : table.FirstRow + 1;
-            int lastRow = onlyHeader ? table.FirstRow : table.LastRow;
+            int headerRowCount = Math.Max(0, table.HeaderRowCount);
+            int totalsRowCount = Math.Max(0, table.TotalsRowCount);
+            int firstRow = onlyHeader ? table.FirstRow : includeHeader ? table.FirstRow : table.FirstRow + headerRowCount;
+            int lastRow = onlyHeader ? table.FirstRow + headerRowCount - 1 : includeHeader ? table.LastRow : table.LastRow - totalsRowCount;
             return firstRow <= lastRow
                 ? FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}")
                 : trimmed;

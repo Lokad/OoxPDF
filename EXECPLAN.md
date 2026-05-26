@@ -7774,6 +7774,20 @@ instead of treating missing local names as absent workbook data.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Used preserved workbook table header/totals metadata when resolving simple
+structured references. `Table[Column]` and `[[#Data],[Column]]` now start after the declared header rows and
+end before declared totals rows, while `[[#Headers],[Column]]` and `[[#All],[Column]]` keep their structural
+scope. The embedded workbook fixture now carries a second table with `totalsRowCount="1"` and proves that a
+chart reference to `SalesTotalsTable[Amount]` hydrates only the two data-body points rather than treating the
+totals row as data.
+
+This still does not implement table filter visibility, multi-column or whole-table references, escaped
+structured-reference column names, or Office cache/source freshness policy. The key long-term improvement is
+that structured references are now resolved from table-owned structure instead of a fixed "first row is
+header, everything else is data" assumption.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved workbook table filter/header/totals metadata in the chart workbook
 bridge. `ChartWorkbookTable` now carries `headerRowCount`, `totalsRowCount`, `totalsRowShown`, the
 `autoFilter/@ref`, and the declared filter-column ids, while retaining the existing table name/display-name,
