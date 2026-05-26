@@ -149,6 +149,56 @@ function Get-AttributeHistogram([xml] $Xml, [string] $XPath, [string] $Attribute
     return [pscustomobject]$histogram
 }
 
+function Add-HistogramValue([System.Collections.Specialized.OrderedDictionary] $Histogram, [string] $Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        $Value = "(missing)"
+    }
+
+    if (-not $Histogram.Contains($Value)) {
+        $Histogram[$Value] = 0
+    }
+
+    $Histogram[$Value]++
+}
+
+function Get-ElementAttributeOrMissing($Element, [string] $AttributeName) {
+    if ($Element -eq $null) {
+        return "(missing)"
+    }
+
+    $value = [string]$Element.GetAttribute($AttributeName)
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return "(missing)"
+    }
+
+    return $value
+}
+
+function Get-PresetShapeProfiles([xml] $Xml) {
+    $profiles = [ordered]@{}
+    if ($Xml -eq $null) {
+        return [pscustomobject]$profiles
+    }
+
+    foreach ($shapeProperties in $Xml.SelectNodes("//*[local-name()='spPr' and *[local-name()='prstGeom']]")) {
+        $presetGeometry = $shapeProperties.SelectSingleNode("*[local-name()='prstGeom']")
+        $preset = Get-ElementAttributeOrMissing $presetGeometry "prst"
+        $owner = $shapeProperties.ParentNode
+        $ownerKind = if ($owner -ne $null) { $owner.LocalName } else { "(missing)" }
+        $transform = $shapeProperties.SelectSingleNode("*[local-name()='xfrm']")
+        $rot = if ($transform -ne $null -and $transform.HasAttribute("rot")) { "rot" } else { "noRot" }
+        $flipH = if ($transform -ne $null -and $transform.HasAttribute("flipH")) { "flipH" } else { "noFlipH" }
+        $flipV = if ($transform -ne $null -and $transform.HasAttribute("flipV")) { "flipV" } else { "noFlipV" }
+        $line = $shapeProperties.SelectSingleNode("*[local-name()='ln']")
+        $headEnd = if ($line -ne $null) { Get-ElementAttributeOrMissing ($line.SelectSingleNode("*[local-name()='headEnd']")) "type" } else { "(missing)" }
+        $tailEnd = if ($line -ne $null) { Get-ElementAttributeOrMissing ($line.SelectSingleNode("*[local-name()='tailEnd']")) "type" } else { "(missing)" }
+
+        Add-HistogramValue $profiles "$ownerKind|$preset|$rot|$flipH|$flipV|head=$headEnd|tail=$tailEnd"
+    }
+
+    return [pscustomobject]$profiles
+}
+
 function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $PartName) {
     $xml = Read-ZipXml $Zip $PartName
     if ($xml -eq $null) {
@@ -182,6 +232,9 @@ function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $Pa
         PresetGeometries = Count-XPath $xml "//*[local-name()='prstGeom']"
         CustomGeometries = Count-XPath $xml "//*[local-name()='custGeom']"
         PresetGeometryKinds = Get-AttributeHistogram $xml "//*[local-name()='prstGeom']" "prst"
+        PresetShapeProfiles = Get-PresetShapeProfiles $xml
+        LineHeadEndKinds = Get-AttributeHistogram $xml "//*[local-name()='headEnd']" "type"
+        LineTailEndKinds = Get-AttributeHistogram $xml "//*[local-name()='tailEnd']" "type"
         TextBodyVerticalModes = Get-AttributeHistogram $xml "//*[local-name()='bodyPr' and @vert]" "vert"
         Notes = @{
             HasBackground = Test-XPath $xml "//*[local-name()='bg']"

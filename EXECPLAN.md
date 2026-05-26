@@ -7784,15 +7784,19 @@ not a regression from chart metadata preservation.
 
 Revision note, 2026-05-26: Extended the private-safe PPTX slide inventory so schema/geometry triage does not
 depend on private screenshots or manual XML inspection. `tools/InventoryPptxSlides.ps1` now reports connector
-shape counts, preset/custom geometry counts, preset-geometry histograms, and text-body vertical-mode
-histograms for slide, layout, and master parts. The updated inventory for private slide 17 shows a
-shape/text-heavy slide with no chart/table/group/custom-geometry/SmartArt signals, several connector shapes,
-rotated/flipped transforms, and only common preset geometries (`rect`, `ellipse`, `diamond`, `triangle`,
-`line`, `curvedConnector2`). This narrows the public-safe slide-17 track toward preset geometry,
-connector/flip/rotation, and text placement instead of chart or private-specific logic.
+shape counts, preset/custom geometry counts, preset-geometry histograms, text-body vertical-mode histograms,
+line-end histograms, and per-preset shape profiles that combine owner kind, rotation/flip flags, and line-end
+types for slide, layout, and master parts. The updated inventory for private slide 17 shows a shape/text-heavy
+slide with no chart/table/group/custom-geometry/SmartArt signals, several connector shapes, rotated/flipped
+transforms, and only common preset geometries (`rect`, `ellipse`, `diamond`, `triangle`, `line`,
+`curvedConnector2`). The refined profile narrows the connector slice to four `curvedConnector2` connector
+shapes with triangle tails: two rotated, one rotated with both horizontal and vertical flips, and one unrotated.
+This keeps the public-safe slide-17 track on preset geometry, connector transform/endpoint parity, and text
+placement instead of chart or private-specific logic.
 
 Validation: `pwsh tools/InventoryPptxSlides.ps1 -Case private-cases/lokad-value-based.json` passed and wrote
 ignored private-safe inventory `artifacts/private-visual/lokad-value-based/inventory/20260526-223952.json`.
+The refined inventory run wrote `artifacts/private-visual/lokad-value-based/inventory/20260526-224231.json`.
 
 Revision note, 2026-05-26: Extended chart shape-style ownership to effects without changing chart drawing.
 `PptxSceneChartShapeStyle` now carries the same parsed glow and outer-shadow records already used by normal
