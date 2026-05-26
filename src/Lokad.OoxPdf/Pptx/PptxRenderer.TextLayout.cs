@@ -829,6 +829,20 @@ internal sealed partial class PptxRenderer
                         cursorX + segmentWidth > columnStartX + effectiveTextWidth + wrapTolerance;
                     if (overflowsLine)
                     {
+                        if (flowSegment.Draw)
+                        {
+                            int leadingSpaceCount = CountLeadingSpaces(currentSegment);
+                            if (leadingSpaceCount > 0)
+                            {
+                                string lineEndSpaces = currentSegment[..leadingSpaceCount];
+                                double lineEndSpaceWidth = advanceEstimator.Measure(lineEndSpaces, fragmentFontSize, runStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing, runStyle.KerningEnabled);
+                                TextRun spaceRun = new(lineEndSpaces, cursorX, cursorY, PptxTextMetricRules.MinimumWidth(lineEndSpaceWidth), frame.TextHeight, columnStartX, frame.TextClipY, columnWidth, frame.TextClipHeight, fragmentFontSize, runStyle.CharacterSpacing, runStyle.BaselineOffset, runStyle.Color, runStyle.Alpha, runStyle.Highlight, runStyle.Bold, runStyle.Italic, runStyle.Underline, runStyle.Strike, runStyle.KerningEnabled, paragraphStyle.Alignment, runStyle.Typeface, frame.TextRotationDegrees, frame.RotationCenterX, frame.RotationCenterY, frame.TextFlipHorizontal, frame.TextFlipVertical, PreventCoalesce: false, Outline: runStyle.Outline);
+                                line.Add(modelRun, spaceRun, cursorX + lineEndSpaceWidth, BuildTextAtoms(spaceRun, advanceEstimator, PptxTextAtomKind.Space), BuildGlyphSpan(spaceRun, advanceEstimator));
+                                cursorX += lineEndSpaceWidth;
+                                line.AdvanceTo(cursorX);
+                            }
+                        }
+
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
                         AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                         cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
@@ -899,6 +913,17 @@ internal sealed partial class PptxRenderer
         }
 
         return new PptxTextFrameLayout(frame, paragraphLayouts);
+    }
+
+    private static int CountLeadingSpaces(string text)
+    {
+        int count = 0;
+        while (count < text.Length && text[count] == ' ')
+        {
+            count++;
+        }
+
+        return count;
     }
 
     private static int CountDrawableTextSegments(PptxTextFlowParagraph paragraph)

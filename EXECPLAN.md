@@ -7231,3 +7231,23 @@ Validation: focused non-slow `pptx-typography` tests passed (`72 passed, 0 faile
 `artifacts/visual/pptx-ladder-04-typography-spautofit-headline-wrap-probe/20260526-134139`, with four
 matching decoded text operations, exact X/font-size/tracking parity, and the remaining `0.44 pt` Y delta
 bounded explicitly.
+
+Revision note, 2026-05-26: Fixed the public noAutoFit wrap-boundary separator ownership exposed by
+`pptx-ladder-04-typography-bold-wrap-probe`. The source OOXML contains ordinary word separators, but Office's
+PDF export emits the separator that triggers a wrap at the end of the preceding text operation, not as a
+leading space on the next line and not as a discarded advance. `BuildTextFrameLayout` now materializes those
+leading wrap spaces as visible line-ending spans before committing the current line, then trims them from the
+next line's word. This keeps the layout model responsible for the observable PDF text content and avoids a
+PDF-inspector or manifest-only workaround.
+
+The bold-wrap manifest now requires decoded PDF text-operation parity and still exposes the remaining uniform
+baseline residual as a `0.3 pt` position gate (`~0.28 pt` in the current public artifact). This pairs with the
+`spAutoFit` headline probe's `~0.44 pt` residual as evidence that the next long-term typography step should
+derive Office's baseline/line-box offsets structurally rather than adding wrap-case baseline nudges.
+
+Validation: focused non-slow `pptx-typography` tests passed (`72 passed, 0 failed, 2 skipped`) after revising
+the older tiny wrap unit to the Office-observed line-ending separator rule and adding a fixture-backed
+bold-wrap line-content test. Targeted `CheckVisualCase.ps1` passed for
+`pptx-ladder-04-typography-bold-wrap-probe` at
+`artifacts/visual/pptx-ladder-04-typography-bold-wrap-probe/20260526-134652`, with two matching decoded text
+operations and exact X/font-size/tracking parity.

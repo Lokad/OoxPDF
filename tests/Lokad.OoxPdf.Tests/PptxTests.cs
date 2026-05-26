@@ -2329,7 +2329,7 @@ internal static class PptxTests
         TestAssert.True(Math.Abs(percentSpacingLines[1].BaselineY - pointSpacingLines[1].BaselineY) < 0.01d, "Expected anchored follow-up paragraph baselines to stay equivalent after empty endParaRPr spacing.");
     }
 
-    public static void PptxSyntheticTextWrapDropsBreakSpaceAtLineEnd()
+    public static void PptxSyntheticTextWrapKeepsBreakSpaceAtLineEnd()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -2364,7 +2364,7 @@ internal static class PptxTests
         TestAssert.Equal(2, lines.Length);
         string firstLine = string.Concat(lines[0].Spans.Select(span => span.Text));
         string secondLine = string.Concat(lines[1].Spans.Select(span => span.Text));
-        TestAssert.Equal("Alpha", firstLine);
+        TestAssert.Equal("Alpha ", firstLine);
         TestAssert.Equal("Beta", secondLine);
     }
 
@@ -4297,6 +4297,31 @@ internal static class PptxTests
         TestAssert.Equal("Execute better, and you have a better operating ", renderedLines[1]);
         TestAssert.Equal("model. Make decisions better and you have a ", renderedLines[2]);
         TestAssert.Equal("better company.", renderedLines[3]);
+    }
+
+    public static void PptxSyntheticNoAutoFitWrapKeepsLineEndingSpace()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-bold-wrap-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        string[] renderedLines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
+            .ToArray();
+
+        TestAssert.Equal(2, renderedLines.Length);
+        TestAssert.Equal("Quality decisions depend on careful operational planning and ", renderedLines[0]);
+        TestAssert.Equal("reliable daily execution.", renderedLines[1]);
     }
 
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
