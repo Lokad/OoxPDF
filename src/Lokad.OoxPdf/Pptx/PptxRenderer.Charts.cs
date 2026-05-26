@@ -2161,35 +2161,25 @@ internal sealed partial class PptxRenderer
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
             : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, fallbackBaselineY, fontSize);
-        var run = new TextRun(
+        double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
+        double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
+        double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
+        var runs = new List<TextRun>();
+        AddChartRichTextRuns(
+            runs,
+            sceneChart?.Title.TextRuns is { Count: > 0 } titleRuns ? ToChartTextRuns(titleRuns) : [],
             title.Trim(),
-            x + width * PptxChartMetricRules.TitleXInsetRatio,
+            titleX,
             baselineY,
-            width * PptxChartMetricRules.TitleWidthRatio,
-            fontSize * PptxChartMetricRules.TitleHeightFactor,
+            titleWidth,
+            titleHeight,
             x,
             y,
             width,
             height,
-            fontSize,
-            0d,
-            0d,
-            style.Color,
-            1d,
-            null,
-            Bold: style.Bold,
-            Italic: style.Italic,
-            Underline: false,
-            Strike: false,
-            KerningEnabled: true,
-            TextAlignment.Center,
-            FontFamily: style.FontFamily,
-            RotationDegrees: 0d,
-            RotationCenterX: 0d,
-            RotationCenterY: 0d,
-            FlipHorizontal: false,
-            FlipVertical: false);
-        return RenderTextRuns([run], graphics, "CT");
+            style,
+            TextAlignment.Center);
+        return RenderTextRuns(runs, graphics, "CT");
     }
 
     private static bool HasPolarChart(XDocument chartXml)
@@ -2938,16 +2928,71 @@ internal sealed partial class PptxRenderer
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
     {
+        return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
+    }
+
+    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
+    {
+        if (options.CustomTextRuns.Count == 0)
+        {
+            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
+            return;
+        }
+
+        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
+    }
+
+    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment)
+    {
+        if (richTextRuns.Count == 0)
+        {
+            runs.Add(CreateChartTextRun(fallbackText, x, y, width, height, clipX, clipY, clipWidth, clipHeight, style, alignment));
+            return;
+        }
+
+        ChartTextRunLayout[] richRuns = richTextRuns
+            .Where(run => !string.IsNullOrEmpty(run.Text))
+            .Select(run =>
+            {
+                ChartTextStyle runStyle = MergeChartTextStyle(style, run.TextStyle);
+                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, EstimateChartTextWidth(run.Text, runStyle.FontSize)));
+            })
+            .Where(run => run.Width > 0d)
+            .ToArray();
+        if (richRuns.Length == 0)
+        {
+            runs.Add(CreateChartTextRun(fallbackText, x, y, width, height, clipX, clipY, clipWidth, clipHeight, style, alignment));
+            return;
+        }
+
+        double totalWidth = richRuns.Sum(run => run.Width);
+        double cursor = alignment switch
+        {
+            TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
+            TextAlignment.Center => x + (Math.Max(1d, width) - totalWidth) / 2d,
+            _ => x
+        };
+
+        foreach (ChartTextRunLayout run in richRuns)
+        {
+            double runWidth = Math.Max(0.1d, run.Width);
+            runs.Add(CreateChartTextRun(run.Text, cursor, y, runWidth, height, clipX, clipY, clipWidth, clipHeight, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
+            cursor += runWidth;
+        }
+    }
+
+    private static TextRun CreateChartTextRun(string text, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment)
+    {
         return new TextRun(
             text,
             x,
             y,
             Math.Max(1d, width),
             height,
-            plotBox.X,
-            plotBox.Y,
-            plotBox.Width,
-            plotBox.Height,
+            clipX,
+            clipY,
+            clipWidth,
+            clipHeight,
             style.FontSize,
             0d,
             0d,
@@ -2966,45 +3011,6 @@ internal sealed partial class PptxRenderer
             RotationCenterY: 0d,
             FlipHorizontal: false,
             FlipVertical: false);
-    }
-
-    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
-    {
-        if (options.CustomTextRuns.Count == 0)
-        {
-            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
-            return;
-        }
-
-        ChartTextRunLayout[] richRuns = options.CustomTextRuns
-            .Where(run => !string.IsNullOrEmpty(run.Text))
-            .Select(run =>
-            {
-                ChartTextStyle runStyle = MergeChartTextStyle(style, run.TextStyle);
-                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, EstimateChartTextWidth(run.Text, runStyle.FontSize)));
-            })
-            .Where(run => run.Width > 0d)
-            .ToArray();
-        if (richRuns.Length == 0)
-        {
-            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
-            return;
-        }
-
-        double totalWidth = richRuns.Sum(run => run.Width);
-        double cursor = alignment switch
-        {
-            TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
-            TextAlignment.Center => x + (Math.Max(1d, width) - totalWidth) / 2d,
-            _ => x
-        };
-
-        foreach (ChartTextRunLayout run in richRuns)
-        {
-            double runWidth = Math.Max(0.1d, run.Width);
-            runs.Add(CreateChartLabelRun(run.Text, cursor, y, runWidth, height, plotBox, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
-            cursor += runWidth;
-        }
     }
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)

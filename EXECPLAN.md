@@ -1161,6 +1161,11 @@ High-priority actions:
     inferred single-series auto titles carry a single default-styled run so future title layout does not have
     to re-infer text from raw chart XML. The scene-builder fixture locks a two-run chart title with distinct
     size/color/bold and font/italic evidence. Validation: focused `pptx-charts` tests passed `40/40`.
+  - [x] Consume scene-owned chart title rich-text runs in title emission:
+    `RenderChartTitle` now splits typed title runs into styled PDF text runs, merging run-level font size,
+    color, bold, italic, and typeface over the resolved chart/title style while retaining the flattened title
+    path for XML-only or unstyled titles. The public line/pie chart rendering test locks run-level title
+    font size and color. Validation: focused `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
