@@ -2048,6 +2048,13 @@ Composite oracle family map:
 - Native bar/column chart rendering now reads chart color-style relationship parts (`chartColorStyle`) and
   uses their resolved DrawingML colors before falling back to document theme accents or legacy palette
   defaults. This is locked by a synthetic chart fixture with an explicit `colorsN.xml` palette.
+- Chart color-style scene ownership now preserves more than the flattened palette: `PptxSceneChart.ColorStyle`
+  records the resolved color-style part name plus the Office `meth` and `id` attributes alongside the resolved
+  colors. This does not close inherited chart-style defaults; it removes a structural blind spot so future
+  palette/default resolution can reason from typed scene data instead of reopening relationship parts in the
+  renderer. Validation: focused `pptx-model` passed (`14 passed, 0 failed, 1 skipped`), focused
+  `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the full non-slow suite passed
+  (`244 passed, 0 failed, 7 skipped`).
 - Line chart renderer now reads explicit series `c:spPr/a:ln` stroke color, alpha, and width through the
   shared line resolver. The same stroke-style model should next be applied to scatter, radar, and area
   outlines before chart style/color-style parts are tackled.
