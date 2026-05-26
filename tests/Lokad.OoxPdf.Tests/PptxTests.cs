@@ -279,6 +279,12 @@ internal static class PptxTests
         TestAssert.Equal(1, sceneSnapshot.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
         PptxSceneSlideSnapshot slideSnapshot = sceneSnapshot.Slides[0];
+        TestAssert.Equal(1, slide.MasterRelationships.Count);
+        TestAssert.Equal(1, slide.LayoutRelationships.Count);
+        TestAssert.Equal(2, slide.SlideRelationships.Count);
+        TestAssert.Equal(1, slideSnapshot.MasterRelationshipCount);
+        TestAssert.Equal(1, slideSnapshot.LayoutRelationshipCount);
+        TestAssert.Equal(2, slideSnapshot.SlideRelationshipCount);
         TestAssert.True(slide.SlideBackground.HasFill, "Expected slide background fill in the scene model.");
         TestAssert.True(slideSnapshot.HasSlideBackground, "Expected scene inspection to expose slide background ownership.");
         TestAssert.Equal(new RgbColor(18, 52, 86), slide.SlideBackground.Color);

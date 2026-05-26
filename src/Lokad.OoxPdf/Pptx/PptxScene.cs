@@ -13,6 +13,9 @@ internal sealed record PptxSceneSlideSnapshot(
     string PartName,
     string? MasterPartName,
     string? LayoutPartName,
+    int MasterRelationshipCount,
+    int LayoutRelationshipCount,
+    int SlideRelationshipCount,
     bool HasMasterBackground,
     bool HasLayoutBackground,
     bool HasSlideBackground,
@@ -219,6 +222,9 @@ internal sealed record PptxSceneSlide(
     string? MasterPartName,
     string? LayoutPartName,
     XDocument SlideXml,
+    IReadOnlyDictionary<string, OoxRelationship> MasterRelationships,
+    IReadOnlyDictionary<string, OoxRelationship> LayoutRelationships,
+    IReadOnlyDictionary<string, OoxRelationship> SlideRelationships,
     PptxSceneBackground MasterBackground,
     PptxSceneBackground LayoutBackground,
     PptxSceneBackground SlideBackground,
@@ -1438,7 +1444,7 @@ internal sealed class PptxSceneBuilder
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
-                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), default, default, default, [], [], []));
+                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), default, default, default, [], [], []));
                 continue;
             }
 
@@ -1460,6 +1466,9 @@ internal sealed class PptxSceneBuilder
                 masterPart?.Name,
                 layoutPart?.Name,
                 slideXml,
+                masterRelationships,
+                layoutRelationships,
+                slideRelationships,
                 ReadBackground(masterXml, theme),
                 ReadBackground(layoutXml, theme),
                 ReadBackground(slideXml, theme),

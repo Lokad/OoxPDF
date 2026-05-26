@@ -66,9 +66,9 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray());
-            RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.MasterPartName), context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-            RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, ReadRelationships(context, context.SceneSlide?.LayoutPartName), context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-            RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
+            RenderOrderedSceneNodes(context.SceneSlide?.MasterNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.MasterRelationships ?? EmptyRelationships, context.SceneSlide?.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide?.LayoutNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.LayoutRelationships ?? EmptyRelationships, context.SceneSlide?.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide?.SlideNodes ?? [], context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide?.SlideRelationships ?? context.SlideRelationships, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
         }
@@ -101,14 +101,7 @@ internal sealed partial class PptxRenderer
         return CreateRenderContext(package, document, theme, slide, slideXml, null, imageCache, diagnosticSink);
     }
 
-    private static IReadOnlyDictionary<string, OoxRelationship> ReadRelationships(PptxRenderContext context, string? partName)
-    {
-        return partName is null
-            ? context.SlideRelationships
-            : context.Package.GetRelationships(partName)
-                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
-    }
+    private static IReadOnlyDictionary<string, OoxRelationship> EmptyRelationships { get; } = new Dictionary<string, OoxRelationship>();
 
     private static PptxRenderContext CreateRenderContext(
         OoxPackage package,

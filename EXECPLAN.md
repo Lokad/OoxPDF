@@ -188,6 +188,11 @@ High-priority actions:
   records, so the next architecture step is not a wholesale rewrite. The remaining structural gap is to move
   resolved package/relationship/inheritance/resource ownership out of renderer-local XML traversal and into
   scene/context records that are observable in public structural tests.
+- [x] Move the first relationship-ownership slice into the PPTX scene:
+  `PptxSceneSlide` now carries master, layout, and slide relationship maps built by `PptxSceneBuilder`, and
+  PDF rendering uses those scene-owned maps for master/layout/slide nodes instead of re-reading relationships
+  at dispatch time. Scene inspection exposes relationship counts so public tests can verify resource ownership
+  without leaking package contents.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
