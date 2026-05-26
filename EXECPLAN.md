@@ -2302,6 +2302,23 @@ High-priority actions:
     `2026-05-26T16:21:10.8638416+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 27/37
     text-gated; the remaining graphics-only cases are nine doughnut legend-position/no-legend probes plus
     the inner plot-layout probe, whose value-axis tick labels drift by about `57 pt`.
+  - [x] Move the doughnut legend-position probes from graphics-only to text-gated by replacing the outside-frame
+    fill-legend fallback with a full-frame legend layout rule. Public Office PDFs for the top/bottom/left/right
+    overlay doughnut probes show that when the polar plot box is the whole chart frame, category-fill legends
+    are placed inside that frame: horizontal legends use frame-internal top/bottom baselines, left legends use
+    an inside-frame side inset, and side fill legends use the same taller row pitch as Office line/stroke
+    legends while centering the group on the chart frame. This is intentionally a structural full-frame legend
+    rule, not a per-probe coordinate patch.
+
+    The seven legend-bearing doughnut probes now gate `LegendText` at `15 pt`: top, bottom, left,
+    right-overlay, and the exploded top/bottom/left companions. The latest public evidence has `LegendText`
+    deltas of about `14 pt` for horizontal legends, `5 pt` for left legends, and `9 pt` for the right-overlay
+    probe; the remaining horizontal residual is packed legend width, not vertical placement. Targeted runs
+    passed around `20260526-162719` through `20260526-162820`, and the full `pptx-charts` family passed 37/37
+    at `artifacts/visual/reports/pptx-charts.json`, generated `2026-05-26T16:32:56.5569741+02:00`.
+    Current chart-gate inventory is 37/37 graphics-gated and 34/37 text-gated. The remaining graphics-only
+    cases are the two no-legend doughnut probes, which have no text structures to gate, and the inner
+    plot-layout probe, whose value-axis tick labels still drift by about `57 pt`.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest

@@ -20,6 +20,13 @@
       "PolarPlotBoxCandidate",
       "PolarSliceCandidate"
     ],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": [
+      "LegendText"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 15
+    },
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,

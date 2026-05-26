@@ -2443,7 +2443,10 @@ internal sealed partial class PptxRenderer
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         bool horizontal = IsHorizontalLegendPosition(layout.PositionKind);
         bool sideStrokeLegend = !horizontal && entries.All(entry => entry.Stroke is not null && entry.Fill is null);
+        bool fillLegendInFullFrame = !sideStrokeLegend && IsSameChartBox(plotBox, frame);
+        bool sideFillLegendInFullFrame = !horizontal && fillLegendInFullFrame;
         double lineHeight = fontSize * (sideStrokeLegend
+            || sideFillLegendInFullFrame
             ? PptxChartMetricRules.LegendSideStrokeLineHeightFactor
             : PptxChartMetricRules.LegendLineHeightFactor);
         double sideGap = sideStrokeLegend
@@ -2455,7 +2458,6 @@ internal sealed partial class PptxRenderer
         double textGap = sideStrokeLegend
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
             : PptxChartMetricRules.LegendTextGap;
-        bool sideFillLegendInFullFrame = !horizontal && !sideStrokeLegend && IsSameChartBox(plotBox, frame);
         double width = horizontal
             ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, fontSize, markerSize))
             : sideFillLegendInFullFrame
@@ -2463,6 +2465,7 @@ internal sealed partial class PptxRenderer
             : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
         double x = layout.PositionKind switch
         {
+            PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
@@ -2470,15 +2473,15 @@ internal sealed partial class PptxRenderer
         };
         double firstY = layout.PositionKind switch
         {
+            PptxSceneChartLegendPosition.Bottom when fillLegendInFullFrame => frame.Y + lineHeight * PptxChartMetricRules.LegendFullFrameBottomBaselineFactor,
+            PptxSceneChartLegendPosition.Top when fillLegendInFullFrame => frame.Y + frame.Height - lineHeight * PptxChartMetricRules.LegendFullFrameTopBaselineFactor,
             PptxSceneChartLegendPosition.Bottom => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
-            _ when sideFillLegendInFullFrame => plotBox.Y + plotBox.Height / 2d -
-                fontSize * PptxChartMetricRules.LegendMarkerBaselineFactor +
-                (entries.Count - 1) * lineHeight / 2d -
-                lineHeight,
+            _ when sideFillLegendInFullFrame => frame.Y + frame.Height / 2d +
+                (entries.Count - 1) * lineHeight / 2d,
             _ when !horizontal => plotBox.Y + plotBox.Height / 2d +
                 fontSize * PptxChartMetricRules.LegendMarkerBaselineFactor +
                 (entries.Count - 1) * lineHeight / 2d,

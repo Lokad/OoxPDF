@@ -971,6 +971,9 @@ internal sealed partial class PptxRenderer
         public const double LegendSideStrokeMarkerWidthFactor = 1.0666666666666667d;
         public const double LegendSideStrokeTextGapFactor = 0.11666666666666667d;
         public const double LegendSideStrokeBaselineCenterOffsetFactor = 0.955d;
+        public const double LegendFullFrameSideInsetRatio = 0.02d;
+        public const double LegendFullFrameBottomBaselineFactor = 0.57d;
+        public const double LegendFullFrameTopBaselineFactor = 0.95d;
         public const double LegendBottomOffsetFactor = 2.39d;
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
