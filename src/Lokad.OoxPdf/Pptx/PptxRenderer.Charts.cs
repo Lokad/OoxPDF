@@ -807,7 +807,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxisForScale);
-                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeries, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
@@ -851,7 +851,7 @@ internal sealed partial class PptxRenderer
                 bool percentStacked = IsPercentStackedChartGrouping(grouping);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme);
-                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, areaChart);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, areaChart);
@@ -912,7 +912,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(scatterPlot, scatterChart);
-                ChartLayout chartLayout = GetLineChartLayout(document, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, scatterChart);
                 XElement? xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : null;
@@ -935,7 +935,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme);
-                ChartLayout chartLayout = GetBubbleChartLayout(document, bounds, chartXml, sceneChart, bubblePlot, bubbleChart);
+                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, bubblePlot, bubbleChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, bubbleChart);
@@ -999,7 +999,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
-                ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+                ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, legend);
@@ -1022,7 +1022,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart);
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
-                ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+                ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, legend);
@@ -2212,7 +2212,7 @@ internal sealed partial class PptxRenderer
         if (horizontalBars && layout.ManualPlotLayoutApplied && IsAutoGeneratedChartTitle(sceneChart))
         {
             ChartFrameBox frame = GetChartFrameBox(document, bounds);
-            ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+            ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
             titleAnchorBox = GetBarChartPlotLayout(
                 theme,
                 frame,
@@ -2429,7 +2429,7 @@ internal sealed partial class PptxRenderer
         return string.IsNullOrWhiteSpace(richText) ? null : richText;
     }
 
-    private static ChartLegendLayout ReadChartLegendLayout(XDocument chartXml)
+    private static ChartLegendLayout ReadChartLegendLayout(PptxTheme theme, XDocument chartXml)
     {
         XElement? legend = chartXml
             .Descendants(ChartNamespace + "legend")
@@ -2446,23 +2446,23 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(PptxSceneBuilder.ParseChartLegendPosition(position), position, overlay, Visible: true, ReadManualLayout(legend));
+        return new ChartLegendLayout(PptxSceneBuilder.ParseChartLegendPosition(position), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme));
     }
 
-    private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxSceneChart? sceneChart, XDocument chartXml)
+    private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
     {
         if (sceneChart is null)
         {
-            return ReadChartLegendLayout(chartXml);
+            return ReadChartLegendLayout(theme, chartXml);
         }
 
         if (!sceneChart.Legend.IsDefined)
         {
-            return ReadChartLegendLayout(chartXml);
+            return ReadChartLegendLayout(theme, chartXml);
         }
 
         return sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(sceneChart.Legend.PositionKind, sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout)
+            ? new ChartLegendLayout(sceneChart.Legend.PositionKind, sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
             : ChartLegendLayout.Hidden;
     }
 
@@ -2546,6 +2546,8 @@ internal sealed partial class PptxRenderer
                 ? manualBox.Y
                 : manualBox.Y + manualBox.Height - lineHeight;
         }
+
+        RenderChartShapeStyle(graphics, x, clipY, width, clipHeight, layout.ShapeStyle);
 
         var runs = new List<TextRun>(entries.Count);
         for (int i = 0; i < entries.Count; i++)
@@ -4690,7 +4692,7 @@ internal sealed partial class PptxRenderer
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetBarChartPlotLayout(theme, frame, chartXml, sceneChart, barPlot, barChart, title, legend, horizontalBars);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
@@ -5629,11 +5631,11 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static ChartLayout GetLineChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
@@ -5757,11 +5759,11 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, y, width, height);
     }
 
-    private static ChartLayout GetBubbleChartLayout(PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
+    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
-        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(sceneChart, chartXml);
+        ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
         ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, legend);
     }
@@ -6815,9 +6817,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 
-    private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout)
+    private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, ChartShapeStyle ShapeStyle)
     {
-        public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default);
+        public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default, ChartShapeStyle.Empty);
     }
 
     private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, GradientFill? GradientFill, ChartSeriesStroke? Stroke)

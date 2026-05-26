@@ -9796,7 +9796,7 @@ internal static class PptxTests
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
                     </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:dLblPos val="t"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800" b="1" i="1"><a:solidFill><a:srgbClr val="0066AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
                     <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="850" b="1"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>ZX</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>Q</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="6600CC"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
-                  </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend></c:chart>
+                  </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/><c:spPr><a:solidFill><a:srgbClr val="F8E6D0"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="102030"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend></c:chart>
                 </c:chartSpace>
                 """),
             ["ppt/charts/chart2.xml"] = TestFixtures.Utf8("""
@@ -9823,6 +9823,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/ShadingType 2", pdf);
         TestAssert.Contains(" sh", pdf);
+        TestAssert.Contains("0.973 0.902 0.816 rg", pdf);
+        TestAssert.Contains("0.063 0.125 0.188 RG", pdf);
         TestAssert.Contains("0.267 0.267 0.267 RG", pdf);
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("93.6 352.8 144 108 re f", pdf);

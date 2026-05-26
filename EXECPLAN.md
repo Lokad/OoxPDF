@@ -2485,6 +2485,12 @@ High-priority actions:
   this structure only after public Office-PDF evidence defines the placement rule. Validation: the focused
   scene test passed `1 passed, 0 failed, 0 skipped`; the full console suite passed
   `204 passed, 0 failed, 0 skipped`; and `dotnet pack` succeeded.
+- [x] 2026-05-26: Consume chart legend shape styling in the native chart renderer.
+  `ChartLegendLayout` now carries the resolved legend `c:spPr` style from the typed scene path, with the raw
+  XML fallback using the same chart shape-style parser. `RenderChartLegend` draws the legend fill/stroke in
+  the existing computed legend rectangle before markers and text, so this consumes preserved structure without
+  adding a new placement rule. The public line/pie chart rendering test locks the legend frame fill and stroke
+  colors at the PDF operator level. Validation: focused `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-25: Promote chart text classification from broad position buckets to first semantic roles.
   `ClassifyPdfChartText.ps1` now emits `CategoryAxisTickLabel`, `ValueAxisTickLabel`, `DataLabelText`,
   `LegendText`, and title-candidate roles where geometry supports them, while preserving broad fallback roles
@@ -7683,5 +7689,19 @@ This is intentionally not chart-title layout closure. Axis titles are still pres
 leader-line geometry and exact data-label boxes are still open, and chart-style inherited defaults still need
 a structural owner. The useful long-term effect is narrower: another legacy XML read now routes through the
 typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt explicit.
+
+Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-26: Consumed another preserved chart structure without adding a placement heuristic.
+`PptxSceneChartLegend` already owned manual layout and `c:spPr`, but the renderer-side `ChartLegendLayout`
+dropped the style and drew only markers/text. `ChartLegendLayout` now carries a `ChartShapeStyle`, the
+scene-owned path passes `PptxSceneChartLegend.ShapeStyle`, the raw XML fallback uses the same chart
+shape-style parser, and `RenderChartLegend` draws the legend fill/stroke inside the already computed legend
+rectangle before emitting legend entries.
+
+This still does not solve Office-perfect legend placement, reserve, or chart-style inherited defaults. It does
+remove a smaller structural blind spot: when Office explicitly frames a legend, OOXPDF no longer needs a later
+XML re-scan or a fixture-specific drawing path to honor that frame. The public line/pie chart rendering test
+now locks the legend frame fill and stroke colors at the PDF operator level.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
