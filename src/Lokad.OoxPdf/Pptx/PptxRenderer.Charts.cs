@@ -1474,7 +1474,13 @@ internal sealed partial class PptxRenderer
                 value = sharedStrings[sharedStringIndex];
             }
 
-            cells[reference] = new ChartWorkbookCell(value, ReadSpreadsheetCellStyleIndex(cell), cellType ?? string.Empty);
+            XElement? formula = cell.Element(SpreadsheetNamespace + "f");
+            cells[reference] = new ChartWorkbookCell(
+                value,
+                ReadSpreadsheetCellStyleIndex(cell),
+                cellType ?? string.Empty,
+                formula?.Value ?? string.Empty,
+                (string?)formula?.Attribute("t") ?? string.Empty);
         }
 
         return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
@@ -1585,7 +1591,9 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartWorkbookCell(
         string Text,
         int? StyleIndex,
-        string CellType);
+        string CellType,
+        string Formula,
+        string FormulaType);
 
     private sealed class ChartWorksheetData
     {
@@ -1652,6 +1660,8 @@ internal sealed partial class PptxRenderer
         bool HasCell,
         int? StyleIndex,
         string CellType,
+        string Formula,
+        string FormulaType,
         int? StyleNumberFormatId,
         string StyleNumberFormatCode,
         bool? StyleAppliesNumberFormat,
@@ -1756,6 +1766,8 @@ internal sealed partial class PptxRenderer
                         hasCell,
                         hasCell ? cell.StyleIndex : null,
                         hasCell ? cell.CellType : string.Empty,
+                        hasCell ? cell.Formula : string.Empty,
+                        hasCell ? cell.FormulaType : string.Empty,
                         format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,
@@ -1894,7 +1906,7 @@ internal sealed partial class PptxRenderer
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, string> cell in sheet.Value)
                 {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty);
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty, string.Empty, string.Empty);
                 }
 
                 converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());

@@ -7774,6 +7774,19 @@ made from workbook-owned metadata instead of hard-coded label heuristics or work
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved worksheet cell formula provenance next to cached workbook values in
+the chart workbook bridge. `ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the raw spreadsheet
+formula text and formula type from `c:f` while keeping existing cached `v` text behavior unchanged. The
+embedded workbook fixture now includes a formula-backed value cell and asserts that the formula survives range
+parsing.
+
+This does not evaluate formulas or reconcile stale chart caches. It only keeps the evidence needed to decide,
+later and with Office-PDF backing, when a chart should trust cached chart XML, cached workbook values, formula
+provenance, external workbook freshness, or explicit `autoUpdate` metadata. Rendering still uses the cached
+workbook value exactly as before.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved worksheet row/column visibility metadata in the chart workbook bridge.
 Sheet storage now keeps a `ChartWorksheetData` object instead of a bare cell dictionary, with cell values,
 hidden row indices, and hidden column indices. `ChartWorkbookRangeCell` carries `RowHidden` and `ColumnHidden`

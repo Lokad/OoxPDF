@@ -10293,6 +10293,9 @@ internal static class PptxTests
         TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedCell) == true, "Expected hidden worksheet column to survive workbook parsing.");
         object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
+        object thirdParsedCell = parsedCells.GetValue(2) ?? throw new InvalidOperationException("Expected third parsed workbook range cell.");
+        System.Reflection.PropertyInfo formulaProperty = thirdParsedCell.GetType().GetProperty("Formula") ?? throw new InvalidOperationException("Expected range-cell formula metadata.");
+        TestAssert.Equal("B2-B3", (string?)formulaProperty.GetValue(thirdParsedCell) ?? string.Empty);
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
@@ -10650,7 +10653,7 @@ internal static class PptxTests
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
                     <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
                     <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
-                    <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><v>1.4</v></c></row>
+                    <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
                   </sheetData>
                   <tableParts count="1"><tablePart r:id="rId1"/></tableParts>
                 </worksheet>
