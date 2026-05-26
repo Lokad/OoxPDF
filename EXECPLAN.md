@@ -8065,6 +8065,15 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved the raw chart marker size token in the typed scene model. Chart marker
+symbols already carried both the typed enum and original OOXML string, but marker size was available only as
+a clamped `double`, which would make later Office-PDF-backed marker sizing work infer intent after parsing had
+discarded the source value. `PptxSceneChartMarker.SizeValue` now keeps the original `c:size/@val` next to the
+existing normalized size, and the scene fixture asserts the token without changing rendering behavior.
+
+Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed
+(`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`258 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved PPTX image recolor OOXML tokens in the scene model instead of keeping
 only normalized renderer values. `PptxSceneImageRecolor` now carries the source recolor element token
 (`grayscl`, `biLevel`, `lum`, or `duotone`) plus raw `lum/@bright`, `lum/@contrast`, and `biLevel/@thresh`

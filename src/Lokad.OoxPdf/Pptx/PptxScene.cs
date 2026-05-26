@@ -731,6 +731,7 @@ internal sealed record PptxSceneChartMarker(
     bool IsDefined,
     PptxSceneChartMarkerSymbol SymbolKind,
     string Symbol,
+    string? SizeValue,
     double Size,
     PptxSceneFillStyle Fill,
     PptxSceneLineStyle Line);
@@ -2105,15 +2106,16 @@ internal sealed class PptxSceneBuilder
     {
         XElement? marker = series.Element(ChartNamespace + "marker");
         string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ?? "circle";
-        double size = marker?.Element(ChartNamespace + "size")?.Attribute("val") is { } value &&
-            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+        string? sizeValue = (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val");
+        double size = sizeValue is not null &&
+            double.TryParse(sizeValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                 ? Math.Clamp(parsed, 2d, 30d)
                 : 4d;
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
         PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, size, fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme));
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
