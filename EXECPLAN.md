@@ -466,9 +466,14 @@ High-priority actions:
 - [x] Remove the hidden text-flow hard-coded advance escape hatch:
   `PptxTextFlowSegment` no longer carries an arbitrary font-size factor. Hidden advances now have to be
   measurable text in the resolved font, or they need a separately named formula in the metric-rule layer.
-- [x] Port the `pptx-renderer`/CSS superscript and subscript scale:
-  baseline-shifted runs now use `0.65x` font size instead of the previous `2/3` approximation, with a
-  synthetic PPTX unit lock.
+- [x] Restore Office's superscript and subscript display-size scale:
+  public Office PDF evidence from `pptx-ladder-04-baseline-shift` shows `24 pt` baseline-shifted runs exported
+  as `15.96 pt` after the PPTX PDF font-size grid, matching a `2/3` display scale rather than the browser/CSS
+  `0.65x` scale used by `pptx-renderer`. The metric-rule owner now names this as Office behavior and the
+  synthetic PPTX unit lock requires `/Tf 15.96`. The public baseline-shift manifest now also gates decoded
+  PDF text operations, positions, font sizes, and character spacing; its font-size/spacing tolerances deliberately
+  preserve the remaining Office secondary `+0.024 pt` and `-0.04 Tc` branches on the subscript/second paragraph
+  as part of the broader emission-profile backlog rather than hiding them behind the superscript scale.
 - [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
   offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
   probes before broad visual MAE gates.

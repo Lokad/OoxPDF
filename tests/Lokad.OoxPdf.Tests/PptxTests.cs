@@ -3567,7 +3567,7 @@ internal static class PptxTests
         TestAssert.True(CountOccurrences(pdf, " TJ") >= 3, "Expected small-caps text to split into full-size and scaled positioned text runs.");
     }
 
-    public static void PptxSyntheticTextBoxRendersBaselineShiftWithCssScale()
+    public static void PptxSyntheticTextBoxRendersBaselineShiftWithOfficeScale()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
         if (!File.Exists(arial))
@@ -3600,7 +3600,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("24 Tf", pdf);
-        TestAssert.Contains("15.6 Tf", pdf);
+        TestAssert.Contains("15.96 Tf", pdf);
     }
 
     public static void PptxSyntheticTextBoxKeepsFontSizeForSmallBaselineShift()

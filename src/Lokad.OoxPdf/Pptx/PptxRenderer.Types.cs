@@ -693,7 +693,7 @@ internal sealed partial class PptxRenderer
         public const double TextStateTolerance = 0.001d;
         public const double MinimumDrawableDimension = 1d;
         public const double MinimumStrokeWidth = 0.5d;
-        public const double CssSuperscriptSubscriptScale = 0.65d;
+        public const double OfficeSuperscriptSubscriptScale = 2d / 3d;
         public const double CssNormalLineHeightFallback = 1.2d;
         public const double OfficeCompatibleDefaultLineSpacingFactor = 1.1d;
         public const double OfficeManualBreakDefaultLineHeightFallback = 1.24d;
@@ -732,7 +732,7 @@ internal sealed partial class PptxRenderer
 
         public static double MinimumWidth(double width) => Math.Max(MinimumDrawableDimension, width);
 
-        public static double SuperscriptSubscriptFontSize(double nominalFontSize) => nominalFontSize * CssSuperscriptSubscriptScale;
+        public static double SuperscriptSubscriptFontSize(double nominalFontSize) => nominalFontSize * OfficeSuperscriptSubscriptScale;
 
         public static bool ShouldScaleSuperscriptSubscript(double baselineOffset, double nominalFontSize) =>
             Math.Abs(baselineOffset) >= nominalFontSize * SuperscriptSubscriptMinimumBaselineRatio;
