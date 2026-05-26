@@ -10290,6 +10290,10 @@ internal static class PptxTests
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
+        System.Reflection.PropertyInfo tablesProperty = workbookType.GetProperty("Tables") ?? throw new InvalidOperationException("Expected workbook tables.");
+        object tables = tablesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook tables.");
+        System.Reflection.PropertyInfo tableCountProperty = tables.GetType().GetProperty("Count") ?? throw new InvalidOperationException("Expected workbook table count.");
+        TestAssert.True((int?)tableCountProperty.GetValue(tables) == 2, "Expected table name and display name to index the parsed workbook table.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10331,6 +10335,23 @@ internal static class PptxTests
         XElement definedNameStrCache = definedNameChartXml.Descendants(c + "strCache").Single();
         TestAssert.Equal("3", definedNameStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("North", definedNameStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
+        var tableChartXml = XDocument.Parse("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart><c:ser>
+                <c:cat><c:strRef><c:f>SalesTable[Region]</c:f></c:strRef></c:cat>
+                <c:val><c:numRef><c:f>SalesTable[Amount]</c:f></c:numRef></c:val>
+              </c:ser></c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        hydrate.Invoke(null, [parsedWorkbook, tableChartXml]);
+
+        XElement tableNumCache = tableChartXml.Descendants(c + "numCache").Single();
+        TestAssert.Equal("3", tableNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("8.2", tableNumCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
+        XElement tableStrCache = tableChartXml.Descendants(c + "strCache").Single();
+        TestAssert.Equal("3", tableStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("North", tableStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
@@ -10556,6 +10577,7 @@ internal static class PptxTests
                   <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
                   <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
                   <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+                  <Override PartName="/xl/tables/table1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml"/>
                 </Types>
                 """,
             ["_rels/.rels"] = """
@@ -10570,6 +10592,12 @@ internal static class PptxTests
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
                   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
                   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["xl/worksheets/_rels/sheet1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/table" Target="../tables/table1.xml"/>
                 </Relationships>
                 """,
             ["xl/workbook.xml"] = """
@@ -10609,14 +10637,26 @@ internal static class PptxTests
                 """,
             ["xl/worksheets/sheet1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <sheetData>
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
                     <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
                     <row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
                     <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><v>1.4</v></c></row>
                   </sheetData>
+                  <tableParts count="1"><tablePart r:id="rId1"/></tableParts>
                 </worksheet>
+                """,
+            ["xl/tables/table1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <table xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                       id="1" name="SalesTable" displayName="Sales_Table" ref="A1:B4">
+                  <tableColumns count="2">
+                    <tableColumn id="1" name="Region"/>
+                    <tableColumn id="2" name="Amount"/>
+                  </tableColumns>
+                </table>
                 """
         });
         return stream.ToArray();

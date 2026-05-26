@@ -7774,6 +7774,21 @@ made from workbook-owned metadata instead of hard-coded label heuristics or work
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added a workbook table catalog for chart data-source resolution. The embedded
+workbook reader now follows worksheet table relationships, parses table name/display name, table `ref`, and
+ordered table-column names, and exposes those records through `ChartWorkbookData.Tables`. `ReadRangeCells`
+can now resolve simple single-column structured references such as `SalesTable[Amount]` to the corresponding
+worksheet data-body range before cache hydration. The embedded workbook fixture now includes a real table part
+and locks table-backed category/value cache materialization.
+
+This is a deliberately narrow structural subset, not full Excel formula support. Totals rows, multi-column or
+whole-table references, multi-area unions, sheet-local names, escaped structured-reference column names, table
+filters, hidden rows, and stale-cache/source freshness policy remain open. The long-term target remains a
+typed chart-data source layer whose workbook/table/name provenance is explicit before PDF-level formatting and
+layout decisions are made.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Added workbook-level defined-name ownership to chart workbook range resolution.
 The embedded workbook reader now preserves non-local `<definedName>` entries from `workbook.xml`, exposes them
 through `ChartWorkbookData.DefinedNames`, and resolves chart formulas like `SalesValues` to their underlying

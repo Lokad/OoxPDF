@@ -14,6 +14,7 @@ internal sealed partial class PptxRenderer
     private const string WorksheetRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet";
     private const string SharedStringsRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings";
     private const string SpreadsheetStylesRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles";
+    private const string SpreadsheetTableRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/table";
     private const string WorkbookContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml";
     private const string SharedStringsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml";
     private const string SpreadsheetStylesContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml";
@@ -1284,6 +1285,7 @@ internal sealed partial class PptxRenderer
         string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
         IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(workbookXml);
+        var tables = new Dictionary<string, ChartWorkbookTable>(StringComparer.OrdinalIgnoreCase);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
             .GetRelationships(workbookPart.Name)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
@@ -1310,9 +1312,17 @@ internal sealed partial class PptxRenderer
             }
 
             sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
+            foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, name))
+            {
+                tables[table.Name] = table;
+                if (!string.Equals(table.DisplayName, table.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    tables[table.DisplayName] = table;
+                }
+            }
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames);
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames, tables);
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -1444,6 +1454,95 @@ internal sealed partial class PptxRenderer
         return cells;
     }
 
+    private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName)
+    {
+        var tables = new List<ChartWorkbookTable>();
+        foreach (OoxRelationship relationship in workbookPackage.GetRelationships(worksheetPart.Name))
+        {
+            if (relationship.IsExternal ||
+                relationship.Type != SpreadsheetTableRelationshipType ||
+                relationship.ResolvedTarget is null)
+            {
+                continue;
+            }
+
+            OoxPart? tablePart = workbookPackage.GetPart(relationship.ResolvedTarget);
+            if (tablePart is null)
+            {
+                continue;
+            }
+
+            using Stream stream = tablePart.OpenRead();
+            XDocument tableXml = SafeXml.Load(stream);
+            XElement? tableElement = tableXml.Root;
+            string name = (string?)tableElement?.Attribute("name") ?? string.Empty;
+            string displayName = (string?)tableElement?.Attribute("displayName") ?? name;
+            string? reference = (string?)tableElement?.Attribute("ref");
+            if (string.IsNullOrWhiteSpace(name) ||
+                string.IsNullOrWhiteSpace(reference) ||
+                !TryParseTableReference(reference, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow))
+            {
+                continue;
+            }
+
+            string[] columnNames = tableElement?
+                .Element(SpreadsheetNamespace + "tableColumns")?
+                .Elements(SpreadsheetNamespace + "tableColumn")
+                .Select(column => (string?)column.Attribute("name") ?? string.Empty)
+                .ToArray() ?? [];
+            if (columnNames.Length == 0)
+            {
+                continue;
+            }
+
+            tables.Add(new ChartWorkbookTable(name, displayName, sheetName, firstColumn, firstRow, lastColumn, lastRow, columnNames));
+        }
+
+        return tables;
+    }
+
+    private static bool TryParseTableReference(string reference, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow)
+    {
+        firstColumn = 0;
+        firstRow = 0;
+        lastColumn = 0;
+        lastRow = 0;
+        string[] references = reference.Split(':', 2, StringSplitOptions.TrimEntries);
+        if (!TryParseSpreadsheetCellReference(references[0], out firstColumn, out firstRow))
+        {
+            return false;
+        }
+
+        if (references.Length == 1)
+        {
+            lastColumn = firstColumn;
+            lastRow = firstRow;
+            return true;
+        }
+
+        return TryParseSpreadsheetCellReference(references[1], out lastColumn, out lastRow);
+    }
+
+    private static bool TryParseSpreadsheetCellReference(string reference, out int column, out int row)
+    {
+        column = 0;
+        row = 0;
+        string normalized = reference.Replace("$", string.Empty, StringComparison.Ordinal).Trim();
+        int index = 0;
+        while (index < normalized.Length && char.IsAsciiLetter(normalized[index]))
+        {
+            column = (column * 26) + (char.ToUpperInvariant(normalized[index]) - 'A' + 1);
+            index++;
+        }
+
+        if (column <= 0 || index == normalized.Length)
+        {
+            return false;
+        }
+
+        return int.TryParse(normalized[index..], NumberStyles.Integer, CultureInfo.InvariantCulture, out row) && row > 0;
+    }
+
     private static int? ReadSpreadsheetCellStyleIndex(XElement cell)
     {
         return ReadSpreadsheetIntegerAttribute(cell, "s");
@@ -1466,6 +1565,16 @@ internal sealed partial class PptxRenderer
         int? NumberFormatId,
         string NumberFormatCode,
         bool? ApplyNumberFormat);
+
+    private readonly record struct ChartWorkbookTable(
+        string Name,
+        string DisplayName,
+        string SheetName,
+        int FirstColumn,
+        int FirstRow,
+        int LastColumn,
+        int LastRow,
+        IReadOnlyList<string> ColumnNames);
 
     private sealed class ChartWorkbookStyles
     {
@@ -1507,6 +1616,7 @@ internal sealed partial class PptxRenderer
         private readonly IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets;
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
+        private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
             : this(sheets, date1904: false)
@@ -1518,6 +1628,7 @@ internal sealed partial class PptxRenderer
             this.sheets = ConvertWorkbookSheets(sheets);
             styles = ChartWorkbookStyles.Empty;
             definedNames = new Dictionary<string, string>();
+            tables = new Dictionary<string, ChartWorkbookTable>();
             Date1904 = date1904;
         }
 
@@ -1536,16 +1647,29 @@ internal sealed partial class PptxRenderer
             bool date1904,
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames)
+            : this(sheets, date1904, styles, definedNames, new Dictionary<string, ChartWorkbookTable>())
+        {
+        }
+
+        public ChartWorkbookData(
+            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets,
+            bool date1904,
+            ChartWorkbookStyles styles,
+            IReadOnlyDictionary<string, string> definedNames,
+            IReadOnlyDictionary<string, ChartWorkbookTable> tables)
         {
             this.sheets = sheets;
             this.styles = styles;
             this.definedNames = definedNames;
+            this.tables = tables;
             Date1904 = date1904;
         }
 
         public bool Date1904 { get; }
 
         public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
+
+        public IReadOnlyDictionary<string, ChartWorkbookTable> Tables => tables;
 
         public string[] ReadRange(string? formula)
         {
@@ -1558,6 +1682,7 @@ internal sealed partial class PptxRenderer
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
             string? resolvedFormula = ResolveDefinedNameFormula(formula);
+            resolvedFormula = ResolveStructuredReferenceFormula(resolvedFormula);
             if (!TryParseRange(resolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out Dictionary<string, ChartWorkbookCell>? cells))
             {
@@ -1610,6 +1735,105 @@ internal sealed partial class PptxRenderer
             return definedNames.TryGetValue(trimmed, out string? definedFormula)
                 ? definedFormula
                 : trimmed;
+        }
+
+        private string? ResolveStructuredReferenceFormula(string? formula)
+        {
+            if (string.IsNullOrWhiteSpace(formula))
+            {
+                return formula;
+            }
+
+            string trimmed = formula.Trim();
+            int open = trimmed.IndexOf('[', StringComparison.Ordinal);
+            if (open <= 0 || trimmed[^1] != ']')
+            {
+                return trimmed;
+            }
+
+            string tableName = trimmed[..open];
+            if (!tables.TryGetValue(tableName, out ChartWorkbookTable table))
+            {
+                return trimmed;
+            }
+
+            string body = trimmed[(open + 1)..^1];
+            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader) ||
+                string.IsNullOrWhiteSpace(columnName))
+            {
+                return trimmed;
+            }
+
+            int columnOffset = -1;
+            for (int i = 0; i < table.ColumnNames.Count; i++)
+            {
+                if (string.Equals(table.ColumnNames[i], columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    columnOffset = i;
+                    break;
+                }
+            }
+
+            if (columnOffset < 0)
+            {
+                return trimmed;
+            }
+
+            int column = table.FirstColumn + columnOffset;
+            int firstRow = onlyHeader ? table.FirstRow : includeHeader ? table.FirstRow : table.FirstRow + 1;
+            int lastRow = onlyHeader ? table.FirstRow : table.LastRow;
+            return firstRow <= lastRow
+                ? FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}")
+                : trimmed;
+        }
+
+        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader)
+        {
+            columnName = string.Empty;
+            includeHeader = false;
+            onlyHeader = false;
+            string trimmed = body.Trim();
+            if (trimmed.Length == 0)
+            {
+                return false;
+            }
+
+            if (trimmed[0] != '[')
+            {
+                columnName = trimmed;
+                return true;
+            }
+
+            string[] segments = trimmed
+                .Split("],[", StringSplitOptions.TrimEntries)
+                .Select(segment => segment.Trim('[', ']'))
+                .ToArray();
+            foreach (string segment in segments)
+            {
+                if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
+                {
+                    includeHeader = true;
+                }
+                else if (string.Equals(segment, "#Headers", StringComparison.OrdinalIgnoreCase))
+                {
+                    includeHeader = true;
+                    onlyHeader = true;
+                }
+                else if (!string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
+                {
+                    columnName = segment;
+                }
+            }
+
+            return !string.IsNullOrWhiteSpace(columnName);
+        }
+
+        private static string QuoteSheetName(string sheetName)
+        {
+            return sheetName.Any(character => !char.IsAsciiLetterOrDigit(character) && character != '_')
+                ? "'" + sheetName.Replace("'", "''", StringComparison.Ordinal) + "'"
+                : sheetName;
         }
 
         private static IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> ConvertWorkbookSheets(
