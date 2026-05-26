@@ -1644,16 +1644,18 @@ internal sealed partial class PptxRenderer
 
     private static ChartPolarGeometry GetRadarChartGeometry(ChartPlotBox plotBox, ChartRadarStyle style)
     {
-        double centerYRatio = style == ChartRadarStyle.Filled
-            ? PptxChartMetricRules.FilledRadarCenterYRatio
-            : PptxChartMetricRules.MarkerRadarCenterYRatio;
-        double radiusRatio = style == ChartRadarStyle.Filled
-            ? PptxChartMetricRules.FilledRadarRadiusRatio
-            : PptxChartMetricRules.MarkerRadarRadiusRatio;
+        ChartRadarGeometryRule rule = ResolveRadarGeometryRule(style);
         return new ChartPolarGeometry(
-            plotBox.X + plotBox.Width * PptxChartMetricRules.RadarCenterXRatio,
-            plotBox.Y + plotBox.Height * centerYRatio,
-            Math.Min(plotBox.Width, plotBox.Height) * radiusRatio);
+            plotBox.X + plotBox.Width * rule.CenterXRatio,
+            plotBox.Y + plotBox.Height * rule.CenterYRatio,
+            Math.Min(plotBox.Width, plotBox.Height) * rule.RadiusRatio);
+    }
+
+    private static ChartRadarGeometryRule ResolveRadarGeometryRule(ChartRadarStyle style)
+    {
+        return style == ChartRadarStyle.Filled
+            ? new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.4583333333333333d, RadiusRatio: 0.3825d)
+            : new ChartRadarGeometryRule(CenterXRatio: 0.5d, CenterYRatio: 0.5d, RadiusRatio: 0.4226d);
     }
 
     private static void RenderChartAreaStyle(PdfGraphicsBuilder graphics, PptxDocument document, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxTheme theme)

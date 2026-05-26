@@ -900,11 +900,6 @@ internal sealed partial class PptxRenderer
         public const double PieDataLabelMinimumWidth = 18d;
         public const double PieDataLabelHeightFactor = 1.35d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
-        public const double RadarCenterXRatio = 0.5d;
-        public const double FilledRadarCenterYRatio = 0.4583333333333333d;
-        public const double FilledRadarRadiusRatio = 0.3825d;
-        public const double MarkerRadarCenterYRatio = 0.5d;
-        public const double MarkerRadarRadiusRatio = 0.4226d;
         public const double RadarCategoryLabelGapFactor = 0.65d;
         public const double MarkerRadarCategoryLabelHorizontalGapFactor = 0.41d;
         public const double FilledRadarCategoryLabelHorizontalGapFactor = 0.35d;
@@ -1002,6 +997,8 @@ internal sealed partial class PptxRenderer
         Marker,
         Filled
     }
+
+    private readonly record struct ChartRadarGeometryRule(double CenterXRatio, double CenterYRatio, double RadiusRatio);
 
     private readonly record struct ChartRadarLayout(
         ChartPlotBox PlotBox,

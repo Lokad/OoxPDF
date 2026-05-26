@@ -2224,8 +2224,15 @@ High-priority actions:
   - [x] Introduce the first `ChartRadarLayout` handoff so radar drawing and radar axis labels consume one typed
     layout record with plot box, style, point count, and resolved center/radius geometry. This is behavior-neutral
     ownership work; the current center/radius values are still Office-observed metric constants.
-  - [ ] Move the filled-vs-marker radar geometry evidence out of `PptxChartMetricRules` into a resolver that can
+  - [x] Move the filled-vs-marker radar geometry evidence out of `PptxChartMetricRules` into a resolver that can
     also own radar label frames, marker envelopes, axis text anchors, and future plot-box reserve semantics.
+    `ResolveRadarGeometryRule` now owns the Office-observed marker/filled center and radius ratios and feeds the
+    typed `ChartRadarLayout` path. Validated with `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`,
+    focused `pptx-charts` tests at `40/40`, and targeted radar visual runs
+    `pptx-ladder-11-chart-radar-2series-port/20260526-165625` plus
+    `pptx-ladder-11-chart-radar-filled-port/20260526-165625`. The broader radar item intentionally stays open:
+    label frames, marker envelopes, axis text anchors, and plot-box reserve semantics still need structural
+    resolver ownership instead of ad hoc metric constants.
 - [x] 2026-05-25: Add opt-in semantic chart gridline candidates to the PDF chart graphics classifier.
   `ClassifyPdfChartGraphics.ps1` now emits `HorizontalGridlineCandidate` and `VerticalGridlineCandidate`
   records for line strokes that span the derived plot box while excluding the plot-box axis edges. Existing
