@@ -9,12 +9,12 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxTextOperationPositionDelta": 1.3,
+    "maxTextOperationPositionDelta": 0.12,
     "maxTextOperationFontSizeDelta": 0.03,
     "maxTextOperationCharacterSpacingDelta": 0.011,
     "compareDecodedTextOperations": true,
-    "maxMeanAbsoluteError": 0.27,
-    "maxChangedPixelRatioAtThreshold16": 0.0027
+    "maxMeanAbsoluteError": 0.04,
+    "maxChangedPixelRatioAtThreshold16": 0.001
   },
   "allowedUnsupportedFeatures": []
 }

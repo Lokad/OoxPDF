@@ -696,7 +696,7 @@ internal sealed partial class PptxRenderer
             }
 
             bool afterManualLineBreak = false;
-            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator);
+            double cursorY = cursorLineTop - ReadFirstLineBaselineOffset(paragraph, paragraphStyle.LineSpacing, advanceEstimator, frame.UseOfficeBaselineFloor);
             double cursorX = paragraphTextX;
             double maxFontSize = 0d;
             var line = new TextLayoutLine(paragraphTextX);
@@ -709,7 +709,7 @@ internal sealed partial class PptxRenderer
                 if (modelRun.Kind == PptxTextRunKind.Break)
                 {
                     double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: false, advanceEstimator);
+                    AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: false, advanceEstimator);
                     cursorLineTop -= ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                     cursorY = double.NaN;
                     afterManualLineBreak = true;
@@ -725,8 +725,8 @@ internal sealed partial class PptxRenderer
                 if (double.IsNaN(cursorY))
                 {
                     cursorY = cursorLineTop - (afterManualLineBreak
-                        ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing)
-                        : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator));
+                        ? ManualBreakBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor)
+                        : LineBaselineOffset(runStyle.NominalFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor));
                     afterManualLineBreak = false;
                 }
 
@@ -793,9 +793,9 @@ internal sealed partial class PptxRenderer
                             if (chunkIndex < chunks.Length - 1)
                             {
                                 double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                                AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, frame.TextX, frame.TextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                                 cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
-                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
+                                cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor);
                                 cursorX = paragraphTextX;
                                 line.Reset(paragraphTextX);
                                 maxFontSize = 0d;
@@ -845,13 +845,13 @@ internal sealed partial class PptxRenderer
                         }
 
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+                        AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
                         cursorLineTop -= ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, lineFontSize);
                         paragraphTextX = bulletText is null
                             ? columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging)
                             : columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft);
-                        cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator);
+                        cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor);
                         cursorX = paragraphTextX;
                         line.Reset(paragraphTextX);
                         maxFontSize = 0d;
@@ -902,11 +902,11 @@ internal sealed partial class PptxRenderer
             if (double.IsNaN(cursorY))
             {
                 cursorY = cursorLineTop - (afterManualLineBreak
-                    ? ManualBreakBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing)
-                    : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing));
+                    ? ManualBreakBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor)
+                    : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, frame.UseOfficeBaselineFloor));
             }
 
-            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
+            AddAlignedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator);
             cursorLineTop -= ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize) + paragraphStyle.SpacingAfter;
             MoveToNextColumnIfNeeded(ref cursorLineTop, ref columnIndex, ref columnStartX, flowFrame.Box.CursorTop, frame.TextX, columnWidth, frame.ColumnSpacing, frame.ColumnCount, flowFrame.Box, paragraphLineFontSize);
             hasPlacedParagraph = true;
@@ -1447,14 +1447,15 @@ internal sealed partial class PptxRenderer
         LineSpacing lineSpacing,
         double maxFontSize,
         TextLayoutLine line,
-        TextAdvanceEstimator advanceEstimator)
+        TextAdvanceEstimator advanceEstimator,
+        bool useOfficeBaselineFloor)
     {
         double advance = ReadLineAdvance(lineSpacing, maxFontSize);
         PptxTextLineMetrics lineMetrics = ResolvePositionedLineMetrics(lineTopY, baselineY, advance);
         PptxTextSpanLayout? baselineSpan = line.Spans.FirstOrDefault();
         ResolvedRunTextStyle? baselineStyle = baselineSpan?.SourceRun?.Style;
         double baselineFontSize = baselineSpan?.Run.FontSize ?? maxFontSize;
-        PptxTextBaselineMetricLayout baselineMetric = ReadBaselineMetric(baselineFontSize, baselineStyle, advanceEstimator);
+        PptxTextBaselineMetricLayout baselineMetric = ReadBaselineMetric(baselineFontSize, baselineStyle, advanceEstimator, useOfficeBaselineFloor);
         return new PptxTextLineBoxLayout(
             lineTopY,
             baselineY,
@@ -2372,13 +2373,13 @@ internal sealed partial class PptxRenderer
             : normalAdvance;
     }
 
-    private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator)
+    private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
     {
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
         double fontSize = firstRun?.Style.NominalFontSize ?? ReadFirstParagraphFontSize(paragraph.Source, paragraph.Style.DefaultRunProperties);
         return ParagraphHasManualLineBreak(paragraph.Source)
-            ? ManualBreakBaselineOffset(fontSize, lineSpacing)
-            : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator);
+            ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor)
+            : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor);
     }
 
     private static bool ParagraphHasManualLineBreak(XElement paragraph)
@@ -2431,7 +2432,7 @@ internal sealed partial class PptxRenderer
         return defaultFontSize;
     }
 
-    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing)
+    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor)
     {
         if (lineSpacing.IsAbsolute)
         {
@@ -2443,21 +2444,21 @@ internal sealed partial class PptxRenderer
             : BaselineOffset(fontSize);
     }
 
-    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
+    private static double LineBaselineOffset(double fontSize, LineSpacing lineSpacing, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
     {
         if (lineSpacing.IsAbsolute)
         {
-            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
+            return Math.Max(BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor: false), lineSpacing.Value - fontSize * PptxTextMetricRules.AbsoluteLineBaselineGapFallback);
         }
 
         return lineSpacing.IsExplicit
             ? ReadExplicitMultipleBaselineOffset(lineSpacing, fontSize)
-            : BaselineOffset(fontSize, style, advanceEstimator);
+            : BaselineOffset(fontSize, style, advanceEstimator, useOfficeBaselineFloor);
     }
 
-    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing)
+    private static double ManualBreakBaselineOffset(double fontSize, LineSpacing lineSpacing, bool useOfficeBaselineFloor)
     {
-        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
+        return lineSpacing.IsExplicit ? LineBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor) : fontSize * PptxTextMetricRules.OfficeManualBreakBaselineFallback;
     }
 
     private static double ReadExplicitMultipleBaselineOffset(LineSpacing lineSpacing, double fontSize)
@@ -2470,7 +2471,7 @@ internal sealed partial class PptxRenderer
         return fontSize * PptxTextMetricRules.OfficeBaselineFallback;
     }
 
-    private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
+    private static double BaselineOffset(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
     {
         if (style is null)
         {
@@ -2491,7 +2492,7 @@ internal sealed partial class PptxRenderer
         }
 
         double metricRatio = Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio);
-        if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
+        if (useOfficeBaselineFloor)
         {
             metricRatio = Math.Max(PptxTextMetricRules.OfficeBaselineFallback, metricRatio);
         }
@@ -2499,7 +2500,7 @@ internal sealed partial class PptxRenderer
         return fontSize * metricRatio;
     }
 
-    private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator)
+    private static PptxTextBaselineMetricLayout ReadBaselineMetric(double fontSize, ResolvedRunTextStyle? style, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
     {
         const double fallbackRatio = PptxTextMetricRules.OfficeBaselineFallback;
         if (style is null)
@@ -2518,7 +2519,7 @@ internal sealed partial class PptxRenderer
         double ratio = ascenderRatio > 0d && ascenderRatio <= PptxTextMetricRules.MaximumBaselineMetricRatio
             ? Math.Max(ascenderRatio, PptxTextMetricRules.MinimumBaselineMetricRatio)
             : fallbackRatio;
-        if (fontSize >= PptxTextMetricRules.LargeTextBaselineMinimumFontSize)
+        if (useOfficeBaselineFloor)
         {
             ratio = Math.Max(fallbackRatio, ratio);
         }

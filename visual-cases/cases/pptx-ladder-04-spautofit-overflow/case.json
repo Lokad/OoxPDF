@@ -9,9 +9,9 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.38,
-    "maxChangedPixelRatioAtThreshold16": 0.0054,
-    "maxTextOperationPositionDelta": 0.5,
+    "maxMeanAbsoluteError": 0.22,
+    "maxChangedPixelRatioAtThreshold16": 0.0036,
+    "maxTextOperationPositionDelta": 0.05,
     "maxTextOperationFontSizeDelta": 0.03,
     "compareDecodedTextOperations": true
   },

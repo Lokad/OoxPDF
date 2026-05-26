@@ -245,6 +245,7 @@ internal sealed partial class PptxRenderer
         double TextRotationDegrees,
         bool TextFlipHorizontal,
         bool TextFlipVertical,
+        bool UseOfficeBaselineFloor,
         double FlowYTop,
         double VerticalOffset,
         PptxTextOrientation Orientation,
@@ -704,7 +705,6 @@ internal sealed partial class PptxRenderer
         public const double MaximumBaselineMetricRatio = 1.05d;
         public const double MinimumFontLineBoxMetricRatio = 0.75d;
         public const double MaximumFontLineBoxMetricRatio = 1.5d;
-        public const double LargeTextBaselineMinimumFontSize = 24d;
         public const double AbsoluteLineBaselineGapFallback = 0.374d;
         public const double ExplicitLineBaselineGapFallback = 0.234d;
         public const double MinimumLineSpacing = 0.1d;

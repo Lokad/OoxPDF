@@ -2166,6 +2166,12 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
+  rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
+  preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
+  font-metric path. Added a synthetic regression that compares a rectangular Arial frame against an ellipse
+  Arial frame, tightened the five refreshed typography manifests, and refreshed two stale residual gates
+  (`pptx-ladder-04-line-spacing-port` and `pptx-ladder-04-mixed-bullet-port`) as explicit remaining debt.
 - [x] 2026-05-25: Added the seven-part long-term architecture track to this ExecPlan without removing
   existing open progress or private-safe evidence. The track makes structural Office-PDF alignment the
   mechanism for pixel-perfect output and sets chart structural oracle tooling as the next concrete slice.
@@ -4250,6 +4256,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: The Office baseline floor is not a universal "Arial baseline" rule.
+  Evidence: Applying the floor broadly fixed top-anchored rectangular wrap cases, but moved the public
+  non-rect small-label probe by about `-1.24 pt` and moved middle/bottom anchored rectangular text in
+  `pptx-ladder-03-text-anchor-overflow` to `-1.00/-1.97 pt` deltas. The passing rule is scoped to
+  rectangular, top-anchored, default-line-spacing text frames; explicit/absolute line spacing still shows a
+  separate uniform `~0.68-0.71 pt` Y residual in `pptx-ladder-04-line-spacing-port`.
 - Observation: The current chart text classifier is strong enough for tick labels and legend entries in several
   line-chart cases, but not yet robust enough to distinguish every title-like text placement from data labels.
   Evidence: `pptx-ladder-11-chart-line-trend-port` has tight category/value/legend text parity, yet the
@@ -4460,6 +4472,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
+  spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved
+  font metrics until separate Office-PDF evidence justifies a broader rule.
+  Rationale: Public evidence split the problem by text-frame context. The floor collapses `~1.25 pt` ordinary
+  top-anchored rectangular residuals to near zero, but it regresses non-rect and vertically anchored cases and
+  does not explain explicit line-spacing residuals. Encoding the context in `PptxTextFrameModel` keeps the rule
+  structural while preventing a global metric nudge from hiding distinct Office behaviors.
+  Date/Author: 2026-05-26 / Codex.
 - The library remains dependency-free. Third-party packages are not allowed in `src/Lokad.OoxPdf`.
 - Office and PDFium remain validation-only under `tools/`.
 - Private documents remain under ignored `private-cases/`; generated private artifacts remain under ignored
@@ -7411,3 +7431,36 @@ instead of adding case-specific nudges.
 Validation: targeted `CheckVisualCase.ps1` passed for the five refreshed cases at artifacts generated around
 `20260526-151734` and `20260526-151745`. The full public `pptx-typography` family passed 77/77 at
 `artifacts/visual/reports/pptx-typography.json`, generated `2026-05-26T15:22:10+02:00`.
+
+Revision note, 2026-05-26: Converted the remaining ordinary rectangular text baseline cluster from a broad
+tolerance into a scoped Office-metric rule. Public PDF evidence showed that Office's resolved Arial ascender
+ratio (`~0.905`) was too low for normal top-anchored rectangular text frames, while the existing
+`0.974` Office baseline fallback matched those frames closely. `PptxTextFrameModel` now carries a
+`UseOfficeBaselineFloor` flag derived from the resolved text-frame context, and line layout applies the floor
+only to rectangular preset geometry with top vertical anchoring and default line spacing. This preserves the
+font-metric path for ellipse/non-rect preset text rectangles, middle/bottom vertical anchoring, and
+explicit/absolute line spacing.
+
+The visible improvement is structural rather than fixture-specific. The refreshed public cases now have
+decoded text-operation parity with near-zero baseline residuals in the ordinary top-anchored rectangular
+cluster: `pptx-ladder-03-text-flow` is within `0.04 pt` Y and `0.11 pt` X, `pptx-ladder-04-bullet-wrap`
+within `0.02 pt`, `pptx-ladder-04-spautofit-overflow` within `0.04 pt`, and
+`pptx-ladder-04-mixed-font-size-stack` within `0.01 pt`. `pptx-ladder-04-mixed-paragraph-stack` improved the
+lower bullet-line residual from about `+1.41 pt` to `-0.08 pt`, while preserving the separate centered/upper
+paragraph residual around `-0.30 pt`.
+
+Two validation surprises remain explicit long-term debt. First, applying the floor to non-rect text frames
+regressed the locked small-label origin probe, so a synthetic unit test now proves that a rectangular Arial
+frame uses the `0.974` floor while an ellipse Arial frame keeps the font ascender metric. Second, applying the
+same idea to vertical anchoring or explicit/absolute line spacing is wrong: the public anchor-overflow case
+keeps its pre-existing bottom-anchor residual (`-0.73 pt`), and the line-spacing port keeps a uniform
+`~0.68-0.71 pt` text-operation Y residual behind an explicit structural gate. These are separate Office
+layout rules to derive, not reasons to broaden the baseline floor.
+
+Validation: focused non-slow `pptx-typography` tests passed (`75 passed, 0 failed, 2 skipped`) with
+`PptxSyntheticRectTextUsesOfficeBaselineFloorButEllipseKeepsFontMetric`. Targeted visual checks passed for
+`pptx-ladder-03-text-anchor-overflow` at `20260526-154123`, `pptx-ladder-04-line-spacing-port` at
+`20260526-154316`, `pptx-ladder-04-mixed-bullet-port` at `20260526-154322`, and the five tightened
+baseline-cluster cases at `20260526-154136`, `20260526-154142`, `20260526-154149`, `20260526-154155`, and
+`20260526-154201`. The full public `pptx-typography` family passed 77/77 at
+`artifacts/visual/reports/pptx-typography.json`, generated `2026-05-26T15:49:50+02:00`.

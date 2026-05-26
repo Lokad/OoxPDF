@@ -187,6 +187,7 @@ internal sealed partial class PptxRenderer
         RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
             ? fontColor
             : null;
+        bool useOfficeBaselineFloor = TextFrameUsesOfficeBaselineFloor(shape, bodyProperties);
         XElement? defaultParagraphProperties = MergeParagraphProperties(
             BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, "lvl1pPr").Sources.ToArray());
         double verticalOffset = bodyProperties.VerticalAnchor switch
@@ -236,11 +237,26 @@ internal sealed partial class PptxRenderer
             textRotationDegrees,
             textFlipHorizontal,
             textFlipVertical,
+            useOfficeBaselineFloor,
             flowYTop,
             verticalOffset,
             orientation,
             shapeFontColor,
             paragraphs);
+    }
+
+    private static bool TextFrameUsesOfficeBaselineFloor(XElement shape, PptxTextBodyProperties bodyProperties)
+    {
+        if (bodyProperties.VerticalAnchor != TextVerticalAnchor.Top)
+        {
+            return false;
+        }
+
+        XElement? geometry = shape
+            .Element(PresentationNamespace + "spPr")
+            ?.Element(DrawingNamespace + "prstGeom");
+        string? preset = (string?)geometry?.Attribute("prst");
+        return string.IsNullOrEmpty(preset) || string.Equals(preset, "rect", StringComparison.Ordinal);
     }
 
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
