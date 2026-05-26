@@ -7774,6 +7774,21 @@ made from workbook-owned metadata instead of hard-coded label heuristics or work
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved worksheet row/column visibility metadata in the chart workbook bridge.
+Sheet storage now keeps a `ChartWorksheetData` object instead of a bare cell dictionary, with cell values,
+hidden row indices, and hidden column indices. `ChartWorkbookRangeCell` carries `RowHidden` and `ColumnHidden`
+flags for every coordinate in a requested range, including the metadata needed later for missing-cell and
+`plotVisOnly` policy decisions. The embedded workbook fixture now marks a row and a column hidden and asserts
+that both flags survive parsing.
+
+This is still behavior-neutral for chart rendering. OOXPDF does not yet decide how Office combines
+`plotVisOnly`, hidden rows/columns, chart caches, workbook source data, and blank-cell settings; those rules
+need public Office-PDF evidence before hidden workbook data changes emitted chart geometry or labels. The
+structural gain is that the workbook bridge no longer discards the visibility evidence needed for that future
+policy.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Added a workbook table catalog for chart data-source resolution. The embedded
 workbook reader now follows worksheet table relationships, parses table name/display name, table `ref`, and
 ordered table-column names, and exposes those records through `ChartWorkbookData.Tables`. `ReadRangeCells`

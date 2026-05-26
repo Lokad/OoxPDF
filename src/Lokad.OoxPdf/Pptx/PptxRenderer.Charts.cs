@@ -1290,7 +1290,7 @@ internal sealed partial class PptxRenderer
             .GetRelationships(workbookPart.Name)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
             .ToDictionary(relationship => relationship.Id, StringComparer.Ordinal);
-        var sheets = new Dictionary<string, Dictionary<string, ChartWorkbookCell>>(StringComparer.OrdinalIgnoreCase);
+        var sheets = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
 
         foreach (XElement sheet in workbookXml.Descendants(SpreadsheetNamespace + "sheet"))
         {
@@ -1311,7 +1311,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
+            sheets[name] = ReadWorksheetData(worksheetPart, sharedStrings);
             foreach (ChartWorkbookTable table in ReadWorksheetTables(workbookPackage, worksheetPart, name))
             {
                 tables[table.Name] = table;
@@ -1415,11 +1415,37 @@ internal sealed partial class PptxRenderer
         return new ChartWorkbookStyles(customNumberFormats, cellFormats);
     }
 
-    private static Dictionary<string, ChartWorkbookCell> ReadWorksheetCells(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
+    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
     {
         using Stream stream = worksheetPart.OpenRead();
         XDocument document = SafeXml.Load(stream);
         var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
+        var hiddenRows = new HashSet<int>();
+        var hiddenColumns = new HashSet<int>();
+        foreach (XElement row in document.Descendants(SpreadsheetNamespace + "row"))
+        {
+            if (IsOoxmlTrue((string?)row.Attribute("hidden")) &&
+                ReadSpreadsheetIntegerAttribute(row, "r") is { } rowIndex)
+            {
+                hiddenRows.Add(rowIndex);
+            }
+        }
+
+        foreach (XElement column in document.Descendants(SpreadsheetNamespace + "col"))
+        {
+            if (!IsOoxmlTrue((string?)column.Attribute("hidden")) ||
+                ReadSpreadsheetIntegerAttribute(column, "min") is not { } minColumn ||
+                ReadSpreadsheetIntegerAttribute(column, "max") is not { } maxColumn)
+            {
+                continue;
+            }
+
+            for (int columnIndex = minColumn; columnIndex <= maxColumn; columnIndex++)
+            {
+                hiddenColumns.Add(columnIndex);
+            }
+        }
+
         foreach (XElement cell in document.Descendants(SpreadsheetNamespace + "c"))
         {
             string? reference = (string?)cell.Attribute("r");
@@ -1451,7 +1477,7 @@ internal sealed partial class PptxRenderer
             cells[reference] = new ChartWorkbookCell(value, ReadSpreadsheetCellStyleIndex(cell), cellType ?? string.Empty);
         }
 
-        return cells;
+        return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
     }
 
     private static IReadOnlyList<ChartWorkbookTable> ReadWorksheetTables(OoxPackage workbookPackage, OoxPart worksheetPart, string sheetName)
@@ -1561,6 +1587,25 @@ internal sealed partial class PptxRenderer
         int? StyleIndex,
         string CellType);
 
+    private sealed class ChartWorksheetData
+    {
+        public ChartWorksheetData(
+            Dictionary<string, ChartWorkbookCell> cells,
+            IReadOnlySet<int> hiddenRows,
+            IReadOnlySet<int> hiddenColumns)
+        {
+            Cells = cells;
+            HiddenRows = hiddenRows;
+            HiddenColumns = hiddenColumns;
+        }
+
+        public Dictionary<string, ChartWorkbookCell> Cells { get; }
+
+        public IReadOnlySet<int> HiddenRows { get; }
+
+        public IReadOnlySet<int> HiddenColumns { get; }
+    }
+
     private readonly record struct ChartWorkbookCellFormat(
         int? NumberFormatId,
         string NumberFormatCode,
@@ -1609,11 +1654,13 @@ internal sealed partial class PptxRenderer
         string CellType,
         int? StyleNumberFormatId,
         string StyleNumberFormatCode,
-        bool? StyleAppliesNumberFormat);
+        bool? StyleAppliesNumberFormat,
+        bool RowHidden,
+        bool ColumnHidden);
 
     private sealed class ChartWorkbookData
     {
-        private readonly IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets;
+        private readonly IReadOnlyDictionary<string, ChartWorksheetData> sheets;
         private readonly ChartWorkbookStyles styles;
         private readonly IReadOnlyDictionary<string, string> definedNames;
         private readonly IReadOnlyDictionary<string, ChartWorkbookTable> tables;
@@ -1638,12 +1685,12 @@ internal sealed partial class PptxRenderer
         }
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904, ChartWorkbookStyles styles)
-            : this(sheets, date1904, styles, new Dictionary<string, string>())
+            : this(ConvertWorkbookSheets(sheets), date1904, styles, new Dictionary<string, string>())
         {
         }
 
         public ChartWorkbookData(
-            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets,
+            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
             bool date1904,
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames)
@@ -1652,7 +1699,7 @@ internal sealed partial class PptxRenderer
         }
 
         public ChartWorkbookData(
-            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets,
+            IReadOnlyDictionary<string, ChartWorksheetData> sheets,
             bool date1904,
             ChartWorkbookStyles styles,
             IReadOnlyDictionary<string, string> definedNames,
@@ -1684,7 +1731,7 @@ internal sealed partial class PptxRenderer
             string? resolvedFormula = ResolveDefinedNameFormula(formula);
             resolvedFormula = ResolveStructuredReferenceFormula(resolvedFormula);
             if (!TryParseRange(resolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
-                !sheets.TryGetValue(sheetName, out Dictionary<string, ChartWorkbookCell>? cells))
+                !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
             {
                 return [];
             }
@@ -1700,7 +1747,7 @@ internal sealed partial class PptxRenderer
                 for (int column = minColumn; column <= maxColumn; column++)
                 {
                     string reference = ToCellReference(column, row);
-                    bool hasCell = cells.TryGetValue(reference, out ChartWorkbookCell cell);
+                    bool hasCell = worksheet.Cells.TryGetValue(reference, out ChartWorkbookCell cell);
                     ChartWorkbookCellFormat format = hasCell ? styles.ResolveCellFormat(cell.StyleIndex) : default;
                     values.Add(new ChartWorkbookRangeCell(
                         index,
@@ -1711,7 +1758,9 @@ internal sealed partial class PptxRenderer
                         hasCell ? cell.CellType : string.Empty,
                         format.NumberFormatId,
                         format.NumberFormatCode,
-                        format.ApplyNumberFormat));
+                        format.ApplyNumberFormat,
+                        worksheet.HiddenRows.Contains(row),
+                        worksheet.HiddenColumns.Contains(column)));
                     index++;
                 }
             }
@@ -1836,10 +1885,10 @@ internal sealed partial class PptxRenderer
                 : sheetName;
         }
 
-        private static IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> ConvertWorkbookSheets(
+        private static IReadOnlyDictionary<string, ChartWorksheetData> ConvertWorkbookSheets(
             IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
         {
-            var converted = new Dictionary<string, Dictionary<string, ChartWorkbookCell>>(StringComparer.OrdinalIgnoreCase);
+            var converted = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
             foreach (KeyValuePair<string, Dictionary<string, string>> sheet in sheets)
             {
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
@@ -1848,7 +1897,19 @@ internal sealed partial class PptxRenderer
                     cells[cell.Key] = new ChartWorkbookCell(cell.Value, null, string.Empty);
                 }
 
-                converted[sheet.Key] = cells;
+                converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());
+            }
+
+            return converted;
+        }
+
+        private static IReadOnlyDictionary<string, ChartWorksheetData> ConvertWorkbookSheets(
+            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets)
+        {
+            var converted = new Dictionary<string, ChartWorksheetData>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, Dictionary<string, ChartWorkbookCell>> sheet in sheets)
+            {
+                converted[sheet.Key] = new ChartWorksheetData(sheet.Value, new HashSet<int>(), new HashSet<int>());
             }
 
             return converted;

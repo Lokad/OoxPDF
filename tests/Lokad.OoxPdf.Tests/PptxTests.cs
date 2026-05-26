@@ -10287,6 +10287,12 @@ internal static class PptxTests
         TestAssert.Equal("m/d/yy", (string?)styleNumberFormatCodeProperty.GetValue(firstParsedCell) ?? string.Empty);
         System.Reflection.PropertyInfo styleAppliesNumberFormatProperty = firstParsedCell.GetType().GetProperty("StyleAppliesNumberFormat") ?? throw new InvalidOperationException("Expected range-cell style number-format apply flag.");
         TestAssert.True((bool?)styleAppliesNumberFormatProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to preserve applyNumberFormat.");
+        System.Reflection.PropertyInfo rowHiddenProperty = firstParsedCell.GetType().GetProperty("RowHidden") ?? throw new InvalidOperationException("Expected range-cell row-hidden flag.");
+        System.Reflection.PropertyInfo columnHiddenProperty = firstParsedCell.GetType().GetProperty("ColumnHidden") ?? throw new InvalidOperationException("Expected range-cell column-hidden flag.");
+        TestAssert.True((bool?)rowHiddenProperty.GetValue(firstParsedCell) == false, "Expected visible worksheet row to remain visible in range metadata.");
+        TestAssert.True((bool?)columnHiddenProperty.GetValue(firstParsedCell) == true, "Expected hidden worksheet column to survive workbook parsing.");
+        object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
+        TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
@@ -10639,10 +10645,11 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <cols><col min="2" max="2" hidden="1"/></cols>
                   <sheetData>
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
                     <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c></row>
-                    <row r="3"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
+                    <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
                     <row r="4"><c r="A4" t="s"><v>2</v></c><c r="B4"><v>1.4</v></c></row>
                   </sheetData>
                   <tableParts count="1"><tablePart r:id="rId1"/></tableParts>
