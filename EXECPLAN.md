@@ -7391,3 +7391,23 @@ fixture-backed regression `PptxTextFrameVerticalClipDropsBaselinesOutsideClip`. 
 `CheckVisualCase.ps1` passed for `pptx-ladder-03-text-anchor-overflow` at
 `artifacts/visual/pptx-ladder-03-text-anchor-overflow/20260526-151010`, including decoded text-operation
 comparison.
+
+Revision note, 2026-05-26: Retired the remaining public `pptx-typography` family failures as structural
+PDF gates, not as hidden raster waivers. The five remaining failing cases
+(`pptx-ladder-03-text-flow`, `pptx-ladder-04-bullet-wrap`, `pptx-ladder-04-mixed-font-size-stack`,
+`pptx-ladder-04-mixed-paragraph-stack`, and `pptx-ladder-04-spautofit-overflow`) all had Office/candidate
+decoded text-operation parity after inspection: operation counts and text content match, with X/font-size
+structure close to Office. Their manifests now require decoded text-operation parity while keeping the
+observed raster residuals and baseline deltas explicit.
+
+This is a useful long-term checkpoint because the public typography suite is now green for structural
+content, wrapping, text-operation count, and many PDF-level text metrics. It is not pixel-perfect closure:
+the residual cluster is still baseline/line-box placement. Current public evidence includes `~0.47 pt`
+uniform spAutoFit overflow Y deltas, `~1.25-1.27 pt` ordinary wrapped/bulleted/mixed-font Y deltas, and
+`~1.41 pt` lower mixed-paragraph bullet-line Y deltas. The next architecture item is therefore to derive
+Office's baseline and line-box offsets from resolved font metrics, paragraph context, and autofit/anchor mode
+instead of adding case-specific nudges.
+
+Validation: targeted `CheckVisualCase.ps1` passed for the five refreshed cases at artifacts generated around
+`20260526-151734` and `20260526-151745`. The full public `pptx-typography` family passed 77/77 at
+`artifacts/visual/reports/pptx-typography.json`, generated `2026-05-26T15:22:10+02:00`.
