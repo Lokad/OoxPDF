@@ -1185,12 +1185,14 @@ High-priority actions:
   rotation, full non-default tick-label offset ladders, multi-level category labels, and
   chart-style inherited text defaults still need structural modeling before axis and data-label text can
   match Office without renderer heuristics.
-  - [ ] Render scene-owned axis titles instead of only preserving them:
+  - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
-    style. Supported native chart rendering now consumes explicit manual-layout axis-title boxes, including
-    their text, rich-text runs, `txPr`, fill, and stroke, but default category/value axis-title placement is
-    still open. This is distinct from tick-label styling and should be solved with Office-PDF-backed placement
-    evidence for horizontal and rotated axis-title boxes, not with frame-relative text nudges.
+    style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
+    their text, rich-text runs, `txPr`, fill, and stroke.
+  - [ ] Derive and render default-placement axis titles:
+    default category/value axis-title placement is still open. This is distinct from tick-label styling and
+    should be solved with Office-PDF-backed placement evidence for horizontal and rotated axis-title boxes,
+    overlay/reserve interaction, and chart-style inherited defaults, not with frame-relative text nudges.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.
