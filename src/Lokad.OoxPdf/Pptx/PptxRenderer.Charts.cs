@@ -1922,6 +1922,8 @@ internal sealed partial class PptxRenderer
         string ResolvedFormula,
         ChartWorkbookRangeSourceKind SourceKind,
         string DefinedName,
+        string DefinedNameSheetName,
+        int? DefinedNameLocalSheetId,
         string TableName,
         string TableColumnName,
         int? TableColumnId,
@@ -1961,6 +1963,8 @@ internal sealed partial class PptxRenderer
         string ResolvedFormula,
         ChartWorkbookRangeSourceKind SourceKind,
         string DefinedName,
+        string DefinedNameSheetName,
+        int? DefinedNameLocalSheetId,
         string TableName,
         string TableColumnName,
         int? TableColumnId);
@@ -2142,6 +2146,8 @@ internal sealed partial class PptxRenderer
                         resolution.ResolvedFormula,
                         resolution.SourceKind,
                         resolution.DefinedName,
+                        resolution.DefinedNameSheetName,
+                        resolution.DefinedNameLocalSheetId,
                         resolution.TableName,
                         resolution.TableColumnName,
                         resolution.TableColumnId,
@@ -2178,17 +2184,27 @@ internal sealed partial class PptxRenderer
             string sourceFormula = formula?.Trim() ?? string.Empty;
             if (sourceFormula.Length == 0)
             {
-                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, string.Empty, null);
+                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, null, string.Empty, string.Empty, null);
             }
 
             string resolvedFormula = sourceFormula;
             string definedNameName = string.Empty;
+            string definedNameSheetName = string.Empty;
+            int? definedNameLocalSheetId = null;
             bool fromDefinedName = false;
             if (!sourceFormula.Contains('!', StringComparison.Ordinal) &&
                 definedNames.TryGetValue(sourceFormula, out string? definedFormula))
             {
                 resolvedFormula = definedFormula;
                 definedNameName = sourceFormula;
+                fromDefinedName = true;
+            }
+            else if (TryResolveQualifiedLocalDefinedName(sourceFormula, out ChartWorkbookDefinedName localDefinedName))
+            {
+                resolvedFormula = localDefinedName.Formula;
+                definedNameName = localDefinedName.Name;
+                definedNameSheetName = localDefinedName.SheetName;
+                definedNameLocalSheetId = localDefinedName.LocalSheetId;
                 fromDefinedName = true;
             }
 
@@ -2207,7 +2223,49 @@ internal sealed partial class PptxRenderer
                 (false, true) => ChartWorkbookRangeSourceKind.StructuredReference,
                 _ => ChartWorkbookRangeSourceKind.DirectRange
             };
-            return new ChartWorkbookRangeResolution(sourceFormula, resolvedFormula, sourceKind, definedNameName, tableName, tableColumnName, tableColumnId);
+            return new ChartWorkbookRangeResolution(
+                sourceFormula,
+                resolvedFormula,
+                sourceKind,
+                definedNameName,
+                definedNameSheetName,
+                definedNameLocalSheetId,
+                tableName,
+                tableColumnName,
+                tableColumnId);
+        }
+
+        private bool TryResolveQualifiedLocalDefinedName(string sourceFormula, out ChartWorkbookDefinedName definedName)
+        {
+            definedName = default;
+            int separator = sourceFormula.LastIndexOf('!');
+            if (separator <= 0 || separator == sourceFormula.Length - 1)
+            {
+                return false;
+            }
+
+            string sheetName = NormalizeSheetName(sourceFormula[..separator]);
+            string name = sourceFormula[(separator + 1)..].Trim();
+            if (sheetName.Length == 0 ||
+                name.Length == 0 ||
+                name.Contains('$', StringComparison.Ordinal) ||
+                name.Contains(':', StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            foreach (ChartWorkbookDefinedName candidate in definedNameRecords)
+            {
+                if (candidate.LocalSheetId is not null &&
+                    string.Equals(candidate.SheetName, sheetName, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    definedName = candidate;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private string? ResolveStructuredReferenceFormula(string? formula, out string tableName, out string tableColumnName, out int? tableColumnId)

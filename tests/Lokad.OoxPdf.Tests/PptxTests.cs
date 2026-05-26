@@ -10376,6 +10376,16 @@ internal static class PptxTests
         object localDefinedName = definedNameRecords.Single(record => (string?)record.GetType().GetProperty("Name")?.GetValue(record) == "SheetLocalValues");
         TestAssert.True((int?)localDefinedName.GetType().GetProperty("LocalSheetId")?.GetValue(localDefinedName) == 0, "Expected sheet-local defined-name scope to survive workbook parsing.");
         TestAssert.Equal("Sheet1", (string?)localDefinedName.GetType().GetProperty("SheetName")?.GetValue(localDefinedName) ?? string.Empty);
+        Array parsedLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!SheetLocalValues"]) ?? throw new InvalidOperationException("Expected parsed sheet-local defined-name range cells."));
+        object firstParsedLocalDefinedNameCell = parsedLocalDefinedNameCells.GetValue(0) ?? throw new InvalidOperationException("Expected first sheet-local defined-name range cell.");
+        TestAssert.Equal("Sheet1!SheetLocalValues", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
+        TestAssert.Equal("DefinedName", firstParsedLocalDefinedNameCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedLocalDefinedNameCell)?.ToString() ?? string.Empty);
+        TestAssert.Equal("SheetLocalValues", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1", (string?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameSheetName")?.GetValue(firstParsedLocalDefinedNameCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameLocalSheetId")?.GetValue(firstParsedLocalDefinedNameCell) == 0, "Expected sheet-local defined-name source scope to survive range resolution.");
+        Array parsedBareLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SheetLocalValues"]) ?? throw new InvalidOperationException("Expected bare sheet-local defined-name lookup to return an empty range."));
+        TestAssert.True(parsedBareLocalDefinedNameCells.Length == 0, "Expected bare sheet-local names to remain unresolved without an explicit sheet scope.");
         System.Reflection.PropertyInfo calculationProperty = workbookType.GetProperty("Calculation") ?? throw new InvalidOperationException("Expected workbook calculation metadata.");
         object calculation = calculationProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook calculation metadata.");
         System.Reflection.PropertyInfo calculationModeProperty = calculation.GetType().GetProperty("CalculationMode") ?? throw new InvalidOperationException("Expected workbook calculation mode.");

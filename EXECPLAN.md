@@ -7867,6 +7867,19 @@ formatting decisions anchored in workbook-owned cell metadata.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Resolved explicitly qualified sheet-local chart workbook defined names.
+`ReadRangeCells` now resolves formulas such as `Sheet1!SheetLocalValues` by matching the preserved
+`DefinedNameRecords` scope (`localSheetId` plus sheet name), and range cells carry `DefinedNameSheetName` and
+`DefinedNameLocalSheetId` alongside the existing defined-name provenance. Bare `SheetLocalValues` remains
+unresolved because embedded chart formulas do not provide an active worksheet context in this layer.
+
+This closes only the unambiguous sheet-qualified name path. Full Excel name grammar, quoted/external workbook
+scope edge cases, multi-area defined-name formulas, sheet-local structured references, and Office's
+source/cache freshness policy remain open. The structural gain is that chart source hydration no longer loses
+local-name ownership once the formula itself supplies the sheet scope.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Carried defined-name and table-column identity through chart workbook range
 resolution. `ChartWorkbookRangeCell` now records the resolved workbook-level defined name when applicable and
 the source table name, table column name, and table column id for structured references. Structured-reference
