@@ -4288,6 +4288,15 @@ internal static class PptxTests
         TestAssert.Equal(4, lines.Length);
         TestAssert.True(lines.All(line => Math.Abs(line.MaxFontSize - 18d) < 0.01d), "Horizontal spAutoFit should preserve Office's run font size when only vertical text height overflows.");
         TestAssert.True(lines.All(line => Math.Abs(line.Advance - 21.6d) < 0.01d), "Horizontal spAutoFit should keep the normal 1.2 line advance instead of shrinking text.");
+
+        string[] renderedLines = lines
+            .Select(line => string.Concat(line.Spans.Select(span => span.Text)))
+            .ToArray();
+
+        TestAssert.Equal("Operational planning is decisions and execution. ", renderedLines[0]);
+        TestAssert.Equal("Execute better, and you have a better operating ", renderedLines[1]);
+        TestAssert.Equal("model. Make decisions better and you have a ", renderedLines[2]);
+        TestAssert.Equal("better company.", renderedLines[3]);
     }
 
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()

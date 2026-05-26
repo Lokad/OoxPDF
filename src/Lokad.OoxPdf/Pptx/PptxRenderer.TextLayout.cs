@@ -326,7 +326,7 @@ internal sealed partial class PptxRenderer
             }
             else if (HasShapeAutoFit(frameModel.TextBody) &&
                 frameModel.Orientation == PptxTextOrientation.Horizontal &&
-                TextLayoutOverflowsHorizontally(layout, flowFrame.Box))
+                TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
             {
                 PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
                 layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
@@ -446,10 +446,25 @@ internal sealed partial class PptxRenderer
 
     private static bool TextLayoutOverflowsHorizontally(PptxTextFrameLayout layout, PptxTextFlowBox box)
     {
+        return TextLayoutOverflowsHorizontally(layout, box, PptxTextMetricRules.TextStateTolerance);
+    }
+
+    private static bool TextLayoutOverflowsHorizontally(PptxTextFrameLayout layout, PptxTextFlowBox box, double tolerance)
+    {
         double right = box.TextX + box.TextWidth;
         return layout.Paragraphs
             .SelectMany(paragraph => paragraph.Lines)
-            .Any(line => line.EndX > right + PptxTextMetricRules.TextStateTolerance);
+            .Any(line => line.EndX > right + Math.Max(PptxTextMetricRules.TextStateTolerance, tolerance));
+    }
+
+    private static double ResolveLayoutMaxFontSize(PptxTextFrameLayout layout)
+    {
+        return layout.Paragraphs
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .Select(span => span.Run.FontSize)
+            .DefaultIfEmpty(18d)
+            .Max();
     }
 
     private static PptxTextFrameModel ScaleTextFrameModel(PptxTextFrameModel frame, double fontScale)
@@ -797,7 +812,9 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    double wrapTolerance = !HasNoAutoFit(frame.TextBody) ||
+                    double wrapTolerance = HasShapeAutoFit(frame.TextBody)
+                        ? PptxTextMetricRules.ShapeAutoFitWrapTolerance(fragmentFontSize, effectiveTextWidth)
+                        : !HasNoAutoFit(frame.TextBody) ||
                         IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
                         paragraphStyle.Alignment == TextAlignment.Distributed
                         ? PptxTextMetricRules.CoordinateTolerance

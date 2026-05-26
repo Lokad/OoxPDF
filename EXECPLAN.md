@@ -7209,3 +7209,25 @@ Validation: targeted `CheckVisualCase.ps1` passed for
 generated `2026-05-26T13:23:14.1357509+02:00`. `pwsh tools\SummarizeChartStructureDeltas.ps1
 -UngatedOnly -ShowBounds` now returns no public chart cases, so every public `pptx-charts` case has at
 least one chart graphics or chart text structural gate.
+
+Revision note, 2026-05-26: Closed the public `spAutoFit` headline wrap split without pretending the
+broader baseline problem is solved. The public
+`pptx-ladder-04-typography-spautofit-headline-wrap-probe` showed that Office keeps the declared `18 pt`
+font and four normal `1.2x` lines, but allows the first line to carry a small frame-relative wrap slack before
+wrapping. `PptxTextMetricRules.ShapeAutoFitWrapTolerance` now gives shape auto-fit wrapping that structural
+slack, and the horizontal shrink decision uses the same tolerance so the renderer does not incorrectly shrink
+the run to fit a tolerated line end. The synthetic text-layout test now asserts the exact public Office line
+contents, not just the line count and font size, and the visual manifest now gates decoded PDF text content.
+
+This remains a typography-model item rather than a fixture-specific exception: the rule is scoped to
+`spAutoFit` horizontal text frames and is expressed as a metric rule at the text-layout boundary. The probe
+still preserves the observed uniform baseline residual (`~0.44 pt`) with an explicit text-operation position
+tolerance, because the same family shows a smaller generic baseline residual in the bold-wrap probe. The
+long-term work is still to derive baseline/line-box offsets from Office PDF evidence and resolved font
+metrics, then tighten these gates structurally instead of burying the residual in wrapping logic.
+
+Validation: focused non-slow `pptx-typography` tests passed (`72 passed, 0 failed, 2 skipped`). Targeted
+`CheckVisualCase.ps1` passed for `pptx-ladder-04-typography-spautofit-headline-wrap-probe` at
+`artifacts/visual/pptx-ladder-04-typography-spautofit-headline-wrap-probe/20260526-134139`, with four
+matching decoded text operations, exact X/font-size/tracking parity, and the remaining `0.44 pt` Y delta
+bounded explicitly.
