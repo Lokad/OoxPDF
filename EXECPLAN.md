@@ -1161,6 +1161,11 @@ High-priority actions:
   rotation, full non-default tick-label offset ladders, multi-level category labels, and
   chart-style inherited text defaults still need structural modeling before axis and data-label text can
   match Office without renderer heuristics.
+  - [ ] Render scene-owned axis titles instead of only preserving them:
+    `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
+    style, but supported native chart rendering still omits category/value axis titles. This is distinct from
+    tick-label styling and should be solved with Office-PDF-backed placement evidence for horizontal and
+    rotated axis-title boxes, not with frame-relative text nudges.
   - [x] Preserve chart and axis title rich-text run boundaries in the scene model:
     `PptxSceneChartTitle` now carries `TextRuns` with per-run text and chart text-style overrides while
     retaining the flattened `Text` value for existing rendering. Explicit titles read runs from `c:tx`, and
@@ -1592,8 +1597,8 @@ High-priority actions:
   pages, zero dimension mismatches, deck MAE `9.043246`, changed16 `0.116409`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Continue data-label rendering alignment with Office: leader-line geometry, rich text runs inside labels,
-  label layout/auto-fit, and exact Office label-box geometry remain approximate.
+- [ ] Continue data-label rendering alignment with Office: leader-line geometry, label layout/auto-fit, and
+  exact Office label-box geometry remain approximate.
 - [x] 2026-05-24: Preserve plot-area manual-layout target and mode fields in the scene model. `PptxSceneChart`
   now carries `layoutTarget`, `xMode`, `yMode`, `wMode`, and `hMode` alongside the existing manual
   `x/y/w/h` factors, so later plot-box work can distinguish Office's inner/outer target and factor/edge
