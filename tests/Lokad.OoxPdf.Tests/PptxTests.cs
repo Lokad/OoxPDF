@@ -9795,7 +9795,7 @@ internal static class PptxTests
                       <c:pt idx="1"><c:v>2</c:v></c:pt>
                       <c:pt idx="2"><c:v>1</c:v></c:pt>
                     </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:showSerName val="0"/><c:dLblPos val="t"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="800" b="1" i="1"><a:solidFill><a:srgbClr val="0066AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbls><c:marker><c:symbol val="star"/><c:size val="9"/></c:marker></c:ser>
-                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>ZXQ</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="6600CC"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
+                    <c:dLbls><c:showVal val="1"/><c:showCatName val="1"/><c:showSerName val="1"/><c:dLblPos val="b"/><c:separator> | </c:separator><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="850" b="1"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>ZX</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>Q</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val="ctr"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="6600CC"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                   </c:lineChart></c:plotArea><c:legend><c:legendPos val="b"/><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="700" b="0" i="1"><a:solidFill><a:srgbClr val="654321"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:legend></c:chart>
                 </c:chartSpace>
                 """),
@@ -9852,12 +9852,14 @@ internal static class PptxTests
         TestAssert.Contains("0.8 0.933 1 rg", pdf);
         TestAssert.Contains("151.2 400.725 28.8 12.15 re f", pdf);
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
-        TestAssert.Contains("/CLD1 9 Tf", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 9 Tf"), "Expected per-label custom data label text style to drive font size.");
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 12\.96 Tf"), "Expected chart title txPr font size to drive title rendering.");
         TestAssert.Contains("0.396 0.263 0.129 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 6\.96 Tf"), "Expected chart legend txPr font size to drive legend rendering.");
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 400\.725 Tm"), "Expected the centered custom data label to keep the Office-derived label-box baseline.");
+        TestAssert.Contains("0.671 0.804 0.937 rg", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8\.52 Tf"), "Expected first custom rich-text data-label run to use its run font size.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <005A>") &&
             Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0058>") &&
             Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0051>"),

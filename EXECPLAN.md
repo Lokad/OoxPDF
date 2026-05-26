@@ -1053,6 +1053,12 @@ High-priority actions:
     overrides while retaining the flattened `CustomText` rendering path. This keeps the future rich label
     renderer from having to re-read `c:dLbl/c:tx` at the draw site. Validation: focused `pptx-charts` tests
     passed `40/40`; the full console runner passed `251/251`.
+  - [x] Consume custom data-label rich-text runs in supported chart label rendering:
+    bar, line, pie, and doughnut data-label emission now splits preserved custom rich-text labels into
+    styled `TextRun`s with run-level font size, color, bold, italic, and typeface merged over the resolved
+    label style. Generated value/category/series labels stay on the existing single-run path, while custom
+    label rendering no longer discards scene-owned run styling after parsing. Validation: focused
+    `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
@@ -1146,7 +1152,7 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
 - [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size and default-run bold/italic:
-  rich text runs, rotation, full non-default tick-label offset ladders, multi-level category labels, and
+  rotation, full non-default tick-label offset ladders, multi-level category labels, and
   chart-style inherited text defaults still need structural modeling before axis and data-label text can
   match Office without renderer heuristics.
   - [x] Preserve chart and axis title rich-text run boundaries in the scene model:
@@ -1189,9 +1195,8 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader-line geometry, rich text
-  runs inside custom labels, exact label-box geometry/auto-fit, and richer position semantics still need
-  renderer support and visual cases.
+- [ ] Extend data-label rendering to consume the remaining richer scene metadata: leader-line geometry, exact
+  label-box geometry/auto-fit, and richer position semantics still need renderer support and visual cases.
 - [x] 2026-05-24: Make secondary value-axis label rendering consume scene-owned axis metadata when available.
   Combo and secondary-axis fallback paths now carry the matching right-side `PptxSceneChartAxis` into
   visibility, scaling, unit, number-format, and text-style decisions instead of dropping back to raw axis XML
@@ -1733,9 +1738,9 @@ High-priority actions:
   - [x] Consume scene/XML data-label separator and number-format metadata for supported value-label text.
   - [x] Consume scene/XML data-label category-name and series-name flags in supported bar/line rendering.
   - [x] Consume scene/XML data-label position metadata in supported bar/line rendering.
-  - [ ] Extend chart data-label rendering to cover leader-line geometry, rich text runs inside custom labels,
-    Office label-box geometry/auto-fit, and richer position semantics before attempting finer
-    Office-aligned data-label layout.
+  - [x] Consume custom data-label rich-text runs for supported bar, line, pie, and doughnut label text.
+  - [ ] Extend chart data-label rendering to cover leader-line geometry, Office label-box geometry/auto-fit,
+    and richer position semantics before attempting finer Office-aligned data-label layout.
   - [x] Make legend-entry names scene-first for supported bar/combo and line chart paths: legend builders
     now consume scene series names and reserve raw `c:ser` name scans for fallback paths.
   - [x] Add and consume scene-owned chart area and plot area solid fill/line styles, so supported chart

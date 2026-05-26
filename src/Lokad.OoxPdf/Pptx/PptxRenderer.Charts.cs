@@ -2684,35 +2684,11 @@ internal sealed partial class PptxRenderer
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
             string label = FormatPieDataLabel(values[i], total, effectiveOptions);
-            runs.Add(new TextRun(
-                label,
-                labelX,
-                labelY,
-                labelWidth,
-                labelHeight,
-                plotBox.X,
-                plotBox.Y,
-                plotBox.Width,
-                plotBox.Height,
-                fontSize,
-                0d,
-                0d,
-                style.Color,
-                1d,
-                null,
-                Bold: style.Bold,
-                Italic: style.Italic,
-                Underline: false,
-                Strike: false,
-                KerningEnabled: true,
-                TextAlignment.Center,
-                FontFamily: style.FontFamily,
-                RotationDegrees: 0d,
-                RotationCenterX: 0d,
-                RotationCenterY: 0d,
-                FlipHorizontal: false,
-                FlipVertical: false));
-            RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
+            if (!string.IsNullOrEmpty(label))
+            {
+                RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
+                AddChartLabelRuns(runs, label, effectiveOptions, labelX, labelY, labelWidth, labelHeight, plotBox, style, TextAlignment.Center);
+            }
             angle += sweep;
         }
 
@@ -2770,7 +2746,7 @@ internal sealed partial class PptxRenderer
                     if (!string.IsNullOrEmpty(label))
                     {
                         RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Left));
+                        AddChartLabelRuns(runs, label, effectiveOptions, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Left);
                     }
                 }
             }
@@ -2804,7 +2780,7 @@ internal sealed partial class PptxRenderer
                     {
                         double labelWidth = Math.Max(1d, barSlot * PptxChartMetricRules.VerticalBarDataLabelWidthRatio);
                         RenderChartShapeStyle(graphics, x, y, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                        runs.Add(CreateChartLabelRun(label, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Center));
+                        AddChartLabelRuns(runs, label, effectiveOptions, x, y, labelWidth, labelHeight, plotBox, style, TextAlignment.Center);
                     }
                 }
             }
@@ -2856,15 +2832,17 @@ internal sealed partial class PptxRenderer
                         labelWidth,
                         labelHeight);
                     RenderChartShapeStyle(graphics, labelX, labelY, labelWidth, labelHeight, effectiveOptions.ShapeStyle);
-                    runs.Add(CreateChartLabelRun(
+                    AddChartLabelRuns(
+                        runs,
                         label,
+                        effectiveOptions,
                         labelX,
                         labelY,
                         labelWidth,
                         labelHeight,
                         plotBox,
                         style,
-                        alignment));
+                        alignment);
                 }
             }
         }
@@ -2988,6 +2966,45 @@ internal sealed partial class PptxRenderer
             RotationCenterY: 0d,
             FlipHorizontal: false,
             FlipVertical: false);
+    }
+
+    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
+    {
+        if (options.CustomTextRuns.Count == 0)
+        {
+            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
+            return;
+        }
+
+        ChartTextRunLayout[] richRuns = options.CustomTextRuns
+            .Where(run => !string.IsNullOrEmpty(run.Text))
+            .Select(run =>
+            {
+                ChartTextStyle runStyle = MergeChartTextStyle(style, run.TextStyle);
+                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, EstimateChartTextWidth(run.Text, runStyle.FontSize)));
+            })
+            .Where(run => run.Width > 0d)
+            .ToArray();
+        if (richRuns.Length == 0)
+        {
+            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
+            return;
+        }
+
+        double totalWidth = richRuns.Sum(run => run.Width);
+        double cursor = alignment switch
+        {
+            TextAlignment.Right => x + Math.Max(1d, width) - totalWidth,
+            TextAlignment.Center => x + (Math.Max(1d, width) - totalWidth) / 2d,
+            _ => x
+        };
+
+        foreach (ChartTextRunLayout run in richRuns)
+        {
+            double runWidth = Math.Max(0.1d, run.Width);
+            runs.Add(CreateChartLabelRun(run.Text, cursor, y, runWidth, height, plotBox, run.Style, TextAlignment.Left) with { PreventCoalesce = true });
+            cursor += runWidth;
+        }
     }
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
@@ -6763,6 +6780,8 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct ChartTextRunOverride(string Text, ChartTextStyleOverride TextStyle);
+
+    private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width);
 
     private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
 
