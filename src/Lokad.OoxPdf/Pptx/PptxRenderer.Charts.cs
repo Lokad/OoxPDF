@@ -236,48 +236,60 @@ internal sealed partial class PptxRenderer
 
     private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
     {
-        return !string.IsNullOrEmpty(scenePlot?.Grouping)
-            ? scenePlot.GroupingKind
-            : PptxSceneBuilder.ParseChartGrouping((string?)plotElement.Element(ChartNamespace + "grouping")?.Attribute("val")) switch
-            {
-                PptxSceneChartGrouping.Unknown => defaultGrouping,
-                PptxSceneChartGrouping parsed => parsed
-            };
+        if (scenePlot is not null)
+        {
+            return string.IsNullOrEmpty(scenePlot.Grouping)
+                ? defaultGrouping
+                : scenePlot.GroupingKind;
+        }
+
+        return PptxSceneBuilder.ParseChartGrouping((string?)plotElement.Element(ChartNamespace + "grouping")?.Attribute("val")) switch
+        {
+            PptxSceneChartGrouping.Unknown => defaultGrouping,
+            PptxSceneChartGrouping parsed => parsed
+        };
     }
 
     private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
-        return !string.IsNullOrEmpty(scenePlot?.BarDirection)
+        return scenePlot is not null
             ? scenePlot.BarDirectionKind
             : PptxSceneBuilder.ParseChartBarDirection((string?)plotElement.Element(ChartNamespace + "barDir")?.Attribute("val"));
     }
 
     private static PptxSceneChartScatterStyle ReadSceneOrXmlChartScatterStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
-        return !string.IsNullOrEmpty(scenePlot?.ScatterStyle)
+        return scenePlot is not null
             ? scenePlot.ScatterStyleKind
             : PptxSceneBuilder.ParseChartScatterStyle((string?)plotElement.Element(ChartNamespace + "scatterStyle")?.Attribute("val"));
     }
 
     private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
-        return !string.IsNullOrEmpty(scenePlot?.RadarStyle)
+        return scenePlot is not null
             ? scenePlot.RadarStyleKind
             : PptxSceneBuilder.ParseChartRadarStyle((string?)plotElement.Element(ChartNamespace + "radarStyle")?.Attribute("val"));
     }
 
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
-        return plot?.HoleSize is { } rawHoleSize
-            ? Math.Clamp(rawHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
-            : ReadDoughnutHoleSize(doughnutChart);
+        if (plot is not null)
+        {
+            return plot.HoleSize is { } rawHoleSize
+                ? Math.Clamp(rawHoleSize / 100d, PptxChartMetricRules.DoughnutHoleMinimumRatio, PptxChartMetricRules.DoughnutHoleMaximumRatio)
+                : PptxChartMetricRules.DoughnutHoleFallbackRatio;
+        }
+
+        return ReadDoughnutHoleSize(doughnutChart);
     }
 
     private static double ReadSceneOrXmlFirstSliceAngle(PptxSceneChartPlot? plot, XElement chartElement)
     {
-        if (plot?.FirstSliceAngle is { } sceneAngle)
+        if (plot is not null)
         {
-            return NormalizeAngleDegrees(sceneAngle);
+            return plot.FirstSliceAngle is { } sceneAngle
+                ? NormalizeAngleDegrees(sceneAngle)
+                : 0d;
         }
 
         string? value = (string?)chartElement.Element(ChartNamespace + "firstSliceAng")?.Attribute("val");

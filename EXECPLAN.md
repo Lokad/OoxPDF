@@ -308,6 +308,17 @@ High-priority actions:
   passed (`259 passed, 0 failed, 7 skipped`); private run `20260527-014324` remained behavior-neutral with
   84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Retire renderer-local XML fallback for scene-owned chart plot scalars:
+  `PptxRenderer.Charts` now treats a present `PptxSceneChartPlot` as authoritative for grouping,
+  bar direction, scatter style, radar style, doughnut hole size, and first-slice angle. XML fallback remains
+  only for non-scene chart paths, while scene-backed paths consume the typed/raw plot tokens already preserved
+  by `PptxSceneBuilder`. This is deliberately narrow: series data, per-point styling, labels, axes, legends,
+  layout, and workbook cache hydration still have separate `ReadSceneOrXml*` bridges that need their own
+  evidence and tests before removal. Validation: focused non-slow `pptx-charts` passed
+  (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`259 passed, 0 failed, 7 skipped`); private run `20260527-015318` remained behavior-neutral with 84/84
+  compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains
@@ -339,11 +350,12 @@ High-priority actions:
   resources; text bodies
   carry typed body, paragraph, and run snapshots but still keep source XML for unported cascade details.
   Remaining renderer-local XML/package work is now explicit debt: `PptxRenderer.Charts` still has
-  `ReadSceneOrXml*` helpers and workbook semantic hydration in the renderer; `PptxRenderer.TextModel` and
+  `ReadSceneOrXml*` helpers for series data, point/series styling, labels, axes, legends, layout, and workbook
+  semantic hydration in the renderer; `PptxRenderer.TextModel` and
   `PptxRenderer.TextLayout` still build much of the cascade from raw `XElement` sources; `PptxRenderer.Shapes`
-  still passes source XML and relationship maps for legacy picture-fill/style fallback; `PptxRenderer.Tables`
-  still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image cache keys still live
-  in rendering. Each future slice should move one of those fields into `PptxScene*` records,
+  still passes source XML for legacy geometry/style fallback, but not for picture-fill package resolution;
+  `PptxRenderer.Tables` still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image
+  cache keys still live in rendering. Each future slice should move one of those fields into `PptxScene*` records,
   add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
