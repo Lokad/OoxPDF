@@ -89,7 +89,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(context.Package, sceneChart?.ExternalData ?? default);
+        ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(sceneChart?.ExternalData ?? default);
 
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts))
         {
@@ -1176,23 +1176,15 @@ internal sealed partial class PptxRenderer
             new XElement(ChartNamespace + "v", value));
     }
 
-    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(
-        OoxPackage package,
-        PptxSceneChartExternalData sceneExternalData)
+    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(PptxSceneChartExternalData sceneExternalData)
     {
         if (!sceneExternalData.IsDefined ||
-            string.IsNullOrWhiteSpace(sceneExternalData.TargetPartName))
+            sceneExternalData.Resource is null)
         {
             return null;
         }
 
-        OoxPart? workbookPackagePart = package.GetPart(sceneExternalData.TargetPartName);
-        if (workbookPackagePart is null)
-        {
-            return null;
-        }
-
-        using Stream stream = workbookPackagePart.OpenRead();
+        using var stream = new MemoryStream(sceneExternalData.Resource.Bytes, writable: false);
         OoxPackage workbookPackage = OoxPackage.Open(stream);
         return ReadWorkbookData(workbookPackage);
     }

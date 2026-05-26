@@ -73,6 +73,7 @@ internal static class PptxTests
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                   <Default Extension="xml" ContentType="application/xml"/>
                   <Default Extension="png" ContentType="image/png"/>
+                  <Default Extension="xlsx" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
                   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
@@ -220,6 +221,7 @@ internal static class PptxTests
                   <cs:chartStyle/>
                 </cs:style>
                 """,
+            ["ppt/embeddings/chart-data.xlsx"] = "fake workbook package bytes for scene resource ownership",
             ["ppt/presentation.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -411,6 +413,9 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.IsDefined == true, "Expected chart external-data ownership in the scene model.");
         TestAssert.Equal("rId3", slide.SlideNodes[4].Chart?.ExternalData.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slide.SlideNodes[4].Chart?.ExternalData.TargetPartName ?? string.Empty);
+        TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slide.SlideNodes[4].Chart?.ExternalData.Resource?.ContentType ?? string.Empty);
+        TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalDataResource, "Expected scene inspection to expose embedded workbook resource ownership without package bytes.");
+        TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.RoundedCorners == false, "Expected chart rounded-corners flag ownership in the scene model.");

@@ -51,6 +51,8 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasChart,
     int ChartPlotCount,
     int ChartAxisCount,
+    bool HasChartExternalDataResource,
+    string ChartExternalDataContentType,
     bool HasGroupTransform,
     IReadOnlyList<PptxSceneNodeSnapshot> Children);
 
@@ -426,6 +428,11 @@ internal sealed record PptxSceneImageResource(
     string ContentType,
     byte[] Bytes);
 
+internal sealed record PptxScenePackageResource(
+    string PartName,
+    string ContentType,
+    byte[] Bytes);
+
 internal sealed record PptxSceneChart(
     string? RelationshipId,
     string? TargetPartName,
@@ -449,6 +456,7 @@ internal readonly record struct PptxSceneChartExternalData(
     bool IsDefined,
     string? RelationshipId,
     string? TargetPartName,
+    PptxScenePackageResource? Resource,
     bool? AutoUpdate);
 
 internal readonly record struct PptxSceneChartOptions(
@@ -2818,6 +2826,7 @@ internal sealed class PptxSceneBuilder
             true,
             relationshipId,
             targetPartName,
+            ReadPackageResource(package, targetPartName),
             ReadOptionalOoxmlBooleanElement(externalData, "autoUpdate"));
     }
 
@@ -3446,6 +3455,19 @@ internal sealed class PptxSceneBuilder
         return imagePart is null
             ? null
             : new PptxSceneImageResource(imagePart.Name, imagePart.ContentType, imagePart.Bytes);
+    }
+
+    private static PptxScenePackageResource? ReadPackageResource(OoxPackage package, string? targetPartName)
+    {
+        if (targetPartName is null)
+        {
+            return null;
+        }
+
+        OoxPart? packagePart = package.GetPart(targetPartName);
+        return packagePart is null
+            ? null
+            : new PptxScenePackageResource(packagePart.Name, packagePart.ContentType, packagePart.Bytes);
     }
 
     private static string? ResolveRelationshipTarget(

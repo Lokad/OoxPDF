@@ -63,6 +63,8 @@ internal sealed partial class PptxRenderer
             node.Chart is not null,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
+            node.Chart?.ExternalData.Resource is not null,
+            node.Chart?.ExternalData.Resource?.ContentType ?? string.Empty,
             node.Kind == PptxSceneNodeKind.Group,
             node.Children.Select(ToSnapshot).ToArray());
     }

@@ -247,8 +247,9 @@ High-priority actions:
   relationships to recover chart XML/palettes during rendering. The normal chart render path now consumes the
   scene-owned `PptxSceneChart.ChartXml`, `PaletteColors`, and `ExternalData` records, and a missing chart XML
   is reported as a scene/model gap instead of silently duplicating package traversal in the renderer. The
-  embedded workbook parser still opens the scene-resolved workbook package target; that remaining package
-  access is a workbook-resource ownership item, not chart XML ownership. Validation: focused non-slow
+  embedded workbook package bytes were later moved into `PptxSceneChart.ExternalData.Resource`; remaining
+  workbook debt is now semantic parsing/interpretation inside the embedded workbook package, not presentation
+  package resource ownership. Validation: focused non-slow
   `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`256 passed, 0 failed, 7 skipped`).
 - [x] Move PPTX image target resolution into the scene:
@@ -283,6 +284,19 @@ High-priority actions:
   (`259 passed, 0 failed, 7 skipped`); private run `20260527-013804` remained behavior-neutral with 84/84
   compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Move PPTX chart embedded workbook package resources into the scene:
+  `PptxSceneChartExternalData` now carries an optional scene-owned package resource with part name, content
+  type, and bytes. The native chart renderer consumes those bytes directly when opening the embedded workbook
+  package instead of reopening the workbook package part through the presentation `OoxPackage`. Scene
+  inspection exposes only resource presence and content type, and the public scene fixture now includes an
+  embedded-workbook package part so the ownership boundary is locked without exposing workbook contents. This
+  intentionally does not change workbook semantics: stale-cache policy, `date1904`, table/name references,
+  hidden rows/columns, and blank-cell rendering still need Office-PDF evidence and typed workbook records.
+  Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed (`1 passed, 0 failed, 0 skipped`);
+  focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner
+  passed (`259 passed, 0 failed, 7 skipped`); private run `20260527-014324` remained behavior-neutral with
+  84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains
@@ -309,15 +323,16 @@ High-priority actions:
 
   Current migration boundaries, based on source inspection after the scene ownership slices:
   `PptxSceneSlide` owns master/layout/slide XML, relationship maps, backgrounds, and node order; standalone
-  pictures and shape picture fills carry scene-resolved media targets; charts carry chart XML, palette data,
-  many typed plot/axis/series/legend/title records, and scene-resolved workbook package targets; text bodies
+  pictures and shape picture fills carry scene-resolved media targets and media bytes; charts carry chart XML,
+  palette data, many typed plot/axis/series/legend/title records, and scene-owned embedded workbook package
+  resources; text bodies
   carry typed body, paragraph, and run snapshots but still keep source XML for unported cascade details.
   Remaining renderer-local XML/package work is now explicit debt: `PptxRenderer.Charts` still has
-  `ReadSceneOrXml*` helpers and workbook hydration in the renderer; `PptxRenderer.TextModel` and
+  `ReadSceneOrXml*` helpers and workbook semantic hydration in the renderer; `PptxRenderer.TextModel` and
   `PptxRenderer.TextLayout` still build much of the cascade from raw `XElement` sources; `PptxRenderer.Shapes`
   still passes source XML and relationship maps for legacy picture-fill/style fallback; `PptxRenderer.Tables`
-  still synthesizes shape XML for table-cell text; image decoding/SVG parsing/cache keys still read package
-  parts directly from rendering. Each future slice should move one of those fields into `PptxScene*` records,
+  still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image cache keys still live
+  in rendering. Each future slice should move one of those fields into `PptxScene*` records,
   add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
