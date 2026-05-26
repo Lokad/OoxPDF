@@ -7774,6 +7774,14 @@ Office-authored formulas contain quoted sheet syntax.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Private validation note, 2026-05-26: Re-ran `private-cases/lokad-value-based.json` after the chart
+style/text-alpha structural work. The run `artifacts/private-visual/lokad-value-based/20260526-223657`
+compared 84/84 pages with zero dimension mismatches, deck MAE `7.555419`, mean changed16 `0.101440`, and
+only the existing `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic. Private page 17 remained dimension-matched at
+MAE `2.785167`, changed16 `0.044117`, changed32 `0.034126`, SSIM `0.923374`. This keeps the public-safe
+diagnosis unchanged: the remaining slide-17 work is still generic schema/text/layout/PDF-structure alignment,
+not a regression from chart metadata preservation.
+
 Revision note, 2026-05-26: Extended chart shape-style ownership to effects without changing chart drawing.
 `PptxSceneChartShapeStyle` now carries the same parsed glow and outer-shadow records already used by normal
 PPTX shapes, and the renderer-facing `ChartShapeStyle` bridge preserves those records through scene-backed
