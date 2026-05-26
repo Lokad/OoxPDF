@@ -13,6 +13,9 @@ internal sealed record PptxSceneSlideSnapshot(
     string PartName,
     string? MasterPartName,
     string? LayoutPartName,
+    bool HasMasterXml,
+    bool HasLayoutXml,
+    bool HasSlideXml,
     int MasterRelationshipCount,
     int LayoutRelationshipCount,
     int SlideRelationshipCount,
@@ -221,6 +224,8 @@ internal sealed record PptxSceneSlide(
     string PartName,
     string? MasterPartName,
     string? LayoutPartName,
+    XDocument? MasterXml,
+    XDocument? LayoutXml,
     XDocument SlideXml,
     IReadOnlyDictionary<string, OoxRelationship> MasterRelationships,
     IReadOnlyDictionary<string, OoxRelationship> LayoutRelationships,
@@ -1444,7 +1449,7 @@ internal sealed class PptxSceneBuilder
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
-                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, new XDocument(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), default, default, default, [], [], []));
+                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, null, null, new XDocument(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), default, default, default, [], [], []));
                 continue;
             }
 
@@ -1465,6 +1470,8 @@ internal sealed class PptxSceneBuilder
                 slide.PartName,
                 masterPart?.Name,
                 layoutPart?.Name,
+                masterXml,
+                layoutXml,
                 slideXml,
                 masterRelationships,
                 layoutRelationships,

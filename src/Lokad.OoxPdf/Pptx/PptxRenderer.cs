@@ -36,15 +36,13 @@ internal sealed partial class PptxRenderer
         {
             PptxSlide slide = document.Slides[slideIndex];
             PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
-            OoxPart? slidePart = package.GetPart(slide.PartName);
-            if (slidePart is null)
+            XDocument slideXml = sceneSlide.SlideXml;
+            if (slideXml.Root is null)
             {
                 pages.Add(new PdfPage(document.SlideWidthPoints, document.SlideHeightPoints));
                 continue;
             }
 
-            using Stream stream = slidePart.OpenRead();
-            XDocument slideXml = SafeXml.Load(stream);
             EmitUnsupportedFeatureDiagnostics(slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
             PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
@@ -113,16 +111,14 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        PptxSlideInheritance inheritance = LoadSlideInheritance(package, slide.PartName);
-        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = package.GetRelationships(slide.PartName)
-            .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-            .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        PptxSlideInheritance inheritance = sceneSlide is null
+            ? LoadSlideInheritance(package, slide.PartName)
+            : new PptxSlideInheritance(sceneSlide.MasterXml, sceneSlide.LayoutXml);
+        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = sceneSlide?.SlideRelationships
+            ?? package.GetRelationships(slide.PartName)
+                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
+                .ToDictionary(r => r.Id, StringComparer.Ordinal);
         return new PptxRenderContext(package, document, theme, slide, slideXml, sceneSlide, inheritance, inheritance.Sources, slideRelationships, imageCache, diagnosticSink);
-    }
-
-    private static IReadOnlyList<XDocument> LoadInheritedSlideXml(OoxPackage package, string slidePartName)
-    {
-        return LoadSlideInheritance(package, slidePartName).Sources;
     }
 
     private static PptxSlideInheritance LoadSlideInheritance(OoxPackage package, string slidePartName)

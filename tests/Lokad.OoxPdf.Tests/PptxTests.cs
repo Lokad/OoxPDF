@@ -279,6 +279,12 @@ internal static class PptxTests
         TestAssert.Equal(1, sceneSnapshot.Slides.Count);
         PptxSceneSlide slide = scene.Slides[0];
         PptxSceneSlideSnapshot slideSnapshot = sceneSnapshot.Slides[0];
+        TestAssert.True(slide.MasterXml is not null, "Expected master XML ownership in the scene model.");
+        TestAssert.True(slide.LayoutXml is not null, "Expected layout XML ownership in the scene model.");
+        TestAssert.True(slide.SlideXml.Root is not null, "Expected slide XML ownership in the scene model.");
+        TestAssert.True(slideSnapshot.HasMasterXml, "Expected scene inspection to expose master XML ownership without XML content.");
+        TestAssert.True(slideSnapshot.HasLayoutXml, "Expected scene inspection to expose layout XML ownership without XML content.");
+        TestAssert.True(slideSnapshot.HasSlideXml, "Expected scene inspection to expose slide XML ownership without XML content.");
         TestAssert.Equal(1, slide.MasterRelationships.Count);
         TestAssert.Equal(1, slide.LayoutRelationships.Count);
         TestAssert.Equal(2, slide.SlideRelationships.Count);

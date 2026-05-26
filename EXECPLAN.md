@@ -195,6 +195,16 @@ High-priority actions:
   without leaking package contents. Private validation run `20260527-001237` compared 84/84 pages with zero
   dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Move the first inherited-XML ownership slice into the PPTX scene:
+  `PptxSceneSlide` now owns the loaded master, layout, and slide XML documents that were already required to
+  build the scene, render dispatch uses the scene-owned slide XML instead of reopening the slide part, and
+  `PptxRenderContext` uses scene-owned master/layout XML and slide relationships when a scene slide is
+  available. Scene inspection exposes only XML-presence flags, not XML content, so public tests can verify the
+  ownership boundary. The remaining package-reload path is the inspection/fallback context path that still has
+  no `PptxSceneSlide`; that should be retired after text-model inspection is moved onto scene-owned context.
+  Private validation run `20260527-001755` remained behavior-neutral against the prior relationship-ownership
+  baseline: 84/84 pages compared, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and
+  only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
