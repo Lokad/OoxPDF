@@ -312,6 +312,13 @@ High-priority actions:
   subpath (`move=2,close=2`), instead of the previous single smoothed sampled path. This is still not Office's
   exact connector geometry (`seg=250,line=244,curve=4` in Office versus candidate `seg=244,line=239,curve=3` in
   the public probe), so the remaining work is structural parity rather than a raster emergency.
+- [x] Move arrow-tail curved connector fills closer to Office path structure:
+  the public connector transform probe now has matching curve count for filled arrow-tail connectors after the
+  curved connector body sampling was nudged to Office's denser outline and the arrowhead trailing cubic was split
+  only for curved connector fills. The public probe stays green, and inspected fills moved from candidate
+  `seg=244,line=239,curve=3` to `seg=249,line=243,curve=4` against Office `seg=250,line=244,curve=4`. This is a
+  structural improvement, not full completion: one body line/segment and the exact analytic offset-curve geometry
+  remain open.
 - [x] Make public arrow-tail connector filled outlines curve-bearing without changing triangle-tail behavior:
   the public connector transform probe uses `tailEnd type="arrow"` and Office emits curve-bearing filled regions
   there. Candidate arrow-tail fills now emit smooth cubic PDF segments through the sampled outline, preserving the

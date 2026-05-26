@@ -1110,6 +1110,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.376 0.376 0.376 rg", pdf);
         TestAssert.Contains(" c\r\n", pdf);
+        TestAssert.True(Regex.Matches(pdf, " c\r\n").Count >= 4, "Expected Office-like arrow-tail filled connector paths to retain four cubic segments.");
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain(" c\r\nS", pdf);
     }

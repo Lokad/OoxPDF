@@ -1816,7 +1816,7 @@ internal sealed partial class PptxRenderer
         graphics.FillCurrentPath();
     }
 
-    private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth)
+    private static void AppendOfficeArrowHeadPath(PdfGraphicsBuilder graphics, double tipX, double tipY, double ux, double uy, double nx, double ny, double lineWidth, bool splitTrailingCurve = false)
     {
         tipX -= ux * 0.01d;
         tipY -= uy * 0.01d;
@@ -1851,8 +1851,38 @@ internal sealed partial class PptxRenderer
         c1 = Point(lineWidth * 4.285d, -lineWidth * 2.24d);
         c2 = Point(lineWidth * 3.978333d, -lineWidth * 2.321667d);
         c3 = Point(lineWidth * 3.74d, -lineWidth * 2.181667d);
-        graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
+        if (splitTrailingCurve)
+        {
+            (double X, double Y) start = Point(lineWidth * 4.423333d, -lineWidth * 2.001667d);
+            ((double X, double Y) leftControl1, (double X, double Y) leftControl2, (double X, double Y) mid, (double X, double Y) rightControl1, (double X, double Y) rightControl2) = SplitCubicAtHalf(start, c1, c2, c3);
+            graphics.CurveTo(leftControl1.X, leftControl1.Y, leftControl2.X, leftControl2.Y, mid.X, mid.Y);
+            graphics.CurveTo(rightControl1.X, rightControl1.Y, rightControl2.X, rightControl2.Y, c3.X, c3.Y);
+        }
+        else
+        {
+            graphics.CurveTo(c1.X, c1.Y, c2.X, c2.Y, c3.X, c3.Y);
+        }
         graphics.ClosePath();
+    }
+
+    private static ((double X, double Y) LeftControl1, (double X, double Y) LeftControl2, (double X, double Y) Mid, (double X, double Y) RightControl1, (double X, double Y) RightControl2) SplitCubicAtHalf(
+        (double X, double Y) start,
+        (double X, double Y) control1,
+        (double X, double Y) control2,
+        (double X, double Y) end)
+    {
+        (double X, double Y) p01 = Midpoint(start, control1);
+        (double X, double Y) p12 = Midpoint(control1, control2);
+        (double X, double Y) p23 = Midpoint(control2, end);
+        (double X, double Y) p012 = Midpoint(p01, p12);
+        (double X, double Y) p123 = Midpoint(p12, p23);
+        (double X, double Y) p0123 = Midpoint(p012, p123);
+        return (p01, p012, p0123, p123, p23);
+    }
+
+    private static (double X, double Y) Midpoint((double X, double Y) left, (double X, double Y) right)
+    {
+        return ((left.X + right.X) / 2d, (left.Y + right.Y) / 2d);
     }
 
     private static void DrawCurvedConnectorPreset(
@@ -1939,7 +1969,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        int samplesPerSegment = tailKind == LineEndKind.Arrow ? 60 : 24;
+        int samplesPerSegment = tailKind == LineEndKind.Arrow ? 61 : 24;
         var samples = new List<CurveSample>(segments.Count * samplesPerSegment + 1);
         foreach (BezierSegment segment in segments)
         {
@@ -2014,7 +2044,7 @@ internal sealed partial class PptxRenderer
         if (tailKind == LineEndKind.Arrow)
         {
             AppendClosedLinePath(graphics, points);
-            AppendOfficeArrowHeadPath(graphics, tip.X, tip.Y, -direction.X, -direction.Y, -normal.X, -normal.Y, lineWidth);
+            AppendOfficeArrowHeadPath(graphics, tip.X, tip.Y, -direction.X, -direction.Y, -normal.X, -normal.Y, lineWidth, splitTrailingCurve: true);
             graphics.FillCurrentPath();
         }
         else
