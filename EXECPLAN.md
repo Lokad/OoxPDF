@@ -7759,6 +7759,19 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved worksheet formula attributes in the embedded chart workbook bridge.
+`ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the full local-name/value attribute bag from
+`x:f`, not only the formula text and `t` type. The regression fixture locks shared-formula `si`/`ref` and
+array-formula `ref`/`ca` metadata, including the case where a formula cell has no cached value.
+
+This deliberately does not evaluate Excel formulas or decide cache freshness. It closes a narrower parse-time
+loss: future Office-PDF-backed reconciliation can inspect shared/array formula identity and recalculation
+signals from the same range-cell record that already carries cached value, style, visibility, and source
+provenance, instead of guessing from the rendered cache points.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved physical blank/formula cells in embedded chart workbooks before
 attempting `dispBlanksAs` or stale-cache policy. `ReadWorksheetData` no longer drops a worksheet `<c>` just
 because it lacks a cached `<v>` value when the cell still carries formula, style, or type metadata.

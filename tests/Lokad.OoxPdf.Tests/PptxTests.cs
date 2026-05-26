@@ -10345,11 +10345,19 @@ internal static class PptxTests
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValue")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached value to preserve missing value state.");
         TestAssert.Equal("Blank", parsedBlankCell.GetType().GetProperty("ValueKind")?.GetValue(parsedBlankCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("NA()", (string?)parsedBlankCell.GetType().GetProperty("Formula")?.GetValue(parsedBlankCell) ?? string.Empty);
+        TestAssert.Equal("array", (string?)parsedBlankCell.GetType().GetProperty("FormulaType")?.GetValue(parsedBlankCell) ?? string.Empty);
+        var parsedBlankFormulaAttributes = (IReadOnlyDictionary<string, string>?)parsedBlankCell.GetType().GetProperty("FormulaAttributes")?.GetValue(parsedBlankCell) ?? throw new InvalidOperationException("Expected blank formula attributes.");
+        TestAssert.True(parsedBlankFormulaAttributes.TryGetValue("ref", out string? blankFormulaReference) && blankFormulaReference == "C2:C2", "Expected array formula reference to survive workbook parsing.");
+        TestAssert.True(parsedBlankFormulaAttributes.TryGetValue("ca", out string? blankFormulaCalculateAlways) && blankFormulaCalculateAlways == "1", "Expected formula calculation attribute to survive workbook parsing.");
         object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
         object thirdParsedCell = parsedCells.GetValue(2) ?? throw new InvalidOperationException("Expected third parsed workbook range cell.");
         System.Reflection.PropertyInfo formulaProperty = thirdParsedCell.GetType().GetProperty("Formula") ?? throw new InvalidOperationException("Expected range-cell formula metadata.");
         TestAssert.Equal("B2-B3", (string?)formulaProperty.GetValue(thirdParsedCell) ?? string.Empty);
+        TestAssert.Equal("shared", (string?)thirdParsedCell.GetType().GetProperty("FormulaType")?.GetValue(thirdParsedCell) ?? string.Empty);
+        var thirdFormulaAttributes = (IReadOnlyDictionary<string, string>?)thirdParsedCell.GetType().GetProperty("FormulaAttributes")?.GetValue(thirdParsedCell) ?? throw new InvalidOperationException("Expected cached formula attributes.");
+        TestAssert.True(thirdFormulaAttributes.TryGetValue("si", out string? sharedFormulaIndex) && sharedFormulaIndex == "7", "Expected shared formula index to survive workbook parsing.");
+        TestAssert.True(thirdFormulaAttributes.TryGetValue("ref", out string? sharedFormulaReference) && sharedFormulaReference == "B4:B4", "Expected shared formula reference to survive workbook parsing.");
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
@@ -10749,9 +10757,9 @@ internal static class PptxTests
                   <cols><col min="2" max="2" hidden="1"/></cols>
                   <sheetData>
                     <row r="1"><c r="B1" t="s"><v>3</v></c></row>
-                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c><c r="C2" s="4"><f>NA()</f></c></row>
+                    <row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" s="5"><v>8.2</v></c><c r="C2" s="4"><f t="array" ref="C2:C2" ca="1">NA()</f></c></row>
                     <row r="3" hidden="1"><c r="A3" t="s"><v>1</v></c><c r="B3"><v>3.2</v></c></row>
-                    <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f>B2-B3</f><v>1.4</v></c></row>
+                    <row r="4"><c r="A4" t="inlineStr"><is><t>West</t></is></c><c r="B4"><f t="shared" ref="B4:B4" si="7">B2-B3</f><v>1.4</v></c></row>
                   </sheetData>
                   <tableParts count="2"><tablePart r:id="rId1"/><tablePart r:id="rId2"/></tableParts>
                 </worksheet>

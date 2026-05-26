@@ -1534,10 +1534,18 @@ internal sealed partial class PptxRenderer
                 cellType ?? string.Empty,
                 ReadWorkbookCellValueKind(cellType, value, hasValue),
                 formula?.Value ?? string.Empty,
-                (string?)formula?.Attribute("t") ?? string.Empty);
+                (string?)formula?.Attribute("t") ?? string.Empty,
+                ReadWorkbookFormulaAttributes(formula));
         }
 
         return new ChartWorksheetData(cells, hiddenRows, hiddenColumns);
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadWorkbookFormulaAttributes(XElement? formula)
+    {
+        return formula?.Attributes()
+            .ToDictionary(attribute => attribute.Name.LocalName, attribute => attribute.Value, StringComparer.Ordinal) ??
+            new Dictionary<string, string>();
     }
 
     private static ChartWorkbookCellValueKind ReadWorkbookCellValueKind(string? cellType, string value, bool hasValue)
@@ -1708,7 +1716,8 @@ internal sealed partial class PptxRenderer
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
         string Formula,
-        string FormulaType);
+        string FormulaType,
+        IReadOnlyDictionary<string, string> FormulaAttributes);
 
     private enum ChartWorkbookCellValueKind
     {
@@ -1832,6 +1841,7 @@ internal sealed partial class PptxRenderer
         ChartWorkbookCellValueKind ValueKind,
         string Formula,
         string FormulaType,
+        IReadOnlyDictionary<string, string> FormulaAttributes,
         int? StyleNumberFormatId,
         string StyleNumberFormatCode,
         bool? StyleAppliesNumberFormat,
@@ -2044,6 +2054,7 @@ internal sealed partial class PptxRenderer
                         hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
                         hasCell ? cell.Formula : string.Empty,
                         hasCell ? cell.FormulaType : string.Empty,
+                        hasCell ? cell.FormulaAttributes : new Dictionary<string, string>(),
                         format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,
@@ -2214,7 +2225,7 @@ internal sealed partial class PptxRenderer
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, string> cell in sheet.Value)
                 {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, true, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty);
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, true, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
                 }
 
                 converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());
