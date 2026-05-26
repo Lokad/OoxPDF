@@ -6634,11 +6634,12 @@ guards updated `PptxSyntheticCurvedConnectorRendersCurve`, `PptxSyntheticCurvedC
 `c S` stroke sequence.
 
 Validation: focused `pptx-shapes` tests passed 14/14; the full non-slow test runner passed 234/234 with 7 skipped;
-and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded. The
-private `lokad-value-based` run `artifacts/private-visual/lokad-value-based/20260526-090623` compared 84/84 pages
-with zero dimension mismatches, deck MAE `8.945151`, changed16 `0.115512`, and only
-`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 improved slightly to MAE `2.877938`, changed16 `0.044695`,
-changed32 `0.035255`, SSIM `0.920089`. Page-filtered graphics inspection now shows candidate
-`f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count while remaining one `f*` fill and 24 `W*` clips away
-from Office `f:4,f*:14,S:4,W*:68`. Remaining structural targets are Office-style clip-region emission and the
-derived fractional font-size differences still visible in page-17 text operations.
+`dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded; and the
+full public `pptx-shapes` visual family passed 30/30 at `artifacts/visual/reports/pptx-shapes.json` generated
+`2026-05-26T09:14:22.8723212+02:00`. The private `lokad-value-based` run
+`artifacts/private-visual/lokad-value-based/20260526-090623` compared 84/84 pages with zero dimension mismatches,
+deck MAE `8.945151`, changed16 `0.115512`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 improved
+slightly to MAE `2.877938`, changed16 `0.044695`, changed32 `0.035255`, SSIM `0.920089`. Page-filtered graphics
+inspection now shows candidate `f:4,f*:13,S:4,W*:44`, matching Office's `S:4` stroke count while remaining one `f*`
+fill and 24 `W*` clips away from Office `f:4,f*:14,S:4,W*:68`. Remaining structural targets are Office-style
+clip-region emission and the derived fractional font-size differences still visible in page-17 text operations.
