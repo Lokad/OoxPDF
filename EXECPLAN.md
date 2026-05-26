@@ -8082,6 +8082,20 @@ Validation: focused `PptxImageRecolorPreservesRawOoxmlTokens` passed; focused
 `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed (`16 passed, 0
 failed, 0 skipped`); full non-slow console runner passed (`257 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved PPTX picture crop and stretch-fill rectangle tokens in the scene
+model. `PptxSceneRect`, which is currently scoped to standalone picture and shape picture-fill crop/fill
+rectangles, now carries raw `l/t/r/b` attribute strings next to the normalized clamped percentages used by
+the renderer. The scene-builder fixture locks raw `srcRect` and `stretch/fillRect` values for both a
+standalone picture and a grouped shape picture fill.
+
+This is another model-ownership slice, not a new image placement heuristic. Current rendering still consumes
+the normalized `CropRect`/`FillRect` bridge, while future Office-PDF structural work can inspect whether a
+visual delta comes from source cropping, stretch-fill insets, tile mode, clipping, or image content effects
+without re-reading raw XML. Tile-mode rendering and Office-perfect image fill placement remain open.
+
+Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-images` passed
+(`16 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`257 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Split PPTX text layout bounds from PDF clipping bounds for default text-box
 overflow. Office PDF evidence from public `pptx-ladder-03-text-anchor-overflow` shows default overflowing
 text boxes clipped to the full slide, while `vertOverflow="clip"` text keeps a local frame clip. The text

@@ -995,7 +995,15 @@ internal readonly record struct PptxSceneGroupTransform(
     public static PptxSceneGroupTransform Identity { get; } = new(0, 0, 0, 0, 0, 0, 1d, 1d, 0d, FlipHorizontal: false, FlipVertical: false);
 }
 
-internal readonly record struct PptxSceneRect(double Left, double Top, double Right, double Bottom)
+internal readonly record struct PptxSceneRect(
+    double Left,
+    double Top,
+    double Right,
+    double Bottom,
+    string? LeftValue,
+    string? TopValue,
+    string? RightValue,
+    string? BottomValue)
 {
     public bool IsEmpty => Left == 0d && Top == 0d && Right == 0d && Bottom == 0d;
 }
@@ -3682,11 +3690,7 @@ internal sealed class PptxSceneBuilder
         XElement? sourceRectangle = blipFill?.Element(DrawingNamespace + "srcRect");
         return sourceRectangle is null
             ? default
-            : new PptxSceneRect(
-                ParsePercentage(sourceRectangle, "l"),
-                ParsePercentage(sourceRectangle, "t"),
-                ParsePercentage(sourceRectangle, "r"),
-                ParsePercentage(sourceRectangle, "b"));
+            : ReadPercentageRectangle(sourceRectangle);
     }
 
     internal static PptxSceneRect ReadPictureFill(XElement picture)
@@ -3698,11 +3702,7 @@ internal sealed class PptxSceneBuilder
             ?.Element(DrawingNamespace + "fillRect");
         return fillRectangle is null
             ? default
-            : new PptxSceneRect(
-                ParsePercentage(fillRectangle, "l"),
-                ParsePercentage(fillRectangle, "t"),
-                ParsePercentage(fillRectangle, "r"),
-                ParsePercentage(fillRectangle, "b"));
+            : ReadPercentageRectangle(fillRectangle);
     }
 
     internal static double ReadPictureAlpha(XElement picture)
@@ -3793,10 +3793,27 @@ internal sealed class PptxSceneBuilder
         return TryReadSolidColorWithAlpha(wrapper, theme, out color, out _);
     }
 
-    private static double ParsePercentage(XElement element, string attribute)
+    private static PptxSceneRect ReadPercentageRectangle(XElement element)
     {
-        return element.Attribute(attribute) is { } value
-            ? Math.Clamp(int.Parse(value.Value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
+        string? left = (string?)element.Attribute("l");
+        string? top = (string?)element.Attribute("t");
+        string? right = (string?)element.Attribute("r");
+        string? bottom = (string?)element.Attribute("b");
+        return new PptxSceneRect(
+            ParsePercentage(left),
+            ParsePercentage(top),
+            ParsePercentage(right),
+            ParsePercentage(bottom),
+            left,
+            top,
+            right,
+            bottom);
+    }
+
+    private static double ParsePercentage(string? value)
+    {
+        return value is not null
+            ? Math.Clamp(int.Parse(value, CultureInfo.InvariantCulture) / 100000d, 0d, 0.999d)
             : 0d;
     }
 

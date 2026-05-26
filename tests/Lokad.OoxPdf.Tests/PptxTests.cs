@@ -334,7 +334,11 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[1].Picture?.TargetPartName ?? string.Empty);
         TestAssert.Equal(0.1d, slide.SlideNodes[1].Picture?.Crop.Left ?? 0d);
         TestAssert.Equal(0.4d, slide.SlideNodes[1].Picture?.Crop.Bottom ?? 0d);
+        TestAssert.Equal("10000", slide.SlideNodes[1].Picture?.Crop.LeftValue ?? string.Empty);
+        TestAssert.Equal("40000", slide.SlideNodes[1].Picture?.Crop.BottomValue ?? string.Empty);
         TestAssert.Equal(0.05d, slide.SlideNodes[1].Picture?.Fill.Left ?? 0d);
+        TestAssert.Equal("5000", slide.SlideNodes[1].Picture?.Fill.LeftValue ?? string.Empty);
+        TestAssert.Equal("10000", slide.SlideNodes[1].Picture?.Fill.RightValue ?? string.Empty);
         TestAssert.Equal(0.5d, slide.SlideNodes[1].Picture?.Alpha ?? 0d);
         TestAssert.Equal(PptxSceneImageRecolorKind.Grayscale, slide.SlideNodes[1].Picture?.Recolor.Kind ?? PptxSceneImageRecolorKind.None);
         TestAssert.Equal("grayscl", slide.SlideNodes[1].Picture?.Recolor.KindValue ?? string.Empty);
@@ -716,8 +720,12 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.TargetPartName ?? string.Empty);
         TestAssert.Equal(0.05d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Left ?? 0d);
         TestAssert.Equal(0.2d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Bottom ?? 0d);
+        TestAssert.Equal("5000", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.LeftValue ?? string.Empty);
+        TestAssert.Equal("20000", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.BottomValue ?? string.Empty);
         TestAssert.Equal(0.025d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.Left ?? 0d);
         TestAssert.Equal(0.075d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.Right ?? 0d);
+        TestAssert.Equal("2500", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.LeftValue ?? string.Empty);
+        TestAssert.Equal("7500", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.RightValue ?? string.Empty);
         TestAssert.True(slide.LayoutNodes[0].Shape?.CustomGeometry.HasGeometry == true, "Expected layout custom geometry in the scene model.");
         TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Guides[0].Name ?? string.Empty);
         TestAssert.Equal(PptxSceneCustomCommandKind.LineTo, slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Kind);
