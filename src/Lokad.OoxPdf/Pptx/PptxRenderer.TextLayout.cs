@@ -24,8 +24,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSlideTextSpansForInspection(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
         if (context is null)
         {
             return [];
@@ -39,8 +38,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextLayoutSnapshot InspectTextLayout(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
         if (context is null)
         {
             return new PptxTextLayoutSnapshot([]);
@@ -53,8 +51,7 @@ internal sealed partial class PptxRenderer
 
     internal static PptxTextFlowSnapshot InspectTextFlow(PptxDocument document, OoxPackage package, int slideIndex)
     {
-        PptxTheme theme = PptxTheme.Load(package, document.PresentationPartName);
-        PptxRenderContext? context = TryLoadRenderContext(document, package, theme, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
         if (context is null)
         {
             return new PptxTextFlowSnapshot([]);

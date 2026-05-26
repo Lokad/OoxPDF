@@ -205,6 +205,14 @@ High-priority actions:
   Private validation run `20260527-001755` remained behavior-neutral against the prior relationship-ownership
   baseline: 84/84 pages compared, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and
   only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Move text inspection contexts onto the scene-owned PPTX context path:
+  `InspectTextFrameModels`, `InspectTextRuns`, `InspectTextFlow`, `InspectTextLayout`, and glyph-run
+  inspection now acquire context through a `PptxSceneBuilder` scene, using the scene theme, scene-owned slide
+  XML, and scene-owned inheritance/relationships instead of separately loading theme, slide, layout, and
+  master parts. This keeps the observable text-model, flow, layout, and glyph snapshots on the same ownership
+  boundary as rendering while preserving the existing snapshot shape. Validation: focused non-slow
+  `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed
+  (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit

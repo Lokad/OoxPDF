@@ -77,7 +77,6 @@ internal sealed partial class PptxRenderer
     private static PptxRenderContext? TryLoadRenderContext(
         PptxDocument document,
         OoxPackage package,
-        PptxTheme theme,
         int slideIndex,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
@@ -88,15 +87,15 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSlide slide = document.Slides[slideIndex];
-        OoxPart? slidePart = package.GetPart(slide.PartName);
-        if (slidePart is null)
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[slideIndex];
+        XDocument slideXml = sceneSlide.SlideXml;
+        if (slideXml.Root is null)
         {
             return null;
         }
 
-        using Stream stream = slidePart.OpenRead();
-        XDocument slideXml = SafeXml.Load(stream);
-        return CreateRenderContext(package, document, theme, slide, slideXml, null, imageCache, diagnosticSink);
+        return CreateRenderContext(package, document, scene.Theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
     }
 
     private static IReadOnlyDictionary<string, OoxRelationship> EmptyRelationships { get; } = new Dictionary<string, OoxRelationship>();
