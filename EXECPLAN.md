@@ -2292,9 +2292,16 @@ High-priority actions:
     rather than the data-label oracle. Targeted validation passed at
     `artifacts/visual/pptx-ladder-11-chart-doughnut-exploded-port/20260526-161332`; the full
     `pptx-charts` family passed 37/37 at `artifacts/visual/reports/pptx-charts.json`, generated
-    `2026-05-26T16:16:35.0983270+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 26/37
-    text-gated; the remaining graphics-only cases are doughnut legend-position probes plus the two plot
-    layout-target probes.
+    `2026-05-26T16:16:35.0983270+02:00`.
+  - [x] Add a narrow text gate to the outer plot-layout probe:
+    `pptx-ladder-11-chart-plot-layout-target-outer-probe` now gates `ValueAxisTickLabel` at `3.0 pt`.
+    The same public evidence still leaves category-axis labels and the chart title ungated because those
+    buckets show `~45 pt` and `~92 pt` layout-target drift respectively. Targeted validation passed at
+    `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-outer-probe/20260526-161807`. The full
+    `pptx-charts` family passed 37/37 at `artifacts/visual/reports/pptx-charts.json`, generated
+    `2026-05-26T16:21:10.8638416+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 27/37
+    text-gated; the remaining graphics-only cases are nine doughnut legend-position/no-legend probes plus
+    the inner plot-layout probe, whose value-axis tick labels drift by about `57 pt`.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest
