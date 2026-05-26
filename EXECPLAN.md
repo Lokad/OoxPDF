@@ -7744,6 +7744,21 @@ explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved numeric chart-cache format codes next to the point metadata already
+owned by the scene model. `PptxSceneChartSeries` now carries `c:numLit/c:formatCode` or
+`c:numCache/c:formatCode` for value, x-value, y-value, and bubble-size caches, while leaving category
+caches out of this numeric-format path. Existing flattened numeric arrays, explicit point records, point
+counts, and renderer behavior remain unchanged.
+
+This closes only the parse-time loss of cache-local numeric format metadata. It does not yet decide the
+Office priority between cache `formatCode`, axis/data-label `c:numFmt`, `sourceLinked`, workbook cell
+styles, locale, and workbook date settings such as `date1904`. That priority should be derived from public
+Office-PDF evidence before chart labels or axis tick text are reformatted from this structural metadata.
+
+Validation: focused non-slow `pptx-model` passed (`17 passed, 0 failed, 1 skipped`); focused non-slow
+`pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved chart number-format metadata at the scene boundary instead of leaving
 format ownership as renderer-local string handling. `PptxSceneChartNumberFormat` now captures whether a
 `c:numFmt` element is present, its `formatCode`, and its `sourceLinked` flag for plot data labels,
