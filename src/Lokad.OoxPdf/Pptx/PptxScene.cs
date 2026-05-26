@@ -643,6 +643,8 @@ internal sealed record PptxSceneChartAxis(
     double? CrossesAt,
     PptxSceneChartAxisCrossBetween CrossBetweenKind,
     string CrossBetween,
+    PptxSceneChartAxisOrientation OrientationKind,
+    string Orientation,
     bool IsReversed,
     bool? IsDeleted,
     bool HasScaling,
@@ -690,6 +692,13 @@ internal enum PptxSceneChartAxisCrossBetween
 {
     Between,
     MidpointCategory,
+    Unknown
+}
+
+internal enum PptxSceneChartAxisOrientation
+{
+    MinimumMaximum,
+    MaximumMinimum,
     Unknown
 }
 
@@ -1269,6 +1278,18 @@ internal sealed class PptxSceneBuilder
             _ when crossBetween?.Equals("between", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrossBetween.Between,
             _ when crossBetween?.Equals("midCat", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisCrossBetween.MidpointCategory,
             _ => PptxSceneChartAxisCrossBetween.Unknown
+        };
+    }
+
+    internal static PptxSceneChartAxisOrientation ParseChartAxisOrientation(string? orientation)
+    {
+        return orientation switch
+        {
+            "minMax" => PptxSceneChartAxisOrientation.MinimumMaximum,
+            "maxMin" => PptxSceneChartAxisOrientation.MaximumMinimum,
+            _ when orientation?.Equals("minMax", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisOrientation.MinimumMaximum,
+            _ when orientation?.Equals("maxMin", StringComparison.OrdinalIgnoreCase) == true => PptxSceneChartAxisOrientation.MaximumMinimum,
+            _ => PptxSceneChartAxisOrientation.Unknown
         };
     }
 
@@ -2018,6 +2039,8 @@ internal sealed class PptxSceneBuilder
             string axisPosition = (string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val") ?? string.Empty;
             string crosses = (string?)axis.Element(ChartNamespace + "crosses")?.Attribute("val") ?? string.Empty;
             string crossBetween = (string?)axis.Element(ChartNamespace + "crossBetween")?.Attribute("val") ?? string.Empty;
+            string orientation = (string?)axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val") ?? string.Empty;
+            PptxSceneChartAxisOrientation orientationKind = ParseChartAxisOrientation(orientation);
             string tickLabelPosition = (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty;
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
             string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
@@ -2033,10 +2056,9 @@ internal sealed class PptxSceneBuilder
                 ReadChartElementDouble(axis, "crossesAt"),
                 ParseChartAxisCrossBetween(crossBetween),
                 crossBetween,
-                string.Equals(
-                    (string?)axis.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val"),
-                    "maxMin",
-                    StringComparison.Ordinal),
+                orientationKind,
+                orientation,
+                orientationKind == PptxSceneChartAxisOrientation.MaximumMinimum,
                 ReadOptionalOoxmlBooleanElement(axis, "delete"),
                 axis.Element(ChartNamespace + "scaling") is not null,
                 ReadChartAxisScalingValue(axis, "min"),

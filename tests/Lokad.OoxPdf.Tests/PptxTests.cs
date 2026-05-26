@@ -524,6 +524,9 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsDeleted == false, "Expected chart axis delete flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].NoMultiLevelLabels is null, "Expected missing chart value-axis multi-level-label metadata to remain distinct from an explicit disable.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasScaling == true, "Expected chart axis scaling ownership in the scene model.");
+        TestAssert.Equal("maxMin", slide.SlideNodes[4].Chart?.Axes[1].Orientation ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartAxisOrientation.MaximumMinimum, slide.SlideNodes[4].Chart?.Axes[1].OrientationKind);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].IsReversed == true, "Expected reversed chart axis orientation to remain available to existing scene consumers.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].Minimum ?? -1d);
         TestAssert.Equal(20d, slide.SlideNodes[4].Chart?.Axes[1].Maximum ?? 0d);
         TestAssert.Equal(5d, slide.SlideNodes[4].Chart?.Axes[1].MajorUnit ?? 0d);
