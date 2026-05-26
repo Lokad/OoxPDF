@@ -7759,6 +7759,20 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved shared-string structure for embedded chart workbook text sources.
+`ReadWorkbookSharedStrings` now builds typed shared-string records with resolved text, direct rich-text run
+count, rich-text presence, phonetic-text presence, and `xml:space="preserve"` metadata. Shared-string backed
+range cells carry that metadata next to their resolved text and raw shared-string index, while current chart
+rendering still consumes the same flattened text.
+
+This does not render workbook rich text in chart labels. It removes another parse-time collapse so future
+Office-PDF-backed chart text work can decide whether category/legend/data-label text came from a plain string,
+rich shared string, inline string, or chart cache without re-opening the embedded workbook or guessing from the
+final text alone.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved raw worksheet value identity alongside resolved workbook text.
 `ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the raw `<v>` text, whether a value element was
 present, and the parsed shared-string index. Shared strings still resolve to display text for current rendering,

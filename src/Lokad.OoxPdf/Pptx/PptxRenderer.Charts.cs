@@ -1277,7 +1277,7 @@ internal sealed partial class PptxRenderer
 
         using Stream workbookStream = workbookPart.OpenRead();
         XDocument workbookXml = SafeXml.Load(workbookStream);
-        string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
+        ChartWorkbookSharedString[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
             .GetRelationships(workbookPart.Name)
@@ -1341,7 +1341,7 @@ internal sealed partial class PptxRenderer
                 IsOoxmlTrue((string?)calculation.Attribute("forceFullCalc")));
     }
 
-    private static string[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
+    private static ChartWorkbookSharedString[] ReadWorkbookSharedStrings(OoxPackage workbookPackage, OoxPart workbookPart)
     {
         OoxPart? sharedStringsPart = workbookPackage
             .GetRelationships(workbookPart.Name)
@@ -1358,8 +1358,20 @@ internal sealed partial class PptxRenderer
         XDocument document = SafeXml.Load(stream);
         return document
             .Descendants(SpreadsheetNamespace + "si")
-            .Select(item => string.Concat(item.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value)))
+            .Select(ReadWorkbookSharedString)
             .ToArray();
+    }
+
+    private static ChartWorkbookSharedString ReadWorkbookSharedString(XElement item)
+    {
+        XElement[] textElements = item.Descendants(SpreadsheetNamespace + "t").ToArray();
+        int runCount = item.Elements(SpreadsheetNamespace + "r").Count();
+        return new ChartWorkbookSharedString(
+            string.Concat(textElements.Select(text => text.Value)),
+            runCount,
+            runCount != 0,
+            item.Descendants(SpreadsheetNamespace + "rPh").Any(),
+            textElements.Any(text => string.Equals((string?)text.Attribute(XNamespace.Xml + "space"), "preserve", StringComparison.Ordinal)));
     }
 
     private static ChartWorkbookSheet[] ReadWorkbookSheetRecords(
@@ -1462,7 +1474,7 @@ internal sealed partial class PptxRenderer
         return new ChartWorkbookStyles(customNumberFormats, cellFormats);
     }
 
-    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<string> sharedStrings)
+    private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings)
     {
         using Stream stream = worksheetPart.OpenRead();
         XDocument document = SafeXml.Load(stream);
@@ -1521,13 +1533,22 @@ internal sealed partial class PptxRenderer
 
             value ??= string.Empty;
             int? sharedStringIndexValue = null;
+            int sharedStringRunCount = 0;
+            bool sharedStringHasRichText = false;
+            bool sharedStringHasPhoneticText = false;
+            bool sharedStringPreserveSpace = false;
             if (string.Equals(cellType, "s", StringComparison.Ordinal) &&
                 int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex))
             {
                 sharedStringIndexValue = sharedStringIndex;
                 if (sharedStringIndex >= 0 && sharedStringIndex < sharedStrings.Count)
                 {
-                    value = sharedStrings[sharedStringIndex];
+                    ChartWorkbookSharedString sharedString = sharedStrings[sharedStringIndex];
+                    value = sharedString.Text;
+                    sharedStringRunCount = sharedString.RunCount;
+                    sharedStringHasRichText = sharedString.HasRichText;
+                    sharedStringHasPhoneticText = sharedString.HasPhoneticText;
+                    sharedStringPreserveSpace = sharedString.PreserveSpace;
                 }
             }
 
@@ -1537,6 +1558,10 @@ internal sealed partial class PptxRenderer
                 hasValue,
                 valueElement is not null,
                 sharedStringIndexValue,
+                sharedStringRunCount,
+                sharedStringHasRichText,
+                sharedStringHasPhoneticText,
+                sharedStringPreserveSpace,
                 styleIndex,
                 cellType ?? string.Empty,
                 ReadWorkbookCellValueKind(cellType, value, hasValue),
@@ -1722,12 +1747,23 @@ internal sealed partial class PptxRenderer
         bool HasValue,
         bool HasValueElement,
         int? SharedStringIndex,
+        int SharedStringRunCount,
+        bool SharedStringHasRichText,
+        bool SharedStringHasPhoneticText,
+        bool SharedStringPreserveSpace,
         int? StyleIndex,
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
         string Formula,
         string FormulaType,
         IReadOnlyDictionary<string, string> FormulaAttributes);
+
+    private readonly record struct ChartWorkbookSharedString(
+        string Text,
+        int RunCount,
+        bool HasRichText,
+        bool HasPhoneticText,
+        bool PreserveSpace);
 
     private enum ChartWorkbookCellValueKind
     {
@@ -1849,6 +1885,10 @@ internal sealed partial class PptxRenderer
         bool HasValue,
         bool HasValueElement,
         int? SharedStringIndex,
+        int SharedStringRunCount,
+        bool SharedStringHasRichText,
+        bool SharedStringHasPhoneticText,
+        bool SharedStringPreserveSpace,
         int? StyleIndex,
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
@@ -2065,6 +2105,10 @@ internal sealed partial class PptxRenderer
                         hasCell && cell.HasValue,
                         hasCell && cell.HasValueElement,
                         hasCell ? cell.SharedStringIndex : null,
+                        hasCell ? cell.SharedStringRunCount : 0,
+                        hasCell && cell.SharedStringHasRichText,
+                        hasCell && cell.SharedStringHasPhoneticText,
+                        hasCell && cell.SharedStringPreserveSpace,
                         hasCell ? cell.StyleIndex : null,
                         hasCell ? cell.CellType : string.Empty,
                         hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
@@ -2241,7 +2285,7 @@ internal sealed partial class PptxRenderer
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, string> cell in sheet.Value)
                 {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, cell.Value, true, true, null, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, cell.Value, true, true, null, 0, false, false, false, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
                 }
 
                 converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());

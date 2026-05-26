@@ -10332,6 +10332,9 @@ internal static class PptxTests
         TestAssert.Equal("SharedString", firstParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("0", (string?)firstParsedTextCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedTextCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringIndex")?.GetValue(firstParsedTextCell) == 0, "Expected shared-string index to survive workbook parsing.");
+        TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringRunCount")?.GetValue(firstParsedTextCell) == 2, "Expected shared-string rich-text run count to survive workbook parsing.");
+        TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringHasRichText")?.GetValue(firstParsedTextCell) == true, "Expected shared-string rich-text presence to survive workbook parsing.");
+        TestAssert.True((bool?)firstParsedTextCell.GetType().GetProperty("SharedStringPreserveSpace")?.GetValue(firstParsedTextCell) == true, "Expected shared-string xml:space metadata to survive workbook parsing.");
         object lastParsedTextValue = parsedTextValues.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string typed text value.");
         object lastParsedTextCell = textCellProperty.GetValue(lastParsedTextValue) ?? throw new InvalidOperationException("Expected inline-string range cell.");
         TestAssert.Equal("InlineString", lastParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(lastParsedTextCell)?.ToString() ?? string.Empty);
@@ -10736,7 +10739,7 @@ internal static class PptxTests
             ["xl/sharedStrings.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-                  <si><t>North</t></si>
+                  <si><r><t xml:space="preserve">No</t></r><r><t>rth</t></r></si>
                   <si><t>South</t></si>
                   <si><t>West</t></si>
                   <si><t>Share</t></si>
