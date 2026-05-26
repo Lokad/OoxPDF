@@ -2293,30 +2293,41 @@ internal sealed partial class PptxRenderer
             }
 
             string body = trimmed[(open + 1)..^1];
-            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals) ||
-                string.IsNullOrWhiteSpace(columnName))
+            if (!TryParseStructuredReferenceBody(body, out string? columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals, out bool wholeTable))
             {
                 return trimmed;
             }
 
-            int columnOffset = -1;
+            int firstColumn = table.FirstColumn;
+            int lastColumn = table.LastColumn;
             ChartWorkbookTableColumn tableColumn = default;
-            for (int i = 0; i < table.Columns.Count; i++)
+            if (!wholeTable)
             {
-                if (string.Equals(table.Columns[i].Name, columnName, StringComparison.OrdinalIgnoreCase))
+                if (string.IsNullOrWhiteSpace(columnName))
                 {
-                    columnOffset = i;
-                    tableColumn = table.Columns[i];
-                    break;
+                    return trimmed;
                 }
+
+                int columnOffset = -1;
+                for (int i = 0; i < table.Columns.Count; i++)
+                {
+                    if (string.Equals(table.Columns[i].Name, columnName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        columnOffset = i;
+                        tableColumn = table.Columns[i];
+                        break;
+                    }
+                }
+
+                if (columnOffset < 0)
+                {
+                    return trimmed;
+                }
+
+                firstColumn = table.FirstColumn + columnOffset;
+                lastColumn = firstColumn;
             }
 
-            if (columnOffset < 0)
-            {
-                return trimmed;
-            }
-
-            int column = table.FirstColumn + columnOffset;
             int headerRowCount = Math.Max(0, table.HeaderRowCount);
             int totalsRowCount = Math.Max(0, table.TotalsRowCount);
             int firstRow = onlyHeader
@@ -2339,17 +2350,18 @@ internal sealed partial class PptxRenderer
             }
 
             tableName = table.Name;
-            tableColumnName = tableColumn.Name;
-            tableColumnId = tableColumn.Id;
-            return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(column, firstRow)}:{ToCellReference(column, lastRow)}");
+            tableColumnName = wholeTable ? string.Empty : tableColumn.Name;
+            tableColumnId = wholeTable ? null : tableColumn.Id;
+            return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(firstColumn, firstRow)}:{ToCellReference(lastColumn, lastRow)}");
         }
 
-        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals)
+        private static bool TryParseStructuredReferenceBody(string body, out string columnName, out bool includeHeader, out bool onlyHeader, out bool onlyTotals, out bool wholeTable)
         {
             columnName = string.Empty;
             includeHeader = false;
             onlyHeader = false;
             onlyTotals = false;
+            wholeTable = false;
             string trimmed = body.Trim();
             if (trimmed.Length == 0)
             {
@@ -2358,33 +2370,61 @@ internal sealed partial class PptxRenderer
 
             if (trimmed[0] != '[')
             {
-                columnName = UnescapeStructuredReferenceText(trimmed);
+                string segment = UnescapeStructuredReferenceText(trimmed);
+                if (ApplyStructuredReferenceItem(segment, ref includeHeader, ref onlyHeader, ref onlyTotals, ref wholeTable))
+                {
+                    return true;
+                }
+
+                columnName = segment;
                 return true;
             }
 
             foreach (string segment in ParseStructuredReferenceSegments(trimmed))
             {
-                if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
+                if (ApplyStructuredReferenceItem(segment, ref includeHeader, ref onlyHeader, ref onlyTotals, ref wholeTable))
                 {
-                    includeHeader = true;
+                    continue;
                 }
-                else if (string.Equals(segment, "#Headers", StringComparison.OrdinalIgnoreCase))
-                {
-                    includeHeader = true;
-                    onlyHeader = true;
-                }
-                else if (string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
-                {
-                    onlyTotals = true;
-                }
-                else if (!string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
-                {
-                    columnName = segment;
-                }
+
+                columnName = segment;
+                wholeTable = false;
             }
 
-            return !string.IsNullOrWhiteSpace(columnName);
+            return wholeTable || !string.IsNullOrWhiteSpace(columnName);
+        }
+
+        private static bool ApplyStructuredReferenceItem(string segment, ref bool includeHeader, ref bool onlyHeader, ref bool onlyTotals, ref bool wholeTable)
+        {
+            if (string.Equals(segment, "#All", StringComparison.OrdinalIgnoreCase))
+            {
+                includeHeader = true;
+                wholeTable = true;
+                return true;
+            }
+
+            if (string.Equals(segment, "#Headers", StringComparison.OrdinalIgnoreCase))
+            {
+                includeHeader = true;
+                onlyHeader = true;
+                wholeTable = true;
+                return true;
+            }
+
+            if (string.Equals(segment, "#Data", StringComparison.OrdinalIgnoreCase))
+            {
+                wholeTable = true;
+                return true;
+            }
+
+            if (string.Equals(segment, "#Totals", StringComparison.OrdinalIgnoreCase))
+            {
+                onlyTotals = true;
+                wholeTable = true;
+                return true;
+            }
+
+            return false;
         }
 
         private static string[] ParseStructuredReferenceSegments(string body)

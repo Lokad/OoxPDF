@@ -7867,6 +7867,19 @@ formatting decisions anchored in workbook-owned cell metadata.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Resolved item-only whole-table structured references for chart workbook ranges.
+`SalesTable[#Data]` now resolves to the table-owned data-body rectangle instead of being treated as a lookup
+for a column literally named `#Data`. The resolver distinguishes whole-table scopes from column-qualified
+scopes, preserves the table name while leaving column identity empty, and keeps `#Totals`/`#Headers` column
+references on the single-column path when a column segment is present.
+
+This does not yet implement multi-column spans such as `[[Region]:[Amount]]`, whole-table chart semantics beyond
+rectangular hydration, table filter visibility, calculated-column evaluation, or source/cache freshness. The
+structural improvement is that OOXML table item tokens now flow through a table-bound range selection model
+rather than a column-name fallback.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved totals-only structured references from table-owned totals-row metadata.
 `SalesTotalsTable[[#Totals],[Amount]]` now hydrates the declared totals row instead of falling back to the
 data-body range because `#Totals` was parsed but ignored. The resolver derives the totals span from

@@ -10347,6 +10347,13 @@ internal static class PptxTests
         TestAssert.Equal("SalesTable", (string?)firstParsedStructuredCell.GetType().GetProperty("TableName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference source column id to survive resolution.");
+        Array parsedWholeTableCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[#Data]"]) ?? throw new InvalidOperationException("Expected parsed whole-table structured-reference range cells."));
+        object firstParsedWholeTableCell = parsedWholeTableCells.GetValue(0) ?? throw new InvalidOperationException("Expected first whole-table structured-reference range cell.");
+        TestAssert.True(parsedWholeTableCells.Length == 9, "Expected whole-table data-body structured reference to hydrate the complete data-body rectangle.");
+        TestAssert.Equal("Sheet1!A2:C4", (string?)firstParsedWholeTableCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
+        TestAssert.Equal("SalesTable", (string?)firstParsedWholeTableCell.GetType().GetProperty("TableName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
+        TestAssert.Equal(string.Empty, (string?)firstParsedWholeTableCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedWholeTableCell) ?? string.Empty);
+        TestAssert.True(firstParsedWholeTableCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedWholeTableCell) is null, "Expected whole-table structured references to keep column id empty.");
         Array parsedEscapedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Quoted ']' Amount]"]) ?? throw new InvalidOperationException("Expected parsed escaped structured-reference range cells."));
         object firstParsedEscapedStructuredCell = parsedEscapedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first escaped structured-reference range cell.");
         TestAssert.Equal("Sheet1!C2:C4", (string?)firstParsedEscapedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedEscapedStructuredCell) ?? string.Empty);
