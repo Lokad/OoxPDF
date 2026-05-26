@@ -208,6 +208,12 @@ High-priority actions:
   locks the solid-outline path.
 - [x] Add a PDF-inspection typography harness that compares Office and candidate text matrices, TJ arrays,
   baseline positions, highlight rectangles, and clipping boxes before relying on raster metrics.
+- [x] Maintain the reusable PDF graphics-operation comparison harness:
+  `tools/ComparePdfGraphicsOperations.ps1` compares inspected `graphics-operations.json` files by operator,
+  path segment shape, and bounding box, and now treats raw `PdfInspect` `Operator` fields and classified
+  `SourceOperator` fields as the same source-operator concept. Optional `-Operators W*` filtering makes
+  remaining page-17 clip mismatches and future chart/shape structural work repeatable Office/candidate
+  deltas instead of ad hoc one-off PowerShell snippets.
 - [x] Add a public fractional-font-size guard for PPTX text:
   `PptxSyntheticTextBoxPreservesFractionalFontSize` proves that an explicit DrawingML run size such as
   `a:rPr sz="996"` survives into the text-frame model, text layout, and PDF `/Tf` emission as `9.96 pt`.
@@ -6767,3 +6773,18 @@ zero dimension mismatches, deck MAE `8.942959`, mean changed16 `0.115525`, and o
 `9:3,9.96:11,12:8,12.96:6,14.04:5,15.96:6,18:5` while Office still has the secondary `9.024` and `12.984`
 sizes. Remaining long-term gaps are explaining those secondary PDF font-size anomalies and the one missing page-17
 `W*` clip structurally.
+
+Revision note, 2026-05-26: Tightened the PDF graphics comparison harness instead of replacing it. The existing
+`ComparePdfGraphicsOperations.ps1` already carries the important bounds, path-command, path-operator, stroke-color,
+line-cap/join, and path-geometry checks used by public chart gates, so the page-17 clip work must preserve that
+surface. The script now resolves source operators from either classified `SourceOperator` fields or raw
+`PdfInspect` `Operator` fields and accepts optional `-Operators` filtering, making raw clip inspections such as
+`W*` comparable without losing the chart-structure behavior.
+
+Validation: the current private page-17 graphics inspection from
+`artifacts/private-visual/lokad-value-based/20260526-103326` was compared with
+`-Kinds Clip -Operators W* -MatchByBounds -MatchOperator -MatchSegmentCount -MatchPathCommandCounts`. The harness
+now reports explicit `W*` operator parity for matched rows and the same structural gap as before: 68 reference clips,
+67 candidate clips, and one missing reference-side clip after nearest-bounds matching. The public
+`pptx-ladder-11-chart-doughnut-bottom-legend-probe` visual case also passed, confirming existing chart-structure
+gates still consume classified `SourceOperator` fields correctly.

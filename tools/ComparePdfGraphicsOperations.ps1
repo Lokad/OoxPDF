@@ -15,6 +15,8 @@ param(
 
     [string[]] $Kinds = @("Stroke", "Fill", "FillStroke", "Clip"),
 
+    [string[]] $Operators = @(),
+
     [int] $PageNumber = 0,
 
     [switch] $MatchByBounds,
@@ -59,12 +61,33 @@ function Read-JsonArray($path) {
 
 function Select-Ops($items) {
     $selectedKinds = @($Kinds | ForEach-Object { [string]$_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+    $selectedOperators = @($Operators | ForEach-Object { [string]$_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
     $selected = @($items | Where-Object { $selectedKinds -contains $_.Kind })
+    if ($selectedOperators.Count -gt 0) {
+        $selected = @($selected | Where-Object { $selectedOperators -contains (OperationSourceOperator $_) })
+    }
+
     if ($PageNumber -gt 0) {
         $selected = @($selected | Where-Object { [int]$_.PageNumber -eq $PageNumber })
     }
 
     return ,$selected
+}
+
+function OperationSourceOperator($op) {
+    if ($null -eq $op) {
+        return ""
+    }
+
+    if (HasValue $op.SourceOperator) {
+        return [string]$op.SourceOperator
+    }
+
+    if (HasValue $op.Operator) {
+        return [string]$op.Operator
+    }
+
+    return ""
 }
 
 function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
@@ -211,7 +234,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaMaxY) -le $boundsToleranceForKind)
     $widthOk = [Math]::Abs($deltaWidth) -le $LineWidthTolerance
     $kindOk = [string]$ref.Kind -eq [string]$cand.Kind
-    $operatorOk = (-not $MatchOperator) -or [string]$ref.SourceOperator -eq [string]$cand.SourceOperator
+    $operatorOk = (-not $MatchOperator) -or (OperationSourceOperator $ref) -eq (OperationSourceOperator $cand)
     $segmentCountOk = (-not $MatchSegmentCount) -or [int]$ref.SegmentCount -eq [int]$cand.SegmentCount
     $pathCommandCountsOk = (-not $MatchPathCommandCounts) -or (
         (IntValue $ref.MoveCount) -eq (IntValue $cand.MoveCount) -and
@@ -255,8 +278,8 @@ foreach ($pair in $pairs) {
         Status = $status
         RefKind = $ref.Kind
         CandKind = $cand.Kind
-        RefOp = $ref.SourceOperator
-        CandOp = $cand.SourceOperator
+        RefOp = OperationSourceOperator $ref
+        CandOp = OperationSourceOperator $cand
         RefSeg = $ref.SegmentCount
         CandSeg = $cand.SegmentCount
         RefPath = "$(IntValue $ref.MoveCount)/$(IntValue $ref.LineCount)/$(IntValue $ref.CurveCount)/$(IntValue $ref.CloseCount)"
@@ -303,6 +326,9 @@ foreach ($pair in $pairs) {
 $rows | Format-Table -AutoSize
 Write-Host "Graphics operation count: reference=$($referenceOps.Count), candidate=$($candidateOps.Count), deltas=$failures"
 Write-Host "Kinds: $($Kinds -join ', ')"
+if ($Operators.Count -gt 0) {
+    Write-Host "Operators: $($Operators -join ', ')"
+}
 if ($PageNumber -gt 0) {
     Write-Host "Page: $PageNumber"
 }
