@@ -316,6 +316,13 @@ High-priority actions:
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering
   still falls back conservatively, but structural tests can now expose unsupported values before private-deck
   tuning turns them into invisible heuristics.
+- [x] Preserve PPTX text-body source tokens in the text-frame model snapshot:
+  `PptxTextBodyProperties` now keeps raw `a:bodyPr @vert`, `@anchor`, `@wrap`, and `@vertOverflow` values next
+  to their normalized enum values. The typed body-property tests lock both known tokens (`vert270`, `b`,
+  `none`, `ellipsis`) and explicit unknown tokens, so future typography work can distinguish missing Office
+  defaults from unsupported source values. Validation: focused non-slow `pptx-typography` passed
+  (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed
+  (`256 passed, 0 failed, 7 skipped`).
 - [x] Extend the OOXML enum ladder to PPTX line styles:
   `PptxSceneLineStyle` now preserves the raw DrawingML values for `a:prstDash @val`, `a:ln @cmpd`,
   `a:ln @cap`, and the line-join child (`round`, `bevel`, or `miter`) alongside the existing PDF-ready dash
@@ -2509,6 +2516,11 @@ High-priority actions:
   scales, closing another enum-ladder gap without changing renderer output. Focused non-slow `pptx-model`
   passed at `17 passed, 0 failed, 1 skipped`; focused non-slow `pptx-shapes` passed at
   `15 passed, 0 failed, 0 skipped`; full non-slow passed at `256 passed, 0 failed, 7 skipped`.
+- [x] 2026-05-27: Preserved raw PPTX text-body enum tokens in `PptxTextBodyProperties` and the
+  text-frame model snapshot. Known and unknown `a:bodyPr @vert`, `@anchor`, `@wrap`, and `@vertOverflow`
+  tokens are now observable beside normalized model enums, keeping future typography work out of XML
+  reparsing. Focused non-slow `pptx-typography` passed at `82 passed, 0 failed, 2 skipped`; full non-slow
+  passed at `256 passed, 0 failed, 7 skipped`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved

@@ -2128,12 +2128,29 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextOrientation ReadTextOrientation(XElement textBody, XElement? inheritedTextBody)
     {
+        return ParseTextOrientation(ReadTextOrientationValue(textBody, inheritedTextBody));
+    }
+
+    private static string? ReadTextOrientationValue(XElement textBody, XElement? inheritedTextBody)
+    {
         string? orientation = (string?)textBody
             .Element(DrawingNamespace + "bodyPr")
             ?.Attribute("vert");
         orientation ??= (string?)inheritedTextBody
             ?.Element(DrawingNamespace + "bodyPr")
             ?.Attribute("vert");
+        return orientation;
+    }
+
+    private static string? ReadTextBodyAttribute(XElement textBody, string attributeName)
+    {
+        return (string?)textBody
+            .Element(DrawingNamespace + "bodyPr")
+            ?.Attribute(attributeName);
+    }
+
+    private static PptxTextOrientation ParseTextOrientation(string? orientation)
+    {
         return orientation switch
         {
             null or "" => PptxTextOrientation.Horizontal,
@@ -2233,9 +2250,11 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextWrapMode ReadTextWrapMode(XElement textBody)
     {
-        string? wrap = (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("wrap");
+        return ParseTextWrapMode(ReadTextBodyAttribute(textBody, "wrap"));
+    }
+
+    private static PptxTextWrapMode ParseTextWrapMode(string? wrap)
+    {
         return wrap switch
         {
             null or "" => PptxTextWrapMode.Square,
@@ -2249,9 +2268,11 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextVerticalOverflow ReadTextVerticalOverflow(XElement textBody)
     {
-        string? overflow = (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("vertOverflow");
+        return ParseTextVerticalOverflow(ReadTextBodyAttribute(textBody, "vertOverflow"));
+    }
+
+    private static PptxTextVerticalOverflow ParseTextVerticalOverflow(string? overflow)
+    {
         return overflow switch
         {
             "clip" => PptxTextVerticalOverflow.Clip,
@@ -2746,9 +2767,11 @@ internal sealed partial class PptxRenderer
 
     private static TextVerticalAnchor ReadTextVerticalAnchor(XElement textBody)
     {
-        string? anchor = (string?)textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("anchor");
+        return ParseTextVerticalAnchor(ReadTextBodyAttribute(textBody, "anchor"));
+    }
+
+    private static TextVerticalAnchor ParseTextVerticalAnchor(string? anchor)
+    {
         return anchor switch
         {
             "ctr" => TextVerticalAnchor.Middle,

@@ -2245,9 +2245,13 @@ internal static class PptxTests
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Vertical270", frame.Orientation);
+        TestAssert.Equal("vert270", frame.OrientationValue ?? string.Empty);
         TestAssert.Equal("Bottom", frame.VerticalAnchor);
+        TestAssert.Equal("b", frame.VerticalAnchorValue ?? string.Empty);
         TestAssert.Equal("None", frame.WrapMode);
+        TestAssert.Equal("none", frame.WrapValue ?? string.Empty);
         TestAssert.Equal("Ellipsis", frame.VerticalOverflow);
+        TestAssert.Equal("ellipsis", frame.VerticalOverflowValue ?? string.Empty);
         TestAssert.Equal(3, frame.ColumnCount);
         TestAssert.Equal(72d, frame.ColumnSpacing);
         TestAssert.Equal(0.8d, frame.FontScale);
@@ -2282,9 +2286,13 @@ internal static class PptxTests
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Unknown", frame.Orientation);
+        TestAssert.Equal("futureVert", frame.OrientationValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.VerticalAnchor);
+        TestAssert.Equal("futureAnchor", frame.VerticalAnchorValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.WrapMode);
+        TestAssert.Equal("futureWrap", frame.WrapValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.VerticalOverflow);
+        TestAssert.Equal("futureOverflow", frame.VerticalOverflowValue ?? string.Empty);
     }
 
     public static void PptxSyntheticTextBoxHonorsLineBreaks()

@@ -30,9 +30,13 @@ internal sealed partial class PptxRenderer
             frame.TextWidth,
             frame.FontScale,
             frame.BodyProperties.Orientation.ToString(),
+            frame.BodyProperties.OrientationValue,
             frame.BodyProperties.VerticalAnchor.ToString(),
+            frame.BodyProperties.VerticalAnchorValue,
             frame.BodyProperties.WrapMode.ToString(),
+            frame.BodyProperties.WrapValue,
             frame.BodyProperties.VerticalOverflow.ToString(),
+            frame.BodyProperties.VerticalOverflowValue,
             frame.BodyProperties.ColumnCount,
             frame.BodyProperties.ColumnSpacing,
             frame.Paragraphs.Select(ToSnapshot).ToArray());
@@ -279,12 +283,20 @@ internal sealed partial class PptxRenderer
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
     {
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
+        string? orientation = ReadTextOrientationValue(textBody, inheritedTextBody);
+        string? verticalAnchor = ReadTextBodyAttribute(textBody, "anchor");
+        string? wrap = ReadTextBodyAttribute(textBody, "wrap");
+        string? verticalOverflow = ReadTextBodyAttribute(textBody, "vertOverflow");
         return new PptxTextBodyProperties(
             ReadTextInsets(textBody),
-            ReadTextOrientation(textBody, inheritedTextBody),
-            ReadTextVerticalAnchor(textBody),
-            ReadTextWrapMode(textBody),
-            ReadTextVerticalOverflow(textBody),
+            ParseTextOrientation(orientation),
+            orientation,
+            ParseTextVerticalAnchor(verticalAnchor),
+            verticalAnchor,
+            ParseTextWrapMode(wrap),
+            wrap,
+            ParseTextVerticalOverflow(verticalOverflow),
+            verticalOverflow,
             columnCount,
             columnSpacing,
             ReadNormAutofitFontScale(textBody),

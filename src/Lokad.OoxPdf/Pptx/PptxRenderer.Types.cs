@@ -257,9 +257,13 @@ internal sealed partial class PptxRenderer
     private readonly record struct PptxTextBodyProperties(
         TextInsets Insets,
         PptxTextOrientation Orientation,
+        string? OrientationValue,
         TextVerticalAnchor VerticalAnchor,
+        string? VerticalAnchorValue,
         PptxTextWrapMode WrapMode,
+        string? WrapValue,
         PptxTextVerticalOverflow VerticalOverflow,
+        string? VerticalOverflowValue,
         int ColumnCount,
         double ColumnSpacing,
         double FontScale,

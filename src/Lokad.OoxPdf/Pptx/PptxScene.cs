@@ -72,9 +72,13 @@ internal sealed record PptxTextFrameModelSnapshot(
     double TextWidth,
     double FontScale,
     string Orientation,
+    string? OrientationValue,
     string VerticalAnchor,
+    string? VerticalAnchorValue,
     string WrapMode,
+    string? WrapValue,
     string VerticalOverflow,
+    string? VerticalOverflowValue,
     int ColumnCount,
     double ColumnSpacing,
     IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
