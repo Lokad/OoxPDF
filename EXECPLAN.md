@@ -2492,6 +2492,10 @@ High-priority actions:
   `PptxRenderContext` now exists and is scene-backed, and typed scene dispatch is split across background,
   shape, text, picture, table, chart, group, and unknown-diagnostic paths. The remaining work is field
   ownership inside those surfaces, not the top-level context/dispatcher architecture.
+- [x] 2026-05-27: Tightened the console test runner so unknown `--group` values fail fast instead of selecting
+  zero tests. `--group pptx-scene --skip-slow` now exits non-zero and prints the available group list;
+  `pptx-shapes --skip-slow` still passes at `15 passed, 0 failed, 0 skipped`; full non-slow passes at
+  `256 passed, 0 failed, 7 skipped`.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
@@ -4699,10 +4703,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   PptxSceneBuilderBuildsResolvedNodeLists` executed the whole suite, including slow tests, and completed with
   `263 passed, 0 failed, 0 skipped`. Future focused runs should use `--group`, `--skip-slow`, `--only-slow`, or
   a supported test-specific switch if one is added later.
-- Observation: A nonexistent test group is accepted by the console runner and selects no tests.
+- Observation: A nonexistent test group used to be accepted by the console runner and select no tests; this has
+  been fixed so future validation cannot silently pass an empty selection.
   Evidence: Running `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group
-  pptx-scene --skip-slow` completed with `0 passed, 0 failed, 0 skipped`. Use known groups from `--list` or
-  validate with adjacent groups plus full non-slow until a scene-specific group exists.
+  pptx-scene --skip-slow` originally completed with `0 passed, 0 failed, 0 skipped`. After the runner fix, the
+  same command exits non-zero and prints the available groups, including `pptx-shapes`, `pptx-charts`,
+  `pptx-model`, and `pptx-typography`.
 - Observation: The Office baseline floor is not a universal "Arial baseline" rule.
   Evidence: Applying the floor broadly fixed top-anchored rectangular wrap cases, but moved the public
   non-rect small-label probe by about `-1.24 pt` and moved middle/bottom anchored rectangular text in
@@ -4944,6 +4950,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   token was `rnd`, unknown, or absent. Keeping the raw token next to the normalized value makes unsupported
   enum variants visible in snapshots and public tests, which supports systematic ladders instead of one-off
   rendering branches.
+  Date/Author: 2026-05-27 / Codex.
+- Decision: Fail unknown console test groups instead of treating them as empty selections.
+  Rationale: Focused validation is only useful when the selector is known to exercise tests. A mistyped or
+  nonexistent group that reports `0 passed, 0 failed, 0 skipped` can make architecture migrations look covered
+  while no assertions ran, so the runner now reports the known group list and exits non-zero.
   Date/Author: 2026-05-27 / Codex.
 - Decision: Scope the PPTX Office baseline floor to rectangular top-anchored text frames using default line
   spacing, and keep non-rect, vertically anchored, explicit-spacing, and absolute-spacing frames on resolved

@@ -25,6 +25,7 @@ internal static class TestRunner
 
     public static int Run(string[] args, IEnumerable<TestCase> tests)
     {
+        TestCase[] testCases = tests.ToArray();
         int passed = 0;
         int failed = 0;
         int skipped = 0;
@@ -34,7 +35,18 @@ internal static class TestRunner
         string? group = ReadOption(args, "--group");
         string? name = ReadOption(args, "--test");
 
-        foreach (TestCase testCase in tests)
+        if (group is not null &&
+            !testCases.Any(testCase => string.Equals(testCase.Group, group, StringComparison.Ordinal)))
+        {
+            string availableGroups = string.Join(", ", testCases
+                .Select(testCase => testCase.Group)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal));
+            Console.WriteLine($"Unknown test group '{group}'. Available groups: {availableGroups}");
+            return 1;
+        }
+
+        foreach (TestCase testCase in testCases)
         {
             Action test = testCase.Action;
             bool isSlow = SlowTests.Contains(test.Method.Name);
