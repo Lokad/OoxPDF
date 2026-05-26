@@ -7028,3 +7028,15 @@ passed 37/37 at `artifacts/visual/reports/pptx-charts.json` generated during the
 Both manifests now gate only the stable `VerticalLine` graphics bucket and `ValueAxisTickLabel` text bucket.
 Current public chart coverage is 30/37 graphics-gated and 18/37 text-gated; 7 chart cases still have neither
 chart graphics nor chart text structural gates.
+
+Revision note, 2026-05-26: Tightened chart marker classification to avoid glyph-sized false positives.
+`ClassifyPdfChartGraphics.ps1` now requires marker candidates to be at least `4 pt` in both dimensions; smaller
+filled fragments are ignored instead of being reclassified as chart markers or filled chart regions. This keeps
+real public scatter markers intact (`~9.8..10 pt`) while reducing the compact secondary-axis probe's candidate
+marker noise from 78 buckets to 1 and the secondary-axis overlay candidate marker noise from 248 buckets to 1.
+The remaining single marker/legend false positive is still open and should be resolved by a better
+plot/legend-region classifier, not a broader size threshold.
+
+Validation: the full public `pptx-charts` visual family passed 37/37 at
+`artifacts/visual/reports/pptx-charts.json` generated during the 2026-05-26 12:21 local run, and
+`pwsh tools\SummarizeChartStructureDeltas.ps1 -UngatedOnly` confirmed the reduced marker false-positive counts.

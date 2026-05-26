@@ -10,6 +10,8 @@ param(
 
     [double] $MinLineLength = 12,
 
+    [double] $MarkerMinSize = 4,
+
     [double] $MarkerMaxSize = 20,
 
     [double] $GridlineBoundsTolerance = 1.0
@@ -467,15 +469,17 @@ foreach ($op in $ops) {
         $structures.Add((New-Structure "VerticalLine" $op))
     }
     elseif ($op.Kind -eq "Stroke" -and $width -gt $LineTolerance -and $height -gt $LineTolerance -and
+        $width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
         $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
         $structures.Add((New-Structure "StrokeMarkerCandidate" $op))
     }
 
     if (($op.Kind -eq "Fill" -or $op.Kind -eq "FillStroke") -and $width -gt 0 -and $height -gt 0) {
-        if ($width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
+        if ($width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and
+            $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
             $structures.Add((New-Structure "MarkerCandidate" $op))
         }
-        else {
+        elseif ($width -gt $MarkerMaxSize -or $height -gt $MarkerMaxSize) {
             $structures.Add((New-Structure "FilledRegion" $op))
         }
     }
