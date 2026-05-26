@@ -127,6 +127,28 @@ function Test-XPath([xml] $Xml, [string] $XPath) {
     return (Count-XPath $Xml $XPath) -gt 0
 }
 
+function Get-AttributeHistogram([xml] $Xml, [string] $XPath, [string] $AttributeName) {
+    $histogram = [ordered]@{}
+    if ($Xml -eq $null) {
+        return [pscustomobject]$histogram
+    }
+
+    foreach ($node in $Xml.SelectNodes($XPath)) {
+        $value = [string]$node.GetAttribute($AttributeName)
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            $value = "(missing)"
+        }
+
+        if (-not $histogram.Contains($value)) {
+            $histogram[$value] = 0
+        }
+
+        $histogram[$value]++
+    }
+
+    return [pscustomobject]$histogram
+}
+
 function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $PartName) {
     $xml = Read-ZipXml $Zip $PartName
     if ($xml -eq $null) {
@@ -136,6 +158,7 @@ function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $Pa
     [pscustomobject]@{
         PartName = $PartName
         Shapes = Count-XPath $xml "//*[local-name()='sp']"
+        ConnectorShapes = Count-XPath $xml "//*[local-name()='cxnSp']"
         GroupShapes = Count-XPath $xml "//*[local-name()='grpSp']"
         Pictures = Count-XPath $xml "//*[local-name()='pic']"
         GraphicFrames = Count-XPath $xml "//*[local-name()='graphicFrame']"
@@ -156,6 +179,10 @@ function Get-PartInventory([System.IO.Compression.ZipArchive] $Zip, [string] $Pa
         SmartArtSignals = Count-XPath $xml "//*[namespace-uri()='http://schemas.openxmlformats.org/drawingml/2006/diagram']"
         MediaSignals = Count-XPath $xml "//*[local-name()='video' or local-name()='audio' or local-name()='videoFile' or local-name()='audioFile']"
         OleSignals = Count-XPath $xml "//*[local-name()='oleObj']"
+        PresetGeometries = Count-XPath $xml "//*[local-name()='prstGeom']"
+        CustomGeometries = Count-XPath $xml "//*[local-name()='custGeom']"
+        PresetGeometryKinds = Get-AttributeHistogram $xml "//*[local-name()='prstGeom']" "prst"
+        TextBodyVerticalModes = Get-AttributeHistogram $xml "//*[local-name()='bodyPr' and @vert]" "vert"
         Notes = @{
             HasBackground = Test-XPath $xml "//*[local-name()='bg']"
             HasHiddenPlaceholder = Test-XPath $xml "//*[local-name()='ph' and (@hidden='1' or @hidden='true')]"

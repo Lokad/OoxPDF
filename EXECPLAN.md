@@ -7782,6 +7782,18 @@ MAE `2.785167`, changed16 `0.044117`, changed32 `0.034126`, SSIM `0.923374`. Thi
 diagnosis unchanged: the remaining slide-17 work is still generic schema/text/layout/PDF-structure alignment,
 not a regression from chart metadata preservation.
 
+Revision note, 2026-05-26: Extended the private-safe PPTX slide inventory so schema/geometry triage does not
+depend on private screenshots or manual XML inspection. `tools/InventoryPptxSlides.ps1` now reports connector
+shape counts, preset/custom geometry counts, preset-geometry histograms, and text-body vertical-mode
+histograms for slide, layout, and master parts. The updated inventory for private slide 17 shows a
+shape/text-heavy slide with no chart/table/group/custom-geometry/SmartArt signals, several connector shapes,
+rotated/flipped transforms, and only common preset geometries (`rect`, `ellipse`, `diamond`, `triangle`,
+`line`, `curvedConnector2`). This narrows the public-safe slide-17 track toward preset geometry,
+connector/flip/rotation, and text placement instead of chart or private-specific logic.
+
+Validation: `pwsh tools/InventoryPptxSlides.ps1 -Case private-cases/lokad-value-based.json` passed and wrote
+ignored private-safe inventory `artifacts/private-visual/lokad-value-based/inventory/20260526-223952.json`.
+
 Revision note, 2026-05-26: Extended chart shape-style ownership to effects without changing chart drawing.
 `PptxSceneChartShapeStyle` now carries the same parsed glow and outer-shadow records already used by normal
 PPTX shapes, and the renderer-facing `ChartShapeStyle` bridge preserves those records through scene-backed
