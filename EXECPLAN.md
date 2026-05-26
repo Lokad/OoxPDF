@@ -2445,6 +2445,13 @@ High-priority actions:
     `ValueAxisTickLabel` at `0.5 pt` while leaving `CategoryAxisTickLabel` at the broader mixed `15 pt` gate.
     The classifier now treats numeric left-of-center radar text as value-axis ticks before broad radial category
     classification, preserving the top tick when its baseline overlaps the bottom category band.
+  - [x] Tighten the radar category-label gates after the radar center/radius and label-frame resolver work:
+    both radar manifests now gate `CategoryAxisTickLabel` at `0.75 pt` while retaining `ValueAxisTickLabel` at
+    `0.5 pt`; the filled radar manifest also gates `ChartTitleText` at `1.0 pt`. Fresh targeted runs
+    `pptx-ladder-11-chart-radar-2series-port/20260526-165921` and
+    `pptx-ladder-11-chart-radar-filled-port/20260526-165921` passed. The remaining chart text classification
+    work is therefore outside basic radar tick labels: ambiguous top/bottom legend containers, richer
+    data-label text positions, annotations, and multi-chart page partitioning.
 - [x] 2026-05-25: Tighten chart text classification for value-axis origin labels near plot-box edges.
   `ClassifyPdfChartText.ps1` now uses a slightly wider axis-label vertical band for text left/right of the
   plot box, so labels near the plot origin are classified as `ValueAxisTickLabel` instead of generic
