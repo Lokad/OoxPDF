@@ -213,6 +213,12 @@ High-priority actions:
   boundary as rendering while preserving the existing snapshot shape. Validation: focused non-slow
   `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed
   (`256 passed, 0 failed, 7 skipped`).
+- [x] Retire the renderer-local slide inheritance loader:
+  after render and inspection context creation both moved onto scene slides, `PptxRenderer` no longer keeps a
+  separate slide -> layout -> master resolver or fallback relationship scan. `PptxSceneBuilder` is now the
+  single owner for normal PPTX slide inheritance XML and relationship discovery, and `PptxRenderContext`
+  receives that state from the scene. Validation: focused non-slow `pptx-typography` passed
+  (`82 passed, 0 failed, 2 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Convert the architectural survey into an `ooxpdf` migration design: what belongs in a presentation
   scene/model, what remains direct PDF rendering, and which abstractions should replace ad hoc XML traversal.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit

@@ -15,8 +15,6 @@ internal sealed partial class PptxRenderer
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private static readonly XNamespace OoxPdfInternalNamespace = "urn:lokad:ooxpdf:internal";
-    private const string SlideLayoutRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
-    private const string SlideMasterRelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
     public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document)
@@ -106,47 +104,13 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PptxSlide slide,
         XDocument slideXml,
-        PptxSceneSlide? sceneSlide,
+        PptxSceneSlide sceneSlide,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        PptxSlideInheritance inheritance = sceneSlide is null
-            ? LoadSlideInheritance(package, slide.PartName)
-            : new PptxSlideInheritance(sceneSlide.MasterXml, sceneSlide.LayoutXml);
-        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = sceneSlide?.SlideRelationships
-            ?? package.GetRelationships(slide.PartName)
-                .Where(r => !r.IsExternal && r.ResolvedTarget is not null)
-                .ToDictionary(r => r.Id, StringComparer.Ordinal);
+        PptxSlideInheritance inheritance = new(sceneSlide.MasterXml, sceneSlide.LayoutXml);
+        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = sceneSlide.SlideRelationships;
         return new PptxRenderContext(package, document, theme, slide, slideXml, sceneSlide, inheritance, inheritance.Sources, slideRelationships, imageCache, diagnosticSink);
-    }
-
-    private static PptxSlideInheritance LoadSlideInheritance(OoxPackage package, string slidePartName)
-    {
-        OoxPart? layoutPart = GetRelatedPart(package, slidePartName, SlideLayoutRelationshipType);
-        OoxPart? masterPart = layoutPart is null ? null : GetRelatedPart(package, layoutPart.Name, SlideMasterRelationshipType);
-
-        XDocument? masterXml = null;
-        if (masterPart is not null)
-        {
-            using Stream masterStream = masterPart.OpenRead();
-            masterXml = SafeXml.Load(masterStream);
-        }
-
-        XDocument? layoutXml = null;
-        if (layoutPart is not null)
-        {
-            using Stream layoutStream = layoutPart.OpenRead();
-            layoutXml = SafeXml.Load(layoutStream);
-        }
-
-        return new PptxSlideInheritance(masterXml, layoutXml);
-    }
-
-    private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType)
-    {
-        OoxRelationship? relationship = package.GetRelationships(sourcePartName)
-            .FirstOrDefault(r => !r.IsExternal && r.Type == relationshipType && r.ResolvedTarget is not null);
-        return relationship?.ResolvedTarget is null ? null : package.GetPart(relationship.ResolvedTarget);
     }
 
     private static ShapeBounds? ReadBounds(XElement shapeProperties)
