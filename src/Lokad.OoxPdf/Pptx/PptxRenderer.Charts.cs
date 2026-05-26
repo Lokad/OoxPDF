@@ -1942,6 +1942,9 @@ internal sealed partial class PptxRenderer
         bool TableHeaderRow,
         bool TableDataRow,
         bool TableTotalsRow,
+        int? TableCellColumnIndex,
+        string TableCellColumnName,
+        int? TableCellColumnId,
         string Text,
         string RawValue,
         bool HasCell,
@@ -2166,6 +2169,21 @@ internal sealed partial class PptxRenderer
                     bool tableHeaderRow = hasSourceTable && tableRowIndex >= 0 && tableRowIndex < Math.Max(0, sourceTable.HeaderRowCount);
                     bool tableTotalsRow = hasSourceTable && sourceTable.TotalsRowCount > 0 && row > sourceTable.LastRow - sourceTable.TotalsRowCount && row <= sourceTable.LastRow;
                     bool tableDataRow = hasSourceTable && !tableHeaderRow && !tableTotalsRow && row >= sourceTable.FirstRow && row <= sourceTable.LastRow;
+                    int? tableCellColumnIndex = null;
+                    string tableCellColumnName = string.Empty;
+                    int? tableCellColumnId = null;
+                    if (hasSourceTable)
+                    {
+                        int columnIndex = column - sourceTable.FirstColumn;
+                        if (columnIndex >= 0 && columnIndex < sourceTable.Columns.Count)
+                        {
+                            ChartWorkbookTableColumn tableCellColumn = sourceTable.Columns[columnIndex];
+                            tableCellColumnIndex = columnIndex;
+                            tableCellColumnName = tableCellColumn.Name;
+                            tableCellColumnId = tableCellColumn.Id;
+                        }
+                    }
+
                     values.Add(new ChartWorkbookRangeCell(
                         index,
                         row - minRow,
@@ -2193,6 +2211,9 @@ internal sealed partial class PptxRenderer
                         tableHeaderRow,
                         tableDataRow,
                         tableTotalsRow,
+                        tableCellColumnIndex,
+                        tableCellColumnName,
+                        tableCellColumnId,
                         hasCell ? cell.Text : string.Empty,
                         hasCell ? cell.RawValue : string.Empty,
                         hasCell,

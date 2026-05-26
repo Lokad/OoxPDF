@@ -7775,6 +7775,19 @@ can now carry rectangular table source provenance without renderer-local heurist
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved per-cell table-column identity on chart workbook range cells. In
+addition to span-level `TableFirstColumn*` and `TableLastColumn*`, each table-backed `ChartWorkbookRangeCell`
+now carries `TableCellColumnIndex`, `TableCellColumnName`, and `TableCellColumnId`. The embedded workbook
+regression locks both the single-column structured-reference case and a multi-column `[[Region]:[Amount]]`
+span where adjacent cells belong to different table columns.
+
+This is still source metadata, not chart-data rendering semantics. OOXPDF does not yet evaluate table
+calculated-column formulas, use table filters, or choose Office cache/workbook freshness behavior. The useful
+long-term invariant is that later typed chart-data vectors can identify the exact table column for each
+materialized cell without deriving it from worksheet coordinates or re-reading the table part.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved table row-role metadata on chart workbook range cells. When a
 structured-reference source resolves through a workbook table, each `ChartWorkbookRangeCell` now carries a
 table-local row index plus explicit `TableHeaderRow`, `TableDataRow`, and `TableTotalsRow` flags. The
