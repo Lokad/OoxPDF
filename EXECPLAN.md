@@ -895,8 +895,12 @@ High-priority actions:
   `inventory-opti`, `accent-spacing`, and `boundary-invariance` still render without diagnostics; boundary
   invariance remains structurally close while inventory/accent remain acceptance probes for later glyph
   parity work.
-- [ ] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
+- [x] Introduce a PPTX render context in `ooxpdf` analogous to `pptx-renderer`: slide model, layout/master
   model, theme, relationships, media lookup, diagnostics sink, font/color caches, and group context.
+  This is complete for the current architecture: `PptxRenderContext` carries package/document/theme/slide,
+  scene slide, inherited XML source list, slide relationships, image cache, and diagnostics, while
+  `PptxSceneSlide` owns master/layout/slide XML and relationship maps. Remaining work is field ownership
+  inside specific surfaces, not absence of a render context.
 - [x] Introduce the first behavior-neutral PPTX render-context boundary for package, document, theme,
   slide XML, inherited XML, slide identity, and diagnostics; extend it toward relationships/media/cache
   ownership in later rendering splits.
@@ -961,8 +965,12 @@ High-priority actions:
   dimension mismatches, deck MAE `9.005915`, changed16 `0.116052`, and still only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; the new `PPTX_UNSUPPORTED_GRAPHIC_FRAME` diagnostic did not appear in
   this private deck. Slide 17 measured MAE `2.880739`, changed16 `0.044888`, SSIM `0.920083`.
-- [ ] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
+- [x] Split PPTX rendering dispatch by typed scene node: background, shape, text, picture, table, chart,
   group, and unknown/diagnostic fallback should be separate renderers consuming the same context.
+  This is complete for current dispatch structure: `PptxRenderer.Dispatch` routes typed scene nodes to
+  shape/text/picture/table/chart/group handlers, background rendering is scene-owned, and unknown graphic
+  frames emit explicit diagnostics. Remaining work is to remove per-surface XML fallbacks inside those
+  handlers, not to create the dispatcher.
 - [x] Move master/layout shape/text rendering into the ordered scene pipeline: non-placeholder master and
   layout scene nodes now render through `RenderOrderedSceneNodes` before slide nodes instead of the old XML
   shape-container pass.
@@ -2480,6 +2488,10 @@ High-priority actions:
   media/EMF capability inventory, SmartArt drawing fallback inventory, shape oracle discipline, and explicit
   text cascade coverage. The TypeScript chart renderer and browser media lifetime remain non-targets for
   OOXPDF's dependency-free PDF runtime.
+- [x] 2026-05-27: Closed two obsolete open architecture checklist items without deleting their history:
+  `PptxRenderContext` now exists and is scene-backed, and typed scene dispatch is split across background,
+  shape, text, picture, table, chart, group, and unknown-diagnostic paths. The remaining work is field
+  ownership inside those surfaces, not the top-level context/dispatcher architecture.
 - [x] 2026-05-26: Replaced the broad PPTX baseline-floor experiment with a narrower structural rule:
   rectangular, top-anchored, default-line-spacing text frames use the Office baseline floor, while non-rect
   preset geometry, vertical middle/bottom anchoring, and explicit/absolute line spacing keep the resolved
