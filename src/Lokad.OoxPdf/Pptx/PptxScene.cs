@@ -40,6 +40,10 @@ internal sealed record PptxSceneNodeSnapshot(
     int TextParagraphCount,
     int TextRunCount,
     bool HasPicture,
+    bool HasPictureResource,
+    string PictureContentType,
+    bool HasShapePictureFillResource,
+    string ShapePictureFillContentType,
     string PictureRecolorKind,
     bool HasTable,
     int TableRowCount,
@@ -342,6 +346,7 @@ internal readonly record struct PptxSceneShapePictureFill(
     bool HasPicture,
     string RelationshipId,
     string? TargetPartName,
+    PptxSceneImageResource? Resource,
     PptxSceneRect Crop,
     PptxSceneRect Fill,
     PptxScenePictureTile Tile);
@@ -409,11 +414,17 @@ internal readonly record struct PptxSceneLineEnd(
 internal sealed record PptxScenePicture(
     string? RelationshipId,
     string? TargetPartName,
+    PptxSceneImageResource? Resource,
     PptxSceneRect Crop,
     PptxSceneRect Fill,
     double Alpha,
     PptxSceneImageRecolor Recolor,
     PptxScenePictureTile Tile);
+
+internal sealed record PptxSceneImageResource(
+    string PartName,
+    string ContentType,
+    byte[] Bytes);
 
 internal sealed record PptxSceneChart(
     string? RelationshipId,
@@ -1611,9 +1622,9 @@ internal sealed class PptxSceneBuilder
                 IsPlaceholder(child),
                 kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicFrame(child),
                 ReadBounds(child),
-                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, relationships) : null,
+                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, theme),
-                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, relationships) : null,
+                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
@@ -1738,12 +1749,15 @@ internal sealed class PptxSceneBuilder
     private static PptxScenePicture ReadPicture(
         XElement picture,
         PptxTheme theme,
+        OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         string? relationshipId = ReadPictureRelationshipId(picture);
+        string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         return new PptxScenePicture(
             relationshipId,
-            ResolveRelationshipTarget(relationshipId, relationships),
+            targetPartName,
+            ReadImageResource(package, targetPartName),
             ReadPictureCrop(picture),
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
@@ -3176,6 +3190,7 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneShape ReadShape(
         XElement shape,
         PptxTheme theme,
+        OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
@@ -3209,7 +3224,7 @@ internal sealed class PptxSceneBuilder
                 : default,
             TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
             TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
-            ReadShapePictureFill(shapeProperties, relationships),
+            ReadShapePictureFill(shapeProperties, package, relationships),
             TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             line,
@@ -3400,21 +3415,37 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneShapePictureFill ReadShapePictureFill(
         XElement? shapeProperties,
+        OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? blip = shapeProperties
             ?.Element(DrawingNamespace + "blipFill")
             ?.Element(DrawingNamespace + "blip");
         string? relationshipId = (string?)blip?.Attribute(RelationshipsNamespace + "embed");
+        string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
         return relationshipId is null
             ? default
             : new PptxSceneShapePictureFill(
                 true,
                 relationshipId,
-                ResolveRelationshipTarget(relationshipId, relationships),
+                targetPartName,
+                ReadImageResource(package, targetPartName),
                 ReadPictureCrop(shapeProperties!),
                 ReadPictureFill(shapeProperties!),
                 ReadPictureTile(shapeProperties!));
+    }
+
+    private static PptxSceneImageResource? ReadImageResource(OoxPackage package, string? targetPartName)
+    {
+        if (targetPartName is null)
+        {
+            return null;
+        }
+
+        OoxPart? imagePart = package.GetPart(targetPartName);
+        return imagePart is null
+            ? null
+            : new PptxSceneImageResource(imagePart.Name, imagePart.ContentType, imagePart.Bytes);
     }
 
     private static string? ResolveRelationshipTarget(

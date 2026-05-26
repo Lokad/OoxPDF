@@ -1546,11 +1546,13 @@ internal sealed partial class PptxRenderer
 
         string? relationshipId;
         string? targetPartName = null;
+        PptxSceneImageResource? imageResource = null;
         bool useRelationshipFallback = false;
         if (pictureFillOverride is { } resolvedPictureFill)
         {
             relationshipId = resolvedPictureFill.RelationshipId;
             targetPartName = resolvedPictureFill.TargetPartName;
+            imageResource = resolvedPictureFill.Resource;
             crop = resolvedPictureFill.Crop;
             fillRect = resolvedPictureFill.Fill;
         }
@@ -1579,8 +1581,15 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        OoxPart? imagePart = package.GetPart(targetPartName);
-        if (imagePart is null)
+        if (imageResource is null && useRelationshipFallback)
+        {
+            OoxPart? imagePart = package.GetPart(targetPartName);
+            imageResource = imagePart is null
+                ? null
+                : new PptxSceneImageResource(imagePart.Name, imagePart.ContentType, imagePart.Bytes);
+        }
+
+        if (imageResource is null)
         {
             diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                 "IMAGE_MISSING_PART",
@@ -1593,7 +1602,7 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        image = GetOrCreateImage(imagePart, ImageRecolor.None, imageCache, diagnosticSink, slideIndex);
+        image = GetOrCreateImage(imageResource, ImageRecolor.None, imageCache, diagnosticSink, slideIndex);
         if (image is null)
         {
             return false;
@@ -2310,7 +2319,7 @@ internal sealed partial class PptxRenderer
     private static ShapePictureFill? ToShapePictureFill(PptxSceneShapePictureFill fill)
     {
         return fill.HasPicture
-            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
+            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, fill.Resource, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
             : null;
     }
 

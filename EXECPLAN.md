@@ -255,9 +255,9 @@ High-priority actions:
   `PptxScenePicture` and `PptxSceneShapePictureFill` now carry the resolved media target part name next to the
   source relationship id, and the normal picture/picture-fill render paths use those scene-owned targets. The
   scene test fixture now includes explicit media relationships and asserts both standalone picture and grouped
-  shape picture-fill targets. This is still not a full media
-  resource abstraction: image decoding, SVG parsing, recolor transforms, and `PdfImageXObject` caching still
-  happen in the renderer through `context.Package`. Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists`
+  shape picture-fill targets. This was not yet a full media resource abstraction: image decoding, SVG parsing,
+  recolor transforms, and `PdfImageXObject` caching still happened in the renderer through `context.Package`.
+  Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists`
   passed (`1 passed, 0 failed, 0 skipped`); focused non-slow `pptx-images` passed
   (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [x] Retire relationship fallback from scene-backed standalone pictures:
@@ -269,6 +269,20 @@ High-priority actions:
   (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`256 passed, 0 failed, 7 skipped`);
   private run `20260527-003730` remained behavior-neutral with 84/84 compared pages, zero dimension
   mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] Move PPTX picture media resources into the scene:
+  `PptxScenePicture` and `PptxSceneShapePictureFill` now carry optional scene-owned image resources with part
+  name, content type, and bytes. Normal standalone picture rendering and scene-backed shape picture-fill
+  rendering consume those resources directly instead of reopening image parts through `context.Package`.
+  Scene inspection exposes only resource presence and content type, not media bytes, so public tests can lock
+  ownership without leaking document content. The remaining package-backed image path is the legacy raw-XML
+  shape picture-fill fallback where no scene picture-fill record is available. The remaining private
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic is therefore a real JPEG/PDF recolor architecture gap, not an
+  image relationship/resource ownership gap. Validation: focused `PptxSceneBuilderBuildsResolvedNodeLists`
+  passed (`1 passed, 0 failed, 0 skipped`); focused non-slow `pptx-images` passed
+  (`17 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`259 passed, 0 failed, 7 skipped`); private run `20260527-013804` remained behavior-neutral with 84/84
+  compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains

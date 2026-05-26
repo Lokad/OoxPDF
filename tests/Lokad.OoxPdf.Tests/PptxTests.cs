@@ -72,6 +72,7 @@ internal static class PptxTests
                 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
                   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                   <Default Extension="xml" ContentType="application/xml"/>
+                  <Default Extension="png" ContentType="image/png"/>
                   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
                   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
@@ -248,6 +249,7 @@ internal static class PptxTests
                   </p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
+            ["ppt/media/image1.png"] = "scene image bytes",
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -332,6 +334,9 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneNodeKind.Picture, slide.SlideNodes[1].Kind);
         TestAssert.Equal("rIdImage", slide.SlideNodes[1].Picture?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[1].Picture?.TargetPartName ?? string.Empty);
+        TestAssert.Equal("image/png", slide.SlideNodes[1].Picture?.Resource?.ContentType ?? string.Empty);
+        TestAssert.True(slideSnapshot.SlideNodes[1].HasPictureResource, "Expected scene inspection to expose picture resource ownership without media bytes.");
+        TestAssert.Equal("image/png", slideSnapshot.SlideNodes[1].PictureContentType);
         TestAssert.Equal(0.1d, slide.SlideNodes[1].Picture?.Crop.Left ?? 0d);
         TestAssert.Equal(0.4d, slide.SlideNodes[1].Picture?.Crop.Bottom ?? 0d);
         TestAssert.Equal("10000", slide.SlideNodes[1].Picture?.Crop.LeftValue ?? string.Empty);
@@ -722,6 +727,9 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[5].Children[0].Shape?.PictureFill.HasPicture == true, "Expected grouped shape picture fill in the scene model.");
         TestAssert.Equal("rIdShapeImage", slide.SlideNodes[5].Children[0].Shape?.PictureFill.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/media/image1.png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.TargetPartName ?? string.Empty);
+        TestAssert.Equal("image/png", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Resource?.ContentType ?? string.Empty);
+        TestAssert.True(slideSnapshot.SlideNodes[5].Children[0].HasShapePictureFillResource, "Expected scene inspection to expose shape picture-fill resource ownership without media bytes.");
+        TestAssert.Equal("image/png", slideSnapshot.SlideNodes[5].Children[0].ShapePictureFillContentType);
         TestAssert.Equal(0.05d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Left ?? 0d);
         TestAssert.Equal(0.2d, slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.Bottom ?? 0d);
         TestAssert.Equal("5000", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Crop.LeftValue ?? string.Empty);
