@@ -10287,6 +10287,9 @@ internal static class PptxTests
         TestAssert.Equal("m/d/yy", (string?)styleNumberFormatCodeProperty.GetValue(firstParsedCell) ?? string.Empty);
         System.Reflection.PropertyInfo styleAppliesNumberFormatProperty = firstParsedCell.GetType().GetProperty("StyleAppliesNumberFormat") ?? throw new InvalidOperationException("Expected range-cell style number-format apply flag.");
         TestAssert.True((bool?)styleAppliesNumberFormatProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to preserve applyNumberFormat.");
+        System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
+        var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
+        TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
         var chartXml = XDocument.Parse("""
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart><c:ser>
@@ -10311,6 +10314,23 @@ internal static class PptxTests
         TestAssert.Equal("3", strCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
         TestAssert.Equal("0", strCache.Elements(c + "pt").First().Attribute("idx")?.Value ?? string.Empty);
         TestAssert.Equal("2", strCache.Elements(c + "pt").Last().Attribute("idx")?.Value ?? string.Empty);
+        var definedNameChartXml = XDocument.Parse("""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart><c:ser>
+                <c:cat><c:strRef><c:f>SalesLabels</c:f></c:strRef></c:cat>
+                <c:val><c:numRef><c:f>SalesValues</c:f></c:numRef></c:val>
+              </c:ser></c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        hydrate.Invoke(null, [parsedWorkbook, definedNameChartXml]);
+
+        XElement definedNameNumCache = definedNameChartXml.Descendants(c + "numCache").Single();
+        TestAssert.Equal("3", definedNameNumCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("8.2", definedNameNumCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
+        XElement definedNameStrCache = definedNameChartXml.Descendants(c + "strCache").Single();
+        TestAssert.Equal("3", definedNameStrCache.Element(c + "ptCount")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("North", definedNameStrCache.Elements(c + "pt").First().Element(c + "v")?.Value ?? string.Empty);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
@@ -10558,6 +10578,10 @@ internal static class PptxTests
                           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <workbookPr date1904="1"/>
                   <sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>
+                  <definedNames>
+                    <definedName name="SalesLabels">Sheet1!$A$2:$A$4</definedName>
+                    <definedName name="SalesValues">Sheet1!$B$2:$B$4</definedName>
+                  </definedNames>
                 </workbook>
                 """,
             ["xl/sharedStrings.xml"] = """

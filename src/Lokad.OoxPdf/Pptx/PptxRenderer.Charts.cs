@@ -1283,6 +1283,7 @@ internal sealed partial class PptxRenderer
         XDocument workbookXml = SafeXml.Load(workbookStream);
         string[] sharedStrings = ReadWorkbookSharedStrings(workbookPackage, workbookPart);
         ChartWorkbookStyles styles = ReadWorkbookStyles(workbookPackage, workbookPart);
+        IReadOnlyDictionary<string, string> definedNames = ReadWorkbookDefinedNames(workbookXml);
         IReadOnlyDictionary<string, OoxRelationship> workbookRelationships = workbookPackage
             .GetRelationships(workbookPart.Name)
             .Where(relationship => !relationship.IsExternal && relationship.ResolvedTarget is not null)
@@ -1311,7 +1312,7 @@ internal sealed partial class PptxRenderer
             sheets[name] = ReadWorksheetCells(worksheetPart, sharedStrings);
         }
 
-        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles);
+        return sheets.Count == 0 ? null : new ChartWorkbookData(sheets, ReadWorkbookDate1904(workbookXml), styles, definedNames);
     }
 
     private static bool ReadWorkbookDate1904(XDocument workbookXml)
@@ -1341,6 +1342,25 @@ internal sealed partial class PptxRenderer
             .Descendants(SpreadsheetNamespace + "si")
             .Select(item => string.Concat(item.Descendants(SpreadsheetNamespace + "t").Select(text => text.Value)))
             .ToArray();
+    }
+
+    private static IReadOnlyDictionary<string, string> ReadWorkbookDefinedNames(XDocument workbookXml)
+    {
+        var definedNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (XElement definedName in workbookXml.Root?.Element(SpreadsheetNamespace + "definedNames")?.Elements(SpreadsheetNamespace + "definedName") ?? [])
+        {
+            string? name = (string?)definedName.Attribute("name");
+            if (string.IsNullOrWhiteSpace(name) ||
+                definedName.Attribute("localSheetId") is not null ||
+                string.IsNullOrWhiteSpace(definedName.Value))
+            {
+                continue;
+            }
+
+            definedNames[name] = definedName.Value.Trim();
+        }
+
+        return definedNames;
     }
 
     private static ChartWorkbookStyles ReadWorkbookStyles(OoxPackage workbookPackage, OoxPart workbookPart)
@@ -1486,6 +1506,7 @@ internal sealed partial class PptxRenderer
     {
         private readonly IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets;
         private readonly ChartWorkbookStyles styles;
+        private readonly IReadOnlyDictionary<string, string> definedNames;
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, string>> sheets)
             : this(sheets, date1904: false)
@@ -1496,6 +1517,7 @@ internal sealed partial class PptxRenderer
         {
             this.sheets = ConvertWorkbookSheets(sheets);
             styles = ChartWorkbookStyles.Empty;
+            definedNames = new Dictionary<string, string>();
             Date1904 = date1904;
         }
 
@@ -1505,13 +1527,25 @@ internal sealed partial class PptxRenderer
         }
 
         public ChartWorkbookData(IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets, bool date1904, ChartWorkbookStyles styles)
+            : this(sheets, date1904, styles, new Dictionary<string, string>())
+        {
+        }
+
+        public ChartWorkbookData(
+            IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> sheets,
+            bool date1904,
+            ChartWorkbookStyles styles,
+            IReadOnlyDictionary<string, string> definedNames)
         {
             this.sheets = sheets;
             this.styles = styles;
+            this.definedNames = definedNames;
             Date1904 = date1904;
         }
 
         public bool Date1904 { get; }
+
+        public IReadOnlyDictionary<string, string> DefinedNames => definedNames;
 
         public string[] ReadRange(string? formula)
         {
@@ -1523,7 +1557,8 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
-            if (!TryParseRange(formula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
+            string? resolvedFormula = ResolveDefinedNameFormula(formula);
+            if (!TryParseRange(resolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out Dictionary<string, ChartWorkbookCell>? cells))
             {
                 return [];
@@ -1557,6 +1592,24 @@ internal sealed partial class PptxRenderer
             }
 
             return values.ToArray();
+        }
+
+        private string? ResolveDefinedNameFormula(string? formula)
+        {
+            if (string.IsNullOrWhiteSpace(formula))
+            {
+                return formula;
+            }
+
+            string trimmed = formula.Trim();
+            if (trimmed.Contains('!', StringComparison.Ordinal))
+            {
+                return trimmed;
+            }
+
+            return definedNames.TryGetValue(trimmed, out string? definedFormula)
+                ? definedFormula
+                : trimmed;
         }
 
         private static IReadOnlyDictionary<string, Dictionary<string, ChartWorkbookCell>> ConvertWorkbookSheets(

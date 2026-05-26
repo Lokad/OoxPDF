@@ -7774,6 +7774,20 @@ made from workbook-owned metadata instead of hard-coded label heuristics or work
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added workbook-level defined-name ownership to chart workbook range resolution.
+The embedded workbook reader now preserves non-local `<definedName>` entries from `workbook.xml`, exposes them
+through `ChartWorkbookData.DefinedNames`, and resolves chart formulas like `SalesValues` to their underlying
+range before cache hydration. The embedded workbook fixture now locks named category and value ranges through
+the same `strCache`/`numCache` materialization path as literal `Sheet1!$A$2:$A$4` references.
+
+This closes only the simple workbook-level name case where the defined name resolves to a normal rectangular
+range. Sheet-local defined names, multi-area unions, structured table references, formulas, stale-cache
+reconciliation, and Office's source/cache freshness policy remain open. The architectural direction is still
+to turn chart data sources into typed workbook-backed value vectors instead of piling special cases into
+renderer-side cache mutation.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved numeric chart-cache format codes next to the point metadata already
 owned by the scene model. `PptxSceneChartSeries` now carries `c:numLit/c:formatCode` or
 `c:numCache/c:formatCode` for value, x-value, y-value, and bubble-size caches, while leaving category
