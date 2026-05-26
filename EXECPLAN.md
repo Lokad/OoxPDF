@@ -1129,6 +1129,12 @@ High-priority actions:
   rich text runs, rotation, full non-default tick-label offset ladders, multi-level category labels, and
   chart-style inherited text defaults still need structural modeling before axis and data-label text can
   match Office without renderer heuristics.
+  - [x] Preserve chart and axis title rich-text run boundaries in the scene model:
+    `PptxSceneChartTitle` now carries `TextRuns` with per-run text and chart text-style overrides while
+    retaining the flattened `Text` value for existing rendering. Explicit titles read runs from `c:tx`, and
+    inferred single-series auto titles carry a single default-styled run so future title layout does not have
+    to re-infer text from raw chart XML. The scene-builder fixture locks a two-run chart title with distinct
+    size/color/bold and font/italic evidence. Validation: focused `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
