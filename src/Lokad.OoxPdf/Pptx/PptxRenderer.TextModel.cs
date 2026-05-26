@@ -50,6 +50,7 @@ internal sealed partial class PptxRenderer
             paragraph.Cascade.Sources.Count(source => source is not null),
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
             paragraph.Style.Alignment.ToString(),
+            paragraph.Style.AlignmentValue,
             paragraph.Style.FontSize,
             paragraph.Style.Indent.MarginLeft,
             paragraph.Style.Indent.Hanging,

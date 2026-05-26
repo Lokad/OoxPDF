@@ -1878,8 +1878,10 @@ internal sealed partial class PptxRenderer
         XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
         double fontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties) * fontScale;
+        string? alignmentValue = ReadAlignmentValue(paragraph, defaultParagraphProperties);
         return new ResolvedParagraphTextStyle(
-            ReadAlignment(paragraph, defaultParagraphProperties),
+            ParseAlignment(alignmentValue),
+            alignmentValue,
             paragraphProperties,
             defaultRunProperties,
             fontSize,

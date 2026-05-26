@@ -197,6 +197,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ResolvedParagraphTextStyle(
         TextAlignment Alignment,
+        string? AlignmentValue,
         XElement? Properties,
         XElement? DefaultRunProperties,
         double FontSize,

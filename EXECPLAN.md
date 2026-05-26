@@ -340,6 +340,13 @@ High-priority actions:
   (`17 passed, 0 failed, 1 skipped`); focused non-slow `pptx-shapes` passed
   (`15 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`256 passed, 0 failed, 7 skipped`).
+- [x] Preserve PPTX paragraph-alignment source tokens in the text model:
+  `ResolvedParagraphTextStyle` and `PptxTextParagraphModelSnapshot` now keep the raw DrawingML `a:pPr @algn`
+  value next to the normalized `TextAlignment` enum. The public alignment ladder locks `just`, `dist`,
+  `justLow`, and `thaiDist` as source tokens in addition to the existing flow/layout enum assertions, so
+  future Office-alignment work can distinguish unsupported source values from normalized layout behavior.
+  Validation: focused non-slow `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow
+  console runner passed (`256 passed, 0 failed, 7 skipped`).
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
   paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
 - [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF

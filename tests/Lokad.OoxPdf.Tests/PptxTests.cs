@@ -5220,6 +5220,15 @@ internal static class PptxTests
         TestAssert.Contains("JustLow", alignmentList);
         TestAssert.Contains("ThaiDistributed", alignmentList);
 
+        PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, 0).ToArray();
+        string alignmentValueList = string.Join("|", models
+            .SelectMany(frame => frame.Paragraphs)
+            .Select(paragraph => paragraph.AlignmentValue ?? string.Empty));
+        TestAssert.Contains("just", alignmentValueList);
+        TestAssert.Contains("dist", alignmentValueList);
+        TestAssert.Contains("justLow", alignmentValueList);
+        TestAssert.Contains("thaiDist", alignmentValueList);
+
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextLineLayoutSnapshot distributed = layout.Frames
             .SelectMany(frame => frame.Paragraphs)

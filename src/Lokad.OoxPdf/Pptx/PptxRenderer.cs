@@ -190,8 +190,17 @@ internal sealed partial class PptxRenderer
 
     private static TextAlignment ReadAlignment(XElement paragraph, XElement? defaultParagraphProperties)
     {
-        string? value = (string?)(paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn") ??
+        return ParseAlignment(ReadAlignmentValue(paragraph, defaultParagraphProperties));
+    }
+
+    private static string? ReadAlignmentValue(XElement paragraph, XElement? defaultParagraphProperties)
+    {
+        return (string?)(paragraph.Element(DrawingNamespace + "pPr")?.Attribute("algn") ??
             defaultParagraphProperties?.Attribute("algn"));
+    }
+
+    private static TextAlignment ParseAlignment(string? value)
+    {
         return value switch
         {
             "ctr" => TextAlignment.Center,
