@@ -2175,7 +2175,7 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>();
         AddChartRichTextRuns(
             runs,
-            sceneChart?.Title.TextRuns is { Count: > 0 } titleRuns ? ToChartTextRuns(titleRuns) : [],
+            ReadSceneOrXmlChartTitleTextRuns(theme, sceneChart, chartXml),
             title.Trim(),
             titleX,
             baselineY,
@@ -2277,6 +2277,20 @@ internal sealed partial class PptxRenderer
         }
 
         return ReadChartTitleText(chartXml);
+    }
+
+    private static IReadOnlyList<ChartTextRunOverride> ReadSceneOrXmlChartTitleTextRuns(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        if (sceneChart is not null)
+        {
+            return ToChartTextRuns(sceneChart.Title.TextRuns);
+        }
+
+        XElement? titleText = chartXml
+            .Descendants(ChartNamespace + "title")
+            .FirstOrDefault()
+            ?.Element(ChartNamespace + "tx");
+        return ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(titleText, theme));
     }
 
     private static string? ReadChartTitleText(XDocument chartXml)

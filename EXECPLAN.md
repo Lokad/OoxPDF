@@ -1028,10 +1028,10 @@ High-priority actions:
   dimension mismatches, deck MAE `9.043369`, changed16 `0.116418`, and only one
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
-- [ ] Extend the chart data-label scene model beyond the current metadata subset: rich text runs inside
-  custom label text, leader lines, exact Office label-box geometry/auto-fit, and richer position semantics
-  still need typed ownership before data-label layout can be aligned structurally with Office instead of
-  renderer heuristics.
+- [ ] Extend the chart data-label scene model beyond the currently consumed subset: leader-line geometry,
+  exact Office label-box geometry/auto-fit, richer position semantics, and label layout ownership still need
+  typed renderer support before data-label layout can be aligned structurally with Office instead of renderer
+  heuristics.
   - [x] Preserve per-label custom rich-text run boundaries in the scene model:
     `PptxSceneChartDataLabelOverride` now carries `CustomTextRuns` with per-run text and chart text-style
     overrides, while retaining the existing flattened `CustomText` for current rendering. The scene-builder
@@ -1181,6 +1181,11 @@ High-priority actions:
     color, bold, italic, and typeface over the resolved chart/title style while retaining the flattened title
     path for XML-only or unstyled titles. The public line/pie chart rendering test locks run-level title
     font size and color. Validation: focused `pptx-charts` tests passed `40/40`.
+  - [x] Align the raw-XML chart-title fallback with the scene-owned rich-text parser:
+    `RenderChartTitle` now asks one scene-or-XML helper for title runs, and the XML-only fallback path reuses
+    `PptxSceneBuilder.ReadChartTextRuns` instead of flattening rich title text before emission. This keeps the
+    legacy fallback no richer than the typed scene path while reducing parser duplication. Validation: focused
+    `pptx-charts` tests passed `40/40`.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout
@@ -1207,8 +1212,8 @@ High-priority actions:
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
   value/percent subset, but the richer Office label contract is no longer discarded at scene build time.
   Later on 2026-05-24, supported bar/line renderers also began consuming the preserved category-name and
-  series-name flags for label text composition; leader-line geometry, position semantics, rich text, per-label
-  overrides, and data-label shape styles remain open.
+  series-name flags for label text composition; leader-line geometry, position semantics, per-label
+  manual-layout/box overrides, and data-label shape styles remain open.
   Focused model/chart tests passed after a transient parallel build lock was rerun serially, the full runner
   passed 186/186, `dotnet pack` succeeded, and private run
   `artifacts/private-visual/lokad-value-based/20260524-161747` stayed stable: 84/84 compared pages, zero
@@ -1784,8 +1789,9 @@ High-priority actions:
     defaults.
   - [x] Add scene-owned chart-level, axis-level, title, and legend text-style overrides for the supported
     `txPr/defRPr` subset: font family, font size, solid color, bold, and italic.
-  - [ ] Extend chart text-style records to cover rich text runs, rotation, full non-default tick-label offset
-    ladders, multi-level category labels, per-run data-label styles, and chart-style inherited defaults.
+  - [ ] Extend chart text-style records to cover the remaining rich-text surfaces, rotation, full non-default
+    tick-label offset ladders, multi-level category labels, data-label box style consumption, and chart-style
+    inherited defaults.
   - [x] Carry scene-owned secondary value-axis metadata into label visibility, formatting, scale, unit, and
     text-style decisions for supported bar/line chart paths.
   - [x] Preserve cross-axis IDs, crossing behavior, cross-between, and reversed orientation metadata in
@@ -7666,3 +7672,16 @@ line-height switch. The next attempt should inspect Office's anchor box top/bott
 containment separately for `anchor="ctr"` and `anchor="b"`, likely using a public matrix of text box versus
 auto-shape, one-line versus multi-line, and default versus explicit line spacing. Keep the current small-label
 ellipse guard intact while doing that work.
+
+Revision note, 2026-05-26: Closed a small chart rich-text asymmetry discovered while reviewing the remaining
+chart-scene fallback code. Scene-owned chart titles already preserved and emitted rich run boundaries, but the
+XML-only title fallback still passed an empty rich-run list into `RenderChartTitle`, flattening `c:title/c:tx`
+text even though the shared scene parser could read it. The renderer now uses a single scene-or-XML helper for
+title runs, and the fallback path reuses `PptxSceneBuilder.ReadChartTextRuns`.
+
+This is intentionally not chart-title layout closure. Axis titles are still preserved but not rendered,
+leader-line geometry and exact data-label boxes are still open, and chart-style inherited defaults still need
+a structural owner. The useful long-term effect is narrower: another legacy XML read now routes through the
+typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt explicit.
+
+Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
