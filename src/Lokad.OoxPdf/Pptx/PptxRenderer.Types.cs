@@ -154,6 +154,7 @@ internal sealed partial class PptxRenderer
         double X,
         double BaselineY,
         double Width,
+        double PdfFontSize,
         bool SyntheticBold,
         bool SyntheticItalic);
 

@@ -329,6 +329,15 @@ High-priority actions:
   `12.984`. The remaining rule is therefore not font-family-specific; it is tied to Office's wrapped/split text-line
   PDF emission. Do not change `PptxPdfTextEmissionProfile` until the per-line condition is known well enough to lock
   with a public probe instead of a private slide-specific branch.
+- [x] Prepare PPTX text glyph emission for context-sensitive Office `/Tf` rules without changing behavior:
+  `TextGlyphRun` now owns the already-resolved PDF emission font size, and `DrawGlyphText` consumes that value
+  instead of recomputing `/Tf` from the layout font size. This keeps the four-stage text pipeline explicit:
+  layout keeps OOXML font sizes, glyph positioning compensates against the emitted size, and PDF drawing consumes
+  a resolved emission value. Validation passed with focused non-slow `pptx-typography` tests (`73 passed, 0 failed,
+  2 skipped`). This intentionally does not implement the secondary `+0.024 pt` branch yet: public-safe probe evidence
+  now shows that wrapped 9 pt text used `9`, `9`, then `9.024`, while a very narrow wrapped 13 pt paragraph used
+  `12.984` only on two interior split lines among many `12.96` lines. The rule is not simply "wrapped text" or
+  "last line"; it still needs an Office PDF structural discriminator before renderer behavior should change.
 - [x] Implement the dominant Office `/Tf` font-size grid at the PDF emission boundary:
   a second ignored public-safe probe rewrote the font-size quantization deck from `spAutoFit` to `noAutofit`
   and Office still emitted the same main sizes, so the dominant behavior is not autofit. `PptxPdfTextEmissionProfile`

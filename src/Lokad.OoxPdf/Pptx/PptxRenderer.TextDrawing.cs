@@ -805,7 +805,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<TextGlyphAtom> glyphs = BuildTextGlyphAtoms(embedded, run);
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
         string? positioningArray = EncodeGlyphPositioningArray(glyphs, run.FontSize, pdfFontSize, forcePositioningArray: true);
-        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, syntheticBold, syntheticItalic);
     }
 
     private static TextGlyphRun? BuildTextGlyphRun(string resourceName, PdfEmbeddedFont embedded, PptxPositionedTextSpan span, bool syntheticBold, bool syntheticItalic)
@@ -830,7 +830,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
-        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, syntheticBold, syntheticItalic);
+        return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, syntheticBold, syntheticItalic);
     }
 
     private static string EncodeGlyphHex(PptxTextGlyphSpanLayout span)
@@ -1039,7 +1039,7 @@ internal sealed partial class PptxRenderer
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
     {
         TextRun run = glyphRun.Source;
-        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+        double pdfFontSize = glyphRun.PdfFontSize;
         if (glyphRun.PositioningArray is null)
         {
             graphics.DrawGlyphText(
