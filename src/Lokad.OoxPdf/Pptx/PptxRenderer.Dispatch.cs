@@ -72,7 +72,6 @@ internal sealed partial class PptxRenderer
                     EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.Picture:
-                    BeginSlideNodeClip(context, graphics);
                     RenderPicture(
                         node,
                         context,
@@ -81,7 +80,6 @@ internal sealed partial class PptxRenderer
                         images,
                         relationships,
                         ref imageIndex);
-                    EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.Table:
                     BeginSlideNodeClip(context, graphics);

@@ -274,6 +274,14 @@ High-priority actions:
   does not add extra page clips around pure text. The public connector transform probe now has exact high-level
   graphics-operator parity with Office (`f:4,f*:1,W*:6`), and private page 17 moved to candidate
   `f:4,f*:14,S:4,W*:67` against Office `f:4,f*:14,S:4,W*:68`.
+- [x] Align raster picture clipping with Office's picture-frame structure:
+  public `pptx-ladder-07-basic-image` Office PDF inspection shows one page `W*` clip and one image-frame `W*`
+  clip, not an additional picture-node full-slide clip. Raster pictures now emit an even-odd frame clip around
+  their drawn image, cropped pictures retain their inner crop clip, and picture scene nodes no longer add a
+  redundant full-slide wrapper. The public `pptx-images` family stayed green at 13/13, and basic-image
+  Office/candidate `W*` clip comparison is exact with two clips and zero deltas. Private page-17 small picture
+  clips now line up at the two picture-frame bounds, but the high-level page-17 count remains Office
+  `W*:68` versus candidate `W*:67`, so the remaining clip gap is not an image-frame issue.
 - [ ] Replace sampled curved-connector filled outlines with analytical Office-like curve-rich paths:
   the public connector transform probe now matches Office at the high-level fill/clip/stroke operator count, but
   PDF inspection still shows candidate filled connector paths as sampled outlines. Arrow-tail connectors now emit
@@ -288,13 +296,15 @@ High-priority actions:
   polygon route because private page-17 Office evidence for those connectors is line-only and the polygon path keeps
   the private raster/graphics-operator improvement stable.
 - [ ] Close the remaining private page-17 slide-clip and derived font-size gaps:
-  after the page/background clipping pass, private page 17 is down to one missing high-level `W*` clip and still
+  after the page/background and raster-picture clipping passes, private page 17 is still down to one missing
+  high-level `W*` clip and still
   differs on derived/fractional font sizes: Office reports `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while
   candidate reports `9,10,12,13,14,16,18`. The fractional-font public guard covers explicit `a:rPr sz`, so the
   remaining work must split two independent issues instead of applying another narrow page-specific patch:
   the source slide has whole-point `a:rPr/@sz` values and no `normAutofit`, while Office's PDF export applies a
-  repeatable text-emission quantization before writing `/Tf`; a separate graphics-structure gap still accounts
-  for the missing even-odd clip.
+  repeatable text-emission quantization before writing `/Tf`; a separate non-picture graphics-structure gap still
+  accounts for the missing even-odd clip. Public image evidence rules out normal stretched raster pictures as the
+  remaining source.
 - [ ] Complete the Office PPTX-to-PDF text font-size emission profile:
   ignored Office-generated probes under `artifacts/probes/font-size-quantization*` show the generic export rule
   outside the private deck (`7->6.96`, `8->8.04`, `10->9.96`, `13->12.96`, `14->14.04`, `16->15.96`,

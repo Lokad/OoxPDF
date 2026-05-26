@@ -119,6 +119,8 @@ internal sealed partial class PptxRenderer
             graphics.SetAlpha(alpha, 1d);
         }
 
+        graphics.SaveState();
+        graphics.ClipRectangleEvenOdd(imageX, imageY, imageWidth, imageHeight);
         if (crop.IsEmpty)
         {
             graphics.DrawImage(name, imageX, imageY, imageWidth, imageHeight);
@@ -127,6 +129,8 @@ internal sealed partial class PptxRenderer
         {
             graphics.DrawImageCropped(name, imageX, imageY, imageWidth, imageHeight, crop.Left, crop.Top, crop.Right, crop.Bottom);
         }
+
+        graphics.RestoreState();
 
         if (transparent)
         {

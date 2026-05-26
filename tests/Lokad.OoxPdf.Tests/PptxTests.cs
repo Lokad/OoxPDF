@@ -5461,6 +5461,10 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/Subtype /Image", pdf);
         TestAssert.Contains("/XObject", pdf);
+        TestAssert.True(
+            CountOccurrences(pdf, "0 0 720 540 re W* n") == 1,
+            "Pictures should rely on the page clip and their own frame clip, not an extra slide-sized node clip.");
+        TestAssert.Contains("72 396 144 72 re W* n", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
         TestAssert.Contains("/Width 2 /Height 1", pdf);
     }
@@ -6141,6 +6145,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("72 396 144 72 re W* n", pdf);
         TestAssert.Contains(" re W n", pdf);
         TestAssert.Contains("/Im1 Do", pdf);
     }
