@@ -1938,6 +1938,10 @@ internal sealed partial class PptxRenderer
         int? TableFirstColumnId,
         string TableLastColumnName,
         int? TableLastColumnId,
+        int? TableRowIndex,
+        bool TableHeaderRow,
+        bool TableDataRow,
+        bool TableTotalsRow,
         string Text,
         string RawValue,
         bool HasCell,
@@ -2147,6 +2151,9 @@ internal sealed partial class PptxRenderer
             int maxRow = Math.Max(firstRow, lastRow);
             int rangeRowCount = maxRow - minRow + 1;
             int rangeColumnCount = maxColumn - minColumn + 1;
+            ChartWorkbookTable sourceTable = default;
+            bool hasSourceTable = !string.IsNullOrWhiteSpace(resolution.TableName) &&
+                tables.TryGetValue(resolution.TableName, out sourceTable);
             int index = 0;
             for (int row = minRow; row <= maxRow; row++)
             {
@@ -2155,6 +2162,10 @@ internal sealed partial class PptxRenderer
                     string reference = ToCellReference(column, row);
                     bool hasCell = worksheet.Cells.TryGetValue(reference, out ChartWorkbookCell cell);
                     ChartWorkbookCellFormat format = hasCell ? styles.ResolveCellFormat(cell.StyleIndex) : default;
+                    int? tableRowIndex = hasSourceTable ? row - sourceTable.FirstRow : null;
+                    bool tableHeaderRow = hasSourceTable && tableRowIndex >= 0 && tableRowIndex < Math.Max(0, sourceTable.HeaderRowCount);
+                    bool tableTotalsRow = hasSourceTable && sourceTable.TotalsRowCount > 0 && row > sourceTable.LastRow - sourceTable.TotalsRowCount && row <= sourceTable.LastRow;
+                    bool tableDataRow = hasSourceTable && !tableHeaderRow && !tableTotalsRow && row >= sourceTable.FirstRow && row <= sourceTable.LastRow;
                     values.Add(new ChartWorkbookRangeCell(
                         index,
                         row - minRow,
@@ -2178,6 +2189,10 @@ internal sealed partial class PptxRenderer
                         resolution.TableFirstColumnId,
                         resolution.TableLastColumnName,
                         resolution.TableLastColumnId,
+                        tableRowIndex,
+                        tableHeaderRow,
+                        tableDataRow,
+                        tableTotalsRow,
                         hasCell ? cell.Text : string.Empty,
                         hasCell ? cell.RawValue : string.Empty,
                         hasCell,

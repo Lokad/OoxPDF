@@ -10362,6 +10362,10 @@ internal static class PptxTests
         TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableFirstColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference first source column id to survive resolution.");
         TestAssert.Equal("Amount", (string?)firstParsedStructuredCell.GetType().GetProperty("TableLastColumnName")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableLastColumnId")?.GetValue(firstParsedStructuredCell) == 2, "Expected structured-reference last source column id to survive resolution.");
+        TestAssert.True((int?)firstParsedStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(firstParsedStructuredCell) == 1, "Expected structured-reference table row index to survive resolution.");
+        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableDataRow")?.GetValue(firstParsedStructuredCell) == true, "Expected structured-reference data row role to survive resolution.");
+        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableHeaderRow")?.GetValue(firstParsedStructuredCell) == false, "Expected structured-reference data row not to be classified as a header row.");
+        TestAssert.True((bool?)firstParsedStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(firstParsedStructuredCell) == false, "Expected structured-reference data row not to be classified as a totals row.");
         Array parsedWholeTableCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[#Data]"]) ?? throw new InvalidOperationException("Expected parsed whole-table structured-reference range cells."));
         object firstParsedWholeTableCell = parsedWholeTableCells.GetValue(0) ?? throw new InvalidOperationException("Expected first whole-table structured-reference range cell.");
         TestAssert.True(parsedWholeTableCells.Length == 9, "Expected whole-table data-body structured reference to hydrate the complete data-body rectangle.");
@@ -10400,6 +10404,9 @@ internal static class PptxTests
         TestAssert.Equal("Sheet1!B4:B4", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
         TestAssert.Equal("Amount", (string?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnName")?.GetValue(firstParsedTotalsStructuredCell) ?? string.Empty);
         TestAssert.True((int?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableColumnId")?.GetValue(firstParsedTotalsStructuredCell) == 2, "Expected totals structured-reference source column id to survive resolution.");
+        TestAssert.True((int?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableRowIndex")?.GetValue(firstParsedTotalsStructuredCell) == 3, "Expected totals structured-reference table row index to survive resolution.");
+        TestAssert.True((bool?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableTotalsRow")?.GetValue(firstParsedTotalsStructuredCell) == true, "Expected totals structured-reference row role to survive resolution.");
+        TestAssert.True((bool?)firstParsedTotalsStructuredCell.GetType().GetProperty("TableDataRow")?.GetValue(firstParsedTotalsStructuredCell) == false, "Expected totals structured-reference not to be classified as a data row.");
         Array parsedBlankCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$C$2:$C$2"]) ?? throw new InvalidOperationException("Expected parsed blank workbook range cell."));
         object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");

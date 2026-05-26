@@ -7775,6 +7775,18 @@ can now carry rectangular table source provenance without renderer-local heurist
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved table row-role metadata on chart workbook range cells. When a
+structured-reference source resolves through a workbook table, each `ChartWorkbookRangeCell` now carries a
+table-local row index plus explicit `TableHeaderRow`, `TableDataRow`, and `TableTotalsRow` flags. The
+embedded workbook regression covers both a data-body reference and a totals-row reference.
+
+This still does not evaluate calculated columns, table totals formulas, filters, or Office's choice between
+workbook data and chart caches. It removes another source-structure blind spot: future chart-data vectors can
+reason about `#Headers`, `#Data`, `#Totals`, blank slots, and table-derived multi-level categories without
+re-opening the table part or deriving row roles from absolute row numbers at the render site.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Added rectangular source coordinates to chart workbook range cells.
 `ChartWorkbookRangeCell` now carries zero-based `RangeRowIndex` and `RangeColumnIndex`, total
 `RangeRowCount` and `RangeColumnCount`, and absolute worksheet `SheetRow` and `SheetColumn` alongside the
