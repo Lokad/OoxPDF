@@ -120,7 +120,23 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SaveState();
-        graphics.ClipRectangleEvenOdd(imageX, imageY, imageWidth, imageHeight);
+        double clipX = imageX;
+        double clipY = imageY;
+        double clipWidth = imageWidth;
+        double clipHeight = imageHeight;
+        if (!hasTransform &&
+            !TryIntersectWithSlideBounds(imageX, imageY, imageWidth, imageHeight, document, out clipX, out clipY, out clipWidth, out clipHeight))
+        {
+            graphics.RestoreState();
+            if (transparent)
+            {
+                graphics.RestoreState();
+            }
+
+            return;
+        }
+
+        graphics.ClipRectangleEvenOdd(clipX, clipY, clipWidth, clipHeight);
         if (crop.IsEmpty)
         {
             graphics.DrawImage(name, imageX, imageY, imageWidth, imageHeight);
@@ -143,6 +159,28 @@ internal sealed partial class PptxRenderer
         }
 
         images.Add(new PdfImageResource(name, image));
+    }
+
+    private static bool TryIntersectWithSlideBounds(
+        double x,
+        double y,
+        double width,
+        double height,
+        PptxDocument document,
+        out double clipX,
+        out double clipY,
+        out double clipWidth,
+        out double clipHeight)
+    {
+        double minX = Math.Max(0d, x);
+        double minY = Math.Max(0d, y);
+        double maxX = Math.Min(document.SlideWidthPoints, x + Math.Max(0d, width));
+        double maxY = Math.Min(document.SlideHeightPoints, y + Math.Max(0d, height));
+        clipX = minX;
+        clipY = minY;
+        clipWidth = Math.Max(0d, maxX - minX);
+        clipHeight = Math.Max(0d, maxY - minY);
+        return clipWidth > 0d && clipHeight > 0d;
     }
 
     private static ShapeBounds ToShapeBounds(PptxSceneBounds bounds)

@@ -7759,6 +7759,26 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Intersected protruding PPTX text and picture clips with the slide page box before
+PDF emission. The private slide-17 `W*` inspection isolated a small top-edge clipping rectangle whose
+candidate path extended just above the page while Office's reference path stopped at the page boundary. The
+text-frame model now intersects `vertOverflow="clip"` text clips with the slide height before layout fans the
+clip into positioned runs, and bitmap picture rendering now intersects untransformed picture frame clips with
+the slide bounds while keeping the original image placement/crop intact. Public synthetic regressions lock
+both protruding text-box and PNG-picture cases at the PDF operator level.
+
+Private-safe validation for `private-cases/lokad-value-based.json` run `20260526-225413`: 84 compared pages,
+no dimension mismatches, MAE `7.555419`, changed16 `0.10144`; diagnostics remain one
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page-17 PDF graphics inspection now shows the targeted top-edge picture
+clip clamped to `MaxY=540`, matching the slide page boundary. The broader strict page-17 `W*` comparison still
+reports `reference=68`, `candidate=67`; remaining deltas are dominated by slide-sized and column-like clip
+structure/order, so the next long-term work should be a general clip-ownership model that can represent Office
+page clips, local object clips, transformed clips, and close-path variants explicitly instead of relying on
+ad hoc renderer-local `ClipRectangle*` calls.
+
+Validation: focused `PptxSyntheticPngPictureClipIntersectsSlideBounds` passed; full non-slow console runner
+passed (`250 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Locked another chart workbook range-parser edge case before broadening renderer
 semantics. The workbook hydration tests now cover a multi-area formula whose sheet token is quoted and
 contains a comma, with the second area relying on the leading sheet token from the first area. This preserves

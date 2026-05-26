@@ -178,12 +178,15 @@ internal sealed partial class PptxRenderer
         int columnCount = bodyProperties.ColumnCount;
         double columnSpacing = bodyProperties.ColumnSpacing;
         bool clipsVerticalOverflow = bodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
-        double textClipY = clipsVerticalOverflow
-            ? document.SlideHeightPoints - flowYTop - insets.Top - textHeight
-            : 0d;
-        double textClipHeight = clipsVerticalOverflow
-            ? textHeight
-            : document.SlideHeightPoints;
+        double textClipY = 0d;
+        double textClipHeight = document.SlideHeightPoints;
+        if (clipsVerticalOverflow)
+        {
+            (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
+                document.SlideHeightPoints - flowYTop - insets.Top - textHeight,
+                textHeight,
+                document.SlideHeightPoints);
+        }
         RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
             ? fontColor
             : null;
@@ -257,6 +260,15 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "prstGeom");
         string? preset = (string?)geometry?.Attribute("prst");
         return string.IsNullOrEmpty(preset) || string.Equals(preset, "rect", StringComparison.Ordinal);
+    }
+
+    private static (double Y, double Height) IntersectVerticalTextClipWithSlide(double y, double height, double slideHeight)
+    {
+        double minY = Math.Max(0d, y);
+        double maxY = Math.Min(slideHeight, y + Math.Max(0d, height));
+        return maxY <= minY
+            ? (minY, 0d)
+            : (minY, maxY - minY);
     }
 
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
