@@ -1928,6 +1928,10 @@ internal sealed partial class PptxRenderer
         string TableName,
         string TableColumnName,
         int? TableColumnId,
+        string TableFirstColumnName,
+        int? TableFirstColumnId,
+        string TableLastColumnName,
+        int? TableLastColumnId,
         string Text,
         string RawValue,
         bool HasCell,
@@ -1968,7 +1972,11 @@ internal sealed partial class PptxRenderer
         int? DefinedNameLocalSheetId,
         string TableName,
         string TableColumnName,
-        int? TableColumnId);
+        int? TableColumnId,
+        string TableFirstColumnName,
+        int? TableFirstColumnId,
+        string TableLastColumnName,
+        int? TableLastColumnId);
 
     private readonly record struct ChartWorkbookNumericValue(
         ChartWorkbookRangeCell Cell,
@@ -2152,6 +2160,10 @@ internal sealed partial class PptxRenderer
                         resolution.TableName,
                         resolution.TableColumnName,
                         resolution.TableColumnId,
+                        resolution.TableFirstColumnName,
+                        resolution.TableFirstColumnId,
+                        resolution.TableLastColumnName,
+                        resolution.TableLastColumnId,
                         hasCell ? cell.Text : string.Empty,
                         hasCell ? cell.RawValue : string.Empty,
                         hasCell,
@@ -2185,7 +2197,7 @@ internal sealed partial class PptxRenderer
             string sourceFormula = formula?.Trim() ?? string.Empty;
             if (sourceFormula.Length == 0)
             {
-                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, null, string.Empty, string.Empty, null);
+                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown, string.Empty, string.Empty, null, string.Empty, string.Empty, null, string.Empty, null, string.Empty, null);
             }
 
             string resolvedFormula = sourceFormula;
@@ -2213,7 +2225,11 @@ internal sealed partial class PptxRenderer
                 resolvedFormula,
                 out string tableName,
                 out string tableColumnName,
-                out int? tableColumnId) ?? string.Empty;
+                out int? tableColumnId,
+                out string tableFirstColumnName,
+                out int? tableFirstColumnId,
+                out string tableLastColumnName,
+                out int? tableLastColumnId) ?? string.Empty;
             bool fromStructuredReference = !string.Equals(structuredResolvedFormula, resolvedFormula, StringComparison.Ordinal);
             resolvedFormula = structuredResolvedFormula;
 
@@ -2233,7 +2249,11 @@ internal sealed partial class PptxRenderer
                 definedNameLocalSheetId,
                 tableName,
                 tableColumnName,
-                tableColumnId);
+                tableColumnId,
+                tableFirstColumnName,
+                tableFirstColumnId,
+                tableLastColumnName,
+                tableLastColumnId);
         }
 
         private bool TryResolveQualifiedLocalDefinedName(string sourceFormula, out ChartWorkbookDefinedName definedName)
@@ -2269,11 +2289,23 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        private string? ResolveStructuredReferenceFormula(string? formula, out string tableName, out string tableColumnName, out int? tableColumnId)
+        private string? ResolveStructuredReferenceFormula(
+            string? formula,
+            out string tableName,
+            out string tableColumnName,
+            out int? tableColumnId,
+            out string tableFirstColumnName,
+            out int? tableFirstColumnId,
+            out string tableLastColumnName,
+            out int? tableLastColumnId)
         {
             tableName = string.Empty;
             tableColumnName = string.Empty;
             tableColumnId = null;
+            tableFirstColumnName = string.Empty;
+            tableFirstColumnId = null;
+            tableLastColumnName = string.Empty;
+            tableLastColumnId = null;
             if (string.IsNullOrWhiteSpace(formula))
             {
                 return formula;
@@ -2301,6 +2333,8 @@ internal sealed partial class PptxRenderer
             int firstColumn = table.FirstColumn;
             int lastColumn = table.LastColumn;
             ChartWorkbookTableColumn tableColumn = default;
+            ChartWorkbookTableColumn firstTableColumn = table.Columns.Count > 0 ? table.Columns[0] : default;
+            ChartWorkbookTableColumn lastTableColumn = table.Columns.Count > 0 ? table.Columns[^1] : default;
             if (!wholeTable)
             {
                 if (string.IsNullOrWhiteSpace(columnName))
@@ -2326,6 +2360,8 @@ internal sealed partial class PptxRenderer
 
                 firstColumn = table.FirstColumn + columnOffset;
                 lastColumn = firstColumn;
+                firstTableColumn = tableColumn;
+                lastTableColumn = tableColumn;
             }
 
             int headerRowCount = Math.Max(0, table.HeaderRowCount);
@@ -2352,6 +2388,10 @@ internal sealed partial class PptxRenderer
             tableName = table.Name;
             tableColumnName = wholeTable ? string.Empty : tableColumn.Name;
             tableColumnId = wholeTable ? null : tableColumn.Id;
+            tableFirstColumnName = firstTableColumn.Name;
+            tableFirstColumnId = firstTableColumn.Id;
+            tableLastColumnName = lastTableColumn.Name;
+            tableLastColumnId = lastTableColumn.Id;
             return FormattableString.Invariant($"{QuoteSheetName(table.SheetName)}!{ToCellReference(firstColumn, firstRow)}:{ToCellReference(lastColumn, lastRow)}");
         }
 

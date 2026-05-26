@@ -7867,6 +7867,18 @@ formatting decisions anchored in workbook-owned cell metadata.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added first/last table-column provenance to structured chart workbook ranges.
+`ChartWorkbookRangeCell` now carries `TableFirstColumnName`/`Id` and `TableLastColumnName`/`Id` next to the
+existing single-column `TableColumnName`/`Id`. Single-column references set all column identities to the same
+table column, while whole-table item references keep the single-column identity empty and record the table's
+first and last source columns.
+
+This is behavior-neutral and deliberately stops short of multi-column span parsing. The point is to make the
+renderer-facing range record capable of representing table-owned rectangular sources without collapsing them
+back into a one-column assumption before Office-PDF-backed chart semantics are applied.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Resolved item-only whole-table structured references for chart workbook ranges.
 `SalesTable[#Data]` now resolves to the table-owned data-body rectangle instead of being treated as a lookup
 for a column literally named `#Data`. The resolver distinguishes whole-table scopes from column-qualified
