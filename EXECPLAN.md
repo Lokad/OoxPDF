@@ -7759,6 +7759,19 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Preserved raw worksheet value identity alongside resolved workbook text.
+`ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the raw `<v>` text, whether a value element was
+present, and the parsed shared-string index. Shared strings still resolve to display text for current rendering,
+but the range-cell record now also keeps the original workbook token (`0`, `1`, etc.) and distinguishes cached
+`<v>` cells from inline strings and formula blanks without cached values.
+
+This is another behavior-neutral data-layer closure. It does not implement source/cache freshness, shared
+string formatting runs, or locale/date conversion. It does keep the structural evidence needed for those later
+decisions in the same value record that already owns source formula, style, formula attributes, and visibility.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`248 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Preserved worksheet formula attributes in the embedded chart workbook bridge.
 `ChartWorkbookCell` and `ChartWorkbookRangeCell` now carry the full local-name/value attribute bag from
 `x:f`, not only the formula text and `t` type. The regression fixture locks shared-formula `si`/`ref` and

@@ -1506,6 +1506,7 @@ internal sealed partial class PptxRenderer
             XElement? formula = cell.Element(SpreadsheetNamespace + "f");
             int? styleIndex = ReadSpreadsheetCellStyleIndex(cell);
             string? value = valueElement?.Value;
+            string rawValue = value ?? string.Empty;
             bool hasValue = valueElement is not null;
             if (string.Equals(cellType, "inlineStr", StringComparison.Ordinal))
             {
@@ -1519,17 +1520,23 @@ internal sealed partial class PptxRenderer
             }
 
             value ??= string.Empty;
+            int? sharedStringIndexValue = null;
             if (string.Equals(cellType, "s", StringComparison.Ordinal) &&
-                int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex) &&
-                sharedStringIndex >= 0 &&
-                sharedStringIndex < sharedStrings.Count)
+                int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sharedStringIndex))
             {
-                value = sharedStrings[sharedStringIndex];
+                sharedStringIndexValue = sharedStringIndex;
+                if (sharedStringIndex >= 0 && sharedStringIndex < sharedStrings.Count)
+                {
+                    value = sharedStrings[sharedStringIndex];
+                }
             }
 
             cells[reference] = new ChartWorkbookCell(
                 value,
+                rawValue,
                 hasValue,
+                valueElement is not null,
+                sharedStringIndexValue,
                 styleIndex,
                 cellType ?? string.Empty,
                 ReadWorkbookCellValueKind(cellType, value, hasValue),
@@ -1711,7 +1718,10 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartWorkbookCell(
         string Text,
+        string RawValue,
         bool HasValue,
+        bool HasValueElement,
+        int? SharedStringIndex,
         int? StyleIndex,
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
@@ -1834,8 +1844,11 @@ internal sealed partial class PptxRenderer
         string TableColumnName,
         int? TableColumnId,
         string Text,
+        string RawValue,
         bool HasCell,
         bool HasValue,
+        bool HasValueElement,
+        int? SharedStringIndex,
         int? StyleIndex,
         string CellType,
         ChartWorkbookCellValueKind ValueKind,
@@ -2047,8 +2060,11 @@ internal sealed partial class PptxRenderer
                         resolution.TableColumnName,
                         resolution.TableColumnId,
                         hasCell ? cell.Text : string.Empty,
+                        hasCell ? cell.RawValue : string.Empty,
                         hasCell,
                         hasCell && cell.HasValue,
+                        hasCell && cell.HasValueElement,
+                        hasCell ? cell.SharedStringIndex : null,
                         hasCell ? cell.StyleIndex : null,
                         hasCell ? cell.CellType : string.Empty,
                         hasCell ? cell.ValueKind : ChartWorkbookCellValueKind.Blank,
@@ -2225,7 +2241,7 @@ internal sealed partial class PptxRenderer
                 var cells = new Dictionary<string, ChartWorkbookCell>(StringComparer.OrdinalIgnoreCase);
                 foreach (KeyValuePair<string, string> cell in sheet.Value)
                 {
-                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, true, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
+                    cells[cell.Key] = new ChartWorkbookCell(cell.Value, cell.Value, true, true, null, null, string.Empty, ReadWorkbookCellValueKind(null, cell.Value, true), string.Empty, string.Empty, new Dictionary<string, string>());
                 }
 
                 converted[sheet.Key] = new ChartWorksheetData(cells, new HashSet<int>(), new HashSet<int>());

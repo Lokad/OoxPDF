@@ -10296,6 +10296,8 @@ internal static class PptxTests
         TestAssert.Equal("DirectRange", firstParsedCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         TestAssert.Equal(string.Empty, (string?)firstParsedCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedCell) ?? string.Empty);
         TestAssert.Equal("Number", firstParsedCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
+        TestAssert.Equal("8.2", (string?)firstParsedCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.True((bool?)firstParsedCell.GetType().GetProperty("HasValueElement")?.GetValue(firstParsedCell) == true, "Expected numeric worksheet cell to preserve its cached value element.");
         System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
         TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
         System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");
@@ -10328,9 +10330,12 @@ internal static class PptxTests
         TestAssert.Equal("DefinedName", firstParsedTextCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("SalesLabels", (string?)firstParsedTextCell.GetType().GetProperty("DefinedName")?.GetValue(firstParsedTextCell) ?? string.Empty);
         TestAssert.Equal("SharedString", firstParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
+        TestAssert.Equal("0", (string?)firstParsedTextCell.GetType().GetProperty("RawValue")?.GetValue(firstParsedTextCell) ?? string.Empty);
+        TestAssert.True((int?)firstParsedTextCell.GetType().GetProperty("SharedStringIndex")?.GetValue(firstParsedTextCell) == 0, "Expected shared-string index to survive workbook parsing.");
         object lastParsedTextValue = parsedTextValues.GetValue(2) ?? throw new InvalidOperationException("Expected inline-string typed text value.");
         object lastParsedTextCell = textCellProperty.GetValue(lastParsedTextValue) ?? throw new InvalidOperationException("Expected inline-string range cell.");
         TestAssert.Equal("InlineString", lastParsedTextCell.GetType().GetProperty("ValueKind")?.GetValue(lastParsedTextCell)?.ToString() ?? string.Empty);
+        TestAssert.True((bool?)lastParsedTextCell.GetType().GetProperty("HasValueElement")?.GetValue(lastParsedTextCell) == false, "Expected inline string cells to remain distinguishable from cached <v> cells.");
         Array parsedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Amount]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference range cells."));
         object firstParsedStructuredCell = parsedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference range cell.");
         TestAssert.Equal("SalesTable[Amount]", (string?)firstParsedStructuredCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
@@ -10343,6 +10348,7 @@ internal static class PptxTests
         object parsedBlankCell = parsedBlankCells.GetValue(0) ?? throw new InvalidOperationException("Expected blank workbook range cell.");
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasCell")?.GetValue(parsedBlankCell) == true, "Expected styled formula blank cell to remain a physical cell.");
         TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValue")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached value to preserve missing value state.");
+        TestAssert.True((bool?)parsedBlankCell.GetType().GetProperty("HasValueElement")?.GetValue(parsedBlankCell) == false, "Expected formula blank cell without cached <v> to preserve value-element absence.");
         TestAssert.Equal("Blank", parsedBlankCell.GetType().GetProperty("ValueKind")?.GetValue(parsedBlankCell)?.ToString() ?? string.Empty);
         TestAssert.Equal("NA()", (string?)parsedBlankCell.GetType().GetProperty("Formula")?.GetValue(parsedBlankCell) ?? string.Empty);
         TestAssert.Equal("array", (string?)parsedBlankCell.GetType().GetProperty("FormulaType")?.GetValue(parsedBlankCell) ?? string.Empty);
