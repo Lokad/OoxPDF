@@ -699,19 +699,19 @@ internal sealed partial class PptxRenderer
     {
         if (preset == "ellipse")
         {
-            graphics.FillEllipse(x, y, width, height);
+            graphics.FillEllipseEvenOdd(x, y, width, height);
         }
         else if (preset == "roundRect")
         {
-            graphics.FillRoundedRectangle(x, y, width, height, Math.Min(width, height) * 0.16d);
+            graphics.FillRoundedRectangleEvenOdd(x, y, width, height, Math.Min(width, height) * 0.16d);
         }
         else if (TryCreatePresetPolygonPoints(preset, x, y, width, height, out (double X, double Y)[] polygonPoints))
         {
-            graphics.FillPolygon(polygonPoints);
+            graphics.FillPolygonEvenOdd(polygonPoints);
         }
         else
         {
-            graphics.FillRectangle(x, y, width, height);
+            graphics.FillRectangleEvenOdd(x, y, width, height);
         }
     }
 
@@ -872,7 +872,7 @@ internal sealed partial class PptxRenderer
             foreach (XElement path in paths.Where(CustomGeometryPathAllowsFill))
             {
                 AppendCustomGeometryPath(graphics, path, x, y, width, height);
-                graphics.FillCurrentPath();
+                graphics.FillCurrentPathEvenOdd();
             }
 
             if (transparentFill)
@@ -975,7 +975,7 @@ internal sealed partial class PptxRenderer
             foreach (PptxSceneCustomPath path in customGeometry.Paths.Where(path => path.AllowsFill))
             {
                 AppendCustomGeometryPath(graphics, customGeometry, path, x, y, width, height);
-                graphics.FillCurrentPath();
+                graphics.FillCurrentPathEvenOdd();
             }
 
             if (transparentFill)

@@ -98,6 +98,11 @@ internal sealed class PdfGraphicsBuilder
         builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f");
     }
 
+    public void FillRectangleEvenOdd(double x, double y, double width, double height)
+    {
+        builder.Append(N(x)).Append(' ').Append(N(y)).Append(' ').Append(N(width)).Append(' ').Append(N(height)).AppendLine(" re f*");
+    }
+
     public void PaintAxialShading(double x0, double y0, double x1, double y1, byte startRed, byte startGreen, byte startBlue, byte endRed, byte endGreen, byte endBlue)
     {
         PaintAxialShading(x0, y0, x1, y1, [new PdfShadingStop(0d, startRed, startGreen, startBlue), new PdfShadingStop(1d, endRed, endGreen, endBlue)]);
@@ -129,6 +134,12 @@ internal sealed class PdfGraphicsBuilder
     {
         AppendRoundedRectanglePath(x, y, width, height, radius);
         builder.AppendLine("f");
+    }
+
+    public void FillRoundedRectangleEvenOdd(double x, double y, double width, double height, double radius)
+    {
+        AppendRoundedRectanglePath(x, y, width, height, radius);
+        builder.AppendLine("f*");
     }
 
     public void StrokeRoundedRectangle(double x, double y, double width, double height, double radius)
@@ -182,6 +193,12 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("f");
     }
 
+    public void FillPolygonEvenOdd((double X, double Y)[] points)
+    {
+        AppendPolygonPath(points);
+        builder.AppendLine("f*");
+    }
+
     public void MoveTo(double x, double y)
     {
         builder.Append(N(x)).Append(' ').Append(N(y)).AppendLine(" m");
@@ -227,6 +244,12 @@ internal sealed class PdfGraphicsBuilder
     {
         AppendEllipsePath(x, y, width, height);
         builder.AppendLine("f");
+    }
+
+    public void FillEllipseEvenOdd(double x, double y, double width, double height)
+    {
+        AppendEllipsePath(x, y, width, height);
+        builder.AppendLine("f*");
     }
 
     public void StrokeEllipse(double x, double y, double width, double height)

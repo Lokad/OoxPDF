@@ -783,7 +783,7 @@ internal static class PptxTests
         TestAssert.Contains("1 1 1 rg", pdf);
         TestAssert.Contains("0 0 720 540 re f", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("72 396 144 72 re f", pdf);
+        TestAssert.Contains("72 396 144 72 re f*", pdf);
         TestAssert.Contains("0 0 1 RG", pdf);
         TestAssert.Contains("0 1 0 rg", pdf);
         TestAssert.Contains(" c", pdf);
@@ -1274,8 +1274,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/GS50000F100000S gs", pdf);
-        TestAssert.Contains("79.2 396 72 72 re f", pdf);
-        TestAssert.Contains("72 396 72 72 re f", pdf);
+        TestAssert.Contains("79.2 396 72 72 re f*", pdf);
+        TestAssert.Contains("72 396 72 72 re f*", pdf);
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_EFFECT"), "Supported outer shadow should not emit an unsupported-effect diagnostic.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered outer shadow alpha should not emit an unsupported-transparency diagnostic.");
     }
@@ -1311,8 +1311,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/GS25000F100000S gs", pdf);
-        TestAssert.Contains("64.8 388.8 86.4 86.4 re f", pdf);
-        TestAssert.Contains("72 396 72 72 re f", pdf);
+        TestAssert.Contains("64.8 388.8 86.4 86.4 re f*", pdf);
+        TestAssert.Contains("72 396 72 72 re f*", pdf);
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_EFFECT"), "Supported glow should not emit an unsupported-effect diagnostic.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Rendered glow alpha should not emit an unsupported-transparency diagnostic.");
     }

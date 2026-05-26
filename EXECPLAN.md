@@ -226,6 +226,21 @@ High-priority actions:
   sides; graphics operators are now Office `f:4,f*:14,S:4,W*:68` versus candidate `f:17,S:8,W*:44`.
   Remaining public work should target the missing filled-region `f*` structure and the extra Office clip
   regions, not missing text.
+- [x] Route PPTX shape fills through explicit even-odd PDF fill operators:
+  `PdfGraphicsBuilder` now exposes even-odd rectangle, rounded-rectangle, polygon, ellipse, and current-path
+  fill primitives, and PPTX preset/custom geometry shape fills use them for DrawingML shape regions. This
+  moves normal shape fills toward Office-like `f*` structure without changing page backgrounds, charts,
+  tables, images, DOCX, connector markers, or gradient shading paths. Public PDF and PPTX shape tests now
+  assert `f*` where this behavior is intentional.
+- [x] Re-check private slide-17 after the even-odd shape-fill change:
+  private run `artifacts/private-visual/lokad-value-based/20260526-085358` stayed stable with 84/84 compared
+  pages, zero dimension mismatches, deck MAE `8.945316`, changed16 `0.115517`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Slide/page 17 remained at MAE `2.881015`, changed16 `0.044900`,
+  changed32 `0.035255`, SSIM `0.920075`. Page-filtered PDF inspection still shows 44 text ops on both
+  sides; graphics operators moved from candidate `f:17,S:8,W*:44` to candidate `f:4,f*:13,S:8,W*:44`,
+  much closer to Office `f:4,f*:14,S:4,W*:68` on filled-region operators. Remaining public work should
+  target extra Office clip regions, stroke/path decomposition, and the separate fractional/derived font-size
+  differences, not another broad fill-operator sweep.
 - [x] Extend PDF inspection for large private decks with page-aware, text-only extraction:
   `tools/InspectPdf.ps1 -TextOnly` skips image stream decoding and emits `PageNumber` on text operations, so
   slide/page-level PDF text structure can be compared without dumping large private image streams.
@@ -6573,3 +6588,22 @@ with zero dimension mismatches, deck MAE `8.945316`, changed16 `0.115517`, and t
 Office-observed positions, no longer emits a standalone visible regular-space operation after that dash, and matches
 the reference page-17 text-operation count (`44` reference operations versus `44` candidate operations). Remaining
 slide-17 work is broader text placement/order parity rather than dash or post-dash visible-space segmentation.
+
+Revision note, 2026-05-26: Advanced the private slide-17 PDF-structure path by switching PPTX DrawingML shape fills
+to explicit even-odd PDF fill operators. `PdfGraphicsBuilder` now has even-odd fill primitives for rectangles,
+rounded rectangles, polygons, ellipses, and current paths; PPTX preset and custom geometry fills use those
+primitives while page backgrounds, charts, tables, images, DOCX, connector markers, and gradient shading remain on
+their existing paths until separate Office evidence justifies moving them. Public guards include
+`WritesEvenOddFillOperators`, `PptxSyntheticShapesProduceDrawingOperators`, and the PPTX outer-shadow/glow shape
+operator assertions.
+
+Validation: focused `pptx-shapes` tests passed 14/14; focused `pdf` tests passed 8/8; the full non-slow test runner
+passed 234/234 with 7 skipped; and `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal
+--no-restore` succeeded. The private `lokad-value-based` run
+`artifacts/private-visual/lokad-value-based/20260526-085358` compared 84/84 pages with zero dimension mismatches,
+deck MAE `8.945316`, changed16 `0.115517`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Private page 17 stayed
+visually neutral at MAE `2.881015`, changed16 `0.044900`, changed32 `0.035255`, SSIM `0.920075`, and 44 text
+operations on both sides. The private-safe graphics-operator structure improved from candidate `f:17,S:8,W*:44`
+after text clipping to candidate `f:4,f*:13,S:8,W*:44`, close to Office `f:4,f*:14,S:4,W*:68` for fill operators.
+Remaining structural gaps are the extra Office clip regions, the candidate's higher stroke/path count, and the
+derived fractional font sizes still absent from candidate page-17 text operations.

@@ -60,6 +60,19 @@ internal static class PdfWriterTests
         TestAssert.Contains("10 20 30 40 re W* n", pdf);
     }
 
+    public static void WritesEvenOddFillOperators()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.FillRectangleEvenOdd(10, 20, 30, 40);
+        graphics.FillPolygonEvenOdd([(0d, 0d), (10d, 0d), (10d, 10d)]);
+
+        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
+
+        TestAssert.Contains("10 20 30 40 re f*", pdf);
+        TestAssert.Contains("0 0 m", pdf);
+        TestAssert.Contains("f*", pdf);
+    }
+
     public static void WritesEmbeddedTrueTypeFontObjects()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
