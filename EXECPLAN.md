@@ -7760,6 +7760,17 @@ Validation: focused `pptx-model` passed with slow tests included (`15 passed, 0 
 focused non-slow `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow console runner
 passed (`244 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-26: Made embedded chart workbook loading consume scene-owned external-data metadata
+first. `ReadEmbeddedChartWorkbookData` now prefers `PptxSceneChart.ExternalData.TargetPartName`, and only
+falls back to scanning raw `c:externalData` plus chart-part relationships when the scene model is absent.
+This does not close workbook semantics: stale cache policy, blank-cell handling, table/name references, and
+the `date1904` option still need public Office-PDF evidence. It does remove another renderer-local
+relationship scan from the normal scene-backed path, so chart series/category/name hydration continues moving
+toward package/model ownership instead of draw-site XML rediscovery.
+
+Validation: focused non-slow `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`244 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-26: Extended the `pptx-renderer` survey without closing the broader migration design.
 The external renderer at `C:\Users\JoannesVermorel\code\pptx-renderer` confirms a useful long-term ownership
 shape: deterministic package parsing, normalized presentation assembly, explicit slide/layout/master/theme

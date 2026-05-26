@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartWorkbookData? chartWorkbook = chartPart is not null
-            ? ReadEmbeddedChartWorkbookData(context.Package, chartPart, resolvedChartXml)
+            ? ReadEmbeddedChartWorkbookData(context.Package, chartPart, resolvedChartXml, sceneChart?.ExternalData ?? default)
             : null;
 
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts))
@@ -1196,7 +1196,33 @@ internal sealed partial class PptxRenderer
             new XElement(ChartNamespace + "v", value));
     }
 
-    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(OoxPackage package, OoxPart chartPart, XDocument chartXml)
+    private static ChartWorkbookData? ReadEmbeddedChartWorkbookData(
+        OoxPackage package,
+        OoxPart chartPart,
+        XDocument chartXml,
+        PptxSceneChartExternalData sceneExternalData)
+    {
+        string? targetPartName = sceneExternalData.IsDefined &&
+            !string.IsNullOrWhiteSpace(sceneExternalData.TargetPartName)
+            ? sceneExternalData.TargetPartName
+            : ReadEmbeddedChartWorkbookTargetPartName(package, chartPart, chartXml);
+        if (targetPartName is null)
+        {
+            return null;
+        }
+
+        OoxPart? workbookPackagePart = package.GetPart(targetPartName);
+        if (workbookPackagePart is null)
+        {
+            return null;
+        }
+
+        using Stream stream = workbookPackagePart.OpenRead();
+        OoxPackage workbookPackage = OoxPackage.Open(stream);
+        return ReadWorkbookData(workbookPackage);
+    }
+
+    private static string? ReadEmbeddedChartWorkbookTargetPartName(OoxPackage package, OoxPart chartPart, XDocument chartXml)
     {
         string? relationshipId = (string?)chartXml
             .Descendants(ChartNamespace + "externalData")
@@ -1207,27 +1233,14 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        OoxRelationship? relationship = package
+        return package
             .GetRelationships(chartPart.Name)
             .FirstOrDefault(item =>
                 item.Id == relationshipId &&
                 !item.IsExternal &&
                 item.Type == ChartExternalDataPackageRelationshipType &&
-                item.ResolvedTarget is not null);
-        if (relationship?.ResolvedTarget is null)
-        {
-            return null;
-        }
-
-        OoxPart? workbookPackagePart = package.GetPart(relationship.ResolvedTarget);
-        if (workbookPackagePart is null)
-        {
-            return null;
-        }
-
-        using Stream stream = workbookPackagePart.OpenRead();
-        OoxPackage workbookPackage = OoxPackage.Open(stream);
-        return ReadWorkbookData(workbookPackage);
+                item.ResolvedTarget is not null)
+            ?.ResolvedTarget;
     }
 
     private static ChartWorkbookData? ReadWorkbookData(OoxPackage workbookPackage)
