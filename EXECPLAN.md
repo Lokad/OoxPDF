@@ -7871,8 +7871,8 @@ Revision note, 2026-05-26: Preserved discontiguous chart workbook range shape in
 source formula as a single rectangle. `ChartWorkbookData.ReadRangeCells` now splits top-level comma-separated
 range areas, carries the leading sheet token across subsequent same-sheet areas, reads each area in Office
 formula order, keeps point indices continuous across areas, and adds `RangeAreaIndex` / `RangeAreaCount` to
-every materialized range cell. The embedded workbook regression locks both raw range cells and typed numeric
-values for a two-area value source with an omitted sheet token in the second area.
+every materialized range cell. The embedded workbook regression locks raw range cells, typed numeric values,
+and a workbook-level defined name for a two-area value source with an omitted sheet token in the second area.
 
 This is still not a formula engine. Parenthesized unions, intersections, dynamic arrays, external workbook
 loading, and source/cache freshness policy remain open. The structural improvement is narrower: chart-data

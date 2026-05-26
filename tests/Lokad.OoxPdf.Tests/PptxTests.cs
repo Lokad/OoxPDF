@@ -10477,6 +10477,7 @@ internal static class PptxTests
         System.Reflection.PropertyInfo definedNamesProperty = workbookType.GetProperty("DefinedNames") ?? throw new InvalidOperationException("Expected workbook defined names.");
         var definedNames = (System.Collections.Generic.IReadOnlyDictionary<string, string>?)definedNamesProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined names.");
         TestAssert.True(definedNames.TryGetValue("SalesValues", out string? salesValuesFormula) && salesValuesFormula == "Sheet1!$B$2:$B$4", "Expected workbook-level defined name to survive parsing.");
+        TestAssert.True(definedNames.TryGetValue("SalesUnionValues", out string? salesUnionValuesFormula) && salesUnionValuesFormula == "Sheet1!$B$2:$B$2,$B$4:$B$4", "Expected workbook-level multi-area defined name to survive parsing.");
         TestAssert.True(!definedNames.ContainsKey("SheetLocalValues"), "Expected sheet-local defined names to stay out of workbook-level name resolution.");
         System.Reflection.PropertyInfo definedNameRecordsProperty = workbookType.GetProperty("DefinedNameRecords") ?? throw new InvalidOperationException("Expected workbook defined-name records.");
         var definedNameRecords = ((System.Collections.IEnumerable?)definedNameRecordsProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed defined-name records.")).Cast<object>().ToArray();
@@ -10493,6 +10494,14 @@ internal static class PptxTests
         TestAssert.True((int?)firstParsedLocalDefinedNameCell.GetType().GetProperty("DefinedNameLocalSheetId")?.GetValue(firstParsedLocalDefinedNameCell) == 0, "Expected sheet-local defined-name source scope to survive range resolution.");
         Array parsedBareLocalDefinedNameCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SheetLocalValues"]) ?? throw new InvalidOperationException("Expected bare sheet-local defined-name lookup to return an empty range."));
         TestAssert.True(parsedBareLocalDefinedNameCells.Length == 0, "Expected bare sheet-local names to remain unresolved without an explicit sheet scope.");
+        Array parsedUnionDefinedNameValues = (Array)(readNumericRange.Invoke(parsedWorkbook, ["SalesUnionValues"]) ?? throw new InvalidOperationException("Expected typed multi-area defined-name numeric values."));
+        TestAssert.True(parsedUnionDefinedNameValues.Length == 2, "Expected multi-area defined-name formula to hydrate both workbook areas.");
+        object secondParsedUnionDefinedNameValue = parsedUnionDefinedNameValues.GetValue(1) ?? throw new InvalidOperationException("Expected second typed multi-area defined-name numeric value.");
+        TestAssert.Equal(1.4d, (double?)numericValueProperty.GetValue(secondParsedUnionDefinedNameValue) ?? 0d);
+        object secondParsedUnionDefinedNameCell = numericCellProperty.GetValue(secondParsedUnionDefinedNameValue) ?? throw new InvalidOperationException("Expected typed multi-area defined-name range cell.");
+        TestAssert.Equal("DefinedName", secondParsedUnionDefinedNameCell.GetType().GetProperty("SourceKind")?.GetValue(secondParsedUnionDefinedNameCell)?.ToString() ?? string.Empty);
+        TestAssert.Equal("SalesUnionValues", (string?)secondParsedUnionDefinedNameCell.GetType().GetProperty("DefinedName")?.GetValue(secondParsedUnionDefinedNameCell) ?? string.Empty);
+        TestAssert.True((int?)secondParsedUnionDefinedNameCell.GetType().GetProperty("RangeAreaIndex")?.GetValue(secondParsedUnionDefinedNameCell) == 1, "Expected multi-area defined-name cell to preserve its range-area index.");
         System.Reflection.PropertyInfo calculationProperty = workbookType.GetProperty("Calculation") ?? throw new InvalidOperationException("Expected workbook calculation metadata.");
         object calculation = calculationProperty.GetValue(parsedWorkbook) ?? throw new InvalidOperationException("Expected parsed workbook calculation metadata.");
         System.Reflection.PropertyInfo calculationModeProperty = calculation.GetType().GetProperty("CalculationMode") ?? throw new InvalidOperationException("Expected workbook calculation mode.");
@@ -10861,6 +10870,7 @@ internal static class PptxTests
                   <definedNames>
                     <definedName name="SalesLabels">Sheet1!$A$2:$A$4</definedName>
                     <definedName name="SalesValues">Sheet1!$B$2:$B$4</definedName>
+                    <definedName name="SalesUnionValues">Sheet1!$B$2:$B$2,$B$4:$B$4</definedName>
                     <definedName name="SheetLocalValues" localSheetId="0">Sheet1!$B$2:$B$4</definedName>
                   </definedNames>
                   <calcPr calcId="191029" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="0"/>
