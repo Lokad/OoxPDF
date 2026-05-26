@@ -7786,6 +7786,19 @@ alignment needs to compare or reconcile sources.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Preserved range-source resolution provenance on chart workbook range cells.
+`ChartWorkbookRangeCell` now carries the original chart/workbook formula, the resolved cell-range formula, and
+a typed source kind distinguishing direct ranges, workbook-level defined names, structured references, and the
+combined defined-name-to-structured-reference path. The workbook regression now locks direct, defined-name, and
+structured-reference source provenance without changing cache hydration or native chart rendering.
+
+This keeps pushing source selection toward Office-aligned structure instead of later string reconstruction.
+OOXPDF still does not decide Office's stale-cache policy, sheet-local name resolution, `plotVisOnly`, or
+multi-area formula semantics, but future cache/source freshness work can now compare the chart formula and the
+materialized workbook cells from the same typed record.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Preserved the embedded chart workbook sheet catalog as typed metadata.
 `ChartWorkbookData.Sheets` now records each workbook sheet's name, `sheetId`, relationship id, raw `state`,
 zero-based workbook order, and resolved worksheet part name, and sheet-local defined-name mapping now uses that

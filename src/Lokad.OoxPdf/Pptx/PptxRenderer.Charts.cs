@@ -1759,6 +1759,9 @@ internal sealed partial class PptxRenderer
         int Index,
         string Reference,
         string SheetName,
+        string SourceFormula,
+        string ResolvedFormula,
+        ChartWorkbookRangeSourceKind SourceKind,
         string Text,
         bool HasCell,
         int? StyleIndex,
@@ -1770,6 +1773,20 @@ internal sealed partial class PptxRenderer
         bool? StyleAppliesNumberFormat,
         bool RowHidden,
         bool ColumnHidden);
+
+    private enum ChartWorkbookRangeSourceKind
+    {
+        Unknown,
+        DirectRange,
+        DefinedName,
+        StructuredReference,
+        DefinedNameStructuredReference
+    }
+
+    private readonly record struct ChartWorkbookRangeResolution(
+        string SourceFormula,
+        string ResolvedFormula,
+        ChartWorkbookRangeSourceKind SourceKind);
 
     private readonly record struct ChartWorkbookNumericValue(
         ChartWorkbookRangeCell Cell,
@@ -1920,9 +1937,8 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookRangeCell[] ReadRangeCells(string? formula)
         {
-            string? resolvedFormula = ResolveDefinedNameFormula(formula);
-            resolvedFormula = ResolveStructuredReferenceFormula(resolvedFormula);
-            if (!TryParseRange(resolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
+            ChartWorkbookRangeResolution resolution = ResolveRangeFormula(formula);
+            if (!TryParseRange(resolution.ResolvedFormula, out string? sheetName, out int firstColumn, out int firstRow, out int lastColumn, out int lastRow) ||
                 !sheets.TryGetValue(sheetName, out ChartWorksheetData? worksheet))
             {
                 return [];
@@ -1945,6 +1961,9 @@ internal sealed partial class PptxRenderer
                         index,
                         reference,
                         sheetName,
+                        resolution.SourceFormula,
+                        resolution.ResolvedFormula,
+                        resolution.SourceKind,
                         hasCell ? cell.Text : string.Empty,
                         hasCell,
                         hasCell ? cell.StyleIndex : null,
@@ -1963,22 +1982,35 @@ internal sealed partial class PptxRenderer
             return values.ToArray();
         }
 
-        private string? ResolveDefinedNameFormula(string? formula)
+        private ChartWorkbookRangeResolution ResolveRangeFormula(string? formula)
         {
-            if (string.IsNullOrWhiteSpace(formula))
+            string sourceFormula = formula?.Trim() ?? string.Empty;
+            if (sourceFormula.Length == 0)
             {
-                return formula;
+                return new ChartWorkbookRangeResolution(string.Empty, string.Empty, ChartWorkbookRangeSourceKind.Unknown);
             }
 
-            string trimmed = formula.Trim();
-            if (trimmed.Contains('!', StringComparison.Ordinal))
+            string resolvedFormula = sourceFormula;
+            bool fromDefinedName = false;
+            if (!sourceFormula.Contains('!', StringComparison.Ordinal) &&
+                definedNames.TryGetValue(sourceFormula, out string? definedFormula))
             {
-                return trimmed;
+                resolvedFormula = definedFormula;
+                fromDefinedName = true;
             }
 
-            return definedNames.TryGetValue(trimmed, out string? definedFormula)
-                ? definedFormula
-                : trimmed;
+            string structuredResolvedFormula = ResolveStructuredReferenceFormula(resolvedFormula) ?? string.Empty;
+            bool fromStructuredReference = !string.Equals(structuredResolvedFormula, resolvedFormula, StringComparison.Ordinal);
+            resolvedFormula = structuredResolvedFormula;
+
+            ChartWorkbookRangeSourceKind sourceKind = (fromDefinedName, fromStructuredReference) switch
+            {
+                (true, true) => ChartWorkbookRangeSourceKind.DefinedNameStructuredReference,
+                (true, false) => ChartWorkbookRangeSourceKind.DefinedName,
+                (false, true) => ChartWorkbookRangeSourceKind.StructuredReference,
+                _ => ChartWorkbookRangeSourceKind.DirectRange
+            };
+            return new ChartWorkbookRangeResolution(sourceFormula, resolvedFormula, sourceKind);
         }
 
         private string? ResolveStructuredReferenceFormula(string? formula)

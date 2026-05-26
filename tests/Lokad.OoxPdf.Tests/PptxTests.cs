@@ -10291,6 +10291,9 @@ internal static class PptxTests
         object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
         System.Reflection.PropertyInfo sheetNameProperty = firstParsedCell.GetType().GetProperty("SheetName") ?? throw new InvalidOperationException("Expected range-cell sheet name.");
         TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!$B$2:$B$4", (string?)firstParsedCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedCell) ?? string.Empty);
+        TestAssert.Equal("DirectRange", firstParsedCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedCell)?.ToString() ?? string.Empty);
         System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
         TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
         System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");
@@ -10316,6 +10319,16 @@ internal static class PptxTests
         object firstParsedTextValue = parsedTextValues.GetValue(0) ?? throw new InvalidOperationException("Expected first typed text value.");
         System.Reflection.PropertyInfo textValueProperty = firstParsedTextValue.GetType().GetProperty("Text") ?? throw new InvalidOperationException("Expected typed text value.");
         TestAssert.Equal("North", (string?)textValueProperty.GetValue(firstParsedTextValue) ?? string.Empty);
+        System.Reflection.PropertyInfo textCellProperty = firstParsedTextValue.GetType().GetProperty("Cell") ?? throw new InvalidOperationException("Expected typed text range-cell ownership.");
+        object firstParsedTextCell = textCellProperty.GetValue(firstParsedTextValue) ?? throw new InvalidOperationException("Expected typed text range cell.");
+        TestAssert.Equal("SalesLabels", (string?)firstParsedTextCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedTextCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!$A$2:$A$4", (string?)firstParsedTextCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedTextCell) ?? string.Empty);
+        TestAssert.Equal("DefinedName", firstParsedTextCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedTextCell)?.ToString() ?? string.Empty);
+        Array parsedStructuredCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["SalesTable[Amount]"]) ?? throw new InvalidOperationException("Expected parsed structured-reference range cells."));
+        object firstParsedStructuredCell = parsedStructuredCells.GetValue(0) ?? throw new InvalidOperationException("Expected first structured-reference range cell.");
+        TestAssert.Equal("SalesTable[Amount]", (string?)firstParsedStructuredCell.GetType().GetProperty("SourceFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
+        TestAssert.Equal("Sheet1!B2:B4", (string?)firstParsedStructuredCell.GetType().GetProperty("ResolvedFormula")?.GetValue(firstParsedStructuredCell) ?? string.Empty);
+        TestAssert.Equal("StructuredReference", firstParsedStructuredCell.GetType().GetProperty("SourceKind")?.GetValue(firstParsedStructuredCell)?.ToString() ?? string.Empty);
         object secondParsedCell = parsedCells.GetValue(1) ?? throw new InvalidOperationException("Expected second parsed workbook range cell.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(secondParsedCell) == true, "Expected hidden worksheet row to survive workbook parsing.");
         object thirdParsedCell = parsedCells.GetValue(2) ?? throw new InvalidOperationException("Expected third parsed workbook range cell.");
