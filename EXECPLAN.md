@@ -2319,6 +2319,22 @@ High-priority actions:
     Current chart-gate inventory is 37/37 graphics-gated and 34/37 text-gated. The remaining graphics-only
     cases are the two no-legend doughnut probes, which have no text structures to gate, and the inner
     plot-layout probe, whose value-axis tick labels still drift by about `57 pt`.
+  - [x] Gate the stable text structures in the inner plot-layout probe after separating a classifier issue from
+    a real chart-title layout gap. The apparent `~57 pt` value-axis drift was the chart title being classified
+    as `ValueAxisTickLabel`: the title sits above the plot and uses title-sized text, but this probe places it
+    far enough off the plot center that the old `0.35 * plotWidth` title-center tolerance missed it.
+    `ClassifyPdfChartText.ps1` now uses a `0.45 * plotWidth` chart-title center tolerance, which moves the
+    title into `ChartTitleText` and leaves the six value-axis tick labels with `0.10 pt` maximum drift.
+
+    `pptx-ladder-11-chart-plot-layout-target-inner-probe` now gates `ValueAxisTickLabel` at `0.2 pt` and
+    `CategoryAxisTickLabel` at `20 pt`. The category residual is still mostly horizontal label anchoring, and
+    the title remains ungated with `~56.98 pt` Y drift; those are real Office-layout work items, not evidence
+    that the value-axis text gate is unstable. Targeted validation passed at
+    `artifacts/visual/pptx-ladder-11-chart-plot-layout-target-inner-probe/20260526-163633`, and the full
+    `pptx-charts` family passed 37/37 at `artifacts/visual/reports/pptx-charts.json`, generated
+    `2026-05-26T16:39:30.4276885+02:00`. Current chart-gate inventory is 37/37 graphics-gated and 35/37
+    text-gated; the two remaining graphics-only chart cases are the no-legend doughnut probes with no text
+    structures to gate.
 - [x] 2026-05-25: Put the first public chart-structure gate on an existing visual case rather than leaving
   the classifier as a detached probe. `pptx-ladder-11-chart-column-clustered-port` now requires the derived
   `AxisPairPlotBoxCandidate` to stay within a bounded Office-PDF structural delta. The actual public manifest

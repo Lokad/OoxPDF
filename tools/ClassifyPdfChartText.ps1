@@ -170,7 +170,7 @@ function Looks-LikeChartTitle($op, $plotBox) {
 
     return $text.Length -gt 6 -and
         $fontSize -ge 10d -and
-        [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.35d)
+        [Math]::Abs($x - $plotCenter) -le ($plotWidth * 0.45d)
 }
 
 function Find-RadarSpokeGeometry($structures) {

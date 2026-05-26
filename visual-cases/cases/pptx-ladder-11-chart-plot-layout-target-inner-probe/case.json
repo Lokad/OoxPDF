@@ -13,6 +13,12 @@
     "maxChangedPixelRatioAtThreshold16": 0.01,
     "minForegroundColorHistogramCorrelation": 0.998,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"]
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "PlotAreaClipBoxCandidate"],
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 20.0,
+      "ValueAxisTickLabel": 0.2
+    }
   }
 }
