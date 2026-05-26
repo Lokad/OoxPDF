@@ -10279,6 +10279,8 @@ internal static class PptxTests
         var readRangeCells = workbookType.GetMethod("ReadRangeCells") ?? throw new InvalidOperationException("Expected range-cell reader.");
         Array parsedCells = (Array)(readRangeCells.Invoke(parsedWorkbook, ["Sheet1!$B$2:$B$4"]) ?? throw new InvalidOperationException("Expected parsed workbook range cells."));
         object firstParsedCell = parsedCells.GetValue(0) ?? throw new InvalidOperationException("Expected first parsed workbook range cell.");
+        System.Reflection.PropertyInfo sheetNameProperty = firstParsedCell.GetType().GetProperty("SheetName") ?? throw new InvalidOperationException("Expected range-cell sheet name.");
+        TestAssert.Equal("Sheet1", (string?)sheetNameProperty.GetValue(firstParsedCell) ?? string.Empty);
         System.Reflection.PropertyInfo styleIndexProperty = firstParsedCell.GetType().GetProperty("StyleIndex") ?? throw new InvalidOperationException("Expected range-cell style index.");
         TestAssert.True((int?)styleIndexProperty.GetValue(firstParsedCell) == 5, "Expected worksheet cell style index to survive workbook parsing.");
         System.Reflection.PropertyInfo styleNumberFormatIdProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatId") ?? throw new InvalidOperationException("Expected range-cell style number-format ID.");

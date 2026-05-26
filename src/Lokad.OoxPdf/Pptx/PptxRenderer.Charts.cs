@@ -1735,6 +1735,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartWorkbookRangeCell(
         int Index,
         string Reference,
+        string SheetName,
         string Text,
         bool HasCell,
         int? StyleIndex,
@@ -1902,6 +1903,7 @@ internal sealed partial class PptxRenderer
                     values.Add(new ChartWorkbookRangeCell(
                         index,
                         reference,
+                        sheetName,
                         hasCell ? cell.Text : string.Empty,
                         hasCell,
                         hasCell ? cell.StyleIndex : null,

@@ -7774,6 +7774,18 @@ instead of treating missing local names as absent workbook data.
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-26: Added explicit sheet provenance to chart workbook range cells. `ChartWorkbookRangeCell`
+now carries the worksheet name alongside the cell reference, range index, text, style, formula, visibility, and
+number-format metadata, and the embedded workbook regression locks that `Sheet1!B2` survives as a sheet-owned
+cell rather than just the local `B2` address.
+
+This is a small provenance slice, but it matters for the long-term multi-sheet target. Direct rendering still
+uses dense compatibility vectors, and multi-area/multi-sheet references remain unresolved; however, typed
+workbook values no longer have to recover sheet identity from the original formula when later structural
+alignment needs to compare or reconcile sources.
+
+Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-26: Used preserved workbook table header/totals metadata when resolving simple
 structured references. `Table[Column]` and `[[#Data],[Column]]` now start after the declared header rows and
 end before declared totals rows, while `[[#Headers],[Column]]` and `[[#All],[Column]]` keep their structural
