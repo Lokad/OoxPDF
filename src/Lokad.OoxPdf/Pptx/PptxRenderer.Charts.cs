@@ -889,12 +889,12 @@ internal sealed partial class PptxRenderer
                         theme,
                         graphics,
                         plotBox,
-                        lineSeries,
+                        lineSeriesVectors,
                         lineValueExtents,
                         lineValueAxisReversed,
                         ReadSceneOrXmlDataLabelOptions(linePlot, comboLineChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(linePlot, comboLineChart, theme),
-                        ReadSceneOrXmlCategoryLabels(linePlot, comboLineChart, workbook),
+                        ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook),
                         ReadSceneOrXmlChartSeriesNames(linePlot, comboLineChart, workbook)));
                     lineChartIndex++;
                 }
@@ -1001,16 +1001,16 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeriesVectors, stacked, percentStacked)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, reverseOrder: stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
-                    fonts.AddRange(RenderLineDataLabels(
-                        theme,
-                        graphics,
-                        plotBox,
-                        lineSeries,
-                        valueExtents,
-                        valueAxisReversed,
-                        ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
-                        ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
-                        ReadSceneOrXmlCategoryLabels(linePlot, lineChart, workbook),
+                fonts.AddRange(RenderLineDataLabels(
+                    theme,
+                    graphics,
+                    plotBox,
+                    lineSeriesVectors,
+                    valueExtents,
+                    valueAxisReversed,
+                    ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
+                    ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook),
                     ReadSceneOrXmlChartSeriesNames(linePlot, lineChart, workbook)));
                 return true;
             }
@@ -4525,12 +4525,12 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartPlotBox plotBox,
-        IReadOnlyList<IReadOnlyList<double>> series,
+        IReadOnlyList<ChartIndexedNumberVector> series,
         ChartValueExtents extents,
         bool valueAxisReversed,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
-        IReadOnlyList<string> categoryLabels,
+        ChartIndexedTextVector categoryLabels,
         IReadOnlyList<string> seriesNames)
     {
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
@@ -4538,23 +4538,34 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
+        if (denseSeries.Count == 0)
+        {
+            return [];
+        }
+
+        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
         var runs = new List<TextRun>();
-        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
         {
-            IReadOnlyList<double> values = series[seriesIndex];
+            IReadOnlyList<double?> values = denseSeries[seriesIndex];
             for (int i = 0; i < values.Count; i++)
             {
+                if (values[i] is not double value)
+                {
+                    continue;
+                }
+
                 double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
-                double pointY = ChartValueToPlotCoordinate(extents, values[i], plotBox.Y, plotBox.Height, valueAxisReversed);
+                double pointY = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
-                string label = FormatCartesianDataLabel(values[i], seriesIndex, i, effectiveOptions, categoryLabels, seriesNames);
+                string label = FormatCartesianDataLabel(value, seriesIndex, i, effectiveOptions, categoryLabels, seriesNames);
                 if (!string.IsNullOrEmpty(label))
                 {
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
@@ -5130,6 +5141,47 @@ internal sealed partial class PptxRenderer
         }
 
         return string.Join(GetChartDataLabelSeparator(options), parts);
+    }
+
+    private static string FormatCartesianDataLabel(
+        double value,
+        int seriesIndex,
+        int categoryIndex,
+        ChartDataLabelOptions options,
+        ChartIndexedTextVector categoryLabels,
+        IReadOnlyList<string> seriesNames)
+    {
+        if (!string.IsNullOrWhiteSpace(options.CustomText))
+        {
+            return options.CustomText;
+        }
+
+        var parts = new List<string>(3);
+        if (options.ShowSeriesName && seriesIndex < seriesNames.Count && !string.IsNullOrWhiteSpace(seriesNames[seriesIndex]))
+        {
+            parts.Add(seriesNames[seriesIndex]);
+        }
+
+        string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
+        if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
+        {
+            parts.Add(categoryLabel);
+        }
+
+        if (options.ShowValue)
+        {
+            parts.Add(FormatChartDataLabelValue(value, options));
+        }
+
+        return string.Join(GetChartDataLabelSeparator(options), parts);
+    }
+
+    private static string GetIndexedCategoryLabel(ChartIndexedTextVector categoryLabels, int categoryIndex)
+    {
+        return (categoryLabels.Points ?? [])
+            .Where(point => point.HasText && point.Index == categoryIndex)
+            .Select(point => point.Text)
+            .FirstOrDefault() ?? string.Empty;
     }
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)
