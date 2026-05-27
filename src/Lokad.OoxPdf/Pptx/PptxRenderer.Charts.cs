@@ -3896,8 +3896,9 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<string> ReadSceneOrXmlChartSeriesNames(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
-        return plot?.Series.Count > 0
-            ? plot.Series
+        if (plot is not null)
+        {
+            return plot.Series
                 .Select((series, index) =>
                 {
                     if (!string.IsNullOrWhiteSpace(series.Name))
@@ -3909,8 +3910,10 @@ internal sealed partial class PptxRenderer
                         .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
                     return string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim();
                 })
-                .ToArray()
-            : ReadChartSeriesNames(chartElement);
+                .ToArray();
+        }
+
+        return ReadChartSeriesNames(chartElement);
     }
 
     private static IReadOnlyList<string> ReadChartSeriesNames(XElement chartElement)
