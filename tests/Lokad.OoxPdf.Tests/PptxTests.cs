@@ -102,6 +102,7 @@ internal static class PptxTests
                   <Relationship Id="rIdImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
                   <Relationship Id="rIdShapeImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/>
                   <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                  <Relationship Id="rIdShapeHyperlink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/shape" TargetMode="External"/>
                 </Relationships>
                 """,
             ["ppt/charts/_rels/chart1.xml.rels"] = """
@@ -284,7 +285,7 @@ internal static class PptxTests
                   <p:cSld>
                     <p:bg><p:bgPr><a:solidFill><a:srgbClr val="123456"><a:alpha val="80000"/></a:srgbClr></a:solidFill></p:bgPr></p:bg>
                     <p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:solidFill><a:srgbClr val="CCDD11"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow><a:outerShdw dist="91440" dir="0"><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="4" name="TextBox"><a:hlinkClick r:id="rIdShapeHyperlink" action="ppaction://hlinkshowjump"/></p:cNvPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:solidFill><a:srgbClr val="CCDD11"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:effectLst><a:glow rad="91440"><a:srgbClr val="0000FF"><a:alpha val="25000"/></a:srgbClr></a:glow><a:outerShdw dist="91440" dir="0"><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></p:spPr><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:pPr lvl="1"/><a:r><a:rPr u="sng"><a:highlight><a:srgbClr val="FFFF00"/></a:highlight></a:rPr><a:t>Hello</a:t></a:r><a:br/><a:fld type="slidenum"><a:rPr sz="1200"/><a:t>1</a:t></a:fld><a:endParaRPr sz="1800"/></a:p></p:txBody></p:sp>
                     <p:pic><p:nvPicPr><p:cNvPr id="5" name="Picture"/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rIdImage"><a:alphaModFix amt="50000"/><a:grayscl/></a:blip><a:srcRect l="10000" t="20000" r="30000" b="40000"/><a:stretch><a:fillRect l="5000" r="10000"/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:pic>
                     <p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="6" name="Table"/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="1828800"/><a:ext cx="1828800" cy="914400"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl><a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr><a:tblGrid><a:gridCol w="914400"/><a:gridCol w="914400"/></a:tblGrid><a:tr h="914400"><a:tc gridSpan="2"><a:txBody><a:bodyPr lIns="91440" tIns="45720"/><a:lstStyle/><a:p/></a:txBody><a:tcPr marL="182880" anchor="ctr"><a:solidFill><a:srgbClr val="445566"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:lnL w="50800" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="778899"><a:alpha val="60000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:lnL></a:tcPr></a:tc><a:tc hMerge="1"/></a:tr></a:tbl></a:graphicData></a:graphic></p:graphicFrame>
                     <p:cxnSp><p:nvCxnSpPr><p:cNvPr id="8" name="Connector"/><p:nvPr/></p:nvCxnSpPr><p:spPr><a:xfrm><a:off x="0" y="2743200"/><a:ext cx="914400" cy="914400"/></a:xfrm><a:prstGeom prst="straightConnector1"><a:avLst><a:gd name="adj1" fmla="val 50000"/></a:avLst></a:prstGeom><a:ln w="25400" cap="rnd" cmpd="dbl"><a:solidFill><a:srgbClr val="336699"><a:alpha val="50000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/><a:headEnd type="arrow" w="lg"/><a:tailEnd type="triangle" len="sm"/></a:ln></p:spPr></p:cxnSp>
@@ -334,6 +335,12 @@ internal static class PptxTests
         TestAssert.Equal(3, slideSnapshot.LayoutNodes.Count);
         TestAssert.Equal(6, slideSnapshot.SlideNodes.Count);
         TestAssert.Equal("Shape", slideSnapshot.SlideNodes[0].Kind);
+        TestAssert.True(slide.SlideNodes[0].HyperlinkClick.IsDefined, "Expected shape-level hyperlink-click source state in the scene model.");
+        TestAssert.Equal("rIdShapeHyperlink", slide.SlideNodes[0].HyperlinkClick.RelationshipId ?? string.Empty);
+        TestAssert.Equal("ppaction://hlinkshowjump", slide.SlideNodes[0].HyperlinkClick.Action ?? string.Empty);
+        TestAssert.True(slideSnapshot.SlideNodes[0].HasHyperlinkClick, "Expected scene inspection to expose shape-level hyperlink-click source state.");
+        TestAssert.Equal("rIdShapeHyperlink", slideSnapshot.SlideNodes[0].HyperlinkClickId ?? string.Empty);
+        TestAssert.Equal("ppaction://hlinkshowjump", slideSnapshot.SlideNodes[0].HyperlinkClickAction ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[0].HasTextBody, "Expected private-safe scene inspection to expose text-body ownership without text content.");
         TestAssert.Equal(1, slideSnapshot.SlideNodes[0].TextParagraphCount);
         TestAssert.Equal(3, slideSnapshot.SlideNodes[0].TextRunCount);

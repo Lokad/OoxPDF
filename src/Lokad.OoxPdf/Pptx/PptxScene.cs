@@ -30,6 +30,9 @@ internal sealed record PptxSceneNodeSnapshot(
     string Kind,
     bool IsPlaceholder,
     bool IsSmartArtGraphicFrame,
+    bool HasHyperlinkClick,
+    string? HyperlinkClickId,
+    string? HyperlinkClickAction,
     bool HasBounds,
     double RotationDegrees,
     bool FlipHorizontal,
@@ -301,6 +304,7 @@ internal sealed record PptxSceneNode(
     string Name,
     bool IsPlaceholder,
     bool IsSmartArtGraphicFrame,
+    PptxSceneHyperlinkClick HyperlinkClick,
     PptxSceneBounds? Bounds,
     PptxSceneShape? Shape,
     PptxSceneTextBody? TextBody,
@@ -310,6 +314,11 @@ internal sealed record PptxSceneNode(
     PptxSceneGroupTransform GroupTransform,
     IReadOnlyList<PptxSceneNode> Children,
     XElement Source);
+
+internal readonly record struct PptxSceneHyperlinkClick(
+    bool IsDefined,
+    string? RelationshipId,
+    string? Action);
 
 internal sealed record PptxSceneShape(
     string Preset,
@@ -1684,13 +1693,14 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
-            (string id, string name) = ReadNonVisualProperties(child);
+            XElement? nonVisualProperties = ReadNonVisualProperties(child);
             nodes.Add(new PptxSceneNode(
                 kind,
-                id,
-                name,
+                ReadNonVisualId(nonVisualProperties),
+                ReadNonVisualName(nonVisualProperties),
                 IsPlaceholder(child),
                 kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicFrame(child),
+                ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, theme),
@@ -1754,14 +1764,37 @@ internal sealed class PptxSceneBuilder
             .Any(uri => uri?.Contains("drawingml/2006/diagram", StringComparison.OrdinalIgnoreCase) == true);
     }
 
-    private static (string Id, string Name) ReadNonVisualProperties(XElement element)
+    private static XElement? ReadNonVisualProperties(XElement element)
     {
-        XElement? nonVisual = element
+        return element
             .Elements()
             .FirstOrDefault(e => e.Name.LocalName is "nvSpPr" or "nvPicPr" or "nvGrpSpPr" or "nvGraphicFramePr" or "nvCxnSpPr")
             ?.Elements()
             .FirstOrDefault(e => e.Name.LocalName == "cNvPr");
-        return ((string?)nonVisual?.Attribute("id") ?? string.Empty, (string?)nonVisual?.Attribute("name") ?? string.Empty);
+    }
+
+    private static string ReadNonVisualId(XElement? nonVisualProperties)
+    {
+        return (string?)nonVisualProperties?.Attribute("id") ?? string.Empty;
+    }
+
+    private static string ReadNonVisualName(XElement? nonVisualProperties)
+    {
+        return (string?)nonVisualProperties?.Attribute("name") ?? string.Empty;
+    }
+
+    private static PptxSceneHyperlinkClick ReadHyperlinkClick(XElement? nonVisualProperties)
+    {
+        XElement? hyperlink = nonVisualProperties?.Element(DrawingNamespace + "hlinkClick");
+        if (hyperlink is null)
+        {
+            return default;
+        }
+
+        return new PptxSceneHyperlinkClick(
+            true,
+            (string?)hyperlink.Attribute(RelationshipsNamespace + "id"),
+            (string?)hyperlink.Attribute("action"));
     }
 
     private static bool IsPlaceholder(XElement element)

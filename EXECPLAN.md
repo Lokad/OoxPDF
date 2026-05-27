@@ -1179,6 +1179,12 @@ High-priority actions:
   `ResolvedRunTextStyle`, text-frame model snapshots, and text-flow snapshots now carry `HasHyperlinkClick`
   and the raw `r:id` token, so future hyperlink annotation, visited-link styling, and relationship-target
   work can consume typed model state instead of re-reading `a:hlinkClick` during rendering.
+- [x] Preserve shape-level hyperlink-click source state in the PPTX scene model:
+  `pptx-renderer` keeps `cNvPr/a:hlinkClick` as base-node state, while OOXPDF previously only exposed
+  run-level hyperlink clicks. `PptxSceneNode` and private-safe scene snapshots now carry whether a node has
+  a hyperlink click plus the raw `r:id` and `action` tokens. This closes the structural source-state gap for
+  shapes, pictures, graphic frames, connectors, and groups without pretending PDF link annotations or external
+  relationship-target policy are implemented yet.
 - [x] Next PPTX typography sequence: move highlight rectangles from the legacy `TextRun` drawing path to
   layout-owned line boxes and glyph spans, keeping `highlight-single` locked throughout the migration.
   Shape-text highlights now consume positioned spans and line-box baselines while highlighted text emission
