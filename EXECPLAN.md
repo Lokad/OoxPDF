@@ -358,14 +358,22 @@ High-priority actions:
   `PptxRenderer.Tables` still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image
   cache keys still live in rendering. Each future slice should move one of those fields into `PptxScene*` records,
   add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
-- [ ] Replace the PPTX table-cell synthetic-shape text bridge with a typed scene text-frame adapter:
-  `PptxSceneTableCell` already carries text insets, vertical anchor metadata, style-fill/text defaults,
-  borders, spans, and the raw `a:txBody`, but table-cell text layout still reaches `ReadTextSpansForShape`
-  by building a temporary `p:sp` element and injecting the internal `ooxpdf:wrapWidth` attribute. The long-term
-  fix is not to remove that wrapper blindly; it is to introduce a typed table-cell text frame that carries
-  bounds, effective body properties, explicit wrap width, table-style run defaults, and placeholder policy into
-  the shared text model without XML surgery. Until that exists, table text remains a renderer-local structural
-  gap even though table geometry, fills, borders, spans, and row/column sizes are scene-owned.
+- [x] 2026-05-27: Replace the PPTX table-cell synthetic-shape text bridge with a typed scene text-frame adapter:
+  `PptxRenderer.Tables` now builds a `PptxTableCellTextFrame` carrying the cell text body, bounds, insets, and
+  vertical anchor, then feeds that typed frame directly into the shared text model/layout path. The renderer no
+  longer constructs a temporary `p:sp`, no longer routes table-cell text through placeholder-aware shape
+  discovery, and the obsolete internal `ooxpdf:wrapWidth` XML hook was removed. This keeps table-cell text
+  geometry explicit while preserving the existing wrapping, clipping, vertical-centering, autofit, and PDF text
+  emission behavior. Validation: focused non-slow `pptx-tables` passed (`7 passed, 0 failed, 0 skipped`);
+  full non-slow runner passed (`260 passed, 0 failed, 7 skipped`); private run
+  `artifacts/private-visual/lokad-value-based/20260527-023443` stayed at 84/84 compared pages, zero dimension
+  mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [ ] Move PPTX table-style text defaults from cloned XML mutation into a typed paragraph/run default layer:
+  the synthetic shape wrapper is gone, but `BuildTableCellTextBody` still clones the table-cell `a:txBody`,
+  prunes leading empty paragraphs, and applies built-in table-style bold/color defaults by inserting missing
+  `a:rPr` fill/bold children into that clone. The next structural step is to preserve those style defaults as a
+  typed table-cell text-style layer in the paragraph/run cascade so table text can share the same model-first
+  style ownership as shape text without renderer-local XML mutation.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join

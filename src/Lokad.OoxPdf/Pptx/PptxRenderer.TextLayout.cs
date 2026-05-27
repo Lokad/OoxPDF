@@ -306,33 +306,37 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
-            PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
-            PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
-            if (HasShapeAutoFit(frameModel.TextBody) && UsesRotatedFrameAutoFit(frameModel.Orientation))
-            {
-                PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
-                if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
-                {
-                    PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
-                    layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false);
-                }
-                else
-                {
-                    layout = unwrappedLayout;
-                }
-            }
-            else if (HasShapeAutoFit(frameModel.TextBody) &&
-                frameModel.Orientation == PptxTextOrientation.Horizontal &&
-                TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
-            {
-                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
-                layout = BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
-            }
-
-            frames.Add(layout);
+            frames.Add(BuildTextFrameLayout(frameModel, document, advanceEstimator));
         }
 
         return new PptxTextLayoutModel(frames);
+    }
+
+    private static PptxTextFrameLayout BuildTextFrameLayout(PptxTextFrameModel frameModel, PptxDocument document, TextAdvanceEstimator advanceEstimator)
+    {
+        PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
+        PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
+        if (HasShapeAutoFit(frameModel.TextBody) && UsesRotatedFrameAutoFit(frameModel.Orientation))
+        {
+            PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
+            if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
+            {
+                PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: false);
+                return BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator, allowWrapping: false);
+            }
+
+            return unwrappedLayout;
+        }
+
+        if (HasShapeAutoFit(frameModel.TextBody) &&
+            frameModel.Orientation == PptxTextOrientation.Horizontal &&
+            TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
+        {
+            PptxTextFrameModel fitted = FitShapeAutoFitFrame(frameModel, document, advanceEstimator, allowWrapping: true);
+            return BuildTextFrameLayout(BuildTextFlowFrame(fitted, document), document, advanceEstimator);
+        }
+
+        return layout;
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(
@@ -1065,6 +1069,13 @@ internal sealed partial class PptxRenderer
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
         return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources));
+    }
+
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
+    {
+        PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
+        PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator());
+        return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]));
     }
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)

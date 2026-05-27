@@ -255,6 +255,15 @@ internal sealed partial class PptxRenderer
         RgbColor? ShapeFontColor,
         IReadOnlyList<PptxTextParagraphModel> Paragraphs);
 
+    private sealed record PptxTableCellTextFrame(
+        XElement TextBody,
+        double X,
+        double Y,
+        double Width,
+        double Height,
+        TextInsets Insets,
+        TextVerticalAnchor VerticalAnchor);
+
     private readonly record struct PptxTextBodyProperties(
         TextInsets Insets,
         PptxTextOrientation Orientation,

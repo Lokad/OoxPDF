@@ -421,8 +421,17 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        XElement tableTextShape = BuildTableCellTextShape(context, textBody, x, y, width, height, ToTextInsets(sceneCell.TextInsets), ToTextVerticalAnchor(sceneCell.VerticalAnchor), tableStyleTextStyle);
-        spans.AddRange(ReadTextSpansForShape(tableTextShape, context, includePlaceholders: false));
+        TextInsets insets = ToTextInsets(sceneCell.TextInsets);
+        XElement tableTextBody = BuildTableCellTextBody(textBody, tableStyleTextStyle);
+        var tableTextFrame = new PptxTableCellTextFrame(
+            tableTextBody,
+            x,
+            y,
+            width,
+            height,
+            insets,
+            ToTextVerticalAnchor(sceneCell.VerticalAnchor));
+        spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
 
     private static TextInsets ToTextInsets(PptxSceneTextInsets insets)
@@ -440,53 +449,12 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static XElement BuildTableCellTextShape(PptxRenderContext context, XElement textBody, double x, double y, double width, double height, TextInsets insets, TextVerticalAnchor anchor, PptxSceneTableCellTextStyle tableStyleTextStyle)
+    private static XElement BuildTableCellTextBody(XElement textBody, PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
-        var textBodyCopy = new XElement(PresentationNamespace + "txBody", textBody.Elements().Select(element => new XElement(element)));
-        XElement bodyProperties = textBodyCopy.Element(DrawingNamespace + "bodyPr") ?? new XElement(DrawingNamespace + "bodyPr");
-        bodyProperties.SetAttributeValue("lIns", PointsToEmu(insets.Left).ToString(CultureInfo.InvariantCulture));
-        bodyProperties.SetAttributeValue("rIns", PointsToEmu(insets.Right).ToString(CultureInfo.InvariantCulture));
-        bodyProperties.SetAttributeValue("tIns", PointsToEmu(insets.Top).ToString(CultureInfo.InvariantCulture));
-        bodyProperties.SetAttributeValue("bIns", PointsToEmu(insets.Bottom).ToString(CultureInfo.InvariantCulture));
-        bodyProperties.SetAttributeValue("vertOverflow", "clip");
-        bodyProperties.SetAttributeValue(OoxPdfInternalNamespace + "wrapWidth", Math.Max(1d, width - insets.Left).ToString("R", CultureInfo.InvariantCulture));
-        bodyProperties.SetAttributeValue("anchor", anchor switch
-        {
-            TextVerticalAnchor.Middle => "ctr",
-            TextVerticalAnchor.Bottom => "b",
-            _ => "t"
-        });
-        if (bodyProperties.Parent is null)
-        {
-            textBodyCopy.AddFirst(bodyProperties);
-        }
-
+        var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
         PruneLeadingEmptyTableParagraphs(textBodyCopy);
         ApplyTableStyleTextDefaults(textBodyCopy, tableStyleTextStyle);
-        long shapeX = PointsToEmu(x);
-        long shapeY = PointsToEmu(context.Document.SlideHeightPoints - y - height);
-        long shapeWidth = PointsToEmu(width);
-        long shapeHeight = PointsToEmu(height);
-        return new XElement(PresentationNamespace + "sp",
-            new XElement(PresentationNamespace + "nvSpPr",
-                new XElement(PresentationNamespace + "cNvPr",
-                    new XAttribute("id", "0"),
-                    new XAttribute("name", "TableCellText")),
-                new XElement(PresentationNamespace + "cNvSpPr",
-                    new XAttribute("txBox", "1")),
-                new XElement(PresentationNamespace + "nvPr")),
-            new XElement(PresentationNamespace + "spPr",
-                new XElement(DrawingNamespace + "xfrm",
-                    new XElement(DrawingNamespace + "off",
-                        new XAttribute("x", shapeX.ToString(CultureInfo.InvariantCulture)),
-                        new XAttribute("y", shapeY.ToString(CultureInfo.InvariantCulture))),
-                    new XElement(DrawingNamespace + "ext",
-                        new XAttribute("cx", shapeWidth.ToString(CultureInfo.InvariantCulture)),
-                        new XAttribute("cy", shapeHeight.ToString(CultureInfo.InvariantCulture)))),
-                new XElement(DrawingNamespace + "prstGeom",
-                    new XAttribute("prst", "rect"),
-                    new XElement(DrawingNamespace + "avLst"))),
-            textBodyCopy);
+        return textBodyCopy;
     }
 
     private static void PruneLeadingEmptyTableParagraphs(XElement textBody)

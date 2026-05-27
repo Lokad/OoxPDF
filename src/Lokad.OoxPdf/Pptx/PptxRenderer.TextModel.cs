@@ -258,6 +258,141 @@ internal sealed partial class PptxRenderer
             paragraphs);
     }
 
+    private static PptxTextFrameModel BuildTextFrameModel(
+        PptxTableCellTextFrame tableFrame,
+        PptxDocument document,
+        PptxTheme theme,
+        int slideNumber,
+        IReadOnlyList<XDocument> placeholderSources)
+    {
+        XElement textBody = tableFrame.TextBody;
+        PptxTextBodyProperties baseBodyProperties = ReadTextBodyProperties(textBody, inheritedTextBody: null);
+        PptxTextBodyProperties bodyProperties = baseBodyProperties with
+        {
+            Insets = tableFrame.Insets,
+            VerticalAnchor = tableFrame.VerticalAnchor,
+            VerticalAnchorValue = tableFrame.VerticalAnchor switch
+            {
+                TextVerticalAnchor.Middle => "ctr",
+                TextVerticalAnchor.Bottom => "b",
+                _ => "t"
+            },
+            VerticalOverflow = PptxTextVerticalOverflow.Clip,
+            VerticalOverflowValue = "clip",
+            ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left)
+        };
+
+        long shapeX = PointsToEmu(tableFrame.X);
+        long shapeY = PointsToEmu(document.SlideHeightPoints - tableFrame.Y - tableFrame.Height);
+        long shapeWidth = PointsToEmu(tableFrame.Width);
+        long shapeHeight = PointsToEmu(tableFrame.Height);
+        var bounds = new ShapeBounds(shapeX, shapeY, shapeWidth, shapeHeight, RotationDegrees: 0d, FlipHorizontal: false, FlipVertical: false);
+        double x = OoxUnits.EmuToPoints(bounds.X);
+        double yTop = OoxUnits.EmuToPoints(bounds.Y);
+        double width = OoxUnits.EmuToPoints(bounds.Width);
+        double height = OoxUnits.EmuToPoints(bounds.Height);
+        TextInsets insets = bodyProperties.Insets;
+        PptxTextOrientation orientation = bodyProperties.Orientation;
+        double fontScale = bodyProperties.FontScale;
+        double lineSpacingScale = bodyProperties.LineSpacingScale;
+        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
+        double rotationCenterX = x + width / 2d;
+        double rotationCenterY = document.SlideHeightPoints - yTop - height / 2d;
+        double flowX = x;
+        double flowYTop = yTop;
+        double flowWidth = width;
+        double flowHeight = height;
+        double? explicitTextRotationDegrees = bodyProperties.RotationDegrees;
+        double textRotationDegrees = explicitTextRotationDegrees ?? 0d;
+        bool textFlipHorizontal = false;
+        bool textFlipVertical = false;
+        if (orientation is PptxTextOrientation.Vertical or
+            PptxTextOrientation.Vertical270 or
+            PptxTextOrientation.EastAsianVertical or
+            PptxTextOrientation.MongolianVertical or
+            PptxTextOrientation.WordArtVertical or
+            PptxTextOrientation.WordArtVerticalRightToLeft)
+        {
+            flowWidth = height;
+            flowHeight = width;
+            flowX = rotationCenterX - flowWidth / 2d;
+            flowYTop = document.SlideHeightPoints - rotationCenterY - flowHeight / 2d;
+            textRotationDegrees += TextOrientationRotationDegrees(orientation);
+        }
+
+        double textX = flowX + insets.Left;
+        double textWidth = Math.Max(1d, flowWidth - insets.Left - insets.Right);
+        double textWrapWidth = bodyProperties.ExplicitWrapWidth ?? textWidth;
+        double textHeight = Math.Max(1d, flowHeight - insets.Top - insets.Bottom);
+        int columnCount = bodyProperties.ColumnCount;
+        double columnSpacing = bodyProperties.ColumnSpacing;
+        bool clipsVerticalOverflow = bodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
+        bool clipsTextLocally = clipsVerticalOverflow || columnCount != 1;
+        double textClipX = clipsTextLocally ? textX : 0d;
+        double textClipWidth = clipsTextLocally ? textWidth : document.SlideWidthPoints;
+        double textClipY = 0d;
+        double textClipHeight = document.SlideHeightPoints;
+        if (clipsVerticalOverflow)
+        {
+            (textClipY, textClipHeight) = IntersectVerticalTextClipWithSlide(
+                document.SlideHeightPoints - flowYTop - insets.Top - textHeight,
+                textHeight,
+                document.SlideHeightPoints);
+        }
+
+        XElement? defaultParagraphProperties = MergeParagraphProperties(
+            BuildParagraphStyleCascade(textBody, textBody, inheritedPlaceholders: [], placeholderSources, "lvl1pPr").Sources.ToArray());
+        double verticalOffset = bodyProperties.VerticalAnchor switch
+        {
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)),
+            _ => 0d
+        };
+        IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
+            textBody,
+            textBody,
+            inheritedPlaceholders: [],
+            placeholderSources,
+            theme,
+            slideNumber,
+            fontScale,
+            lineSpacingScale,
+            compatibleLineSpacing,
+            shapeFontColor: null);
+
+        return new PptxTextFrameModel(
+            textBody,
+            textBody,
+            InheritedTextBody: null,
+            theme,
+            bodyProperties,
+            bounds,
+            insets,
+            fontScale,
+            lineSpacingScale,
+            textX,
+            textWidth,
+            textWrapWidth,
+            textHeight,
+            textClipX,
+            textClipWidth,
+            textClipY,
+            textClipHeight,
+            columnCount,
+            columnSpacing,
+            rotationCenterX,
+            rotationCenterY,
+            textRotationDegrees,
+            textFlipHorizontal,
+            textFlipVertical,
+            UseOfficeBaselineFloor: bodyProperties.VerticalAnchor == TextVerticalAnchor.Top,
+            flowYTop,
+            verticalOffset,
+            orientation,
+            ShapeFontColor: null,
+            paragraphs);
+    }
+
     private static bool TextFrameUsesOfficeBaselineFloor(XElement shape, PptxTextBodyProperties bodyProperties)
     {
         if (bodyProperties.VerticalAnchor != TextVerticalAnchor.Top)
@@ -304,16 +439,7 @@ internal sealed partial class PptxRenderer
             ReadNormAutofitLineSpacingScale(textBody),
             HasCompatibleLineSpacing(textBody),
             ReadTextBodyRotationDegrees(textBody),
-            ReadTextWrapWidth(textBody));
-    }
-
-    private static double? ReadTextWrapWidth(XElement textBody)
-    {
-        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        return bodyProperties?.Attribute(OoxPdfInternalNamespace + "wrapWidth") is { } value &&
-            double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double points)
-                ? Math.Max(1d, points)
-                : null;
+            ExplicitWrapWidth: null);
     }
 
     private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)
