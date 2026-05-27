@@ -1495,6 +1495,15 @@ High-priority actions:
     private run `artifacts/private-visual/lokad-value-based/20260527-034506` stayed at 84/84 compared pages,
     zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Render Cartesian category-axis labels on the dense indexed text domain:
+    `ChartIndexedTextVector.DenseValues()` now preserves category `ptCount` and sparse source indices for
+    bar/column, line, and area axis-label placement. `RenderChartCategoryLabels` sizes the axis slots from the
+    dense vector and skips absent labels rather than compacting labels left before rendering. Radar labels and
+    polar fill legends still use compact category labels and remain separate migrations. Validation: focused
+    non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`262 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-034734`; private run
+    `artifacts/private-visual/lokad-value-based/20260527-034856` stayed at 84/84 compared pages, zero dimension
+    mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source

@@ -906,7 +906,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotBox.Y, plotBox.Height, valueAxisReversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -992,7 +992,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, PptxSceneChartAxisKind.Category);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(linePlot, lineChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
@@ -1064,7 +1064,7 @@ internal sealed partial class PptxRenderer
                     valueAxisReversed);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(areaPlot, areaChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
@@ -5201,8 +5201,9 @@ internal sealed partial class PptxRenderer
         return string.IsNullOrEmpty(options.Separator) ? ", " : options.Separator;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, IReadOnlyList<string> labels, bool horizontalBars, double? verticalAxisY = null)
+    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null)
     {
+        IReadOnlyList<string?> labels = labelVector.DenseValues();
         if (labels.Count == 0)
         {
             return [];
@@ -5217,6 +5218,12 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < labels.Count; i++)
         {
             if (i % tickLabelSkip != 0)
+            {
+                continue;
+            }
+
+            string? label = labels[i];
+            if (string.IsNullOrWhiteSpace(label))
             {
                 continue;
             }
@@ -5246,7 +5253,7 @@ internal sealed partial class PptxRenderer
 
             double labelWidth = Math.Max(1d, width);
             runs.Add(new TextRun(
-                labels[i],
+                label,
                 x,
                 y,
                 labelWidth,
@@ -8703,6 +8710,27 @@ internal sealed partial class PptxRenderer
                 .OrderBy(point => point.Index)
                 .Select(point => point.Text)
                 .ToArray();
+        }
+
+        public IReadOnlyList<string?> DenseValues()
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
+            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
+            if (pointCount <= 0)
+            {
+                return [];
+            }
+
+            var values = new string?[pointCount];
+            foreach (ChartIndexedTextPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.HasText)
+                {
+                    values[point.Index] = point.Text;
+                }
+            }
+
+            return values;
         }
     }
 
