@@ -7730,15 +7730,17 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false);
             if (series.Count > 0)
             {
-                IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, plotElement);
-                XElement? valueAxis = valueAxes.Count > 1
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement);
+                ChartAxisSource valueAxis = valueAxes.Count > 1
                     ? valueAxes[1]
-                    : ReadChartValueAxisForChart(chartXml, plotElement) ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
-                ChartValueExtents valueExtents = ReadBubbleChartValueAxisExtents(valueAxis, GetScatterYValueExtents(series));
-                ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadChartValueAxisUnits(valueAxis), valueExtents);
+                    : valueAxes.Count > 0
+                        ? valueAxes[0]
+                        : new ChartAxisSource(null, chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault());
+                ChartValueExtents valueExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetScatterYValueExtents(series));
+                ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
                 string[] tickLabels = tickValues
-                    .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis: null, valueAxis, defaultNumberFormat: null))
+                    .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d

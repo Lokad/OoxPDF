@@ -9599,6 +9599,19 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed scatter right-legend plot-box estimation through scene-owned value-axis
+sources. The Cartesian no-title/right-legend estimator now pairs the scatter Y axis with
+`ReadSceneOrXmlChartValueAxesForPlot`, using scene-owned scale, units, and number-format metadata when
+present while preserving the raw-XML fallback for XML-only paths. This closes a small ownership gap left by
+the scatter/bubble axis rendering slice: layout reservation and axis drawing now consult the same typed axis
+source for this supported scatter path.
+
+This intentionally does not retune the chart metrics. Exact scatter/bubble plot-box reserves, title/legend
+interactions, and axis crossing geometry still need Office-PDF structural evidence before metric changes.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved the remaining chart data-label display flags through the scene and
 renderer option boundary. `PptxSceneChartDataLabels`, per-label overrides, and renderer-facing
 `ChartDataLabelOptions`/`ChartDataLabelOverride` now carry `showLegendKey` and `showBubbleSize` alongside
