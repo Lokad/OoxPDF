@@ -457,6 +457,16 @@ High-priority actions:
   `20260527-150241` passed the new structural gate; line-marker port and area port both passed at run
   `20260527-150255`. Remaining sparse debts are still plot/legend bounds drift, marker/legend placement, and
   clip-box count parity.
+- [x] 2026-05-27: Split color-only chart stroke defaults by rendered role instead of one inherited width.
+  Follow-up sparse inspection showed that `<a:ln>` without `@w` is not a single chart-wide default: Office uses
+  `3 pt` for line/area series paths, but marker outlines and filled-series borders use thin Office-like
+  strokes (`0.75 pt` in the public sparse evidence). The chart renderer now passes explicit inherited widths
+  by role for line/area series, filled bar-series borders, and marker outlines, with focused synthetic tests
+  for line-series, bar filled-series, and marker-line defaults. Validation: focused non-slow `pptx-charts`
+  passed (`56 passed, 0 failed, 0 skipped`); sparse/blank probe run `20260527-151415` passed the existing
+  `ChartSeriesLineCandidate` structural gate. Remaining sparse legend debt is not closed: the top right-legend
+  filled keys still show a role/legend-key mismatch in the PDF structure, so the durable next step is a typed
+  legend-key model that separates series path strokes, marker outline strokes, and filled-key border strokes.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -10873,3 +10883,17 @@ adding a unit test for `<a:ln>` without `@w`; and adjacent line-marker and area 
 `20260527-150255`. Remaining sparse debts are deliberately not gated here: right-legend text/swatch
 placement, marker placement, residual plot-box bounds, and clip-box count parity still need separate
 Office-PDF structural work.
+
+Revision note, 2026-05-27: Extended the line-width provenance work into a role-specific stroke-default split.
+The sparse fixture contains color-only `<a:ln>` nodes in multiple roles, and Office does not use one inherited
+width for all of them. Line and area series paths use the observed `3 pt` stroke; marker outlines and
+filled-series borders use thin strokes (`0.75 pt` in the public sparse evidence). The renderer now passes
+role-specific inherited widths into scene/XML stroke conversion for line/area paths, filled bar-series borders,
+and marker outlines, and three focused synthetic chart tests lock those distinctions.
+
+Validation: focused non-slow `pptx-charts` passed with `56` tests; sparse/blank probe run `20260527-151415`
+passed the existing series-line structural gate. This investigation also exposed a remaining legend-key
+architecture gap: some filled right-legend keys still borrow series-line stroke state in the rendered PDF.
+Do not close the sparse legend item until the legend key model explicitly distinguishes series path strokes,
+marker outline strokes, and filled-key border strokes rather than passing one `ChartSeriesStroke` through all
+legend surfaces.
