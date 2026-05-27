@@ -9176,8 +9176,8 @@ Revision note, 2026-05-26: Preserved PPTX image recolor OOXML tokens in the scen
 only normalized renderer values. `PptxSceneImageRecolor` now carries the source recolor element token
 (`grayscl`, `biLevel`, `lum`, or `duotone`) plus raw `lum/@bright`, `lum/@contrast`, and `biLevel/@thresh`
 attribute strings next to the clamped numeric values used by current rendering. The scene-builder fixture
-locks the standalone picture's `grayscl` token, and a direct parser test locks luminance and bi-level raw
-attribute preservation.
+now locks the standalone picture's luminance token and raw luminance attributes through the private-safe
+scene-inspection snapshot, and a direct parser test locks luminance and bi-level raw attribute preservation.
 
 This is behavior-neutral for current PNG/BMP/JPEG rendering and diagnostics. The value is long-term
 structural alignment: future dependency-free JPEG recolor or PDF-level color-transform work can reason from
@@ -11865,6 +11865,22 @@ scene-backed native charts, and embedded workbook ranges remain sidecar provenan
 proves a promotion rule.
 
 Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-27: Extended picture-recolor scene inspection so the JPEG/PDF recolor track can be
+advanced from source policy rather than from private diagnostics. `PptxSceneNodeSnapshot` now exposes the
+picture recolor source token, nullable normalized luminance brightness/contrast, nullable bi-level threshold,
+and the raw OOXML numeric strings already preserved by `PptxSceneImageRecolor`. The snapshot still does not
+carry media bytes or duotone color payloads, keeping the inspection surface useful for private-safe
+classification without turning it into a content dump.
+
+This is intentionally not a JPEG recolor rendering fix. The remaining private diagnostic is still the known
+`duotone|image/jpeg` gap, and the long-term decision remains between a dependency-free JPEG decode/re-encode
+path and a PDF-level color-transform architecture. The value of this slice is that future work can first
+assert which Office recolor policy is present before changing image embedding or color-space structure.
+
+Validation: focused non-slow `pptx-images` passed with `17` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips; full console runner
+including slow tests passed with `325` tests, `0` failures, and `0` skips.
 
 Revision note, 2026-05-27: Tightened the public sparse/blank chart oracle around currently matched
 Office-visible structures. The `pptx-ladder-11-chart-sparse-blank-points-probe` manifest now also gates

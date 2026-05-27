@@ -38,6 +38,7 @@ internal sealed partial class PptxRenderer
         int tableRowCount = node.Table?.Rows.Count ?? 0;
         int tableCellCount = node.Table?.Rows.Sum(row => row.Cells.Count) ?? 0;
         PptxSceneBounds? bounds = node.Bounds;
+        PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
         return new PptxSceneNodeSnapshot(
@@ -61,7 +62,14 @@ internal sealed partial class PptxRenderer
             node.Picture?.Resource?.ContentType ?? string.Empty,
             node.Shape?.PictureFill.Resource is not null,
             node.Shape?.PictureFill.Resource?.ContentType ?? string.Empty,
-            node.Picture?.Recolor.Kind.ToString() ?? string.Empty,
+            recolor?.Kind.ToString() ?? string.Empty,
+            recolor?.KindValue ?? string.Empty,
+            recolor?.Kind == PptxSceneImageRecolorKind.Luminance ? recolor?.Brightness : null,
+            recolor?.Kind == PptxSceneImageRecolorKind.Luminance ? recolor?.Contrast : null,
+            recolor?.Kind == PptxSceneImageRecolorKind.BiLevel ? recolor?.Threshold : null,
+            recolor?.BrightnessValue ?? string.Empty,
+            recolor?.ContrastValue ?? string.Empty,
+            recolor?.ThresholdValue ?? string.Empty,
             node.Table is not null,
             tableRowCount,
             tableCellCount,
