@@ -1451,6 +1451,16 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-032613` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
     `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Compute bar/line/area value-axis extents on the dense indexed value domain:
+    the vector-aware extent overloads no longer compact before calculating clustered min/max or stacked
+    category totals. This aligns axis scaling with the now-indexed line, bar/column, and area geometry while
+    still ignoring blank/non-numeric points as missing values. Validation: focused non-slow `pptx-charts`
+    passed (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`261 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-032823` with
+    MAE `4.205817` and changed16 `0.048637`; private run
+    `artifacts/private-visual/lokad-value-based/20260527-032914` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
+    `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
