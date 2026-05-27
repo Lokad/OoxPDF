@@ -318,11 +318,6 @@ internal sealed partial class PptxRenderer
         return normalized < 0d ? normalized + 360d : normalized;
     }
 
-    private static IReadOnlyList<IReadOnlyList<double>> ReadSceneOrXmlChartSeries(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
-    {
-        return CompactChartSeries(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook));
-    }
-
     private static IReadOnlyList<IReadOnlyList<double>> CompactChartSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series

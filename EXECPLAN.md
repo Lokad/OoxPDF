@@ -9582,6 +9582,15 @@ current supported label path reflect the long-term data model.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed the unused `ReadSceneOrXmlChartSeries` compatibility wrapper. All active
+chart-family entrypoints already acquire `ChartIndexedNumberVector` records first and choose their own
+explicit compact or dense boundary. The old helper compacted scene/XML/workbook vectors straight to
+`IReadOnlyList<double>` and had no callers, so keeping it would have preserved an obsolete bypass around the
+indexed data model.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved blank and missing workbook source cells in renderer-facing chart sidecar
 vectors. The first workbook-sidecar implementation reused typed numeric/text range projections, which were
 correct for compatibility rendering fallbacks but silently dropped blank, non-numeric, or absent cells inside
