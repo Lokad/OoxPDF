@@ -9603,6 +9603,16 @@ lookup.
 Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`265 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed three obsolete XML-wide chart-axis helper overloads after confirming their
+callers had already moved to explicit `ChartAxisSource` or paired `XElement` inputs. The removed helpers picked
+the first `valAx`/axis element internally (`ReadChartValueAxisExtents(XDocument, ...)`,
+`ReadChartValueAxisUnits(XDocument)`, and `ReadChartAxisStroke(XDocument, ...)`), which made them attractive
+future shortcuts around plot-owned axis pairing. This is intentionally behavior-neutral cleanup, but it keeps
+new chart work on the structural source path instead of reviving first-axis heuristics.
+
+Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`265 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Restricted first-`valAx` fallback after paired value-axis lookup. Standalone line
 rendering, chart-axis style construction, and the right-legend Cartesian tick-label estimator now use
 `ResolveXmlValueAxisForSource`: if the paired source has XML, use it; if there is no scene axis at all, keep

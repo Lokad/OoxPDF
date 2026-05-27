@@ -3545,13 +3545,6 @@ internal sealed partial class PptxRenderer
         return (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
     }
 
-    private static ChartValueExtents ReadChartValueAxisExtents(XDocument chartXml, ChartValueExtents fallback)
-    {
-        return ReadChartValueAxisExtents(chartXml
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault(), fallback);
-    }
-
     private static IReadOnlyList<XElement> ReadChartValueAxesForChart(XDocument chartXml, XElement chartElement)
     {
         string[] axisIds = chartElement
@@ -3719,13 +3712,6 @@ internal sealed partial class PptxRenderer
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             ? parsed
             : null;
-    }
-
-    private static ChartAxisUnits ReadChartValueAxisUnits(XDocument chartXml)
-    {
-        return ReadChartValueAxisUnits(chartXml
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault());
     }
 
     private static ChartAxisUnits ReadChartValueAxisUnits(XElement? valueAxis)
@@ -6495,13 +6481,6 @@ internal sealed partial class PptxRenderer
         }
 
         return parsed;
-    }
-
-    private static ChartSeriesStroke? ReadChartAxisStroke(XDocument chartXml, string axisName, PptxTheme theme)
-    {
-        return ReadChartAxisStroke(chartXml
-            .Descendants(ChartNamespace + axisName)
-            .FirstOrDefault(), theme);
     }
 
     private static ChartSeriesStroke? ReadChartAxisStroke(XElement? axis, PptxTheme theme)
