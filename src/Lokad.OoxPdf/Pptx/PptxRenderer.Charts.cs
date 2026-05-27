@@ -4184,24 +4184,48 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<string> ReadSceneOrXmlChartSeriesNames(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
+        return ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook)
+            .Select(name => name.ActiveName)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneOrXmlChartSeriesNameRecords(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
+    {
         if (plot is not null)
         {
             return plot.Series
                 .Select((series, index) =>
                 {
+                    IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, series.DataSources.Name);
                     if (!string.IsNullOrWhiteSpace(series.Name))
                     {
-                        return series.Name.Trim();
+                        return new ChartSeriesNameRecord(series.Name.Trim(), series.Name.Trim(), series.DataSources.Name, workbookPoints);
                     }
 
-                    string? workbookName = ReadWorkbookTextValues(workbook, series.DataSources.Name)
+                    string? workbookName = workbookPoints
+                        .Where(value => value.HasText)
+                        .Select(value => value.Text)
                         .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
-                    return string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim();
+                    return new ChartSeriesNameRecord(
+                        string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim(),
+                        string.Empty,
+                        series.DataSources.Name,
+                        workbookPoints);
                 })
                 .ToArray();
         }
 
-        return ReadChartSeriesNames(chartElement);
+        return ReadChartSeriesNames(chartElement)
+            .Select(name => new ChartSeriesNameRecord(name, name, default, []))
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartIndexedTextPoint> ReadWorkbookTextPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
+    {
+        return workbook?
+            .ReadTextRange(source.Formula)
+            .Select(value => new ChartIndexedTextPoint(value.Cell.Index, value.Text, value.Cell.HasValue, value.Cell))
+            .ToArray() ?? [];
     }
 
     private static IReadOnlyList<string> ReadChartSeriesNames(XElement chartElement)
@@ -9032,6 +9056,12 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked);
+
+    private readonly record struct ChartSeriesNameRecord(
+        string ActiveName,
+        string CacheName,
+        PptxSceneChartDataSource Source,
+        IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
 

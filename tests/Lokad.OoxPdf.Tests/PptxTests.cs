@@ -11309,6 +11309,50 @@ internal static class PptxTests
         TestAssert.Equal("A4", (string?)visibleLabelCell.GetType().GetProperty("Reference")?.GetValue(visibleLabelCell) ?? string.Empty);
     }
 
+    public static void PptxChartSeriesNamesPreserveWorkbookSidecarPoints()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:ser>
+                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache><c:pt idx="0"><c:v>Cached Name</c:v></c:pt></c:strCache></c:strRef></c:tx>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChartPlot plot = BuildSingleChartScene(chartXml)?.Plots.Single()
+            ?? throw new InvalidOperationException("Expected one chart plot.");
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "lineChart").Single();
+        Type workbookType = typeof(PptxRenderer).GetNestedType(
+            "ChartWorkbookData",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["B1"] = "Workbook Name"
+            }
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        System.Reflection.MethodInfo readNameRecords = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartSeriesNameRecords",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series-name record reader.");
+
+        object[] records = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [plot, chartElement, workbook])) ?? throw new InvalidOperationException("Expected series-name records.")).Cast<object>().ToArray();
+
+        TestAssert.True(records.Length == 1, "Expected one series-name record.");
+        TestAssert.Equal("Cached Name", (string?)records[0].GetType().GetProperty("ActiveName")?.GetValue(records[0]) ?? string.Empty);
+        object[] workbookPoints = (((System.Collections.IEnumerable?)records[0].GetType().GetProperty("WorkbookPoints")?.GetValue(records[0])) ?? throw new InvalidOperationException("Expected workbook series-name sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True(workbookPoints.Length == 1, "Expected series-name sidecar to preserve the workbook source name.");
+        TestAssert.Equal("Workbook Name", (string?)workbookPoints[0].GetType().GetProperty("Text")?.GetValue(workbookPoints[0]) ?? string.Empty);
+        object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected series-name workbook cell provenance.");
+        TestAssert.Equal("B1", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+    }
+
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
     {
         string input = Path.Combine(

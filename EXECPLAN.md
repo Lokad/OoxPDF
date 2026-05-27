@@ -9539,3 +9539,19 @@ at the formatting call site.
 Validation: focused `PptxScenePreservesChartNumberFormatMetadata` passed (`1 passed, 0 failed, 0 skipped`);
 focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console runner passed
 (`263 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Preserved workbook source text beside active chart-cache series names. Legend text,
+auto-title inputs, and `showSerName` data labels still consume the same active string names as before, but the
+scene-backed renderer path now builds `ChartSeriesNameRecord` values that keep the active/cache name, source
+formula, and workbook text sidecar points together. The regression
+`PptxChartSeriesNamesPreserveWorkbookSidecarPoints` locks the stale-name prerequisite: a cached series name
+remains active while the embedded workbook name and its cell provenance remain available next to it.
+
+This is still not source/cache freshness policy, and it does not alter legend or data-label text. It closes a
+smaller ownership gap where series-name workbook provenance was previously collapsed to a string list before
+later Office-PDF-backed reconciliation could compare cached names, workbook names, hidden source rows/columns,
+and source-linked text/number-format choices.
+
+Validation: focused `PptxChartSeriesNamesPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
