@@ -9599,6 +9599,18 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed main bar-chart category-label rendering through the paired category-axis
+source. The supported bar branch now resolves category-axis visibility, label styling, and label emission
+from `ReadSceneOrXmlChartCategoryAxisForPlot` instead of independently selecting a scene category axis and
+raw `catAx`. This complements the earlier line/area/radar category-axis slice while preserving the existing
+bar category label geometry.
+
+Bar plot-box reservation helpers still use direct axis lookups in several places; those remain open until
+the reservation model can be moved to paired sources without changing Office-visible metrics.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Added paired category-axis sources for line, area, and radar label rendering.
 `ReadSceneOrXmlChartCategoryAxisForPlot` now mirrors the value-axis source pattern for supported `catAx`
 paths, pairing the typed scene category axis to raw XML by `axId` and preserving XML-only fallback when no

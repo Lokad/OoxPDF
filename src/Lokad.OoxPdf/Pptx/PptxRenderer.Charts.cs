@@ -955,14 +955,13 @@ internal sealed partial class PptxRenderer
                     lineChartIndex++;
                 }
 
-                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, barChart);
-                    PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, barPlot, PptxSceneChartAxisKind.Category);
-                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, barPlot, chartXml, barChart);
+                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotBox.Y, plotBox.Height, valueAxisReversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY));
                 }
 
                 if (axesStyle.ValueAxisVisible)
