@@ -368,7 +368,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
     {
         return ReadSceneOrXmlScatterSeriesVectors(plot, chartElement, readBubbleSize, workbook)
-            .Select(ToCompactScatterSeries)
+            .Select(BuildScatterSeries)
             .Where(series => series.Points.Count != 0)
             .ToArray();
     }
@@ -425,7 +425,7 @@ internal sealed partial class PptxRenderer
         return ReadChartCategoryLabelVector(chartElement);
     }
 
-    private static ScatterSeries ToCompactScatterSeries(ChartIndexedScatterSeries series)
+    private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
         IReadOnlyList<ChartIndexedNumberPoint> xPoints = series.XValues.CompactPoints();
         IReadOnlyList<ChartIndexedNumberPoint> yPoints = series.YValues.CompactPoints();
@@ -6465,7 +6465,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
     {
         return ReadScatterSeriesVectors(chartElement, readBubbleSize)
-            .Select(ToCompactScatterSeries)
+            .Select(BuildScatterSeries)
             .Where(series => series.Points.Count != 0)
             .ToArray();
     }

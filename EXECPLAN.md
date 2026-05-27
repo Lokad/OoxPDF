@@ -9752,7 +9752,7 @@ runner passed (`264 passed, 0 failed, 7 skipped`).
 
 Revision note, 2026-05-27: Preserved indexed value provenance through scatter and bubble point construction.
 `ScatterPoint` used to carry only rendered X, Y, and bubble-size scalars after `ChartIndexedScatterSeries`
-had already preserved cache/workbook vectors. The compact scatter projection now derives from compact
+had already preserved cache/workbook vectors. The scatter projection now derives from compact
 `ChartIndexedNumberPoint` records and stores the active X, Y, optional bubble-size points plus matching
 workbook sidecar points on each rendered scatter point. Existing chart drawing still reads the same scalar
 coordinates and size, so visible output is unchanged.
@@ -9764,6 +9764,17 @@ data to doubles.
 
 Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Renamed the scatter/bubble renderer projection from `ToCompactScatterSeries` to
+`BuildScatterSeries` so the code no longer describes the boundary as a compact scalar conversion. The current
+projection still uses compact active X/Y/bubble point order for behavior compatibility, but each rendered
+point retains the active indexed point records and matching workbook sidecars. This makes the remaining policy
+gap clearer: sparse scatter channels still need an Office-backed public fixture before deciding whether X/Y
+and bubble-size points should be paired by compact ordinal, source `idx`, workbook cell domain, or another
+Office-specific rule.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
 Revision note, 2026-05-27: Preserved indexed value provenance through pie and doughnut slice construction.

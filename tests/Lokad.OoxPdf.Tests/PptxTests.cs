@@ -11324,13 +11324,13 @@ internal static class PptxTests
             "ChartIndexedScatterSeries",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed scatter-series type.");
         object scatterSeries = Activator.CreateInstance(scatterSeriesType, [vector, vector, vector, true]) ?? throw new InvalidOperationException("Expected indexed scatter-series instance.");
-        System.Reflection.MethodInfo toCompactScatterSeries = typeof(PptxRenderer).GetMethod(
-            "ToCompactScatterSeries",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected compact scatter-series projection.");
-        object compactScatter = toCompactScatterSeries.Invoke(null, [scatterSeries]) ?? throw new InvalidOperationException("Expected compact scatter-series.");
-        object compactScatterSource = compactScatter.GetType().GetProperty("Source")?.GetValue(compactScatter) ?? throw new InvalidOperationException("Expected compact scatter-series to preserve its indexed source vectors.");
-        TestAssert.True((bool?)compactScatterSource.GetType().GetProperty("ReadBubbleSize")?.GetValue(compactScatterSource) == true, "Expected compact scatter-series source to preserve bubble-size channel ownership.");
-        object[] scatterPoints = (((System.Collections.IEnumerable?)compactScatter.GetType().GetProperty("Points")?.GetValue(compactScatter)) ?? throw new InvalidOperationException("Expected compact scatter points.")).Cast<object>().ToArray();
+        System.Reflection.MethodInfo buildScatterSeries = typeof(PptxRenderer).GetMethod(
+            "BuildScatterSeries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter-series projection.");
+        object renderedScatter = buildScatterSeries.Invoke(null, [scatterSeries]) ?? throw new InvalidOperationException("Expected rendered scatter-series.");
+        object renderedScatterSource = renderedScatter.GetType().GetProperty("Source")?.GetValue(renderedScatter) ?? throw new InvalidOperationException("Expected rendered scatter-series to preserve its indexed source vectors.");
+        TestAssert.True((bool?)renderedScatterSource.GetType().GetProperty("ReadBubbleSize")?.GetValue(renderedScatterSource) == true, "Expected rendered scatter-series source to preserve bubble-size channel ownership.");
+        object[] scatterPoints = (((System.Collections.IEnumerable?)renderedScatter.GetType().GetProperty("Points")?.GetValue(renderedScatter)) ?? throw new InvalidOperationException("Expected rendered scatter points.")).Cast<object>().ToArray();
         TestAssert.True(scatterPoints.Length == 1, "Expected stale positive cache value to remain an active scatter point.");
         object scatterXPoint = scatterPoints[0].GetType().GetProperty("XPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve its active X point.");
         object scatterXWorkbookPoint = scatterPoints[0].GetType().GetProperty("XWorkbookPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve matching workbook X point.");
