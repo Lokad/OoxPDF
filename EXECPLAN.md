@@ -1362,9 +1362,8 @@ High-priority actions:
   presence. Bar/column, line, area, pie/doughnut, Cartesian data labels, category-axis labels, radar labels,
   polar legends, series-name labels, and series-name legend sizing now consume indexed vectors or
   provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
-  some stacked/extent helpers, polar data-label text, and chart
-  text/layout decisions still need to carry the same typed data records all the way to Office-PDF-backed
-  layout and source/cache freshness decisions.
+  some stacked/extent helpers and chart text/layout decisions still need to carry the same typed data records
+  all the way to Office-PDF-backed layout and source/cache freshness decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
