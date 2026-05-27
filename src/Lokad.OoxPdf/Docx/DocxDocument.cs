@@ -57,6 +57,8 @@ internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? 
 internal sealed record DocxTableCell(
     string Text,
     string? FillHex,
+    string? ShadingValue,
+    string? ShadingColor,
     string? VerticalAlignmentValue,
     IReadOnlyList<DocxTableCellBorder> Borders);
 

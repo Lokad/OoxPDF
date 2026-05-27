@@ -473,14 +473,15 @@ internal sealed class DocxReader
                     .Descendants(WordprocessingNamespace + "p")
                     .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
                     .Where(t => t.Length != 0));
-                string? fill = (string?)cellProperties
-                    ?.Element(WordprocessingNamespace + "shd")
-                    ?.Attribute(WordprocessingNamespace + "fill");
+                XElement? shading = cellProperties?.Element(WordprocessingNamespace + "shd");
+                string? fill = (string?)shading?.Attribute(WordprocessingNamespace + "fill");
+                string? shadingValue = (string?)shading?.Attribute(WordprocessingNamespace + "val");
+                string? shadingColor = (string?)shading?.Attribute(WordprocessingNamespace + "color");
                 string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
                 IReadOnlyList<DocxTableCellBorder> borders = ReadTableCellBorders(cellProperties);
-                cells.Add(new DocxTableCell(text, fill, verticalAlignment, borders));
+                cells.Add(new DocxTableCell(text, fill, shadingValue, shadingColor, verticalAlignment, borders));
             }
 
             if (cells.Count > 0)

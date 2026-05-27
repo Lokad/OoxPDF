@@ -452,6 +452,13 @@ High-priority actions:
   from the current rectangular grid strokes. Validation: focused non-slow `docx-tables` passed
   (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`278 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX table-cell shading source tokens beyond fill color:
+  `DocxTableCell` now keeps raw `w:shd @w:val` and `@w:color` tokens beside the existing fill color shortcut.
+  The DOCX table ladder locks a patterned shading value, foreground color, fill color, and absent shading
+  without changing current fill rendering. Future pattern/theme shading work can now start from structural
+  cell records instead of a fill-only heuristic. Validation: focused non-slow `docx-tables` passed
+  (`8 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`279 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering
