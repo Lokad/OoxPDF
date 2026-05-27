@@ -11279,6 +11279,16 @@ internal static class PptxTests
         object sliceWorkbookPoint = pieSlices[0].GetType().GetProperty("WorkbookPoint")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
         TestAssert.True((double?)slicePoint.GetType().GetProperty("Value")?.GetValue(slicePoint) == 99d, "Expected pie slice active point to preserve the rendered cache value.");
         TestAssert.True((double?)sliceWorkbookPoint.GetType().GetProperty("Value")?.GetValue(sliceWorkbookPoint) == 8.2d, "Expected pie slice workbook sidecar point to preserve the workbook source value.");
+        System.Reflection.MethodInfo compactRadarSeries = typeof(PptxRenderer).GetMethod(
+            "CompactRadarSeries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected compact radar-series projection.");
+        Array typedNumberVectors = Array.CreateInstance(vector.GetType(), 1);
+        typedNumberVectors.SetValue(vector, 0);
+        object[] radarSeries = (((System.Collections.IEnumerable?)compactRadarSeries.Invoke(null, [typedNumberVectors])) ?? throw new InvalidOperationException("Expected compact radar series.")).Cast<object>().ToArray();
+        TestAssert.True(radarSeries.Length == 1, "Expected positive cache value to remain an active radar series.");
+        object radarSource = radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) ?? throw new InvalidOperationException("Expected radar series to preserve its source vector.");
+        object[] radarWorkbookPoints = (((System.Collections.IEnumerable?)radarSource.GetType().GetProperty("WorkbookPoints")?.GetValue(radarSource)) ?? throw new InvalidOperationException("Expected radar source vector workbook sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
         Type scatterSeriesType = typeof(PptxRenderer).GetNestedType(
             "ChartIndexedScatterSeries",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed scatter-series type.");

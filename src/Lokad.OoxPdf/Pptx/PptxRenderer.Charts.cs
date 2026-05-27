@@ -326,6 +326,14 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<ChartRadarSeries> CompactRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series
+            .Select(vector => new ChartRadarSeries(vector.CompactValues(), vector))
+            .Where(item => item.Values.Count != 0)
+            .ToArray();
+    }
+
     private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
@@ -1166,7 +1174,7 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
             IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSceneOrXmlChartSeriesVectors(radarPlot, radarChart, workbook);
-            IReadOnlyList<IReadOnlyList<double>> radarSeries = CompactChartSeries(radarSeriesVectors);
+            IReadOnlyList<ChartRadarSeries> radarSeries = CompactRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
@@ -1175,7 +1183,7 @@ internal sealed partial class PptxRenderer
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, radarChart);
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, radarPlot, PptxSceneChartAxisKind.Value);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, radarPlot, PptxSceneChartAxisKind.Category);
-                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(radarSeries));
+                ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueSceneAxis, valueAxis, GetRadarChartValueExtents(radarSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, ReadSceneOrXmlChartRadarStyle(radarPlot, radarChart), radarSeries);
@@ -3281,7 +3289,7 @@ internal sealed partial class PptxRenderer
             hasLegend);
     }
 
-    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<IReadOnlyList<double>> series)
+    private static ChartRadarLayout ResolveRadarLayout(ChartPlotBox plotBox, PptxSceneChartRadarStyle radarStyle, IReadOnlyList<ChartRadarSeries> series)
     {
         ChartRadarStyle style = radarStyle == PptxSceneChartRadarStyle.Filled
             ? ChartRadarStyle.Filled
@@ -3290,7 +3298,7 @@ internal sealed partial class PptxRenderer
             plotBox,
             GetRadarChartGeometry(plotBox, style),
             style,
-            Math.Max(3, series.Max(values => values.Count)),
+            Math.Max(3, series.Max(item => item.Values.Count)),
             ResolveRadarLabelRules(style));
     }
 
@@ -7817,6 +7825,11 @@ internal sealed partial class PptxRenderer
         return GetLineChartValueExtents(series, stacked: false, percentStacked: false);
     }
 
+    private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
+    {
+        return GetLineChartValueExtents(series.Select(item => item.Values).ToArray());
+    }
+
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
     {
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
@@ -8360,7 +8373,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartRadarLayout layout, IReadOnlyList<IReadOnlyList<double>> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)
+    private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         int pointCount = layout.PointCount;
@@ -8388,7 +8401,7 @@ internal sealed partial class PptxRenderer
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<double> values = series[seriesIndex];
+            IReadOnlyList<double> values = series[seriesIndex].Values;
             var points = new (double X, double Y)[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
@@ -8758,6 +8771,8 @@ internal sealed partial class PptxRenderer
     }
 
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points, ChartIndexedScatterSeries Source);
+
+    private readonly record struct ChartRadarSeries(IReadOnlyList<double> Values, ChartIndexedNumberVector Source);
 
     private readonly record struct ScatterPoint(
         double X,
