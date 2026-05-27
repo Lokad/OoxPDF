@@ -896,6 +896,65 @@ internal static class DocxTests
         TestAssert.True(cells[2].VerticalAlignmentValue is null, "Expected missing cell vertical alignment to keep a null source token.");
     }
 
+    public static void DocxReaderTableCellPreservesBorderTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:tbl>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr>
+                        <w:tc>
+                          <w:tcPr>
+                            <w:tcBorders>
+                              <w:top w:val="single" w:color="112233" w:sz="12"/>
+                              <w:bottom w:val="nil"/>
+                              <w:start w:val="dashed" w:color="445566" w:sz="8"/>
+                            </w:tcBorders>
+                          </w:tcPr>
+                          <w:p><w:r><w:t>Bordered</w:t></w:r></w:p>
+                        </w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        IReadOnlyList<DocxTableCellBorder> borders = document.Tables[0].Rows[0].Cells[0].Borders;
+
+        TestAssert.Equal(3, borders.Count);
+        TestAssert.Equal("top", borders[0].Edge);
+        TestAssert.Equal("single", borders[0].Value ?? string.Empty);
+        TestAssert.Equal("112233", borders[0].Color ?? string.Empty);
+        TestAssert.Equal("12", borders[0].SizeValue ?? string.Empty);
+        TestAssert.Equal("bottom", borders[1].Edge);
+        TestAssert.Equal("nil", borders[1].Value ?? string.Empty);
+        TestAssert.Equal("start", borders[2].Edge);
+        TestAssert.Equal("dashed", borders[2].Value ?? string.Empty);
+    }
+
     public static void DocxSyntheticTableKeepsBodyOrder()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

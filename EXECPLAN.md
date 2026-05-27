@@ -444,6 +444,14 @@ High-priority actions:
   future cell text placement can use WordprocessingML structure instead of row-height heuristics. Validation:
   focused non-slow `docx-tables` passed (`6 passed, 0 failed, 0 skipped`); full non-slow console runner
   passed (`277 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX table-cell border source tokens:
+  `DocxTableCell` now carries explicit `DocxTableCellBorder` entries for `w:tcBorders` children, preserving
+  the edge name plus raw `w:val`, `w:color`, and `w:sz` tokens. The DOCX table ladder locks visible, nil,
+  and dashed border variants without changing current generic table-grid rendering. Future table border
+  geometry can now be driven by structural WordprocessingML border records instead of inferring everything
+  from the current rectangular grid strokes. Validation: focused non-slow `docx-tables` passed
+  (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`278 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

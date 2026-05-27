@@ -468,19 +468,19 @@ internal sealed class DocxReader
             var cells = new List<DocxTableCell>();
             foreach (XElement cell in row.Elements(WordprocessingNamespace + "tc"))
             {
+                XElement? cellProperties = cell.Element(WordprocessingNamespace + "tcPr");
                 string text = string.Join(" ", cell
                     .Descendants(WordprocessingNamespace + "p")
                     .Select(p => string.Concat(p.Descendants(WordprocessingNamespace + "t").Select(t => (string?)t ?? string.Empty)))
                     .Where(t => t.Length != 0));
-                string? fill = (string?)cell
-                    .Element(WordprocessingNamespace + "tcPr")
+                string? fill = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "shd")
                     ?.Attribute(WordprocessingNamespace + "fill");
-                string? verticalAlignment = (string?)cell
-                    .Element(WordprocessingNamespace + "tcPr")
+                string? verticalAlignment = (string?)cellProperties
                     ?.Element(WordprocessingNamespace + "vAlign")
                     ?.Attribute(WordprocessingNamespace + "val");
-                cells.Add(new DocxTableCell(text, fill, verticalAlignment));
+                IReadOnlyList<DocxTableCellBorder> borders = ReadTableCellBorders(cellProperties);
+                cells.Add(new DocxTableCell(text, fill, verticalAlignment, borders));
             }
 
             if (cells.Count > 0)
@@ -501,6 +501,25 @@ internal sealed class DocxReader
         }
 
         return new DocxTable(layoutValue, columns, rows);
+    }
+
+    private static IReadOnlyList<DocxTableCellBorder> ReadTableCellBorders(XElement? cellProperties)
+    {
+        XElement? borders = cellProperties?.Element(WordprocessingNamespace + "tcBorders");
+        if (borders is null)
+        {
+            return [];
+        }
+
+        return borders
+            .Elements()
+            .Where(border => border.Name.Namespace == WordprocessingNamespace)
+            .Select(border => new DocxTableCellBorder(
+                border.Name.LocalName,
+                (string?)border.Attribute(WordprocessingNamespace + "val"),
+                (string?)border.Attribute(WordprocessingNamespace + "color"),
+                (string?)border.Attribute(WordprocessingNamespace + "sz")))
+            .ToArray();
     }
 
     private static double? ReadTableRowHeight(XElement row)
