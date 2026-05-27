@@ -560,6 +560,9 @@ if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
             "OuterChartText",
             "ChartText")
     }
+    if ($manifest.expected.compareChartTextStructureTextHash -eq $true) {
+        $compareChartTextArgs.MatchTextHash = $true
+    }
 
     if ($hasChartTextGlobalTolerance) {
         & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartTextArgs

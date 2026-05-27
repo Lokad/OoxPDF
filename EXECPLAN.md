@@ -8387,6 +8387,27 @@ focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full n
 public `pptx-charts` visual family passed (`38 passed, 0 failed`) with report generated at
 `artifacts/visual/reports/pptx-charts.json` on `2026-05-27T04:18:16+02:00`.
 
+Revision note, 2026-05-27: Extended the public chart-text structural oracle to cover the doughnut legend
+text exposed by the auto-title validation. `ComparePdfGraphicsOperations.ps1` now has an opt-in
+`-MatchTextHash` mode, and `CheckVisualCase.ps1` can pass it through with
+`expected.compareChartTextStructureTextHash`. This matters because legend entries can be uniformly shifted:
+matching only by nearest bounds can pair candidate legend line 1 with reference legend line 2, hiding the
+actual per-entry structural identity. The doughnut visual case now gates both `DataLabelText` and
+`LegendText`, matching legend text by stable text hash and allowing the current legend block offset with a
+`24 pt` tolerance.
+
+This is deliberately an oracle-coverage slice, not a renderer-layout fix. The new gate records that OOXPDF
+emits the same three legend labels in stable order and exposes the current shift as measurable structure.
+The remaining long-term work is still to replace legend anchoring/reserve geometry with Office-PDF-backed
+layout evidence, then tighten the `LegendText` tolerance instead of adding chart-specific coordinate nudges.
+
+Validation: direct `LegendText` compare on the latest doughnut artifacts passed with `-MatchTextHash` and
+`24 pt` tolerance; `visual-cases/cases/pptx-ladder-11-chart-doughnut-port/case.json` passed at run
+`20260527-042041`; `visual-cases/cases/pptx-ladder-11-chart-pie-5-categories-port/case.json` passed at run
+`20260527-042101` after rerunning serially because the first parallel attempt hit a transient build lock;
+full public `pptx-charts` visual family passed (`38 passed, 0 failed`) with report generated at
+`artifacts/visual/reports/pptx-charts.json` on `2026-05-27T04:24:38+02:00`.
+
 Revision note, 2026-05-26: Preserved the raw chart marker size token in the typed scene model. Chart marker
 symbols already carried both the typed enum and original OOXML string, but marker size was available only as
 a clamped `double`, which would make later Office-PDF-backed marker sizing work infer intent after parsing had

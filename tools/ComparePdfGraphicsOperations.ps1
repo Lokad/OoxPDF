@@ -35,6 +35,8 @@ param(
 
     [switch] $MatchLineJoin,
 
+    [switch] $MatchTextHash,
+
     [switch] $MatchPathGeometry,
 
     [double] $PathGeometryTolerance = 0.25,
@@ -165,10 +167,12 @@ if ($MatchByBounds) {
                     (IntValue $cand.LineCount) -eq (IntValue $ref.LineCount) -and
                     (IntValue $cand.CurveCount) -eq (IntValue $ref.CurveCount) -and
                     (IntValue $cand.CloseCount) -eq (IntValue $ref.CloseCount))) { 0d } else { 1000d }
+            $textHashPenalty = if (-not $MatchTextHash -or (-not (HasValue $cand.TextHash)) -or (-not (HasValue $ref.TextHash)) -or [string]$cand.TextHash -eq [string]$ref.TextHash) { 0d } else { 10000000d }
             $score = $kindPenalty +
                 $operatorPenalty +
                 $segmentPenalty +
                 $pathCountPenalty +
+                $textHashPenalty +
                 [Math]::Abs((CenterX $cand) - (CenterX $ref)) +
                 [Math]::Abs((CenterY $cand) - (CenterY $ref)) +
                 [Math]::Abs((Width $cand) - (Width $ref)) +
@@ -267,6 +271,7 @@ foreach ($pair in $pairs) {
     $strokeColorOk = (-not $MatchStrokeColor) -or (StrokeColorEqual $ref.StrokeColor $cand.StrokeColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
     $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
+    $textHashOk = (-not $MatchTextHash) -or (-not (HasValue $ref.TextHash)) -or (-not (HasValue $cand.TextHash)) -or [string]$ref.TextHash -eq [string]$cand.TextHash
     $pathGeometryAvailable = (HasValue $ref.PathCenterX) -and (HasValue $cand.PathCenterX) -and
         (HasValue $ref.PathCenterY) -and (HasValue $cand.PathCenterY) -and
         (HasValue $ref.PathRadius) -and (HasValue $cand.PathRadius)
@@ -290,7 +295,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind -and
         ((-not $pathMinRadiusRelevant) -or ($pathMinRadiusAvailable -and [Math]::Abs($deltaPathMinRadius) -le $pathGeometryToleranceForKind)) -and
         ((-not $pathMaxRadiusRelevant) -or ($pathMaxRadiusAvailable -and [Math]::Abs($deltaPathMaxRadius) -le $pathGeometryToleranceForKind)))
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $pathGeometryOk) { "ok" } else { "delta" }
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -321,6 +326,9 @@ foreach ($pair in $pairs) {
         RefLineJoin = $ref.LineJoin
         CandLineJoin = $cand.LineJoin
         LineJoinOk = $lineJoinOk
+        RefTextHash = $ref.TextHash
+        CandTextHash = $cand.TextHash
+        TextHashOk = $textHashOk
         RefPathCenter = if (HasValue $ref.PathCenterX) { "$($ref.PathCenterX),$($ref.PathCenterY)" } else { $null }
         CandPathCenter = if (HasValue $cand.PathCenterX) { "$($cand.PathCenterX),$($cand.PathCenterY)" } else { $null }
         DeltaPathCenterX = $deltaPathCenterX
