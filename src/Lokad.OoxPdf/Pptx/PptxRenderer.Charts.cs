@@ -1170,6 +1170,17 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetScatterYValueExtents(scatterSeries));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderScatterChart(graphics, plotBox, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries, xExtents, yExtents);
+                fonts.AddRange(RenderScatterDataLabels(
+                    theme,
+                    graphics,
+                    plotBox,
+                    scatterSeries,
+                    bubble: false,
+                    xExtents,
+                    yExtents,
+                    ReadSceneOrXmlDataLabelOptions(scatterPlot, scatterChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(scatterPlot, scatterChart, theme),
+                    ReadSceneOrXmlChartSeriesNameRecords(scatterPlot, scatterChart, workbook)));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, scatterPlot, scatterChart, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }

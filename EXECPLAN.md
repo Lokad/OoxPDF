@@ -10179,3 +10179,17 @@ the renderer despite already being present in the scene model and bubble-size ve
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`47 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-27: Routed scatter chart `showVal` data labels through the same structured
+scatter/bubble label renderer. The scatter branch now reads plot and series data-label options from the scene
+or chart XML, preserves series-name provenance through `ChartSeriesNameRecord`, and formats the active Y
+value at the final label assembly boundary. The existing public area/scatter/radar/doughnut synthetic case
+now carries `c:dLbls/c:showVal` on the scatter chart and verifies the scatter-label PDF font resource is
+emitted.
+
+This still does not settle Office's automatic scatter label placement, category-name behavior for XY charts,
+or sparse X/Y point pairing. It removes the narrower drop where parsed scatter data-label intent was ignored
+after the renderer already had typed X/Y point records and axis extents.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`47 passed, 0 failed, 0 skipped`).

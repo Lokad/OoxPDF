@@ -10791,6 +10791,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:scatterChart>
                   <c:scatterStyle val="lineMarker"/>
+                  <c:dLbls><c:showVal val="1"/><c:dLblPos val="t"/><c:numFmt formatCode="0"/></c:dLbls>
                   <c:ser><c:spPr><a:ln><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr><c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:yVal></c:ser>
                 </c:scatterChart></c:plotArea></c:chart></c:chartSpace>
                 """),
@@ -10818,6 +10819,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0 rg", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("0.667 0.667 0 rg", pdf);
+        TestAssert.Contains("/CSD1", pdf);
         TestAssert.True(Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count >= 4, "Expected native chart paths for area, scatter, radar, and doughnut charts.");
         TestAssert.DoesNotContain("/GS62000F100000S gs", pdf);
         TestAssert.Contains(" c", pdf);
