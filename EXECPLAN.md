@@ -10163,3 +10163,19 @@ those facts after slice geometry has already been computed.
 Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Rendered the first bubble data-label text path from preserved scatter/bubble
+channel structure. Bubble chart rendering now consumes `c:dLbls/c:showBubbleSize` through
+`ChartDataLabelOptions`, formats the active bubble-size point or its workbook sidecar, and emits chart
+data-label PDF text after bubble geometry. `ScatterPoint` also carries the originating bubble-size format
+code, and scatter/bubble point coordinate/radius mapping is now shared between bubble drawing and label
+placement so the label path does not reconstruct point geometry independently.
+
+This is intentionally a narrow structural closure, not a claim of Office-perfect bubble-label placement.
+Automatic label boxes still reuse the current line-label placement rules, and scatter/bubble sparse channel
+pairing, source-linked number-format priority, `plotVisOnly`, and manual data-label layout semantics still
+need public Office-PDF-backed probes. The useful long-term step is that `showBubbleSize` no longer dies in
+the renderer despite already being present in the scene model and bubble-size vector.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`47 passed, 0 failed, 0 skipped`).

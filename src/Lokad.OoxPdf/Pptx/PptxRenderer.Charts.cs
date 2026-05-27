@@ -495,7 +495,8 @@ internal sealed partial class PptxRenderer
                 bubbleSizePoint,
                 series.XValues.WorkbookPointForIndex(xPoint.Value.Index),
                 series.YValues.WorkbookPointForIndex(yPoint.Value.Index),
-                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null));
+                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null,
+                series.BubbleSizes.FormatCode));
         }
 
         return new ScatterSeries(points, series);
@@ -1196,6 +1197,17 @@ internal sealed partial class PptxRenderer
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme);
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisUnits.MajorUnit, crossingValue: null, reversed: false, major: true, gridlineStyle.Major);
                 RenderScatterChart(graphics, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], xExtents, yExtents);
+                fonts.AddRange(RenderScatterDataLabels(
+                    theme,
+                    graphics,
+                    plotBox,
+                    bubbleSeries,
+                    bubble: true,
+                    xExtents,
+                    yExtents,
+                    ReadSceneOrXmlDataLabelOptions(bubblePlot, bubbleChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(bubblePlot, bubbleChart, theme),
+                    ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook)));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -4915,6 +4927,150 @@ internal sealed partial class PptxRenderer
         };
     }
 
+    private static IReadOnlyList<PdfFontResource> RenderScatterDataLabels(
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ChartPlotBox plotBox,
+        IReadOnlyList<ScatterSeries> series,
+        bool bubble,
+        ChartValueExtents xExtents,
+        ChartValueExtents yExtents,
+        ChartDataLabelOptions labelOptions,
+        IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+    {
+        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
+        {
+            return [];
+        }
+
+        double maxBubbleSize = Math.Max(1d, series.SelectMany(item => item.Points).DefaultIfEmpty().Max(point => point.Size));
+        var runs = new List<TextRun>();
+        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        {
+            foreach (ScatterPoint point in series[seriesIndex].Points)
+            {
+                ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
+                    ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex),
+                    point.Index);
+                if (!effectiveOptions.HasVisibleText)
+                {
+                    continue;
+                }
+
+                ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
+                double fontSize = style.FontSize;
+                double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
+                string label = FormatScatterDataLabel(point, seriesIndex, effectiveOptions, seriesNames);
+                if (string.IsNullOrEmpty(label))
+                {
+                    continue;
+                }
+
+                double labelWidth = Math.Max(
+                    PptxChartMetricRules.CartesianDataLabelMinimumWidth,
+                    EstimateChartTextWidth(label, fontSize) + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+                (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(
+                    plotBox,
+                    point,
+                    bubble,
+                    xExtents,
+                    yExtents,
+                    maxBubbleSize);
+                (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
+                    effectiveOptions.PositionKind,
+                    pointX,
+                    bubble ? pointY + radius : pointY,
+                    labelWidth,
+                    labelHeight);
+                ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
+                AddChartLabelRuns(
+                    runs,
+                    label,
+                    effectiveOptions,
+                    labelBox.X,
+                    labelBox.Y,
+                    labelBox.Width,
+                    labelBox.Height,
+                    plotBox,
+                    style,
+                    alignment);
+            }
+        }
+
+        return RenderTextRuns(runs, graphics, "CSD");
+    }
+
+    private static string FormatScatterDataLabel(
+        ScatterPoint point,
+        int seriesIndex,
+        ChartDataLabelOptions options,
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+    {
+        if (!string.IsNullOrWhiteSpace(options.CustomText))
+        {
+            return options.CustomText;
+        }
+
+        var parts = new List<string>(3);
+        string seriesName = GetActiveSeriesName(seriesNames, seriesIndex);
+        if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
+        {
+            parts.Add(seriesName);
+        }
+
+        if (options.ShowValue)
+        {
+            parts.Add(FormatChartDataLabelValue(point.Y, options));
+        }
+
+        if (options.ShowBubbleSize && ResolveBubbleSizeValue(point) is { } bubbleSize)
+        {
+            parts.Add(FormatBubbleSizeDataLabelValue(bubbleSize, point, options));
+        }
+
+        return string.Join(GetChartDataLabelSeparator(options), parts);
+    }
+
+    private static double? ResolveBubbleSizeValue(ScatterPoint point)
+    {
+        return point.BubbleSizeWorkbookPoint?.Value ??
+            point.BubbleSizePoint?.Value;
+    }
+
+    private static string FormatBubbleSizeDataLabelValue(double value, ScatterPoint point, ChartDataLabelOptions options)
+    {
+        if (options.NumberFormatInfo.IsDefined || !string.IsNullOrWhiteSpace(options.NumberFormat))
+        {
+            return FormatChartDataLabelValue(value, options);
+        }
+
+        string formatCode = point.BubbleSizeFormatCode ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(formatCode) &&
+            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase)
+            ? FormatChartNumber(value, formatCode)
+            : FormatChartAxisLabel(value);
+    }
+
+    private static (double X, double Y, double Radius) ResolveScatterPointGeometry(
+        ChartPlotBox plotBox,
+        ScatterPoint point,
+        bool bubble,
+        ChartValueExtents xExtents,
+        ChartValueExtents yExtents,
+        double maxBubbleSize)
+    {
+        double xRange = Math.Max(1d, xExtents.Max - xExtents.Min);
+        double yRange = Math.Max(1d, yExtents.Max - yExtents.Min);
+        double pointX = plotBox.X + (point.X - xExtents.Min) / xRange * plotBox.Width;
+        double pointY = plotBox.Y + (point.Y - yExtents.Min) / yRange * plotBox.Height;
+        double radius = bubble
+            ? Math.Sqrt(Math.Max(0d, point.Size) / Math.Max(1d, maxBubbleSize)) * Math.Min(plotBox.Width, plotBox.Height) * PptxChartMetricRules.BubbleRadiusPlotRatio
+            : 3d;
+        return (pointX, pointY, radius);
+    }
+
     private static ChartTextStyle ResolveChartDataLabelTextStyle(PptxTheme theme, ChartDataLabelOptions options)
     {
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
@@ -8384,8 +8540,7 @@ internal sealed partial class PptxRenderer
             var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
             foreach (ScatterPoint point in series[seriesIndex].Points)
             {
-                double pointX = plotX + (point.X - minX) / xRange * plotWidth;
-                double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
+                (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
                 points.Add((pointX, pointY));
             }
 
@@ -8403,11 +8558,7 @@ internal sealed partial class PptxRenderer
 
             foreach (ScatterPoint point in series[seriesIndex].Points)
             {
-                double pointX = plotX + (point.X - minX) / xRange * plotWidth;
-                double pointY = plotY + (point.Y - minY) / yRange * plotHeight;
-                double radius = bubble
-                    ? Math.Sqrt(Math.Max(0d, point.Size) / maxBubbleSize) * Math.Min(plotWidth, plotHeight) * PptxChartMetricRules.BubbleRadiusPlotRatio
-                    : 3d;
+                (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
                 if (bubble)
                 {
                     graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
@@ -8823,7 +8974,8 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberPoint? BubbleSizePoint,
         ChartIndexedNumberPoint? XWorkbookPoint,
         ChartIndexedNumberPoint? YWorkbookPoint,
-        ChartIndexedNumberPoint? BubbleSizeWorkbookPoint);
+        ChartIndexedNumberPoint? BubbleSizeWorkbookPoint,
+        string? BubbleSizeFormatCode);
 
     private readonly record struct ChartIndexedScatterSeries(
         ChartIndexedNumberVector XValues,
@@ -9082,9 +9234,9 @@ internal sealed partial class PptxRenderer
     {
         public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
-        public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName ||
+        public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
             !string.IsNullOrWhiteSpace(CustomText) ||
-            Overrides.Values.Any(label => label.ShowValue == true || label.ShowPercent == true || label.ShowCategoryName == true || label.ShowSeriesName == true || !string.IsNullOrWhiteSpace(label.CustomText));
+            Overrides.Values.Any(label => label.ShowValue == true || label.ShowPercent == true || label.ShowCategoryName == true || label.ShowSeriesName == true || label.ShowBubbleSize == true || !string.IsNullOrWhiteSpace(label.CustomText));
 
         public bool HasVisibleContent => HasVisibleText || ShowLegendKey ||
             Overrides.Values.Any(label => label.ShowLegendKey == true);
