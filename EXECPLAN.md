@@ -1631,6 +1631,16 @@ High-priority actions:
     This consumes preserved `c:dLbl/c:layout/c:manualLayout` only when Office gives an explicit box; default
     Office label-box construction, auto-fit, richer position semantics, and leader-line geometry remain open.
     Validation: focused `pptx-charts` tests passed `40/40`.
+  - [x] Consume category-name and series-name flags for polar data-label text:
+    pie and doughnut label rendering now receives the same indexed category-label vector and series-name
+    records used by legends and Cartesian labels. `FormatPieDataLabel` builds label text from explicit custom
+    text, series name, category name, value, and percent flags instead of limiting polar labels to value and
+    percent only. This closes a text-provenance gap only; automatic polar label-box placement, auto-fit, and
+    leader-line geometry remain open. Validation: focused non-slow `pptx-charts` passed
+    (`46 passed, 0 failed, 0 skipped`); public polar visual cases passed
+    (`pptx-ladder-11-chart-pie-5-categories-port` run `20260527-101002`,
+    `pptx-ladder-11-chart-doughnut-port` run `20260527-101010`); full non-slow console runner passed
+    (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient

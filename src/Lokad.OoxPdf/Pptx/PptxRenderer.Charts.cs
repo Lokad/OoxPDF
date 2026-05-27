@@ -1243,6 +1243,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0]);
             if (pieSlices.Count != 0)
             {
+                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(piePlot, pieChart, workbook);
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart, workbook);
@@ -1252,7 +1254,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, legend);
                 RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSlices, pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart));
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, pieSlices, pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme)));
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, pieSlices, pointExplosions, 0d, ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme), categoryLabels, seriesNames));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, pointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -1266,6 +1268,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0]);
             if (doughnutSlices.Count != 0)
             {
+                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook);
+                IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(doughnutPlot, doughnutChart, workbook);
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
                 IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart, workbook);
@@ -1276,7 +1280,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, legend);
                 RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSlices, pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart));
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, doughnutSlices, pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme)));
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, polarLayout, doughnutSlices, pointExplosions, holeSize, ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme), categoryLabels, seriesNames));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, pointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -4602,7 +4606,7 @@ internal sealed partial class PptxRenderer
         return OoxBoolean.ParseElement(element, defaultValue);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions)
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!labelOptions.HasVisibleText || slices.Count == 0)
         {
@@ -4637,7 +4641,7 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(slice.Index, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
-            string label = FormatPieDataLabel(slice.Value, total, effectiveOptions);
+            string label = FormatPieDataLabel(slice.Value, total, slice.Index, effectiveOptions, categoryLabels, seriesNames);
             if (!string.IsNullOrEmpty(label))
             {
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
@@ -5335,21 +5339,37 @@ internal sealed partial class PptxRenderer
         return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
     }
 
-    private static string FormatPieDataLabel(double value, double total, ChartDataLabelOptions options)
+    private static string FormatPieDataLabel(double value, double total, int categoryIndex, ChartDataLabelOptions options, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
         {
             return options.CustomText;
         }
 
-        if (options.ShowValue && options.ShowPercent)
+        var parts = new List<string>(4);
+        string seriesName = GetActiveSeriesName(seriesNames, 0);
+        if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
         {
-            return FormatChartDataLabelValue(value, options) + GetChartDataLabelSeparator(options) + FormatChartPercentageLabel(value / total);
+            parts.Add(seriesName);
         }
 
-        return options.ShowPercent
-            ? FormatChartPercentageLabel(value / total)
-            : FormatChartDataLabelValue(value, options);
+        string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
+        if (options.ShowCategoryName && !string.IsNullOrWhiteSpace(categoryLabel))
+        {
+            parts.Add(categoryLabel);
+        }
+
+        if (options.ShowValue)
+        {
+            parts.Add(FormatChartDataLabelValue(value, options));
+        }
+
+        if (options.ShowPercent)
+        {
+            parts.Add(FormatChartPercentageLabel(value / total));
+        }
+
+        return string.Join(GetChartDataLabelSeparator(options), parts);
     }
 
     private static string FormatCartesianDataLabel(
