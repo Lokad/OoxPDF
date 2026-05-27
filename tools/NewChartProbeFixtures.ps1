@@ -1,6 +1,7 @@
 param(
     [switch] $DoughnutOnly,
-    [switch] $SparseOnly
+    [switch] $SparseOnly,
+    [switch] $DataLabelsOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,6 +53,8 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
     $presentation = $null
     $workbook = $null
     $worksheet = $null
+    $series = $null
+    $labels = $null
 
     try {
         $presentation = $PowerPoint.Presentations.Add($true)
@@ -112,6 +115,109 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
         $presentation = $null
     }
     finally {
+        if ($worksheet -ne $null) { Release-ComObject $worksheet }
+        if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
+function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
+    $output = Join-Path $Cases "pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx"
+    $presentation = $null
+    $workbook = $null
+    $worksheet = $null
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartShape = $slide.Shapes.AddChart(5, 144, 36, 576, 432)
+        $chart = $chartShape.Chart
+        [void]($chart.HasTitle = $false)
+        [void]($chart.HasLegend = $false)
+        [void]($chart.ChartData.Activate())
+
+        $workbook = $chart.ChartData.Workbook
+        $worksheet = $workbook.Worksheets.Item(1)
+        $worksheet.Cells.Clear()
+        $worksheet.Cells.Item(1, 1).Value = "Category"
+        $worksheet.Cells.Item(1, 2).Value = "Share"
+        $worksheet.Cells.Item(2, 1).Value = "Alpha"
+        $worksheet.Cells.Item(2, 2).Value = 48.0
+        $worksheet.Cells.Item(3, 1).Value = "Beta"
+        $worksheet.Cells.Item(3, 2).Value = 22.0
+        $worksheet.Cells.Item(4, 1).Value = "Gamma"
+        $worksheet.Cells.Item(4, 2).Value = 17.0
+        $worksheet.Cells.Item(5, 1).Value = "Delta"
+        $worksheet.Cells.Item(5, 2).Value = 13.0
+
+        [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$B`$5", 2))
+        [void]($chart.ChartType = 5)
+
+        $series = $chart.SeriesCollection().Item(1)
+        try {
+            $series.Points(1).Format.Fill.ForeColor.RGB = Rgb 68 114 196
+            $series.Points(2).Format.Fill.ForeColor.RGB = Rgb 237 125 49
+            $series.Points(3).Format.Fill.ForeColor.RGB = Rgb 165 165 165
+            $series.Points(4).Format.Fill.ForeColor.RGB = Rgb 112 173 71
+        }
+        catch {
+            # Point materialization can be deferred by Office until save.
+        }
+
+        [void]($series.ApplyDataLabels())
+        $labels = $series.DataLabels()
+        $labels.ShowCategoryName = $true
+        $labels.ShowValue = $false
+        $labels.ShowPercentage = $true
+        $labels.ShowSeriesName = $false
+        $labels.ShowLegendKey = $true
+        $labels.Separator = "`n"
+        $labels.Position = 2
+        try {
+            $series.HasLeaderLines = $true
+        }
+        catch {
+            # Some Office versions infer leader lines from outside labels and
+            # do not expose this property until the chart is laid out.
+        }
+        try {
+            $series.LeaderLines.Format.Line.ForeColor.RGB = Rgb 89 89 89
+            $series.LeaderLines.Format.Line.Weight = 0.75
+        }
+        catch {
+            # The generated PDF remains the source of truth for leader geometry.
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        Release-ComObject $labels
+        $labels = $null
+        Release-ComObject $series
+        $series = $null
+        Release-ComObject $worksheet
+        $worksheet = $null
+        Close-ChartWorkbook $workbook
+        $workbook = $null
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        if ($labels -ne $null) { Release-ComObject $labels }
+        if ($series -ne $null) { Release-ComObject $series }
         if ($worksheet -ne $null) { Release-ComObject $worksheet }
         if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
         if ($presentation -ne $null) {
@@ -252,7 +358,12 @@ $presentation = $null
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
 
-    if ($SparseOnly) {
+    if ($DataLabelsOnly) {
+        $output = New-PieDataLabelLeaderLineProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+    }
+    elseif ($SparseOnly) {
         $output = New-SparseBlankChartProbe `
             -PowerPoint $powerPoint `
             -Cases $cases
@@ -438,7 +549,7 @@ try {
     $presentation = $null
     }
 
-    if (-not $SparseOnly) {
+    if (-not $SparseOnly -and -not $DataLabelsOnly) {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `

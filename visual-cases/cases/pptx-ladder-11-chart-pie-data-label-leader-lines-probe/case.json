@@ -1,0 +1,37 @@
+{
+  "id": "pptx-ladder-11-chart-pie-data-label-leader-lines-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "chart", "pie-chart", "data-labels", "leader-lines", "office-probe"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 8.75,
+    "maxChangedPixelRatioAtThreshold16": 0.12,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "PolarPlotBoxCandidate": 52,
+      "PolarSliceCandidate": 52
+    },
+    "compareChartGraphicsStructureKinds": [
+      "PolarPlotBoxCandidate",
+      "PolarSliceCandidate"
+    ],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true,
+    "compareChartGraphicsStructurePathGeometry": true,
+    "maxChartGraphicsStructurePathGeometryDelta": 28,
+    "maxChartGraphicsStructurePathGeometryDeltaByKind": {
+      "PolarSliceCandidate": 28
+    },
+    "compareChartTextStructurePageNumber": 1,
+    "compareChartTextStructureKinds": ["DataLabelText"],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "DataLabelText": 200
+    }
+  }
+}

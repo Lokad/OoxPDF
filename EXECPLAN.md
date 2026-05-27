@@ -1649,6 +1649,26 @@ High-priority actions:
     (`pptx-ladder-11-chart-pie-5-categories-port` run `20260527-101245`,
     `pptx-ladder-11-chart-doughnut-port` run `20260527-101253`); full non-slow console runner passed
     (`265 passed, 0 failed, 7 skipped`).
+  - [x] Add a public Office-backed polar data-label probe for structural oracle work:
+    `tools/NewChartProbeFixtures.ps1 -DataLabelsOnly` now generates
+    `pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx`, and the matching visual case locks
+    public-safe polar slice geometry plus the existence of four Office data-label text anchors. The generated
+    chart XML contains series-level `dLbls` with `outEnd`, `showCatName`, `showPercent`, `showLegendKey`,
+    `showLeaderLines`, and a styled `leaderLines` element, giving future renderer work a reproducible public
+    fixture instead of relying on private decks. The first validated run after tightening COM cleanup,
+    `artifacts/visual/pptx-ladder-11-chart-pie-data-label-leader-lines-probe/20260527-102132`, passed with
+    MAE `3.747745`, changed16 `0.045911`, and matching dimension/page counts.
+  - [ ] Render and structurally classify polar data-label legend-key swatches:
+    the new public probe shows Office emits four small color swatches next to outside pie labels when
+    `showLegendKey` is enabled; OOXPDF currently preserves the flag but does not draw those swatches, and
+    `ClassifyPdfChartText.ps1` currently classifies the second line of the Office label as `LegendText`
+    because it is near the swatch. Fix this by carrying the label-swatch geometry through the renderer and by
+    teaching the structural classifier to distinguish data-label legend keys from chart legend entries.
+  - [ ] Build a stronger public leader-line geometry probe before rendering leader lines:
+    the same generated OOXML includes `showLeaderLines` and styled `c:leaderLines`, but the Office PDF for the
+    current layout did not expose separate leader-line strokes. Create a public Office-authored probe that
+    forces visible leader-line strokes in the reference PDF, then add a first-class chart-graphics
+    classification for those connector strokes before implementing renderer-side leader-line geometry.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
