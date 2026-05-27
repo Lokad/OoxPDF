@@ -9572,6 +9572,22 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Preserved indexed value provenance through scatter and bubble point construction.
+`ScatterPoint` used to carry only rendered X, Y, and bubble-size scalars after `ChartIndexedScatterSeries`
+had already preserved cache/workbook vectors. The compact scatter projection now derives from compact
+`ChartIndexedNumberPoint` records and stores the active X, Y, optional bubble-size points plus matching
+workbook sidecar points on each rendered scatter point. Existing chart drawing still reads the same scalar
+coordinates and size, so visible output is unchanged.
+
+This does not implement scatter or bubble data labels, `plotVisOnly`, or source/cache freshness. It keeps the
+future label/layout layer from having to reverse-map a rendered scatter dot back to sparse chart-cache indices,
+workbook cells, hidden source rows/columns, or source-linked formats after geometry has already collapsed the
+data to doubles.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved indexed value provenance through pie and doughnut slice construction.
 `ChartIndexedPieSlice` used to collapse an active chart point to only an index and value, which was enough for
 current wedge geometry but lost the rendered point record and matching workbook sidecar point before future

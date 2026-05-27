@@ -419,10 +419,10 @@ internal sealed partial class PptxRenderer
 
     private static ScatterSeries ToCompactScatterSeries(ChartIndexedScatterSeries series)
     {
-        IReadOnlyList<double> xValues = series.XValues.CompactValues();
-        IReadOnlyList<double> yValues = series.YValues.CompactValues();
-        IReadOnlyList<double> bubbleSizes = series.BubbleSizes.CompactValues();
-        int count = Math.Min(xValues.Count, yValues.Count);
+        IReadOnlyList<ChartIndexedNumberPoint> xPoints = series.XValues.CompactPoints();
+        IReadOnlyList<ChartIndexedNumberPoint> yPoints = series.YValues.CompactPoints();
+        IReadOnlyList<ChartIndexedNumberPoint> bubbleSizePoints = series.BubbleSizes.CompactPoints();
+        int count = Math.Min(xPoints.Count, yPoints.Count);
         if (count == 0)
         {
             return new ScatterSeries([]);
@@ -431,8 +431,21 @@ internal sealed partial class PptxRenderer
         var points = new ScatterPoint[count];
         for (int i = 0; i < count; i++)
         {
-            double size = series.ReadBubbleSize && i < bubbleSizes.Count ? bubbleSizes[i] : 1d;
-            points[i] = new ScatterPoint(xValues[i], yValues[i], size);
+            ChartIndexedNumberPoint xPoint = xPoints[i];
+            ChartIndexedNumberPoint yPoint = yPoints[i];
+            ChartIndexedNumberPoint? bubbleSizePoint = series.ReadBubbleSize && i < bubbleSizePoints.Count ? bubbleSizePoints[i] : null;
+            double size = bubbleSizePoint?.Value ?? 1d;
+            points[i] = new ScatterPoint(
+                xPoint.Value!.Value,
+                yPoint.Value!.Value,
+                size,
+                yPoint.Index,
+                xPoint,
+                yPoint,
+                bubbleSizePoint,
+                series.XValues.WorkbookPointForIndex(xPoint.Index),
+                series.YValues.WorkbookPointForIndex(yPoint.Index),
+                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null);
         }
 
         return new ScatterSeries(points);
@@ -8788,7 +8801,17 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points);
 
-    private readonly record struct ScatterPoint(double X, double Y, double Size);
+    private readonly record struct ScatterPoint(
+        double X,
+        double Y,
+        double Size,
+        int Index,
+        ChartIndexedNumberPoint XPoint,
+        ChartIndexedNumberPoint YPoint,
+        ChartIndexedNumberPoint? BubbleSizePoint,
+        ChartIndexedNumberPoint? XWorkbookPoint,
+        ChartIndexedNumberPoint? YWorkbookPoint,
+        ChartIndexedNumberPoint? BubbleSizeWorkbookPoint);
 
     private readonly record struct ChartIndexedScatterSeries(
         ChartIndexedNumberVector XValues,
@@ -8812,10 +8835,16 @@ internal sealed partial class PptxRenderer
     {
         public IReadOnlyList<double> CompactValues()
         {
+            return CompactPoints()
+                .Select(point => point.Value!.Value)
+                .ToArray();
+        }
+
+        public IReadOnlyList<ChartIndexedNumberPoint> CompactPoints()
+        {
             return (Points ?? [])
                 .Where(point => point.Value is not null)
                 .OrderBy(point => point.Index)
-                .Select(point => point.Value!.Value)
                 .ToArray();
         }
 
@@ -8867,6 +8896,19 @@ internal sealed partial class PptxRenderer
             }
 
             return values;
+        }
+
+        public ChartIndexedNumberPoint? WorkbookPointForIndex(int index)
+        {
+            foreach (ChartIndexedNumberPoint point in WorkbookPoints ?? [])
+            {
+                if (point.Index == index)
+                {
+                    return point;
+                }
+            }
+
+            return null;
         }
     }
 

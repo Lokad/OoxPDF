@@ -11276,6 +11276,20 @@ internal static class PptxTests
         object sliceWorkbookPoint = pieSlices[0].GetType().GetProperty("WorkbookPoint")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
         TestAssert.True((double?)slicePoint.GetType().GetProperty("Value")?.GetValue(slicePoint) == 99d, "Expected pie slice active point to preserve the rendered cache value.");
         TestAssert.True((double?)sliceWorkbookPoint.GetType().GetProperty("Value")?.GetValue(sliceWorkbookPoint) == 8.2d, "Expected pie slice workbook sidecar point to preserve the workbook source value.");
+        Type scatterSeriesType = typeof(PptxRenderer).GetNestedType(
+            "ChartIndexedScatterSeries",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected indexed scatter-series type.");
+        object scatterSeries = Activator.CreateInstance(scatterSeriesType, [vector, vector, vector, true]) ?? throw new InvalidOperationException("Expected indexed scatter-series instance.");
+        System.Reflection.MethodInfo toCompactScatterSeries = typeof(PptxRenderer).GetMethod(
+            "ToCompactScatterSeries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected compact scatter-series projection.");
+        object compactScatter = toCompactScatterSeries.Invoke(null, [scatterSeries]) ?? throw new InvalidOperationException("Expected compact scatter-series.");
+        object[] scatterPoints = (((System.Collections.IEnumerable?)compactScatter.GetType().GetProperty("Points")?.GetValue(compactScatter)) ?? throw new InvalidOperationException("Expected compact scatter points.")).Cast<object>().ToArray();
+        TestAssert.True(scatterPoints.Length == 1, "Expected stale positive cache value to remain an active scatter point.");
+        object scatterXPoint = scatterPoints[0].GetType().GetProperty("XPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve its active X point.");
+        object scatterXWorkbookPoint = scatterPoints[0].GetType().GetProperty("XWorkbookPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve matching workbook X point.");
+        TestAssert.True((double?)scatterXPoint.GetType().GetProperty("Value")?.GetValue(scatterXPoint) == 99d, "Expected scatter active point to preserve the rendered cache value.");
+        TestAssert.True((double?)scatterXWorkbookPoint.GetType().GetProperty("Value")?.GetValue(scatterXWorkbookPoint) == 8.2d, "Expected scatter workbook sidecar point to preserve the workbook source value.");
         var blankSource = source with { Formula = "Sheet1!$B$2:$B$4" };
         object blankVector = buildVector.Invoke(
             null,
