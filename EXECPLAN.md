@@ -11579,3 +11579,16 @@ The durable open item is therefore narrower and more explicit: design an Office-
 policy that decides when `plotVisOnly`, `externalData/autoUpdate`, cache presence, workbook sidecars, and
 hidden rows/columns are allowed to affect active rendered points. Until then, `plotVisOnly` should remain
 preserved and testable as structure, not silently consumed as a workbook-over-cache rule.
+
+Revision note, 2026-05-27: Tightened the synthetic no-fill text-outline guard without changing renderer
+behavior. `PptxSyntheticTextBoxRendersTextOutline` now verifies the full structural route that the public
+Office probe justified: no-fill outlined text uses PDF text rendering mode `1 Tr`, resets to `0 Tr`, and
+keeps searchable `TJ` text while rejecting stroked glyph-path signatures such as `c/S` and `h/S`.
+
+This deliberately preserves the split discovered by the Office-backed fixtures: semi-transparent filled
+text is glyph-path-owned, while no-fill outlined text is text-rendering-mode-owned. An initial overbroad
+negative check for raw `f` tokens failed because PDF resources can contain that character outside the target
+operation; the durable guard now targets operator sequences that would indicate the previous backed-out
+glyph-stroking prototype.
+
+Validation: focused non-slow `pptx-typography` passed with `87` tests and `2` slow skips.

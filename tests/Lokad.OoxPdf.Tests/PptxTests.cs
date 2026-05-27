@@ -2446,7 +2446,10 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.667 0 RG", pdf);
         TestAssert.Contains("1 Tr", pdf);
+        TestAssert.Contains("0 Tr", pdf);
         TestAssert.Contains(" TJ", pdf);
+        TestAssert.DoesNotContain(" c\r\nS", pdf);
+        TestAssert.DoesNotContain(" h\r\nS", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesThemeHyperlinkColor()
