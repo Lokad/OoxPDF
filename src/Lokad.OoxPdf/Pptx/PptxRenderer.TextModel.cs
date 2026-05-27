@@ -67,6 +67,8 @@ internal sealed partial class PptxRenderer
             run.Style.FontSize,
             run.Style.CharacterSpacing,
             run.Style.Typeface,
+            run.Style.HasHyperlinkClick,
+            run.Style.HyperlinkClickId,
             run.Style.Underline,
             run.Style.UnderlineValue,
             run.Style.Strike,

@@ -109,6 +109,8 @@ internal sealed record PptxTextRunModelSnapshot(
     double FontSize,
     double CharacterSpacing,
     string? Typeface,
+    bool HasHyperlinkClick,
+    string? HyperlinkClickId,
     bool Underline,
     string? UnderlineValue,
     bool Strike,
@@ -138,6 +140,8 @@ internal sealed record PptxTextFlowRunSnapshot(
     string SourceText,
     double FontSize,
     string? Typeface,
+    bool HasHyperlinkClick,
+    string? HyperlinkClickId,
     IReadOnlyList<PptxTextFlowSegmentSnapshot> Segments);
 
 internal sealed record PptxTextFlowSegmentSnapshot(

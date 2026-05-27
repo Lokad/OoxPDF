@@ -276,6 +276,8 @@ internal sealed partial class PptxRenderer
         double Alpha,
         TextOutline? Outline,
         RgbColor? Highlight,
+        bool HasHyperlinkClick,
+        string? HyperlinkClickId,
         bool Bold,
         bool Italic,
         bool Underline,

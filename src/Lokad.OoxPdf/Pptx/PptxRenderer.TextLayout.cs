@@ -146,6 +146,8 @@ internal sealed partial class PptxRenderer
             run.Source.Text,
             run.Style.FontSize,
             run.Style.Typeface,
+            run.Style.HasHyperlinkClick,
+            run.Style.HyperlinkClickId,
             run.Segments.Select(ToSnapshot).ToArray());
     }
 
@@ -2043,6 +2045,8 @@ internal sealed partial class PptxRenderer
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, out TextOutline outline) ? outline : null,
             TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
+            HasHyperlinkClick(runProperties),
+            ReadHyperlinkClickId(runProperties),
             bold,
             italic,
             underline,
@@ -2096,6 +2100,13 @@ internal sealed partial class PptxRenderer
     private static bool HasHyperlinkClick(XElement? runProperties)
     {
         return runProperties?.Element(DrawingNamespace + "hlinkClick") is not null;
+    }
+
+    private static string? ReadHyperlinkClickId(XElement? runProperties)
+    {
+        return (string?)runProperties
+            ?.Element(DrawingNamespace + "hlinkClick")
+            ?.Attribute(RelationshipsNamespace + "id");
     }
 
     private static string? ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)

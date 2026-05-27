@@ -2345,6 +2345,16 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output);
 
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextRunModelSnapshot linkRun = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Runs)
+            .Single(run => run.Text == "Link");
+        TestAssert.True(linkRun.HasHyperlinkClick, "Expected the text model to preserve hyperlink-click source state before color resolution.");
+        TestAssert.Equal("rIdHyper", linkRun.HyperlinkClickId ?? string.Empty);
+
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
         TestAssert.Contains(" TJ", pdf);
