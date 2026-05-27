@@ -2355,14 +2355,6 @@ internal sealed partial class PptxRenderer
 
         public ChartWorkbookCalculationProperties Calculation => calculation;
 
-        public string[] ReadRange(string? formula)
-        {
-            return ReadRangeCells(formula)
-                .Where(cell => cell.HasCell)
-                .Select(cell => cell.Text)
-                .ToArray();
-        }
-
         public ChartWorkbookNumericValue[] ReadNumericRange(string? formula)
         {
             return ReadRangeCells(formula)
