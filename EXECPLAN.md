@@ -11405,3 +11405,20 @@ Validation: focused non-slow `pptx-typography` passed with `84` tests and `2` sl
 passed with `20` tests; focused non-slow `pptx-charts` passed with `57` tests; full non-slow suite passed
 with `296` tests and `7` slow skips; `pptx-ladder-04-transparent-text` passed at run `20260527-203332` with
 the new glyph-outline structural gate.
+
+Revision note, 2026-05-27: Added a public no-fill text-outline probe instead of broadening the transparent
+glyph-outline renderer gate. The first attempted renderer change stroked glyph outlines for `<a:noFill/>`
+text with `<a:ln>`, but the Office reference PDF rejected that assumption: the inspected visual run had
+zero comparable graphics stroke operations in the reference while the candidate gained one `S` glyph-path
+operation. The prototype was backed out before commit.
+
+The durable conclusion is that Office-PDF text effect ownership is case-specific. Semi-transparent filled
+text is now structurally aligned as filled glyph paths, but no-fill outlined text remains structurally closer
+to PDF text rendering mode (`Tr`) in the current Office evidence. The new
+`pptx-ladder-04-text-outline-probe` fixture and visual case preserve that evidence with tight raster gates,
+without adding a false graphics-structure gate.
+
+Validation: focused non-slow `pptx-typography` passed with `84` tests and `2` slow skips. The new
+`pptx-ladder-04-text-outline-probe` passed at run `20260527-204210`; the calibration run reported mean
+absolute error `0.18520302854938273` and changed-pixel ratio at threshold 16 of
+`0.0018229166666666667`.

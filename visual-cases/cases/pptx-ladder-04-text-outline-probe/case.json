@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-04-text-outline-probe",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-text-outline-probe.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "styled-text", "text-outline", "text-mode", "approximate"],
+  "expected": {
+    "minAgentRating": 3,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.186,
+    "maxChangedPixelRatioAtThreshold16": 0.00183
+  },
+  "allowedUnsupportedFeatures": []
+}

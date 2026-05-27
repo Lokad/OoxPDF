@@ -212,6 +212,10 @@ New-TypographyProbe -Id "pptx-ladder-04-typography-whitespace-controls-probe" -T
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Dépendance&#xA0;élevée - coût&#x202F;unitaire</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe -Id "pptx-ladder-04-text-outline-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3600"><a:noFill/><a:ln w="12700"><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln><a:latin typeface="Arial"/></a:rPr><a:t>Outline</a:t></a:r></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-repeated-spaces" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha  beta   gamma</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Left  middle   right</a:t></a:r></a:p>
