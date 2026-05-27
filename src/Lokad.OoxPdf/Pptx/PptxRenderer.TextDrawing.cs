@@ -39,6 +39,8 @@ internal sealed partial class PptxRenderer
                     glyphRun.X,
                     glyphRun.BaselineY,
                     glyphRun.Width,
+                    run.FontSize,
+                    glyphRun.PdfFontSize,
                     glyphRun.Glyphs.Count,
                     glyphRun.Glyphs.Skip(1).FirstOrDefault()?.AdjustmentBefore ?? 0d,
                     glyphRun.Glyphs

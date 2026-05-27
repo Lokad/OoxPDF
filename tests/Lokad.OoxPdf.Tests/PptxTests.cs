@@ -2075,6 +2075,10 @@ internal static class PptxTests
 
         PptxTextFrameLayoutSnapshot layoutFrame = PptxRenderer.InspectTextLayout(document, package, 0).Frames.Single();
         TestAssert.Equal(10d, layoutFrame.Paragraphs[0].Lines[0].Spans[0].FontSize);
+
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
+        TestAssert.Equal(10d, glyphRun.LayoutFontSize);
+        TestAssert.Equal(9.96d, glyphRun.PdfFontSize);
     }
 
     public static void PptxSyntheticTextBoxHonorsNoFillText()

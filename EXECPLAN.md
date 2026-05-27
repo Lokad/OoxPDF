@@ -636,6 +636,13 @@ High-priority actions:
   now shows that wrapped 9 pt text used `9`, `9`, then `9.024`, while a very narrow wrapped 13 pt paragraph used
   `12.984` only on two interior split lines among many `12.96` lines. The rule is not simply "wrapped text" or
   "last line"; it still needs an Office PDF structural discriminator before renderer behavior should change.
+- [x] Expose PPTX glyph-run layout and PDF font sizes through public-safe inspection:
+  `InspectTextGlyphRuns` now reports both the OOXML/layout font size and the resolved PDF `/Tf` font size for each
+  emitted glyph run. The existing Office font-grid guard now verifies the structural boundary directly (`10 pt`
+  layout with `9.96 pt` PDF emission), instead of relying only on raw PDF text. This is a diagnostic/architecture
+  step toward the secondary `+0.024 pt` branch: it gives future probes a stable place to compare layout-derived
+  context against emitted PDF state, but it deliberately leaves rendering unchanged until the Office line-split
+  discriminator is understood.
 - [x] Implement the dominant Office `/Tf` font-size grid at the PDF emission boundary:
   a second ignored public-safe probe rewrote the font-size quantization deck from `spAutoFit` to `noAutofit`
   and Office still emitted the same main sizes, so the dominant behavior is not autofit. `PptxPdfTextEmissionProfile`
