@@ -11832,3 +11832,20 @@ Validation: `pptx-ladder-11-chart-doughnut-top-legend-probe`,
 `pptx-ladder-11-chart-doughnut-left-legend-probe`, and
 `pptx-ladder-11-chart-doughnut-right-overlay-legend-probe` all passed with the new legend-swatch structural
 gate at run `20260527-232542`.
+
+Revision note, 2026-05-27: Closed the exploded doughnut legend-swatch follow-up with the same structural
+contract. Bottom, top, and left exploded legend probes now also gate three `LegendSwatchCandidate` structures
+independently from their polar plot/slice comparison. The inspection matched the non-exploded pattern:
+Office and candidate agree on swatch count, rectangle path command shape, and fill colors while retaining the
+expected `f*` versus `f` spelling difference for closed fills.
+
+With this, all current public doughnut legend-position probes that actually display a legend have separate
+PDF-level contracts for plot geometry, legend text, and legend swatches. The remaining legend work should
+move away from identifying swatches and toward layout ownership: legend bounding boxes, overlay semantics,
+entry spacing, and plot-area negotiation should be derived from Office-backed structure rather than inferred
+from a broad plot-box overlap heuristic.
+
+Validation: `pptx-ladder-11-chart-doughnut-bottom-legend-exploded-probe`,
+`pptx-ladder-11-chart-doughnut-top-legend-exploded-probe`, and
+`pptx-ladder-11-chart-doughnut-left-legend-exploded-probe` all passed with the new legend-swatch structural
+gate at run `20260527-232712`.

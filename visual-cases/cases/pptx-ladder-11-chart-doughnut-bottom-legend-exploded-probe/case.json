@@ -35,6 +35,16 @@
     "maxChartGraphicsStructurePathGeometryDelta": 8.1,
     "maxChartGraphicsStructurePathGeometryDeltaByKind": {
       "PolarSliceCandidate": 0.6
-    }
+    },
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["LegendSwatchCandidate"],
+        "maxBoundsDelta": 15.0,
+        "matchFillColors": true,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true,
+        "matchPathOperators": true
+      }
+    ]
   }
 }
