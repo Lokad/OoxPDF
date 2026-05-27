@@ -4524,6 +4524,7 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+        style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "legend"));
         return MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.Legend.TextStyle));
     }
 

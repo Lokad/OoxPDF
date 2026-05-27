@@ -2177,6 +2177,12 @@ High-priority actions:
     emission. This intentionally does not claim the same cascade for legend, axis, or data-label role styles
     yet; those need separate role mapping and precedence probes. Validation: focused non-slow `pptx-charts`
     passed with `59` tests, `0` failures, and `0` skips.
+  - [x] 2026-05-27: Consume the typed chart-style `legend` role in legend text rendering with the same
+    precedence shape as chart titles: default style, chart-level text defaults, chart-style role defaults, then
+    direct `c:legend/c:txPr`. A synthetic chart-style-only legend fixture now locks role-owned legend color and
+    Office-grid font-size emission. Axis and data-label role mapping remains open because their chart-style role
+    names and precedence need separate public probes. Validation: focused non-slow `pptx-charts` passed with
+    `60` tests, `0` failures, and `0` skips.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.
