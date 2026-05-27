@@ -10257,3 +10257,22 @@ after the renderer already had typed X/Y point records and axis extents.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`47 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-27: Consumed line-chart `c:dispBlanksAs` in native line geometry instead of treating
+every missing point as a gap. The renderer now prefers the typed scene chart option and falls back to the chart
+XML only while that surface remains incomplete. `gap` keeps the Office blank break, `span` connects the
+neighboring nonblank points across the omitted index, and `zero` projects the missing index onto value zero.
+The new public synthetic test locks those three modes by counting the series-colored PDF line-segment
+operators under a unique stroke color, which keeps the check structural rather than pixel-threshold based.
+
+This does not gate the public sparse/blank multi-chart visual probe yet. Re-running
+`pptx-ladder-11-chart-sparse-blank-points-probe` after the change produced the same public-safe metrics
+(MAE `4.20581729841821`, changed16 `0.048637152777777776`, SSIM `0.5234185503003941`, histogram
+`0.9152592114254318`) because that probe's charts declare `dispBlanksAs="gap"` and the remaining deltas are
+broader: multi-chart structural bucketing, bar/area blank semantics, and plot-box/legend/text matching. The
+structural summary for run `20260527-111945` still shows large marker, plot-box, legend-swatch, and tick-label
+deltas, so the case stays ungated until the oracle can compare each chart region independently and the non-line
+blank policies have Office-backed behavior.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`51 passed, 0 failed, 0 skipped`).

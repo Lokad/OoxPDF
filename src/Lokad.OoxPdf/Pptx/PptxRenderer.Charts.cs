@@ -301,6 +301,21 @@ internal sealed partial class PptxRenderer
             : PptxSceneBuilder.ParseChartRadarStyle((string?)plotElement.Element(ChartNamespace + "radarStyle")?.Attribute("val"));
     }
 
+    private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        if (sceneChart?.Options.DisplayBlanksAsKind is { } sceneValue && sceneValue != PptxSceneChartDisplayBlanksAs.Unknown)
+        {
+            return sceneValue;
+        }
+
+        XElement? chart = chartXml.Root?.Element(ChartNamespace + "chart");
+        return PptxSceneBuilder.ParseChartDisplayBlanksAs((string?)chart?.Element(ChartNamespace + "dispBlanksAs")?.Attribute("val")) switch
+        {
+            PptxSceneChartDisplayBlanksAs.Unknown => PptxSceneChartDisplayBlanksAs.Gap,
+            PptxSceneChartDisplayBlanksAs parsed => parsed
+        };
+    }
+
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
         if (plot is not null)
@@ -966,7 +981,8 @@ internal sealed partial class PptxRenderer
                         lineValueExtents,
                         lineAxisUnits,
                         ReadSceneOrXmlValueAxisCrossingValue(lineValueSceneAxis, lineValueAxisForScale, lineValueExtents),
-                        lineValueAxisReversed);
+                        lineValueAxisReversed,
+                        ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
                     fonts.AddRange(RenderLineDataLabels(
                         theme,
                         graphics,
@@ -1072,7 +1088,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueAxis.SceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
+                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueAxis.SceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxisForScale, valueExtents), valueAxisReversed, ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
@@ -7874,7 +7890,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -7954,9 +7970,20 @@ internal sealed partial class PptxRenderer
             {
                 if (values[i] is not { } value)
                 {
-                    StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
-                    points.Clear();
-                    continue;
+                    if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero)
+                    {
+                        value = 0d;
+                    }
+                    else
+                    {
+                        if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
+                        {
+                            StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                            points.Clear();
+                        }
+
+                        continue;
+                    }
                 }
 
                 double pointX = plotX + plotWidth * (i + 0.5d) / pointCount;

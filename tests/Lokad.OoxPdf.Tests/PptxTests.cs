@@ -11784,6 +11784,76 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxSyntheticLineChartConsumesDisplayBlanksAs()
+    {
+        string gapPdf = RenderLineChartWithDisplayBlanksAs("gap");
+        string spanPdf = RenderLineChartWithDisplayBlanksAs("span");
+        string zeroPdf = RenderLineChartWithDisplayBlanksAs("zero");
+
+        TestAssert.Equal(0, CountLineChartSeriesSegments(gapPdf, "0.071 0.671 0.204 RG"));
+        TestAssert.Equal(1, CountLineChartSeriesSegments(spanPdf, "0.071 0.671 0.204 RG"));
+        TestAssert.Equal(2, CountLineChartSeriesSegments(zeroPdf, "0.071 0.671 0.204 RG"));
+    }
+
+    private static string RenderLineChartWithDisplayBlanksAs(string displayBlanksAs)
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8($$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:lineChart>
+                  <c:grouping val="standard"/>
+                  <c:marker val="0"/>
+                  <c:ser>
+                    <c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="12AB34"/></a:solidFill></a:ln></c:spPr>
+                    <c:marker><c:symbol val="none"/></c:marker>
+                    <c:cat><c:strLit><c:ptCount val="3"/><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:ptCount val="3"/><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="2"><c:v>20</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="20"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:dispBlanksAs val="{{displayBlanksAs}}"/></c:chart></c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var collector = new DiagnosticCollector();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), $"Line chart displayBlanksAs={displayBlanksAs} should render without static fallback diagnostics.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), $"Line chart displayBlanksAs={displayBlanksAs} should not emit unsupported chart diagnostics.");
+        return File.ReadAllText(output, Encoding.ASCII);
+    }
+
+    private static int CountLineChartSeriesSegments(string pdf, string strokeColorOperation)
+    {
+        int colorIndex = pdf.IndexOf(strokeColorOperation, StringComparison.Ordinal);
+        TestAssert.True(colorIndex >= 0, $"Expected series stroke color operation '{strokeColorOperation}'.");
+        int nextColorIndex = pdf.IndexOf(" RG", colorIndex + strokeColorOperation.Length, StringComparison.Ordinal);
+        string seriesScope = nextColorIndex < 0 ? pdf[colorIndex..] : pdf[colorIndex..nextColorIndex];
+        return Regex.Matches(seriesScope, @"[0-9.]+ [0-9.]+ m [0-9.]+ [0-9.]+ l S").Count;
+    }
+
     public static void PptxChartExplosionsUseWorkbookPointCount()
     {
         const string chartXml = """
