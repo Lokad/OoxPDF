@@ -9582,6 +9582,18 @@ current supported label path reflect the long-term data model.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Kept series-name provenance attached to fill and stroke legend entries. Legend
+rendering still uses the same active text string for measurement and PDF text emission, but
+`ChartLegendEntry` now carries the originating `ChartSeriesNameRecord` when the entry represents a series.
+Pie/doughnut category legends remain category-point driven rather than series-name driven.
+
+This does not alter legend placement or source/cache freshness. It keeps future Office-aligned legend text
+and source-linked formatting work from having to reverse-map a rendered legend row back to series-name cache
+and workbook-sidecar records after the entry list has already been built.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Removed the obsolete raw-XML `ReadChartSeries` helpers that returned compact
 `double` lists directly from chart cache XML. The only remaining raw chart cache reader in this path now
 produces `ChartIndexedNumberVector` records first, and callers make any compact/dense choice explicitly after

@@ -4136,14 +4136,14 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, int paletteOffset = 0, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyList<string> names = ReadSceneOrXmlChartSeriesNames(plot, chartElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
             ChartSeriesFill fill = i < seriesFills.Count && seriesFills[i] is { } explicitFill
                 ? explicitFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, i + paletteOffset), 1d);
-            entries.Add(new ChartLegendEntry(names[i], fill, null));
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, null, names[i]));
         }
 
         return entries;
@@ -4164,7 +4164,7 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, point.Index), 1d);
-            entries.Add(new ChartLegendEntry(point.Text, fill, null));
+            entries.Add(new ChartLegendEntry(point.Text, fill, null, null));
         }
 
         return entries;
@@ -4172,11 +4172,11 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, bool reverseOrder = false, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyList<string> names = ReadSceneOrXmlChartSeriesNames(plot, chartElement, workbook);
+        IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
-            entries.Add(new ChartLegendEntry(names[i], null, ChartSeriesStrokeColor(theme, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth)));
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), names[i]));
         }
 
         if (reverseOrder)
@@ -9083,7 +9083,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
-    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke);
+    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartSeriesNameRecord? SeriesName);
 
     private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, ChartShapeStyle ShapeStyle)
     {
