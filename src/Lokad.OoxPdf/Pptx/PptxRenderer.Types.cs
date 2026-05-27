@@ -262,7 +262,8 @@ internal sealed partial class PptxRenderer
         double Width,
         double Height,
         TextInsets Insets,
-        TextVerticalAnchor VerticalAnchor);
+        TextVerticalAnchor VerticalAnchor,
+        PptxSceneTableCellTextStyle TextStyle);
 
     private readonly record struct PptxTextBodyProperties(
         TextInsets Insets,

@@ -368,12 +368,17 @@ High-priority actions:
   full non-slow runner passed (`260 passed, 0 failed, 7 skipped`); private run
   `artifacts/private-visual/lokad-value-based/20260527-023443` stayed at 84/84 compared pages, zero dimension
   mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
-- [ ] Move PPTX table-style text defaults from cloned XML mutation into a typed paragraph/run default layer:
-  the synthetic shape wrapper is gone, but `BuildTableCellTextBody` still clones the table-cell `a:txBody`,
-  prunes leading empty paragraphs, and applies built-in table-style bold/color defaults by inserting missing
-  `a:rPr` fill/bold children into that clone. The next structural step is to preserve those style defaults as a
-  typed table-cell text-style layer in the paragraph/run cascade so table text can share the same model-first
-  style ownership as shape text without renderer-local XML mutation.
+- [x] 2026-05-27: Move PPTX table-style text defaults from cloned XML mutation into a typed resolver layer:
+  `PptxTableCellTextFrame` now carries the scene-owned `PptxSceneTableCellTextStyle`, and
+  `ResolveRunTextStyle` applies that table text color/bold only when the run itself lacks an explicit fill or
+  bold value. `BuildTableCellTextBody` now only clones the `a:txBody` and prunes leading empty paragraphs; it
+  no longer injects `a:rPr`, `a:solidFill`, or `@b` children into cloned XML. This keeps table-style text
+  defaults in the same model-first resolution step as ordinary run styling while preserving the old precedence
+  where explicit run formatting wins over table defaults. Validation: focused non-slow `pptx-tables` passed
+  (`7 passed, 0 failed, 0 skipped`); full non-slow runner passed (`260 passed, 0 failed, 7 skipped`); private
+  run `artifacts/private-visual/lokad-value-based/20260527-023824` stayed at 84/84 compared pages, zero
+  dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join

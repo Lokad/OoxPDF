@@ -358,7 +358,8 @@ internal sealed partial class PptxRenderer
             fontScale,
             lineSpacingScale,
             compatibleLineSpacing,
-            shapeFontColor: null);
+            shapeFontColor: null,
+            tableFrame.TextStyle);
 
         return new PptxTextFrameModel(
             textBody,
@@ -487,7 +488,8 @@ internal sealed partial class PptxRenderer
         double fontScale,
         double lineSpacingScale,
         bool compatibleLineSpacing,
-        RgbColor? shapeFontColor)
+        RgbColor? shapeFontColor,
+        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         var paragraphs = new List<PptxTextParagraphModel>();
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
@@ -500,7 +502,7 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale);
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
@@ -541,7 +543,8 @@ internal sealed partial class PptxRenderer
         RgbColor? shapeFontColor,
         PptxTheme theme,
         int slideNumber,
-        double fontScale)
+        double fontScale,
+        PptxSceneTableCellTextStyle tableStyleTextStyle)
     {
         var runs = new List<PptxTextRunModel>();
         foreach (XElement child in paragraph.Elements())
@@ -554,7 +557,7 @@ internal sealed partial class PptxRenderer
                     child,
                     breakProperties,
                     "\n",
-                    ResolveRunTextStyle(breakProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale)));
+                    ResolveRunTextStyle(breakProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
                 continue;
             }
 
@@ -569,7 +572,7 @@ internal sealed partial class PptxRenderer
                 child,
                 runProperties,
                 ReadTextElementText(child, slideNumber),
-                ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale)));
+                ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
         }
 
         return runs;

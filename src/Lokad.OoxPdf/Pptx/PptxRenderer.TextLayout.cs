@@ -1908,7 +1908,8 @@ internal sealed partial class PptxRenderer
         XElement? defaultRunProperties,
         RgbColor? shapeFontColor,
         PptxTheme theme,
-        double fontScale)
+        double fontScale,
+        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         double nominalFontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
         double baselineOffset = ReadBaselineOffset(runProperties, defaultRunProperties, nominalFontSize);
@@ -1926,6 +1927,10 @@ internal sealed partial class PptxRenderer
         {
             color = runColor;
             alpha = runAlpha;
+        }
+        else if (tableStyleTextStyle.Color is { } tableTextColor && !HasTextFill(runProperties))
+        {
+            color = tableTextColor;
         }
         else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", out RgbColor hyperlinkColor))
         {
@@ -1952,6 +1957,7 @@ internal sealed partial class PptxRenderer
 
         string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
         bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
+            (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
             (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
@@ -1978,6 +1984,13 @@ internal sealed partial class PptxRenderer
     private static bool HasTextNoFill(XElement? runProperties)
     {
         return runProperties?.Element(DrawingNamespace + "noFill") is not null;
+    }
+
+    private static bool HasTextFill(XElement? runProperties)
+    {
+        return runProperties?.Element(DrawingNamespace + "solidFill") is not null ||
+            runProperties?.Element(DrawingNamespace + "noFill") is not null ||
+            runProperties?.Element(DrawingNamespace + "gradFill") is not null;
     }
 
     private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, out TextOutline outline)

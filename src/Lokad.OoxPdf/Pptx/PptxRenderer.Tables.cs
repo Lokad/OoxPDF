@@ -422,7 +422,7 @@ internal sealed partial class PptxRenderer
         }
 
         TextInsets insets = ToTextInsets(sceneCell.TextInsets);
-        XElement tableTextBody = BuildTableCellTextBody(textBody, tableStyleTextStyle);
+        XElement tableTextBody = BuildTableCellTextBody(textBody);
         var tableTextFrame = new PptxTableCellTextFrame(
             tableTextBody,
             x,
@@ -430,7 +430,8 @@ internal sealed partial class PptxRenderer
             width,
             height,
             insets,
-            ToTextVerticalAnchor(sceneCell.VerticalAnchor));
+            ToTextVerticalAnchor(sceneCell.VerticalAnchor),
+            tableStyleTextStyle);
         spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
 
@@ -449,11 +450,10 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static XElement BuildTableCellTextBody(XElement textBody, PptxSceneTableCellTextStyle tableStyleTextStyle)
+    private static XElement BuildTableCellTextBody(XElement textBody)
     {
         var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
         PruneLeadingEmptyTableParagraphs(textBodyCopy);
-        ApplyTableStyleTextDefaults(textBodyCopy, tableStyleTextStyle);
         return textBodyCopy;
     }
 
@@ -474,65 +474,6 @@ internal sealed partial class PptxRenderer
 
             paragraph.Remove();
         }
-    }
-
-    private static void ApplyTableStyleTextDefaults(XElement textBody, PptxSceneTableCellTextStyle style)
-    {
-        if (style == default)
-        {
-            return;
-        }
-
-        foreach (XElement runProperties in ReadTableTextRunProperties(textBody))
-        {
-            if (style.Bold && runProperties.Attribute("b") is null)
-            {
-                runProperties.SetAttributeValue("b", "1");
-            }
-
-            if (style.Color is { } color && !HasTextFill(runProperties))
-            {
-                runProperties.AddFirst(
-                        new XElement(DrawingNamespace + "solidFill",
-                            new XElement(DrawingNamespace + "srgbClr",
-                            new XAttribute("val", string.Create(CultureInfo.InvariantCulture, $"{color.Red:X2}{color.Green:X2}{color.Blue:X2}")))));
-            }
-        }
-    }
-
-    private static IEnumerable<XElement> ReadTableTextRunProperties(XElement textBody)
-    {
-        foreach (XElement run in textBody.Descendants(DrawingNamespace + "r"))
-        {
-            XElement? runProperties = run.Element(DrawingNamespace + "rPr");
-            if (runProperties is null)
-            {
-                runProperties = new XElement(DrawingNamespace + "rPr");
-                XElement? text = run.Element(DrawingNamespace + "t");
-                if (text is null)
-                {
-                    run.AddFirst(runProperties);
-                }
-                else
-                {
-                    text.AddBeforeSelf(runProperties);
-                }
-            }
-
-            yield return runProperties;
-        }
-
-        foreach (XElement runProperties in textBody.Descendants(DrawingNamespace + "endParaRPr"))
-        {
-            yield return runProperties;
-        }
-    }
-
-    private static bool HasTextFill(XElement runProperties)
-    {
-        return runProperties.Element(DrawingNamespace + "solidFill") is not null ||
-            runProperties.Element(DrawingNamespace + "noFill") is not null ||
-            runProperties.Element(DrawingNamespace + "gradFill") is not null;
     }
 
     private static long PointsToEmu(double points)
