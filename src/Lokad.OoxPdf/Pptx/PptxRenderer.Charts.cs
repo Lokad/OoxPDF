@@ -4941,13 +4941,10 @@ internal sealed partial class PptxRenderer
                         double textWidth = labelBox.Width;
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
-                            double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
-                            double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
                             ChartSeriesFill fill = ResolveBarPointFill(theme, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
-                            FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
-                            textX += swatchSize + swatchGap;
-                            textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);
+                            double legendKeyWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
+                            textX += legendKeyWidth;
+                            textWidth = Math.Max(1d, textWidth - legendKeyWidth);
                         }
 
                         if (!string.IsNullOrEmpty(label))
@@ -5000,13 +4997,10 @@ internal sealed partial class PptxRenderer
                         TextAlignment alignment = TextAlignment.Center;
                         if (effectiveOptions.ShowLegendKey)
                         {
-                            double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
-                            double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
-                            double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
                             ChartSeriesFill fill = ResolveBarPointFill(theme, chartPalette, seriesIndex, category, densePointSeries.Count, varyColors, seriesFills, pointFills, value);
-                            FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
-                            textX += swatchSize + swatchGap;
-                            textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);
+                            double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, fill);
+                            textX += consumedWidth;
+                            textWidth = Math.Max(1d, textWidth - consumedWidth);
                             alignment = TextAlignment.Left;
                         }
 
@@ -5077,7 +5071,7 @@ internal sealed partial class PptxRenderer
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
-                        ? Math.Max(ChartMarker(seriesIndex, markerStyles).Size * 2d, fontSize * 1.05d) + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor
+                        ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, ChartMarker(seriesIndex, markerStyles))
                         : 0d;
                     double effectiveLabelWidth = effectiveOptions.ShowLegendKey
                         ? Math.Max(labelWidth, EstimateChartTextWidth(label, fontSize) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
@@ -5096,13 +5090,9 @@ internal sealed partial class PptxRenderer
                     {
                         ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
                         ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
-                        double segmentLength = Math.Max(marker.Size * 2d, fontSize * 1.05d);
-                        double segmentY = labelBox.Y + labelBox.Height / 2d;
-                        SetChartStroke(graphics, stroke);
-                        graphics.StrokeLine(labelBox.X, segmentY, labelBox.X + segmentLength, segmentY);
-                        DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, stroke.Color, stroke.Color);
-                        textX += segmentLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
-                        textWidth = Math.Max(1d, textWidth - segmentLength - fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor);
+                        double consumedWidth = RenderStrokeMarkerDataLabelLegendKey(graphics, labelBox, fontSize, marker, stroke);
+                        textX += consumedWidth;
+                        textWidth = Math.Max(1d, textWidth - consumedWidth);
                         alignment = TextAlignment.Left;
                     }
 
@@ -5125,6 +5115,35 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CLD");
+    }
+
+    private static double GetFillDataLabelLegendKeyWidth(double fontSize)
+    {
+        return fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor);
+    }
+
+    private static double RenderFillDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartSeriesFill fill)
+    {
+        double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+        double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
+        double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
+        FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
+        return swatchSize + swatchGap;
+    }
+
+    private static double GetStrokeMarkerDataLabelLegendKeyWidth(double fontSize, ChartMarkerStyle marker)
+    {
+        return Math.Max(marker.Size * 2d, fontSize * 1.05d) + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
+    }
+
+    private static double RenderStrokeMarkerDataLabelLegendKey(PdfGraphicsBuilder graphics, ChartLayoutBox labelBox, double fontSize, ChartMarkerStyle marker, ChartSeriesStroke stroke)
+    {
+        double segmentLength = Math.Max(marker.Size * 2d, fontSize * 1.05d);
+        double segmentY = labelBox.Y + labelBox.Height / 2d;
+        SetChartStroke(graphics, stroke);
+        graphics.StrokeLine(labelBox.X, segmentY, labelBox.X + segmentLength, segmentY);
+        DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, stroke.Color, stroke.Color);
+        return segmentLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
     }
 
     private static ChartLayoutBox ResolveDataLabelBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
@@ -5219,7 +5238,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 double legendKeyWidth = effectiveOptions.ShowLegendKey
-                    ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
+                    ? GetFillDataLabelLegendKeyWidth(fontSize)
                     : 0d;
                 double labelWidth = Math.Max(
                     PptxChartMetricRules.CartesianDataLabelMinimumWidth,
@@ -5243,12 +5262,9 @@ internal sealed partial class PptxRenderer
                 double textWidth = labelBox.Width;
                 if (effectiveOptions.ShowLegendKey)
                 {
-                    double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
-                    double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
-                    double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
-                    FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, ChartSeriesColor(seriesIndex, seriesFills));
-                    textX += swatchSize + swatchGap;
-                    textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);
+                    double consumedWidth = RenderFillDataLabelLegendKey(graphics, labelBox, fontSize, ChartSeriesColor(seriesIndex, seriesFills));
+                    textX += consumedWidth;
+                    textWidth = Math.Max(1d, textWidth - consumedWidth);
                     alignment = TextAlignment.Left;
                 }
 

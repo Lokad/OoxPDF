@@ -11209,3 +11209,18 @@ reruns passed for `pptx-ladder-11-chart-line-markers-port` at run `20260527-1947
 `pptx-ladder-11-chart-column-clustered-port` at run `20260527-194721`, and
 `pptx-ladder-11-chart-area-2series-port` at run `20260527-194732`. `git diff --check` passed, and the full
 non-slow test run passed with `288 passed, 0 failed, 7 skipped`.
+
+Revision note, 2026-05-27: Pulled data-label legend-key drawing into explicit renderer primitives. Bar,
+column, scatter, and bubble data labels now use `RenderFillDataLabelLegendKey` for filled square keys, while
+line data labels use `RenderStrokeMarkerDataLabelLegendKey` for the short line segment plus marker key. The
+helpers preserve the previous sizes, gaps, fills, strokes, marker colors, and text-width consumption exactly;
+the point is ownership, not a coordinate change.
+
+This closes a small architectural gap discovered while investigating the open legend/data-label key item:
+legend-key semantics cannot be aligned with Office if every chart family owns its own inline swatch code.
+The open evidence item remains explicit. The next durable step is to add public Office-authored legend-key
+data-label fixtures and first-class classifier buckets so label keys can be distinguished from normal legend
+swatches, plot markers, and bar fills before making any clipping or placement decision.
+
+Validation: focused non-slow `pptx-charts` passed with `57` tests. The public pie data-label leader-line
+probe still passed at run `20260527-195120`.
