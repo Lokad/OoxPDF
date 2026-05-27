@@ -3932,7 +3932,7 @@ internal sealed partial class PptxRenderer
 
     private static void ClipChartPlotArea(PdfGraphicsBuilder graphics, double x, double y, double width, double height)
     {
-        graphics.ClipRectangle(x, y, width, height);
+        graphics.ClipRectangleEvenOdd(x, y, width, height);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)

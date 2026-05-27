@@ -11019,3 +11019,20 @@ test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-line-
 `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-191105`. The broader clip-box
 parity item remains open: this slice only makes the existing line-chart scope robust, it does not add or
 remove Office-like subpart clip scopes.
+
+Revision note, 2026-05-27: Aligned the shared chart plot-area clip operator with Office PDF output.
+`ClipChartPlotArea` now emits an even-odd rectangle clip (`W*`) rather than a normal rectangle clip (`W`).
+This removes an operator-level structural mismatch for bar, line, area, scatter, and bubble plot clips through
+one shared primitive instead of chart-family-specific logic.
+
+Fresh sparse/blank inspection at run `20260527-191648` shows candidate `ClipBox` operators are now all `W*`,
+including the actual plot-area clip boxes. This does not close the larger clip ownership problem: Office still
+repeats plot-sized clips (`18` upper-region and `36` lower-region instances in the sparse probe), while the
+candidate still has one plot-sized chart clip per chart plus text/label clip boxes. The next durable step is to
+map which chart subparts own those repeated plot clips, not to multiply clips globally.
+
+Validation: focused non-slow `pptx-charts` passed with `57` tests; full non-slow test run passed
+(`288 passed, 0 failed, 7 skipped`); `git diff --check` passed; `pptx-ladder-11-chart-sparse-blank-points-probe`
+passed at run `20260527-191648`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-191709`;
+and `pptx-ladder-11-chart-scatter-clusters-port` passed at run `20260527-191723`. Two earlier parallel visual
+runs failed only because simultaneous CLI builds locked shared `obj` files; serial reruns passed.
