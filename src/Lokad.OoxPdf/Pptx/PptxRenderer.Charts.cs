@@ -5778,25 +5778,32 @@ internal sealed partial class PptxRenderer
 
     private static string FormatSceneOrXmlChartAxisLabel(double value, PptxSceneChartAxis? sceneAxis, XElement? axis, string? defaultNumberFormat = null)
     {
-        string? formatCode = sceneAxis?.NumberFormat;
-        if (!string.IsNullOrWhiteSpace(formatCode) &&
-            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
+        ChartNumberFormat numberFormat = ReadSceneOrXmlChartAxisNumberFormat(sceneAxis, axis);
+        if (IsRenderableChartNumberFormat(numberFormat))
         {
-            return FormatChartNumber(value, formatCode);
-        }
-
-        formatCode = (string?)axis?
-            .Element(ChartNamespace + "numFmt")
-            ?.Attribute("formatCode");
-        if (!string.IsNullOrWhiteSpace(formatCode) &&
-            !string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
-        {
-            return FormatChartNumber(value, formatCode);
+            return FormatChartNumber(value, numberFormat.FormatCode);
         }
 
         return !string.IsNullOrWhiteSpace(defaultNumberFormat)
             ? FormatChartNumber(value, defaultNumberFormat)
             : FormatChartAxisLabel(value);
+    }
+
+    private static ChartNumberFormat ReadSceneOrXmlChartAxisNumberFormat(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    {
+        if (sceneAxis?.NumberFormatInfo.IsDefined == true)
+        {
+            return ToChartNumberFormat(sceneAxis.NumberFormatInfo);
+        }
+
+        return axis is null ? default : ReadChartNumberFormat(axis);
+    }
+
+    private static bool IsRenderableChartNumberFormat(ChartNumberFormat numberFormat)
+    {
+        return numberFormat.IsDefined &&
+            !string.IsNullOrWhiteSpace(numberFormat.FormatCode) &&
+            !string.Equals(numberFormat.FormatCode, "General", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FormatChartNumber(double value, string formatCode)

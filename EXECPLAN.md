@@ -9478,3 +9478,17 @@ Office-authored evidence before changing emitted chart text.
 Validation: focused `PptxChartWorkbookHydrationPreservesRangePointIndices` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`262 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Routed value-axis label formatting through the typed chart number-format bridge.
+`FormatSceneOrXmlChartAxisLabel` now resolves a `ChartNumberFormat` from scene-owned
+`PptxSceneChartAxis.NumberFormatInfo` first, with XML fallback through the same `ReadChartNumberFormat`
+parser used elsewhere, before applying the existing `FormatChartNumber` behavior. This keeps rendered labels
+unchanged but prevents the axis path from bypassing `sourceLinked` metadata that the scene model already
+preserves.
+
+This still does not implement source-linked workbook formatting. The immediate gain is a smaller ownership
+boundary: future Office-PDF-backed priority rules for axis labels can start from one renderer-facing number
+format object instead of a legacy string path plus an unrelated raw XML fallback.
+
+Validation: focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`262 passed, 0 failed, 7 skipped`).
