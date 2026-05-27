@@ -1408,6 +1408,15 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-031018` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
     `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Add an Office-authored public sparse/blank chart-point fixture before changing vector compaction
+    semantics. `tools/NewChartProbeFixtures.ps1 -SparseOnly` now regenerates
+    `pptx-ladder-11-chart-sparse-blank-points-probe.pptx`, a one-slide Office deck with line, clustered
+    column, and area charts sharing blank and non-numeric cached points. The visual case is intentionally
+    a raster probe for now because the current structural/text extractors expose the expected Office-vs-
+    candidate chart geometry gaps too noisily for a stable gate; tightening those gates should happen after
+    the renderer consumes indexed points in geometry. Validation: direct `CheckVisualCase` passed for
+    run `20260527-031520`, and `CheckVisualFamily.ps1 -Family pptx-charts -OnlyChanged` passed for run
+    `20260527-031540`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source

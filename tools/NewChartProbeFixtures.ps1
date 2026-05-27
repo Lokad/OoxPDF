@@ -1,5 +1,6 @@
 param(
-    [switch] $DoughnutOnly
+    [switch] $DoughnutOnly,
+    [switch] $SparseOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -125,13 +126,138 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
     return $output
 }
 
+function Populate-SparseChartWorksheet($Worksheet) {
+    $Worksheet.Cells.Clear()
+    $Worksheet.Cells.Item(1, 1).Value = "Category"
+    $Worksheet.Cells.Item(1, 2).Value = "Actual"
+    $Worksheet.Cells.Item(1, 3).Value = "Plan"
+    $Worksheet.Cells.Item(2, 1).Value = "Jan"
+    $Worksheet.Cells.Item(2, 2).Value = 10.0
+    $Worksheet.Cells.Item(2, 3).Value = 8.0
+    $Worksheet.Cells.Item(3, 1).Value = "Feb"
+    $Worksheet.Cells.Item(3, 2).ClearContents()
+    $Worksheet.Cells.Item(3, 3).Value = 12.0
+    $Worksheet.Cells.Item(4, 1).Value = "Mar"
+    $Worksheet.Cells.Item(4, 2).Value = "N/A"
+    $Worksheet.Cells.Item(4, 3).Value = 14.0
+    $Worksheet.Cells.Item(5, 1).Value = "Apr"
+    $Worksheet.Cells.Item(5, 2).Value = 18.0
+    $Worksheet.Cells.Item(5, 3).ClearContents()
+    $Worksheet.Cells.Item(6, 1).Value = "May"
+    $Worksheet.Cells.Item(6, 2).Value = 24.0
+    $Worksheet.Cells.Item(6, 3).Value = 21.0
+}
+
+function Configure-SparseProbeChart($Chart, [int]$ChartType) {
+    [void]($Chart.HasTitle = $false)
+    [void]($Chart.HasLegend = $true)
+    [void]($Chart.ChartType = $ChartType)
+    try {
+        [void]($Chart.DisplayBlanksAs = 1)
+    }
+    catch {
+        # Some Office builds reject DisplayBlanksAs for a subset of chart kinds.
+    }
+
+    $valueAxis = $Chart.Axes(2, 1)
+    $valueAxis.MinimumScale = 0
+    $valueAxis.MaximumScale = 30
+    $valueAxis.MajorUnit = 10
+    $valueAxis.TickLabels.Font.Size = 8
+    $valueAxis.Format.Line.Visible = 0
+    $valueAxis.MajorGridlines.Format.Line.ForeColor.RGB = Rgb 217 217 217
+    $valueAxis.MajorGridlines.Format.Line.Weight = 0.75
+
+    $categoryAxis = $Chart.Axes(1, 1)
+    $categoryAxis.TickLabels.Font.Size = 8
+    $categoryAxis.Format.Line.ForeColor.RGB = Rgb 217 217 217
+    $categoryAxis.Format.Line.Weight = 0.75
+
+    $series = $Chart.SeriesCollection()
+    $series.Item(1).Format.Line.ForeColor.RGB = Rgb 68 114 196
+    $series.Item(1).Format.Fill.ForeColor.RGB = Rgb 68 114 196
+    $series.Item(2).Format.Line.ForeColor.RGB = Rgb 237 125 49
+    $series.Item(2).Format.Fill.ForeColor.RGB = Rgb 237 125 49
+}
+
+function New-SparseBlankChartProbe($PowerPoint, $Cases) {
+    $output = Join-Path $Cases "pptx-ladder-11-chart-sparse-blank-points-probe.pptx"
+    $presentation = $null
+    $workbooks = @()
+    $worksheets = @()
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartSpecs = @(
+            @{ Type = 65; X = 42;  Y = 36;  W = 300; H = 210 },
+            @{ Type = 51; X = 378; Y = 36;  W = 300; H = 210 },
+            @{ Type = 1;  X = 210; Y = 276; W = 300; H = 210 }
+        )
+
+        foreach ($spec in $chartSpecs) {
+            $chartShape = $slide.Shapes.AddChart($spec.Type, $spec.X, $spec.Y, $spec.W, $spec.H)
+            $chart = $chartShape.Chart
+            [void]($chart.ChartData.Activate())
+            $workbook = $chart.ChartData.Workbook
+            $worksheet = $workbook.Worksheets.Item(1)
+            $workbooks += $workbook
+            $worksheets += $worksheet
+            Populate-SparseChartWorksheet $worksheet
+            [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$C`$6"))
+            Configure-SparseProbeChart $chart $spec.Type
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        foreach ($worksheet in $worksheets) {
+            Release-ComObject $worksheet
+        }
+        $worksheets = @()
+        foreach ($workbook in $workbooks) {
+            Close-ChartWorkbook $workbook
+        }
+        $workbooks = @()
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        foreach ($worksheet in $worksheets) {
+            Release-ComObject $worksheet
+        }
+        foreach ($workbook in $workbooks) {
+            Close-ChartWorkbook $workbook
+        }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
 $powerPoint = $null
 $presentation = $null
 
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
 
-    if (-not $DoughnutOnly) {
+    if ($SparseOnly) {
+        $output = New-SparseBlankChartProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+    }
+    elseif (-not $DoughnutOnly) {
     $output = Join-Path $cases "pptx-ladder-11-secondary-axis-overlay-probe.pptx"
     $presentation = $powerPoint.Presentations.Add($true)
     $slide = $presentation.Slides.Add(1, 12)
@@ -312,6 +438,7 @@ try {
     $presentation = $null
     }
 
+    if (-not $SparseOnly) {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `
@@ -379,6 +506,7 @@ try {
         -LegendPosition -4152 `
         -HasLegend $true `
         -IncludeInLayout $false
+    }
 }
 finally {
     if ($presentation -ne $null) {
