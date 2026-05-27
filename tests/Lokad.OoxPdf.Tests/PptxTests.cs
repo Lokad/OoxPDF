@@ -137,6 +137,18 @@ internal static class PptxTests
                       <a:majorFont><a:latin typeface="Arial"/></a:majorFont>
                       <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
                     </a:fontScheme>
+                    <a:fmtScheme name="Test">
+                      <a:fillStyleLst/>
+                      <a:lnStyleLst>
+                        <a:ln w="25400" cap="sq" cmpd="dbl">
+                          <a:solidFill><a:srgbClr val="ABC123"><a:alpha val="60000"/></a:srgbClr></a:solidFill>
+                          <a:prstDash val="dot"/>
+                          <a:round/>
+                        </a:ln>
+                      </a:lnStyleLst>
+                      <a:effectStyleLst/>
+                      <a:bgFillStyleLst/>
+                    </a:fmtScheme>
                   </a:themeElements>
                 </a:theme>
                 """,
@@ -219,6 +231,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle" id="10">
                   <cs:chartStyle/>
+                  <cs:majorGridlines><cs:lnRef idx="1"/></cs:majorGridlines>
                 </cs:style>
                 """,
             ["ppt/embeddings/chart-data.xlsx"] = "fake workbook package bytes for scene resource ownership",
@@ -435,6 +448,17 @@ internal static class PptxTests
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.StyleXml is not null, "Expected chart style XML ownership in the scene model.");
+        PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "majorGridlines") ?? default;
+        TestAssert.Equal("majorGridlines", majorGridlineStyle.Role ?? string.Empty);
+        TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
+        TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
+        TestAssert.Equal(new RgbColor(171, 193, 35), majorGridlineStyle.Line.Color);
+        TestAssert.Equal(2d, majorGridlineStyle.Line.Width);
+        TestAssert.Equal(0.6d, majorGridlineStyle.Line.Alpha);
+        TestAssert.Equal("dot", majorGridlineStyle.Line.DashPreset ?? string.Empty);
+        TestAssert.Equal(PptxSceneLineCompound.Double, majorGridlineStyle.Line.Compound);
+        TestAssert.Equal("sq", majorGridlineStyle.Line.CapValue ?? string.Empty);
+        TestAssert.Equal(1, majorGridlineStyle.Line.Join);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StyleId ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);

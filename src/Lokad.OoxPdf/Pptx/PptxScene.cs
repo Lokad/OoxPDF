@@ -521,7 +521,13 @@ internal sealed record PptxSceneChartStyle(
     bool IsDefined,
     string? PartName,
     string Id,
-    XDocument? StyleXml);
+    XDocument? StyleXml,
+    IReadOnlyList<PptxSceneChartStyleEntry> Entries);
+
+internal readonly record struct PptxSceneChartStyleEntry(
+    string Role,
+    int? LineReferenceIndex,
+    PptxSceneLineStyle Line);
 
 internal sealed record PptxSceneChartPlot(
     PptxSceneChartPlotKind PlotKind,
@@ -1840,8 +1846,8 @@ internal sealed class PptxSceneBuilder
             ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], null)
             : ReadChartColorStyle(package, chartPart.Name, theme);
         PptxSceneChartStyle stylePart = chartPart is null
-            ? new PptxSceneChartStyle(false, null, string.Empty, null)
-            : ReadChartStylePart(package, chartPart.Name);
+            ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
+            : ReadChartStylePart(package, chartPart.Name, theme);
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme);
         IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme);
@@ -2916,7 +2922,7 @@ internal sealed class PptxSceneBuilder
             document);
     }
 
-    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName)
+    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme)
     {
         OoxRelationship? styleRelationship = package.GetRelationships(chartPartName)
             .FirstOrDefault(relationship => !relationship.IsExternal &&
@@ -2924,13 +2930,13 @@ internal sealed class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (styleRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartStyle(false, null, string.Empty, null);
+            return new PptxSceneChartStyle(false, null, string.Empty, null, []);
         }
 
         OoxPart? stylePart = package.GetPart(styleRelationship.ResolvedTarget);
         if (stylePart is null)
         {
-            return new PptxSceneChartStyle(false, styleRelationship.ResolvedTarget, string.Empty, null);
+            return new PptxSceneChartStyle(false, styleRelationship.ResolvedTarget, string.Empty, null, []);
         }
 
         XDocument document = LoadXml(stylePart);
@@ -2938,7 +2944,38 @@ internal sealed class PptxSceneBuilder
             true,
             stylePart.Name,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
-            document);
+            document,
+            ReadChartStyleEntries(document, theme));
+    }
+
+    private static IReadOnlyList<PptxSceneChartStyleEntry> ReadChartStyleEntries(XDocument document, PptxTheme theme)
+    {
+        if (document.Root is null)
+        {
+            return [];
+        }
+
+        var entries = new List<PptxSceneChartStyleEntry>();
+        foreach (XElement roleElement in document.Root.Elements())
+        {
+            XElement? lineReference = roleElement
+                .Descendants()
+                .FirstOrDefault(element => element.Name.LocalName == "lnRef");
+            if (lineReference is null)
+            {
+                continue;
+            }
+
+            int lineReferenceIndexValue = ParseOptionalIntAttribute(lineReference, "idx", 0);
+            int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
+            PptxSceneLineStyle line = lineReferenceIndex is not null &&
+                TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle resolvedLine)
+                    ? resolvedLine
+                    : default;
+            entries.Add(new PptxSceneChartStyleEntry(roleElement.Name.LocalName, lineReferenceIndex, line));
+        }
+
+        return entries;
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
@@ -3673,10 +3710,56 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        lineWidth = lineStyle.Attribute("w") is { } widthAttribute
+        if (TryReadThemeLineReference(lineRef, theme, out PptxSceneLineStyle line))
+        {
+            color = line.Color;
+            lineWidth = line.Width;
+            alpha = line.Alpha;
+            return true;
+        }
+
+        color = default;
+        lineWidth = 0d;
+        alpha = 1d;
+        return false;
+    }
+
+    private static bool TryReadThemeLineReference(XElement? lineReference, PptxTheme theme, out PptxSceneLineStyle line)
+    {
+        int lineIndex = ParseOptionalIntAttribute(lineReference, "idx", 0);
+        if (lineIndex <= 0 ||
+            !theme.TryGetLineStyle(lineIndex, out XElement lineStyle) ||
+            lineStyle.Element(DrawingNamespace + "noFill") is not null ||
+            !TryReadSolidColorWithAlpha(lineStyle, theme, lineReference, out RgbColor color, out double alpha))
+        {
+            line = default;
+            return false;
+        }
+
+        double lineWidth = lineStyle.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
-        return TryReadSolidColorWithAlpha(lineStyle, theme, lineRef, out color, out alpha);
+        XElement shapeProperties = new(DrawingNamespace + "spPr", new XElement(lineStyle));
+        string? lineCap = ReadLineCap(shapeProperties);
+        line = new PptxSceneLineStyle(
+            true,
+            color,
+            lineWidth,
+            alpha,
+            TryReadPresetDash(shapeProperties, lineWidth, out IReadOnlyList<double> dashPattern) ? dashPattern : [],
+            ReadPresetDashValue(shapeProperties),
+            ReadLineCompound(shapeProperties),
+            ReadLineCompoundValue(shapeProperties),
+            lineCap switch
+            {
+                "rnd" => 1,
+                "sq" => 2,
+                _ => null
+            },
+            lineCap,
+            ReadLineJoin(shapeProperties),
+            ReadLineJoinValue(shapeProperties));
+        return true;
     }
 
     private static bool TryReadLineWithAlpha(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)

@@ -1820,6 +1820,13 @@ High-priority actions:
 - [ ] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join/compound lines: theme style
   references and chart-style inherited defaults still need typed ownership before gridlines can be considered
   fully structurally aligned with Office.
+  - [x] 2026-05-27: Decode chart-style line references into scene-owned role entries. `PptxSceneChart.StylePart`
+    now carries `PptxSceneChartStyleEntry` records keyed by chart-style role name, preserving the `lnRef`
+    index and resolving the referenced theme line into the same typed `PptxSceneLineStyle` fields used by
+    direct chart lines: color, width, alpha, dash preset, compound, cap, and join. This intentionally does
+    not consume those entries as inherited defaults yet; the remaining gap is the Office chart-style cascade
+    that maps chart type, style id, axis/gridline role, and direct `spPr` precedence before rendering can
+    safely apply inherited gridline strokes.
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
   and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
   font size, and solid text color, and supported category/value axis labels consume those scene styles before
@@ -2735,6 +2742,13 @@ Composite oracle family map:
   relationship discovery. Validation: focused `pptx-model` passed (`14 passed, 0 failed, 1 skipped`), focused
   `pptx-charts` passed (`40 passed, 0 failed, 0 skipped`), and the full non-slow suite passed
   (`244 passed, 0 failed, 7 skipped`).
+- Chart style-part scene ownership now includes line-reference role entries. The style part remains the source
+  of truth for raw XML, but `PptxSceneChartStyle.Entries` decodes role-local `lnRef` indices and resolves their
+  theme line styles into `PptxSceneLineStyle`, giving the future chart-style cascade a typed input instead of
+  another renderer-local XML scan. This does not yet apply inherited defaults to gridlines or other chart roles;
+  the unresolved work is the Office precedence/cascade model. Validation: focused `pptx-model` passed
+  (`19 passed, 0 failed, 0 skipped`) and focused non-slow `pptx-charts` passed
+  (`52 passed, 0 failed, 0 skipped`).
 - Chart external-data scene ownership now preserves workbook provenance: `PptxSceneChart.ExternalData` records
   `c:externalData/@r:id`, the package-resolved embedded-workbook target, and the `autoUpdate` flag. Workbook
   parsing still remains a renderer-side bridge and does not yet provide stale-cache reconciliation, blank-cell
