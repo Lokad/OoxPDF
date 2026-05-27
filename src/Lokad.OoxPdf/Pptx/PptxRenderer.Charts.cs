@@ -320,14 +320,15 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<IReadOnlyList<double>> ReadSceneOrXmlChartSeries(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyList<double>[]? sceneSeries = plot?
-            .Series
-            .Select(series => series.Values.Count != 0 ? series.Values : ReadWorkbookNumericValues(workbook, series.DataSources.Values))
-            .Where(values => values.Count != 0)
-            .ToArray();
-        return sceneSeries is { Length: > 0 }
-            ? sceneSeries
-            : ReadChartSeries(chartElement);
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => series.Values.Count != 0 ? series.Values : ReadWorkbookNumericValues(workbook, series.DataSources.Values))
+                .Where(values => values.Count != 0)
+                .ToArray();
+        }
+
+        return ReadChartSeries(chartElement);
     }
 
     private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
@@ -359,18 +360,19 @@ internal sealed partial class PptxRenderer
             series.Add(new ScatterSeries(points));
         }
 
-        return series.Count != 0 ? series : ReadScatterSeries(chartElement, readBubbleSize);
+        return series;
     }
 
     private static IReadOnlyList<string> ReadSceneOrXmlCategoryLabels(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyList<string>? categories = plot?
-            .Series
-            .Select(series => series.Categories.Count != 0 ? series.Categories : ReadWorkbookTextValues(workbook, series.DataSources.Categories))
-            .FirstOrDefault(values => values.Count != 0);
-        return categories is { Count: > 0 }
-            ? categories
-            : ReadChartCategoryLabels(chartElement);
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => series.Categories.Count != 0 ? series.Categories : ReadWorkbookTextValues(workbook, series.DataSources.Categories))
+                .FirstOrDefault(values => values.Count != 0) ?? [];
+        }
+
+        return ReadChartCategoryLabels(chartElement);
     }
 
     private static IReadOnlyList<double> ReadWorkbookNumericValues(ChartWorkbookData? workbook, PptxSceneChartDataSource source)

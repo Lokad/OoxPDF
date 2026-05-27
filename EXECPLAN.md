@@ -1327,6 +1327,17 @@ High-priority actions:
   vector that carries indexed points, blank/missing state, source formula/cell metadata, and the Office
   cache-vs-workbook precedence into axis scaling, stacked totals, category labels, data labels, and
   pie/doughnut slice construction.
+- [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
+  `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, and `ReadSceneOrXmlCategoryLabels` now use
+  `PptxSceneChartPlot.Series` plus workbook-backed scene data-source formulas whenever a typed plot exists,
+  falling back to raw chart XML only for the no-scene compatibility path. This intentionally preserves the
+  current compressed-value rendering contract; the indexed chart data vector above remains open because
+  blank/sparse point semantics still need a richer renderer payload before Office-like gaps and source-cell
+  precedence can be represented in chart geometry. Validation: focused `pptx-charts` tests passed `42/42`,
+  the full non-slow runner passed `260/260` with `7` skips, and private run
+  `artifacts/private-visual/lokad-value-based/20260527-022124` stayed stable at 84/84 compared pages, zero
+  dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-25: Preserve chart title and legend boolean source presence.
   `PptxSceneChartTitle.IsAutoDeleted` now keeps missing `c:autoTitleDeleted` distinct from explicit false,
   and `PptxSceneChartLegend` now separates legend element presence from nullable `c:delete` metadata. The
