@@ -1346,12 +1346,12 @@ High-priority actions:
 - [ ] Introduce a renderer-level indexed chart data vector before removing the remaining chart value/category
   XML fallbacks. The scene and workbook layers already preserve `ptCount`, sparse point indices, blank or
   non-numeric points, multi-area/structured-reference workbook cell indices, and category string-point
-  presence, but supported chart renderers still consume compressed `IReadOnlyList<double>` and
-  `IReadOnlyList<string>` payloads. Removing `ReadSceneOrXmlChartSeries`,
-  `ReadSceneOrXmlScatterSeries`, and `ReadSceneOrXmlCategoryLabels` fallbacks safely requires a typed data
-  vector that carries indexed points, blank/missing state, source formula/cell metadata, and the Office
-  cache-vs-workbook precedence into category labels, data labels, legends, scatter/bubble channels, and the
-  remaining chart text/layout decisions.
+  presence. Bar/column, line, area, pie/doughnut, Cartesian data labels, category-axis labels, radar labels,
+  polar legends, series-name labels, and series-name legend sizing now consume indexed vectors or
+  provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
+  radar geometry, some stacked/extent helpers, scatter/bubble entrypoints, polar data-label text, and chart
+  text/layout decisions still need to carry the same typed data records all the way to Office-PDF-backed
+  layout and source/cache freshness decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
@@ -1389,7 +1389,7 @@ High-priority actions:
   - [x] Split chart-family entrypoint data acquisition from compact-value rendering:
     bar, combo-bar, combo-line, standalone line, area, radar, pie, and doughnut entrypoints now obtain
     `ChartIndexedNumberVector` series first and compact through one explicit `CompactChartSeries` boundary.
-    The old `ReadSceneOrXmlChartSeries` helper remains only as a compatibility wrapper, so future axis
+    The old `ReadSceneOrXmlChartSeries` helper was later removed, so future axis
     scaling, stacked totals, data labels, and slice geometry can migrate one call site at a time without
     re-parsing scene/XML/workbook data or reintroducing hidden flattening logic. Validation: focused non-slow
     `pptx-charts` passed (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
@@ -1421,8 +1421,8 @@ High-priority actions:
     `ChartIndexedNumberVector.DenseValues()` now preserves missing, blank, and non-numeric cache entries as
     nullable gaps, and `RenderLineChart` uses that dense domain for point spacing, stacked lower bounds, and
     marker placement. Missing points break line segments instead of shifting later values into earlier
-    categories. This is deliberately limited to line charts; bar/column and area renderers still compact and
-    remain separate follow-up migrations. Validation: focused non-slow `pptx-charts` passed
+    categories. Bar/column and area renderers were later migrated to the same dense indexed domain.
+    Validation: focused non-slow `pptx-charts` passed
     (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
     (`261 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-031835` with
     MAE `5.049121` and changed16 `0.058477`; private run
@@ -1433,8 +1433,8 @@ High-priority actions:
     `RenderBarChart`, clustered horizontal bars, stacked horizontal bars, clustered columns, and stacked
     columns now share the dense nullable chart value domain. Blank or non-numeric points reserve their
     category band but skip bar emission, and percent-stacked totals ignore missing points at the category
-    index. This keeps axis extent math compact for now while moving the visible category geometry away from
-    shift-left heuristics. Validation: focused non-slow `pptx-charts` passed
+    index. Axis extents were later moved to the same dense indexed domain. Validation: focused non-slow
+    `pptx-charts` passed
     (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
     (`261 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-032303` with
     MAE `4.673340` and changed16 `0.054476`; private run
