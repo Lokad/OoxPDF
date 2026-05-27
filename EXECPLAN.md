@@ -10735,3 +10735,26 @@ Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipp
 `pptx-ladder-11-chart-line-3series-port` passed at run `20260527-141928`; and
 `SummarizeChartStructureDeltas.ps1 -Case pptx-ladder-11-chart-sparse-blank-points-probe -ByRegion -ShowBounds`
 confirmed category tick label count parity and the reduced sparse category-label deltas.
+
+Revision note, 2026-05-27: Split fill-backed side legend key baseline from the generic marker baseline.
+Office's filled legend squares sit on the legend text line, while the previous renderer applied the generic
+marker baseline offset and pushed filled swatches downward. `RenderChartLegend` now uses a dedicated
+`LegendSideFillMarkerBaselineFactor` for filled legend entries and keeps the old generic marker baseline for
+non-fill marker cases. This is a PDF-structure alignment: the filled rectangle key is still a filled path
+next to a text object, but its local legend-row baseline no longer follows the unrelated point-marker rule.
+
+This closes only the filled-key baseline portion of the right-legend gap. The large area fixture's
+`LegendSwatchCandidate` delta dropped from about `14.9 pt` to `5.78 pt`, and the sparse/blank probe's
+upper fill-backed `LegendSwatchCandidate`/`StrokeMarkerCandidate` delta dropped from about `14.9 pt` to
+`6.01 pt`. The representative `pptx-ladder-11-chart-bar-clustered-port` fixture stayed aligned, with plot,
+axis, fill-region, and text deltas still under about `0.72 pt`.
+
+Remaining legend work is still open: side fill legend text itself remains about `6-8 pt` off, and lower-region
+line legend markers remain about `9.24 pt` off. Those are separate legend block-placement and stroke-marker
+geometry issues; this slice only removes the incorrect filled-key baseline inheritance.
+
+Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-area-2series-port` passed at run `20260527-142247`;
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-142311`;
+`pptx-ladder-11-chart-bar-clustered-port` passed at run `20260527-142323`; and structural summaries with
+`-ShowBounds` confirmed the fill-legend swatch delta reduction without reopening the text or plot-box gates.

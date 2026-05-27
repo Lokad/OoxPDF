@@ -1051,6 +1051,7 @@ internal sealed partial class PptxRenderer
         public const double LegendTopOffsetFactor = 0.15d;
         public const double LegendHorizontalClipHeightFactor = 1.25d;
         public const double LegendMarkerBaselineFactor = 0.35d;
+        public const double LegendSideFillMarkerBaselineFactor = 0d;
         public const double LegendHorizontalMarkerBaselineFactor = 0d;
         public const double LegendTextGap = 3d;
     }

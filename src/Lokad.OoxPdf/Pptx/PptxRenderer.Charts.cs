@@ -4583,7 +4583,9 @@ internal sealed partial class PptxRenderer
             double y = horizontal ? firstY : firstY - i * lineHeight;
             double markerBaselineFactor = horizontal || sideStrokeLegend
                 ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
-                : PptxChartMetricRules.LegendMarkerBaselineFactor;
+                : entry.Fill is not null
+                    ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
+                    : PptxChartMetricRules.LegendMarkerBaselineFactor;
             double markerY = y + lineHeight * markerBaselineFactor;
             if (entry.Fill is { } fill)
             {
