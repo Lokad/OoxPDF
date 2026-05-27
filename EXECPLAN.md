@@ -11934,3 +11934,18 @@ spacing, overlay semantics, and plot-area negotiation. It also keeps missing leg
 an explicit `false`, so future default ladders do not collapse source absence into a made-up policy.
 
 Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-27: Extracted chart legend geometry into an explicit renderer-side layout record
+without changing legend rendering behavior. `RenderChartLegend` now consumes a resolved `ChartLegendBox`
+that carries the legend clip box, first baseline, line height, marker dimensions, text gap, orientation, and
+stroke-only side-legend classification. The old formulas for side legends, full-frame legends, manual layout
+override, marker baselines, and packed horizontal entries are preserved in `ResolveChartLegendBox`.
+
+This is a small ownership move, not an Office-perfect legend fix. Its value is that legend placement is no
+longer mixed directly with drawing swatches and text runs, so future public Office-PDF work can replace the
+remaining plot-box and reserved-band heuristics through a single layout boundary. The open long-term work is
+still to derive legend bounding boxes, entry spacing, overlay behavior, and plot-area negotiation from
+Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRules`.
+
+Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.

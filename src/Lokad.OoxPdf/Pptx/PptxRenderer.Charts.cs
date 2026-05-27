@@ -4562,6 +4562,88 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style);
+
+        RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
+
+        var runs = new List<TextRun>(entries.Count);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            ChartLegendEntry entry = entries[i];
+            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(entries, style.FontSize, legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
+            double entryWidth = legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style.FontSize, legendBox.MarkerSize) : legendBox.Width;
+            double y = legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight;
+            double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
+                ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
+                : entry.Fill is not null
+                    ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
+                    : PptxChartMetricRules.LegendMarkerBaselineFactor;
+            double markerY = y + legendBox.LineHeight * markerBaselineFactor;
+            if (entry.Fill is { } fill)
+            {
+                FillChartRectangle(graphics, entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize, fill);
+                if (entry.Stroke is { } fillStroke && fillStroke.Alpha > 0d)
+                {
+                    if (fillStroke.Alpha < 1d)
+                    {
+                        graphics.SaveState();
+                        graphics.SetAlpha(1d, fillStroke.Alpha);
+                    }
+
+                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke(fillStroke));
+                    graphics.StrokeRectangle(entryX, markerY, legendBox.MarkerSize, legendBox.MarkerSize);
+                    if (fillStroke.Alpha < 1d)
+                    {
+                        graphics.RestoreState();
+                    }
+                }
+            }
+            else if (entry.Stroke is { } stroke)
+            {
+                double lineY = markerY + legendBox.MarkerSize / 2d;
+                SetChartStroke(graphics, stroke);
+                graphics.StrokeLine(entryX, lineY, entryX + legendBox.MarkerWidth, lineY);
+                if (entry.Marker is { } marker)
+                {
+                    DrawChartMarker(graphics, entryX + legendBox.MarkerWidth / 2d, lineY, marker, stroke.Color, stroke.Color);
+                }
+            }
+
+            runs.Add(new TextRun(
+                entry.Name,
+                entryX + legendBox.MarkerWidth + legendBox.TextGap,
+                y,
+                Math.Max(1d, entryWidth - legendBox.MarkerWidth - legendBox.TextGap),
+                legendBox.LineHeight,
+                legendBox.X,
+                legendBox.ClipY,
+                legendBox.Width,
+                legendBox.ClipHeight,
+                style.FontSize,
+                0d,
+                0d,
+                style.Color,
+                1d,
+                null,
+                Bold: style.Bold,
+                Italic: style.Italic,
+                Underline: false,
+                Strike: false,
+                KerningEnabled: true,
+                TextAlignment.Left,
+                FontFamily: style.FontFamily,
+                RotationDegrees: 0d,
+                RotationCenterX: 0d,
+                RotationCenterY: 0d,
+                FlipHorizontal: false,
+                FlipVertical: false));
+        }
+
+        return RenderTextRuns(runs, graphics, "CL");
+    }
+
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style)
+    {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
         bool horizontal = IsHorizontalLegendPosition(layout.PositionKind);
@@ -4632,82 +4714,7 @@ internal sealed partial class PptxRenderer
                 : manualBox.Y + manualBox.Height - lineHeight;
         }
 
-        RenderChartShapeStyle(graphics, x, clipY, width, clipHeight, layout.ShapeStyle);
-
-        var runs = new List<TextRun>(entries.Count);
-        for (int i = 0; i < entries.Count; i++)
-        {
-            ChartLegendEntry entry = entries[i];
-            double entryX = horizontal ? GetPackedHorizontalLegendEntryX(entries, fontSize, markerSize, x, i) : x;
-            double entryWidth = horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, fontSize, markerSize) : width;
-            double y = horizontal ? firstY : firstY - i * lineHeight;
-            double markerBaselineFactor = horizontal || sideStrokeLegend
-                ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
-                : entry.Fill is not null
-                    ? PptxChartMetricRules.LegendSideFillMarkerBaselineFactor
-                    : PptxChartMetricRules.LegendMarkerBaselineFactor;
-            double markerY = y + lineHeight * markerBaselineFactor;
-            if (entry.Fill is { } fill)
-            {
-                FillChartRectangle(graphics, entryX, markerY, markerSize, markerSize, fill);
-                if (entry.Stroke is { } fillStroke && fillStroke.Alpha > 0d)
-                {
-                    if (fillStroke.Alpha < 1d)
-                    {
-                        graphics.SaveState();
-                        graphics.SetAlpha(1d, fillStroke.Alpha);
-                    }
-
-                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke(fillStroke));
-                    graphics.StrokeRectangle(entryX, markerY, markerSize, markerSize);
-                    if (fillStroke.Alpha < 1d)
-                    {
-                        graphics.RestoreState();
-                    }
-                }
-            }
-            else if (entry.Stroke is { } stroke)
-            {
-                double lineY = markerY + markerSize / 2d;
-                SetChartStroke(graphics, stroke);
-                graphics.StrokeLine(entryX, lineY, entryX + markerWidth, lineY);
-                if (entry.Marker is { } marker)
-                {
-                    DrawChartMarker(graphics, entryX + markerWidth / 2d, lineY, marker, stroke.Color, stroke.Color);
-                }
-            }
-
-            runs.Add(new TextRun(
-                entry.Name,
-                entryX + markerWidth + textGap,
-                y,
-                Math.Max(1d, entryWidth - markerWidth - textGap),
-                lineHeight,
-                x,
-                clipY,
-                width,
-                clipHeight,
-                fontSize,
-                0d,
-                0d,
-                style.Color,
-                1d,
-                null,
-                Bold: style.Bold,
-                Italic: style.Italic,
-                Underline: false,
-                Strike: false,
-                KerningEnabled: true,
-                TextAlignment.Left,
-                FontFamily: style.FontFamily,
-                RotationDegrees: 0d,
-                RotationCenterX: 0d,
-                RotationCenterY: 0d,
-                FlipHorizontal: false,
-                FlipVertical: false));
-        }
-
-        return RenderTextRuns(runs, graphics, "CL");
+        return new ChartLegendBox(x, clipY, width, clipHeight, firstY, lineHeight, markerSize, markerWidth, textGap, horizontal, sideStrokeLegend);
     }
 
     private static double GetLegendSideStrokeBaselineCenterOffsetFactor(IReadOnlyList<ChartLegendEntry> entries)
@@ -9809,6 +9816,19 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartLayoutBox(double X, double Y, double Width, double Height);
 
     private readonly record struct ChartPlotBox(double X, double Y, double Width, double Height);
+
+    private readonly record struct ChartLegendBox(
+        double X,
+        double ClipY,
+        double Width,
+        double ClipHeight,
+        double FirstY,
+        double LineHeight,
+        double MarkerSize,
+        double MarkerWidth,
+        double TextGap,
+        bool Horizontal,
+        bool SideStrokeLegend);
 
     private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 
