@@ -476,7 +476,11 @@ internal sealed class DocxReader
                     .Element(WordprocessingNamespace + "tcPr")
                     ?.Element(WordprocessingNamespace + "shd")
                     ?.Attribute(WordprocessingNamespace + "fill");
-                cells.Add(new DocxTableCell(text, fill));
+                string? verticalAlignment = (string?)cell
+                    .Element(WordprocessingNamespace + "tcPr")
+                    ?.Element(WordprocessingNamespace + "vAlign")
+                    ?.Attribute(WordprocessingNamespace + "val");
+                cells.Add(new DocxTableCell(text, fill, verticalAlignment));
             }
 
             if (cells.Count > 0)

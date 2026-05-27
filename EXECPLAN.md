@@ -438,6 +438,12 @@ High-priority actions:
   page break, while explicit `on` and implicit true remain observable as body break elements. Validation:
   focused non-slow `docx-page` passed (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`276 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX table-cell vertical-anchor source tokens:
+  `DocxTableCell` now carries the raw `w:tcPr/w:vAlign @w:val` value alongside text and fill data. The DOCX
+  table ladder locks `top`, `center`, and absent cell-anchor tokens without changing current rendering, so
+  future cell text placement can use WordprocessingML structure instead of row-height heuristics. Validation:
+  focused non-slow `docx-tables` passed (`6 passed, 0 failed, 0 skipped`); full non-slow console runner
+  passed (`277 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

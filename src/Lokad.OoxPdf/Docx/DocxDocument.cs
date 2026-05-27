@@ -54,7 +54,7 @@ internal sealed record DocxTable(string? LayoutValue, IReadOnlyList<double> Colu
 
 internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? HeightPoints);
 
-internal sealed record DocxTableCell(string Text, string? FillHex);
+internal sealed record DocxTableCell(string Text, string? FillHex, string? VerticalAlignmentValue);
 
 internal enum DocxTextAlignment
 {
