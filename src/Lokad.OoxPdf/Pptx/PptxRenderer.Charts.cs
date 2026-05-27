@@ -109,7 +109,42 @@ internal sealed partial class PptxRenderer
             }
         }
 
+        if (HasSupportedSceneChartWithoutRenderableCachedValues(sceneChart))
+        {
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_MISSING_CACHED_DATA", OoxPdfSeverity.Warning, "Supported chart references formula-only data without cached numeric values; embedded workbook values are preserved as sidecar provenance but are not used for active rendering.", chartPartName, context.SlideNumber, "Ignored");
+            return;
+        }
+
         EmitChartDiagnostic(context.DiagnosticSink, "PPTX_UNSUPPORTED_CHART", OoxPdfSeverity.Warning, "Only bar, line, area, scatter, bubble, radar, pie, and doughnut charts with cached numeric values are currently supported by the native chart renderer.", chartPartName, context.SlideNumber, "Ignored");
+    }
+
+    private static bool HasSupportedSceneChartWithoutRenderableCachedValues(PptxSceneChart? chart)
+    {
+        return chart?.Plots.Any(plot =>
+            IsSupportedNativeChartPlot(plot.PlotKind) &&
+            plot.Series.Count != 0 &&
+            !plot.Series.Any(HasRenderableCachedValues)) == true;
+    }
+
+    private static bool IsSupportedNativeChartPlot(PptxSceneChartPlotKind kind)
+    {
+        return kind is PptxSceneChartPlotKind.Area or
+            PptxSceneChartPlotKind.Bar or
+            PptxSceneChartPlotKind.Bubble or
+            PptxSceneChartPlotKind.Doughnut or
+            PptxSceneChartPlotKind.Line or
+            PptxSceneChartPlotKind.Pie or
+            PptxSceneChartPlotKind.Radar or
+            PptxSceneChartPlotKind.Scatter;
+    }
+
+    private static bool HasRenderableCachedValues(PptxSceneChartSeries series)
+    {
+        return series.Values.Count != 0 ||
+            series.ValuePoints.Any(point => point.Value is not null) ||
+            (series.XValues.Count != 0 && series.YValues.Count != 0) ||
+            (series.XValuePoints.Any(point => point.Value is not null) &&
+                series.YValuePoints.Any(point => point.Value is not null));
     }
 
     private static PptxSceneChartPlot? ReadSceneChartPlot(PptxSceneChart? chart, PptxSceneChartPlotKind kind, int index = 0)

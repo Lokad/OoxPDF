@@ -10906,7 +10906,8 @@ internal static class PptxTests
         TestAssert.True(pathStartCount == 0, $"Expected formula-only embedded workbook references to remain inactive without chart-side caches; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
         TestAssert.True(CountTextMatrices(pdf) == 0, "Expected formula-only embedded workbook category references not to feed native legend text without chart-side string caches.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
-        TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART"), "Formula-only embedded workbook references should require chart-side caches for active rendering.");
+        TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"), "Formula-only embedded workbook references should require chart-side caches for active rendering.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Formula-only supported chart families should report missing cached data rather than a generic unsupported chart.");
     }
 
     public static void PptxChartWorkbookHydrationPreservesRangePointIndices()

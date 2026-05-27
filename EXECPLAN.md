@@ -10365,3 +10365,19 @@ has a distinct stroke operation.
 Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`);
 `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-114557` with unchanged metrics, and
 `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-114627` with graphics/text gates enabled.
+
+Revision note, 2026-05-27: Split formula-only supported charts out of the generic unsupported-chart
+diagnostic. When a typed scene chart uses a natively supported chart family but has no renderable cached
+numeric values, OOXPDF now emits `PPTX_CHART_MISSING_CACHED_DATA` instead of `PPTX_UNSUPPORTED_CHART`. This
+keeps the source/cache policy observable: the chart family is understood, but Office-trusted chart caches are
+absent and embedded workbook values remain sidecar provenance rather than active rendering input.
+
+The sparse/blank probe now allows this precise diagnostic for its formula-only clustered-column chart part.
+This matters for the long-term execution plan because future source/cache freshness work can count and gate
+missing-cache cases separately from genuinely unsupported chart kinds, instead of losing them inside one
+catch-all warning.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`51 passed, 0 failed, 0 skipped`); sparse/blank visual probe passed at run
+`20260527-114937` with unchanged MAE `2.424721016589506`, changed16 `0.028974247685185184`, SSIM
+`0.6863076919549375`, and diagnostic `PPTX_CHART_MISSING_CACHED_DATA` for `/ppt/charts/chart2.xml`.
