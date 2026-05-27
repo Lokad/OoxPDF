@@ -1963,6 +1963,7 @@ internal sealed partial class PptxRenderer
             (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
+        string? capsValue = ReadTextCapsValue(runProperties, defaultRunProperties);
         bool underline = underlineValue is not null && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
 
         return new ResolvedRunTextStyle(
@@ -1980,6 +1981,7 @@ internal sealed partial class PptxRenderer
             underlineValue,
             IsStrikeEnabled(strikeValue),
             strikeValue,
+            capsValue,
             IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
             typeface);
     }
@@ -2117,9 +2119,14 @@ internal sealed partial class PptxRenderer
         return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
     }
 
+    private static string? ReadTextCapsValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
+    }
+
     private static IReadOnlyList<TextCapsFragment> ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)
     {
-        string? value = (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
+        string? value = ReadTextCapsValue(runProperties, defaultRunProperties);
         if (text.Length == 0)
         {
             return [];

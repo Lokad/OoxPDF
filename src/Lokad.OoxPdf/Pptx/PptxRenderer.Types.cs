@@ -222,6 +222,7 @@ internal sealed partial class PptxRenderer
         string? UnderlineValue,
         bool Strike,
         string? StrikeValue,
+        string? CapsValue,
         bool KerningEnabled,
         string? Typeface);
 

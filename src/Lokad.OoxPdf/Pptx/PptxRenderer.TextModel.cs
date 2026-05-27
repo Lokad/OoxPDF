@@ -69,6 +69,7 @@ internal sealed partial class PptxRenderer
             run.Style.UnderlineValue,
             run.Style.Strike,
             run.Style.StrikeValue,
+            run.Style.CapsValue,
             run.Style.Highlight);
     }
 

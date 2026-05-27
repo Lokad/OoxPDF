@@ -421,15 +421,16 @@ High-priority actions:
   future Office-alignment work can distinguish unsupported source values from normalized layout behavior.
   Validation: focused non-slow `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow
   console runner passed (`256 passed, 0 failed, 7 skipped`).
-- [x] Extend the OOXML enum ladder to PPTX run-decoration tokens:
+- [x] Extend the OOXML enum ladder to PPTX run-style tokens:
   `ResolvedRunTextStyle`, `PptxSceneRunStyle`, and `PptxTextRunModelSnapshot` now preserve raw DrawingML
-  underline and strike values next to the existing booleans. The synthetic text-model ladder locks direct
-  unknown tokens, explicit `u="none"`/`strike="noStrike"` disabling, and inherited default-run `u="dbl"` /
-  `strike="dblStrike"` values without changing current PDF rendering. This keeps future Office-aligned
-  underline/strike geometry from depending on collapsed booleans. Validation: focused non-slow
-  `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow console runner passed
-  (`261 passed, 0 failed, 7 skipped`); private run
-  `artifacts/private-visual/lokad-value-based/20260527-024404` stayed at 84/84 compared pages, zero
+  underline, strike, and capitalization values next to the existing booleans/rendering behavior. The synthetic
+  text-model ladder locks direct unknown tokens, explicit `u="none"`/`strike="noStrike"` disabling, explicit
+  `cap="all"`, and inherited default-run `u="dbl"` / `strike="dblStrike"` / `cap="small"` values without
+  changing current PDF rendering. This keeps future Office-aligned underline/strike/caps geometry from
+  depending on collapsed booleans or raw XML re-reads. Validation: focused non-slow `pptx-typography` passed
+  (`83 passed, 0 failed, 2 skipped`); full non-slow console runner passed (`261 passed, 0 failed, 7 skipped`);
+  private run
+  `artifacts/private-visual/lokad-value-based/20260527-024721` stayed at 84/84 compared pages, zero
   dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,

@@ -111,6 +111,7 @@ internal sealed record PptxTextRunModelSnapshot(
     string? UnderlineValue,
     bool Strike,
     string? StrikeValue,
+    string? CapsValue,
     RgbColor? Highlight);
 
 internal sealed record PptxTextFlowSnapshot(IReadOnlyList<PptxTextFlowFrameSnapshot> Frames);
@@ -1144,6 +1145,7 @@ internal sealed record PptxSceneRunStyle(
     string? UnderlineValue,
     bool Strike,
     string? StrikeValue,
+    string? CapsValue,
     double CharacterSpacing,
     double BaselineOffset,
     RgbColor? Highlight);
@@ -4224,6 +4226,7 @@ internal sealed class PptxSceneBuilder
             (runProperties?.Attribute("i") is null && paragraphStyle.Italic);
         string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
         string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
+        string? capsValue = ReadTextCapsValue(runProperties, defaultRunProperties);
         bool underline = underlineValue is not null &&
             !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
         bool strike = IsStrikeEnabled(strikeValue);
@@ -4238,6 +4241,7 @@ internal sealed class PptxSceneBuilder
             underlineValue,
             strike,
             strikeValue,
+            capsValue,
             ReadCharacterSpacing(runProperties, defaultRunProperties),
             ReadBaselineOffset(runProperties, defaultRunProperties, fontSize),
             TryReadHighlightColor(runProperties, out RgbColor highlight) ? highlight : null);
@@ -4282,6 +4286,11 @@ internal sealed class PptxSceneBuilder
     private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)
     {
         return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
+    }
+
+    private static string? ReadTextCapsValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("cap") ?? defaultRunProperties?.Attribute("cap"));
     }
 
     private static bool ParseOptionalBoolAttribute(XElement? element, string attributeName)

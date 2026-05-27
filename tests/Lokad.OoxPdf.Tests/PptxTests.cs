@@ -2385,7 +2385,7 @@ internal static class PptxTests
         TestAssert.Equal("futureOverflow", frame.VerticalOverflowValue ?? string.Empty);
     }
 
-    public static void PptxTextModelPreservesRunDecorationTokens()
+    public static void PptxTextModelPreservesRunStyleTokens()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -2401,9 +2401,9 @@ internal static class PptxTests
                     <p:txBody>
                       <a:bodyPr/><a:lstStyle/>
                       <a:p>
-                        <a:pPr><a:defRPr u="dbl" strike="dblStrike"/></a:pPr>
-                        <a:r><a:rPr sz="1800" u="futureUnderline" strike="futureStrike"/><a:t>Unknown</a:t></a:r>
-                        <a:r><a:rPr sz="1800" u="none" strike="noStrike"/><a:t>Off</a:t></a:r>
+                        <a:pPr><a:defRPr u="dbl" strike="dblStrike" cap="small"/></a:pPr>
+                        <a:r><a:rPr sz="1800" u="futureUnderline" strike="futureStrike" cap="futureCaps"/><a:t>Unknown</a:t></a:r>
+                        <a:r><a:rPr sz="1800" u="none" strike="noStrike" cap="all"/><a:t>Off</a:t></a:r>
                         <a:r><a:rPr sz="1800"/><a:t>Default</a:t></a:r>
                       </a:p>
                     </p:txBody>
@@ -2424,12 +2424,15 @@ internal static class PptxTests
         TestAssert.True(runs[0].Underline, "Expected unknown underline tokens to remain enabled until an Office-aligned renderer handles them.");
         TestAssert.Equal("futureStrike", runs[0].StrikeValue ?? string.Empty);
         TestAssert.True(runs[0].Strike, "Expected unknown strike tokens to remain enabled until an Office-aligned renderer handles them.");
+        TestAssert.Equal("futureCaps", runs[0].CapsValue ?? string.Empty);
         TestAssert.Equal("none", runs[1].UnderlineValue ?? string.Empty);
         TestAssert.True(!runs[1].Underline, "Expected explicit underline none to remain disabled.");
         TestAssert.Equal("noStrike", runs[1].StrikeValue ?? string.Empty);
         TestAssert.True(!runs[1].Strike, "Expected explicit noStrike to remain disabled.");
+        TestAssert.Equal("all", runs[1].CapsValue ?? string.Empty);
         TestAssert.Equal("dbl", runs[2].UnderlineValue ?? string.Empty);
         TestAssert.Equal("dblStrike", runs[2].StrikeValue ?? string.Empty);
+        TestAssert.Equal("small", runs[2].CapsValue ?? string.Empty);
     }
 
     public static void PptxSyntheticTextBoxHonorsLineBreaks()
