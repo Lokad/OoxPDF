@@ -31,6 +31,7 @@ internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,
     IReadOnlyList<DocxInlineImage> Images,
     DocxTextAlignment Alignment,
+    string? AlignmentValue,
     double SpacingBeforePoints,
     double SpacingAfterPoints,
     double LineSpacingFactor,

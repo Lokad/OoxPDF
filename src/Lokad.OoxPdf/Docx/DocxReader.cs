@@ -344,6 +344,7 @@ internal sealed class DocxReader
             runs,
             images,
             resolvedParagraph.Alignment ?? DocxTextAlignment.Left,
+            resolvedParagraph.AlignmentValue,
             resolvedParagraph.SpacingBeforePoints ?? 0d,
             resolvedParagraph.SpacingAfterPoints ?? 6d,
             resolvedParagraph.LineSpacingFactor ?? 1.25d,
@@ -696,7 +697,8 @@ internal sealed class DocxReader
 
     private static DocxResolvedParagraphProperties ReadParagraphProperties(XElement? properties)
     {
-        DocxTextAlignment? alignment = ReadAlignment(properties);
+        string? alignmentValue = ReadAlignmentValue(properties);
+        DocxTextAlignment? alignment = ReadAlignment(alignmentValue);
         XElement? spacing = properties?.Element(WordprocessingNamespace + "spacing");
         double? before = ReadTwipsAttribute(spacing, WordprocessingNamespace + "before");
         double? after = ReadTwipsAttribute(spacing, WordprocessingNamespace + "after");
@@ -716,14 +718,18 @@ internal sealed class DocxReader
             }
         }
 
-        return new DocxResolvedParagraphProperties(alignment, before, after, lineFactor, linePoints);
+        return new DocxResolvedParagraphProperties(alignment, alignmentValue, before, after, lineFactor, linePoints);
     }
 
-    private static DocxTextAlignment? ReadAlignment(XElement? properties)
+    private static string? ReadAlignmentValue(XElement? properties)
     {
-        string? value = (string?)properties
+        return (string?)properties
             ?.Element(WordprocessingNamespace + "jc")
             ?.Attribute(WordprocessingNamespace + "val");
+    }
+
+    private static DocxTextAlignment? ReadAlignment(string? value)
+    {
         return value switch
         {
             "center" => DocxTextAlignment.Center,
@@ -811,7 +817,7 @@ internal sealed class DocxReader
     {
         public static DocxStyleSet Empty { get; } = new(
             new DocxResolvedRunProperties(null, null, null, null, null, null),
-            new DocxResolvedParagraphProperties(null, null, null, null, null),
+            new DocxResolvedParagraphProperties(null, null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>());
     }
@@ -831,6 +837,7 @@ internal sealed class DocxReader
 
     private readonly record struct DocxResolvedParagraphProperties(
         DocxTextAlignment? Alignment,
+        string? AlignmentValue,
         double? SpacingBeforePoints,
         double? SpacingAfterPoints,
         double? LineSpacingFactor,
@@ -840,6 +847,7 @@ internal sealed class DocxReader
         {
             return new DocxResolvedParagraphProperties(
                 other.Alignment ?? Alignment,
+                other.AlignmentValue ?? AlignmentValue,
                 other.SpacingBeforePoints ?? SpacingBeforePoints,
                 other.SpacingAfterPoints ?? SpacingAfterPoints,
                 other.LineSpacingFactor ?? LineSpacingFactor,

@@ -397,6 +397,26 @@ High-priority actions:
   and arrowhead presets, preset geometries and adjustments, fills/color transforms, picture crop/tile/recolor
   modes, table borders/anchors, chart types/marker styles, and DOCX alignment, breaks, table layout,
   numbering, underline/border/shading, drawing wrap, and section/page settings.
+- [x] 2026-05-27: Survey the current OOXML enum-ownership pattern before adding more one-off cases:
+  PPTX is materially ahead of DOCX because many scene records now keep both normalized enum values and raw
+  DrawingML tokens for text body properties, paragraph alignment, run underline/strike/caps, line dash/cap/join
+  and line-end markers, chart plot/grouping/style/marker families, axis tick-label/tick-mark positions, table
+  text anchors, and picture tile/recolor tokens. Remaining PPTX enum ladders should keep following that exact
+  pattern: first preserve the raw source token in a scene/model snapshot, then add structural tests, then render
+  the Office semantics. The still-open PPTX families are `anchorCtr` and autofit semantics, full vertical
+  writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
+  unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
+  crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
+  paragraph alignment, breaks, table layout, numbering formats, underline/border/shading, drawing wrap, and
+  section/page settings still need raw-token preservation before renderer behavior is broadened.
+- [x] Preserve DOCX paragraph-alignment source tokens in the document model:
+  `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
+  `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
+  (`distribute`), and absent tokens are covered by a DOCX reader test. Rendering remains intentionally
+  unchanged for unsupported values, but future justified/distributed layout work can now distinguish source
+  OOXML from the conservative left-aligned fallback. Validation: focused non-slow `docx-text` passed
+  (`4 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`273 passed, 0 failed, 7 skipped`); attempted aggregate `docx` group is not defined by the runner.
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

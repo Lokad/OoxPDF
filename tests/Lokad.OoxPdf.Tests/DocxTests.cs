@@ -254,6 +254,75 @@ internal static class DocxTests
         TestAssert.True(paragraph.Runs[1].Italic, "Expected w:i w:val=\"on\" to enable italic.");
     }
 
+    public static void DocxReaderPreservesParagraphAlignmentTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="Justified">
+                    <w:pPr><w:jc w:val="both"/></w:pPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr><w:jc w:val="center"/></w:pPr>
+                      <w:r><w:t>Center</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr><w:pStyle w:val="Justified"/></w:pPr>
+                      <w:r><w:t>Inherited both</w:t></w:r>
+                    </w:p>
+                    <w:p>
+                      <w:pPr><w:jc w:val="distribute"/></w:pPr>
+                      <w:r><w:t>Distributed</w:t></w:r>
+                    </w:p>
+                    <w:p><w:r><w:t>Default</w:t></w:r></w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+
+        TestAssert.Equal(DocxTextAlignment.Center, document.Paragraphs[0].Alignment);
+        TestAssert.Equal("center", document.Paragraphs[0].AlignmentValue ?? string.Empty);
+        TestAssert.Equal(DocxTextAlignment.Left, document.Paragraphs[1].Alignment);
+        TestAssert.Equal("both", document.Paragraphs[1].AlignmentValue ?? string.Empty);
+        TestAssert.Equal(DocxTextAlignment.Left, document.Paragraphs[2].Alignment);
+        TestAssert.Equal("distribute", document.Paragraphs[2].AlignmentValue ?? string.Empty);
+        TestAssert.True(document.Paragraphs[3].AlignmentValue is null, "Expected default alignment to keep a null source token.");
+    }
+
     public static void DocxSyntheticParagraphsBreakAcrossPages()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
