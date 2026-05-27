@@ -712,7 +712,8 @@ internal sealed record PptxSceneChartSeries(
 internal readonly record struct PptxSceneChartNumberPoint(
     int Index,
     double? Value,
-    string Text);
+    string Text,
+    bool HasValueElement);
 
 internal readonly record struct PptxSceneChartStringPoint(
     int Index,
@@ -2362,11 +2363,12 @@ internal sealed class PptxSceneBuilder
             int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
                 ? parsedIndex
                 : ordinal;
-            string text = (string?)point.Element(ChartNamespace + "v") ?? string.Empty;
+            XElement? valueElement = point.Element(ChartNamespace + "v");
+            string text = (string?)valueElement ?? string.Empty;
             double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                 ? parsed
                 : null;
-            points.Add(new PptxSceneChartNumberPoint(index, value, text));
+            points.Add(new PptxSceneChartNumberPoint(index, value, text, valueElement is not null));
             ordinal++;
         }
 

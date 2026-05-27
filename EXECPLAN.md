@@ -1352,6 +1352,19 @@ High-priority actions:
   vector that carries indexed points, blank/missing state, source formula/cell metadata, and the Office
   cache-vs-workbook precedence into axis scaling, stacked totals, category labels, data labels, and
   pie/doughnut slice construction.
+  - [x] Start the renderer indexed-vector adapter without changing chart output:
+    `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
+    labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
+    the existing renderer payloads. The vectors carry point indices, `ptCount`, source formula/cache metadata,
+    workbook cell metadata, category levels, and explicit point text/value presence for later axis, data-label,
+    and pie/doughnut work. While doing this, a missing model bit was exposed and closed: numeric chart cache
+    points now preserve whether `<c:v>` exists, so empty numeric values, missing value elements, and
+    non-numeric text are distinguishable before rendering. Validation: focused non-slow `pptx-charts` passed
+    (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`261 passed, 0 failed, 7 skipped`); private run
+    `artifacts/private-visual/lokad-value-based/20260527-025313` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
