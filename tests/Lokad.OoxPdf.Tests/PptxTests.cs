@@ -2080,6 +2080,11 @@ internal static class PptxTests
         TestAssert.Equal(0, glyphRun.FrameIndex);
         TestAssert.Equal(0, glyphRun.ParagraphIndex);
         TestAssert.Equal(0, glyphRun.LineIndex);
+        TestAssert.Equal(frame.FontScale, glyphRun.FrameFontScale);
+        TestAssert.Equal(frame.TextX, glyphRun.FrameTextX);
+        TestAssert.Equal(frame.TextWidth, glyphRun.FrameTextWidth);
+        TestAssert.Equal(1, glyphRun.FrameColumnCount);
+        TestAssert.Equal(0d, glyphRun.FrameColumnSpacing);
         TestAssert.Equal(10d, glyphRun.LineMaxFontSize);
         TestAssert.Equal(10d, glyphRun.LayoutFontSize);
         TestAssert.Equal(9.96d, glyphRun.PdfFontSize);
@@ -5087,9 +5092,12 @@ internal static class PptxTests
             .SelectMany(frame => frame.Paragraphs)
             .SelectMany(paragraph => paragraph.Lines)
             .ToArray();
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
 
         TestAssert.True(lines.Any(line => Math.Abs(line.StartX - 72d) < 0.01d), "Expected first-column text.");
         TestAssert.True(lines.Any(line => Math.Abs(line.StartX - 219.78d) < 0.01d), "Expected second-column text. Starts: " + string.Join(", ", lines.Select(line => line.StartX.ToString("0.###", CultureInfo.InvariantCulture))));
+        TestAssert.True(glyphRuns.All(run => run.FrameColumnCount == 3), "Expected glyph-run inspection to preserve text-frame column count.");
+        TestAssert.True(glyphRuns.All(run => Math.Abs(run.FrameColumnSpacing - 144000d / 12700d) < 0.01d), "Expected glyph-run inspection to preserve text-frame column spacing.");
     }
 
     public static void PptxSyntheticTextBoxClipsOverflow()

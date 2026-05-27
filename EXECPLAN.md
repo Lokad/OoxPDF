@@ -9599,6 +9599,20 @@ specific font-size exceptions.
 Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Threaded PPTX text-frame geometry into glyph-run inspection without changing
+rendering. `PptxPositionedTextSpan` and `PptxTextGlyphRunSnapshot` now preserve the resolved frame font
+scale, text rectangle, wrap width, text height, clip rectangle, column count, and column spacing alongside
+the existing frame/paragraph/line ordinals. Public typography guards now assert that single-column and
+multi-column glyph runs retain this frame context after span splitting/coalescing and glyph-typeface
+partitioning.
+
+This extends the structural evidence needed for the private page-17 derived-font-size branch: future `/Tf`
+rules can compare line state against resolved frame geometry and column/clipping context instead of adding
+per-size or private-slide exceptions. It is diagnostic plumbing only; the PDF emission profile is unchanged.
+
+Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only

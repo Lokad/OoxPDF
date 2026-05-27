@@ -637,12 +637,14 @@ internal sealed partial class PptxRenderer
         return layout.Frames
             .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
             {
+                Frame = frame,
                 FrameIndex = frameIndex,
                 Paragraph = paragraph,
                 ParagraphIndex = paragraphIndex
             }))
             .SelectMany(paragraphState => paragraphState.Paragraph.Lines.Select((line, lineIndex) => new
             {
+                paragraphState.Frame,
                 paragraphState.FrameIndex,
                 paragraphState.ParagraphIndex,
                 Line = line,
@@ -654,6 +656,17 @@ internal sealed partial class PptxRenderer
                 lineState.FrameIndex,
                 lineState.ParagraphIndex,
                 lineState.LineIndex,
+                lineState.Frame.Model.FontScale,
+                lineState.Frame.Model.TextX,
+                lineState.Frame.Model.TextWidth,
+                lineState.Frame.Model.TextWrapWidth,
+                lineState.Frame.Model.TextHeight,
+                lineState.Frame.Model.TextClipX,
+                lineState.Frame.Model.TextClipWidth,
+                lineState.Frame.Model.TextClipY,
+                lineState.Frame.Model.TextClipHeight,
+                lineState.Frame.Model.ColumnCount,
+                lineState.Frame.Model.ColumnSpacing,
                 lineState.Line.Alignment,
                 span.Run,
                 span.EndX,
