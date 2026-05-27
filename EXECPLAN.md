@@ -11865,3 +11865,16 @@ scene-backed native charts, and embedded workbook ranges remain sidecar provenan
 proves a promotion rule.
 
 Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-27: Exposed chart legend layout policy fields through scene inspection without
+changing rendering. The scene model already retained `c:legendPos`, `c:overlay`, nullable `c:delete`, and
+manual legend layout factors, but snapshot consumers could not assert those layout inputs without reaching
+into the full chart model. `PptxSceneNodeSnapshot` now reports legend presence, source position token,
+nullable overlay/delete state, manual-layout presence, and the manual X/Y/W/H factors.
+
+This is deliberately not a legend placement fix. It supports the next long-term legend work by making the
+OOXML layout contract observable before renderer changes attempt Office-like legend bounding boxes, entry
+spacing, overlay semantics, and plot-area negotiation. It also keeps missing legend deletion distinct from
+an explicit `false`, so future default ladders do not collapse source absence into a made-up policy.
+
+Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.

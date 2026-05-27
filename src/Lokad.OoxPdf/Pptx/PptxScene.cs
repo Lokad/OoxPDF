@@ -61,6 +61,15 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasChartExternalDataResource,
     string ChartExternalDataContentType,
     bool? ChartPlotVisibleOnly,
+    bool HasChartLegend,
+    string ChartLegendPosition,
+    bool? ChartLegendOverlay,
+    bool? ChartLegendDeleted,
+    bool HasChartLegendManualLayout,
+    double? ChartLegendLayoutX,
+    double? ChartLegendLayoutY,
+    double? ChartLegendLayoutWidth,
+    double? ChartLegendLayoutHeight,
     bool HasGroupTransform,
     IReadOnlyList<PptxSceneNodeSnapshot> Children);
 

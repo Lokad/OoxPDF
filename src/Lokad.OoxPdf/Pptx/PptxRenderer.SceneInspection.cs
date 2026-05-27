@@ -38,6 +38,8 @@ internal sealed partial class PptxRenderer
         int tableRowCount = node.Table?.Rows.Count ?? 0;
         int tableCellCount = node.Table?.Rows.Sum(row => row.Cells.Count) ?? 0;
         PptxSceneBounds? bounds = node.Bounds;
+        PptxSceneChartLegend? legend = node.Chart?.Legend;
+        PptxSceneChartManualLayout? legendLayout = legend?.Layout;
         return new PptxSceneNodeSnapshot(
             node.Kind.ToString(),
             node.IsPlaceholder,
@@ -73,6 +75,15 @@ internal sealed partial class PptxRenderer
             node.Chart?.ExternalData.Resource is not null,
             node.Chart?.ExternalData.Resource?.ContentType ?? string.Empty,
             node.Chart?.Options.PlotVisibleOnly,
+            legend?.IsDefined ?? false,
+            legend?.Position ?? string.Empty,
+            legend?.Overlay,
+            legend?.IsDeleted,
+            legendLayout?.HasLayout ?? false,
+            legendLayout?.X,
+            legendLayout?.Y,
+            legendLayout?.Width,
+            legendLayout?.Height,
             node.Kind == PptxSceneNodeKind.Group,
             node.Children.Select(ToSnapshot).ToArray());
     }
