@@ -982,6 +982,17 @@ High-priority actions:
   and wrapping are not the discriminator: a one-character scan still maps `21`/`24`/`36` to `+0.024 pt` only at
   selected frame heights (`15` remains exact), while adjacent heights with the same size remain exact. This points to
   an Office export quantization interaction involving frame geometry/baseline placement, not a font-size table.
+  - [x] 2026-05-27: Add a reusable public-safe font-emission probe summarizer instead of continuing with one-off
+    shell snippets. `tools/SummarizePptxFontEmissionProbe.ps1` joins a PPTX slide's textbox source geometry with
+    inspected Office `text-operations.json`, infers the normal 18 pt OOXML default when PowerPoint omits `sz`, and
+    reports `SourceFontSize`, Office `/Tf`, the first-order 600-DPI grid value, `SecondaryDelta`, shape bounds,
+    insets, wrap/autofit, and reference text position. Running it over the existing single-line probes confirms the
+    secondary branch is geometry-sensitive: `font-size-quantization-noautofit`, `wide`, and `cambria` share the same
+    `15.024`, `21.024`, `24.024`, and `36.024` rows at the same source bounds; `dense` shifts the branch to
+    `23.064`, `26.064`, `29.064`, `32.064`, `35.064`, and `38.064`; `dense-defaultinset` additionally exposes
+    `20.064`. The script deliberately leaves wrapped/multi-operation rows visible through `TextMatches` instead of
+    pretending they are one-to-one; use `ComparePptxTextEmission.ps1` plus glyph-run metadata for wrapped-line
+    conditions. Rendering remains unchanged.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and

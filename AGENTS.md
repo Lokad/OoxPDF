@@ -39,6 +39,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/InspectPptxText.ps1`: inspect PPTX glyph-run layout/emission summaries without text by default.
 - `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/ComparePptxTextEmission.ps1`: compare Office PDF text operations to candidate PPTX glyph-run emission.
+- `tools/SummarizePptxFontEmissionProbe.ps1`: join public-safe PPTX textbox geometry with Office text-operation font sizes.
 - `tools/ComparePdfGraphicsOperations.ps1`: compare inspected PDF path/clip/stroke/fill geometry.
 - `tools/ClassifyPdfChartGraphics.ps1`: classify inspected PDF graphics operations into chart-like structures.
 - `tools/ClassifyPdfChartText.ps1`: classify inspected PDF text operations relative to derived chart plot boxes.
