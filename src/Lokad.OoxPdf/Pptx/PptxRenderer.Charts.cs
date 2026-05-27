@@ -328,7 +328,7 @@ internal sealed partial class PptxRenderer
 
     private static int CountRenderableSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
-        return series.Count(vector => vector.CompactValues().Count != 0);
+        return series.Count(vector => vector.CompactPoints().Count != 0);
     }
 
     private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)
@@ -7294,54 +7294,10 @@ internal sealed partial class PptxRenderer
         return patternPreset.StartsWith("dk", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
-    {
-        double maxValue = Math.Max(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(values => values).DefaultIfEmpty(0d).Min());
-        return (minValue, maxValue);
-    }
-
     private static (double Min, double Max) GetClusteredValueExtents(IReadOnlyList<IReadOnlyList<double?>> series)
     {
         double maxValue = Math.Max(0d, series.SelectMany(values => values).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Max());
         double minValue = Math.Min(0d, series.SelectMany(values => values).Where(value => value is not null).Select(value => value!.Value).DefaultIfEmpty(0d).Min());
-        return (minValue, maxValue);
-    }
-
-    private static (double Min, double Max) GetStackedValueExtents(IReadOnlyList<IReadOnlyList<double>> series, int categoryCount, bool percentStacked)
-    {
-        if (percentStacked)
-        {
-            return (0d, 1d);
-        }
-
-        double minValue = 0d;
-        double maxValue = 0d;
-        for (int category = 0; category < categoryCount; category++)
-        {
-            double positive = 0d;
-            double negative = 0d;
-            foreach (IReadOnlyList<double> values in series)
-            {
-                if (category >= values.Count)
-                {
-                    continue;
-                }
-
-                if (values[category] >= 0d)
-                {
-                    positive += values[category];
-                }
-                else
-                {
-                    negative += values[category];
-                }
-            }
-
-            maxValue = Math.Max(maxValue, positive);
-            minValue = Math.Min(minValue, negative);
-        }
-
         return (minValue, maxValue);
     }
 
@@ -7514,19 +7470,6 @@ internal sealed partial class PptxRenderer
     private static double GetClusteredBarStep(double barWidth, double overlapPercent)
     {
         return Math.Max(0d, barWidth * (1d - overlapPercent / 100d));
-    }
-
-    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double>> series, int category, bool percentStacked)
-    {
-        if (!percentStacked)
-        {
-            return 1d;
-        }
-
-        return Math.Max(1d, series
-            .Where(values => category < values.Count)
-            .Select(values => Math.Max(0d, values[category]))
-            .Sum());
     }
 
     private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double?>> series, int category, bool percentStacked)
@@ -7857,16 +7800,11 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, y, width, height);
     }
 
-    private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
-    {
-        return GetLineChartValueExtents(series, stacked: false, percentStacked: false);
-    }
-
     private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
     {
-        return GetLineChartValueExtents(series
-            .Select(item => item.Points.Select(point => point.Value!.Value).ToArray())
-            .ToArray());
+        double maxValue = Math.Max(0d, series.SelectMany(item => item.Points).Select(point => point.Value!.Value).DefaultIfEmpty(0d).Max());
+        double minValue = Math.Min(0d, series.SelectMany(item => item.Points).Select(point => point.Value!.Value).DefaultIfEmpty(0d).Min());
+        return new ChartValueExtents(minValue, maxValue);
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
@@ -7876,15 +7814,6 @@ internal sealed partial class PptxRenderer
         (double minValue, double maxValue) = stacked
             ? GetStackedValueExtents(denseSeries, pointCount, percentStacked)
             : GetClusteredValueExtents(denseSeries);
-        return new ChartValueExtents(minValue, maxValue);
-    }
-
-    private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked)
-    {
-        int pointCount = Math.Max(1, series.Max(values => values.Count));
-        (double minValue, double maxValue) = stacked
-            ? GetStackedValueExtents(series, pointCount, percentStacked)
-            : GetClusteredValueExtents(series);
         return new ChartValueExtents(minValue, maxValue);
     }
 
@@ -8274,26 +8203,6 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
-    }
-
-    private static double GetMaxStackedLineValue(IReadOnlyList<IReadOnlyList<double>> series, int pointCount)
-    {
-        double maxValue = 1d;
-        for (int i = 0; i < pointCount; i++)
-        {
-            double sum = 0d;
-            foreach (IReadOnlyList<double> values in series)
-            {
-                if (i < values.Count)
-                {
-                    sum += Math.Max(0d, values[i]);
-                }
-            }
-
-            maxValue = Math.Max(maxValue, sum);
-        }
-
-        return maxValue;
     }
 
     private static ChartValueExtents GetScatterXValueExtents(IReadOnlyList<ScatterSeries> series)

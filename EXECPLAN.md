@@ -9625,9 +9625,21 @@ skipped`).
 Revision note, 2026-05-27: Removed obsolete compact double-list extent overloads for bar/column and area
 charts. Those families already compute extents from `ChartIndexedNumberVector` dense nullable domains, so the
 older `IReadOnlyList<IReadOnlyList<double>>` overloads had no callers and would have preserved a misleading
-compact-only route for future axis work. The line/radar compact overload remains intentionally because radar
-geometry still uses compact values until a public Office-backed sparse-radar fixture justifies changing that
-visible behavior.
+compact-only route for future axis work. A later cleanup removed the matching line/radar compact overload too
+after radar started carrying active indexed point records through its renderer boundary.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Removed the remaining non-nullable compact double-list chart extent/total helpers.
+Radar extents now read directly from the active `ChartIndexedNumberPoint` records held by `ChartRadarSeries`,
+and renderability checks use `CompactPoints()` instead of asking for a temporary compact double list. Line,
+area, and bar/column geometry already use dense nullable series domains, so the deleted overloads were an
+obsolete adapter path rather than an Office semantics owner.
+
+This still preserves current radar behavior: active points are compacted in source-index order and absent
+spokes continue to render at zero radius. The open long-term question is unchanged: dense sparse-point radar
+geometry and filled-radar gap handling need a public Office-backed probe before changing visible output.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
