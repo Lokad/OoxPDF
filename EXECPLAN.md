@@ -547,6 +547,13 @@ High-priority actions:
   diagnostics or Office probes. A focused regression locks the source-token/effective-layout split for
   `legendPos="bogus"`. Validation: focused `UnknownLegend` passed (`1` test, `0` failures); focused non-slow
   `pptx-charts` passed with `64` tests, `0` failures, and `0` skips.
+- [x] 2026-05-27: Make chart data-label position fallback explicit without dropping raw source tokens.
+  `PptxSceneChartDataLabels` continues to preserve unknown `dLblPos` values as `Unknown` plus the original
+  token, while the geometry boundary now resolves the effective placement through an explicit
+  `Unknown -> OutsideEnd` ladder before bar, line, and scatter-family label boxes are computed. This removes
+  another silent `_`-arm behavior from chart geometry and keeps the unsupported token available for later
+  Office-PDF probes. Validation: focused `UnknownDataLabel` passed (`1` test, `0` failures); focused non-slow
+  `pptx-charts` passed with `65` tests, `0` failures, and `0` skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

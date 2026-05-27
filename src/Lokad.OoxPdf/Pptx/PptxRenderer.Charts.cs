@@ -5185,6 +5185,7 @@ internal sealed partial class PptxRenderer
 
     private static double ResolveHorizontalBarDataLabelX(PptxSceneChartDataLabelPosition position, double barBase, double barEnd, double labelWidth)
     {
+        position = ResolveChartDataLabelPosition(position);
         bool extendsRight = barEnd >= barBase;
         return position switch
         {
@@ -5197,6 +5198,7 @@ internal sealed partial class PptxRenderer
 
     private static double ResolveVerticalBarDataLabelY(PptxSceneChartDataLabelPosition position, double barBase, double barEnd, double labelHeight)
     {
+        position = ResolveChartDataLabelPosition(position);
         bool extendsUp = barEnd >= barBase;
         return position switch
         {
@@ -5209,6 +5211,7 @@ internal sealed partial class PptxRenderer
 
     private static (double X, double Y, TextAlignment Alignment) ResolveLineDataLabelPosition(PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth, double labelHeight)
     {
+        position = ResolveChartDataLabelPosition(position);
         return position switch
         {
             PptxSceneChartDataLabelPosition.Bottom => (pointX - labelWidth / 2d, pointY - labelHeight * PptxChartMetricRules.LineDataLabelBelowOffsetFactor, TextAlignment.Center),
@@ -5217,6 +5220,13 @@ internal sealed partial class PptxRenderer
             PptxSceneChartDataLabelPosition.Center or PptxSceneChartDataLabelPosition.BestFit => (pointX - labelWidth / 2d, pointY - labelHeight / 2d, TextAlignment.Center),
             PptxSceneChartDataLabelPosition.Top or PptxSceneChartDataLabelPosition.OutsideEnd or _ => (pointX - labelWidth / 2d, pointY + labelHeight * PptxChartMetricRules.LineDataLabelAboveOffsetFactor, TextAlignment.Center)
         };
+    }
+
+    private static PptxSceneChartDataLabelPosition ResolveChartDataLabelPosition(PptxSceneChartDataLabelPosition position)
+    {
+        return position == PptxSceneChartDataLabelPosition.Unknown
+            ? PptxSceneChartDataLabelPosition.OutsideEnd
+            : position;
     }
 
     private static IReadOnlyList<PdfFontResource> RenderScatterDataLabels(

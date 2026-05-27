@@ -11342,6 +11342,30 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartLegendPosition.Right, (PptxSceneChartLegendPosition)positionKind);
     }
 
+    public static void PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:dLbls><c:showVal val="1"/><c:dLblPos val="bogus"/></c:dLbls>
+                  <c:ser><c:tx><c:v>Line Series</c:v></c:tx><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.Unknown, chart.Plots[0].DataLabels.PositionKind);
+        TestAssert.Equal("bogus", chart.Plots[0].DataLabels.Position);
+
+        System.Reflection.MethodInfo resolvePosition = typeof(PptxRenderer).GetMethod(
+            "ResolveChartDataLabelPosition",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label position resolver.");
+        object position = resolvePosition.Invoke(null, [PptxSceneChartDataLabelPosition.Unknown]) ?? throw new InvalidOperationException("Expected resolved data-label position.");
+
+        TestAssert.Equal(PptxSceneChartDataLabelPosition.OutsideEnd, (PptxSceneChartDataLabelPosition)position);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""
