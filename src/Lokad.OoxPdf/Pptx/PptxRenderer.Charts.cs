@@ -731,7 +731,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, barPlot, PptxSceneChartAxisKind.Value);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
                 bool percentStacked = IsPercentStackedChartGrouping(grouping);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeries, grouping), percentStacked);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeriesVectors, grouping), percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
                 bool varyColors = ReadSceneOrXmlChartVaryColors(barPlot, barChart);
@@ -767,7 +767,7 @@ internal sealed partial class PptxRenderer
                     XElement? extraValueAxis = ReadChartValueAxisForChart(chartXml, extraBarChart);
                     PptxSceneChartAxis? extraValueSceneAxis = ReadSceneChartAxis(sceneChart, extraBarPlot, PptxSceneChartAxisKind.Value);
                     bool extraPercentStacked = IsPercentStackedChartGrouping(extraGrouping);
-                    ChartValueExtents extraValueExtents = ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeries, extraGrouping), extraPercentStacked);
+                    ChartValueExtents extraValueExtents = ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeriesVectors, extraGrouping), extraPercentStacked);
                     ChartAxisUnits extraAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(extraValueSceneAxis, extraValueAxis), extraPercentStacked);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme);
@@ -841,7 +841,7 @@ internal sealed partial class PptxRenderer
                     PptxSceneChartGrouping lineGrouping = ReadSceneOrXmlChartGrouping(linePlot, comboLineChart, PptxSceneChartGrouping.Standard);
                     bool lineStacked = IsStackedChartGrouping(lineGrouping);
                     bool linePercentStacked = IsPercentStackedChartGrouping(lineGrouping);
-                    ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeries, lineStacked, linePercentStacked), linePercentStacked, useNearMaximumHeadroom: !linePercentStacked);
+                    ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, lineStacked, linePercentStacked), linePercentStacked, useNearMaximumHeadroom: !linePercentStacked);
                     ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueSceneAxis, lineValueAxisForScale), linePercentStacked);
                     bool lineValueAxisReversed = ReadSceneOrXmlValueAxisReversed(lineValueSceneAxis, lineValueAxisForScale);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme);
@@ -928,7 +928,7 @@ internal sealed partial class PptxRenderer
                         }
                         else
                         {
-                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeries, grouping)));
+                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeriesVectors, grouping)));
                         }
                     }
                 }
@@ -973,7 +973,7 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxisForScale = valueAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, linePlot, PptxSceneChartAxisKind.Value);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxisForScale, theme);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeries, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxisForScale), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxisForScale);
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
@@ -990,7 +990,7 @@ internal sealed partial class PptxRenderer
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis, valueSceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: percentStacked ? "0%" : null));
-                    fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeries, stacked, percentStacked)));
+                    fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeriesVectors, stacked, percentStacked)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, reverseOrder: stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                     fonts.AddRange(RenderLineDataLabels(
@@ -1027,7 +1027,7 @@ internal sealed partial class PptxRenderer
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, areaChart);
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, areaPlot, PptxSceneChartAxisKind.Value);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, areaPlot, PptxSceneChartAxisKind.Category);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetAreaChartValueExtents(areaSeries, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: stacked && !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetAreaChartValueExtents(areaSeriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: stacked && !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
@@ -6513,7 +6513,7 @@ internal sealed partial class PptxRenderer
         ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
             valueSceneAxis,
             valueAxis,
-            GetBarChartValueExtents(series, grouping),
+            GetBarChartValueExtents(seriesVectors, grouping),
             IsPercentStackedChartGrouping(grouping));
         double? crossing = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
         return crossing > valueExtents.Min + PptxChartMetricRules.AxisValueEpsilon &&
@@ -6722,7 +6722,7 @@ internal sealed partial class PptxRenderer
         ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(
             valueSceneAxis,
             valueAxis,
-            GetBarChartValueExtents(series, grouping),
+            GetBarChartValueExtents(seriesVectors, grouping),
             percentStacked);
         ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
         string? defaultNumberFormat = percentStacked ? "0%" : null;
@@ -6779,6 +6779,11 @@ internal sealed partial class PptxRenderer
             ? GetStackedValueExtents(series, categoryCount, percentStacked)
             : GetClusteredValueExtents(series);
         return new ChartValueExtents(min, max);
+    }
+
+    private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)
+    {
+        return GetBarChartValueExtents(CompactChartSeries(series), grouping);
     }
 
     private static bool IsStackedChartGrouping(PptxSceneChartGrouping grouping)
@@ -7478,7 +7483,7 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, plotElement) ??
                     chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
                 PptxSceneChartAxis? valueSceneAxis = ReadSceneChartAxis(sceneChart, plot, PptxSceneChartAxisKind.Value);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(series, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetLineChartValueExtents(seriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
                 string[] tickLabels = tickValues
@@ -7553,6 +7558,11 @@ internal sealed partial class PptxRenderer
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series)
     {
         return GetLineChartValueExtents(series, stacked: false, percentStacked: false);
+    }
+
+    private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
+    {
+        return GetLineChartValueExtents(CompactChartSeries(series), stacked, percentStacked);
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked)
@@ -8164,6 +8174,11 @@ internal sealed partial class PptxRenderer
             ? GetStackedValueExtents(series, pointCount, percentStacked)
             : GetClusteredValueExtents(series);
         return new ChartValueExtents(minValue, maxValue);
+    }
+
+    private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
+    {
+        return GetAreaChartValueExtents(CompactChartSeries(series), stacked, percentStacked);
     }
 
     private static void AppendRadarPolygonEdgeSegments(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, int pointCount, double radius)
