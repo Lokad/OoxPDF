@@ -320,6 +320,14 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<IReadOnlyList<double>> ReadSceneOrXmlChartSeries(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
+        return ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook)
+            .Select(vector => vector.CompactValues())
+            .Where(values => values.Count != 0)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
+    {
         if (plot is not null)
         {
             return plot.Series
@@ -330,65 +338,60 @@ internal sealed partial class PptxRenderer
                     series.ValueFormatCode,
                     series.DataSources.Values,
                     workbook))
-                .Select(vector => vector.CompactValues())
-                .Where(values => values.Count != 0)
                 .ToArray();
         }
 
-        return ReadChartSeries(chartElement);
+        return ReadChartSeriesVectors(chartElement);
     }
 
     private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
     {
+        return ReadSceneOrXmlScatterSeriesVectors(plot, chartElement, readBubbleSize, workbook)
+            .Select(ToCompactScatterSeries)
+            .Where(series => series.Points.Count != 0)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneOrXmlScatterSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
+    {
         if (plot is null)
         {
-            return ReadScatterSeries(chartElement, readBubbleSize);
+            return ReadScatterSeriesVectors(chartElement, readBubbleSize);
         }
 
-        var series = new List<ScatterSeries>();
-        foreach (PptxSceneChartSeries item in plot.Series)
-        {
-            IReadOnlyList<double> xValues = BuildChartIndexedNumberVector(
-                item.XValues,
-                item.XValuePoints,
-                item.XValuePointCount,
-                item.XValueFormatCode,
-                item.DataSources.XValues,
-                workbook).CompactValues();
-            IReadOnlyList<double> yValues = BuildChartIndexedNumberVector(
-                item.YValues,
-                item.YValuePoints,
-                item.YValuePointCount,
-                item.YValueFormatCode,
-                item.DataSources.YValues,
-                workbook).CompactValues();
-            IReadOnlyList<double> bubbleSizes = BuildChartIndexedNumberVector(
-                item.BubbleSizes,
-                item.BubbleSizePoints,
-                item.BubbleSizePointCount,
-                item.BubbleSizeFormatCode,
-                item.DataSources.BubbleSizes,
-                workbook).CompactValues();
-            int count = Math.Min(xValues.Count, yValues.Count);
-            if (count == 0)
-            {
-                continue;
-            }
-
-            var points = new ScatterPoint[count];
-            for (int i = 0; i < count; i++)
-            {
-                double size = readBubbleSize && i < bubbleSizes.Count ? bubbleSizes[i] : 1d;
-                points[i] = new ScatterPoint(xValues[i], yValues[i], size);
-            }
-
-            series.Add(new ScatterSeries(points));
-        }
-
-        return series;
+        return plot.Series
+            .Select(item => new ChartIndexedScatterSeries(
+                BuildChartIndexedNumberVector(
+                    item.XValues,
+                    item.XValuePoints,
+                    item.XValuePointCount,
+                    item.XValueFormatCode,
+                    item.DataSources.XValues,
+                    workbook),
+                BuildChartIndexedNumberVector(
+                    item.YValues,
+                    item.YValuePoints,
+                    item.YValuePointCount,
+                    item.YValueFormatCode,
+                    item.DataSources.YValues,
+                    workbook),
+                BuildChartIndexedNumberVector(
+                    item.BubbleSizes,
+                    item.BubbleSizePoints,
+                    item.BubbleSizePointCount,
+                    item.BubbleSizeFormatCode,
+                    item.DataSources.BubbleSizes,
+                    workbook),
+                readBubbleSize))
+            .ToArray();
     }
 
     private static IReadOnlyList<string> ReadSceneOrXmlCategoryLabels(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
+    {
+        return ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook).CompactValues();
+    }
+
+    private static ChartIndexedTextVector ReadSceneOrXmlCategoryLabelVector(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
         if (plot is not null)
         {
@@ -400,11 +403,31 @@ internal sealed partial class PptxRenderer
                     series.CategoryLevels,
                     series.DataSources.Categories,
                     workbook))
-                .Select(vector => vector.CompactValues())
-                .FirstOrDefault(values => values.Count != 0) ?? [];
+                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null);
         }
 
-        return ReadChartCategoryLabels(chartElement);
+        return ReadChartCategoryLabelVector(chartElement);
+    }
+
+    private static ScatterSeries ToCompactScatterSeries(ChartIndexedScatterSeries series)
+    {
+        IReadOnlyList<double> xValues = series.XValues.CompactValues();
+        IReadOnlyList<double> yValues = series.YValues.CompactValues();
+        IReadOnlyList<double> bubbleSizes = series.BubbleSizes.CompactValues();
+        int count = Math.Min(xValues.Count, yValues.Count);
+        if (count == 0)
+        {
+            return new ScatterSeries([]);
+        }
+
+        var points = new ScatterPoint[count];
+        for (int i = 0; i < count; i++)
+        {
+            double size = series.ReadBubbleSize && i < bubbleSizes.Count ? bubbleSizes[i] : 1d;
+            points[i] = new ScatterPoint(xValues[i], yValues[i], size);
+        }
+
+        return new ScatterSeries(points);
     }
 
     private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
@@ -1181,24 +1204,79 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XElement chartElement)
     {
-        var series = new List<IReadOnlyList<double>>();
+        return ReadChartSeriesVectors(chartElement)
+            .Select(vector => vector.CompactValues())
+            .Where(values => values.Count != 0)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadChartSeriesVectors(XElement chartElement)
+    {
+        var series = new List<ChartIndexedNumberVector>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            double[] values = element
-                .Elements(ChartNamespace + "val")
-                .Descendants(ChartNamespace + "pt")
-                .Select(point => (string?)point.Element(ChartNamespace + "v"))
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? parsed : double.NaN)
-                .Where(value => !double.IsNaN(value))
-                .ToArray();
-            if (values.Length > 0)
+            ChartIndexedNumberVector values = ReadChartNumberVector(element.Element(ChartNamespace + "val"));
+            if (values.Points.Count > 0 || values.PointCount is not null)
             {
                 series.Add(values);
             }
         }
 
         return series;
+    }
+
+    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container)
+    {
+        if (container is null)
+        {
+            return default;
+        }
+
+        XElement? cache = container
+            .Descendants(ChartNamespace + "numCache")
+            .Concat(container.Descendants(ChartNamespace + "numLit"))
+            .FirstOrDefault();
+        if (cache is null)
+        {
+            return default;
+        }
+
+        ChartIndexedNumberPoint[] points = cache
+            .Elements(ChartNamespace + "pt")
+            .Select((point, fallbackIndex) =>
+            {
+                int index = ReadChartCachePointIndex(point) ?? fallbackIndex;
+                XElement? valueElement = point.Element(ChartNamespace + "v");
+                string text = valueElement?.Value ?? string.Empty;
+                bool hasValue = valueElement is not null;
+                double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+                    ? parsed
+                    : null;
+                return new ChartIndexedNumberPoint(index, value, text, hasValue, default);
+            })
+            .ToArray();
+        return new ChartIndexedNumberVector(
+            points,
+            ReadChartPointCount(cache) ?? InferPointCount(points),
+            (string?)container.Descendants(ChartNamespace + "f").FirstOrDefault(),
+            (string?)cache.Element(ChartNamespace + "formatCode"),
+            default);
+    }
+
+    private static int? ReadChartPointCount(XElement cache)
+    {
+        string? value = (string?)cache.Element(ChartNamespace + "ptCount")?.Attribute("val");
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
+            ? parsed
+            : null;
+    }
+
+    private static int? ReadChartCachePointIndex(XElement point)
+    {
+        string? value = (string?)point.Attribute("idx");
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
+            ? parsed
+            : null;
     }
 
     private static void HydrateChartReferenceCaches(ChartWorkbookData workbook, XDocument chartXml)
@@ -3898,20 +3976,45 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<string> ReadChartCategoryLabels(XElement chartElement)
     {
+        return ReadChartCategoryLabelVector(chartElement).CompactValues();
+    }
+
+    private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement)
+    {
         XElement? categories = chartElement
             .Element(ChartNamespace + "ser")
             ?.Element(ChartNamespace + "cat");
         if (categories is null)
         {
-            return [];
+            return default;
         }
 
-        return categories
-            .Descendants(ChartNamespace + "pt")
-            .Select(point => ((string?)point.Element(ChartNamespace + "v"))?.Trim())
-            .Where(value => !string.IsNullOrEmpty(value))
-            .Cast<string>()
+        XElement? cache = categories
+            .Descendants(ChartNamespace + "strCache")
+            .Concat(categories.Descendants(ChartNamespace + "strLit"))
+            .Concat(categories.Descendants(ChartNamespace + "numCache"))
+            .Concat(categories.Descendants(ChartNamespace + "numLit"))
+            .FirstOrDefault();
+        if (cache is null)
+        {
+            return default;
+        }
+
+        ChartIndexedTextPoint[] points = cache
+            .Elements(ChartNamespace + "pt")
+            .Select((point, fallbackIndex) =>
+            {
+                XElement? valueElement = point.Element(ChartNamespace + "v");
+                string text = valueElement?.Value.Trim() ?? string.Empty;
+                return new ChartIndexedTextPoint(ReadChartCachePointIndex(point) ?? fallbackIndex, text, !string.IsNullOrEmpty(text), default);
+            })
             .ToArray();
+        return new ChartIndexedTextVector(
+            points,
+            ReadChartPointCount(cache) ?? InferPointCount(points),
+            [],
+            (string?)categories.Descendants(ChartNamespace + "f").FirstOrDefault(),
+            default);
     }
 
     private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, int paletteOffset = 0, ChartWorkbookData? workbook = null)
@@ -6114,41 +6217,31 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
     {
-        var series = new List<ScatterSeries>();
+        return ReadScatterSeriesVectors(chartElement, readBubbleSize)
+            .Select(ToCompactScatterSeries)
+            .Where(series => series.Points.Count != 0)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize)
+    {
+        var series = new List<ChartIndexedScatterSeries>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            double[] xValues = ReadCachedNumbers(element, "xVal");
-            double[] yValues = ReadCachedNumbers(element, "yVal");
-            double[] bubbleSizes = readBubbleSize ? ReadCachedNumbers(element, "bubbleSize") : [];
-            int count = Math.Min(xValues.Length, yValues.Length);
-            if (count == 0)
+            ChartIndexedNumberVector xValues = ReadChartNumberVector(element.Element(ChartNamespace + "xVal"));
+            ChartIndexedNumberVector yValues = ReadChartNumberVector(element.Element(ChartNamespace + "yVal"));
+            ChartIndexedNumberVector bubbleSizes = readBubbleSize
+                ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"))
+                : default;
+            if (xValues.Points.Count == 0 && yValues.Points.Count == 0)
             {
                 continue;
             }
 
-            var points = new ScatterPoint[count];
-            for (int i = 0; i < count; i++)
-            {
-                double size = i < bubbleSizes.Length ? bubbleSizes[i] : 1d;
-                points[i] = new ScatterPoint(xValues[i], yValues[i], size);
-            }
-
-            series.Add(new ScatterSeries(points));
+            series.Add(new ChartIndexedScatterSeries(xValues, yValues, bubbleSizes, readBubbleSize));
         }
 
         return series;
-    }
-
-    private static double[] ReadCachedNumbers(XElement element, string containerName)
-    {
-        return element
-            .Elements(ChartNamespace + containerName)
-            .Descendants(ChartNamespace + "pt")
-            .Select(point => (string?)point.Element(ChartNamespace + "v"))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) ? parsed : double.NaN)
-            .Where(value => !double.IsNaN(value))
-            .ToArray();
     }
 
     private static RgbColor ChartPalette(IReadOnlyList<RgbColor>? chartPalette, PptxTheme? theme, int index)
@@ -8347,6 +8440,12 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ScatterPoint(double X, double Y, double Size);
 
+    private readonly record struct ChartIndexedScatterSeries(
+        ChartIndexedNumberVector XValues,
+        ChartIndexedNumberVector YValues,
+        ChartIndexedNumberVector BubbleSizes,
+        bool ReadBubbleSize);
+
     private readonly record struct ChartIndexedNumberVector(
         IReadOnlyList<ChartIndexedNumberPoint> Points,
         int? PointCount,
@@ -8356,7 +8455,7 @@ internal sealed partial class PptxRenderer
     {
         public IReadOnlyList<double> CompactValues()
         {
-            return Points
+            return (Points ?? [])
                 .Where(point => point.Value is not null)
                 .OrderBy(point => point.Index)
                 .Select(point => point.Value!.Value)
@@ -8380,7 +8479,7 @@ internal sealed partial class PptxRenderer
     {
         public IReadOnlyList<string> CompactValues()
         {
-            return Points
+            return (Points ?? [])
                 .Where(point => point.HasText)
                 .OrderBy(point => point.Index)
                 .Select(point => point.Text)

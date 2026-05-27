@@ -1375,6 +1375,17 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-025628` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Make the no-scene chart XML fallback produce indexed vectors before compacting:
+    raw chart caches now flow through the same `ChartIndexedNumberVector`, `ChartIndexedTextVector`, and
+    `ChartIndexedScatterSeries` adapters as typed scene/workbook-backed charts, preserving `idx`, `ptCount`,
+    formula, format code, blank or non-numeric value state, and category cache presence until the current
+    renderer boundary compacts values for unchanged geometry. This removes another immediate flattening point
+    without yet changing axis scaling, stacked totals, category-label placement, or pie/doughnut slice drawing.
+    Validation: focused non-slow `pptx-charts` passed (`42 passed, 0 failed, 0 skipped`); full non-slow
+    console runner passed (`261 passed, 0 failed, 7 skipped`); private run
+    `artifacts/private-visual/lokad-value-based/20260527-030219` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
+    `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
