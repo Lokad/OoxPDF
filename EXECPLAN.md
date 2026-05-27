@@ -526,6 +526,11 @@ High-priority actions:
   broader drawing-wrap/floating layout and actual multi-section rendering still need model and renderer work
   before behavior is broadened, even though several narrow paragraph, table, numbering, section/page, and
   floating-anchor source tokens now have model homes.
+- [x] 2026-05-27: Keep PPTX shape stroke enum ownership in the scene layer. `RenderShape` now treats a supplied
+  `LineStyle` override as authoritative even when it represents no stroke, instead of falling back to re-reading
+  DrawingML line XML for dash/cap/join state. This preserves the long-term split where `PptxScene` owns OOXML
+  token interpretation and the renderer consumes the structural scene model. Validation: focused non-slow
+  `pptx-shapes` passed (`16 passed, 0 failed, 0 skipped`).
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

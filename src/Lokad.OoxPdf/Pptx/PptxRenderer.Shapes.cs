@@ -158,12 +158,12 @@ internal sealed partial class PptxRenderer
         double lineWidth;
         double strokeAlpha;
         bool hasStroke;
-        if (lineOverride is { HasLine: true } line)
+        if (lineOverride is { } line)
         {
             stroke = line.Color;
             lineWidth = line.Width;
             strokeAlpha = line.Alpha;
-            hasStroke = true;
+            hasStroke = line.HasLine;
         }
         else
         {
@@ -173,7 +173,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<double> dashPattern;
         int? lineCap;
         int? lineJoin;
-        if (lineOverride is { HasLine: true } resolvedLine)
+        if (lineOverride is { } resolvedLine)
         {
             hasDash = resolvedLine.HasDash;
             dashPattern = resolvedLine.DashPattern;
