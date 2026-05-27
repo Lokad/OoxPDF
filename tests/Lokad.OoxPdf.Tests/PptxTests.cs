@@ -10130,6 +10130,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 21\.6 Tf"), "Expected absent auto chart title to use Office's 120% title text scale over chart txPr.");
+        TestAssert.True(pdf.Split("/FontFile2", StringSplitOptions.None).Length - 1 >= 2, "Expected absent auto chart title to request a distinct embedded face for Office's bold title default.");
         TestAssert.True(Regex.IsMatch(pdf, @"/C[AV][A-Z][0-9]+ 18 Tf"), "Expected chart axis text to keep the unscaled chart txPr size.");
     }
 
