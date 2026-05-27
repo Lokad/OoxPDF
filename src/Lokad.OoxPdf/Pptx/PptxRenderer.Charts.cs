@@ -974,6 +974,8 @@ internal sealed partial class PptxRenderer
                         lineSeriesVectors,
                         lineValueExtents,
                         lineValueAxisReversed,
+                        lineSeriesStrokes,
+                        lineMarkerStyles,
                         ReadSceneOrXmlDataLabelOptions(linePlot, comboLineChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(linePlot, comboLineChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook),
@@ -1090,6 +1092,8 @@ internal sealed partial class PptxRenderer
                     lineSeriesVectors,
                     valueExtents,
                     valueAxisReversed,
+                    seriesStrokes,
+                    markerStyles,
                     ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook),
@@ -4883,12 +4887,14 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberVector> series,
         ChartValueExtents extents,
         bool valueAxisReversed,
+        IReadOnlyList<ChartSeriesStroke?> seriesStrokes,
+        IReadOnlyList<ChartMarkerStyle> markerStyles,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
-        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
+        if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
             return [];
         }
@@ -4917,31 +4923,61 @@ internal sealed partial class PptxRenderer
                 double pointX = plotBox.X + (pointCount == 1 ? plotBox.Width / 2d : plotBox.Width * i / (pointCount - 1));
                 double pointY = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), i);
+                if (!effectiveOptions.HasVisibleContent)
+                {
+                    continue;
+                }
+
                 ChartTextStyle style = ResolveChartDataLabelTextStyle(theme, effectiveOptions);
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 string label = FormatCartesianDataLabel(value, seriesIndex, i, effectiveOptions, categoryLabels, seriesNames);
-                if (!string.IsNullOrEmpty(label))
+                if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
+                    double legendKeyWidth = effectiveOptions.ShowLegendKey
+                        ? Math.Max(ChartMarker(seriesIndex, markerStyles).Size * 2d, fontSize * 1.05d) + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor
+                        : 0d;
+                    double effectiveLabelWidth = effectiveOptions.ShowLegendKey
+                        ? Math.Max(labelWidth, EstimateChartTextWidth(label, fontSize) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
+                        : labelWidth;
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
                         effectiveOptions.PositionKind,
                         pointX,
                         pointY,
-                        labelWidth,
+                        effectiveLabelWidth,
                         labelHeight);
-                    ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                    ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, effectiveLabelWidth, labelHeight);
                     RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
-                    AddChartLabelRuns(
-                        runs,
-                        label,
-                        effectiveOptions,
-                        labelBox.X,
-                        labelBox.Y,
-                        labelBox.Width,
-                        labelBox.Height,
-                        plotBox,
-                        style,
-                        alignment);
+                    double textX = labelBox.X;
+                    double textWidth = labelBox.Width;
+                    if (effectiveOptions.ShowLegendKey)
+                    {
+                        ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+                        ChartMarkerStyle marker = ChartMarker(seriesIndex, markerStyles);
+                        double segmentLength = Math.Max(marker.Size * 2d, fontSize * 1.05d);
+                        double segmentY = labelBox.Y + labelBox.Height / 2d;
+                        SetChartStroke(graphics, stroke);
+                        graphics.StrokeLine(labelBox.X, segmentY, labelBox.X + segmentLength, segmentY);
+                        DrawChartMarker(graphics, labelBox.X + segmentLength / 2d, segmentY, marker, stroke.Color, stroke.Color);
+                        textX += segmentLength + fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
+                        textWidth = Math.Max(1d, textWidth - segmentLength - fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor);
+                        alignment = TextAlignment.Left;
+                    }
+
+                    if (!string.IsNullOrEmpty(label))
+                    {
+                        AddChartLabelRuns(
+                            runs,
+                            label,
+                            effectiveOptions,
+                            textX,
+                            labelBox.Y,
+                            textWidth,
+                            labelBox.Height,
+                            plotBox,
+                            style,
+                            alignment);
+                    }
                 }
             }
         }

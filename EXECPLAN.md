@@ -10226,6 +10226,24 @@ an explicit semantic gap rather than a guessed rectangle fill.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`49 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-27: Closed line-chart `showLegendKey` data labels with Office-PDF-backed structural
+evidence instead of guessing a fill rectangle. An ignored Office-authored probe under
+`artifacts/probes/line-legend-key-data-label/line-legend-key-data-label-office.pptx` shows PowerPoint emits
+a short series-colored stroke segment plus the series marker before the data-label text. `RenderLineDataLabels`
+now treats legend keys as visible content, consumes the same structured series stroke and marker-style records
+used by line geometry, emits the composite key, and only emits text runs when the formatted label string is
+non-empty. The new public synthetic line case locks legend-key-only emission with a unique data-label shape
+fill so the parsed option cannot disappear behind `showVal=false`.
+
+This is still not Office-perfect line data-label layout. The key dimensions and automatic label box reserve
+remain font/marker-size approximations until a public Office-PDF fixture derives the exact segment length,
+marker centering, and gap metrics across fonts and marker sizes. The narrower long-term closure is that line
+labels now share the same typed stroke/marker structure as the rendered series and no longer need a chart XML
+reread or hard-coded rectangle proxy for legend-key content.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`50 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-27: Routed scatter chart `showVal` data labels through the same structured
 scatter/bubble label renderer. The scatter branch now reads plot and series data-label options from the scene
 or chart XML, preserves series-name provenance through `ChartSeriesNameRecord`, and formats the active Y
