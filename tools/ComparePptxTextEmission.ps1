@@ -56,6 +56,15 @@ function OptionalValue($object, [string] $propertyName) {
     return $property.Value
 }
 
+function OptionalRoundedDouble($object, [string] $propertyName) {
+    $value = OptionalValue $object $propertyName
+    if ($null -eq $value) {
+        return $null
+    }
+
+    return [Math]::Round([double]$value, 6)
+}
+
 function RefX($op) {
     if ($UseEffectiveMatrix -and (HasValue $op.EffectiveX)) {
         return [double]$op.EffectiveX
@@ -164,8 +173,17 @@ foreach ($pair in $pairs) {
             CandLineIndex = if ($null -eq $candidate) { $null } else { $candidate.LineIndex }
             CandSpanIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SpanIndex" }
             CandLineSpanCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "LineSpanCount" }
+            CandFrameShapeHeight = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameShapeHeight" }
+            CandFrameInsetTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameInsetTop" }
+            CandFrameInsetBottom = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameInsetBottom" }
             CandFrameTextWidth = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.FrameTextWidth, 6) }
+            CandFrameTextHeight = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FrameTextHeight" }
             CandFrameColumnCount = if ($null -eq $candidate) { $null } else { $candidate.FrameColumnCount }
+            CandLineTopFromShapeTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineTopFromShapeTop" }
+            CandLineTopFromTextTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineTopFromTextTop" }
+            CandBaselineFromShapeTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "BaselineFromShapeTop" }
+            CandLineBottomFromShapeBottom = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineBottomFromShapeBottom" }
+            CandLineAdvance = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineAdvance" }
             RefText = if ($IncludeText -and $null -ne $reference) { RefText $reference } else { $null }
             CandText = if ($IncludeText -and $null -ne $candidate) { CandText $candidate } else { $null }
         })
@@ -207,8 +225,17 @@ foreach ($pair in $pairs) {
         CandLineIndex = $candidate.LineIndex
         CandSpanIndex = OptionalValue $candidate "SpanIndex"
         CandLineSpanCount = OptionalValue $candidate "LineSpanCount"
+        CandFrameShapeHeight = OptionalRoundedDouble $candidate "FrameShapeHeight"
+        CandFrameInsetTop = OptionalRoundedDouble $candidate "FrameInsetTop"
+        CandFrameInsetBottom = OptionalRoundedDouble $candidate "FrameInsetBottom"
         CandFrameTextWidth = [Math]::Round([double]$candidate.FrameTextWidth, 6)
+        CandFrameTextHeight = OptionalRoundedDouble $candidate "FrameTextHeight"
         CandFrameColumnCount = $candidate.FrameColumnCount
+        CandLineTopFromShapeTop = OptionalRoundedDouble $candidate "LineTopFromShapeTop"
+        CandLineTopFromTextTop = OptionalRoundedDouble $candidate "LineTopFromTextTop"
+        CandBaselineFromShapeTop = OptionalRoundedDouble $candidate "BaselineFromShapeTop"
+        CandLineBottomFromShapeBottom = OptionalRoundedDouble $candidate "LineBottomFromShapeBottom"
+        CandLineAdvance = OptionalRoundedDouble $candidate "LineAdvance"
         RefText = if ($IncludeText) { RefText $reference } else { $null }
         CandText = if ($IncludeText) { CandText $candidate } else { $null }
     })

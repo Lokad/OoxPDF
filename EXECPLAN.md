@@ -901,6 +901,15 @@ High-priority actions:
   and wrapping are not the discriminator: a one-character scan still maps `21`/`24`/`36` to `+0.024 pt` only at
   selected frame heights (`15` remains exact), while adjacent heights with the same size remain exact. This points to
   an Office export quantization interaction involving frame geometry/baseline placement, not a font-size table.
+- [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
+  instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
+  and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
+  `LineBottomFromShapeBottom`), and `tools/ComparePptxTextEmission.ps1` carries those fields into comparison JSON.
+  Refreshed ignored public-safe probes show the secondary branch is still not explained by a single first-line
+  geometry condition: wide/no-autofit single-line cases have `LineTopFromShapeTop = 3.6`, while wrapped 13 pt rows
+  still show `12.984` on deeper line indexes. The current 600-DPI emission grid remains the renderer rule until a
+  structural line/frame condition is proven. Validation: `PptxInspect` builds; refreshed ignored comparisons for
+  `font-size-quantization-wrap13b`, `height-scan`, `wide`, and `dense-defaultinset`.
 - [x] Expose source text-frame construction through glyph-run inspection:
   glyph-run snapshots and the internal `PptxPdfTextEmissionContext` now carry source shape bounds, body insets,
   wrap mode/value, and autofit mode in addition to the already-resolved text rectangle, line identity, line advance,
