@@ -114,7 +114,7 @@ internal sealed class DocxRenderer
             {
                 string text = paragraph.ListLabel is null
                     ? string.Concat(paragraph.Runs.Select(r => r.Text))
-                    : paragraph.ListLabel + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
+                    : paragraph.ListLabel.Text + " " + string.Concat(paragraph.Runs.Select(r => r.Text));
                 DocxTextRun firstRun = paragraph.Runs[0];
                 RgbColor color = ReadColor(firstRun.ColorHex);
                 foreach (string line in WrapWords(text, width, paragraphFontSize, embedded))

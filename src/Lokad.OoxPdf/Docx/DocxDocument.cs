@@ -36,7 +36,14 @@ internal sealed record DocxParagraph(
     double SpacingAfterPoints,
     double LineSpacingFactor,
     double? LineSpacingPoints,
-    string? ListLabel);
+    DocxListLabel? ListLabel);
+
+internal sealed record DocxListLabel(
+    string Text,
+    string FormatValue,
+    string LevelTextValue,
+    string NumberId,
+    int Level);
 
 internal sealed record DocxTextRun(
     string Text,

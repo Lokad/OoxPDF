@@ -568,7 +568,7 @@ internal sealed class DocxReader
         return images;
     }
 
-    private static string? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
+    private static DocxListLabel? CreateListLabel(XElement? paragraphProperties, DocxNumberingSet numbering, Dictionary<(string NumId, int Level), int> counters)
     {
         XElement? numberingProperties = paragraphProperties?.Element(WordprocessingNamespace + "numPr");
         string? numId = (string?)numberingProperties?
@@ -586,13 +586,14 @@ internal sealed class DocxReader
 
         if (numberingLevel.Format.Equals("bullet", StringComparison.OrdinalIgnoreCase))
         {
-            return "\u2022";
+            return new DocxListLabel("\u2022", numberingLevel.Format, numberingLevel.Text, numId, level);
         }
 
         var key = (numId, level);
         counters[key] = counters.TryGetValue(key, out int current) ? current + 1 : numberingLevel.Start;
         string numberText = counters[key].ToString(CultureInfo.InvariantCulture);
-        return numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
+        string labelText = numberingLevel.Text.Replace("%" + (level + 1).ToString(CultureInfo.InvariantCulture), numberText, StringComparison.Ordinal);
+        return new DocxListLabel(labelText, numberingLevel.Format, numberingLevel.Text, numId, level);
     }
 
     private static DocxStyleSet LoadStyles(OoxPackage package, string documentPartName)

@@ -407,7 +407,7 @@ High-priority actions:
   writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
   unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
   crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
-  paragraph alignment, breaks, table layout, numbering formats, underline/border/shading, drawing wrap, and
+  paragraph alignment, breaks, table layout, underline/border/shading, drawing wrap, and
   section/page settings still need raw-token preservation before renderer behavior is broadened.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
@@ -467,6 +467,14 @@ High-priority actions:
   re-reading DrawingML or inferring intent from vertical anchor placement. Validation: focused non-slow
   `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow console runner passed
   (`279 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX numbering format source tokens on paragraph list labels:
+  `DocxParagraph.ListLabel` is now a structured `DocxListLabel` carrying the emitted label text plus raw
+  `w:numFmt @w:val`, raw `w:lvlText @w:val`, numbering ID, and level. The reader fixture locks a currently
+  unrendered known format (`lowerRoman`), an unknown future format token, and a bullet level without changing
+  current decimal label emission for non-bullet numbering. Future Word-aligned numbering work can now branch
+  from paragraph model metadata instead of reopening `numbering.xml` or inferring format from label text.
+  Validation: focused non-slow `docx-numbering` passed (`3 passed, 0 failed, 0 skipped`); full non-slow
+  console runner passed (`280 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering
