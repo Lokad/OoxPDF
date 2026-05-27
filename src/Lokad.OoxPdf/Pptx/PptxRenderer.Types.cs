@@ -330,6 +330,8 @@ internal sealed partial class PptxRenderer
         string? OrientationValue,
         TextVerticalAnchor VerticalAnchor,
         string? VerticalAnchorValue,
+        bool? AnchorCenter,
+        string? AnchorCenterValue,
         PptxTextWrapMode WrapMode,
         string? WrapValue,
         PptxTextVerticalOverflow VerticalOverflow,

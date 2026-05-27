@@ -81,6 +81,8 @@ internal sealed record PptxTextFrameModelSnapshot(
     string? OrientationValue,
     string VerticalAnchor,
     string? VerticalAnchorValue,
+    bool? AnchorCenter,
+    string? AnchorCenterValue,
     string WrapMode,
     string? WrapValue,
     string VerticalOverflow,

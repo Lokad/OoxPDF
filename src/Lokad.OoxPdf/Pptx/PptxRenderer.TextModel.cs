@@ -33,6 +33,8 @@ internal sealed partial class PptxRenderer
             frame.BodyProperties.OrientationValue,
             frame.BodyProperties.VerticalAnchor.ToString(),
             frame.BodyProperties.VerticalAnchorValue,
+            frame.BodyProperties.AnchorCenter,
+            frame.BodyProperties.AnchorCenterValue,
             frame.BodyProperties.WrapMode.ToString(),
             frame.BodyProperties.WrapValue,
             frame.BodyProperties.VerticalOverflow.ToString(),
@@ -426,14 +428,18 @@ internal sealed partial class PptxRenderer
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
         string? orientation = ReadTextOrientationValue(textBody, inheritedTextBody);
         string? verticalAnchor = ReadTextBodyAttribute(textBody, "anchor");
+        string? anchorCenter = ReadTextBodyAttribute(textBody, "anchorCtr");
         string? wrap = ReadTextBodyAttribute(textBody, "wrap");
         string? verticalOverflow = ReadTextBodyAttribute(textBody, "vertOverflow");
+        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxTextBodyProperties(
             ReadTextInsets(textBody),
             ParseTextOrientation(orientation),
             orientation,
             ParseTextVerticalAnchor(verticalAnchor),
             verticalAnchor,
+            OoxBoolean.ParseOptionalAttribute(bodyPr, "anchorCtr"),
+            anchorCenter,
             ParseTextWrapMode(wrap),
             wrap,
             ParseTextVerticalOverflow(verticalOverflow),

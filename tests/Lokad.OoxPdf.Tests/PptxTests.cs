@@ -2445,7 +2445,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
-                      <a:bodyPr vert="vert270" anchor="b" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400">
+                      <a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400">
                         <a:normAutofit fontScale="80000" lnSpcReduction="12000"/>
                       </a:bodyPr>
                       <a:lstStyle/>
@@ -2465,6 +2465,8 @@ internal static class PptxTests
         TestAssert.Equal("vert270", frame.OrientationValue ?? string.Empty);
         TestAssert.Equal("Bottom", frame.VerticalAnchor);
         TestAssert.Equal("b", frame.VerticalAnchorValue ?? string.Empty);
+        TestAssert.Equal(true, frame.AnchorCenter);
+        TestAssert.Equal("1", frame.AnchorCenterValue ?? string.Empty);
         TestAssert.Equal("None", frame.WrapMode);
         TestAssert.Equal("none", frame.WrapValue ?? string.Empty);
         TestAssert.Equal("Ellipsis", frame.VerticalOverflow);
@@ -2488,7 +2490,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
-                      <a:bodyPr vert="futureVert" anchor="futureAnchor" wrap="futureWrap" vertOverflow="futureOverflow"/>
+                      <a:bodyPr vert="futureVert" anchor="futureAnchor" anchorCtr="futureAnchorCenter" wrap="futureWrap" vertOverflow="futureOverflow"/>
                       <a:lstStyle/>
                       <a:p><a:r><a:rPr sz="1800"/><a:t>Unknown body properties</a:t></a:r></a:p>
                     </p:txBody>
@@ -2506,6 +2508,8 @@ internal static class PptxTests
         TestAssert.Equal("futureVert", frame.OrientationValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.VerticalAnchor);
         TestAssert.Equal("futureAnchor", frame.VerticalAnchorValue ?? string.Empty);
+        TestAssert.Equal(false, frame.AnchorCenter);
+        TestAssert.Equal("futureAnchorCenter", frame.AnchorCenterValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.WrapMode);
         TestAssert.Equal("futureWrap", frame.WrapValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.VerticalOverflow);

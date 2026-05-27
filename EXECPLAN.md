@@ -403,7 +403,7 @@ High-priority actions:
   and line-end markers, chart plot/grouping/style/marker families, axis tick-label/tick-mark positions, table
   text anchors, and picture tile/recolor tokens. Remaining PPTX enum ladders should keep following that exact
   pattern: first preserve the raw source token in a scene/model snapshot, then add structural tests, then render
-  the Office semantics. The still-open PPTX families are `anchorCtr` and autofit semantics, full vertical
+  the Office semantics. The still-open PPTX families are autofit semantics, full vertical
   writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
   unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
   crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
@@ -458,6 +458,14 @@ High-priority actions:
   without changing current fill rendering. Future pattern/theme shading work can now start from structural
   cell records instead of a fill-only heuristic. Validation: focused non-slow `docx-tables` passed
   (`8 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`279 passed, 0 failed, 7 skipped`).
+- [x] Preserve PPTX `a:bodyPr @anchorCtr` source tokens in the text-frame model:
+  `PptxTextBodyProperties` and `PptxTextFrameModelSnapshot` now carry the optional normalized boolean
+  beside the original `anchorCtr` token, matching the raw-token pattern already used for `@vert`,
+  `@anchor`, `@wrap`, and `@vertOverflow`. Known `anchorCtr="1"` and unknown future tokens are covered
+  by typography model assertions, so future anchor-center rendering can consume model state instead of
+  re-reading DrawingML or inferring intent from vertical anchor placement. Validation: focused non-slow
+  `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow console runner passed
   (`279 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
