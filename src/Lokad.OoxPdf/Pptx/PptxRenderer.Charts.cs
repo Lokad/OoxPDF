@@ -391,90 +391,84 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartSeriesFill?> ReadSceneOrXmlSeriesFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        ChartSeriesFill?[]? fills = plot?
-            .Series
-            .Select(series => ToChartSeriesFill(series.Fill, series.PatternFill))
-            .ToArray();
-        return fills is { Length: > 0 } && fills.Any(fill => fill is not null)
-            ? fills
-            : ReadChartSeriesFills(chartElement, theme);
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => ToChartSeriesFill(series.Fill, series.PatternFill))
+                .ToArray();
+        }
+
+        return ReadChartSeriesFills(chartElement, theme);
     }
 
     private static IReadOnlyList<ChartSeriesStroke?> ReadSceneOrXmlSeriesStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        ChartSeriesStroke?[]? strokes = plot?
-            .Series
-            .Select(series => ToChartSeriesStroke(series.Line))
-            .ToArray();
-        return strokes is { Length: > 0 } && strokes.Any(stroke => stroke is not null)
-            ? strokes
-            : ReadChartSeriesStrokes(chartElement, theme);
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => ToChartSeriesStroke(series.Line))
+                .ToArray();
+        }
+
+        return ReadChartSeriesStrokes(chartElement, theme);
     }
 
     private static IReadOnlyList<ChartMarkerStyle> ReadSceneOrXmlMarkerStyles(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        ChartMarkerStyle[]? markers = plot?
-            .Series
-            .Select(series => new ChartMarkerStyle(
-                series.Marker.SymbolKind,
-                series.Marker.Symbol,
-                series.Marker.Size,
-                series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
-                ToChartSeriesStroke(series.Marker.Line)))
-            .ToArray();
-        return markers is { Length: > 0 }
-            ? markers
-            : ReadChartMarkerStyles(chartElement, theme, plot?.PlotKind ?? PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName));
+        if (plot is not null)
+        {
+            return plot.Series
+                .Select(series => new ChartMarkerStyle(
+                    series.Marker.SymbolKind,
+                    series.Marker.Symbol,
+                    series.Marker.Size,
+                    series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
+                    ToChartSeriesStroke(series.Marker.Line)))
+                .ToArray();
+        }
+
+        return ReadChartMarkerStyles(chartElement, theme, PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName));
     }
 
     private static IReadOnlyList<bool> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
     {
-        bool?[]? smooth = plot?.Series.Select(series => series.Smooth).ToArray();
-        return smooth is { Length: > 0 } && smooth.Any(value => value.HasValue)
-            ? smooth.Select(value => value ?? false).ToArray()
+        return plot is not null
+            ? plot.Series.Select(series => series.Smooth ?? false).ToArray()
             : ReadChartSeriesSmooth(chartElement);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        IReadOnlyDictionary<int, ChartSeriesFill>[]? fills = plot?
-            .Series
-            .Select(ReadSceneChartPointFills)
-            .ToArray();
-        return fills is { Length: > 0 } && fills.Any(fill => fill.Count != 0)
-            ? fills
+        return plot is not null
+            ? plot.Series.Select(ReadSceneChartPointFills).ToArray()
             : ReadChartSeriesPointFills(chartElement, theme);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> ReadSceneOrXmlSeriesPointStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        IReadOnlyDictionary<int, ChartSeriesStroke>[]? strokes = plot?
-            .Series
-            .Select(ReadSceneChartPointStrokes)
-            .ToArray();
-        return strokes is { Length: > 0 } && strokes.Any(stroke => stroke.Count != 0)
-            ? strokes
+        return plot is not null
+            ? plot.Series.Select(ReadSceneChartPointStrokes).ToArray()
             : ReadChartSeriesPointStrokes(chartElement, theme);
     }
 
     private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneOrXmlChartPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        IReadOnlyDictionary<int, ChartSeriesFill>? fills = plot?.Series.Count > 0
-            ? ReadSceneChartPointFills(plot.Series[0])
-            : null;
-        return fills is { Count: > 0 }
-            ? fills
-            : ReadChartPointFills(chartElement, theme);
+        if (plot is not null)
+        {
+            return plot.Series.Count > 0 ? ReadSceneChartPointFills(plot.Series[0]) : new Dictionary<int, ChartSeriesFill>();
+        }
+
+        return ReadChartPointFills(chartElement, theme);
     }
 
     private static IReadOnlyDictionary<int, ChartSeriesStroke> ReadSceneOrXmlChartPointStrokes(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
-        IReadOnlyDictionary<int, ChartSeriesStroke>? strokes = plot?.Series.Count > 0
-            ? ReadSceneChartPointStrokes(plot.Series[0])
-            : null;
-        return strokes is { Count: > 0 }
-            ? strokes
-            : ReadChartPointStrokes(chartElement, theme);
+        if (plot is not null)
+        {
+            return plot.Series.Count > 0 ? ReadSceneChartPointStrokes(plot.Series[0]) : new Dictionary<int, ChartSeriesStroke>();
+        }
+
+        return ReadChartPointStrokes(chartElement, theme);
     }
 
     private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement)

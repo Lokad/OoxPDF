@@ -1294,6 +1294,13 @@ High-priority actions:
   explicit deletion to hidden axes, preserving existing output while preventing the scene model from erasing
   OOXML schema intent before later Office-alignment work. Focused scene tests passed, the full runner passed
   204/204, and `dotnet pack` succeeded.
+- [x] 2026-05-27: Make chart series/point style helpers scene-authoritative when a typed plot exists.
+  `PptxRenderer.Charts` now uses `PptxSceneChartPlot.Series` directly for series fills, series strokes,
+  marker styles, smooth flags, and per-point fill/stroke dictionaries instead of falling back to raw chart
+  XML whenever the scene-owned collection happens to contain only defaults. Raw XML remains only for the
+  no-scene compatibility path. Point explosions and data value/category hydration intentionally remain on the
+  existing mixed path until the workbook/cache model owns point counts structurally; changing those together
+  would risk hiding a real data-source gap behind a style migration.
 - [x] 2026-05-25: Preserve chart title and legend boolean source presence.
   `PptxSceneChartTitle.IsAutoDeleted` now keeps missing `c:autoTitleDeleted` distinct from explicit false,
   and `PptxSceneChartLegend` now separates legend element presence from nullable `c:delete` metadata. The
