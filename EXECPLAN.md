@@ -11301,3 +11301,17 @@ line/scatter plot markers.
 
 Validation: `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run `20260527-201112`; the normal
 runner reported `16/16` key structures matched, including `8/8` filled markers and `8/8` stroked markers.
+
+Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-key work. The
+private run `20260527-201228` completed successfully with `84` reference pages and `84` candidate pages,
+zero dimension mismatches, one private-safe unsupported image-recolor diagnostic on a later slide, and no
+case-runner failure. The originally reported slide 17 is no longer a schema blocker in this run: page 17
+matched dimensions and reported mean absolute error `2.9774262152777777`, changed-pixel ratio at threshold
+16 of `0.046558641975308644`, and structural similarity `0.9182837809349319`.
+
+Private-safe slide inventory for slide 17 shows no charts, tables, effects, transparency, SmartArt, media,
+OLE, or custom geometry. Its remaining risk surface is ordinary shape and connector geometry: `31` shapes,
+`7` connector shapes, `2` pictures, `4` rotated transforms, `4` flipped transforms, preset geometry dominated
+by rectangles plus ellipses, diamonds, triangles, straight lines, and `curvedConnector2`, with four triangle
+line tails. This keeps any further slide-17 work pointed at connector/shape geometry rather than private
+schema handling or chart rendering.
