@@ -399,11 +399,6 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<string> ReadSceneOrXmlCategoryLabels(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
-    {
-        return ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook).CompactValues();
-    }
-
     private static ChartIndexedTextVector ReadSceneOrXmlCategoryLabelVector(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
         if (plot is not null)
@@ -1155,7 +1150,7 @@ internal sealed partial class PptxRenderer
                 RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
                 {
-                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabels(radarPlot, radarChart, workbook)));
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(radarPlot, radarChart, workbook)));
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis))
@@ -3995,11 +3990,6 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault();
     }
 
-    private static IReadOnlyList<string> ReadChartCategoryLabels(XElement chartElement)
-    {
-        return ReadChartCategoryLabelVector(chartElement).CompactValues();
-    }
-
     private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement)
     {
         XElement? categories = chartElement
@@ -4055,14 +4045,20 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyList<string> labels = ReadSceneOrXmlCategoryLabels(plot, chartElement, workbook);
-        var entries = new List<ChartLegendEntry>(labels.Count);
-        for (int i = 0; i < labels.Count; i++)
+        ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook);
+        IReadOnlyList<ChartIndexedTextPoint> points = labels.Points ?? [];
+        var entries = new List<ChartLegendEntry>(points.Count);
+        foreach (ChartIndexedTextPoint point in points.OrderBy(point => point.Index))
         {
-            ChartSeriesFill fill = pointFills.TryGetValue(i, out ChartSeriesFill pointFill)
+            if (!point.HasText || string.IsNullOrWhiteSpace(point.Text))
+            {
+                continue;
+            }
+
+            ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
-                : new ChartSeriesFill(ChartPalette(chartPalette, theme, i), 1d);
-            entries.Add(new ChartLegendEntry(labels[i], fill, null));
+                : new ChartSeriesFill(ChartPalette(chartPalette, theme, point.Index), 1d);
+            entries.Add(new ChartLegendEntry(point.Text, fill, null));
         }
 
         return entries;
@@ -8410,8 +8406,9 @@ internal sealed partial class PptxRenderer
         PptxSceneChart? sceneChart,
         PptxSceneChartAxis? sceneAxis,
         XElement? categoryAxis,
-        IReadOnlyList<string> labels)
+        ChartIndexedTextVector labelVector)
     {
+        IReadOnlyList<string?> labels = labelVector.DenseValues();
         if (labels.Count == 0)
         {
             return [];
@@ -8423,8 +8420,14 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
-            ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, labels[i], style, i, pointCount);
-            runs.Add(CreateChartLabelRun(labels[i], frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
+            string? label = labels[i];
+            if (string.IsNullOrWhiteSpace(label))
+            {
+                continue;
+            }
+
+            ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, i, pointCount);
+            runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
         }
 
         return RenderTextRuns(runs, graphics, "RCA");

@@ -1477,10 +1477,10 @@ High-priority actions:
   - [x] Render line-chart data labels on the dense indexed point domain:
     `RenderLineDataLabels` now consumes `ChartIndexedNumberVector` series and `ChartIndexedTextVector`
     category labels directly, skips missing/blank/non-numeric points, and uses the source point index for
-    point X, value Y, per-point label overrides, and category-name lookup. This removes another compact
-    ordinal boundary after line geometry had already moved to dense indexed points. Bar/column data labels,
-    category-axis labels, and fill legends still have their own compact-label paths and remain separate
-    follow-ups. Validation: focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`);
+    point X, value Y, per-point label overrides, and category-name lookup. This removed another compact
+    ordinal boundary after line geometry had already moved to dense indexed points; bar/column data labels,
+    category-axis labels, radar labels, and polar fill legends were kept as separate follow-ups at this
+    checkpoint. Validation: focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`);
     full non-slow console runner passed (`262 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed
     at run `20260527-034103`; private run `artifacts/private-visual/lokad-value-based/20260527-034151`
     stayed at 84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`,
@@ -1499,13 +1499,27 @@ High-priority actions:
     `ChartIndexedTextVector.DenseValues()` now preserves category `ptCount` and sparse source indices for
     bar/column, line, and area axis-label placement. `RenderChartCategoryLabels` sizes the axis slots from the
     dense vector and skips absent labels rather than compacting labels left before rendering. Radar labels and
-    polar fill legends still use compact category labels and remain separate migrations. Validation: focused
+    polar fill legends remained separate migrations at this checkpoint. Validation: focused
     non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console runner passed
     (`262 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-034734`; private run
     `artifacts/private-visual/lokad-value-based/20260527-034856` stayed at 84/84 compared pages, zero dimension
     mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Render radar labels and polar fill legends from source-indexed category text:
+    the remaining compact category-label compatibility readers were removed. Radar category labels now consume
+    `ChartIndexedTextVector.DenseValues()`, preserving blank category slots for spoke angles while skipping
+    missing text emission. Pie and doughnut category-fill legends now iterate source-indexed category points and
+    resolve point fills and palette colors by `c:pt/@idx` instead of compact legend ordinal, so sparse labels do
+    not desynchronize legend marker colors from slice colors. The sparse pie synthetic test now proves a
+    `dPt idx=4` fill reaches both the slice and its legend marker. Validation: focused non-slow `pptx-charts`
+    passed (`43 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`262 passed, 0 failed,
+    7 skipped`); sparse/blank visual probe passed at run `20260527-035328`; radar visual gate passed at run
+    `20260527-035337`; public pie/doughnut probes still fail only on the pre-existing chart-text placement gates
+    (`ChartTitleText` for pie at `20260527-035348`, `DataLabelText` for doughnut at `20260527-035313`) while
+    polar geometry remains matched; private run `artifacts/private-visual/lokad-value-based/20260527-035424`
+    stayed at 84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and
+    only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
-  `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
+  `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
   formulas whenever a typed plot exists, falling back to raw chart XML only for the no-scene compatibility
   path. This intentionally preserves the current compressed-value rendering contract; the indexed chart data

@@ -10649,6 +10649,11 @@ internal static class PptxTests
                   <c:chart><c:plotArea><c:pieChart>
                     <c:ser>
                       <c:dPt><c:idx val="4"/><c:spPr><a:solidFill><a:srgbClr val="123456"/></a:solidFill></c:spPr></c:dPt>
+                      <c:cat><c:strLit>
+                        <c:ptCount val="5"/>
+                        <c:pt idx="2"><c:v>Source two</c:v></c:pt>
+                        <c:pt idx="4"><c:v>Source four</c:v></c:pt>
+                      </c:strLit></c:cat>
                       <c:val><c:numLit>
                         <c:ptCount val="5"/>
                         <c:pt idx="0"><c:v></c:v></c:pt>
@@ -10656,7 +10661,7 @@ internal static class PptxTests
                         <c:pt idx="4"><c:v>70</c:v></c:pt>
                       </c:numLit></c:val>
                     </c:ser>
-                  </c:pieChart></c:plotArea></c:chart>
+                  </c:pieChart></c:plotArea><c:legend><c:legendPos val="r"/></c:legend></c:chart>
                 </c:chartSpace>
                 """)
         });
@@ -10667,6 +10672,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
+        TestAssert.True(Regex.Matches(pdf, "0\\.071 0\\.204 0\\.337 rg").Count >= 2, "Expected sparse point index 4 to drive both the slice fill and its category legend marker fill.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Sparse pie charts should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Sparse pie charts should not emit unsupported chart diagnostics.");
     }
