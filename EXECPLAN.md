@@ -2183,9 +2183,9 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained dimension-matched at MAE `2.945717`, changed16
   `0.045530`, SSIM `0.917662`.
 - [ ] Extend chart text-style ownership beyond simple `defRPr` font/color/size and default-run bold/italic:
-  rotation, full non-default tick-label offset ladders, multi-level category labels, and
-  chart-style inherited text defaults still need structural modeling before axis and data-label text can
-  match Office without renderer heuristics.
+  rotation, full non-default tick-label offset ladders, multi-level category labels, default-placement axis-title
+  cascades, and richer chart-style text dimensions still need structural modeling before chart text can match
+  Office without renderer heuristics.
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
@@ -2216,9 +2216,17 @@ High-priority actions:
   - [x] 2026-05-27: Consume the typed chart-style `legend` role in legend text rendering with the same
     precedence shape as chart titles: default style, chart-level text defaults, chart-style role defaults, then
     direct `c:legend/c:txPr`. A synthetic chart-style-only legend fixture now locks role-owned legend color and
-    Office-grid font-size emission. Axis and data-label role mapping remains open because their chart-style role
-    names and precedence need separate public probes. Validation: focused non-slow `pptx-charts` passed with
-    `60` tests, `0` failures, and `0` skips.
+    Office-grid font-size emission. This legend slice did not claim axis or data-label role mapping; those are
+    tracked as separate completed probes below. Validation: focused non-slow `pptx-charts` passed with `60`
+    tests, `0` failures, and `0` skips.
+  - [x] 2026-05-27: Consume typed chart-style axis text roles for tick labels:
+    category, value, and radar tick-label rendering now merge `cs:categoryAxis` or `cs:valueAxis` text defaults
+    after chart-level defaults and before direct axis `txPr`. The value-axis strip reservation path uses the
+    same cascade, so larger chart-style value-label fonts reserve the same structural lane they render in. A
+    synthetic chart-style-only line chart locks category/value tick-label color and Office-grid font-size
+    emission. This does not close default-placement axis titles, rotation, multi-level category labels, or
+    non-default offset ladders. Validation: focused non-slow `pptx-charts` passed with `63` tests, `0`
+    failures, and `0` skips.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.

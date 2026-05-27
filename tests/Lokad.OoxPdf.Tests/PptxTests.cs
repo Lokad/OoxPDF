@@ -10516,6 +10516,98 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 14\.04 Tf"), "Expected chart-style dataLabel role font size to drive data-label rendering when c:dLbls has no direct txPr.");
     }
 
+    public static void PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart>
+                    <c:plotArea>
+                      <c:lineChart>
+                        <c:ser>
+                          <c:cat><c:strLit><c:pt idx="0"><c:v>Alpha</c:v></c:pt><c:pt idx="1"><c:v>Beta</c:v></c:pt></c:strLit></c:cat>
+                          <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>8</c:v></c:pt></c:numLit></c:val>
+                        </c:ser>
+                        <c:axId val="10"/>
+                        <c:axId val="20"/>
+                      </c:lineChart>
+                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx>
+                      <c:valAx>
+                        <c:axId val="20"/>
+                        <c:axPos val="l"/>
+                        <c:scaling><c:min val="0"/><c:max val="10"/></c:scaling>
+                        <c:majorUnit val="5"/>
+                        <c:tickLblPos val="nextTo"/>
+                        <c:crossAx val="10"/>
+                      </c:valAx>
+                    </c:plotArea>
+                  </c:chart>
+                </c:chartSpace>
+                """),
+            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          id="80">
+                  <cs:categoryAxis>
+                    <cs:defRPr sz="1300">
+                      <a:solidFill><a:srgbClr val="AA5500"/></a:solidFill>
+                      <a:latin typeface="Arial"/>
+                    </cs:defRPr>
+                  </cs:categoryAxis>
+                  <cs:valueAxis>
+                    <cs:defRPr sz="1400">
+                      <a:solidFill><a:srgbClr val="0055AA"/></a:solidFill>
+                      <a:latin typeface="Arial"/>
+                    </cs:defRPr>
+                  </cs:valueAxis>
+                </cs:style>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.667 0.333 0 rg", pdf);
+        TestAssert.Contains("0 0.333 0.667 rg", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"/CCA[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive category tick labels when c:catAx has no direct txPr.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CVA[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive value tick labels when c:valAx has no direct txPr.");
+    }
+
     public static void PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
