@@ -464,33 +464,38 @@ internal sealed partial class PptxRenderer
 
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
     {
-        IReadOnlyList<ChartIndexedNumberPoint> xPoints = series.XValues.CompactPoints();
-        IReadOnlyList<ChartIndexedNumberPoint> yPoints = series.YValues.CompactPoints();
-        IReadOnlyList<ChartIndexedNumberPoint> bubbleSizePoints = series.BubbleSizes.CompactPoints();
-        int count = Math.Min(xPoints.Count, yPoints.Count);
+        IReadOnlyList<ChartIndexedNumberPoint?> xPoints = series.XValues.DensePoints();
+        IReadOnlyList<ChartIndexedNumberPoint?> yPoints = series.YValues.DensePoints();
+        IReadOnlyList<ChartIndexedNumberPoint?> bubbleSizePoints = series.BubbleSizes.DensePoints();
+        int count = Math.Max(xPoints.Count, yPoints.Count);
         if (count == 0)
         {
             return new ScatterSeries([], series);
         }
 
-        var points = new ScatterPoint[count];
+        var points = new List<ScatterPoint>(count);
         for (int i = 0; i < count; i++)
         {
-            ChartIndexedNumberPoint xPoint = xPoints[i];
-            ChartIndexedNumberPoint yPoint = yPoints[i];
+            ChartIndexedNumberPoint? xPoint = i < xPoints.Count ? xPoints[i] : null;
+            ChartIndexedNumberPoint? yPoint = i < yPoints.Count ? yPoints[i] : null;
+            if (xPoint?.Value is not { } xValue || yPoint?.Value is not { } yValue)
+            {
+                continue;
+            }
+
             ChartIndexedNumberPoint? bubbleSizePoint = series.ReadBubbleSize && i < bubbleSizePoints.Count ? bubbleSizePoints[i] : null;
             double size = bubbleSizePoint?.Value ?? 1d;
-            points[i] = new ScatterPoint(
-                xPoint.Value!.Value,
-                yPoint.Value!.Value,
+            points.Add(new ScatterPoint(
+                xValue,
+                yValue,
                 size,
-                yPoint.Index,
-                xPoint,
-                yPoint,
+                yPoint.Value.Index,
+                xPoint.Value,
+                yPoint.Value,
                 bubbleSizePoint,
-                series.XValues.WorkbookPointForIndex(xPoint.Index),
-                series.YValues.WorkbookPointForIndex(yPoint.Index),
-                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null);
+                series.XValues.WorkbookPointForIndex(xPoint.Value.Index),
+                series.YValues.WorkbookPointForIndex(yPoint.Value.Index),
+                bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null));
         }
 
         return new ScatterSeries(points, series);

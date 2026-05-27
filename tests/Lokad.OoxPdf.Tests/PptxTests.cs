@@ -11376,6 +11376,21 @@ internal static class PptxTests
         object scatterXWorkbookPoint = scatterPoints[0].GetType().GetProperty("XWorkbookPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve matching workbook X point.");
         TestAssert.True((double?)scatterXPoint.GetType().GetProperty("Value")?.GetValue(scatterXPoint) == 99d, "Expected scatter active point to preserve the rendered cache value.");
         TestAssert.True((double?)scatterXWorkbookPoint.GetType().GetProperty("Value")?.GetValue(scatterXWorkbookPoint) == 8.2d, "Expected scatter workbook sidecar point to preserve the workbook source value.");
+        object sparseScatterXVector = buildVector.Invoke(
+            null,
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 12d, "12", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
+        object sparseScatterYVector = buildVector.Invoke(
+            null,
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 34d, "34", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
+        object sparseScatterSizeVector = buildVector.Invoke(
+            null,
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 5d, "5", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
+        object sparseScatterSeriesRecord = Activator.CreateInstance(scatterSeriesType, [sparseScatterXVector, sparseScatterYVector, sparseScatterSizeVector, true]) ?? throw new InvalidOperationException("Expected sparse indexed scatter-series instance.");
+        object sparseRenderedScatter = buildScatterSeries.Invoke(null, [sparseScatterSeriesRecord]) ?? throw new InvalidOperationException("Expected sparse rendered scatter-series.");
+        object[] sparseScatterPoints = (((System.Collections.IEnumerable?)sparseRenderedScatter.GetType().GetProperty("Points")?.GetValue(sparseRenderedScatter)) ?? throw new InvalidOperationException("Expected sparse rendered scatter points.")).Cast<object>().ToArray();
+        TestAssert.True(sparseScatterPoints.Length == 1, "Expected sparse scatter channels to pair by source index.");
+        TestAssert.True((int?)sparseScatterPoints[0].GetType().GetProperty("Index")?.GetValue(sparseScatterPoints[0]) == 2, "Expected sparse scatter point to preserve the paired source index.");
+        TestAssert.True((double?)sparseScatterPoints[0].GetType().GetProperty("Size")?.GetValue(sparseScatterPoints[0]) == 5d, "Expected sparse bubble-size channel to pair by source index.");
         var blankSource = source with { Formula = "Sheet1!$B$2:$B$4" };
         object blankVector = buildVector.Invoke(
             null,

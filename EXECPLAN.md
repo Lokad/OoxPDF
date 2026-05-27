@@ -1362,7 +1362,7 @@ High-priority actions:
   presence. Bar/column, line, area, pie/doughnut, Cartesian data labels, category-axis labels, radar labels,
   polar legends, series-name labels, and series-name legend sizing now consume indexed vectors or
   provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
-  some stacked/extent helpers, scatter/bubble entrypoints, polar data-label text, and chart
+  some stacked/extent helpers, polar data-label text, and chart
   text/layout decisions still need to carry the same typed data records all the way to Office-PDF-backed
   layout and source/cache freshness decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
@@ -1540,6 +1540,17 @@ High-priority actions:
     (`46 passed, 0 failed, 0 skipped`); public radar visual cases passed
     (`pptx-ladder-11-chart-radar-2series-port` run `20260527-095917`,
     `pptx-ladder-11-chart-radar-filled-port` run `20260527-095933`); full non-slow console runner passed
+    (`265 passed, 0 failed, 7 skipped`).
+  - [x] Pair scatter and bubble channels on dense source indices:
+    `BuildScatterSeries` now reads dense X, Y, and bubble-size vectors, skips only positions missing a
+    renderable X or Y value, and pairs optional bubble-size values by the same source index. This replaces the
+    previous compact-ordinal pairing, which could attach a later X value to an unrelated Y value after blank
+    or non-numeric cache points were removed. Existing scalar drawing still receives `ScatterPoint` records,
+    but each point's X/Y/size provenance now remains aligned with its OOXML index. Validation: focused
+    non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); public scatter/bubble visual cases
+    passed (`pptx-ladder-11-chart-scatter-clusters-port` run `20260527-100245`,
+    `pptx-ladder-11-chart-scatter-smooth-port` run `20260527-100255`,
+    `pptx-ladder-11-chart-bubble-port` run `20260527-100302`); full non-slow console runner passed
     (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
