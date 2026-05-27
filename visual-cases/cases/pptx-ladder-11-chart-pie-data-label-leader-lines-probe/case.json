@@ -29,9 +29,9 @@
       "PolarSliceCandidate": 28
     },
     "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["LegendText"],
+    "compareChartTextStructureKinds": ["DataLabelText"],
     "maxChartTextStructurePositionDeltaByKind": {
-      "LegendText": 200
+      "DataLabelText": 200
     }
   }
 }

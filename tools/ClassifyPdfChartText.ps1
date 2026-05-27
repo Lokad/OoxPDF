@@ -45,6 +45,10 @@ function Is-NumericText([string]$text) {
     return $trimmed -match '^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)%?$'
 }
 
+function Contains-NumericLabelSignal([string]$text) {
+    return $text -match '\d' -or $text.Contains("%")
+}
+
 function TextX($op) {
     if ($op.EffectiveX -ne $null) {
         return [double]$op.EffectiveX
@@ -149,6 +153,20 @@ function Has-LegendContainer($op, $structures, $plotBox, [double]$tolerance) {
             $x -le ([double]$structure.MaxX + $tolerance) -and
             $y -ge ([double]$structure.MinY - $tolerance) -and
             $y -le ([double]$structure.MaxY + $tolerance)) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Has-NearbyNumericLabel($op, $numericLabels) {
+    $x = TextX $op
+    $y = TextY $op
+    foreach ($label in $numericLabels) {
+        $labelX = TextX $label
+        $labelY = TextY $label
+        if ([Math]::Abs($x - $labelX) -le 40d -and [Math]::Abs($y - $labelY) -le 32d) {
             return $true
         }
     }
@@ -284,7 +302,7 @@ function Classify-RadarText($op, $radarGeometry, [double]$tolerance) {
     return $null
 }
 
-function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
+function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]$tolerance) {
     if ($null -eq $plotBox) {
         return "ChartText"
     }
@@ -309,8 +327,14 @@ function Classify-Text($op, $plotBox, $structures, [double]$tolerance) {
     }
 
     $isPolarChart = Is-PolarChart $plotBox $structures
-    if (($isPolarChart -or -not ($insideX -and $insideY)) -and
-        (Has-LegendSwatch $op $structures $plotBox $isPolarChart)) {
+    $hasLegendSwatch = ($isPolarChart -or -not ($insideX -and $insideY)) -and
+        (Has-LegendSwatch $op $structures $plotBox $isPolarChart)
+    if ($hasLegendSwatch) {
+        if ($isPolarChart -and
+            (Contains-NumericLabelSignal (TextValue $op) -or Has-NearbyNumericLabel $op $polarNumericLabels)) {
+            return "DataLabelText"
+        }
+
         return "LegendText"
     }
 
@@ -379,6 +403,13 @@ if ($PageNumber -gt 0) {
 }
 
 $plotBox = Find-PlotBox $structures
+$isPolarChart = Is-PolarChart $plotBox $structures
+$polarNumericLabels = if ($isPolarChart) {
+    @($textOps | Where-Object { Is-NumericText (TextValue $_) })
+}
+else {
+    @()
+}
 $classified = New-Object System.Collections.Generic.List[object]
 foreach ($op in $textOps) {
     $text = TextValue $op
@@ -390,7 +421,7 @@ foreach ($op in $textOps) {
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
     $classified.Add([pscustomobject]@{
-        Kind = Classify-Text $op $plotBox $structures $PlotTolerance
+        Kind = Classify-Text $op $plotBox $structures $polarNumericLabels $PlotTolerance
         PageNumber = $op.PageNumber
         SourceKind = "Text"
         SourceOperator = $op.Operator

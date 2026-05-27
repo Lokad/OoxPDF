@@ -1665,12 +1665,13 @@ High-priority actions:
     candidate swatches to compare against Office output. Validation: solution build passed; focused non-slow
     `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); public probe
     `pptx-ladder-11-chart-pie-data-label-leader-lines-probe` passed in run `20260527-102519`.
-  - [ ] Structurally classify polar data-label legend-key swatches separately from chart legends:
+  - [x] Structurally classify polar data-label legend-key swatches separately from chart legends:
     the new public probe shows Office emits four small color swatches next to outside pie labels when
-    `showLegendKey` is enabled, but `ClassifyPdfChartText.ps1` currently classifies swatch-adjacent label text
-    as `LegendText` because it is near the swatch. Teach the structural classifier to distinguish data-label
-    legend keys from chart legend entries before tightening this probe to data-label-specific text/swatch
-    gates.
+    `showLegendKey` is enabled. `ClassifyPdfChartText.ps1` now keeps polar swatch-adjacent numeric labels,
+    combined category/percent labels, and nearby category lines as `DataLabelText` instead of treating every
+    swatch-adjacent polar text run as chart `LegendText`; existing public doughnut legend probes remain gated
+    as `LegendText`. Validation: public data-label probe passed as `DataLabelText` in run `20260527-102703`;
+    public doughnut right-overlay, left, and top legend probes passed in run `20260527-102718`.
   - [ ] Build a stronger public leader-line geometry probe before rendering leader lines:
     the same generated OOXML includes `showLeaderLines` and styled `c:leaderLines`, but the Office PDF for the
     current layout did not expose separate leader-line strokes. Create a public Office-authored probe that
