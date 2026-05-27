@@ -1410,8 +1410,13 @@ High-priority actions:
   `pptx-ladder-04-typography-punctuation-boundaries` with line-start parity within `0.25pt`. The accented
   Latin probe was regenerated from the correct UTF-8 generator source and now locks decoded text plus
   line-start parity; remaining drift is glyph raster/font parity, not a fallback/positioning blocker.
-- [ ] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run
-  sizing, superscript/subscript baseline, no-fill/outline text, hyperlink color, and table text overrides.
+- [x] Next PPTX typography sequence: continue porting `pptx-renderer` typography tests for end-paragraph run
+  sizing, superscript/subscript baseline, no-fill/outline text, hyperlink color, and table text overrides:
+  the named cases now have focused .NET and/or public visual coverage. `PptxSyntheticTrailingBreakUsesEndParagraphFontSize`,
+  `PptxSyntheticEmptyParagraphUsesEndParagraphFontSize`, baseline-shift tests, no-fill/outline text tests,
+  `PptxSyntheticTextBoxUsesThemeHyperlinkColor`, and table-cell text/style tests cover the intended renderer
+  surface. Remaining typography ports are tracked by narrower entries such as full cascade ownership, justified
+  spacing parity, line-height/baseline formulas, and unsupported gradient text fill rather than by this broad list.
 - [x] Port the `pptx-renderer` justified-alignment text oracle as a public ooxpdf probe:
   `pptx-ladder-04-typography-justify-port` now exposes the missing PowerPoint word-spacing behavior for
   wrapped justified paragraphs.
