@@ -8772,21 +8772,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints)
     {
-        public IReadOnlyList<double> CompactValues()
-        {
-            return CompactPoints()
-                .Select(point => point.Value!.Value)
-                .ToArray();
-        }
-
-        public IReadOnlyList<ChartIndexedNumberPoint> CompactPoints()
-        {
-            return (Points ?? [])
-                .Where(point => point.Value is not null)
-                .OrderBy(point => point.Index)
-                .ToArray();
-        }
-
         public IReadOnlyList<double?> DenseValues()
         {
             return DensePoints()
@@ -8873,15 +8858,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints)
     {
-        public IReadOnlyList<string> CompactValues()
-        {
-            return (Points ?? [])
-                .Where(point => point.HasText)
-                .OrderBy(point => point.Index)
-                .Select(point => point.Text)
-                .ToArray();
-        }
-
         public IReadOnlyList<string?> DenseValues()
         {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];

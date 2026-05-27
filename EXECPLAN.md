@@ -1558,6 +1558,13 @@ High-priority actions:
     last generic chart-family gate that depended on compacting sparse source vectors before layout. Validation:
     focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console runner
     passed (`265 passed, 0 failed, 7 skipped`).
+  - [x] Remove obsolete compact chart-vector convenience APIs:
+    after the geometry, label, legend, scatter/bubble, radar, and renderability migrations, the private
+    `ChartIndexedNumberVector.CompactValues`, `ChartIndexedNumberVector.CompactPoints`, and
+    `ChartIndexedTextVector.CompactValues` methods had no callers. Removing them makes dense/source-indexed
+    projection the only renderer-side vector API and prevents future chart work from reviving the old
+    compact-ordinal behavior accidentally. Validation: focused non-slow `pptx-charts` passed
+    (`46 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
