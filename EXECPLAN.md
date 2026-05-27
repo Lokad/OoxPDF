@@ -9599,6 +9599,20 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed area and radar primary value axes through scene/XML axis sources. The
+native area and radar render branches now take their value-axis scale, unit, gridline, crossing, and label
+metadata from the paired `ChartAxisSource` returned by `ReadSceneOrXmlChartValueAxesForPlot` instead of
+keeping independently selected scene and raw-XML axis locals. This is an identity-alignment slice: when a
+typed scene axis exists, downstream rendering now carries the XML axis matched to the same `axId`, and
+XML-only charts keep the existing fallback behavior.
+
+Remaining chart families still have several parallel scene/XML axis locals, especially bar/line combo and
+plot-box reservation paths. Those should continue to move to paired source objects before changing any
+Office-facing chart metrics.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed scatter right-legend plot-box estimation through scene-owned value-axis
 sources. The Cartesian no-title/right-legend estimator now pairs the scatter Y axis with
 `ReadSceneOrXmlChartValueAxesForPlot`, using scene-owned scale, units, and number-format metadata when
