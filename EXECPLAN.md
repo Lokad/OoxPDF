@@ -631,6 +631,11 @@ High-priority actions:
   probe still emits exact `15`, `21`, `24`, `30`, and `36`, while the wide/no-autofit probes emit `15.024`,
   `21.024`, `24.024`, exact `30`, and `36.024`. The next probe must vary generated frame height and line count while
   keeping shape width and body insets fixed, otherwise a renderer rule would still be a hidden geometry heuristic.
+  Two ignored public-safe height scans under `artifacts/probes/font-size-quantization-height-scan*` now keep width,
+  default insets, `noAutofit`, and single-line text fixed while varying only shape height. They show that text length
+  and wrapping are not the discriminator: a one-character scan still maps `21`/`24`/`36` to `+0.024 pt` only at
+  selected frame heights (`15` remains exact), while adjacent heights with the same size remain exact. This points to
+  an Office export quantization interaction involving frame geometry/baseline placement, not a font-size table.
 - [x] Expose source text-frame construction through glyph-run inspection:
   glyph-run snapshots and the internal `PptxPdfTextEmissionContext` now carry source shape bounds, body insets,
   wrap mode/value, and autofit mode in addition to the already-resolved text rectangle, line identity, line advance,
