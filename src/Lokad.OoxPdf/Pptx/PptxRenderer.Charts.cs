@@ -1245,20 +1245,6 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XDocument chartXml, string chartElementName)
-    {
-        XElement? chartElement = chartXml.Descendants(ChartNamespace + chartElementName).FirstOrDefault();
-        return chartElement is null ? [] : ReadChartSeries(chartElement);
-    }
-
-    private static IReadOnlyList<IReadOnlyList<double>> ReadChartSeries(XElement chartElement)
-    {
-        return ReadChartSeriesVectors(chartElement)
-            .Select(vector => vector.CompactValues())
-            .Where(values => values.Count != 0)
-            .ToArray();
-    }
-
     private static IReadOnlyList<ChartIndexedNumberVector> ReadChartSeriesVectors(XElement chartElement)
     {
         var series = new List<ChartIndexedNumberVector>();

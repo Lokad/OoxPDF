@@ -9582,6 +9582,14 @@ current supported label path reflect the long-term data model.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed the obsolete raw-XML `ReadChartSeries` helpers that returned compact
+`double` lists directly from chart cache XML. The only remaining raw chart cache reader in this path now
+produces `ChartIndexedNumberVector` records first, and callers make any compact/dense choice explicitly after
+the indexed metadata has been attached.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Removed the unused `ReadSceneOrXmlChartSeries` compatibility wrapper. All active
 chart-family entrypoints already acquire `ChartIndexedNumberVector` records first and choose their own
 explicit compact or dense boundary. The old helper compacted scene/XML/workbook vectors straight to
