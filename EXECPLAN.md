@@ -29,7 +29,8 @@ keep diagnostics honest when a feature is still missing.
 - `tools/SummarizeChartStructureDeltas.ps1`: public chart structural-delta sweep over latest visual runs.
   It accepts repeated PowerShell array values and comma/semicolon-separated `-Case` values for focused
   multi-case comparisons, and `-ShowBounds` prints reference/candidate bounds for singleton structural
-  buckets when edge-level plot-box evidence is needed.
+  buckets when edge-level plot-box evidence is needed. `-ByRegion` splits the summary by chart-local
+  `RegionIndex` when the graphics/text classifiers can attach structures to plot-box-derived regions.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -10295,3 +10296,30 @@ Validation: representative visual gates passed for
 `pptx-ladder-11-chart-column-clustered-port/20260527-112632`,
 `pptx-ladder-11-chart-plot-layout-target-inner-probe/20260527-112632`, and
 `pptx-ladder-11-composite-two-charts-port/20260527-112654`.
+
+Revision note, 2026-05-27: Added chart-local `RegionIndex` annotations to the public structural oracle.
+`ClassifyPdfChartGraphics.ps1` now chooses one prioritized plot-box family per page, assigns contiguous
+region indexes to those boxes, and attaches every derived graphics structure to the nearest region. The text
+classifier carries the nearest plot box's region index into chart text structures, and
+`SummarizeChartStructureDeltas.ps1 -ByRegion` can now report deltas per local chart frame while preserving the
+old page-level summary by default.
+
+This is a tooling/schema improvement, not renderer behavior. It deliberately avoids mixing gridline, axis,
+fallback, and clip-derived plot boxes into separate competing regions; the selected family is the local owner
+for the page. On sparse/blank probe run `20260527-111945`, the region summary now shows Office reference
+regions `0` and `1` with matching candidate regions shifted by roughly 20-39 pt, plus a candidate-only region
+`2` containing five category tick labels, four value tick labels, two legend texts, two marker candidates, and
+a `GridlineAxisPlotBoxCandidate`. That turns the old page-global marker delta (`440.66`) and plot-box delta
+(`244.05`) into a clearer structural target: the renderer is producing an extra local chart-like region and
+still has local plot-box/text offsets on the two shared regions.
+
+The sparse/blank multi-chart probe remains ungated. Region ownership makes the remaining mismatch more
+diagnosable, but the next long-term closures are renderer-side chart-region semantics and non-line blank
+policies, plus a future gate that can compare per-region structures directly instead of relying only on
+page-level nearest-bound matching.
+
+Validation: `SummarizeChartStructureDeltas.ps1 -Case pptx-ladder-11-chart-sparse-blank-points-probe
+-SkipProbe -ShowBounds -ByRegion` produced region-local deltas; `SummarizeChartStructureDeltas.ps1
+-UngatedOnly -SkipProbe -ByRegion` completed; representative visual gates passed for
+`pptx-ladder-11-chart-column-clustered-port/20260527-113327` and
+`pptx-ladder-11-composite-two-charts-port/20260527-113327`.

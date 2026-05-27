@@ -5,7 +5,9 @@ param(
 
     [switch] $SkipProbe,
 
-    [switch] $ShowBounds
+    [switch] $ShowBounds,
+
+    [switch] $ByRegion
 )
 
 $ErrorActionPreference = "Stop"
@@ -132,9 +134,34 @@ function Format-Bounds($item) {
         [Math]::Round([double]$item.MaxY, 2)
 }
 
-function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
-    $reference = @($referenceItems | Where-Object { $_.Kind -eq $kind })
-    $candidate = @($candidateItems | Where-Object { $_.Kind -eq $kind })
+function Get-RegionValue($item) {
+    if ($null -eq $item -or -not ($item.PSObject.Properties.Name -contains "RegionIndex") -or $null -eq $item.RegionIndex) {
+        return ""
+    }
+
+    return [string]$item.RegionIndex
+}
+
+function Make-SummaryKey([string]$kind, [string]$regionIndex) {
+    return "$kind`u{1f}$regionIndex"
+}
+
+function Parse-SummaryKey([string]$key) {
+    $parts = $key -split "`u{1f}", 2
+    if ($parts.Count -eq 1) {
+        return [pscustomobject]@{ Kind = $parts[0]; RegionIndex = "" }
+    }
+
+    return [pscustomobject]@{ Kind = $parts[0]; RegionIndex = $parts[1] }
+}
+
+function Summarize-Kind($kind, $regionIndex, $referenceItems, $candidateItems, $setName) {
+    $reference = @($referenceItems | Where-Object {
+        $_.Kind -eq $kind -and (-not $ByRegion -or (Get-RegionValue $_) -eq $regionIndex)
+    })
+    $candidate = @($candidateItems | Where-Object {
+        $_.Kind -eq $kind -and (-not $ByRegion -or (Get-RegionValue $_) -eq $regionIndex)
+    })
     $maxDelta = $null
     $maxReferenceItem = $null
     $maxCandidateItem = $null
@@ -189,6 +216,7 @@ function Summarize-Kind($kind, $referenceItems, $candidateItems, $setName) {
     [pscustomobject]@{
         Set = $setName
         Kind = $kind
+        RegionIndex = if ($ByRegion) { $regionIndex } else { $null }
         ReferenceCount = $reference.Count
         CandidateCount = $candidate.Count
         MaxBoundsDelta = if ($null -eq $maxDelta) { $null } else { [Math]::Round($maxDelta, 2) }
@@ -237,20 +265,52 @@ foreach ($caseFile in $caseFiles) {
         [pscustomobject]@{ Name = "TEXT"; File = "chart-text-structures.json" })) {
         $referenceItems = Read-JsonArray (Join-Path $run.FullName "probe-reference/$($set.File)")
         $candidateItems = Read-JsonArray (Join-Path $run.FullName "probe-candidate/$($set.File)")
-        $kinds = @($referenceItems.Kind + $candidateItems.Kind | Where-Object { $_ } | Sort-Object -Unique)
-        $rows = foreach ($kind in $kinds) {
-            Summarize-Kind $kind $referenceItems $candidateItems $set.Name
+        $keys = if ($ByRegion) {
+            @(
+                foreach ($item in @($referenceItems + $candidateItems)) {
+                    if ($item.Kind) {
+                        Make-SummaryKey ([string]$item.Kind) (Get-RegionValue $item)
+                    }
+                }
+            ) | Sort-Object -Unique
+        }
+        else {
+            @($referenceItems.Kind + $candidateItems.Kind | Where-Object { $_ } | Sort-Object -Unique)
+        }
+
+        $rows = foreach ($key in $keys) {
+            if ($ByRegion) {
+                $parsed = Parse-SummaryKey $key
+                Summarize-Kind $parsed.Kind $parsed.RegionIndex $referenceItems $candidateItems $set.Name
+            }
+            else {
+                Summarize-Kind $key "" $referenceItems $candidateItems $set.Name
+            }
         }
 
         if ($ShowBounds) {
-            $rows |
-                Sort-Object Set, Kind |
-                Format-List Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+            if ($ByRegion) {
+                $rows |
+                    Sort-Object Set, Kind, RegionIndex |
+                    Format-List Set, Kind, RegionIndex, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+            }
+            else {
+                $rows |
+                    Sort-Object Set, Kind |
+                    Format-List Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta, ReferenceBounds, CandidateBounds
+            }
         }
         else {
-            $rows |
-                Sort-Object Set, Kind |
-                Format-Table Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta -AutoSize
+            if ($ByRegion) {
+                $rows |
+                    Sort-Object Set, Kind, RegionIndex |
+                    Format-Table Set, Kind, RegionIndex, ReferenceCount, CandidateCount, MaxBoundsDelta -AutoSize
+            }
+            else {
+                $rows |
+                    Sort-Object Set, Kind |
+                    Format-Table Set, Kind, ReferenceCount, CandidateCount, MaxBoundsDelta -AutoSize
+            }
         }
     }
 }

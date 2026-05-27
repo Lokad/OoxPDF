@@ -485,6 +485,7 @@ foreach ($op in $textOps) {
     }
     $classified.Add([pscustomobject]@{
         Kind = Classify-Text $op $textPlotBox $structures $polarNumericLabels $PlotTolerance
+        RegionIndex = if ($null -eq $textPlotBox -or $textPlotBox.RegionIndex -eq $null) { $null } else { $textPlotBox.RegionIndex }
         PageNumber = $op.PageNumber
         SourceKind = "Text"
         SourceOperator = $op.Operator

@@ -282,6 +282,7 @@ function New-Structure($kind, $op) {
     $pathGeometry = if ($null -ne $radarSpokeGeometry) { $radarSpokeGeometry } elseif ($null -ne $pieSliceGeometry) { $pieSliceGeometry } else { $annularSliceGeometry }
     [pscustomobject]@{
         Kind = $kind
+        RegionIndex = $null
         PageNumber = $op.PageNumber
         SourceKind = $op.Kind
         SourceOperator = $op.Operator
@@ -318,6 +319,7 @@ function New-Structure($kind, $op) {
 function New-DerivedStructure($kind, $pageNumber, $sourceOperator, $segmentCount, $minX, $minY, $maxX, $maxY) {
     [pscustomobject]@{
         Kind = $kind
+        RegionIndex = $null
         PageNumber = $pageNumber
         SourceKind = "Derived"
         SourceOperator = $sourceOperator
@@ -368,6 +370,7 @@ function New-PolarPlotBoxStructure($pageNumber, $sourceOperator, $segmentCount, 
 function Copy-StructureAsKind($kind, $structure) {
     [pscustomobject]@{
         Kind = $kind
+        RegionIndex = $structure.RegionIndex
         PageNumber = $structure.PageNumber
         SourceKind = $structure.SourceKind
         SourceOperator = $structure.SourceOperator
@@ -450,6 +453,81 @@ function Is-LegendSwatchShape($structure) {
     }
 
     return $false
+}
+
+function Distance-ToBox([double]$x, [double]$y, $box) {
+    $dx = 0d
+    if ($x -lt [double]$box.MinX) {
+        $dx = [double]$box.MinX - $x
+    }
+    elseif ($x -gt [double]$box.MaxX) {
+        $dx = $x - [double]$box.MaxX
+    }
+
+    $dy = 0d
+    if ($y -lt [double]$box.MinY) {
+        $dy = [double]$box.MinY - $y
+    }
+    elseif ($y -gt [double]$box.MaxY) {
+        $dy = $y - [double]$box.MaxY
+    }
+
+    return [Math]::Sqrt($dx * $dx + $dy * $dy)
+}
+
+function Find-RegionPlotBoxes($structures) {
+    $priority = @(
+        "GridlineAxisPlotBoxCandidate",
+        "AxisPairPlotBoxCandidate",
+        "CrossingAxisPlotBoxCandidate",
+        "PlotBoxCandidate",
+        "PolarPlotBoxCandidate",
+        "PlotAreaClipBoxCandidate"
+    )
+
+    foreach ($kind in $priority) {
+        $matches = @($structures |
+            Where-Object { $_.Kind -eq $kind } |
+            Sort-Object -Property PageNumber, MinY, MinX, MaxY, MaxX)
+        if ($matches.Count -gt 0) {
+            return $matches
+        }
+    }
+
+    return @()
+}
+
+function Assign-RegionIndexes($structures) {
+    $plotBoxes = @(Find-RegionPlotBoxes $structures)
+    if ($plotBoxes.Count -eq 0) {
+        return
+    }
+
+    for ($i = 0; $i -lt $plotBoxes.Count; $i++) {
+        $plotBoxes[$i].RegionIndex = $i
+    }
+
+    foreach ($structure in $structures) {
+        if ($structure.RegionIndex -ne $null) {
+            continue
+        }
+
+        $centerX = CenterX $structure
+        $centerY = CenterY $structure
+        $best = $null
+        $bestScore = [double]::PositiveInfinity
+        foreach ($plotBox in $plotBoxes) {
+            $score = Distance-ToBox $centerX $centerY $plotBox
+            if ($score -lt $bestScore) {
+                $bestScore = $score
+                $best = $plotBox
+            }
+        }
+
+        if ($null -ne $best) {
+            $structure.RegionIndex = $best.RegionIndex
+        }
+    }
 }
 
 $ops = Read-JsonArray $InputPath
@@ -750,6 +828,8 @@ if ($polarRegions.Count -gt 1) {
         }
     }
 }
+
+Assign-RegionIndexes ([object[]]$structures.ToArray())
 
 $ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)
 $ordered | Format-Table -AutoSize
