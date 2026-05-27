@@ -4552,7 +4552,7 @@ internal sealed partial class PptxRenderer
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
-            _ when sideFillLegendInFullFrame => frame.Y + frame.Height / 2d +
+            _ when !sideStrokeLegend && !horizontal => frame.Y + frame.Height / 2d +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !horizontal => plotBox.Y + plotBox.Height / 2d +
                 fontSize * PptxChartMetricRules.LegendMarkerBaselineFactor +

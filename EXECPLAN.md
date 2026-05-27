@@ -10681,21 +10681,28 @@ frame-scaled structural rules. The sparse/blank probe and the larger public line
 frame regimes: the single large line chart already matched Office within about `0.7 pt`, while the small
 multi-chart sparse fixture had a left plot inset about `22.6 pt` too large. `GetCartesianNoTitleRightLegendPlotBox`
 now caps the value-axis padding by a frame-width ratio, preserving the large-chart fixed padding but shrinking
-the small-chart axis reserve. Area/fill right legends also get an explicit frame-scaled reserve term, and
+the small-chart axis reserve. Area/fill right legends also get an explicit frame-scaled reserve term,
 fill-backed side legends are anchored into the reserved right band instead of being glued to the plot-box
-right edge. This keeps plot ownership and legend anchoring as separate PDF-level structures.
+right edge, and their vertical placement is centered on the chart frame rather than the plot box. This keeps
+plot ownership and legend anchoring as separate PDF-level structures.
 
 The sparse/blank plot-box offsets dropped from roughly `22.6 pt` to `3.2-3.9 pt` on the two rendered chart
-regions. The larger `pptx-ladder-11-chart-line-3series-port` fixture remains stable with plot, legend, and
-tick-label deltas still under about `0.7 pt`. The larger area fixture now has its plot-box/right edge aligned
-within about `0.9 pt`, and its right legend X position is aligned (`703.91 pt` candidate swatch X versus
-`703.74 pt` Office reference X), while its legend Y placement remains off by about `24-33 pt`. That remaining
-fill-legend vertical placement should be solved as a first-class legend layout rule, not by undoing the plot
-reserve correction.
+regions. Upper-region legend text in the sparse probe moved from an X/Y placement delta around `17.8 pt` to
+about `7.6 pt`, and its swatch delta dropped from `26.9 pt` to `14.9 pt`. The larger
+`pptx-ladder-11-chart-line-3series-port` fixture remains stable with plot, legend, and tick-label deltas still
+under about `0.7 pt`. The larger area fixture now has its plot-box/right edge aligned within about `0.9 pt`;
+its right legend X position is aligned (`703.91 pt` candidate swatch X versus `703.74 pt` Office reference X);
+and its legend text Y delta dropped from about `24 pt` to about `6 pt`.
+
+Remaining gaps are still visible and should stay open: sparse category tick labels in the upper rendered chart
+remain about `19 pt` off, fill-legend swatch Y still has a residual `14.9 pt` sparse delta, candidate line/area
+series strokes are decomposed differently from Office's multi-segment paths, and clip-box counts still differ.
+Those are separate axis text, legend marker baseline, series path, and clipping-structure problems rather than
+evidence against the frame-scaled plot reserve.
 
 Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
-`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-140715`;
-`pptx-ladder-11-chart-line-3series-port` passed at run `20260527-140730`; and
-`pptx-ladder-11-chart-area-2series-port` passed at run `20260527-140730`. Structural summaries with
-`-ShowBounds` confirmed the sparse plot-box improvement, the unchanged large line fixture, and the area
-plot/right-legend-X closure while preserving the fill-legend Y gap.
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-140937`;
+`pptx-ladder-11-chart-line-3series-port` passed at run `20260527-140953`; and
+`pptx-ladder-11-chart-area-2series-port` passed at run `20260527-140953`. Structural summaries with
+`-ShowBounds` confirmed the sparse plot-box improvement, the unchanged large line fixture, the area
+plot/right-legend-X closure, and the frame-centered fill-legend Y improvement.
