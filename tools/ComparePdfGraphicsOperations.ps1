@@ -31,6 +31,8 @@ param(
 
     [switch] $MatchStrokeColor,
 
+    [switch] $MatchFillColor,
+
     [switch] $MatchLineCap,
 
     [switch] $MatchLineJoin,
@@ -101,18 +103,18 @@ function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$valu
 function HasValue($value) { return $null -ne $value -and [string]$value -ne "" }
 function ColorValues($value) {
     $text = [string]$value
-    if ($text -match '^G:(?<g>[0-9.]+)$') {
+    if ($text -match '^[gG]:(?<g>[0-9.]+)$') {
         $g = [double]$Matches['g']
         return @($g, $g, $g)
     }
 
-    if ($text -match '^RG:(?<r>[0-9.]+),(?<g>[0-9.]+),(?<b>[0-9.]+)$') {
+    if ($text -match '^[rR][gG]:(?<r>[0-9.]+),(?<g>[0-9.]+),(?<b>[0-9.]+)$') {
         return @([double]$Matches['r'], [double]$Matches['g'], [double]$Matches['b'])
     }
 
     return @()
 }
-function StrokeColorEqual($left, $right) {
+function ColorEqual($left, $right) {
     $leftValues = @(ColorValues $left)
     $rightValues = @(ColorValues $right)
     if ($leftValues.Count -eq 0 -or $rightValues.Count -eq 0) {
@@ -167,11 +169,13 @@ if ($MatchByBounds) {
                     (IntValue $cand.LineCount) -eq (IntValue $ref.LineCount) -and
                     (IntValue $cand.CurveCount) -eq (IntValue $ref.CurveCount) -and
                     (IntValue $cand.CloseCount) -eq (IntValue $ref.CloseCount))) { 0d } else { 1000d }
+            $fillColorPenalty = if (-not $MatchFillColor -or (ColorEqual $cand.FillColor $ref.FillColor)) { 0d } else { 10000000d }
             $textHashPenalty = if (-not $MatchTextHash -or (-not (HasValue $cand.TextHash)) -or (-not (HasValue $ref.TextHash)) -or [string]$cand.TextHash -eq [string]$ref.TextHash) { 0d } else { 10000000d }
             $score = $kindPenalty +
                 $operatorPenalty +
                 $segmentPenalty +
                 $pathCountPenalty +
+                $fillColorPenalty +
                 $textHashPenalty +
                 [Math]::Abs((CenterX $cand) - (CenterX $ref)) +
                 [Math]::Abs((CenterY $cand) - (CenterY $ref)) +
@@ -268,7 +272,8 @@ foreach ($pair in $pairs) {
         (IntValue $ref.CurveCount) -eq (IntValue $cand.CurveCount) -and
         (IntValue $ref.CloseCount) -eq (IntValue $cand.CloseCount))
     $pathOperatorsOk = (-not $MatchPathOperators) -or [string]$ref.PathOperators -eq [string]$cand.PathOperators
-    $strokeColorOk = (-not $MatchStrokeColor) -or (StrokeColorEqual $ref.StrokeColor $cand.StrokeColor)
+    $strokeColorOk = (-not $MatchStrokeColor) -or (ColorEqual $ref.StrokeColor $cand.StrokeColor)
+    $fillColorOk = (-not $MatchFillColor) -or (ColorEqual $ref.FillColor $cand.FillColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
     $lineJoinOk = (-not $MatchLineJoin) -or (IntValue $ref.LineJoin) -eq (IntValue $cand.LineJoin)
     $textHashOk = (-not $MatchTextHash) -or (-not (HasValue $ref.TextHash)) -or (-not (HasValue $cand.TextHash)) -or [string]$ref.TextHash -eq [string]$cand.TextHash
@@ -295,7 +300,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind -and
         ((-not $pathMinRadiusRelevant) -or ($pathMinRadiusAvailable -and [Math]::Abs($deltaPathMinRadius) -le $pathGeometryToleranceForKind)) -and
         ((-not $pathMaxRadiusRelevant) -or ($pathMaxRadiusAvailable -and [Math]::Abs($deltaPathMaxRadius) -le $pathGeometryToleranceForKind)))
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $fillColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -320,6 +325,9 @@ foreach ($pair in $pairs) {
         RefStrokeColor = $ref.StrokeColor
         CandStrokeColor = $cand.StrokeColor
         StrokeColorOk = $strokeColorOk
+        RefFillColor = $ref.FillColor
+        CandFillColor = $cand.FillColor
+        FillColorOk = $fillColorOk
         RefLineCap = $ref.LineCap
         CandLineCap = $cand.LineCap
         LineCapOk = $lineCapOk

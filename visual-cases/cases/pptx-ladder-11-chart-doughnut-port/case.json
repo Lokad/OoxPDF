@@ -31,6 +31,14 @@
     "maxChartTextStructurePositionDeltaByKind": {
       "DataLabelText": 0.8,
       "LegendText": 24
-    }
+    },
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["MarkerCandidate"],
+        "maxBoundsDelta": 33,
+        "maxLineWidthDelta": 0.05,
+        "matchFillColors": true
+      }
+    ]
   }
 }

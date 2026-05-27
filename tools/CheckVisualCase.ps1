@@ -398,6 +398,9 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
     if ($manifest.expected.compareChartGraphicsStructureStrokeColors -eq $true) {
         $compareChartArgs.MatchStrokeColor = $true
     }
+    if ($manifest.expected.compareChartGraphicsStructureFillColors -eq $true) {
+        $compareChartArgs.MatchFillColor = $true
+    }
     if ($manifest.expected.compareChartGraphicsStructureLineCaps -eq $true) {
         $compareChartArgs.MatchLineCap = $true
     }
@@ -424,6 +427,62 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareChartArgs
     if ($LASTEXITCODE -ne 0) {
         throw "PDF chart graphics structure gate failed."
+    }
+
+    foreach ($additionalComparison in @($manifest.expected.additionalChartGraphicsStructureComparisons)) {
+        if ($null -eq $additionalComparison) {
+            continue
+        }
+
+        $additionalCompareArgs = @{
+            Reference = $referenceChartStructures
+            Candidate = $candidateChartStructures
+            MatchByBounds = $true
+        }
+        if ($additionalComparison.pageNumber -ne $null) {
+            $additionalCompareArgs.PageNumber = [int]$additionalComparison.pageNumber
+        }
+        if ($additionalComparison.kinds -ne $null) {
+            $additionalCompareArgs.Kinds = @($additionalComparison.kinds)
+        }
+        if ($additionalComparison.maxBoundsDelta -ne $null) {
+            $additionalCompareArgs.BoundsTolerance = [double]$additionalComparison.maxBoundsDelta
+            $additionalCompareArgs.UseBoundsToleranceForUnlistedKinds = $true
+        }
+        if ($additionalComparison.maxBoundsDeltaByKind -ne $null) {
+            $boundsToleranceByKind = @{}
+            foreach ($entry in $additionalComparison.maxBoundsDeltaByKind.PSObject.Properties) {
+                $boundsToleranceByKind[[string]$entry.Name] = [double]$entry.Value
+            }
+
+            $additionalCompareArgs.BoundsToleranceByKind = $boundsToleranceByKind
+        }
+        if ($additionalComparison.maxLineWidthDelta -ne $null) {
+            $additionalCompareArgs.LineWidthTolerance = [double]$additionalComparison.maxLineWidthDelta
+        }
+        if ($additionalComparison.matchFillColors -eq $true) {
+            $additionalCompareArgs.MatchFillColor = $true
+        }
+        if ($additionalComparison.matchStrokeColors -eq $true) {
+            $additionalCompareArgs.MatchStrokeColor = $true
+        }
+        if ($additionalComparison.matchOperators -eq $true) {
+            $additionalCompareArgs.MatchOperator = $true
+        }
+        if ($additionalComparison.matchSegmentCounts -eq $true) {
+            $additionalCompareArgs.MatchSegmentCount = $true
+        }
+        if ($additionalComparison.matchPathCommandCounts -eq $true) {
+            $additionalCompareArgs.MatchPathCommandCounts = $true
+        }
+        if ($additionalComparison.matchPathOperators -eq $true) {
+            $additionalCompareArgs.MatchPathOperators = $true
+        }
+
+        & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @additionalCompareArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Additional PDF chart graphics structure gate failed."
+        }
     }
 }
 

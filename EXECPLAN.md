@@ -8361,6 +8361,24 @@ cell-owned metadata from the workbook bridge instead of rediscovering cells or g
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Extended the chart graphics oracle so legend marker boxes can be gated separately
+from polar slice path geometry. `ComparePdfGraphicsOperations.ps1` now has an opt-in `-MatchFillColor` mode
+that uses the same tolerant color comparison for fill identity as stroke identity, and `CheckVisualCase.ps1`
+can run additional manifest-defined chart graphics comparisons after the primary structure gate. The public
+doughnut chart keeps its strict polar `PolarPlotBoxCandidate`/`PolarSliceCandidate` operator and path-geometry
+gate, then adds a second `MarkerCandidate` gate that matches the three legend swatches by fill color and
+records their current block offset under a `33 pt` bounds tolerance.
+
+This is another oracle-coverage slice rather than a legend placement fix. It preserves the evidence that the
+same category colors survive into the legend swatches while keeping the remaining layout debt explicit:
+doughnut right-legend anchoring/reserve and vertical baseline placement still need an Office-aligned legend
+box model before the marker/text tolerances should be tightened.
+
+Validation: direct `MarkerCandidate` compare on the latest doughnut artifacts passed with `-MatchFillColor`;
+`visual-cases/cases/pptx-ladder-11-chart-doughnut-port/case.json` passed at run `20260527-043029`; full
+public `pptx-charts` visual family passed (`38 passed, 0 failed`) with report generated at
+`2026-05-27T04:33:30.8108354+02:00`.
+
 Revision note, 2026-05-27: Fixed auto-generated chart-title emission by routing inferred titles through the
 same Office-default title path as absent explicit rich text, instead of treating the scene's synthetic title
 run as authored rich text. `ReadSceneOrXmlChartTitleTextRuns` now returns no rich runs for
