@@ -570,6 +570,13 @@ High-priority actions:
   scene-authoritative test pairs `tickLblPos="bogus"` with a mismatched XML fallback `none` and verifies the scene
   default remains visible. Validation: focused `PptxChartUnknownTickLabelPositionUsesSceneAuthoritativeDefault`
   passed; focused non-slow `pptx-charts` passed (`83 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Rechecked the private PPTX acceptance corpus after the axis enum-default ladder.
+  Private run `20260527-231557` compared all `84` reference pages against `84` candidate pages with zero dimension
+  mismatches. Deck-level MAE remained `7.702155`, max page MAE remained `16.412422`, and changed-pixel ratio at
+  threshold 16 remained `0.103230`. The only diagnostic remained the existing private-safe
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR` count of `1`; worst pages by metric remained `53`, `32`, `50`, `36`, and `49`.
+  This confirms the value-axis orientation/crossing/crossBetween and tick-label-position default cleanup was
+  behavior-neutral on the current private corpus while making renderer boundaries more explicit.
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit
