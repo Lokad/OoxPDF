@@ -36,6 +36,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/RenderReference.ps1`: render Office reference output through COM.
 - `tools/RasterizePdf.ps1`: rasterize PDFs through local PDFium.
 - `tools/InspectPdf.ps1`: inspect Office/candidate PDF objects and streams.
+- `tools/InspectPptxText.ps1`: inspect PPTX glyph-run layout/emission summaries without text by default.
 - `tools/ComparePdfTextOperations.ps1`: compare inspected PDF text matrices and spacing.
 - `tools/ComparePdfGraphicsOperations.ps1`: compare inspected PDF path/clip/stroke/fill geometry.
 - `tools/ClassifyPdfChartGraphics.ps1`: classify inspected PDF graphics operations into chart-like structures.
@@ -46,6 +47,7 @@ NuGet packages are written to ignored `artifacts/nuget/`.
 - `tools/Lokad.OoxPdf.VisualDiff`: compare reference and candidate PNGs.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: dependency-free PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspector.
+- `tools/Lokad.OoxPdf.PptxInspect`: dependency-free PPTX text/glyph-run inspector.
 
 Unit tests can be filtered by capability group with `--group`, for example:
 `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`.

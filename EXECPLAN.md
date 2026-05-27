@@ -9613,6 +9613,25 @@ per-size or private-slide exceptions. It is diagnostic plumbing only; the PDF em
 Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Added `tools/InspectPptxText.ps1` and the dependency-free
+`tools/Lokad.OoxPdf.PptxInspect` helper to export PPTX glyph-run layout/emission summaries as JSON. The tool
+uses the same internal `InspectTextGlyphRuns` path as the test harness and omits text by default, recording
+text length, position, frame geometry, column context, line context, layout font size, emitted PDF font size,
+and glyph counts. `--include-text` is explicit and should stay limited to public probes.
+
+The first public-safe run against `artifacts/probes/font-size-quantization-wrap13b` produced 38 candidate
+glyph-run records. The numeric comparison keeps the known gap visible: Office's inspected PDF has secondary
+`+0.024 pt` branches for some single-line sizes and two wrapped 13 pt lines, while candidate glyph inspection
+still reports the first-order grid only. This confirms the next step should be rule discovery from public
+geometry/line evidence, not another private slide-specific `/Tf` exception.
+
+Validation: `dotnet build tools/Lokad.OoxPdf.PptxInspect/Lokad.OoxPdf.PptxInspect.csproj --tl:off --nologo
+-v minimal` passed; `pwsh tools/InspectPptxText.ps1 -InputPptx
+artifacts/probes/font-size-quantization-wrap13b/font-size-quantization-wrap13b.pptx -OutputDirectory
+artifacts/probes/font-size-quantization-wrap13b/candidate-text-inspect -Slide 1` produced 38 glyph-run
+records with text omitted by default; full non-slow console runner passed (`264 passed, 0 failed, 7
+skipped`).
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only
