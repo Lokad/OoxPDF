@@ -391,6 +391,158 @@ function New-SparseBlankChartProbe($PowerPoint, $Cases) {
     return $output
 }
 
+function Populate-LegendKeyDataLabelWorksheet($Worksheet) {
+    $Worksheet.Cells.Clear()
+    $Worksheet.Cells.Item(1, 1).Value = "Category"
+    $Worksheet.Cells.Item(1, 2).Value = "Demand"
+    $Worksheet.Cells.Item(1, 3).Value = "Supply"
+    $Worksheet.Cells.Item(2, 1).Value = "A"
+    $Worksheet.Cells.Item(2, 2).Value = 4.0
+    $Worksheet.Cells.Item(2, 3).Value = 7.0
+    $Worksheet.Cells.Item(3, 1).Value = "B"
+    $Worksheet.Cells.Item(3, 2).Value = 9.0
+    $Worksheet.Cells.Item(3, 3).Value = 5.0
+    $Worksheet.Cells.Item(4, 1).Value = "C"
+    $Worksheet.Cells.Item(4, 2).Value = 6.0
+    $Worksheet.Cells.Item(4, 3).Value = 11.0
+    $Worksheet.Cells.Item(5, 1).Value = "D"
+    $Worksheet.Cells.Item(5, 2).Value = 12.0
+    $Worksheet.Cells.Item(5, 3).Value = 8.0
+}
+
+function Configure-LegendKeyDataLabelProbeChart($Chart, [int]$ChartType, [int]$DataLabelPosition) {
+    [void]($Chart.HasTitle = $false)
+    [void]($Chart.HasLegend = $false)
+    [void]($Chart.ChartType = $ChartType)
+
+    try {
+        $valueAxis = $Chart.Axes(2, 1)
+        $valueAxis.MinimumScale = 0
+        $valueAxis.MaximumScale = 14
+        $valueAxis.MajorUnit = 2
+        $valueAxis.TickLabels.Font.Size = 7
+        $valueAxis.Format.Line.ForeColor.RGB = Rgb 217 217 217
+        $valueAxis.MajorGridlines.Format.Line.ForeColor.RGB = Rgb 230 230 230
+        $valueAxis.MajorGridlines.Format.Line.Weight = 0.5
+    }
+    catch {
+        # Some chart kinds materialize axes lazily; the saved Office PDF is the oracle.
+    }
+
+    try {
+        $categoryAxis = $Chart.Axes(1, 1)
+        $categoryAxis.TickLabels.Font.Size = 7
+        $categoryAxis.Format.Line.ForeColor.RGB = Rgb 217 217 217
+    }
+    catch {
+        # Scatter axes do not expose category-axis settings in the same way.
+    }
+
+    $seriesCollection = $Chart.SeriesCollection()
+    for ($i = 1; $i -le $seriesCollection.Count; $i++) {
+        $series = $seriesCollection.Item($i)
+        if ($i -eq 1) {
+            $series.Format.Fill.ForeColor.RGB = Rgb 68 114 196
+            $series.Format.Line.ForeColor.RGB = Rgb 68 114 196
+            try { $series.MarkerStyle = 8 } catch {}
+            try { $series.MarkerSize = 7 } catch {}
+            try { $series.MarkerForegroundColor = Rgb 68 114 196 } catch {}
+            try { $series.MarkerBackgroundColor = Rgb 68 114 196 } catch {}
+        }
+        else {
+            $series.Format.Fill.ForeColor.RGB = Rgb 237 125 49
+            $series.Format.Line.ForeColor.RGB = Rgb 237 125 49
+            try { $series.MarkerStyle = 8 } catch {}
+            try { $series.MarkerSize = 7 } catch {}
+            try { $series.MarkerForegroundColor = Rgb 237 125 49 } catch {}
+            try { $series.MarkerBackgroundColor = Rgb 237 125 49 } catch {}
+        }
+
+        try {
+            [void]($series.ApplyDataLabels())
+            $labels = $series.DataLabels()
+            $labels.ShowValue = $false
+            $labels.ShowSeriesName = $false
+            $labels.ShowCategoryName = $false
+            $labels.ShowLegendKey = $true
+            $labels.Position = $DataLabelPosition
+            $labels.Font.Size = 8
+            Release-ComObject $labels
+        }
+        catch {
+            # If a specific Office build refuses one label property, keep the
+            # generated PPTX as evidence of that build's observable behavior.
+        }
+
+        Release-ComObject $series
+    }
+    Release-ComObject $seriesCollection
+}
+
+function New-CartesianLegendKeyDataLabelProbe($PowerPoint, $Cases) {
+    $output = Join-Path $Cases "pptx-ladder-11-chart-data-label-legend-keys-probe.pptx"
+    $presentation = $null
+    $workbooks = @()
+    $worksheets = @()
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartSpecs = @(
+            @{ Type = 51; X = 144; Y = 78; W = 432; H = 324; Position = 2 }
+        )
+
+        foreach ($spec in $chartSpecs) {
+            $chartShape = $slide.Shapes.AddChart($spec.Type, $spec.X, $spec.Y, $spec.W, $spec.H)
+            $chart = $chartShape.Chart
+            [void]($chart.ChartData.Activate())
+            $workbook = $chart.ChartData.Workbook
+            $worksheet = $workbook.Worksheets.Item(1)
+            $workbooks += $workbook
+            $worksheets += $worksheet
+            Populate-LegendKeyDataLabelWorksheet $worksheet
+            [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$C`$5"))
+            Configure-LegendKeyDataLabelProbeChart $chart $spec.Type $spec.Position
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        foreach ($worksheet in $worksheets) {
+            Release-ComObject $worksheet
+        }
+        $worksheets = @()
+        foreach ($workbook in $workbooks) {
+            Close-ChartWorkbook $workbook
+        }
+        $workbooks = @()
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        foreach ($worksheet in $worksheets) {
+            Release-ComObject $worksheet
+        }
+        foreach ($workbook in $workbooks) {
+            Close-ChartWorkbook $workbook
+        }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
 $powerPoint = $null
 $presentation = $null
 
@@ -399,6 +551,9 @@ try {
 
     if ($DataLabelsOnly) {
         $output = New-PieDataLabelLeaderLineProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+        $output = New-CartesianLegendKeyDataLabelProbe `
             -PowerPoint $powerPoint `
             -Cases $cases
     }
