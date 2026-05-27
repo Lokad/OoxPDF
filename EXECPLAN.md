@@ -902,6 +902,14 @@ High-priority actions:
   and PDF `/Tf` size. This deliberately does not change rendering. It closes the diagnostic gap discovered while
   comparing dense/default-inset and wide/no-autofit font-size probes: future public-safe probes can now correlate
   Office's secondary `/Tf +0.024 pt` branch with OOXML frame construction instead of relying on a per-size lookup.
+- [x] 2026-05-27: Write source text-frame construction fields to `PptxInspect` glyph-run JSON:
+  the internal glyph-run snapshot already carried source shape bounds, insets, wrap mode, and autofit mode, but the
+  public-safe `tools/Lokad.OoxPdf.PptxInspect` output stopped at resolved text-frame fields. The inspector now writes
+  those source fields as well, making ignored Office probes useful for correlating `/Tf` anomalies with OOXML frame
+  construction. Regenerating `font-size-quantization-wrap13b` and `font-size-quantization-height-scan` glyph-run JSON
+  shows the secondary `+0.024 pt` branch still depends on frame height/line placement rather than on font size,
+  font family, or wrapping alone, so renderer behavior remains unchanged. Validation: `PptxInspect` builds and focused
+  non-slow `pptx-typography` passed (`86 passed, 0 failed, 2 skipped`).
 - [x] Prepare PPTX text glyph emission for context-sensitive Office `/Tf` rules without changing behavior:
   `TextGlyphRun` now owns the already-resolved PDF emission font size, and `DrawGlyphText` consumes that value
   instead of recomputing `/Tf` from the layout font size. This keeps the four-stage text pipeline explicit:
