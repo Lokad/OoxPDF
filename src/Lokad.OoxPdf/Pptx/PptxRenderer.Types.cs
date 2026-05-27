@@ -957,6 +957,8 @@ internal sealed partial class PptxRenderer
         public const double PieDataLabelWidthRatio = 0.55d;
         public const double PieDataLabelMinimumWidth = 18d;
         public const double PieDataLabelHeightFactor = 1.35d;
+        public const double DataLabelLegendKeySizeFactor = 0.55d;
+        public const double DataLabelLegendKeyTextGapFactor = 0.35d;
         public const double PieExplosionLabelRadiusRatio = 0.22d;
         public const double CartesianDataLabelHeightFactor = 1.35d;
         public const double CartesianDataLabelMinimumWidth = 18d;

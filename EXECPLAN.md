@@ -1658,12 +1658,19 @@ High-priority actions:
     fixture instead of relying on private decks. The first validated run after tightening COM cleanup,
     `artifacts/visual/pptx-ladder-11-chart-pie-data-label-leader-lines-probe/20260527-102132`, passed with
     MAE `3.747745`, changed16 `0.045911`, and matching dimension/page counts.
-  - [ ] Render and structurally classify polar data-label legend-key swatches:
+  - [x] Render polar data-label legend-key swatches from indexed point fills:
+    pie and doughnut data-label rendering now treats `showLegendKey` as visible label content and draws a
+    small per-point swatch next to the label text using the same indexed point-fill resolution as the slice.
+    This consumes the source flag without adding a chart-local XML scan and gives the public probe four
+    candidate swatches to compare against Office output. Validation: solution build passed; focused non-slow
+    `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); public probe
+    `pptx-ladder-11-chart-pie-data-label-leader-lines-probe` passed in run `20260527-102519`.
+  - [ ] Structurally classify polar data-label legend-key swatches separately from chart legends:
     the new public probe shows Office emits four small color swatches next to outside pie labels when
-    `showLegendKey` is enabled; OOXPDF currently preserves the flag but does not draw those swatches, and
-    `ClassifyPdfChartText.ps1` currently classifies the second line of the Office label as `LegendText`
-    because it is near the swatch. Fix this by carrying the label-swatch geometry through the renderer and by
-    teaching the structural classifier to distinguish data-label legend keys from chart legend entries.
+    `showLegendKey` is enabled, but `ClassifyPdfChartText.ps1` currently classifies swatch-adjacent label text
+    as `LegendText` because it is near the swatch. Teach the structural classifier to distinguish data-label
+    legend keys from chart legend entries before tightening this probe to data-label-specific text/swatch
+    gates.
   - [ ] Build a stronger public leader-line geometry probe before rendering leader lines:
     the same generated OOXML includes `showLeaderLines` and styled `c:leaderLines`, but the Office PDF for the
     current layout did not expose separate leader-line strokes. Create a public Office-authored probe that
