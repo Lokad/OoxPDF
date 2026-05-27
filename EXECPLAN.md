@@ -402,6 +402,16 @@ High-priority actions:
   regressions. Remaining marker debt is still Office-wide sizing: absent chart-level line markers in the
   line-marker port remain about `1.7 pt` smaller than Office, and explicit size values likely need a structural
   Office unit/shape-envelope conversion rather than more fixture-specific constants.
+- [x] 2026-05-27: Align auto-enabled line marker envelopes with Office's public line-marker PDF structure:
+  the shared `PptxChartMarkerMetricRules.AutoLineChartMarkerSize` now uses the Office-observed `7 pt` envelope
+  for chart-level `c:marker val="1"` series that do not carry their own `c:marker` node. This keeps auto
+  markers distinct from explicitly styled `9 pt` line markers and from generic `4 pt` chart markers.
+  Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`); line-marker port run
+  `20260527-143525` passed and improved `LegendSwatchCandidate` max bounds delta from `1.69 pt` to
+  `0.73 pt`, and `MarkerCandidate`/`StrokeMarkerCandidate` from `1.73 pt` to `0.77 pt`; sparse/blank probe
+  run `20260527-143539` passed with the styled-marker deltas unchanged at `6.74 pt`. Remaining marker debt is
+  now explicit size-value unit/envelope conversion plus broader style/color-style inheritance, not auto-marker
+  default sizing.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -2927,8 +2937,7 @@ Composite oracle family map:
 - Line and scatter chart markers now honor marker-level `c:marker/c:spPr` solid fills and line strokes.
   Explicitly styled line markers without `c:size` now use a distinct Office-observed default envelope shared by
   the scene and renderer. Remaining marker work is Office's full marker preset set, automatic marker
-  inheritance from chart style/color-style parts, exact Office marker sizing for absent chart-level markers,
-  and explicit marker-size unit/envelope conversion.
+  inheritance from chart style/color-style parts, and explicit marker-size unit/envelope conversion.
 - Line and scatter chart markers now render line-only `plus`, `x`, and `dash` marker presets and filled
   `dot`/`star` presets with default stroke fallback when no marker stroke override is present. Remaining
   marker work is automatic marker inheritance from chart style/color-style parts and exact Office marker

@@ -10641,13 +10641,13 @@ internal static class PptxTests
         TestAssert.True(plot.MarkersEnabled == true, "Expected chart-level marker enablement to survive in the scene model.");
         TestAssert.True(plot.Series[0].Marker.IsDefined == false, "Expected an automatically enabled marker to remain distinct from series marker XML.");
         TestAssert.Equal("diamond", plot.Series[0].Marker.Symbol);
-        TestAssert.Equal(5d, plot.Series[0].Marker.Size);
+        TestAssert.Equal(7d, plot.Series[0].Marker.Size);
         TestAssert.True(plot.Series[1].Marker.IsDefined == true, "Expected explicit series marker XML to remain explicit.");
         TestAssert.Equal("plus", plot.Series[1].Marker.Symbol);
         TestAssert.Equal("9", plot.Series[1].Marker.SizeValue ?? string.Empty);
         TestAssert.True(plot.Series[2].Marker.IsDefined == false, "Expected missing sibling markers to stay missing even when their effective style is modeled.");
         TestAssert.Equal("triangle", plot.Series[2].Marker.Symbol);
-        TestAssert.Equal(5d, plot.Series[2].Marker.Size);
+        TestAssert.Equal(7d, plot.Series[2].Marker.Size);
         TestAssert.True(plot.Series[3].Marker.IsDefined == true, "Expected styled series marker XML to stay explicit.");
         TestAssert.Equal("x", plot.Series[3].Marker.Symbol);
         TestAssert.Equal(9d, plot.Series[3].Marker.Size);
