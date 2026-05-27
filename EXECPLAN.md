@@ -1485,6 +1485,16 @@ High-priority actions:
     at run `20260527-034103`; private run `artifacts/private-visual/lokad-value-based/20260527-034151`
     stayed at 84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`,
     and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Render bar/column data labels on the dense indexed point domain:
+    `RenderBarDataLabels` now consumes `ChartIndexedNumberVector` series and indexed category labels, so
+    blank or non-numeric points reserve their category band while skipping label emission instead of shifting
+    later labels to earlier compact ordinals. This aligns the data-label slotting with the already-indexed
+    bar/column geometry while deliberately leaving stacked-label baseline policy unchanged. Validation:
+    focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console runner
+    passed (`262 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-034416`;
+    private run `artifacts/private-visual/lokad-value-based/20260527-034506` stayed at 84/84 compared pages,
+    zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source

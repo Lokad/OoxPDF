@@ -819,13 +819,13 @@ internal sealed partial class PptxRenderer
                         theme,
                         graphics,
                         plotBox,
-                        extraSeries,
+                        extraSeriesVectors,
                         extraValueExtents,
                         extraHorizontalBars,
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
-                        ReadSceneOrXmlCategoryLabels(extraBarPlot, extraBarChart, workbook),
+                        ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
                         ReadSceneOrXmlChartSeriesNames(extraBarPlot, extraBarChart, workbook)));
                     seriesOffset += extraSeries.Count;
                     barChartIndex++;
@@ -949,13 +949,13 @@ internal sealed partial class PptxRenderer
                     theme,
                     graphics,
                     plotBox,
-                    barSeries,
+                    barSeriesVectors,
                     valueExtents,
                     horizontalBars,
                     valueAxisReversed,
                     ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(barPlot, barChart, theme),
-                    ReadSceneOrXmlCategoryLabels(barPlot, barChart, workbook),
+                    ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
                     ReadSceneOrXmlChartSeriesNames(barPlot, barChart, workbook)));
                 return true;
             }
@@ -4429,13 +4429,13 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         PdfGraphicsBuilder graphics,
         ChartPlotBox plotBox,
-        IReadOnlyList<IReadOnlyList<double>> series,
+        IReadOnlyList<ChartIndexedNumberVector> series,
         ChartValueExtents extents,
         bool horizontalBars,
         bool valueAxisReversed,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
-        IReadOnlyList<string> categoryLabels,
+        ChartIndexedTextVector categoryLabels,
         IReadOnlyList<string> seriesNames)
     {
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
@@ -4443,27 +4443,32 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        int categoryCount = Math.Max(1, series.Max(values => values.Count));
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
+        if (denseSeries.Count == 0)
+        {
+            return [];
+        }
+
+        int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         if (horizontalBars)
         {
             double categoryHeight = plotBox.Height / categoryCount;
-            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, series.Count);
+            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseSeries.Count);
             double labelWidth = Math.Max(PptxChartMetricRules.CartesianDataLabelMinimumWidth, plotBox.Width * PptxChartMetricRules.HorizontalBarDataLabelWidthRatio);
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<double> values = series[seriesIndex];
-                    if (category >= values.Count)
+                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
+                    if (category >= values.Count || values[category] is not double value)
                     {
                         continue;
                     }
 
-                    double value = values[category];
                     double barBase = zeroX;
                     double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.X, plotBox.Width, valueAxisReversed);
                     ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex), category);
@@ -4485,19 +4490,18 @@ internal sealed partial class PptxRenderer
         else
         {
             double categoryWidth = plotBox.Width / categoryCount;
-            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, series.Count);
+            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseSeries.Count);
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryX = plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<double> values = series[seriesIndex];
-                    if (category >= values.Count)
+                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
+                    if (category >= values.Count || values[category] is not double value)
                     {
                         continue;
                     }
 
-                    double value = values[category];
                     double x = categoryX + seriesIndex * barSlot;
                     double barBase = zeroY;
                     double barEnd = ChartValueToPlotCoordinate(extents, value, plotBox.Y, plotBox.Height, valueAxisReversed);
