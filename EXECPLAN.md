@@ -9572,6 +9572,21 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Kept chart series-name records alive through Cartesian data-label formatting.
+The scene/workbook path already builds `ChartSeriesNameRecord` values with active cache text, source formula,
+and workbook sidecar points, but bar and line data-label rendering still requested a collapsed string list.
+`RenderBarDataLabels` and `RenderLineDataLabels` now receive the record list and resolve only the active name
+at the final label-string assembly boundary. Existing label text remains unchanged.
+
+This does not implement source-linked series-name freshness or rich chart text layout. It removes another
+premature collapse before data-label layout: future Office-PDF-backed decisions can combine label overrides,
+series names, workbook hidden state, source formulas, and source-linked formatting without re-reading series
+name XML after the label formatter has already discarded provenance.
+
+Validation: focused `PptxChartSeriesNamesPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved indexed value provenance through scatter and bubble point construction.
 `ScatterPoint` used to carry only rendered X, Y, and bubble-size scalars after `ChartIndexedScatterSeries`
 had already preserved cache/workbook vectors. The compact scatter projection now derives from compact

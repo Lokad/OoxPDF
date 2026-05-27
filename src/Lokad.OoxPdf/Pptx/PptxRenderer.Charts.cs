@@ -851,7 +851,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
-                        ReadSceneOrXmlChartSeriesNames(extraBarPlot, extraBarChart, workbook)));
+                        ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook)));
                     seriesOffset += extraSeries.Count;
                     barChartIndex++;
                 }
@@ -920,7 +920,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlDataLabelOptions(linePlot, comboLineChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(linePlot, comboLineChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook),
-                        ReadSceneOrXmlChartSeriesNames(linePlot, comboLineChart, workbook)));
+                        ReadSceneOrXmlChartSeriesNameRecords(linePlot, comboLineChart, workbook)));
                     lineChartIndex++;
                 }
 
@@ -981,7 +981,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
-                    ReadSceneOrXmlChartSeriesNames(barPlot, barChart, workbook)));
+                    ReadSceneOrXmlChartSeriesNameRecords(barPlot, barChart, workbook)));
                 return true;
             }
         }
@@ -1036,7 +1036,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook),
-                    ReadSceneOrXmlChartSeriesNames(linePlot, lineChart, workbook)));
+                    ReadSceneOrXmlChartSeriesNameRecords(linePlot, lineChart, workbook)));
                 return true;
             }
         }
@@ -4565,7 +4565,7 @@ internal sealed partial class PptxRenderer
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
-        IReadOnlyList<string> seriesNames)
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
@@ -4664,7 +4664,7 @@ internal sealed partial class PptxRenderer
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         ChartIndexedTextVector categoryLabels,
-        IReadOnlyList<string> seriesNames)
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
         {
@@ -5282,7 +5282,7 @@ internal sealed partial class PptxRenderer
         int categoryIndex,
         ChartDataLabelOptions options,
         ChartIndexedTextVector categoryLabels,
-        IReadOnlyList<string> seriesNames)
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
         {
@@ -5290,9 +5290,10 @@ internal sealed partial class PptxRenderer
         }
 
         var parts = new List<string>(3);
-        if (options.ShowSeriesName && seriesIndex < seriesNames.Count && !string.IsNullOrWhiteSpace(seriesNames[seriesIndex]))
+        string seriesName = GetActiveSeriesName(seriesNames, seriesIndex);
+        if (options.ShowSeriesName && !string.IsNullOrWhiteSpace(seriesName))
         {
-            parts.Add(seriesNames[seriesIndex]);
+            parts.Add(seriesName);
         }
 
         string categoryLabel = GetIndexedCategoryLabel(categoryLabels, categoryIndex);
@@ -5315,6 +5316,13 @@ internal sealed partial class PptxRenderer
             .Where(point => point.HasText && point.Index == categoryIndex)
             .Select(point => point.Text)
             .FirstOrDefault() ?? string.Empty;
+    }
+
+    private static string GetActiveSeriesName(IReadOnlyList<ChartSeriesNameRecord> seriesNames, int seriesIndex)
+    {
+        return seriesIndex >= 0 && seriesIndex < seriesNames.Count
+            ? seriesNames[seriesIndex].ActiveName
+            : string.Empty;
     }
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)

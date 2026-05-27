@@ -11383,6 +11383,13 @@ internal static class PptxTests
         TestAssert.Equal("Workbook Name", (string?)workbookPoints[0].GetType().GetProperty("Text")?.GetValue(workbookPoints[0]) ?? string.Empty);
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected series-name workbook cell provenance.");
         TestAssert.Equal("B1", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        Array typedRecords = Array.CreateInstance(records[0].GetType(), records.Length);
+        typedRecords.SetValue(records[0], 0);
+        System.Reflection.MethodInfo getActiveSeriesName = typeof(PptxRenderer).GetMethod(
+            "GetActiveSeriesName",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected active series-name helper.");
+        string activeSeriesName = (string?)getActiveSeriesName.Invoke(null, [typedRecords, 0]) ?? string.Empty;
+        TestAssert.Equal("Cached Name", activeSeriesName);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
