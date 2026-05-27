@@ -227,6 +227,27 @@ internal sealed partial class PptxRenderer
         return sources;
     }
 
+    private static ChartAxisSource ReadSceneOrXmlChartCategoryAxisForPlot(
+        PptxSceneChart? sceneChart,
+        PptxSceneChartPlot? scenePlot,
+        XDocument chartXml,
+        XElement? chartElement)
+    {
+        XElement[] xmlAxes = chartElement is null
+            ? chartXml.Descendants(ChartNamespace + "catAx").ToArray()
+            : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
+        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Category);
+        if (sceneAxes.Count == 0)
+        {
+            XElement? xmlAxis = xmlAxes.FirstOrDefault();
+            return new ChartAxisSource(null, xmlAxis);
+        }
+
+        PptxSceneChartAxis sceneAxis = sceneAxes[0];
+        XElement? matchedXmlAxis = xmlAxes.FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis.Id, StringComparison.Ordinal));
+        return new ChartAxisSource(sceneAxis, matchedXmlAxis);
+    }
+
     private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
     {
         if (scenePlot is not null)
@@ -1021,11 +1042,10 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueAxis.SceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
-                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
-                PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, PptxSceneChartAxisKind.Category);
-                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
+                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1064,8 +1084,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, areaPlot, chartXml, areaChart).FirstOrDefault();
-                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, areaChart);
-                PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, areaPlot, PptxSceneChartAxisKind.Category);
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, areaPlot, chartXml, areaChart);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: stacked && !percentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueAxis.SceneAxis, valueAxis.XmlAxis);
@@ -1093,9 +1112,9 @@ internal sealed partial class PptxRenderer
                     axisUnits,
                     ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxis.XmlAxis, valueExtents),
                     valueAxisReversed);
-                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1175,17 +1194,16 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(radarPlot, radarChart, theme);
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, radarPlot, chartXml, radarChart).FirstOrDefault();
-                XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, radarChart);
-                PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, radarPlot, PptxSceneChartAxisKind.Category);
+                ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, radarPlot, chartXml, radarChart);
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetRadarChartValueExtents(radarSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, ReadSceneOrXmlChartRadarStyle(radarPlot, radarChart), radarSeries);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
-                if (IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
+                if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categorySceneAxis, categoryAxis, ReadSceneOrXmlCategoryLabelVector(radarPlot, radarChart, workbook)));
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(radarPlot, radarChart, workbook)));
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -3572,6 +3590,36 @@ internal sealed partial class PptxRenderer
             .Descendants(ChartNamespace + "catAx")
             .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty)) ??
             chartXml.Descendants(ChartNamespace + "catAx").FirstOrDefault();
+    }
+
+    private static IReadOnlyList<XElement> ReadChartCategoryAxesForChart(XDocument chartXml, XElement chartElement)
+    {
+        string[] axisIds = chartElement
+            .Elements(ChartNamespace + "axId")
+            .Select(axis => (string?)axis.Attribute("val"))
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToArray();
+        if (axisIds.Length == 0)
+        {
+            return chartXml.Descendants(ChartNamespace + "catAx").ToArray();
+        }
+
+        var axes = new List<XElement>();
+        foreach (string axisId in axisIds)
+        {
+            XElement? axis = chartXml
+                .Descendants(ChartNamespace + "catAx")
+                .FirstOrDefault(candidate => string.Equals(ReadChartAxisId(candidate), axisId, StringComparison.Ordinal));
+            if (axis is not null)
+            {
+                axes.Add(axis);
+            }
+        }
+
+        return axes.Count == 0
+            ? chartXml.Descendants(ChartNamespace + "catAx").Take(1).ToArray()
+            : axes;
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)
