@@ -10,14 +10,15 @@ internal static class PdfGlyphOutlinePath
         ushort glyphId,
         double x,
         double y,
-        double fontSize)
+        double fontSize,
+        double shear = 0d)
     {
         if (!font.TryReadGlyphOutline(glyphId, out var outline) || outline.Contours.Count == 0)
         {
             return false;
         }
 
-        AppendGlyphPath(graphics, font, outline, x, y, fontSize);
+        AppendGlyphPath(graphics, font, outline, x, y, fontSize, shear);
         return true;
     }
 
@@ -27,12 +28,13 @@ internal static class PdfGlyphOutlinePath
         OpenTypeFont.OpenTypeGlyphOutline outline,
         double x,
         double y,
-        double fontSize)
+        double fontSize,
+        double shear = 0d)
     {
         double scale = font.UnitsPerEm == 0 ? 0d : fontSize / font.UnitsPerEm;
         foreach (OpenTypeFont.OpenTypeGlyphContour contour in outline.Contours)
         {
-            AppendContourPath(graphics, contour, x, y, scale);
+            AppendContourPath(graphics, contour, x, y, scale, shear);
         }
     }
 
@@ -41,7 +43,8 @@ internal static class PdfGlyphOutlinePath
         OpenTypeFont.OpenTypeGlyphContour contour,
         double x,
         double y,
-        double scale)
+        double scale,
+        double shear)
     {
         IReadOnlyList<OpenTypeFont.OpenTypeGlyphPoint> source = contour.Points;
         if (source.Count == 0)
@@ -56,7 +59,8 @@ internal static class PdfGlyphOutlinePath
         }
 
         DPoint start = points[0];
-        graphics.MoveTo(x + start.X * scale, y + start.Y * scale);
+        PdfPoint pdfStart = ToPdfPoint(start, x, y, scale, shear);
+        graphics.MoveTo(pdfStart.X, pdfStart.Y);
         DPoint current = start;
 
         for (int i = 1; i < points.Length;)
@@ -64,7 +68,8 @@ internal static class PdfGlyphOutlinePath
             DPoint point = points[i];
             if (point.IsOnCurve)
             {
-                graphics.LineTo(x + point.X * scale, y + point.Y * scale);
+                PdfPoint pdfPoint = ToPdfPoint(point, x, y, scale, shear);
+                graphics.LineTo(pdfPoint.X, pdfPoint.Y);
                 current = point;
                 i++;
                 continue;
@@ -85,19 +90,22 @@ internal static class PdfGlyphOutlinePath
                 end.Y + (point.Y - end.Y) * 2d / 3d,
                 IsOnCurve: false);
 
-            graphics.CurveTo(
-                x + control1.X * scale,
-                y + control1.Y * scale,
-                x + control2.X * scale,
-                y + control2.Y * scale,
-                x + end.X * scale,
-                y + end.Y * scale);
+            PdfPoint pdfControl1 = ToPdfPoint(control1, x, y, scale, shear);
+            PdfPoint pdfControl2 = ToPdfPoint(control2, x, y, scale, shear);
+            PdfPoint pdfEnd = ToPdfPoint(end, x, y, scale, shear);
+            graphics.CurveTo(pdfControl1.X, pdfControl1.Y, pdfControl2.X, pdfControl2.Y, pdfEnd.X, pdfEnd.Y);
 
             current = end;
             i += 2;
         }
 
         graphics.ClosePath();
+    }
+
+    private static PdfPoint ToPdfPoint(DPoint point, double x, double y, double scale, double shear)
+    {
+        double scaledY = point.Y * scale;
+        return new PdfPoint(x + point.X * scale + scaledY * shear, y + scaledY);
     }
 
     private static DPoint[] BuildPdfContourPoints(IReadOnlyList<OpenTypeFont.OpenTypeGlyphPoint> source)
@@ -158,4 +166,6 @@ internal static class PdfGlyphOutlinePath
     }
 
     private readonly record struct DPoint(double X, double Y, bool IsOnCurve);
+
+    private readonly record struct PdfPoint(double X, double Y);
 }

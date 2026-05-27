@@ -11441,3 +11441,26 @@ structural gate; after the renderer gate change its raster metrics improved to m
 `0.020626205632716048` and changed-pixel ratio at threshold 16 of `0.0006462191358024692`, with the
 candidate exposing no text operations for the run. The existing `pptx-ladder-04-transparent-text` gate also
 passed again at run `20260527-204751`. The full non-slow suite passed with `297` tests and `7` slow skips.
+
+Revision note, 2026-05-27: Added public Office-PDF evidence for semi-transparent synthetic-italic text and
+wired that case through the same filled glyph-outline path route. The new
+`pptx-ladder-04-transparent-synthetic-italic-probe` uses italic Cambria Math with a 45% fill alpha. Office
+exports the run as one alpha-scoped `Fill`/`f` glyph path with `157` segments and `8/43/106/8`
+move/line/curve/close command counts; it does not emit searchable `TJ`/`Tj` text for this effect
+combination.
+
+OOXPDF now applies the existing synthetic italic shear (`0.213`) to glyph-outline coordinates instead of
+keeping transparent synthetic italic on the PDF text-matrix path. The shear value is shared with the normal
+text emitter, so the path route and text route no longer carry separate magic constants. Opaque synthetic
+italic remains PDF text emission, and no-fill outlined text remains on the text-rendering-mode route until
+separate Office evidence says otherwise. The remaining long-view gap is not the path structure: it is the
+same sub-2 pt italic bounds/placement delta seen in the visual gate, which should be reduced through
+font-metric and positioning alignment rather than by loosening glyph-path structure.
+
+Validation: focused non-slow `pptx-typography` passed with `86` tests and `2` slow skips. The new
+`pptx-ladder-04-transparent-synthetic-italic-probe` passed at run `20260527-205445` with a structural
+graphics gate matching `Fill`/`f`, `157` segments, and `8/43/106/8` path-command counts; raster metrics from
+the calibrated run were mean absolute error `0.05136140046296296` and changed-pixel ratio at threshold 16
+of `0.0012490354938271605`. The existing `pptx-ladder-04-transparent-synthetic-bold-probe` and
+`pptx-ladder-04-transparent-text` structural gates both passed again at run `20260527-205445`. The full
+non-slow suite passed with `298` tests and `7` slow skips.

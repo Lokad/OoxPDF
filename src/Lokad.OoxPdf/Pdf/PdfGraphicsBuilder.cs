@@ -5,6 +5,8 @@ namespace Lokad.OoxPdf.Pdf;
 
 internal sealed class PdfGraphicsBuilder
 {
+    internal const double SyntheticItalicShear = 0.213d;
+
     private readonly StringBuilder builder = new();
     private readonly List<PdfExtGStateResource> extGStates = [];
     private readonly List<PdfShadingResource> shadings = [];
@@ -336,7 +338,7 @@ internal sealed class PdfGraphicsBuilder
             builder.Append(N(characterSpacing)).AppendLine(" Tc");
         }
 
-        double shear = italic ? 0.213d : 0d;
+        double shear = italic ? SyntheticItalicShear : 0d;
         builder.Append("1 0 ").Append(N(shear)).Append(" 1 ").Append(N(x)).Append(' ').Append(N(y)).AppendLine(" Tm");
         builder.AppendLine(textOperator);
         if (textRenderingMode is 1 or 2)

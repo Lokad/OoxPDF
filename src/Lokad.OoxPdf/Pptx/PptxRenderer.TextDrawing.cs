@@ -1164,7 +1164,6 @@ internal sealed partial class PptxRenderer
         TextRun run = glyphRun.Source;
         if (run.Alpha >= 1d - PptxTextMetricRules.TextStateTolerance ||
             run.Outline is not null ||
-            glyphRun.SyntheticItalic ||
             glyphRun.Glyphs.Count == 0)
         {
             return false;
@@ -1194,6 +1193,7 @@ internal sealed partial class PptxRenderer
     {
         TextRun run = glyphRun.Source;
         graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+        double shear = glyphRun.SyntheticItalic ? PdfGraphicsBuilder.SyntheticItalicShear : 0d;
 
         double cursorX = glyphRun.X;
         bool hasPath = false;
@@ -1211,7 +1211,8 @@ internal sealed partial class PptxRenderer
                 glyph.GlyphId,
                 cursorX,
                 glyphRun.BaselineY,
-                glyphRun.PdfFontSize))
+                glyphRun.PdfFontSize,
+                shear))
             {
                 hasPath = true;
             }

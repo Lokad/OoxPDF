@@ -220,6 +220,10 @@ New-TypographyProbe -Id "pptx-ladder-04-transparent-synthetic-bold-probe" -TextB
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3600" b="1"><a:solidFill><a:srgbClr val="336699"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Bold</a:t></a:r></a:p>
 '@
 
+New-TypographyProbe -Id "pptx-ladder-04-transparent-synthetic-italic-probe" -TextBody @'
+          <a:p><a:pPr algn="l"/><a:r><a:rPr sz="3600" i="1"><a:solidFill><a:srgbClr val="663399"><a:alpha val="45000"/></a:srgbClr></a:solidFill><a:latin typeface="Cambria Math"/></a:rPr><a:t>Italic</a:t></a:r></a:p>
+'@
+
 New-TypographyProbe -Id "pptx-ladder-04-typography-repeated-spaces" -TextBody @'
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha  beta   gamma</a:t></a:r></a:p>
           <a:p><a:pPr algn="l"/><a:r><a:rPr sz="2600"><a:latin typeface="Calibri"/></a:rPr><a:t>Left  middle   right</a:t></a:r></a:p>
