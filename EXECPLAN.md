@@ -539,6 +539,14 @@ High-priority actions:
   DrawingML line XML for dash/cap/join state. This preserves the long-term split where `PptxScene` owns OOXML
   token interpretation and the renderer consumes the structural scene model. Validation: focused non-slow
   `pptx-shapes` passed (`16 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
+  `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
+  but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit
+  `Unknown -> Right` ladder before legend geometry runs. This removes the previous accidental reliance on
+  switch fallthrough in `RenderChartLegend` while keeping unsupported source evidence available for future
+  diagnostics or Office probes. A focused regression locks the source-token/effective-layout split for
+  `legendPos="bogus"`. Validation: focused `UnknownLegend` passed (`1` test, `0` failures); focused non-slow
+  `pptx-charts` passed with `64` tests, `0` failures, and `0` skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

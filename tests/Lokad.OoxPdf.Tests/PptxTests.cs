@@ -11314,6 +11314,34 @@ internal static class PptxTests
         TestAssert.True(chart?.Title.IsAutoDeleted == false, "Expected explicit autoTitleDeleted=false metadata to be preserved.");
     }
 
+    public static void PptxChartUnknownLegendPositionResolvesThroughExplicitDefault()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:ser><c:tx><c:v>Line Series</c:v></c:tx><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  </c:lineChart>
+                </c:plotArea>
+                <c:legend><c:legendPos val="bogus"/></c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChart chart = BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartLegendPosition.Unknown, chart.Legend.PositionKind);
+        TestAssert.Equal("bogus", chart.Legend.Position);
+
+        System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLegendLayout",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
+        object layout = readLegendLayout.Invoke(null, [PptxTheme.Empty, chart, XDocument.Parse(chartXml)]) ?? throw new InvalidOperationException("Expected chart legend layout.");
+        object positionKind = layout.GetType().GetProperty("PositionKind")?.GetValue(layout) ?? throw new InvalidOperationException("Expected legend position kind.");
+
+        TestAssert.Equal(PptxSceneChartLegendPosition.Right, (PptxSceneChartLegendPosition)positionKind);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

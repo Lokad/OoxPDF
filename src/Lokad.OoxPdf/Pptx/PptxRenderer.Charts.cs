@@ -4494,7 +4494,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(PptxSceneBuilder.ParseChartLegendPosition(position), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme));
+        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -4510,8 +4510,15 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(sceneChart.Legend.PositionKind, sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
+            ? new ChartLegendLayout(ResolveChartLegendPosition(sceneChart.Legend.PositionKind), sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
             : ChartLegendLayout.Hidden;
+    }
+
+    private static PptxSceneChartLegendPosition ResolveChartLegendPosition(PptxSceneChartLegendPosition position)
+    {
+        return position == PptxSceneChartLegendPosition.Unknown
+            ? PptxSceneChartLegendPosition.Right
+            : position;
     }
 
     private static ChartTextStyle ReadSceneOrXmlChartLegendTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
