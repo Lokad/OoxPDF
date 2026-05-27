@@ -4608,7 +4608,7 @@ internal sealed partial class PptxRenderer
                         graphics.SetAlpha(1d, fillStroke.Alpha);
                     }
 
-                    SetChartStroke(graphics, fillStroke);
+                    SetChartStroke(graphics, ResolveFilledLegendKeyStroke(fillStroke));
                     graphics.StrokeRectangle(entryX, markerY, markerSize, markerSize);
                     if (fillStroke.Alpha < 1d)
                     {
@@ -4658,6 +4658,13 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CL");
+    }
+
+    private static ChartSeriesStroke ResolveFilledLegendKeyStroke(ChartSeriesStroke stroke)
+    {
+        return stroke.Width > ChartFilledSeriesInheritedStrokeWidth
+            ? stroke with { Width = ChartFilledSeriesInheritedStrokeWidth }
+            : stroke;
     }
 
     private static double GetPackedHorizontalLegendWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerSize)

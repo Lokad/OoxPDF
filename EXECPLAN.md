@@ -467,6 +467,15 @@ High-priority actions:
   `ChartSeriesLineCandidate` structural gate. Remaining sparse legend debt is not closed: the top right-legend
   filled keys still show a role/legend-key mismatch in the PDF structure, so the durable next step is a typed
   legend-key model that separates series path strokes, marker outline strokes, and filled-key border strokes.
+- [x] 2026-05-27: Stop filled legend keys from inheriting thick series path strokes.
+  `RenderChartLegend` now resolves filled-key border strokes through a dedicated filled-key stroke path, so
+  fill swatches no longer reuse `3 pt` line/area series widths for their rectangle border. This is the first
+  small typed-legend-key split: the visible PDF object for a filled legend key has a fill, a thin key border,
+  and text, while series path strokes remain separate objects. Validation: focused non-slow `pptx-charts`
+  passed (`56 passed, 0 failed, 0 skipped`); sparse/blank probe run `20260527-151604` passed the existing
+  `ChartSeriesLineCandidate` structural gate, and raw candidate PDF inspection shows the top filled right-legend
+  key borders now emit `0.75 w` instead of `3 w`. Remaining sparse legend debt is placement and layout-box
+  alignment, not thick-stroke leakage.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -10891,9 +10900,8 @@ filled-series borders use thin strokes (`0.75 pt` in the public sparse evidence)
 role-specific inherited widths into scene/XML stroke conversion for line/area paths, filled bar-series borders,
 and marker outlines, and three focused synthetic chart tests lock those distinctions.
 
-Validation: focused non-slow `pptx-charts` passed with `56` tests; sparse/blank probe run `20260527-151415`
-passed the existing series-line structural gate. This investigation also exposed a remaining legend-key
-architecture gap: some filled right-legend keys still borrow series-line stroke state in the rendered PDF.
-Do not close the sparse legend item until the legend key model explicitly distinguishes series path strokes,
-marker outline strokes, and filled-key border strokes rather than passing one `ChartSeriesStroke` through all
-legend surfaces.
+Validation: focused non-slow `pptx-charts` passed with `56` tests; sparse/blank probe run `20260527-151604`
+passed the existing series-line structural gate. The follow-up filled-key pass added a dedicated filled legend
+key stroke resolver, and raw candidate PDF inspection shows the top right-legend filled-key borders now emit
+`0.75 w` instead of borrowing the `3 pt` series path stroke. Do not close the sparse legend item yet: the
+remaining problem is the joint plot/legend layout box and right-legend placement, not stroke-role leakage.
