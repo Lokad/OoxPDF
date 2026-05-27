@@ -2085,6 +2085,10 @@ internal static class PptxTests
         TestAssert.Equal(0, glyphRun.ParagraphIndex);
         TestAssert.Equal(0, glyphRun.LineIndex);
         TestAssert.Equal(frame.FontScale, glyphRun.FrameFontScale);
+        TestAssert.Equal(72d, glyphRun.FrameShapeX);
+        TestAssert.Equal(72d, glyphRun.FrameShapeTopY);
+        TestAssert.Equal("Square", glyphRun.FrameWrapMode);
+        TestAssert.Equal("noAutofit", glyphRun.FrameAutofitMode);
         TestAssert.Equal(frame.TextX, glyphRun.FrameTextX);
         TestAssert.Equal(frame.TextWidth, glyphRun.FrameTextWidth);
         TestAssert.Equal(1, glyphRun.FrameColumnCount);

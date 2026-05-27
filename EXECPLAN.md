@@ -626,7 +626,17 @@ High-priority actions:
   of requested point size. The same nominal sizes can emit exact values or `+0.024`/nearby branches depending on
   frame geometry, insets, generated textbox height, and wrapped-line state. Treat the current 600-DPI grid as the
   stable first-order export approximation, but do not add per-size exceptions for `15`, `21`, `24`, `36`, or wrapped
-  `9`/`13` until the renderer can derive the same context from the text-frame layout/export model.
+  `9`/`13` until the renderer can derive the same context from the text-frame layout/export model. A follow-up
+  inspection pass confirmed that default body insets alone do not trigger the secondary branch: a dense/default-inset
+  probe still emits exact `15`, `21`, `24`, `30`, and `36`, while the wide/no-autofit probes emit `15.024`,
+  `21.024`, `24.024`, exact `30`, and `36.024`. The next probe must vary generated frame height and line count while
+  keeping shape width and body insets fixed, otherwise a renderer rule would still be a hidden geometry heuristic.
+- [x] Expose source text-frame construction through glyph-run inspection:
+  glyph-run snapshots and the internal `PptxPdfTextEmissionContext` now carry source shape bounds, body insets,
+  wrap mode/value, and autofit mode in addition to the already-resolved text rectangle, line identity, line advance,
+  and PDF `/Tf` size. This deliberately does not change rendering. It closes the diagnostic gap discovered while
+  comparing dense/default-inset and wide/no-autofit font-size probes: future public-safe probes can now correlate
+  Office's secondary `/Tf +0.024 pt` branch with OOXML frame construction instead of relying on a per-size lookup.
 - [x] Prepare PPTX text glyph emission for context-sensitive Office `/Tf` rules without changing behavior:
   `TextGlyphRun` now owns the already-resolved PDF emission font size, and `DrawGlyphText` consumes that value
   instead of recomputing `/Tf` from the layout font size. This keeps the four-stage text pipeline explicit:

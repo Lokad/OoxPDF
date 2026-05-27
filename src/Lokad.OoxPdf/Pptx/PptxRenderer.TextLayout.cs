@@ -397,6 +397,27 @@ internal sealed partial class PptxRenderer
             ?.Element(DrawingNamespace + "noAutofit") is not null;
     }
 
+    private static string ReadTextAutofitMode(XElement textBody)
+    {
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
+        if (bodyProperties?.Element(DrawingNamespace + "spAutoFit") is not null)
+        {
+            return "spAutoFit";
+        }
+
+        if (bodyProperties?.Element(DrawingNamespace + "noAutofit") is not null)
+        {
+            return "noAutofit";
+        }
+
+        if (bodyProperties?.Element(DrawingNamespace + "normAutofit") is not null)
+        {
+            return "normAutofit";
+        }
+
+        return string.Empty;
+    }
+
     private static bool TextBodyAllowsWrapping(XElement textBody)
     {
         return ReadTextWrapMode(textBody) != PptxTextWrapMode.None;
@@ -657,6 +678,17 @@ internal sealed partial class PptxRenderer
                 lineState.ParagraphIndex,
                 lineState.LineIndex,
                 lineState.Frame.Model.FontScale,
+                OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.X),
+                OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.Y),
+                OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.Width),
+                OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.Height),
+                lineState.Frame.Model.Insets.Left,
+                lineState.Frame.Model.Insets.Right,
+                lineState.Frame.Model.Insets.Top,
+                lineState.Frame.Model.Insets.Bottom,
+                lineState.Frame.Model.BodyProperties.WrapMode.ToString(),
+                lineState.Frame.Model.BodyProperties.WrapValue,
+                ReadTextAutofitMode(lineState.Frame.Model.TextBody),
                 lineState.Frame.Model.TextX,
                 lineState.Frame.Model.TextWidth,
                 lineState.Frame.Model.TextWrapWidth,
