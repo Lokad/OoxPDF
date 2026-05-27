@@ -8040,121 +8040,129 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         graphics.SaveState();
-        ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
-        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
-        double maxValue = valueExtents.Max;
-        double minValue = valueExtents.Min;
-        double valueRange = Math.Max(1d, maxValue - minValue);
-        double valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
-
-        if (minorGridlines)
-        {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
-        }
-
-        if (majorGridlines)
-        {
-            DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
-        }
-
-        ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
+        int pointCount = 0;
+        double valueAxisCrossingY = 0d;
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
-        if (axesStyle.CategoryAxisVisible)
+        try
         {
-            if (categoryAxisStroke.Alpha > 0.001d)
-            {
-                SetChartStroke(graphics, categoryAxisStroke);
-                graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
-            }
-        }
+            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
+            pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
+            double maxValue = valueExtents.Max;
+            double minValue = valueExtents.Min;
+            double valueRange = Math.Max(1d, maxValue - minValue);
+            valueAxisCrossingY = ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotY, plotHeight, valueAxisReversed);
 
-        if (axesStyle.ValueAxisVisible)
-        {
-            if (valueAxisStroke.Alpha > 0.001d)
+            if (minorGridlines)
             {
-                SetChartStroke(graphics, valueAxisStroke);
-                double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
-                graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
             }
 
-            if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+            if (majorGridlines)
             {
-                if (secondaryValueAxisStroke.Alpha > 0.001d)
+                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+            }
+
+            ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
+            if (axesStyle.CategoryAxisVisible)
+            {
+                if (categoryAxisStroke.Alpha > 0.001d)
                 {
-                    SetChartStroke(graphics, secondaryValueAxisStroke);
-                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                    SetChartStroke(graphics, categoryAxisStroke);
+                    graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
+                }
+            }
+
+            if (axesStyle.ValueAxisVisible)
+            {
+                if (valueAxisStroke.Alpha > 0.001d)
+                {
+                    SetChartStroke(graphics, valueAxisStroke);
+                    double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
                     graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
                 }
-            }
-        }
 
-        double[] lower = new double[pointCount];
-        for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
-        {
-            IReadOnlyList<double?> values = denseSeries[seriesIndex];
-            if (values.Count == 0)
-            {
-                continue;
-            }
-
-            ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
-            if (stroke.Alpha < 1d)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(1d, stroke.Alpha);
-            }
-
-            SetChartStroke(graphics, stroke);
-            var points = new List<(double X, double Y)>(values.Count);
-            var markers = new List<(double X, double Y)>(values.Count);
-            for (int i = 0; i < values.Count; i++)
-            {
-                if (values[i] is not { } value)
+                if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
                 {
-                    if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero)
+                    if (secondaryValueAxisStroke.Alpha > 0.001d)
                     {
-                        value = 0d;
+                        SetChartStroke(graphics, secondaryValueAxisStroke);
+                        double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                        graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
                     }
-                    else
+                }
+            }
+
+            double[] lower = new double[pointCount];
+            for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
+            {
+                IReadOnlyList<double?> values = denseSeries[seriesIndex];
+                if (values.Count == 0)
+                {
+                    continue;
+                }
+
+                ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.SaveState();
+                    graphics.SetAlpha(1d, stroke.Alpha);
+                }
+
+                SetChartStroke(graphics, stroke);
+                var points = new List<(double X, double Y)>(values.Count);
+                var markers = new List<(double X, double Y)>(values.Count);
+                for (int i = 0; i < values.Count; i++)
+                {
+                    if (values[i] is not { } value)
                     {
-                        if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
+                        if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Zero)
                         {
-                            StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
-                            points.Clear();
+                            value = 0d;
                         }
+                        else
+                        {
+                            if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
+                            {
+                                StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                                points.Clear();
+                            }
 
-                        continue;
+                            continue;
+                        }
+                    }
+
+                    double pointX = plotX + plotWidth * (i + 0.5d) / pointCount;
+                    double positiveTotal = GetCategoryPositiveTotal(denseSeries, i, percentStacked);
+                    double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
+                    double plottedValue = stacked ? lower[i] + normalizedValue : value;
+                    double pointY = ChartValueToPlotCoordinate(valueExtents, plottedValue, plotY, plotHeight, valueAxisReversed);
+                    points.Add((pointX, pointY));
+                    markers.Add((pointX, pointY));
+                    if (stacked)
+                    {
+                        lower[i] = plottedValue;
                     }
                 }
 
-                double pointX = plotX + plotWidth * (i + 0.5d) / pointCount;
-                double positiveTotal = GetCategoryPositiveTotal(denseSeries, i, percentStacked);
-                double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
-                double plottedValue = stacked ? lower[i] + normalizedValue : value;
-                double pointY = ChartValueToPlotCoordinate(valueExtents, plottedValue, plotY, plotHeight, valueAxisReversed);
-                points.Add((pointX, pointY));
-                markers.Add((pointX, pointY));
-                if (stacked)
+                StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+
+                foreach ((double pointX, double pointY) in markers)
                 {
-                    lower[i] = plottedValue;
+                    graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
+                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
+                }
+
+                if (stroke.Alpha < 1d)
+                {
+                    graphics.RestoreState();
                 }
             }
-
-            StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
-
-            foreach ((double pointX, double pointY) in markers)
-            {
-                graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
-            }
-
-            if (stroke.Alpha < 1d)
-            {
-                graphics.RestoreState();
-            }
+        }
+        finally
+        {
+            graphics.RestoreState();
         }
 
-        graphics.RestoreState();
         if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
         {
             SetChartStroke(graphics, categoryAxisStroke);

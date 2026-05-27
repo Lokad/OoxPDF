@@ -11007,3 +11007,15 @@ Validation: focused non-slow `pptx-charts` passed with `57` tests; full non-slow
 `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-190645`. The scatter-clusters
 raster gates were loosened only from `2.21` to `2.22` MAE and from `0.0202` to `0.0203` changed-pixel ratio
 to accommodate the intended clip-scope antialiasing shift while keeping the structural gates unchanged.
+
+Revision note, 2026-05-27: Hardened the line-chart plot-area clip scope lifecycle. `RenderLineChart` now
+restores the PDF graphics state through `try`/`finally`, matching the ownership pattern used by bar, area,
+and scatter chart series clipping. This is intended to be behavior-neutral in successful renders, but it
+prevents future chart subpart failures from leaking a clipping state into subsequent PDF operations.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-line-markers-port` passed at run
+`20260527-191106`; `pptx-ladder-11-chart-line-3series-port` passed at run `20260527-191105`; and
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-191105`. The broader clip-box
+parity item remains open: this slice only makes the existing line-chart scope robust, it does not add or
+remove Office-like subpart clip scopes.
