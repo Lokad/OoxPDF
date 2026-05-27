@@ -797,13 +797,22 @@ High-priority actions:
   `artifacts/private-visual/lokad-value-based/20260527-024721` stayed at 84/84 compared pages, zero
   dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
-- [ ] Prioritize the `pptx-renderer` typography architecture before broad deck work: explicit text body,
-  paragraph, run, line, and glyph-position models must replace ad hoc layout/emission decisions.
-- [ ] Split PPTX text into four observable stages: style cascade, line layout, glyph positioning, and PDF
-  emission. Each stage needs synthetic Office-PDF-backed cases before private-deck tuning.
-- [ ] Port `pptx-renderer` text renderer unit coverage as clean `ooxpdf` tests for line spacing, paragraph
-  spacing, character spacing, kerning thresholds, font fallback, EA/CS font fallback, bullets, baseline
-  shifts, tabs, highlights, and no-fill/outline text where PDF support exists.
+- [x] Prioritize the `pptx-renderer` typography architecture before broad deck work:
+  this architectural milestone is now satisfied at the model-boundary level. The direct PPTX renderer has explicit
+  text-frame, paragraph/run style, flow, line-box, positioned-span, glyph-span, glyph-run, and PDF-emission records,
+  and the inspector/tooling exposes those stages for public-safe Office comparisons. Do not read this as
+  pixel-perfect typography completion: the remaining work is tracked below as narrower Office formula, cascade,
+  justified spacing, decoration geometry, and `/Tf` emission-profile items.
+- [x] Split PPTX text into four observable stages:
+  style cascade, line layout, glyph positioning, and PDF emission are now independently inspectable through
+  text-frame/model, flow/layout, glyph-run, and PDF text-operation diagnostics. The latest decoration work also
+  exposes highlight/underline/strike rectangles from glyph-run geometry, closing the old hidden side path where
+  visual text decoration geometry had to be inferred from `TextRun` emission.
+- [x] Port the first `pptx-renderer` text renderer coverage as clean `ooxpdf` tests:
+  the suite now includes focused cases for line spacing, paragraph spacing, character spacing, kerning thresholds,
+  font fallback including EA/CS, bullets, baseline shifts, tabs and whitespace controls, highlights, underline/strike,
+  hyperlink/theme colors, no-fill text, and outline/transparent text where PDF support exists. Remaining edge cases
+  are tracked as explicit backlog items instead of keeping this broad architecture item open forever.
 - [x] Respect the DrawingML text-body wrap mode in line layout:
   `a:bodyPr @wrap="none"` now disables automatic word wrapping in both text placement and the text-height
   estimate used by vertical anchoring, while manual line breaks remain explicit content. A synthetic PPTX
