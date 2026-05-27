@@ -834,6 +834,16 @@ High-priority actions:
   repeatable text-emission quantization before writing `/Tf`; a separate non-picture graphics-structure gap still
   accounts for the missing even-odd clip. Public image evidence rules out normal stretched raster pictures as the
   remaining source.
+- [x] 2026-05-27: Close the remaining private page-17 graphics-operator clip gap with an Office-like
+  stroke-phase slide clip:
+  public `pptx-ladder-05-basic-shapes` showed the same pattern as the private slide: Office emits a slide-sized
+  `W*` before filling a solid-filled vector shape and another slide-sized `W*` before stroking that same shape.
+  The renderer now re-emits the slide clip before the stroke phase for solid-filled preset shapes; if the shape is
+  transformed, it temporarily leaves and then re-enters the shape transform so the clip stays in slide coordinates.
+  The public basic-shapes manifest now gates the `Clip`/`Fill`/`Stroke` operator sequence, and private page 17 run
+  `20260527-210904` now matches Office exactly at `f:4,f*:14,S:4,W*:68`. The private page's remaining structural
+  text gap is no longer `10/13/14/16` dominant font-size quantization; candidate now emits
+  `9,9.96,12,12.96,14.04,15.96,18`, leaving only Office's secondary wrapped-line `9.024` and `12.984` branch.
 - [x] Align single-column PPTX text-box PDF clips across default, `spAutoFit`, and `noAutofit` overflow modes:
   public Office probes now show that single-column text boxes with default body properties, explicit
   `a:spAutoFit`, and explicit `a:noAutofit` all emit slide-sized `W*` text clips when `vertOverflow` is not

@@ -10,7 +10,12 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 0.01,
-    "maxChangedPixelRatioAtThreshold16": 0.0004
+    "maxChangedPixelRatioAtThreshold16": 0.0004,
+    "maxGraphicsOperationBoundsDelta": 1.0,
+    "maxGraphicsOperationLineWidthDelta": 10.0,
+    "compareGraphicsOperationKinds": ["Clip", "Fill", "Stroke"],
+    "compareGraphicsOperationOperators": ["W*", "f*", "S"],
+    "matchGraphicsOperationOperators": true
   },
   "allowedUnsupportedFeatures": []
 }

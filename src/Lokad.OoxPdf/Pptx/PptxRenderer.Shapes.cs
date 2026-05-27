@@ -554,6 +554,21 @@ internal sealed partial class PptxRenderer
 
         if (hasStroke)
         {
+            if (hasFill)
+            {
+                if (transformed)
+                {
+                    graphics.RestoreState();
+                    ClipSlideBoundsEvenOdd(document, graphics);
+                    graphics.SaveState();
+                    ApplyShapeTransform(graphics, x, y, width, height, bounds);
+                }
+                else
+                {
+                    ClipSlideBoundsEvenOdd(document, graphics);
+                }
+            }
+
             bool transparentStroke = strokeAlpha < 0.999d;
             if (transparentStroke)
             {
