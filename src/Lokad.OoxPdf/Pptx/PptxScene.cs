@@ -414,7 +414,8 @@ internal readonly record struct PptxSceneLineStyle(
     int? Cap,
     string? CapValue,
     int? Join,
-    string? JoinValue)
+    string? JoinValue,
+    bool WidthSpecified = true)
 {
     public bool HasDash => DashPattern is { Count: > 0 };
 }
@@ -2277,6 +2278,8 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)
     {
+        XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
+        bool widthSpecified = line?.Attribute("w") is not null;
         return shapeProperties is not null &&
             TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double lineWidth, out double alpha)
                 ? new PptxSceneLineStyle(
@@ -2296,7 +2299,8 @@ internal sealed class PptxSceneBuilder
                     },
                     ReadLineCap(shapeProperties),
                     ReadLineJoin(shapeProperties),
-                    ReadLineJoinValue(shapeProperties))
+                    ReadLineJoinValue(shapeProperties),
+                    widthSpecified)
                 : default;
     }
 

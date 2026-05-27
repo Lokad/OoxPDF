@@ -446,6 +446,17 @@ High-priority actions:
   `20260527-145708` passed and no longer reports candidate-only region-0 `ChartSeriesLineCandidate` rows; public
   area port run `20260527-145715` passed with `FilledRegion` and `VerticalLine` counts still aligned (`3/3` and
   `1/1`) and max bounds delta about `0.86 pt`.
+- [x] 2026-05-27: Preserve chart-series line-width provenance for explicit `<a:ln>` elements without
+  `@w`. `PptxSceneLineStyle` now records whether the OOXML width was specified, and chart series convert
+  unspecified widths through Office's observed inherited series-line width (`3 pt`) instead of collapsing
+  them to the generic shape-line fallback (`1 pt`). This closes the sparse probe's remaining
+  `ChartSeriesLineCandidate` line-width mismatch without changing ordinary shape-line defaults. A new
+  focused unit test locks the behavior, and the sparse public manifest now gates `ChartSeriesLineCandidate`
+  structure by operator, segment count, path command/operator counts, bounds (`4 pt`), and line width (`0.3 pt`).
+  Validation: focused non-slow `pptx-charts` passed (`54 passed, 0 failed, 0 skipped`); sparse/blank probe run
+  `20260527-150241` passed the new structural gate; line-marker port and area port both passed at run
+  `20260527-150255`. Remaining sparse debts are still plot/legend bounds drift, marker/legend placement, and
+  clip-box count parity.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -10846,3 +10857,19 @@ passes, with `FilledRegion` and `VerticalLine` structures count-aligned. Do not 
 series-line gate yet: inspected reference/candidate objects show Office line width `3 pt` versus candidate
 `1 pt`, so the next durable step is to preserve series stroke provenance/defaulting rather than widening a
 gate around a known structural mismatch.
+
+Revision note, 2026-05-27: Preserved chart-series line-width provenance instead of treating every resolved
+line as an explicit `1 pt` stroke. Fresh inspection of the sparse/blank fixture showed PowerPoint-created
+series with `<a:ln>` color but no `@w`; Office renders those series as `3 pt` strokes in the PDF. The scene
+model now carries `PptxSceneLineStyle.WidthSpecified`, and only chart-series stroke conversion substitutes
+the Office-observed inherited `3 pt` width when `@w` is absent. Generic shape lines keep their existing
+fallback.
+
+This closes the sparse probe's line-width mismatch for the lower `ChartSeriesLineCandidate` pair without
+masking the residual geometry drift. The public sparse manifest now has a focused series-line structure gate:
+operator, segment count, path command/operator counts, `4 pt` bounds tolerance, and `0.3 pt` line-width
+tolerance. Run `20260527-150241` passed that gate; the focused chart test group passed with `54` tests after
+adding a unit test for `<a:ln>` without `@w`; and adjacent line-marker and area fixtures passed at
+`20260527-150255`. Remaining sparse debts are deliberately not gated here: right-legend text/swatch
+placement, marker placement, residual plot-box bounds, and clip-box count parity still need separate
+Office-PDF structural work.

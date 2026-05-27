@@ -10,7 +10,16 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 4.5,
-    "maxChangedPixelRatioAtThreshold16": 0.05
+    "maxChangedPixelRatioAtThreshold16": 0.05,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "ChartSeriesLineCandidate": 4.0
+    },
+    "maxChartGraphicsStructureLineWidthDelta": 0.3,
+    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate"],
+    "compareChartGraphicsStructureOperators": true,
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
+    "compareChartGraphicsStructurePathOperators": true
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_MISSING_CACHED_DATA",

@@ -18,6 +18,7 @@ internal sealed partial class PptxRenderer
     private const string SharedStringsContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml";
     private const string SpreadsheetStylesContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml";
     private const double ChartLineDefaultStrokeWidth = 2.25d;
+    private const double ChartSeriesInheritedStrokeWidth = 3d;
     private static readonly XNamespace SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 
     private static void RenderChartFrame(
@@ -639,7 +640,7 @@ internal sealed partial class PptxRenderer
         if (plot is not null)
         {
             return plot.Series
-                .Select(series => ToChartSeriesStroke(series.Line))
+                .Select(series => ToChartSeriesStroke(series.Line, ChartSeriesInheritedStrokeWidth))
                 .ToArray();
         }
 
@@ -797,10 +798,10 @@ internal sealed partial class PptxRenderer
             : null;
     }
 
-    private static ChartSeriesStroke? ToChartSeriesStroke(PptxSceneLineStyle line)
+    private static ChartSeriesStroke? ToChartSeriesStroke(PptxSceneLineStyle line, double? inheritedWidth = null)
     {
         return line.HasLine
-            ? new ChartSeriesStroke(line.Color, line.Alpha, line.Width, line.DashPattern, line.Cap, line.Join, line.Compound)
+            ? new ChartSeriesStroke(line.Color, line.Alpha, line.WidthSpecified ? line.Width : inheritedWidth ?? line.Width, line.DashPattern, line.Cap, line.Join, line.Compound)
             : null;
     }
 
@@ -6600,10 +6601,18 @@ internal sealed partial class PptxRenderer
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             XElement? shapeProperties = element.Element(ChartNamespace + "spPr");
-            strokes.Add(shapeProperties is not null &&
-                TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
-                    ? new ChartSeriesStroke(color, alpha, width)
-                    : null);
+            ChartSeriesStroke? stroke = null;
+            if (shapeProperties is not null &&
+                TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha))
+            {
+                bool widthSpecified = shapeProperties.Element(DrawingNamespace + "ln")?.Attribute("w") is not null;
+                stroke = new ChartSeriesStroke(
+                    color,
+                    alpha,
+                    widthSpecified ? width : ChartSeriesInheritedStrokeWidth);
+            }
+
+            strokes.Add(stroke);
         }
 
         return strokes;
