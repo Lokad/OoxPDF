@@ -11171,3 +11171,22 @@ Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed wit
 test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-scatter-clusters-port` passed at
 run `20260527-194055`; `pptx-ladder-11-chart-scatter-smooth-port` passed at run `20260527-194111`; and
 `pptx-ladder-11-chart-bubble-port` passed at run `20260527-194123`.
+
+Revision note, 2026-05-27: Removed the broad Cartesian plot-area clip operators from bar/column, line,
+area, scatter, and bubble chart series bodies. Earlier slices established explicit plot clips around the
+actual emitted subparts: gridlines, in-plot axes, line runs, marker fill/stroke operations, area fills and
+outlines, bar rectangle fills and optional borders, scatter paths, scatter markers, and bubble fills. With
+those subpart owners in place, the enclosing family-level `ClipChartPlotArea` calls were redundant structural
+noise and no longer represented Office's repeated subpart bracketing.
+
+This is a cleanup of clip ownership, not a geometry change. The surrounding save/restore state scopes remain
+for now because they are harmless to raster output and should be removed, if at all, in a later PDF-operator
+cleanup that checks the exact `q`/`Q` structure against Office. Remaining chart-structure work stays open:
+legend/data-label key semantics, residual sparse layout offsets, marker/legend placement, and any nested
+pattern-fill clip differences.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
+passed at run `20260527-194329`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-194345`;
+`pptx-ladder-11-chart-area-2series-port`, `pptx-ladder-11-chart-column-clustered-port`, and
+`pptx-ladder-11-chart-scatter-clusters-port` passed at run `20260527-194403`.

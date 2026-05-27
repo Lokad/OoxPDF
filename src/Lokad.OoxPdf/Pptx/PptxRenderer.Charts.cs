@@ -7104,7 +7104,6 @@ internal sealed partial class PptxRenderer
         graphics.SaveState();
         try
         {
-            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
             bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
@@ -8076,7 +8075,6 @@ internal sealed partial class PptxRenderer
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
         try
         {
-            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
             double maxValue = valueExtents.Max;
             double minValue = valueExtents.Min;
@@ -8769,7 +8767,6 @@ internal sealed partial class PptxRenderer
         graphics.SaveState();
         try
         {
-            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             if (minorGridlines)
             {
                 RenderInChartPlotAreaClip(
@@ -9009,7 +9006,6 @@ internal sealed partial class PptxRenderer
         graphics.SaveState();
         try
         {
-            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
                 ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
