@@ -11058,3 +11058,21 @@ test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-spars
 passed at run `20260527-192206`; and `pptx-ladder-11-chart-line-markers-port` passed at run
 `20260527-192206`. The combo-line unit test was updated to allow the intended clip operators between stroke
 state setup and the blue line path while keeping the same blue-line geometry assertion.
+
+Revision note, 2026-05-27: Split plot-series marker emission into explicit fill and stroke subparts.
+`DrawChartMarker` still composes marker fill and marker stroke for legend and data-label marker contexts,
+but line-series markers now call `DrawChartMarkerInPlotClip`, which opens a separate plot-area clip around
+the marker fill and another around the marker stroke when those subparts exist. This follows the sparse
+Office-PDF evidence where marker fill and marker outline are independently bracketed by plot-sized clips.
+
+This is a structural ownership change, not a marker geometry change. It intentionally applies only to
+line-chart plot-series markers; legend keys keep their current PDF shape sequence, and scatter/bubble
+markers remain for a separate evidence-backed pass. The public line-marker fixture's dominant plot clip
+count rose from `19` to `35`, and the sparse lower line-chart region rose from `11` to `19`, while the
+visible raster and existing structural gates remained green. Remaining clip work is still open: gridline/axis
+subpart ownership, legend-key plot clips, non-line chart-family subpart clips, and the upper area-chart clip
+structure.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-line-markers-port` passed at run
+`20260527-192615`; and `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-192629`.

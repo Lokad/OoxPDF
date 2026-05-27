@@ -8163,10 +8163,7 @@ internal sealed partial class PptxRenderer
                 foreach ((double pointX, double pointY) in markers)
                 {
                     graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                    RenderInChartPlotAreaClip(
-                        graphics,
-                        plotBox,
-                        () => DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color));
+                    DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
                 }
 
                 if (stroke.Alpha < 1d)
@@ -8504,7 +8501,34 @@ internal sealed partial class PptxRenderer
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
         ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d));
+        DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill);
+        DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke);
+    }
+
+    private static void DrawChartMarkerInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double x, double y, ChartMarkerStyle marker, RgbColor defaultFill, RgbColor defaultStroke)
+    {
+        if (marker.SymbolKind == PptxSceneChartMarkerSymbol.None)
+        {
+            return;
+        }
+
+        double size = marker.Size;
+        ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d));
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
+        {
+            RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerFill(graphics, x, y, marker.SymbolKind, size, fill));
+        }
+
+        if (stroke is not null)
+        {
+            RenderInChartPlotAreaClip(graphics, plotBox, () => DrawChartMarkerStroke(graphics, x, y, marker.SymbolKind, size, stroke));
+        }
+    }
+
+    private static void DrawChartMarkerFill(PdfGraphicsBuilder graphics, double x, double y, PptxSceneChartMarkerSymbol symbol, double size, ChartSeriesFill fill)
+    {
+        if (!IsLineOnlyChartMarker(symbol))
         {
             if (fill.Alpha < 1d)
             {
@@ -8513,7 +8537,7 @@ internal sealed partial class PptxRenderer
             }
 
             graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            switch (marker.SymbolKind)
+            switch (symbol)
             {
                 case PptxSceneChartMarkerSymbol.Dot:
                     graphics.FillEllipse(x - size / 4d, y - size / 4d, size / 2d, size / 2d);
@@ -8549,7 +8573,10 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
+    }
 
+    private static void DrawChartMarkerStroke(PdfGraphicsBuilder graphics, double x, double y, PptxSceneChartMarkerSymbol symbol, double size, ChartSeriesStroke? stroke)
+    {
         if (stroke is not { } markerStroke)
         {
             return;
@@ -8562,7 +8589,7 @@ internal sealed partial class PptxRenderer
         }
 
         SetChartStroke(graphics, markerStroke);
-        switch (marker.SymbolKind)
+        switch (symbol)
         {
             case PptxSceneChartMarkerSymbol.Dash:
                 graphics.StrokeLine(x - size / 2d, y, x + size / 2d, y);
