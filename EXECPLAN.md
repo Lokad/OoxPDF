@@ -1068,6 +1068,15 @@ High-priority actions:
     are literal Office `/Tf` choices rather than an inspector artifact from CTM composition. This strengthens the
     long-term requirement: the next renderer change must derive a page-coordinate/baseline quantization model from
     public probes, not introduce a Y-value lookup.
+  - [x] 2026-05-27: Add reusable font-grid and baseline-grid diagnostics to the public-safe text-emission comparer
+    before deriving the secondary `/Tf` rule. `tools/ComparePptxTextEmission.ps1` now reports the candidate's
+    dominant 600-DPI font grid, Office's delta from that grid, the candidate PDF-grid delta, and the Office/candidate
+    baseline remainders on the same 600-DPI grid. Regenerating diagnostics for
+    `font-size-quantization-y-scan-21pt-fine` shows the `+0.024 pt` branch at compare indices `5..11`; all seven
+    secondary rows have Office baseline-grid remainder `0.833333`, but five exact rows share that same remainder
+    while sixteen exact rows sit at `0.583333`. This is a useful discriminator but still not a sufficient rule, so
+    rendering remains unchanged and the next step must include more frame/paragraph context than absolute baseline
+    remainder alone.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and

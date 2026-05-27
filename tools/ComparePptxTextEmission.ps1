@@ -39,6 +39,27 @@ function Delta([double] $left, [double] $right) {
     return [Math]::Round($right - $left, 6)
 }
 
+function RoundAway([double] $value) {
+    return [Math]::Round($value, 6, [MidpointRounding]::AwayFromZero)
+}
+
+function OfficeExportGridStep() {
+    return 72d / 600d
+}
+
+function OfficeMainFontGrid([double] $fontSize) {
+    $gridStep = OfficeExportGridStep
+    $deviceUnits = [Math]::Round($fontSize / $gridStep, [MidpointRounding]::AwayFromZero)
+    return $deviceUnits * $gridStep
+}
+
+function OfficeGridRemainder([double] $value) {
+    $gridStep = OfficeExportGridStep
+    $scaled = $value / $gridStep
+    $floor = [Math]::Floor($scaled)
+    return RoundAway ($scaled - $floor)
+}
+
 function HasValue($value) {
     return $null -ne $value -and [string]$value -ne ""
 }
@@ -164,10 +185,15 @@ foreach ($pair in $pairs) {
             RefBaselineY = if ($null -eq $reference) { $null } else { [Math]::Round((RefY $reference), 6) }
             CandBaselineY = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.BaselineY, 6) }
             DeltaBaselineY = $null
+            RefBaselineY600Remainder = if ($null -eq $reference) { $null } else { OfficeGridRemainder (RefY $reference) }
+            CandBaselineY600Remainder = if ($null -eq $candidate) { $null } else { OfficeGridRemainder ([double]$candidate.BaselineY) }
             RefFontSize = if ($null -eq $reference) { $null } else { [Math]::Round([double]$reference.FontSize, 6) }
             CandPdfFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.PdfFontSize, 6) }
             DeltaFontSize = $null
             CandLayoutFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.LayoutFontSize, 6) }
+            MainFontGrid = if ($null -eq $candidate) { $null } else { RoundAway (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) }
+            RefSecondaryFontDelta = if ($null -eq $reference -or $null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$reference.FontSize) }
+            CandPdfGridDelta = if ($null -eq $candidate) { $null } else { Delta -left (OfficeMainFontGrid ([double]$candidate.LayoutFontSize)) -right ([double]$candidate.PdfFontSize) }
             CandFrameIndex = if ($null -eq $candidate) { $null } else { $candidate.FrameIndex }
             CandParagraphIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "ParagraphIndex" }
             CandLineIndex = if ($null -eq $candidate) { $null } else { $candidate.LineIndex }
@@ -199,6 +225,7 @@ foreach ($pair in $pairs) {
     $deltaX = Delta -left $refX -right $candX
     $deltaY = Delta -left $refY -right $candY
     $deltaFontSize = Delta -left $refFontSize -right $candFontSize
+    $mainFontGrid = OfficeMainFontGrid ([double]$candidate.LayoutFontSize)
     $positionOk = [Math]::Abs($deltaX) -le $PositionTolerance -and [Math]::Abs($deltaY) -le $PositionTolerance
     $fontSizeOk = [Math]::Abs($deltaFontSize) -le $FontSizeTolerance
     $textOk = -not $IncludeText -or -not (HasValue (RefText $reference)) -or -not (HasValue (CandText $candidate)) -or (RefText $reference) -eq (CandText $candidate)
@@ -216,10 +243,15 @@ foreach ($pair in $pairs) {
         RefBaselineY = [Math]::Round($refY, 6)
         CandBaselineY = [Math]::Round($candY, 6)
         DeltaBaselineY = $deltaY
+        RefBaselineY600Remainder = OfficeGridRemainder $refY
+        CandBaselineY600Remainder = OfficeGridRemainder $candY
         RefFontSize = [Math]::Round($refFontSize, 6)
         CandPdfFontSize = [Math]::Round($candFontSize, 6)
         DeltaFontSize = $deltaFontSize
         CandLayoutFontSize = [Math]::Round([double]$candidate.LayoutFontSize, 6)
+        MainFontGrid = RoundAway $mainFontGrid
+        RefSecondaryFontDelta = Delta -left $mainFontGrid -right $refFontSize
+        CandPdfGridDelta = Delta -left $mainFontGrid -right $candFontSize
         CandFrameIndex = $candidate.FrameIndex
         CandParagraphIndex = OptionalValue $candidate "ParagraphIndex"
         CandLineIndex = $candidate.LineIndex
