@@ -11397,6 +11397,37 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)grouping);
     }
 
+    public static void PptxChartUnknownBarDirectionUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:barDir val="bogus"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartBarDirection.Unknown, chart.Plots[0].BarDirectionKind);
+        TestAssert.Equal("bogus", chart.Plots[0].BarDirection);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart><c:barDir val="bar"/></c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        System.Reflection.MethodInfo readBarDirection = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartBarDirection",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-direction resolver.");
+        object barDirection = readBarDirection.Invoke(null, [chart.Plots[0], mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved bar direction.");
+
+        TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)barDirection);
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

@@ -578,6 +578,14 @@ High-priority actions:
   the effective grouping is the scene-owned default, not the XML fallback. Validation: focused `Grouping`
   passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66` tests, `0` failures, and
   `0` skips; full non-slow suite passed with `312` tests, `0` failures, and `7` slow skips.
+- [x] 2026-05-27: Make chart bar-direction defaults explicit at the renderer boundary.
+  `PptxSceneChartPlot.BarDirection` still preserves unsupported `c:barDir` tokens, but the renderer now resolves
+  `Unknown -> Column` through a named resolver instead of relying on every caller to interpret "not Bar" as
+  column geometry. The XML fallback path uses the same resolver. A regression pairs a scene plot preserving
+  `barDir="bogus"` with a deliberately mismatched XML fallback `barDir="bar"` and verifies that the effective
+  direction remains the scene-owned column default. Validation: focused `BarDirection` passed (`1` test,
+  `0` failures); focused non-slow `pptx-charts` passed with `66` tests, `0` failures, and `0` skips; full
+  non-slow suite passed with `313` tests, `0` failures, and `7` slow skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

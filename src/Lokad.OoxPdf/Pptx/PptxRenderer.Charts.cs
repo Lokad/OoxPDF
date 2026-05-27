@@ -324,8 +324,15 @@ internal sealed partial class PptxRenderer
     private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
         return scenePlot is not null
-            ? scenePlot.BarDirectionKind
-            : PptxSceneBuilder.ParseChartBarDirection((string?)plotElement.Element(ChartNamespace + "barDir")?.Attribute("val"));
+            ? ResolveChartBarDirection(scenePlot.BarDirectionKind)
+            : ResolveChartBarDirection(PptxSceneBuilder.ParseChartBarDirection((string?)plotElement.Element(ChartNamespace + "barDir")?.Attribute("val")));
+    }
+
+    private static PptxSceneChartBarDirection ResolveChartBarDirection(PptxSceneChartBarDirection value)
+    {
+        return value == PptxSceneChartBarDirection.Unknown
+            ? PptxSceneChartBarDirection.Column
+            : value;
     }
 
     private static PptxSceneChartScatterStyle ReadSceneOrXmlChartScatterStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
