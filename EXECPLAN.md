@@ -11504,3 +11504,17 @@ the calibrated run were mean absolute error `0.05136140046296296` and changed-pi
 of `0.0012490354938271605`. The existing `pptx-ladder-04-transparent-synthetic-bold-probe` and
 `pptx-ladder-04-transparent-text` structural gates both passed again at run `20260527-205445`. The full
 non-slow suite passed with `298` tests and `7` slow skips.
+
+Revision note, 2026-05-27: Locked the combined semi-transparent synthetic bold+italic text route at the
+synthetic unit level. The existing glyph-outline predicate is intentionally effect-owned by fill alpha, not
+by one-off style flags: bold, italic, and bold+italic transparent filled runs all stay on the filled
+glyph-outline path when the font can supply outlines, while opaque synthetic styles still use normal PDF text
+operators and no-fill outlined text remains on the text-rendering-mode route pending separate Office
+evidence. The new guard verifies that a transparent bold+italic Cambria Math run emits alpha-scoped filled
+glyph paths and does not emit `TJ`/`Tj` text or `Tr`.
+
+This does not claim Office-PDF visual parity for the combined effect yet. The separate public Office-backed
+bold and italic probes already justify the renderer ownership boundary, but a future public combined-effect
+fixture would still be useful before adding a visual structural gate or tightening placement/bounds deltas.
+
+Validation: the console runner passed with `306` tests, `0` failures, and `0` skips.
