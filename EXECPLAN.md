@@ -407,8 +407,8 @@ High-priority actions:
   writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
   unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
   crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
-  broader drawing-wrap/floating layout and multi-section settings still need model and renderer work before
-  behavior is broadened, even though several narrow paragraph, table, numbering, final-section page, and
+  broader drawing-wrap/floating layout and actual multi-section rendering still need model and renderer work
+  before behavior is broadened, even though several narrow paragraph, table, numbering, section/page, and
   floating-anchor source tokens now have model homes.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
@@ -492,6 +492,15 @@ High-priority actions:
   placement heuristics. Validation: focused `DocxReaderPreservesFloatingDrawingWrapTokens` passed
   (`1 passed, 0 failed, 0 skipped`); focused non-slow `docx-core` passed
   (`3 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`282 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX paragraph section-break source tokens in body flow:
+  `DocxSectionBreakElement` now records paragraph `w:pPr/w:sectPr` boundaries as body elements after their
+  owning paragraph, including section `w:type`, `w:pgSz`, `w:pgMar`, and `w:cols` source tokens. This does
+  not implement Word multi-section layout; the existing unsupported-section diagnostic remains the renderer
+  truth. It does keep section boundaries and page/column facts in the document model so later pagination work
+  does not have to rediscover them from raw XML. Validation: focused
+  `DocxReaderPreservesParagraphSectionBreakTokens` passed (`1 passed, 0 failed, 0 skipped`); focused non-slow
+  `docx-text` passed (`6 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`283 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

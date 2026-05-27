@@ -447,9 +447,8 @@ internal sealed class DocxReader
         {
             if (element.Name == WordprocessingNamespace + "p")
             {
-                XElement? pageBreakBefore = element
-                    .Element(WordprocessingNamespace + "pPr")
-                    ?.Element(WordprocessingNamespace + "pageBreakBefore");
+                XElement? paragraphProperties = element.Element(WordprocessingNamespace + "pPr");
+                XElement? pageBreakBefore = paragraphProperties?.Element(WordprocessingNamespace + "pageBreakBefore");
                 if (ReadOnOff(pageBreakBefore) == true)
                 {
                     elements.Add(new DocxPageBreakElement("pageBreakBefore", (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val")));
@@ -459,6 +458,12 @@ internal sealed class DocxReader
                 if (paragraph is not null)
                 {
                     elements.Add(new DocxParagraphElement(paragraph));
+                }
+
+                XElement? sectionProperties = paragraphProperties?.Element(WordprocessingNamespace + "sectPr");
+                if (sectionProperties is not null)
+                {
+                    elements.Add(ReadSectionBreak(sectionProperties));
                 }
             }
             else if (element.Name == WordprocessingNamespace + "tbl")
@@ -472,6 +477,21 @@ internal sealed class DocxReader
         }
 
         return elements;
+    }
+
+    private static DocxSectionBreakElement ReadSectionBreak(XElement sectionProperties)
+    {
+        XElement? columns = sectionProperties.Element(WordprocessingNamespace + "cols");
+        return new DocxSectionBreakElement(
+            ReadPageSettings(
+                sectionProperties.Element(WordprocessingNamespace + "pgSz"),
+                sectionProperties.Element(WordprocessingNamespace + "pgMar")),
+            (string?)sectionProperties
+                .Element(WordprocessingNamespace + "type")
+                ?.Attribute(WordprocessingNamespace + "val"),
+            (string?)columns?.Attribute(WordprocessingNamespace + "num"),
+            (string?)columns?.Attribute(WordprocessingNamespace + "equalWidth"),
+            (string?)columns?.Attribute(WordprocessingNamespace + "space"));
     }
 
     private static IReadOnlyList<DocxParagraph> ReadReferencedHeaderFooterParagraphs(

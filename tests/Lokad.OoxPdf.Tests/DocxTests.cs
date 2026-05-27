@@ -575,6 +575,65 @@ internal static class DocxTests
         TestAssert.True(breaks[1].Value is null, "Expected implicit pageBreakBefore to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphSectionBreakTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:pPr>
+                        <w:sectPr>
+                          <w:type w:val="continuous"/>
+                          <w:pgSz w:w="10080" w:h="12240" w:orient="portrait"/>
+                          <w:pgMar w:top="360" w:right="720" w:bottom="1080" w:left="1440"/>
+                          <w:cols w:num="2" w:equalWidth="0" w:space="720"/>
+                        </w:sectPr>
+                      </w:pPr>
+                      <w:r><w:t>Section end</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxSectionBreakElement sectionBreak = document.BodyElements.OfType<DocxSectionBreakElement>().Single();
+
+        TestAssert.Equal("continuous", sectionBreak.TypeValue ?? string.Empty);
+        TestAssert.Equal("10080", sectionBreak.PageSettings.WidthValue ?? string.Empty);
+        TestAssert.Equal("12240", sectionBreak.PageSettings.HeightValue ?? string.Empty);
+        TestAssert.Equal("portrait", sectionBreak.PageSettings.OrientationValue ?? string.Empty);
+        TestAssert.Equal("360", sectionBreak.PageSettings.MarginTopValue ?? string.Empty);
+        TestAssert.Equal("720", sectionBreak.PageSettings.MarginRightValue ?? string.Empty);
+        TestAssert.Equal("1080", sectionBreak.PageSettings.MarginBottomValue ?? string.Empty);
+        TestAssert.Equal("1440", sectionBreak.PageSettings.MarginLeftValue ?? string.Empty);
+        TestAssert.Equal("2", sectionBreak.ColumnCountValue ?? string.Empty);
+        TestAssert.Equal("0", sectionBreak.ColumnEqualWidthValue ?? string.Empty);
+        TestAssert.Equal("720", sectionBreak.ColumnSpaceValue ?? string.Empty);
+        TestAssert.True(document.BodyElements[0] is DocxParagraphElement, "Paragraph section break should remain anchored after its paragraph.");
+        TestAssert.True(document.BodyElements[1] is DocxSectionBreakElement, "Section break should be part of body flow.");
+    }
+
     public static void DocxSyntheticExactLineHeightPositionsNextParagraph()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

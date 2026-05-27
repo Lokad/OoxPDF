@@ -63,6 +63,13 @@ internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
 internal sealed record DocxPageBreakElement(string SourceKind, string? Value) : DocxBodyElement;
 
+internal sealed record DocxSectionBreakElement(
+    DocxPageSettings PageSettings,
+    string? TypeValue,
+    string? ColumnCountValue,
+    string? ColumnEqualWidthValue,
+    string? ColumnSpaceValue) : DocxBodyElement;
+
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,
     IReadOnlyList<DocxInlineImage> Images,
