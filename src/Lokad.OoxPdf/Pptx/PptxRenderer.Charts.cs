@@ -9031,14 +9031,7 @@ internal sealed partial class PptxRenderer
 
                 if (connectLines)
                 {
-                    if (IsSmoothSeries(seriesIndex, smoothSeries))
-                    {
-                        StrokeSmoothChartPath(graphics, points);
-                    }
-                    else
-                    {
-                        StrokeStraightChartPath(graphics, points);
-                    }
+                    StrokeScatterChartPathInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
                 }
 
                 foreach (ScatterPoint point in series[seriesIndex].Points)
@@ -9046,11 +9039,11 @@ internal sealed partial class PptxRenderer
                     (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
                     if (bubble)
                     {
-                        graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
+                        FillBubbleInPlotClip(graphics, plotBox, pointX, pointY, radius);
                     }
                     else
                     {
-                        DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
+                        DrawChartMarkerInPlotClip(graphics, plotBox, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
                     }
 
                 }
@@ -9065,6 +9058,26 @@ internal sealed partial class PptxRenderer
         {
             graphics.RestoreState();
         }
+    }
+
+    private static void StrokeScatterChartPathInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth)
+    {
+        RenderInChartPlotAreaClip(graphics, plotBox, () =>
+        {
+            if (smooth)
+            {
+                StrokeSmoothChartPath(graphics, points);
+            }
+            else
+            {
+                StrokeStraightChartPath(graphics, points);
+            }
+        });
+    }
+
+    private static void FillBubbleInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, double pointX, double pointY, double radius)
+    {
+        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d));
     }
 
     private static void RenderRadarChart(PdfGraphicsBuilder graphics, ChartRadarLayout layout, IReadOnlyList<ChartRadarSeries> series, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents extents, ChartAxisUnits axisUnits)

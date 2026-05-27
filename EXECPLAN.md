@@ -11154,3 +11154,20 @@ run `20260527-193715`; `pptx-ladder-11-chart-bar-clustered-port` passed at run `
 `pptx-ladder-11-chart-column-negative-port` passed at run `20260527-193742`;
 `pptx-ladder-11-chart-column-stacked-port` passed at run `20260527-193846`; and
 `pptx-ladder-11-chart-bar-stacked-port` passed at run `20260527-193857`.
+
+Revision note, 2026-05-27: Added scatter and bubble series subpart plot clips. `RenderScatterChart` still keeps
+its broad series-loop plot clip for raster safety, but it now also opens explicit even-odd plot clips around
+the real emitted subparts: a connected scatter path, each scatter marker fill/stroke pair through
+`DrawChartMarkerInPlotClip`, and each bubble fill ellipse. This reuses the same structural helper family as
+line/bar/area work and avoids adding a scatter-specific clipping rule.
+
+The slice is intentionally limited to series geometry. Scatter and bubble axes remain outside the series
+clip path, consistent with prior inspection, and legend swatches remain unmodified because a plot-area clip
+would be wrong for legends outside the plot area. The remaining long-view work is now less about adding clips
+by chart family and more about removing broad safety scopes once every emitted series subpart is structurally
+owned, plus investigating legend-key/data-label semantics with fresh Office-PDF evidence.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-scatter-clusters-port` passed at
+run `20260527-194055`; `pptx-ladder-11-chart-scatter-smooth-port` passed at run `20260527-194111`; and
+`pptx-ladder-11-chart-bubble-port` passed at run `20260527-194123`.
