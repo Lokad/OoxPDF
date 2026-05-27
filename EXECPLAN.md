@@ -10675,3 +10675,27 @@ Validation: `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `2026
 `ChartSeriesLineCandidate` rows and no sparse-probe `DataLabelLeaderLineCandidate` rows; and
 `pptx-ladder-11-chart-pie-data-label-leader-lines-probe` passed at run `20260527-140137`, preserving the
 polar `DataLabelLeaderLineCandidate` structures while its gated polar slice/plot structures still match.
+
+Revision note, 2026-05-27: Replaced two fixed no-title/right-legend Cartesian layout assumptions with
+frame-scaled structural rules. The sparse/blank probe and the larger public line/area fixtures show different
+frame regimes: the single large line chart already matched Office within about `0.7 pt`, while the small
+multi-chart sparse fixture had a left plot inset about `22.6 pt` too large. `GetCartesianNoTitleRightLegendPlotBox`
+now caps the value-axis padding by a frame-width ratio, preserving the large-chart fixed padding but shrinking
+the small-chart axis reserve. Area/fill right legends also get an explicit frame-scaled reserve term, and
+fill-backed side legends are anchored into the reserved right band instead of being glued to the plot-box
+right edge. This keeps plot ownership and legend anchoring as separate PDF-level structures.
+
+The sparse/blank plot-box offsets dropped from roughly `22.6 pt` to `3.2-3.9 pt` on the two rendered chart
+regions. The larger `pptx-ladder-11-chart-line-3series-port` fixture remains stable with plot, legend, and
+tick-label deltas still under about `0.7 pt`. The larger area fixture now has its plot-box/right edge aligned
+within about `0.9 pt`, and its right legend X position is aligned (`703.91 pt` candidate swatch X versus
+`703.74 pt` Office reference X), while its legend Y placement remains off by about `24-33 pt`. That remaining
+fill-legend vertical placement should be solved as a first-class legend layout rule, not by undoing the plot
+reserve correction.
+
+Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-140715`;
+`pptx-ladder-11-chart-line-3series-port` passed at run `20260527-140730`; and
+`pptx-ladder-11-chart-area-2series-port` passed at run `20260527-140730`. Structural summaries with
+`-ShowBounds` confirmed the sparse plot-box improvement, the unchanged large line fixture, and the area
+plot/right-legend-X closure while preserving the fill-legend Y gap.

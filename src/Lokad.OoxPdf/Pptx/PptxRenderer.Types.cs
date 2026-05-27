@@ -957,9 +957,11 @@ internal sealed partial class PptxRenderer
         public const double LineNoTitleRightLegendPlotBoxWidthRatio = 0.7687d;
         public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.8722d;
         public const double LineRightLegendValueAxisPadding = 35.7d;
+        public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         public const double LineRightLegendExtraValueLabelCharacterPadding = 5.3d;
         public const double LineRightLegendReservePadding = 43.8d;
         public const double LineRightLegendExtraLegendCharacterPadding = 8.4d;
+        public const double AreaRightLegendReserveFrameWidthFactor = 0.025d;
         public const double LineTitleRightLegendPlotBoxXRatio = 0.0639d;
         public const double LineTitleRightLegendPlotBoxYRatio = 0.0924d;
         public const double LineTitleRightLegendPlotBoxWidthRatio = 0.7391d;
@@ -1041,6 +1043,7 @@ internal sealed partial class PptxRenderer
         public const double LegendSideStrokeMarkerWidthFactor = 1.0666666666666667d;
         public const double LegendSideStrokeTextGapFactor = 0.11666666666666667d;
         public const double LegendSideStrokeBaselineCenterOffsetFactor = 0.955d;
+        public const double LegendSideFillReservedBandOffsetFactor = 0.04d;
         public const double LegendFullFrameSideInsetRatio = 0.02d;
         public const double LegendFullFrameBottomBaselineFactor = 0.57d;
         public const double LegendFullFrameTopBaselineFactor = 0.95d;

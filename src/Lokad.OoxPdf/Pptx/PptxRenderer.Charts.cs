@@ -4540,6 +4540,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
+            _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap
         };
         double firstY = layout.PositionKind switch
@@ -8179,6 +8180,10 @@ internal sealed partial class PptxRenderer
             legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor +
             PptxChartMetricRules.LineRightLegendReservePadding +
             Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding;
+        if (plotKind == PptxSceneChartPlotKind.Area)
+        {
+            rightReserve += frame.Width * PptxChartMetricRules.AreaRightLegendReserveFrameWidthFactor;
+        }
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
@@ -8234,7 +8239,9 @@ internal sealed partial class PptxRenderer
 
         double leftInset = maxValueLabelWidth > 0d
             ? maxValueLabelWidth +
-                PptxChartMetricRules.LineRightLegendValueAxisPadding +
+                Math.Min(
+                    PptxChartMetricRules.LineRightLegendValueAxisPadding,
+                    frame.Width * PptxChartMetricRules.LineRightLegendValueAxisFrameWidthPaddingRatio) +
                 Math.Max(0, maxValueLabelLength - 3) * PptxChartMetricRules.LineRightLegendExtraValueLabelCharacterPadding
             : frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxXRatio;
         double x = frame.X + leftInset;
