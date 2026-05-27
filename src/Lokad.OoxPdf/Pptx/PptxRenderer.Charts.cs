@@ -8765,10 +8765,7 @@ internal sealed partial class PptxRenderer
         }
 
         SetChartStroke(graphics, stroke);
-        for (int i = 1; i < upperPoints.Length; i++)
-        {
-            graphics.StrokeLine(upperPoints[i - 1].X, upperPoints[i - 1].Y, upperPoints[i].X, upperPoints[i].Y);
-        }
+        graphics.StrokePolygon(polygon);
 
         if (stroke.Alpha < 1d)
         {

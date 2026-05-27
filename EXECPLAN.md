@@ -434,8 +434,18 @@ High-priority actions:
   `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`); public sparse/blank probe run `20260527-144857`
   passed and moved region-1 `ChartSeriesLineCandidate` structure to count parity (`2/2`) with max bounds
   delta `3.71 pt`; public line-marker port run `20260527-144840` passed with the existing marker gates intact.
-  Remaining series-structure debt is not closed: the sparse probe still has candidate-only region-0
-  `ChartSeriesLineCandidate` rows, so the classifier/plot-region ownership model still needs a follow-up.
+  A follow-up area-outline pass removed the sparse probe's candidate-only region-0
+  `ChartSeriesLineCandidate` rows; remaining series-line debt is now the explicit stroke-width/provenance
+  mismatch (`3 pt` Office line strokes versus `1 pt` candidate strokes) plus residual `3.71 pt` lower-region
+  bounds drift.
+- [x] 2026-05-27: Stroke area chart polygons using the same closed path Office emits for area geometry.
+  `RenderAreaChartSeriesSegment` now fills and strokes the same polygon path instead of filling the area and
+  separately stroking only the upper edge as independent line segments. This is a PDF-structure alignment:
+  Office represents the rendered area series as fill plus polygon stroke, not as chart-line overlays. Validation:
+  focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`); public sparse/blank probe run
+  `20260527-145708` passed and no longer reports candidate-only region-0 `ChartSeriesLineCandidate` rows; public
+  area port run `20260527-145715` passed with `FilledRegion` and `VerticalLine` counts still aligned (`3/3` and
+  `1/1`) and max bounds delta about `0.86 pt`.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -10814,13 +10824,25 @@ points and blank-run decisions remain owned by the existing chart data vector an
 
 The sparse/blank probe now shows the lower rendered chart's `ChartSeriesLineCandidate` count aligned at
 `2/2` with max bounds delta `3.71 pt`, replacing the prior candidate decomposition into one-segment strokes.
-The upper region still reports candidate-only `ChartSeriesLineCandidate` rows (`0/4`), so that gap remains
-open as a plot-region/classifier ownership problem rather than a renderer path-emission problem. Other open
-sparse debts are unchanged: right-legend text/swatch placement, clip-box count parity, and residual plot-box
-offsets still need Office-PDF structural modeling.
+A later area-outline pass removed the upper-region candidate-only `ChartSeriesLineCandidate` rows by making
+area charts stroke the same closed polygon path they fill. Other open sparse debts remain: right-legend
+text/swatch placement, clip-box count parity, residual plot-box offsets, and now the clearer
+chart-series-line stroke-width/provenance mismatch.
 
 Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
 `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-144857`;
 `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-144840`; and structural summaries with
-`-ByRegion -ShowBounds` confirmed the region-1 chart-series-line count parity while preserving the open
-region-0 classifier debt.
+`-ByRegion -ShowBounds` confirmed the region-1 chart-series-line count parity.
+
+Revision note, 2026-05-27: Aligned area-series outline emission with Office's PDF path structure.
+`RenderAreaChartSeriesSegment` now strokes the same polygon it fills, instead of separately stroking only
+the upper edge. This keeps fill ownership and outline ownership on one closed path, matching the reference
+PDF structure for area chart series and avoiding synthetic chart-line overlays.
+
+This removed the sparse/blank probe's upper-region candidate-only `ChartSeriesLineCandidate` rows. Fresh
+validation at run `20260527-145708` now reports only the lower rendered chart's `ChartSeriesLineCandidate`
+pair aligned at `2/2` with max bounds delta `3.71 pt`; the large area port at run `20260527-145715` still
+passes, with `FilledRegion` and `VerticalLine` structures count-aligned. Do not add a tight sparse
+series-line gate yet: inspected reference/candidate objects show Office line width `3 pt` versus candidate
+`1 pt`, so the next durable step is to preserve series stroke provenance/defaulting rather than widening a
+gate around a known structural mismatch.
