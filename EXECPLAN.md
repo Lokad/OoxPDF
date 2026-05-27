@@ -9586,6 +9586,16 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Preserved the remaining chart data-label display flags through the scene and
+renderer option boundary. `PptxSceneChartDataLabels`, per-label overrides, and renderer-facing
+`ChartDataLabelOptions`/`ChartDataLabelOverride` now carry `showLegendKey` and `showBubbleSize` alongside
+the existing value, percent, category, series, and leader-line flags. The current renderer still does not
+draw legend-key swatches or bubble-size text from these flags; this is a source-preservation step so future
+Office-PDF-backed data-label layout can decide those semantics without re-reading `c:dLbls` XML.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Added a public wrapped/highlighted text guard for the new PPTX glyph-run line
 context. `PptxHighlightedHeadlineTextWrapsBeforeFinalWord` now asserts that the first six emitted glyph
 runs retain line index `0` and a shared line top, while the final wrapped word retains line index `1` and a
