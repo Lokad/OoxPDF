@@ -636,53 +636,21 @@ internal sealed partial class PptxRenderer
 
     private static int ResolveSceneChartSeriesPointCount(PptxSceneChartSeries series, ChartWorkbookData? workbook)
     {
-        int pointCount = Math.Max(series.Values.Count, series.Categories.Count);
-        pointCount = Math.Max(pointCount, series.ValuePointCount ?? 0);
-        pointCount = Math.Max(pointCount, series.CategoryPointCount ?? 0);
-        pointCount = Math.Max(pointCount, MaxSceneChartNumberPointIndex(series.ValuePoints) + 1);
-        pointCount = Math.Max(pointCount, MaxSceneChartStringPointIndex(series.CategoryPoints) + 1);
-
-        if (workbook is not null)
-        {
-            pointCount = Math.Max(pointCount, ReadWorkbookNumericPointCount(workbook, series.DataSources.Values));
-            pointCount = Math.Max(pointCount, ReadWorkbookTextPointCount(workbook, series.DataSources.Categories));
-        }
-
-        return pointCount;
-    }
-
-    private static int MaxSceneChartNumberPointIndex(IReadOnlyList<PptxSceneChartNumberPoint> points)
-    {
-        int max = -1;
-        foreach (PptxSceneChartNumberPoint point in points)
-        {
-            max = Math.Max(max, point.Index);
-        }
-
-        return max;
-    }
-
-    private static int MaxSceneChartStringPointIndex(IReadOnlyList<PptxSceneChartStringPoint> points)
-    {
-        int max = -1;
-        foreach (PptxSceneChartStringPoint point in points)
-        {
-            max = Math.Max(max, point.Index);
-        }
-
-        return max;
-    }
-
-    private static int ReadWorkbookNumericPointCount(ChartWorkbookData workbook, PptxSceneChartDataSource source)
-    {
-        ChartWorkbookNumericValue[] values = workbook.ReadNumericRange(source.Formula);
-        return values.Length == 0 ? 0 : values.Max(value => value.Cell.Index) + 1;
-    }
-
-    private static int ReadWorkbookTextPointCount(ChartWorkbookData workbook, PptxSceneChartDataSource source)
-    {
-        ChartWorkbookTextValue[] values = workbook.ReadTextRange(source.Formula);
-        return values.Length == 0 ? 0 : values.Max(value => value.Cell.Index) + 1;
+        ChartIndexedNumberVector values = BuildChartIndexedNumberVector(
+            series.Values,
+            series.ValuePoints,
+            series.ValuePointCount,
+            series.ValueFormatCode,
+            series.DataSources.Values,
+            workbook);
+        ChartIndexedTextVector categories = BuildChartIndexedTextVector(
+            series.Categories,
+            series.CategoryPoints,
+            series.CategoryPointCount,
+            series.CategoryLevels,
+            series.DataSources.Categories,
+            workbook);
+        return Math.Max(values.PointCount ?? 0, categories.PointCount ?? 0);
     }
 
     private static ChartSeriesFill? ToChartSeriesFill(PptxSceneFillStyle fill, PptxScenePatternFill patternFill)

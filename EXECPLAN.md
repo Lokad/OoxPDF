@@ -1365,6 +1365,16 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-025313` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Route pie/doughnut point-count expansion through the indexed data vectors:
+    scene series explosion expansion now asks the numeric/category vectors for effective point counts instead
+    of maintaining separate `ptCount`, max-index, and workbook-range helpers. This keeps slice explosion
+    expansion on the same cache/workbook precedence path as values and category labels while preserving the
+    existing rendered output. Validation: focused non-slow `pptx-charts` passed
+    (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`261 passed, 0 failed, 7 skipped`); private run
+    `artifacts/private-visual/lokad-value-based/20260527-025628` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
