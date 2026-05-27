@@ -11216,6 +11216,46 @@ internal static class PptxTests
         TestAssert.Equal("3.2", totalsTableNumCache.Elements(c + "pt").Last().Element(c + "v")?.Value ?? string.Empty);
     }
 
+    public static void PptxChartIndexedVectorsPreserveWorkbookSidecarPoints()
+    {
+        Type workbookType = typeof(PptxRenderer).GetNestedType(
+            "ChartWorkbookData",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["B2"] = "8.2",
+                ["B3"] = "3.4"
+            }
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        var source = new PptxSceneChartDataSource(
+            "Sheet1!$B$2:$B$3",
+            PptxSceneChartDataSourceReferenceKind.NumberReference,
+            "numRef",
+            PptxSceneChartDataSourceCacheKind.NumberCache,
+            "numCache",
+            HasCachedPoints: true);
+        System.Reflection.MethodInfo buildVector = typeof(PptxRenderer).GetMethod(
+            "BuildChartIndexedNumberVector",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected indexed chart vector builder.");
+
+        object vector = buildVector.Invoke(
+            null,
+            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 1, "General", source, workbook]) ?? throw new InvalidOperationException("Expected indexed chart vector.");
+
+        object[] activePoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("Points")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected active chart points.")).Cast<object>().ToArray();
+        object[] workbookPoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("WorkbookPoints")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected workbook sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True(activePoints.Length == 1, "Expected existing chart-cache point projection to remain active.");
+        TestAssert.True((double?)activePoints[0].GetType().GetProperty("Value")?.GetValue(activePoints[0]) == 99d, "Expected chart-cache value to remain the rendered point value.");
+        TestAssert.True(workbookPoints.Length == 2, "Expected workbook sidecar points to preserve workbook source values next to cached chart points.");
+        TestAssert.True((int?)workbookPoints[0].GetType().GetProperty("Index")?.GetValue(workbookPoints[0]) == 0, "Expected workbook sidecar point index to preserve range order.");
+        TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
+        object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
+        TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+    }
+
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
     {
         string input = Path.Combine(

@@ -9492,3 +9492,19 @@ format object instead of a legacy string path plus an unrelated raw XML fallback
 
 Validation: focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`262 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Preserved workbook source points beside active chart-cache points in renderer-facing
+indexed vectors. `ChartIndexedNumberVector` and `ChartIndexedTextVector` now carry `WorkbookPoints` sidecars
+when an embedded workbook is available, while the existing `Points` collection still represents the values
+used by current rendering. The regression `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` locks the
+important stale-cache prerequisite: a chart cache value can remain active while the workbook range values and
+their source-cell provenance are still available next to it.
+
+This is not source/cache freshness policy. OOXPDF still does not decide when Office trusts chart caches,
+workbook cached values, formulas, `externalData/autoUpdate`, or stale linked workbooks. The structural gain is
+that future Office-PDF-backed reconciliation can compare cache-side and workbook-side point vectors without
+re-opening workbook XML or rehydrating ranges after the renderer has already chosen one source.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`263 passed, 0 failed, 7 skipped`).
