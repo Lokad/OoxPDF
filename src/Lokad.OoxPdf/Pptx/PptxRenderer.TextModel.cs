@@ -352,8 +352,8 @@ internal sealed partial class PptxRenderer
             BuildParagraphStyleCascade(textBody, textBody, inheritedPlaceholders: [], placeholderSources, "lvl1pPr").Sources.ToArray());
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, tableFrame.TextStyle)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, tableFrame.TextStyle)),
             _ => 0d
         };
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(

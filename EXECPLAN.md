@@ -380,6 +380,14 @@ High-priority actions:
   run `artifacts/private-visual/lokad-value-based/20260527-023824` stayed at 84/84 compared pages, zero
   dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-27: Retire the remaining table-local text-height heuristic from centered table-cell layout:
+  `EstimateTextHeight` now accepts the scene-owned `PptxSceneTableCellTextStyle`, so table first-row/column
+  bold participates in the same wrapping and vertical-offset estimate as later text layout. The obsolete
+  `EstimateTableCellTextHeight` duplicate was removed instead of tuned, and glyph-run inspection now includes
+  scene table text spans so table text can be checked through the same structural snapshot path as shape text.
+  `PptxSyntheticTableStyleBoldContributesToCenteredTextHeight` locks the observed behavior: inherited
+  table-style bold wraps and centers as bold, while explicit `b="0"` stays on the direct-run path. Validation:
+  focused test passed; focused non-slow `pptx-tables` passed (`8 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Carry line-chart marker styles into stroke legend keys:
   line and combo-line legends now keep the already-parsed per-series `ChartMarkerStyle` in `ChartLegendEntry`
   and emit a composite key as a short stroke with the marker centered on it, matching the same PDF structure

@@ -8016,6 +8016,84 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 72 499\.667 Tm"), $"Centered table-cell text should account for its line height before vertical anchoring. Matrices: {string.Join(" | ", matrices)}");
     }
 
+    public static void PptxSyntheticTableStyleBoldContributesToCenteredTextHeight()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes().Replace(
+                "</Types>",
+                "  <Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/>\r\n</Types>",
+                StringComparison.Ordinal)),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="TableTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="TableTheme">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent6><a:srgbClr val="336699"/></a:accent6>
+                    </a:clrScheme>
+                    <a:fontScheme name="TableTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="0"/><a:ext cx="1066800" cy="914400"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"><a:tbl>
+                        <a:tblPr firstRow="1"><a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId></a:tblPr>
+                        <a:tblGrid><a:gridCol w="533400"/><a:gridCol w="533400"/></a:tblGrid>
+                        <a:tr h="914400">
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"><a:latin typeface="Arial"/></a:rPr><a:t>Next up</a:t></a:r></a:p></a:txBody>
+                            <a:tcPr anchor="ctr" marL="0" marR="0" marT="0" marB="0"/>
+                          </a:tc>
+                          <a:tc>
+                            <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200" b="0"><a:latin typeface="Arial"/></a:rPr><a:t>Next up</a:t></a:r></a:p></a:txBody>
+                            <a:tcPr anchor="ctr" marL="0" marR="0" marT="0" marB="0"/>
+                          </a:tc>
+                        </a:tr>
+                      </a:tbl></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """)
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .Where(run => run.Text.Contains("Next", StringComparison.Ordinal) || run.Text.Contains("up", StringComparison.Ordinal))
+            .ToArray();
+        PptxTextGlyphRunSnapshot[] styleBoldRuns = glyphRuns.Where(run => run.X < 100d).ToArray();
+        PptxTextGlyphRunSnapshot[] directNonBoldRuns = glyphRuns.Where(run => run.X > 100d).ToArray();
+        string diagnostics = string.Join(" | ", glyphRuns.Select(run => $"{run.Text}@{run.X:0.###},{run.BaselineY:0.###},w{run.Width:0.###},line{run.LineIndex}"));
+
+        TestAssert.True(styleBoldRuns.Select(run => run.LineIndex).Distinct().Count() == 2, "Expected inherited table-style bold to affect wrapping. Runs: " + diagnostics);
+        TestAssert.True(directNonBoldRuns.Select(run => run.LineIndex).Distinct().Count() == 1, "Expected explicit b=\"0\" to keep the comparison cell on one line. Runs: " + diagnostics);
+        TestAssert.True(styleBoldRuns.Max(run => run.BaselineY) > directNonBoldRuns.Max(run => run.BaselineY) + 2d, "Expected table-style bold to feed the centered text-height estimate. Runs: " + diagnostics);
+    }
+
     public static void PptxSyntheticTableMergedCellsSuppressInteriorGrid()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

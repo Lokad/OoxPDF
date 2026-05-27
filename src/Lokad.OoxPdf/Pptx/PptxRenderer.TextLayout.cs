@@ -33,6 +33,7 @@ internal sealed partial class PptxRenderer
         return context.InheritedXml
             .SelectMany(xml => ReadTextSpans(context, xml, includePlaceholders: false, placeholderSources: []))
             .Concat(ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
+            .Concat(ReadSceneTableTextSpans(context))
             .ToArray();
     }
 
@@ -2912,7 +2913,12 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double EstimateTextHeight(XElement textBody, XElement? defaultParagraphProperties, PptxTheme theme, double textWidth)
+    private static double EstimateTextHeight(
+        XElement textBody,
+        XElement? defaultParagraphProperties,
+        PptxTheme theme,
+        double textWidth,
+        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
@@ -2979,10 +2985,11 @@ internal sealed partial class PptxRenderer
                 double fontSize = ReadFontSize(runProperties, defaultRunProperties);
                 string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
                 bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
-                    ParseOptionalBoolAttribute(defaultRunProperties, "b");
+                    (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
+                    (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
                 bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
                     ParseOptionalBoolAttribute(defaultRunProperties, "i");
-                foreach (string token in SplitTableTextWrapTokens(ReadTextElementText(child, slideNumber: 0)))
+                foreach (string token in SplitTextWrapTokens(ReadTextElementText(child, slideNumber: 0)))
                 {
                     if (token.Length == 0)
                     {
@@ -3031,6 +3038,33 @@ internal sealed partial class PptxRenderer
         }
 
         return height;
+    }
+
+    private static IEnumerable<string> SplitTextWrapTokens(string text)
+    {
+        int start = 0;
+        bool? whitespace = null;
+        for (int i = 0; i < text.Length; i++)
+        {
+            bool currentWhitespace = char.IsWhiteSpace(text[i]);
+            if (whitespace is null)
+            {
+                whitespace = currentWhitespace;
+                continue;
+            }
+
+            if (currentWhitespace != whitespace.Value)
+            {
+                yield return text[start..i];
+                start = i;
+                whitespace = currentWhitespace;
+            }
+        }
+
+        if (start < text.Length)
+        {
+            yield return text[start..];
+        }
     }
 
     private static double ReadEstimatedAnchorLineAdvance(
