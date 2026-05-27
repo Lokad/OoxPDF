@@ -11518,3 +11518,17 @@ bold and italic probes already justify the renderer ownership boundary, but a fu
 fixture would still be useful before adding a visual structural gate or tightening placement/bounds deltas.
 
 Validation: the console runner passed with `306` tests, `0` failures, and `0` skips.
+
+Revision note, 2026-05-27: Locked the shared chart-text route into the same transparent glyph-outline
+emission path. A synthetic chart-title test now authors `c:title/c:txPr` text with 45% fill alpha and verifies
+that the resulting PDF uses the alpha graphics state plus filled glyph path operators. This is deliberately a
+shared-emitter guard: chart titles, legends, axes, and labels should not grow a second transparent-text
+heuristic beside the slide text renderer.
+
+This closes only the renderer-route ownership for directly authored chart-title alpha. It does not settle
+Office visual parity for transparent chart labels, inherited chart-style alpha, rich-text run override
+precedence across every chart label surface, or whether Office converts all transparent chart text roles to
+glyph paths under the same conditions as regular slide text. Those need public Office-PDF probes before any
+role-specific structural gates are claimed.
+
+Validation: focused non-slow `pptx-charts` passed with `58` tests, `0` failures, and `0` skips.
