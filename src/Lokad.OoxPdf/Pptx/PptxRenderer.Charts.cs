@@ -4215,22 +4215,63 @@ internal sealed partial class PptxRenderer
                 .ToArray();
         }
 
-        return ReadChartSeriesNames(chartElement)
-            .Select(name => new ChartSeriesNameRecord(name, name, default, []))
-            .ToArray();
+        return ReadChartSeriesNameRecords(chartElement);
     }
 
-    private static IReadOnlyList<string> ReadChartSeriesNames(XElement chartElement)
+    private static IReadOnlyList<ChartSeriesNameRecord> ReadChartSeriesNameRecords(XElement chartElement)
     {
         return chartElement
             .Elements(ChartNamespace + "ser")
-            .Select((series, index) => ReadChartSeriesName(series) ?? $"Series {index + 1}")
+            .Select((series, index) =>
+            {
+                string cacheName = ReadChartSeriesName(series)?.Trim() ?? string.Empty;
+                string activeName = string.IsNullOrWhiteSpace(cacheName) ? $"Series {index + 1}" : cacheName;
+                return new ChartSeriesNameRecord(activeName, cacheName, ReadChartSeriesNameDataSource(series), []);
+            })
             .ToArray();
     }
 
     private static string? ReadChartSeriesName(XElement series)
     {
         return ReadChartText(series.Element(ChartNamespace + "tx"));
+    }
+
+    private static PptxSceneChartDataSource ReadChartSeriesNameDataSource(XElement series)
+    {
+        return ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef");
+    }
+
+    private static PptxSceneChartDataSource ReadChartDataSource(XElement? container, params string[] referenceKinds)
+    {
+        if (container is null)
+        {
+            return default;
+        }
+
+        foreach (string referenceKind in referenceKinds)
+        {
+            XElement? reference = container.Element(ChartNamespace + referenceKind);
+            if (reference is null)
+            {
+                continue;
+            }
+
+            XElement? cache = reference
+                .Elements()
+                .FirstOrDefault(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Cache", StringComparison.Ordinal));
+            bool hasCachedPoints = cache?
+                .Elements(ChartNamespace + "pt")
+                .Any() == true;
+            return new PptxSceneChartDataSource(
+                (string?)reference.Element(ChartNamespace + "f"),
+                PptxSceneBuilder.ParseChartDataSourceReferenceKind(referenceKind),
+                referenceKind,
+                PptxSceneBuilder.ParseChartDataSourceCacheKind(cache?.Name.LocalName),
+                cache?.Name.LocalName ?? string.Empty,
+                hasCachedPoints);
+        }
+
+        return default;
     }
 
     private static string? ReadChartText(XElement? text)

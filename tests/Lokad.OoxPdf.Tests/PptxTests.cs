@@ -11405,6 +11405,17 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected active series-name helper.");
         string activeSeriesName = (string?)getActiveSeriesName.Invoke(null, [typedRecords, 0]) ?? string.Empty;
         TestAssert.Equal("Cached Name", activeSeriesName);
+
+        object[] rawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, chartElement, null])) ?? throw new InvalidOperationException("Expected raw fallback series-name records.")).Cast<object>().ToArray();
+        TestAssert.True(rawRecords.Length == 1, "Expected raw XML fallback to preserve one series-name record.");
+        TestAssert.Equal("Cached Name", (string?)rawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(rawRecords[0]) ?? string.Empty);
+        object rawSource = rawRecords[0].GetType().GetProperty("Source")?.GetValue(rawRecords[0]) ?? throw new InvalidOperationException("Expected raw series-name source metadata.");
+        TestAssert.Equal("Sheet1!$B$1", (string?)rawSource.GetType().GetProperty("Formula")?.GetValue(rawSource) ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
+        TestAssert.Equal("strRef", (string?)rawSource.GetType().GetProperty("ReferenceKind")?.GetValue(rawSource) ?? string.Empty);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
+        TestAssert.Equal("strCache", (string?)rawSource.GetType().GetProperty("CacheKind")?.GetValue(rawSource) ?? string.Empty);
+        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw series-name cache point presence to survive fallback parsing.");
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()

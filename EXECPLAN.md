@@ -9590,6 +9590,22 @@ now start from typed indexed vectors rather than reviving a flattened compact-se
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Preserved raw XML series-name source metadata in the renderer fallback path. The
+scene-backed path already carried `ChartSeriesNameRecord` values with active/cache names, source formulas,
+and workbook sidecar points, but the no-scene fallback still built records from a collapsed
+`IReadOnlyList<string>` helper. The fallback now produces `ChartSeriesNameRecord` values directly and keeps
+the `c:tx` data-source kind, formula, cache kind, and cached-point presence beside the active name.
+
+Visible legend, auto-title, and `showSerName` data-label text are unchanged: the active string is still the
+same cached text or generated `Series N` fallback. This is not source/cache freshness policy and does not
+prefer workbook text over cache text. It removes another renderer-local place where future freshness,
+source-linked formatting, and Office-PDF-backed priority rules would otherwise have had to recover the
+series-name formula after the raw XML path had already flattened it to a string list.
+
+Validation: full console runner passed (`271 passed, 0 failed, 0 skipped`); focused non-slow `pptx-charts`
+passed (`45 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`264 passed, 0 failed, 7
+skipped`).
+
 Revision note, 2026-05-27: Removed obsolete compact double-list extent overloads for bar/column and area
 charts. Those families already compute extents from `ChartIndexedNumberVector` dense nullable domains, so the
 older `IReadOnlyList<IReadOnlyList<double>>` overloads had no callers and would have preserved a misleading
