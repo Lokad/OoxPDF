@@ -9632,6 +9632,24 @@ artifacts/probes/font-size-quantization-wrap13b/candidate-text-inspect -Slide 1`
 records with text omitted by default; full non-slow console runner passed (`264 passed, 0 failed, 7
 skipped`).
 
+Revision note, 2026-05-27: Extended the public font-size emission evidence across the
+`artifacts/probes/font-size-quantization*` ladder and threaded PDF text emission through an explicit
+`PptxPdfTextEmissionContext`. The positioned text path now builds the `/Tf` decision from a context carrying
+layout font size, frame/paragraph/line ordinals, resolved frame font scale, text/wrap/clip rectangles, column
+count/spacing, and line-box metrics, while the current profile still applies only Office's first-order
+600-DPI grid. This keeps rendering behavior unchanged but removes the scalar-only decision point that would
+otherwise force future Office alignment into per-size or private-slide conditionals.
+
+The public probe sweep showed the secondary Office branch is broader than the original wrapped-line clue:
+single-line public cases produce Office-only `15.024`, `21.024`, `24.024`, and `36.024` values where the
+candidate first-order grid emits `15`, `21`, `24`, and `36`; dense probes also show Office-only
+`23.064`, `26.064`, `29.064`, `32.064`, `35.064`, and `38.064` where the candidate emits the corresponding
+`*.04` grid values. Wrapped 13 pt probes keep the known Office-only `12.984` branch. The rule is therefore
+not a slide-17 special case and not simply "wrapped text"; the next implementation step must explain the
+secondary quantization branch from public line/frame/PDF evidence before changing the profile.
+
+Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`).
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only

@@ -844,12 +844,36 @@ internal sealed partial class PptxRenderer
             TextAlignment.Right => run.X + Math.Max(0, run.Width - lineWidth),
             _ => run.X
         };
-        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(run.FontSize);
+        double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(CreatePdfTextEmissionContext(span));
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
             .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, syntheticBold, syntheticItalic);
+    }
+
+    private static PptxPdfTextEmissionContext CreatePdfTextEmissionContext(PptxPositionedTextSpan span)
+    {
+        TextRun run = span.Run;
+        return new PptxPdfTextEmissionContext(
+            run.FontSize,
+            span.FrameIndex,
+            span.ParagraphIndex,
+            span.LineIndex,
+            span.FrameFontScale,
+            span.FrameTextX,
+            span.FrameTextWidth,
+            span.FrameTextWrapWidth,
+            span.FrameTextHeight,
+            span.FrameClipX,
+            span.FrameClipWidth,
+            span.FrameClipY,
+            span.FrameClipHeight,
+            span.FrameColumnCount,
+            span.FrameColumnSpacing,
+            span.LineBox?.TopY ?? run.Y,
+            span.LineBox?.Advance ?? 0d,
+            span.LineBox?.MaxFontSize ?? run.FontSize);
     }
 
     private static string EncodeGlyphHex(PptxTextGlyphSpanLayout span)

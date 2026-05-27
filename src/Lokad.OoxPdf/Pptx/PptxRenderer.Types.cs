@@ -182,6 +182,26 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxTextAtomLayout> Atoms,
         PptxTextGlyphSpanLayout GlyphSpan);
 
+    private readonly record struct PptxPdfTextEmissionContext(
+        double LayoutFontSize,
+        int FrameIndex,
+        int ParagraphIndex,
+        int LineIndex,
+        double FrameFontScale,
+        double FrameTextX,
+        double FrameTextWidth,
+        double FrameTextWrapWidth,
+        double FrameTextHeight,
+        double FrameClipX,
+        double FrameClipWidth,
+        double FrameClipY,
+        double FrameClipHeight,
+        int FrameColumnCount,
+        double FrameColumnSpacing,
+        double LineTopY,
+        double LineAdvance,
+        double LineMaxFontSize);
+
     private sealed record TextFontUse(
         string FamilyName,
         bool Bold,
@@ -840,6 +860,8 @@ internal sealed partial class PptxRenderer
     {
         private const double OfficeExportFontGridDpi = 600d;
         private const double PointsPerInch = 72d;
+
+        public static double FontSize(PptxPdfTextEmissionContext context) => FontSize(context.LayoutFontSize);
 
         public static double FontSize(double layoutFontSize)
         {
