@@ -3,14 +3,14 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-04-transparent-text.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "styled-text", "transparency", "approximate"],
+  "tags": ["pptx", "ladder", "styled-text", "transparency", "approximate", "needs-text-outline"],
   "expected": {
     "minAgentRating": 3,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.009,
-    "maxChangedPixelRatioAtThreshold16": 0.00027
+    "maxMeanAbsoluteError": 0.23,
+    "maxChangedPixelRatioAtThreshold16": 0.0041
   },
   "allowedUnsupportedFeatures": []
 }

@@ -11315,3 +11315,22 @@ OLE, or custom geometry. Its remaining risk surface is ordinary shape and connec
 by rectangles plus ellipses, diamonds, triangles, straight lines, and `curvedConnector2`, with four triangle
 line tails. This keeps any further slide-17 work pointed at connector/shape geometry rather than private
 schema handling or chart rendering.
+
+Revision note, 2026-05-27: Rechecked the public connector hypothesis raised by the private slide-17
+inventory. The public `pptx-ladder-06-curved-connector-transform-probe` still passes with four matched
+filled connector structures; Office and candidate both expose sampled, line-heavy filled paths with
+`250` segments and matching `2/244/4/2` path-command counts under the existing structural gate. This does
+not close the long-term connector item, because a broader connector family still needs exact Office evidence,
+but it rules out treating the current `curvedConnector2` sampled-fill strategy as the immediate slide-17
+blocker.
+
+The same pass exposed a separate public typography gap that should not be trimmed away. The
+`pptx-ladder-04-transparent-text` fixture had obsolete tight raster thresholds. Fresh Office-PDF inspection at
+run `20260527-201746` shows why: Office converts a semi-transparent text run into alpha-scoped filled glyph
+outline paths (`/GS6 gs`, `ca 0.45098`, one large `Fill` operation with `326` segments), while `ooxpdf`
+keeps the run as searchable alpha-scoped PDF text (`/GS45000F100000S gs`, `TJ`). Both preserve the run color
+and alpha, but they are structurally different and PDFium rasterization reports MAE `0.220793` and changed16
+`0.004018`. The manifest is now honestly tagged `needs-text-outline` and its approximate thresholds preserve
+the current behavior without claiming Office-like PDF structure. Long-term text rendering needs an
+Office-aligned glyph-outline emission path for transparent/no-fill/outline text cases before this fixture can
+be locked tightly again.
