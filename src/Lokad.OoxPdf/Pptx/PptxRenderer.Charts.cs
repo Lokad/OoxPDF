@@ -146,30 +146,6 @@ internal sealed partial class PptxRenderer
         return elementName is null ? [] : ReadChartPlotElements(chartXml, elementName);
     }
 
-    private static PptxSceneChartAxis? ReadSceneChartAxis(PptxSceneChart? chart, PptxSceneChartPlot? plot, PptxSceneChartAxisKind kind)
-    {
-        if (chart is null)
-        {
-            return null;
-        }
-
-        if (plot is not null && plot.AxisIds.Count != 0)
-        {
-            foreach (string axisId in plot.AxisIds)
-            {
-                PptxSceneChartAxis? axis = chart.Axes.FirstOrDefault(candidate =>
-                    string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
-                    candidate.AxisKind == kind);
-                if (axis is not null)
-                {
-                    return axis;
-                }
-            }
-        }
-
-        return chart.Axes.FirstOrDefault(axis => axis.AxisKind == kind);
-    }
-
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {
         return chart?.Plots
@@ -3564,19 +3540,6 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault(), fallback);
     }
 
-    private static XElement? ReadChartValueAxisForChart(XDocument chartXml, XElement chartElement)
-    {
-        HashSet<string> axisIds = chartElement
-            .Elements(ChartNamespace + "axId")
-            .Select(axis => (string?)axis.Attribute("val"))
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
-            .ToHashSet(StringComparer.Ordinal);
-        return chartXml
-            .Descendants(ChartNamespace + "valAx")
-            .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty));
-    }
-
     private static IReadOnlyList<XElement> ReadChartValueAxesForChart(XDocument chartXml, XElement chartElement)
     {
         string[] axisIds = chartElement
@@ -3603,19 +3566,6 @@ internal sealed partial class PptxRenderer
         }
 
         return axes;
-    }
-
-    private static XElement? ReadChartCategoryAxisForChart(XDocument chartXml, XElement chartElement)
-    {
-        HashSet<string> axisIds = chartElement
-            .Elements(ChartNamespace + "axId")
-            .Select(axis => (string?)axis.Attribute("val"))
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
-            .ToHashSet(StringComparer.Ordinal);
-        return ReadChartCategoryAxes(chartXml)
-            .FirstOrDefault(axis => ReadChartAxisId(axis) is { } axisId && axisIds.Contains(axisId)) ??
-            ReadChartCategoryAxes(chartXml).FirstOrDefault();
     }
 
     private static IReadOnlyList<XElement> ReadChartCategoryAxesForChart(XDocument chartXml, XElement chartElement)
@@ -7065,15 +7015,6 @@ internal sealed partial class PptxRenderer
         double right = frame.X + frame.Width - rightReserve;
         double width = Math.Max(1d, right - x);
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
-    }
-
-    private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement valueAxis)
-    {
-        ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis: null, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize);
-        double fontSize = style.FontSize;
-        ChartValueExtents extents = ReadChartValueAxisExtents(valueAxis, new ChartValueExtents(0d, 1d));
-        ChartAxisUnits units = ReadChartValueAxisUnits(valueAxis);
-        return EstimateVerticalValueAxisLabelStripWidth(theme, sceneChart, chartXml, valueAxis, sceneAxis: null, extents, units, defaultNumberFormat: null);
     }
 
     private static double EstimateVerticalValueAxisLabelStripWidth(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, XElement? valueAxis, PptxSceneChartAxis? sceneAxis, ChartValueExtents extents, ChartAxisUnits units, string? defaultNumberFormat)

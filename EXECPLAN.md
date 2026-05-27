@@ -9603,6 +9603,20 @@ lookup.
 Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`265 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed obsolete single-axis and XML-only chart-axis helper bypasses after the
+category/date-axis source pairing work. `ReadSceneChartAxis`, `ReadChartValueAxisForChart`,
+`ReadChartCategoryAxisForChart`, and the `EstimateVerticalValueAxisLabelStripWidth` overload that always
+passed `sceneAxis: null` had no remaining callers. Keeping them would have left tempting shortcuts around the
+paired `ChartAxisSource` model and around the scene-aware value-axis strip estimator.
+
+This is intentionally behavior-neutral cleanup, not a metric change. The remaining active axis paths still
+flow through paired value/category-like sources or explicit raw-list fallbacks where no scene source exists.
+The long-term point is to keep new Office-PDF-backed work from choosing an obsolete raw single-axis helper
+when a plot-owned source pair is available.
+
+Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`265 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed scatter and bubble value-axis rendering through scene-owned axis sources.
 The scatter/bubble branches now select their X/Y value axes with `ReadSceneOrXmlChartValueAxesForPlot`,
 derive axis extents and units from `PptxSceneChartAxis` when present, and pass scene axes into bubble
