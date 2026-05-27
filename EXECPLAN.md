@@ -1640,6 +1640,15 @@ High-priority actions:
     (`pptx-ladder-11-chart-pie-5-categories-port` run `20260527-101002`,
     `pptx-ladder-11-chart-doughnut-port` run `20260527-101010`); full non-slow console runner passed
     (`265 passed, 0 failed, 7 skipped`).
+  - [x] Apply series-level data-label options to polar charts:
+    pie and doughnut charts have a single rendered series, but scene-backed rendering previously passed only
+    plot-level `dLbls` options into `RenderPieDataLabels`. The polar paths now resolve the first series'
+    data-label options through the same `ResolveChartDataLabelOptionsForSeries` boundary used by bar and line
+    labels, so scene-owned series label flags/styles/overrides are not ignored. Validation: focused non-slow
+    `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); public polar visual cases passed
+    (`pptx-ladder-11-chart-pie-5-categories-port` run `20260527-101245`,
+    `pptx-ladder-11-chart-doughnut-port` run `20260527-101253`); full non-slow console runner passed
+    (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
