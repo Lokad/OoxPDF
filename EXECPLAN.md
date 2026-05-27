@@ -9573,6 +9573,15 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed the obsolete Cartesian data-label formatter overload that accepted
+collapsed string category and series-name lists. After the formatter boundary was moved to
+`ChartIndexedTextVector` plus `ChartSeriesNameRecord`, the string-list overload had no callers and would have
+remained an easy way to reintroduce flattened label metadata. Keeping only the typed overload makes the
+current supported label path reflect the long-term data model.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved blank and missing workbook source cells in renderer-facing chart sidecar
 vectors. The first workbook-sidecar implementation reused typed numeric/text range projections, which were
 correct for compatibility rendering fallbacks but silently dropped blank, non-numeric, or absent cells inside

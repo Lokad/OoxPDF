@@ -5257,38 +5257,6 @@ internal sealed partial class PptxRenderer
         int seriesIndex,
         int categoryIndex,
         ChartDataLabelOptions options,
-        IReadOnlyList<string> categoryLabels,
-        IReadOnlyList<string> seriesNames)
-    {
-        if (!string.IsNullOrWhiteSpace(options.CustomText))
-        {
-            return options.CustomText;
-        }
-
-        var parts = new List<string>(3);
-        if (options.ShowSeriesName && seriesIndex < seriesNames.Count && !string.IsNullOrWhiteSpace(seriesNames[seriesIndex]))
-        {
-            parts.Add(seriesNames[seriesIndex]);
-        }
-
-        if (options.ShowCategoryName && categoryIndex < categoryLabels.Count && !string.IsNullOrWhiteSpace(categoryLabels[categoryIndex]))
-        {
-            parts.Add(categoryLabels[categoryIndex]);
-        }
-
-        if (options.ShowValue)
-        {
-            parts.Add(FormatChartDataLabelValue(value, options));
-        }
-
-        return string.Join(GetChartDataLabelSeparator(options), parts);
-    }
-
-    private static string FormatCartesianDataLabel(
-        double value,
-        int seriesIndex,
-        int categoryIndex,
-        ChartDataLabelOptions options,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
