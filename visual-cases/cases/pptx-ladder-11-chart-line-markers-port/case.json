@@ -14,6 +14,14 @@
     "maxChartGraphicsStructureBoundsDelta": 0.9,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
     "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "VerticalLine", "PlotAreaClipBoxCandidate", "MarkerCandidate"],
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["LegendSwatchCandidate", "StrokeMarkerCandidate"],
+        "maxBoundsDelta": 1.8,
+        "maxLineWidthDelta": 1.0,
+        "matchOperators": true
+      }
+    ],
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
     "maxChartTextStructurePositionDeltaByKind": {

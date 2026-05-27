@@ -423,10 +423,9 @@ High-priority actions:
   `pptx-ladder-11-chart-line-markers-port` now includes `MarkerCandidate` in its chart-graphics structure
   comparison, guarded by the existing `0.9 pt` max bounds threshold after the Office-aligned auto marker size
   work brought marker bounds to `0.77 pt`. Validation: public line-marker port run `20260527-144231` passed.
-  `LegendSwatchCandidate` and `StrokeMarkerCandidate` were deliberately left ungated for this case because the
-  current nearest-bounds comparator still reports fill/stroke ordering and stroke-vs-fill operator deltas for
-  composite legend keys even when marker bounds are close; that is an oracle/classifier gap, not a renderer
-  size gap.
+  A second operator-aware auxiliary comparison now gates `LegendSwatchCandidate` and `StrokeMarkerCandidate`
+  at `1.8 pt` bounds and `1.0 pt` line-width tolerance, reflecting the current composite-key structure without
+  pretending its stroke width is exact. Validation: public line-marker port run `20260527-144516` passed.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
