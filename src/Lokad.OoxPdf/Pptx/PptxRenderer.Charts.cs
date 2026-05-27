@@ -200,6 +200,34 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<PptxSceneChartAxis> ReadSceneChartCategoryAxes(PptxSceneChart? chart, PptxSceneChartPlot? plot)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        static bool IsCategoryLike(PptxSceneChartAxis axis)
+        {
+            return axis.AxisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date;
+        }
+
+        if (plot is not null && plot.AxisIds.Count != 0)
+        {
+            return plot.AxisIds
+                .Select(axisId => chart.Axes.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, axisId, StringComparison.Ordinal) &&
+                    IsCategoryLike(candidate)))
+                .Where(axis => axis is not null)
+                .Select(axis => axis!)
+                .ToArray();
+        }
+
+        return chart.Axes
+            .Where(IsCategoryLike)
+            .ToArray();
+    }
+
     private static IReadOnlyList<ChartAxisSource> ReadSceneOrXmlChartValueAxesForPlot(
         PptxSceneChart? sceneChart,
         PptxSceneChartPlot? scenePlot,
@@ -234,9 +262,9 @@ internal sealed partial class PptxRenderer
         XElement? chartElement)
     {
         XElement[] xmlAxes = chartElement is null
-            ? chartXml.Descendants(ChartNamespace + "catAx").ToArray()
+            ? ReadChartCategoryAxes(chartXml).ToArray()
             : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
-        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Category);
+        IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartCategoryAxes(sceneChart, scenePlot);
         if (sceneAxes.Count == 0)
         {
             XElement? xmlAxis = xmlAxes.FirstOrDefault();
@@ -3585,10 +3613,9 @@ internal sealed partial class PptxRenderer
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id!)
             .ToHashSet(StringComparer.Ordinal);
-        return chartXml
-            .Descendants(ChartNamespace + "catAx")
-            .FirstOrDefault(axis => axisIds.Contains((string?)axis.Element(ChartNamespace + "axId")?.Attribute("val") ?? string.Empty)) ??
-            chartXml.Descendants(ChartNamespace + "catAx").FirstOrDefault();
+        return ReadChartCategoryAxes(chartXml)
+            .FirstOrDefault(axis => ReadChartAxisId(axis) is { } axisId && axisIds.Contains(axisId)) ??
+            ReadChartCategoryAxes(chartXml).FirstOrDefault();
     }
 
     private static IReadOnlyList<XElement> ReadChartCategoryAxesForChart(XDocument chartXml, XElement chartElement)
@@ -3601,14 +3628,13 @@ internal sealed partial class PptxRenderer
             .ToArray();
         if (axisIds.Length == 0)
         {
-            return chartXml.Descendants(ChartNamespace + "catAx").ToArray();
+            return ReadChartCategoryAxes(chartXml).ToArray();
         }
 
         var axes = new List<XElement>();
         foreach (string axisId in axisIds)
         {
-            XElement? axis = chartXml
-                .Descendants(ChartNamespace + "catAx")
+            XElement? axis = ReadChartCategoryAxes(chartXml)
                 .FirstOrDefault(candidate => string.Equals(ReadChartAxisId(candidate), axisId, StringComparison.Ordinal));
             if (axis is not null)
             {
@@ -3617,8 +3643,18 @@ internal sealed partial class PptxRenderer
         }
 
         return axes.Count == 0
-            ? chartXml.Descendants(ChartNamespace + "catAx").Take(1).ToArray()
+            ? ReadChartCategoryAxes(chartXml).Take(1).ToArray()
             : axes;
+    }
+
+    private static IEnumerable<XElement> ReadChartCategoryAxes(XDocument chartXml)
+    {
+        return chartXml
+            .Descendants(ChartNamespace + "plotArea")
+            .FirstOrDefault()?
+            .Elements()
+            .Where(element => element.Name == ChartNamespace + "catAx" || element.Name == ChartNamespace + "dateAx") ??
+            [];
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)

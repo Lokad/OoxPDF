@@ -9586,6 +9586,23 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Extended category-axis source pairing to include date axes. The scene model
+already preserved `dateAx` as `PptxSceneChartAxisKind.Date`, but renderer category-axis source lookup was
+still `catAx`-only. `ReadSceneOrXmlChartCategoryAxisForPlot` now treats category and date axes as the
+category-like axis family for line/bar/area/radar category-label and plot-box paths, pairing by plot `axId`
+against either `catAx` or `dateAx`. XML-only fallback now also considers `dateAx` in plot-area order instead
+of silently falling through to no category-axis source when a chart uses date axes.
+
+This is source-ownership alignment, not full date-scale rendering. OOXPDF still renders the existing cached
+category label vector and does not yet generate Office-like date tick intervals, base units, major/minor date
+units, or source-linked serial-date label formatting. The long-term gain is that date-axis style, visibility,
+number-format, and axis ownership now flow through the same structural path as category axes, so future
+Office-PDF-backed date-axis work starts from the right axis source instead of adding a special-case renderer
+lookup.
+
+Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`265 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed scatter and bubble value-axis rendering through scene-owned axis sources.
 The scatter/bubble branches now select their X/Y value axes with `ReadSceneOrXmlChartValueAxesForPlot`,
 derive axis extents and units from `PptxSceneChartAxis` when present, and pass scene axes into bubble

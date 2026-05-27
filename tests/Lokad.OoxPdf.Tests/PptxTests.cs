@@ -11479,6 +11479,52 @@ internal static class PptxTests
         TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw series-name cache point presence to survive fallback parsing.");
     }
 
+    public static void PptxChartCategoryAxisSourceAcceptsDateAxes()
+    {
+        const string chartXml = """
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser>
+                    <c:idx val="0"/><c:order val="0"/>
+                    <c:cat><c:numRef><c:f>Sheet1!$A$2:$A$4</c:f><c:numCache><c:ptCount val="3"/><c:pt idx="0"><c:v>44927</c:v></c:pt><c:pt idx="1"><c:v>44928</c:v></c:pt><c:pt idx="2"><c:v>44929</c:v></c:pt></c:numCache></c:numRef></c:cat>
+                    <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:ptCount val="3"/><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numCache></c:numRef></c:val>
+                  </c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:dateAx>
+                  <c:axId val="10"/><c:axPos val="b"/>
+                  <c:scaling><c:orientation val="minMax"/></c:scaling>
+                  <c:numFmt formatCode="m/d/yy" sourceLinked="1"/>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100"><a:solidFill><a:srgbClr val="1155AA"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                  <c:crossAx val="20"/><c:tickLblPos val="low"/>
+                </c:dateAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        PptxSceneChart chart = BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots.Single();
+        XElement lineChart = chart.ChartXml?.Descendants(c + "lineChart").Single() ?? throw new InvalidOperationException("Expected line chart XML.");
+        System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartCategoryAxisForPlot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis source helper.");
+
+        object source = readCategoryAxis.Invoke(null, [chart, plot, chart.ChartXml!, lineChart]) ?? throw new InvalidOperationException("Expected category-axis source.");
+        PptxSceneChartAxis sceneAxis = (PptxSceneChartAxis?)source.GetType().GetProperty("SceneAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected scene date axis source.");
+        XElement xmlAxis = (XElement?)source.GetType().GetProperty("XmlAxis")?.GetValue(source) ?? throw new InvalidOperationException("Expected XML date axis source.");
+        object xmlOnlySource = readCategoryAxis.Invoke(null, [null, null, chart.ChartXml!, lineChart]) ?? throw new InvalidOperationException("Expected XML-only category-axis source.");
+        XElement xmlOnlyAxis = (XElement?)xmlOnlySource.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlySource) ?? throw new InvalidOperationException("Expected XML-only date axis source.");
+
+        TestAssert.Equal(PptxSceneChartAxisKind.Date, sceneAxis.AxisKind);
+        TestAssert.Equal("dateAx", sceneAxis.Kind);
+        TestAssert.Equal("10", sceneAxis.Id);
+        TestAssert.Equal("dateAx", xmlAxis.Name.LocalName);
+        TestAssert.Equal("10", xmlAxis.Element(c + "axId")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("dateAx", xmlOnlyAxis.Name.LocalName);
+    }
+
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()
     {
         string input = Path.Combine(
