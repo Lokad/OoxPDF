@@ -1164,7 +1164,6 @@ internal sealed partial class PptxRenderer
         TextRun run = glyphRun.Source;
         if (run.Alpha >= 1d - PptxTextMetricRules.TextStateTolerance ||
             run.Outline is not null ||
-            glyphRun.SyntheticBold ||
             glyphRun.SyntheticItalic ||
             glyphRun.Glyphs.Count == 0)
         {

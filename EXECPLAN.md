@@ -11422,3 +11422,22 @@ Validation: focused non-slow `pptx-typography` passed with `84` tests and `2` sl
 `pptx-ladder-04-text-outline-probe` passed at run `20260527-204210`; the calibration run reported mean
 absolute error `0.18520302854938273` and changed-pixel ratio at threshold 16 of
 `0.0018229166666666667`.
+
+Revision note, 2026-05-27: Added public Office-PDF evidence for semi-transparent synthetic-bold text before
+changing the renderer gate. The new `pptx-ladder-04-transparent-synthetic-bold-probe` uses bold Cambria Math
+with a 45% fill alpha. Office exports that run as one alpha-scoped filled glyph-outline path, not as
+searchable PDF text and not as a stroked graphics path: the inspected reference has one `Fill`/`f` operation
+with `131` path segments and `8/23/100/8` move/line/curve/close command counts.
+
+OOXPDF now allows synthetic-bold transparent filled text through the same glyph-outline route as plain
+transparent filled text, while opaque synthetic bold remains PDF fill-and-stroke text mode. The public probe
+locks the structural match with graphics-operation kind/operator, segment-count, path-command, and bounds
+gates. This keeps the long-term rule evidence-driven: transparency owns the path conversion here; no-fill
+outlined text remains on the text-rendering-mode path until separate Office evidence says otherwise.
+
+Validation: focused non-slow `pptx-typography` passed with `85` tests and `2` slow skips. The new
+`pptx-ladder-04-transparent-synthetic-bold-probe` passed at run `20260527-204751` with the filled glyph-path
+structural gate; after the renderer gate change its raster metrics improved to mean absolute error
+`0.020626205632716048` and changed-pixel ratio at threshold 16 of `0.0006462191358024692`, with the
+candidate exposing no text operations for the run. The existing `pptx-ladder-04-transparent-text` gate also
+passed again at run `20260527-204751`. The full non-slow suite passed with `297` tests and `7` slow skips.
