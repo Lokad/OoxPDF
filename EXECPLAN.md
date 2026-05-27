@@ -2037,6 +2037,13 @@ High-priority actions:
     label-option resolver. Per-label polar leader lines can now override chart-wide or series-wide leader-line
     stroke style without re-scanning XML at draw time. Validation: focused scene-builder and native line/pie
     render tests passed after one transient parallel build-file lock was rerun serially.
+  - [x] Consume chart-style role text defaults for scene-backed data labels:
+    the scene-backed data-label option boundary now merges chart-level text defaults, the preserved
+    `cs:dataLabel` chart-style role, and direct `c:dLbls/txPr` text in that order before label rendering.
+    This matches the existing title/legend chart-style handoff and removes another renderer-local blind spot
+    where data labels could parse chart style parts but not use them. A synthetic chart with no direct
+    `c:dLbls/txPr` locks chart-style data-label color and font size in PDF output. Validation: the non-slow
+    console runner passed with the new test included (`312 passed, 0 failed, 0 skipped`).
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report

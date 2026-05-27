@@ -930,8 +930,8 @@ internal sealed partial class PptxRenderer
                         extraSeriesFills,
                         extraPointFills,
                         ReadSceneOrXmlChartVaryColors(extraBarPlot, extraBarChart),
-                        ReadSceneOrXmlDataLabelOptions(extraBarPlot, extraBarChart, theme),
-                        ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
+                        ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
+                        ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
                         ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook)));
                     seriesOffset += extraSeriesCount;
@@ -1002,8 +1002,8 @@ internal sealed partial class PptxRenderer
                         lineValueAxisReversed,
                         lineSeriesStrokes,
                         lineMarkerStyles,
-                        ReadSceneOrXmlDataLabelOptions(linePlot, comboLineChart, theme),
-                        ReadSceneOrXmlSeriesDataLabelOptions(linePlot, comboLineChart, theme),
+                        ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme),
+                        ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook),
                         ReadSceneOrXmlChartSeriesNameRecords(linePlot, comboLineChart, workbook)));
                     lineChartIndex++;
@@ -1066,8 +1066,8 @@ internal sealed partial class PptxRenderer
                     seriesFills,
                     pointFills,
                     varyColors,
-                    ReadSceneOrXmlDataLabelOptions(barPlot, barChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(barPlot, barChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
                     ReadSceneOrXmlChartSeriesNameRecords(barPlot, barChart, workbook)));
                 return true;
@@ -1120,8 +1120,8 @@ internal sealed partial class PptxRenderer
                     valueAxisReversed,
                     seriesStrokes,
                     markerStyles,
-                    ReadSceneOrXmlDataLabelOptions(linePlot, lineChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(linePlot, lineChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook),
                     ReadSceneOrXmlChartSeriesNameRecords(linePlot, lineChart, workbook)));
                 return true;
@@ -1218,8 +1218,8 @@ internal sealed partial class PptxRenderer
                     xExtents,
                     yExtents,
                     seriesFills,
-                    ReadSceneOrXmlDataLabelOptions(scatterPlot, scatterChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(scatterPlot, scatterChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme),
                     ReadSceneOrXmlChartSeriesNameRecords(scatterPlot, scatterChart, workbook)));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, scatterPlot, scatterChart, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
@@ -1257,8 +1257,8 @@ internal sealed partial class PptxRenderer
                     xExtents,
                     yExtents,
                     seriesFills,
-                    ReadSceneOrXmlDataLabelOptions(bubblePlot, bubbleChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(bubblePlot, bubbleChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, bubblePlot, bubbleChart, theme),
                     ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook)));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
@@ -1310,8 +1310,8 @@ internal sealed partial class PptxRenderer
                 ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(piePlot, pieChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
-                    ReadSceneOrXmlDataLabelOptions(piePlot, pieChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(piePlot, pieChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme),
                     seriesIndex: 0);
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
@@ -1339,8 +1339,8 @@ internal sealed partial class PptxRenderer
                 ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(doughnutPlot, doughnutChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
-                    ReadSceneOrXmlDataLabelOptions(doughnutPlot, doughnutChart, theme),
-                    ReadSceneOrXmlSeriesDataLabelOptions(doughnutPlot, doughnutChart, theme),
+                    ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme),
+                    ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme),
                     seriesIndex: 0);
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
@@ -5627,6 +5627,17 @@ internal sealed partial class PptxRenderer
             next.Italic ?? style.Italic);
     }
 
+    private static ChartTextStyleOverride MergeChartTextStyleOverride(ChartTextStyleOverride style, ChartTextStyleOverride next)
+    {
+        return new ChartTextStyleOverride(
+            next.FontFamily ?? style.FontFamily,
+            next.FontSize ?? style.FontSize,
+            next.Color ?? style.Color,
+            next.Alpha ?? style.Alpha,
+            next.Bold ?? style.Bold,
+            next.Italic ?? style.Italic);
+    }
+
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme)
     {
         XElement? labels = chartElement.Element(ChartNamespace + "dLbls") ??
@@ -5658,7 +5669,7 @@ internal sealed partial class PptxRenderer
                 IsDefined: true);
     }
 
-    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    private static ChartDataLabelOptions ReadSceneOrXmlDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
         return plot is null
             ? ReadChartDataLabelOptions(chartElement, theme)
@@ -5679,18 +5690,18 @@ internal sealed partial class PptxRenderer
                 plot.DataLabels.NumberFormat,
                 ToChartNumberFormat(plot.DataLabels.NumberFormatInfo),
                 plot.DataLabels.Layout,
-                ToChartTextStyleOverride(plot.DataLabels.TextStyle),
+                ToChartDataLabelTextStyleOverride(sceneChart, plot.DataLabels),
                 ToChartShapeStyle(plot.DataLabels.ShapeStyle),
                 ToChartDataLabelOverrides(plot.DataLabels.Overrides),
                 plot.DataLabels.IsDefined);
     }
 
-    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
+    private static IReadOnlyList<ChartDataLabelOptions> ReadSceneOrXmlSeriesDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
         if (plot is not null)
         {
             return plot.Series
-                .Select(series => ToChartDataLabelOptions(series.DataLabels))
+                .Select(series => ToChartDataLabelOptions(sceneChart, series.DataLabels))
                 .ToArray();
         }
 
@@ -5700,7 +5711,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChartDataLabels labels)
+    private static ChartDataLabelOptions ToChartDataLabelOptions(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
     {
         return new ChartDataLabelOptions(
             labels.ShowValue == true,
@@ -5719,10 +5730,22 @@ internal sealed partial class PptxRenderer
             labels.NumberFormat,
             ToChartNumberFormat(labels.NumberFormatInfo),
             labels.Layout,
-            ToChartTextStyleOverride(labels.TextStyle),
+            ToChartDataLabelTextStyleOverride(sceneChart, labels),
             ToChartShapeStyle(labels.ShapeStyle),
             ToChartDataLabelOverrides(labels.Overrides),
             labels.IsDefined);
+    }
+
+    private static ChartTextStyleOverride ToChartDataLabelTextStyleOverride(PptxSceneChart? sceneChart, PptxSceneChartDataLabels labels)
+    {
+        ChartTextStyleOverride style = ChartTextStyleOverride.Empty;
+        if (sceneChart is not null)
+        {
+            style = MergeChartTextStyleOverride(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+            style = MergeChartTextStyleOverride(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "dataLabel"));
+        }
+
+        return MergeChartTextStyleOverride(style, ToChartTextStyleOverride(labels.TextStyle));
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
