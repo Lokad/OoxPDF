@@ -54,8 +54,13 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasChart,
     int ChartPlotCount,
     int ChartAxisCount,
+    bool HasChartExternalData,
+    string ChartExternalDataRelationshipId,
+    string ChartExternalDataTargetPartName,
+    bool? ChartExternalDataAutoUpdate,
     bool HasChartExternalDataResource,
     string ChartExternalDataContentType,
+    bool? ChartPlotVisibleOnly,
     bool HasGroupTransform,
     IReadOnlyList<PptxSceneNodeSnapshot> Children);
 

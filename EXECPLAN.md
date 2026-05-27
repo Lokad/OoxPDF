@@ -11849,3 +11849,19 @@ Validation: `pptx-ladder-11-chart-doughnut-bottom-legend-exploded-probe`,
 `pptx-ladder-11-chart-doughnut-top-legend-exploded-probe`, and
 `pptx-ladder-11-chart-doughnut-left-legend-exploded-probe` all passed with the new legend-swatch structural
 gate at run `20260527-232712`.
+
+Revision note, 2026-05-27: Exposed chart source/cache policy fields through scene inspection without
+changing rendering. The scene model already preserved `c:externalData`, its relationship target, embedded
+workbook resource ownership, `c:autoUpdate`, and `c:plotVisOnly`, but the inspection snapshot only surfaced
+the workbook resource presence and content type. `PptxSceneNodeSnapshot` now also reports whether
+external data is defined, the external-data relationship id, target part, nullable `autoUpdate`, and
+nullable `plotVisOnly`.
+
+This closes a structural observability gap in the long-term source/cache plan. Future workbook-over-cache
+or hidden-row policy work can assert the exact OOXML policy inputs before changing active chart points,
+instead of inferring them from private documents or from whether a workbook sidecar happened to be readable.
+The rendering path remains deliberately unchanged: saved chart caches are still the active source for
+scene-backed native charts, and embedded workbook ranges remain sidecar provenance until Office-PDF evidence
+proves a promotion rule.
+
+Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
