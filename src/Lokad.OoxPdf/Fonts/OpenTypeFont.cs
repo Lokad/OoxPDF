@@ -158,6 +158,231 @@ internal sealed class OpenTypeFont
         return kerningPairs.TryGetValue(key, out short value) ? value : (short)0;
     }
 
+    public bool TryReadGlyphOutline(ushort glyphId, out OpenTypeGlyphOutline outline)
+    {
+        outline = default;
+        if (glyphId >= GlyphCount ||
+            !tables.TryGetValue("head", out TableRecord head) ||
+            !tables.TryGetValue("loca", out TableRecord loca) ||
+            !tables.TryGetValue("glyf", out TableRecord glyf) ||
+            head.Length < 52)
+        {
+            return false;
+        }
+
+        short indexToLocFormat = I16(bytes, head.Offset + 50);
+        if (!TryGetGlyphTableRange(glyphId, indexToLocFormat, loca, glyf, out int glyphOffset, out int glyphLength) ||
+            glyphLength < 10)
+        {
+            return false;
+        }
+
+        int glyphEnd = glyphOffset + glyphLength;
+        short contourCount = I16(bytes, glyphOffset);
+        FontBounds glyphBounds = new(
+            I16(bytes, glyphOffset + 2),
+            I16(bytes, glyphOffset + 4),
+            I16(bytes, glyphOffset + 6),
+            I16(bytes, glyphOffset + 8));
+
+        if (contourCount < 0)
+        {
+            outline = new OpenTypeGlyphOutline(glyphBounds, [], IsCompound: true);
+            return true;
+        }
+
+        return TryReadSimpleGlyphOutline(glyphOffset + 10, glyphEnd, contourCount, glyphBounds, out outline);
+    }
+
+    private bool TryGetGlyphTableRange(
+        ushort glyphId,
+        short indexToLocFormat,
+        TableRecord loca,
+        TableRecord glyf,
+        out int glyphOffset,
+        out int glyphLength)
+    {
+        glyphOffset = 0;
+        glyphLength = 0;
+
+        if (indexToLocFormat == 0)
+        {
+            int locaOffset = loca.Offset + glyphId * 2;
+            if (locaOffset + 4 > loca.Offset + loca.Length)
+            {
+                return false;
+            }
+
+            glyphOffset = glyf.Offset + U16(bytes, locaOffset) * 2;
+            int nextOffset = glyf.Offset + U16(bytes, locaOffset + 2) * 2;
+            glyphLength = nextOffset - glyphOffset;
+        }
+        else if (indexToLocFormat == 1)
+        {
+            int locaOffset = loca.Offset + glyphId * 4;
+            if (locaOffset + 8 > loca.Offset + loca.Length)
+            {
+                return false;
+            }
+
+            uint relativeOffset = U32(bytes, locaOffset);
+            uint nextRelativeOffset = U32(bytes, locaOffset + 4);
+            if (relativeOffset > int.MaxValue || nextRelativeOffset > int.MaxValue)
+            {
+                return false;
+            }
+
+            glyphOffset = glyf.Offset + (int)relativeOffset;
+            int nextOffset = glyf.Offset + (int)nextRelativeOffset;
+            glyphLength = nextOffset - glyphOffset;
+        }
+        else
+        {
+            return false;
+        }
+
+        return glyphLength > 0 &&
+            glyphOffset >= glyf.Offset &&
+            glyphOffset + glyphLength <= glyf.Offset + glyf.Length;
+    }
+
+    private bool TryReadSimpleGlyphOutline(
+        int offset,
+        int glyphEnd,
+        short contourCount,
+        FontBounds bounds,
+        out OpenTypeGlyphOutline outline)
+    {
+        outline = default;
+        if (contourCount == 0)
+        {
+            outline = new OpenTypeGlyphOutline(bounds, [], IsCompound: false);
+            return true;
+        }
+
+        if (offset + contourCount * 2 + 2 > glyphEnd)
+        {
+            return false;
+        }
+
+        var contourEnds = new ushort[contourCount];
+        for (int i = 0; i < contourEnds.Length; i++)
+        {
+            contourEnds[i] = U16(bytes, offset + i * 2);
+        }
+
+        int pointCount = contourEnds[^1] + 1;
+        int instructionLengthOffset = offset + contourCount * 2;
+        ushort instructionLength = U16(bytes, instructionLengthOffset);
+        int flagsOffset = instructionLengthOffset + 2 + instructionLength;
+        if (pointCount <= 0 || flagsOffset > glyphEnd)
+        {
+            return false;
+        }
+
+        var flags = new byte[pointCount];
+        int cursor = flagsOffset;
+        for (int i = 0; i < pointCount;)
+        {
+            if (cursor >= glyphEnd)
+            {
+                return false;
+            }
+
+            byte flag = bytes[cursor++];
+            int repeatCount = 0;
+            if ((flag & 0x08) != 0)
+            {
+                if (cursor >= glyphEnd)
+                {
+                    return false;
+                }
+
+                repeatCount = bytes[cursor++];
+            }
+
+            for (int repeat = 0; repeat <= repeatCount && i < pointCount; repeat++)
+            {
+                flags[i++] = flag;
+            }
+        }
+
+        if (!TryReadSimpleGlyphCoordinates(flags, glyphEnd, ref cursor, readX: true, out short[] xs) ||
+            !TryReadSimpleGlyphCoordinates(flags, glyphEnd, ref cursor, readX: false, out short[] ys))
+        {
+            return false;
+        }
+
+        var contours = new OpenTypeGlyphContour[contourCount];
+        int start = 0;
+        for (int i = 0; i < contours.Length; i++)
+        {
+            int end = contourEnds[i];
+            if (end < start || end >= pointCount)
+            {
+                return false;
+            }
+
+            var points = new OpenTypeGlyphPoint[end - start + 1];
+            for (int point = start; point <= end; point++)
+            {
+                points[point - start] = new OpenTypeGlyphPoint(xs[point], ys[point], (flags[point] & 0x01) != 0);
+            }
+
+            contours[i] = new OpenTypeGlyphContour(points);
+            start = end + 1;
+        }
+
+        outline = new OpenTypeGlyphOutline(bounds, contours, IsCompound: false);
+        return true;
+    }
+
+    private bool TryReadSimpleGlyphCoordinates(byte[] flags, int glyphEnd, ref int cursor, bool readX, out short[] coordinates)
+    {
+        coordinates = new short[flags.Length];
+        int value = 0;
+        byte shortVector = readX ? (byte)0x02 : (byte)0x04;
+        byte sameOrPositive = readX ? (byte)0x10 : (byte)0x20;
+
+        for (int i = 0; i < flags.Length; i++)
+        {
+            int delta = 0;
+            if ((flags[i] & shortVector) != 0)
+            {
+                if (cursor >= glyphEnd)
+                {
+                    return false;
+                }
+
+                delta = bytes[cursor++];
+                if ((flags[i] & sameOrPositive) == 0)
+                {
+                    delta = -delta;
+                }
+            }
+            else if ((flags[i] & sameOrPositive) == 0)
+            {
+                if (cursor + 2 > glyphEnd)
+                {
+                    return false;
+                }
+
+                delta = I16(bytes, cursor);
+                cursor += 2;
+            }
+
+            value += delta;
+            if (value < short.MinValue || value > short.MaxValue)
+            {
+                return false;
+            }
+
+            coordinates[i] = (short)value;
+        }
+
+        return true;
+    }
+
     private static ushort ReadUnitsPerEm(byte[] bytes, Dictionary<string, TableRecord> tables)
     {
         TableRecord head = Required(tables, "head");
@@ -875,6 +1100,12 @@ internal sealed class OpenTypeFont
         ushort WindowsDescender);
 
     internal readonly record struct FontBounds(short XMin, short YMin, short XMax, short YMax);
+
+    internal readonly record struct OpenTypeGlyphOutline(FontBounds Bounds, IReadOnlyList<OpenTypeGlyphContour> Contours, bool IsCompound);
+
+    internal readonly record struct OpenTypeGlyphContour(IReadOnlyList<OpenTypeGlyphPoint> Points);
+
+    internal readonly record struct OpenTypeGlyphPoint(short X, short Y, bool IsOnCurve);
 
     internal readonly record struct PostMetrics(
         double ItalicAngle,

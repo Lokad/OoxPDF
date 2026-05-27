@@ -11334,3 +11334,20 @@ and alpha, but they are structurally different and PDFium rasterization reports 
 the current behavior without claiming Office-like PDF structure. Long-term text rendering needs an
 Office-aligned glyph-outline emission path for transparent/no-fill/outline text cases before this fixture can
 be locked tightly again.
+
+Revision note, 2026-05-27: Started the transparent-text structural alignment path at the font boundary.
+`OpenTypeFont` now exposes a read-only TrueType glyph-outline surface backed by the `head`, `loca`, and
+`glyf` tables. The first slice decodes simple glyph contours, repeat-compressed point flags, relative
+coordinate streams, glyph bounds, and on/off-curve point markers; malformed or out-of-range glyph reads
+fail closed. Compound glyphs are detected and reported as compound outlines without expanding their
+components yet.
+
+This is deliberately not wired into PPTX PDF text emission yet. The prior transparent-text Office-PDF
+inspection showed that Office emits semi-transparent text as filled glyph paths, but turning that into a
+renderer behavior requires two more structural pieces before it should affect visuals: compound glyph
+component expansion and deterministic conversion of TrueType quadratic contours, including implied on-curve
+points, into PDF path operations. Keeping this as a tested parser boundary avoids replacing one heuristic
+with another and gives the eventual transparent/no-fill/outline text emitter a real font-geometry source.
+
+Validation: focused `fonts` tests passed with `16` tests, including new checks for simple Arial glyph
+outlines, curved off-curve points, and out-of-range glyph rejection.

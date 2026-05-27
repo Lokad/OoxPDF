@@ -53,6 +53,67 @@ internal static class FontTests
         TestAssert.True(font.GetAdvanceWidth(glyph) > 0, "Expected a positive advance width for 'A'.");
     }
 
+    public static void OpenTypeParserReadsSimpleGlyphOutlines()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('A');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'A'.");
+        TestAssert.True(!outline.IsCompound, "Expected Arial 'A' to be a simple glyph outline.");
+        TestAssert.True(outline.Contours.Count > 0, "Expected at least one contour in Arial 'A'.");
+        TestAssert.True(outline.Contours.Sum(contour => contour.Points.Count) > 0, "Expected outline points in Arial 'A'.");
+        TestAssert.True(
+            outline.Bounds.XMax > outline.Bounds.XMin && outline.Bounds.YMax > outline.Bounds.YMin,
+            "Expected non-empty glyph outline bounds for Arial 'A'.");
+    }
+
+    public static void OpenTypeParserReadsCurvedGlyphOutlinePoints()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('O');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'O'.");
+        TestAssert.True(
+            outline.Contours.SelectMany(contour => contour.Points).Any(point => !point.IsOnCurve),
+            "Expected at least one off-curve point in Arial 'O'.");
+    }
+
+    public static void OpenTypeParserRejectsOutOfRangeGlyphOutline()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+
+        TestAssert.True(!font.TryReadGlyphOutline(ushort.MaxValue, out _), "Expected out-of-range glyph outline reads to fail.");
+    }
+
     public static void OpenTypeParserReadsGposPairAdjustments()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
