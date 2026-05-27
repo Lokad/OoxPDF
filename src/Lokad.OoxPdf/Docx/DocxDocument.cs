@@ -8,6 +8,7 @@ internal sealed record DocxDocument(
     double MarginTopPoints,
     double MarginBottomPoints,
     DocxPageSettings PageSettings,
+    IReadOnlyList<DocxFloatingDrawing> FloatingDrawings,
     IReadOnlyList<DocxParagraph> HeaderParagraphs,
     IReadOnlyList<DocxParagraph> FooterParagraphs,
     IReadOnlyList<DocxBodyElement> BodyElements,
@@ -15,7 +16,7 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [], [])
     {
     }
 }
@@ -31,6 +32,28 @@ internal sealed record DocxPageSettings(
 {
     public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null);
 }
+
+internal sealed record DocxFloatingDrawing(
+    string? DistanceTopValue,
+    string? DistanceBottomValue,
+    string? DistanceLeftValue,
+    string? DistanceRightValue,
+    string? SimplePositionValue,
+    string? RelativeHeightValue,
+    string? BehindDocumentValue,
+    string? LockedValue,
+    string? LayoutInCellValue,
+    string? AllowOverlapValue,
+    string? ExtentCxValue,
+    string? ExtentCyValue,
+    string? HorizontalRelativeFromValue,
+    string? HorizontalAlignValue,
+    string? HorizontalOffsetValue,
+    string? VerticalRelativeFromValue,
+    string? VerticalAlignValue,
+    string? VerticalOffsetValue,
+    string? WrapKind,
+    string? WrapTextValue);
 
 internal abstract record DocxBodyElement;
 

@@ -407,9 +407,9 @@ High-priority actions:
   writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
   unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
   crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
-  drawing wrap and broader multi-section settings still need raw-token preservation before renderer behavior
-  is broadened, even though several narrow paragraph, table, numbering, and final-section page tokens now
-  have model homes.
+  broader drawing-wrap/floating layout and multi-section settings still need model and renderer work before
+  behavior is broadened, even though several narrow paragraph, table, numbering, final-section page, and
+  floating-anchor source tokens now have model homes.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
@@ -483,6 +483,15 @@ High-priority actions:
   settings, section breaks, headers/footers across sections, and drawing wrap remain open architecture work.
   Validation: focused non-slow `docx-page` passed (`8 passed, 0 failed, 0 skipped`); full non-slow console
   runner passed (`281 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX floating drawing anchor and wrap source tokens:
+  `DocxDocument.FloatingDrawings` now records unsupported `wp:anchor` source facts instead of reducing them
+  to only `DOCX_UNSUPPORTED_FLOATING_DRAWING`: anchor distances and flags, extent values, horizontal/vertical
+  relative positioning, alignment or offset values, wrap element kind, and `wrapText`. Rendering still skips
+  floating drawings with the existing diagnostic; future Word-aligned floating layout can now start from
+  model-visible WordprocessingDrawing tokens instead of re-reading XML or inventing document-specific
+  placement heuristics. Validation: focused `DocxReaderPreservesFloatingDrawingWrapTokens` passed
+  (`1 passed, 0 failed, 0 skipped`); focused non-slow `docx-core` passed
+  (`3 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`282 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

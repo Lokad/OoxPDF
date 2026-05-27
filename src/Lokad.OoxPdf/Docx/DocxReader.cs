@@ -48,6 +48,7 @@ internal sealed class DocxReader
         IReadOnlyList<DocxTable> tables = bodyElements.OfType<DocxTableElement>().Select(e => e.Table).ToArray();
         IReadOnlyList<DocxParagraph> headers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, HeaderRelationshipType, "headerReference");
         IReadOnlyList<DocxParagraph> footers = ReadReferencedHeaderFooterParagraphs(document, package, relationships, styles, numbering, FooterRelationshipType, "footerReference");
+        IReadOnlyList<DocxFloatingDrawing> floatingDrawings = ReadFloatingDrawings(document);
 
         if (pageSize is null)
         {
@@ -59,6 +60,7 @@ internal sealed class DocxReader
                 72d,
                 72d,
                 ReadPageSettings(pageSize, pageMargins),
+                floatingDrawings,
                 headers,
                 footers,
                 bodyElements,
@@ -87,11 +89,54 @@ internal sealed class DocxReader
             top,
             bottom,
             ReadPageSettings(pageSize, pageMargins),
+            floatingDrawings,
             headers,
             footers,
             bodyElements,
             paragraphs,
             tables);
+    }
+
+    private static IReadOnlyList<DocxFloatingDrawing> ReadFloatingDrawings(XDocument document)
+    {
+        return document
+            .Descendants(WordprocessingDrawingNamespace + "anchor")
+            .Select(ReadFloatingDrawing)
+            .ToArray();
+    }
+
+    private static DocxFloatingDrawing ReadFloatingDrawing(XElement anchor)
+    {
+        XElement? extent = anchor.Element(WordprocessingDrawingNamespace + "extent");
+        XElement? positionH = anchor.Element(WordprocessingDrawingNamespace + "positionH");
+        XElement? positionV = anchor.Element(WordprocessingDrawingNamespace + "positionV");
+        XElement? wrap = anchor
+            .Elements()
+            .FirstOrDefault(element =>
+                element.Name.Namespace == WordprocessingDrawingNamespace &&
+                element.Name.LocalName.StartsWith("wrap", StringComparison.Ordinal));
+
+        return new DocxFloatingDrawing(
+            (string?)anchor.Attribute("distT"),
+            (string?)anchor.Attribute("distB"),
+            (string?)anchor.Attribute("distL"),
+            (string?)anchor.Attribute("distR"),
+            (string?)anchor.Attribute("simplePos"),
+            (string?)anchor.Attribute("relativeHeight"),
+            (string?)anchor.Attribute("behindDoc"),
+            (string?)anchor.Attribute("locked"),
+            (string?)anchor.Attribute("layoutInCell"),
+            (string?)anchor.Attribute("allowOverlap"),
+            (string?)extent?.Attribute("cx"),
+            (string?)extent?.Attribute("cy"),
+            (string?)positionH?.Attribute("relativeFrom"),
+            (string?)positionH?.Element(WordprocessingDrawingNamespace + "align"),
+            (string?)positionH?.Element(WordprocessingDrawingNamespace + "posOffset"),
+            (string?)positionV?.Attribute("relativeFrom"),
+            (string?)positionV?.Element(WordprocessingDrawingNamespace + "align"),
+            (string?)positionV?.Element(WordprocessingDrawingNamespace + "posOffset"),
+            wrap?.Name.LocalName,
+            (string?)wrap?.Attribute("wrapText"));
     }
 
     private static DocxPageSettings ReadPageSettings(XElement? pageSize, XElement? pageMargins)

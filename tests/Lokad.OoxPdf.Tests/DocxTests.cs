@@ -860,6 +860,74 @@ internal static class DocxTests
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "IMAGE_UNSUPPORTED_FORMAT" && d.Severity == OoxPdfSeverity.Error && d.PartName == "/word/media/image1.png"), "Unsupported DOCX image should emit a release-blocking diagnostic.");
     }
 
+    public static void DocxReaderPreservesFloatingDrawingWrapTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+                  <w:body>
+                    <w:p>
+                      <w:r>
+                        <w:drawing>
+                          <wp:anchor distT="114300" distB="228600" distL="342900" distR="457200"
+                                     simplePos="0" relativeHeight="251658240" behindDoc="0"
+                                     locked="1" layoutInCell="1" allowOverlap="0">
+                            <wp:extent cx="1828800" cy="914400"/>
+                            <wp:positionH relativeFrom="column"><wp:align>center</wp:align></wp:positionH>
+                            <wp:positionV relativeFrom="paragraph"><wp:posOffset>63500</wp:posOffset></wp:positionV>
+                            <wp:wrapSquare wrapText="bothSides"/>
+                          </wp:anchor>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxFloatingDrawing drawing = document.FloatingDrawings.Single();
+
+        TestAssert.Equal("114300", drawing.DistanceTopValue ?? string.Empty);
+        TestAssert.Equal("228600", drawing.DistanceBottomValue ?? string.Empty);
+        TestAssert.Equal("342900", drawing.DistanceLeftValue ?? string.Empty);
+        TestAssert.Equal("457200", drawing.DistanceRightValue ?? string.Empty);
+        TestAssert.Equal("0", drawing.SimplePositionValue ?? string.Empty);
+        TestAssert.Equal("251658240", drawing.RelativeHeightValue ?? string.Empty);
+        TestAssert.Equal("0", drawing.BehindDocumentValue ?? string.Empty);
+        TestAssert.Equal("1", drawing.LockedValue ?? string.Empty);
+        TestAssert.Equal("1", drawing.LayoutInCellValue ?? string.Empty);
+        TestAssert.Equal("0", drawing.AllowOverlapValue ?? string.Empty);
+        TestAssert.Equal("1828800", drawing.ExtentCxValue ?? string.Empty);
+        TestAssert.Equal("914400", drawing.ExtentCyValue ?? string.Empty);
+        TestAssert.Equal("column", drawing.HorizontalRelativeFromValue ?? string.Empty);
+        TestAssert.Equal("center", drawing.HorizontalAlignValue ?? string.Empty);
+        TestAssert.Equal("paragraph", drawing.VerticalRelativeFromValue ?? string.Empty);
+        TestAssert.Equal("63500", drawing.VerticalOffsetValue ?? string.Empty);
+        TestAssert.Equal("wrapSquare", drawing.WrapKind ?? string.Empty);
+        TestAssert.Equal("bothSides", drawing.WrapTextValue ?? string.Empty);
+    }
+
     public static void DocxSyntheticTableRendersCellsAndText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
