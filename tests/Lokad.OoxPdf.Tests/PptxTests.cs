@@ -11906,6 +11906,67 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxSyntheticBarChartLegendSwatchesUseSeriesStroke()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame><p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic></p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:chart><c:plotArea><c:barChart>
+                  <c:barDir val="col"/>
+                  <c:grouping val="clustered"/>
+                  <c:varyColors val="0"/>
+                  <c:ser>
+                    <c:tx><c:strLit><c:pt idx="0"><c:v>Demand</c:v></c:pt></c:strLit></c:tx>
+                    <c:spPr><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:ln></c:spPr>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                  <c:ser>
+                    <c:tx><c:strLit><c:pt idx="0"><c:v>Supply</c:v></c:pt></c:strLit></c:tx>
+                    <c:spPr><a:solidFill><a:srgbClr val="ED7D31"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="654321"/></a:solidFill></a:ln></c:spPr>
+                    <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt><c:pt idx="1"><c:v>5</c:v></c:pt></c:numLit></c:val>
+                  </c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:barChart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:tickLblPos val="none"/><c:crossAx val="20"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:tickLblPos val="none"/><c:crossAx val="10"/></c:valAx></c:plotArea><c:legend><c:legendPos val="r"/><c:overlay val="0"/></c:legend></c:chart></c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var collector = new DiagnosticCollector();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.267 0.447 0.769 rg", pdf);
+        TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
+        TestAssert.Contains("0.929 0.49 0.192 rg", pdf);
+        TestAssert.Contains("0.396 0.263 0.129 RG", pdf);
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Bar chart legends with stroked swatches should render without static fallback diagnostics.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bar chart legends with stroked swatches should not emit unsupported chart diagnostics.");
+    }
+
     public static void PptxSyntheticLineChartRendersLegendKeyOnlyDataLabels()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

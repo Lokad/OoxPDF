@@ -10627,3 +10627,27 @@ Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipp
 `2.076725983796296`, changed16 `0.02411988811728395`, SSIM `0.6626860241264197`, and histogram
 `0.9978587357915978`; `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-115927`; and
 `pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-115927`.
+
+Revision note, 2026-05-27: Preserved explicit series lines on fill-backed chart legend swatches. Fresh
+Office/candidate inspection of `pptx-ladder-11-chart-sparse-blank-points-probe` showed that the region-0
+stroke-marker mismatch was not a line-marker issue: it was the upper bar chart legend. Office emits each bar
+legend key as a filled rectangle plus the series `spPr/a:ln` stroke, while OOXPDF had already parsed the
+series stroke but discarded it when building fill legend entries. `BuildFillLegendEntries` now carries the
+typed series stroke alongside the fill for bar, area, and bubble legends, and `RenderChartLegend` strokes the
+fill swatch with that explicit line instead of inventing a fallback outline. The new public unit fixture
+`PptxSyntheticBarChartLegendSwatchesUseSeriesStroke` locks the PDF fill/stroke color structure for two
+bar-series legend swatches.
+
+This closes only the structural swatch outline loss. Re-running the sparse/blank probe at
+`artifacts/visual/pptx-ladder-11-chart-sparse-blank-points-probe/20260527-135330` and summarizing with
+`-ByRegion -ShowBounds` shows region-0 `LegendSwatchCandidate` and `StrokeMarkerCandidate` count parity
+(`4/4` and `2/2`). The remaining sparse-probe gaps are still real and should not be marked done: plot-box,
+axis, gridline, and tick-label offsets remain around `22.6 pt`; legend text/swatch placement still differs;
+marker sizing and lower-chart marker placement still differ; clip-box counts still differ; and candidate
+leader-line classification remains over-eager.
+
+Validation: focused `PptxSyntheticBarChartLegendSwatchesUseSeriesStroke` passed; non-slow `pptx-charts`
+passed (`53 passed, 0 failed, 0 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run
+`20260527-135330`; and `SummarizeChartStructureDeltas.ps1 -Case
+pptx-ladder-11-chart-sparse-blank-points-probe -ByRegion -ShowBounds` confirmed the swatch/stroke count
+closure while preserving the broader layout deltas.

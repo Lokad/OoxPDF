@@ -840,9 +840,10 @@ internal sealed partial class PptxRenderer
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
                 bool varyColors = ReadSceneOrXmlChartVaryColors(barPlot, barChart);
+                IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
-                var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills, workbook: workbook));
+                var legendEntries = new List<ChartLegendEntry>(BuildFillLegendEntries(theme, chartPalette, barPlot, barChart, seriesFills, seriesStrokes, workbook: workbook));
                 ChartLayout chartLayout = GetBarChartLayout(document, theme, bounds, chartXml, sceneChart, barPlot, barChart, horizontalBars);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
@@ -876,6 +877,7 @@ internal sealed partial class PptxRenderer
                     ChartValueExtents extraValueExtents = ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeriesVectors, extraGrouping), extraPercentStacked);
                     ChartAxisUnits extraAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(extraValueSceneAxis, extraValueAxis), extraPercentStacked);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
+                    IReadOnlyList<ChartSeriesStroke?> extraSeriesStrokes = ReadSceneOrXmlSeriesStrokes(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> extraPointFills = ReadSceneOrXmlSeriesPointFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> extraPointStrokes = ReadSceneOrXmlSeriesPointStrokes(extraBarPlot, extraBarChart, theme);
                     if (!extraHorizontalBars && secondaryValueAxis is null && IsSceneOrXmlVisibleValueAxis(extraValueSceneAxis, extraValueAxis))
@@ -886,7 +888,7 @@ internal sealed partial class PptxRenderer
                         secondaryAxisUnits = extraAxisUnits;
                     }
 
-                    legendEntries.AddRange(BuildFillLegendEntries(theme, chartPalette, extraBarPlot, extraBarChart, extraSeriesFills, seriesOffset, workbook));
+                    legendEntries.AddRange(BuildFillLegendEntries(theme, chartPalette, extraBarPlot, extraBarChart, extraSeriesFills, extraSeriesStrokes, seriesOffset, workbook));
                     RenderBarChart(
                         graphics,
                         theme,
@@ -1177,7 +1179,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: percentStacked ? "0%" : null));
                 }
 
-                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1257,7 +1259,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook)));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
-                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -4288,7 +4290,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, int paletteOffset = 0, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?>? seriesStrokes = null, int paletteOffset = 0, ChartWorkbookData? workbook = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
@@ -4297,7 +4299,10 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = i < seriesFills.Count && seriesFills[i] is { } explicitFill
                 ? explicitFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, i + paletteOffset), 1d);
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, null, null, names[i]));
+            ChartSeriesStroke? stroke = seriesStrokes is not null && i < seriesStrokes.Count
+                ? seriesStrokes[i]
+                : null;
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, stroke, null, names[i]));
         }
 
         return entries;
@@ -4582,6 +4587,21 @@ internal sealed partial class PptxRenderer
             if (entry.Fill is { } fill)
             {
                 FillChartRectangle(graphics, entryX, markerY, markerSize, markerSize, fill);
+                if (entry.Stroke is { } fillStroke && fillStroke.Alpha > 0d)
+                {
+                    if (fillStroke.Alpha < 1d)
+                    {
+                        graphics.SaveState();
+                        graphics.SetAlpha(1d, fillStroke.Alpha);
+                    }
+
+                    SetChartStroke(graphics, fillStroke);
+                    graphics.StrokeRectangle(entryX, markerY, markerSize, markerSize);
+                    if (fillStroke.Alpha < 1d)
+                    {
+                        graphics.RestoreState();
+                    }
+                }
             }
             else if (entry.Stroke is { } stroke)
             {
