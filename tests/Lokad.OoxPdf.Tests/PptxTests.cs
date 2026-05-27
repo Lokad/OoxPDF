@@ -11262,6 +11262,9 @@ internal static class PptxTests
         object[] workbookPoints = (((System.Collections.IEnumerable?)vector.GetType().GetProperty("WorkbookPoints")?.GetValue(vector)) ?? throw new InvalidOperationException("Expected workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True(activePoints.Length == 1, "Expected existing chart-cache point projection to remain active.");
         TestAssert.True((double?)activePoints[0].GetType().GetProperty("Value")?.GetValue(activePoints[0]) == 99d, "Expected chart-cache value to remain the rendered point value.");
+        object[] densePoints = (((System.Collections.IEnumerable?)vector.GetType().GetMethod("DensePoints")?.Invoke(vector, [])) ?? throw new InvalidOperationException("Expected dense active point projection.")).Cast<object>().ToArray();
+        TestAssert.True(densePoints.Length == 1, "Expected dense point projection to preserve rendered point count.");
+        TestAssert.True((double?)densePoints[0].GetType().GetProperty("Value")?.GetValue(densePoints[0]) == 99d, "Expected dense point projection to preserve rendered cache point records.");
         TestAssert.True(workbookPoints.Length == 2, "Expected workbook sidecar points to preserve workbook source values next to cached chart points.");
         TestAssert.True((int?)workbookPoints[0].GetType().GetProperty("Index")?.GetValue(workbookPoints[0]) == 0, "Expected workbook sidecar point index to preserve range order.");
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");

@@ -9556,6 +9556,23 @@ Validation: focused `PptxChartSeriesNamesPreserveWorkbookSidecarPoints` passed (
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Kept active chart point records alive through Cartesian data-label loops.
+`RenderBarDataLabels` and `RenderLineDataLabels` previously densified numeric vectors into `double?`
+payloads, which preserved category gaps but discarded the `ChartIndexedNumberPoint` record before label text
+and label-box placement were resolved. `ChartIndexedNumberVector.DensePoints()` now exposes the same dense
+domain as point records, `DenseValues()` is derived from it, and Cartesian label loops consume dense point
+series while continuing to use the same scalar `Value` for coordinates and text. Visible PDF output is
+unchanged.
+
+This does not change label placement, stacked-label policy, or source-linked number formatting. It keeps
+future label layout attached to the active source point index, cache text, blank/missing state, and workbook
+sidecar join points at the moment label geometry is computed, instead of requiring an after-the-fact lookup
+from dense doubles back into chart vectors.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved blank and missing workbook source cells in renderer-facing chart sidecar
 vectors. The first workbook-sidecar implementation reused typed numeric/text range projections, which were
 correct for compatibility rendering fallbacks but silently dropped blank, non-numeric, or absent cells inside

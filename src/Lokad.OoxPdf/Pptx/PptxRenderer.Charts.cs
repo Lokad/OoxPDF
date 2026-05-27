@@ -339,6 +339,14 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> DensifyChartPointSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series
+            .Select(vector => vector.DensePoints())
+            .Where(points => points.Any(point => point?.Value is not null))
+            .ToArray();
+    }
+
     private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
         if (plot is not null)
@@ -4572,28 +4580,28 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
-        if (denseSeries.Count == 0)
+        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
+        if (densePointSeries.Count == 0)
         {
             return [];
         }
 
-        int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
+        int categoryCount = Math.Max(1, densePointSeries.Max(values => values.Count));
         double zeroX = ChartValueToPlotCoordinate(extents, 0d, plotBox.X, plotBox.Width, valueAxisReversed);
         double zeroY = ChartValueToPlotCoordinate(extents, 0d, plotBox.Y, plotBox.Height, valueAxisReversed);
         var runs = new List<TextRun>();
         if (horizontalBars)
         {
             double categoryHeight = plotBox.Height / categoryCount;
-            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseSeries.Count);
+            double barSlot = categoryHeight * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
             double labelWidth = Math.Max(PptxChartMetricRules.CartesianDataLabelMinimumWidth, plotBox.Width * PptxChartMetricRules.HorizontalBarDataLabelWidthRatio);
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryY = plotBox.Y + category * categoryHeight + categoryHeight * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
-                    if (category >= values.Count || values[category] is not double value)
+                    IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
+                    if (category >= points.Count || points[category]?.Value is not double value)
                     {
                         continue;
                     }
@@ -4619,14 +4627,14 @@ internal sealed partial class PptxRenderer
         else
         {
             double categoryWidth = plotBox.Width / categoryCount;
-            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, denseSeries.Count);
+            double barSlot = categoryWidth * PptxChartMetricRules.BarDataLabelSlotFillRatio / Math.Max(1, densePointSeries.Count);
             for (int category = 0; category < categoryCount; category++)
             {
                 double categoryX = plotBox.X + category * categoryWidth + categoryWidth * PptxChartMetricRules.BarDataLabelCategoryInsetRatio;
-                for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
+                for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
                 {
-                    IReadOnlyList<double?> values = denseSeries[seriesIndex];
-                    if (category >= values.Count || values[category] is not double value)
+                    IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
+                    if (category >= points.Count || points[category]?.Value is not double value)
                     {
                         continue;
                     }
@@ -4671,23 +4679,23 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
-        if (denseSeries.Count == 0)
+        IReadOnlyList<IReadOnlyList<ChartIndexedNumberPoint?>> densePointSeries = DensifyChartPointSeries(series);
+        if (densePointSeries.Count == 0)
         {
             return [];
         }
 
-        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
+        int pointCount = Math.Max(1, densePointSeries.Max(values => values.Count));
         double labelWidth = Math.Max(
             PptxChartMetricRules.CartesianDataLabelMinimumWidth,
             plotBox.Width / Math.Max(PptxChartMetricRules.LineDataLabelMinimumPointSpan, pointCount * PptxChartMetricRules.LineDataLabelPointWidthFactor));
         var runs = new List<TextRun>();
-        for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
+        for (int seriesIndex = 0; seriesIndex < densePointSeries.Count; seriesIndex++)
         {
-            IReadOnlyList<double?> values = denseSeries[seriesIndex];
-            for (int i = 0; i < values.Count; i++)
+            IReadOnlyList<ChartIndexedNumberPoint?> points = densePointSeries[seriesIndex];
+            for (int i = 0; i < points.Count; i++)
             {
-                if (values[i] is not double value)
+                if (points[i]?.Value is not double value)
                 {
                     continue;
                 }
@@ -8858,6 +8866,13 @@ internal sealed partial class PptxRenderer
 
         public IReadOnlyList<double?> DenseValues()
         {
+            return DensePoints()
+                .Select(point => point?.Value)
+                .ToArray();
+        }
+
+        public IReadOnlyList<ChartIndexedNumberPoint?> DensePoints()
+        {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
@@ -8865,12 +8880,12 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
-            var values = new double?[pointCount];
+            var values = new ChartIndexedNumberPoint?[pointCount];
             foreach (ChartIndexedNumberPoint point in points)
             {
-                if (point.Index >= 0 && point.Index < pointCount && point.Value is { } value)
+                if (point.Index >= 0 && point.Index < pointCount && point.Value is not null)
                 {
-                    values[point.Index] = value;
+                    values[point.Index] = point;
                 }
             }
 
