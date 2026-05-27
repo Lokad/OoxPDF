@@ -2077,6 +2077,10 @@ internal static class PptxTests
         TestAssert.Equal(10d, layoutFrame.Paragraphs[0].Lines[0].Spans[0].FontSize);
 
         PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single();
+        TestAssert.Equal(0, glyphRun.FrameIndex);
+        TestAssert.Equal(0, glyphRun.ParagraphIndex);
+        TestAssert.Equal(0, glyphRun.LineIndex);
+        TestAssert.Equal(10d, glyphRun.LineMaxFontSize);
         TestAssert.Equal(10d, glyphRun.LayoutFontSize);
         TestAssert.Equal(9.96d, glyphRun.PdfFontSize);
     }

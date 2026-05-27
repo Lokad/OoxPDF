@@ -635,9 +635,30 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> FlattenTextLayoutToSpans(PptxTextLayoutModel layout)
     {
         return layout.Frames
-            .SelectMany(frame => frame.Paragraphs)
-            .SelectMany(paragraph => paragraph.Lines)
-            .SelectMany(line => line.Spans.Select(span => new PptxPositionedTextSpan(span.SourceRun, line.Box, line.Alignment, span.Run, span.EndX, span.Atoms, span.GlyphSpan)))
+            .SelectMany((frame, frameIndex) => frame.Paragraphs.Select((paragraph, paragraphIndex) => new
+            {
+                FrameIndex = frameIndex,
+                Paragraph = paragraph,
+                ParagraphIndex = paragraphIndex
+            }))
+            .SelectMany(paragraphState => paragraphState.Paragraph.Lines.Select((line, lineIndex) => new
+            {
+                paragraphState.FrameIndex,
+                paragraphState.ParagraphIndex,
+                Line = line,
+                LineIndex = lineIndex
+            }))
+            .SelectMany(lineState => lineState.Line.Spans.Select(span => new PptxPositionedTextSpan(
+                span.SourceRun,
+                lineState.Line.Box,
+                lineState.FrameIndex,
+                lineState.ParagraphIndex,
+                lineState.LineIndex,
+                lineState.Line.Alignment,
+                span.Run,
+                span.EndX,
+                span.Atoms,
+                span.GlyphSpan)))
             .ToArray();
     }
 

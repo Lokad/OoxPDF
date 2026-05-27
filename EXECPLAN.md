@@ -643,6 +643,12 @@ High-priority actions:
   step toward the secondary `+0.024 pt` branch: it gives future probes a stable place to compare layout-derived
   context against emitted PDF state, but it deliberately leaves rendering unchanged until the Office line-split
   discriminator is understood.
+- [x] Thread line identity and line-box metrics into PPTX glyph-run inspection:
+  positioned text spans now retain frame/paragraph/line ordinals through flattening, coalescing, highlight/underline
+  merges, and fallback-font splits, and `InspectTextGlyphRuns` exposes those ordinals plus line top, advance, and
+  maximum line font size. This preserves the context needed to analyze the public wrap probes where Office alternates
+  between the main 600-DPI `/Tf` grid and the secondary `+0.024 pt` branch. Rendering remains unchanged; the point is
+  to make the eventual Office rule derivable from line/frame structure rather than a hard-coded font-size exception.
 - [x] Implement the dominant Office `/Tf` font-size grid at the PDF emission boundary:
   a second ignored public-safe probe rewrote the font-size quantization deck from `spAutoFit` to `noAutofit`
   and Office still emitted the same main sizes, so the dominant behavior is not autofit. `PptxPdfTextEmissionProfile`

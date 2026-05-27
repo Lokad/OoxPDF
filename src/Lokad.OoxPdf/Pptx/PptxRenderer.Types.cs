@@ -162,6 +162,9 @@ internal sealed partial class PptxRenderer
     private sealed record PptxPositionedTextSpan(
         PptxTextRunModel? SourceRun,
         PptxTextLineBoxLayout? LineBox,
+        int FrameIndex,
+        int ParagraphIndex,
+        int LineIndex,
         TextAlignment SourceAlignment,
         TextRun Run,
         double EndX,
