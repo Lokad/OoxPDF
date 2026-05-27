@@ -539,6 +539,14 @@ High-priority actions:
   DrawingML line XML for dash/cap/join state. This preserves the long-term split where `PptxScene` owns OOXML
   token interpretation and the renderer consumes the structural scene model. Validation: focused non-slow
   `pptx-shapes` passed (`16 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Make chart value-axis orientation defaulting explicit at the renderer boundary. The scene model
+  already preserves raw `c:scaling/c:orientation` tokens and maps unknown values to
+  `PptxSceneChartAxisOrientation.Unknown`; `ReadSceneOrXmlValueAxisReversed` now routes both scene and XML fallback
+  values through `ResolveChartAxisReversed`, making `Unknown -> minMax/not reversed` a named rule instead of an
+  accidental equality comparison. A synthetic scene-authoritative test locks that an unknown scene token does not
+  fall back to mismatched XML `maxMin`. Validation: focused
+  `PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault` passed; focused non-slow `pptx-charts` passed
+  (`66 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit

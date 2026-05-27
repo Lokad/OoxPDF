@@ -11459,6 +11459,40 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)radarStyle);
     }
 
+    public static void PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:scaling><c:orientation val="bogus"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+        TestAssert.Equal(PptxSceneChartAxisOrientation.Unknown, valueAxis.OrientationKind);
+        TestAssert.Equal("bogus", valueAxis.Orientation);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:valAx><c:scaling><c:orientation val="maxMin"/></c:scaling></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "valAx").Single();
+        System.Reflection.MethodInfo readAxisReversed = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlValueAxisReversed",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis orientation resolver.");
+        object reversed = readAxisReversed.Invoke(null, [valueAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved axis orientation.");
+
+        TestAssert.True(!(bool)reversed, "Unknown scene-owned value-axis orientation should resolve to the Office default minMax, not fall back to mismatched XML.");
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

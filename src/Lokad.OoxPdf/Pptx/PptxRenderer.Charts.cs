@@ -6413,12 +6413,16 @@ internal sealed partial class PptxRenderer
     {
         if (sceneAxis is not null)
         {
-            return sceneAxis.OrientationKind == PptxSceneChartAxisOrientation.MaximumMinimum;
+            return ResolveChartAxisReversed(sceneAxis.OrientationKind);
         }
 
-        return PptxSceneBuilder.ParseChartAxisOrientation(
-            (string?)valueAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val")) ==
-            PptxSceneChartAxisOrientation.MaximumMinimum;
+        return ResolveChartAxisReversed(PptxSceneBuilder.ParseChartAxisOrientation(
+            (string?)valueAxis?.Element(ChartNamespace + "scaling")?.Element(ChartNamespace + "orientation")?.Attribute("val")));
+    }
+
+    private static bool ResolveChartAxisReversed(PptxSceneChartAxisOrientation orientation)
+    {
+        return orientation == PptxSceneChartAxisOrientation.MaximumMinimum;
     }
 
     private static double GetChartValuePlotRatio(ChartValueExtents extents, double value, bool reversed)
