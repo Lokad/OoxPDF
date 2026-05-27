@@ -1827,6 +1827,10 @@ High-priority actions:
     not consume those entries as inherited defaults yet; the remaining gap is the Office chart-style cascade
     that maps chart type, style id, axis/gridline role, and direct `spPr` precedence before rendering can
     safely apply inherited gridline strokes.
+  - [x] 2026-05-27: Preserve direct chart-style role line properties. Local style-part inspection showed
+    real chart styles often put gridline defaults under role-local `cs:spPr/a:ln` even when `lnRef @idx`
+    is `0`; `PptxSceneChartStyleEntry.ShapeLine` now preserves those direct role lines so the future
+    cascade resolver does not have to re-scan raw chart-style XML for the core gridline stroke.
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
   and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
   font size, and solid text color, and supported category/value axis labels consume those scene styles before
@@ -2749,6 +2753,11 @@ Composite oracle family map:
   the unresolved work is the Office precedence/cascade model. Validation: focused `pptx-model` passed
   (`19 passed, 0 failed, 0 skipped`) and focused non-slow `pptx-charts` passed
   (`52 passed, 0 failed, 0 skipped`).
+- Chart style-part role entries now also preserve direct `cs:spPr/a:ln` role lines as `ShapeLine`. This closes
+  a structural gap discovered in local style parts where gridline roles carry the useful stroke in role-local
+  shape properties while `lnRef` remains zero. Rendering still waits on a real chart-style cascade and precedence
+  model. Validation: focused `pptx-model` passed (`19 passed, 0 failed, 0 skipped`) and focused non-slow
+  `pptx-charts` passed (`52 passed, 0 failed, 0 skipped`).
 - Chart external-data scene ownership now preserves workbook provenance: `PptxSceneChart.ExternalData` records
   `c:externalData/@r:id`, the package-resolved embedded-workbook target, and the `autoUpdate` flag. Workbook
   parsing still remains a renderer-side bridge and does not yet provide stale-cache reconciliation, blank-cell

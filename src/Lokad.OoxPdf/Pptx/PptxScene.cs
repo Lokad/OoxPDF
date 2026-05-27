@@ -527,7 +527,8 @@ internal sealed record PptxSceneChartStyle(
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
     int? LineReferenceIndex,
-    PptxSceneLineStyle Line);
+    PptxSceneLineStyle Line,
+    PptxSceneLineStyle ShapeLine);
 
 internal sealed record PptxSceneChartPlot(
     PptxSceneChartPlotKind PlotKind,
@@ -2972,7 +2973,12 @@ internal sealed class PptxSceneBuilder
                 TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle resolvedLine)
                     ? resolvedLine
                     : default;
-            entries.Add(new PptxSceneChartStyleEntry(roleElement.Name.LocalName, lineReferenceIndex, line));
+            PptxSceneLineStyle shapeLine = ReadChartLine(
+                roleElement
+                    .Elements()
+                    .FirstOrDefault(element => element.Name.LocalName == "spPr"),
+                theme);
+            entries.Add(new PptxSceneChartStyleEntry(roleElement.Name.LocalName, lineReferenceIndex, line, shapeLine));
         }
 
         return entries;
