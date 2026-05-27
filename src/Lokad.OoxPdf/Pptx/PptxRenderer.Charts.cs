@@ -7106,13 +7106,20 @@ internal sealed partial class PptxRenderer
 
     private static bool ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        if (sceneAxis is not null && sceneAxis.CrossBetweenKind != PptxSceneChartAxisCrossBetween.Unknown)
+        if (sceneAxis is not null)
         {
-            return sceneAxis.CrossBetweenKind == PptxSceneChartAxisCrossBetween.MidpointCategory;
+            return ResolveChartAxisCrossBetween(sceneAxis.CrossBetweenKind) == PptxSceneChartAxisCrossBetween.MidpointCategory;
         }
 
         string? crossBetween = (string?)axis?.Element(ChartNamespace + "crossBetween")?.Attribute("val");
-        return PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween) == PptxSceneChartAxisCrossBetween.MidpointCategory;
+        return ResolveChartAxisCrossBetween(PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween)) == PptxSceneChartAxisCrossBetween.MidpointCategory;
+    }
+
+    private static PptxSceneChartAxisCrossBetween ResolveChartAxisCrossBetween(PptxSceneChartAxisCrossBetween crossBetween)
+    {
+        return crossBetween == PptxSceneChartAxisCrossBetween.Unknown
+            ? PptxSceneChartAxisCrossBetween.Between
+            : crossBetween;
     }
 
     private static int? ReadChartElementInt(XElement? chartElement, string elementName)

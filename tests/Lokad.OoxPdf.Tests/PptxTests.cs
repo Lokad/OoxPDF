@@ -11531,6 +11531,40 @@ internal static class PptxTests
         TestAssert.Equal(0d, (double)crossingValue);
     }
 
+    public static void PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/><c:crossBetween val="bogus"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+        TestAssert.Equal(PptxSceneChartAxisCrossBetween.Unknown, valueAxis.CrossBetweenKind);
+        TestAssert.Equal("bogus", valueAxis.CrossBetween);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:valAx><c:crossBetween val="midCat"/></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "valAx").Single();
+        System.Reflection.MethodInfo labelsOnTickMarks = typeof(PptxRenderer).GetMethod(
+            "ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis label placement resolver.");
+        object onTickMarks = labelsOnTickMarks.Invoke(null, [valueAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved category-axis label placement.");
+
+        TestAssert.True(!(bool)onTickMarks, "Unknown scene-owned crossBetween should resolve to the Office default between, not fall back to mismatched XML.");
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

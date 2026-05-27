@@ -557,6 +557,13 @@ High-priority actions:
   validation group covers the chart enum/default ladder. Validation: focused
   `PptxChartUnknownAxisCrossesUsesSceneAuthoritativeDefault` passed; focused non-slow `pptx-charts` now passes with
   the broader chart set (`81 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Make chart `crossBetween` fallback scene-authoritative. The scene axis already preserves the raw
+  `c:crossBetween` token, but `ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks` previously let a scene-owned
+  `Unknown` fall back to the XML axis. The resolver now routes both paths through `ResolveChartAxisCrossBetween`,
+  making `Unknown -> between` explicit before category label placement is derived. A synthetic test pairs
+  `crossBetween="bogus"` with a mismatched XML fallback `midCat` and verifies labels do not move onto tick marks.
+  Validation: focused `PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault` passed; focused non-slow
+  `pptx-charts` passed (`82 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit
