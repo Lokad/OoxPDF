@@ -9599,6 +9599,18 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed chart-axis style construction through paired axis sources and removed the
+unused raw-only axes-style helper. `ReadSceneOrXmlChartAxesStyle` now resolves primary value and category
+axes from `ChartAxisSource` before calculating axis strokes, side placement, visibility, and category tick
+marks, while preserving the existing first-`valAx` fallback for incomplete XML-only scale/style paths. This
+reduces another place where style could pair a scene axis with unrelated raw XML.
+
+Secondary-axis style pairing still depends on the existing `ReadSecondaryValueAxisForChart` and
+`ReadSceneSecondaryValueAxis` bridge; exact secondary crossing and reserve behavior remain open.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed chart plot-box reservation helpers through paired axis sources where the
 plot context is already available. `HasInsideValueAxisCrossing`, horizontal-bar inner plot-box derivation,
 stacked value-label reserve adjustment, and the line/no-title/right-legend tick-label estimator now use

@@ -6297,35 +6297,15 @@ internal sealed partial class PptxRenderer
             : 0d;
     }
 
-    private static ChartAxesStyle ReadChartAxesStyle(XDocument chartXml, PptxTheme theme, XElement chartElement)
-    {
-        XElement? valueAxisElement = ReadChartValueAxisForChart(chartXml, chartElement) ??
-            chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
-        XElement? categoryAxisElement = ReadChartCategoryAxisForChart(chartXml, chartElement);
-        XElement? secondaryValueAxisElement = ReadSecondaryValueAxisForChart(chartXml, valueAxisElement);
-        ChartSeriesStroke? valueAxis = ReadChartAxisStroke(valueAxisElement, theme);
-        ChartSeriesStroke? categoryAxis = ReadChartAxisStroke(categoryAxisElement, theme);
-        return new ChartAxesStyle(
-            valueAxis,
-            ReadChartAxisStroke(secondaryValueAxisElement, theme),
-            categoryAxis,
-            ResolveSceneOrXmlValueAxisRightSide(null, valueAxisElement, defaultRightSide: false),
-            ResolveSceneOrXmlValueAxisRightSide(null, secondaryValueAxisElement, defaultRightSide: true),
-            ResolveSceneOrXmlValueAxisBottomSide(null, valueAxisElement, defaultBottomSide: true),
-            ResolveSceneOrXmlCategoryAxisRightSide(null, categoryAxisElement, defaultRightSide: false),
-            !IsChartAxisDeleted(valueAxisElement),
-            !IsChartAxisDeleted(categoryAxisElement),
-            ReadSceneOrXmlChartAxisMajorTickMark(null, categoryAxisElement));
-    }
-
     private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
     {
-        XElement? valueAxisElement = ReadChartValueAxisForChart(chartXml, chartElement) ??
-            chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
-        XElement? categoryAxisElement = ReadChartCategoryAxisForChart(chartXml, chartElement);
+        ChartAxisSource valueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, chartElement).FirstOrDefault();
+        XElement? valueAxisElement = valueAxisSource.XmlAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+        ChartAxisSource categoryAxisSource = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, chartElement);
+        XElement? categoryAxisElement = categoryAxisSource.XmlAxis;
         XElement? secondaryValueAxisElement = ReadSecondaryValueAxisForChart(chartXml, valueAxisElement);
-        PptxSceneChartAxis? valueAxis = ReadSceneChartAxis(sceneChart, plot, PptxSceneChartAxisKind.Value);
-        PptxSceneChartAxis? categoryAxis = ReadSceneChartAxis(sceneChart, plot, PptxSceneChartAxisKind.Category);
+        PptxSceneChartAxis? valueAxis = valueAxisSource.SceneAxis;
+        PptxSceneChartAxis? categoryAxis = categoryAxisSource.SceneAxis;
         PptxSceneChartAxis? secondaryValueAxis = ReadSceneSecondaryValueAxis(sceneChart, secondaryValueAxisElement, valueAxis);
         return new ChartAxesStyle(
             ReadSceneOrXmlChartAxisStroke(valueAxis, valueAxisElement, theme),
