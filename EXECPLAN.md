@@ -407,8 +407,9 @@ High-priority actions:
   writing behavior, data-label and legend positions, chart layout modes, combo/secondary-axis plot semantics,
   unsupported chart plot families, full preset-geometry adjustment formulas, connector curvature, picture
   crop/tile/recolor semantics, table border variants, and full theme/color-transform chains. DOCX is weaker:
-  paragraph alignment, breaks, table layout, underline/border/shading, drawing wrap, and
-  section/page settings still need raw-token preservation before renderer behavior is broadened.
+  drawing wrap and broader multi-section settings still need raw-token preservation before renderer behavior
+  is broadened, even though several narrow paragraph, table, numbering, and final-section page tokens now
+  have model homes.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
@@ -475,6 +476,13 @@ High-priority actions:
   from paragraph model metadata instead of reopening `numbering.xml` or inferring format from label text.
   Validation: focused non-slow `docx-numbering` passed (`3 passed, 0 failed, 0 skipped`); full non-slow
   console runner passed (`280 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX final-section page-size and margin source tokens:
+  `DocxDocument.PageSettings` now keeps raw `w:pgSz` width, height, and orientation tokens plus raw `w:pgMar`
+  top/right/bottom/left tokens beside the existing normalized page and margin point values. This closes the
+  immediate final-section token-loss gap without claiming full Word section semantics: multi-section page
+  settings, section breaks, headers/footers across sections, and drawing wrap remain open architecture work.
+  Validation: focused non-slow `docx-page` passed (`8 passed, 0 failed, 0 skipped`); full non-slow console
+  runner passed (`281 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

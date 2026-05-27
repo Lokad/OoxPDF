@@ -82,6 +82,55 @@ internal static class DocxTests
         TestAssert.Contains("/MediaBox [0 0 594.96 842.04]", pdf);
     }
 
+    public static void DocxReaderPreservesPageSettingTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p/>
+                    <w:sectPr>
+                      <w:pgSz w:w="16840" w:h="11900" w:orient="landscape"/>
+                      <w:pgMar w:top="720" w:right="1440" w:bottom="1080" w:left="1800"/>
+                    </w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxPageSettings settings = document.PageSettings;
+
+        TestAssert.Equal("16840", settings.WidthValue ?? string.Empty);
+        TestAssert.Equal("11900", settings.HeightValue ?? string.Empty);
+        TestAssert.Equal("landscape", settings.OrientationValue ?? string.Empty);
+        TestAssert.Equal("720", settings.MarginTopValue ?? string.Empty);
+        TestAssert.Equal("1440", settings.MarginRightValue ?? string.Empty);
+        TestAssert.Equal("1080", settings.MarginBottomValue ?? string.Empty);
+        TestAssert.Equal("1800", settings.MarginLeftValue ?? string.Empty);
+        TestAssert.Equal(842d, document.PageWidthPoints);
+        TestAssert.Equal(595d, document.PageHeightPoints);
+        TestAssert.Equal(90d, document.MarginLeftPoints);
+    }
+
     public static void DocxSyntheticParagraphRendersText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

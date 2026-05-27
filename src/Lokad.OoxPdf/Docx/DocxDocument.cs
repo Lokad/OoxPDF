@@ -7,6 +7,7 @@ internal sealed record DocxDocument(
     double MarginRightPoints,
     double MarginTopPoints,
     double MarginBottomPoints,
+    DocxPageSettings PageSettings,
     IReadOnlyList<DocxParagraph> HeaderParagraphs,
     IReadOnlyList<DocxParagraph> FooterParagraphs,
     IReadOnlyList<DocxBodyElement> BodyElements,
@@ -14,9 +15,21 @@ internal sealed record DocxDocument(
     IReadOnlyList<DocxTable> Tables)
 {
     public DocxDocument(double pageWidthPoints, double pageHeightPoints)
-        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, [], [], [], [], [])
+        : this(pageWidthPoints, pageHeightPoints, 72d, 72d, 72d, 72d, DocxPageSettings.Empty, [], [], [], [], [])
     {
     }
+}
+
+internal sealed record DocxPageSettings(
+    string? WidthValue,
+    string? HeightValue,
+    string? OrientationValue,
+    string? MarginTopValue,
+    string? MarginRightValue,
+    string? MarginBottomValue,
+    string? MarginLeftValue)
+{
+    public static DocxPageSettings Empty { get; } = new(null, null, null, null, null, null, null);
 }
 
 internal abstract record DocxBodyElement;

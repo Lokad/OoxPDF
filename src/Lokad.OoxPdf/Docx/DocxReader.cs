@@ -51,7 +51,19 @@ internal sealed class DocxReader
 
         if (pageSize is null)
         {
-            return new DocxDocument(612d, 792d, 72d, 72d, 72d, 72d, headers, footers, bodyElements, paragraphs, tables);
+            return new DocxDocument(
+                612d,
+                792d,
+                72d,
+                72d,
+                72d,
+                72d,
+                ReadPageSettings(pageSize, pageMargins),
+                headers,
+                footers,
+                bodyElements,
+                paragraphs,
+                tables);
         }
 
         double width = OoxUnits.TwipsToPoints(ParseLongAttribute(pageSize, WordprocessingNamespace + "w"));
@@ -67,7 +79,31 @@ internal sealed class DocxReader
         double right = ReadMargin(pageMargins, WordprocessingNamespace + "right", 72d);
         double top = ReadMargin(pageMargins, WordprocessingNamespace + "top", 72d);
         double bottom = ReadMargin(pageMargins, WordprocessingNamespace + "bottom", 72d);
-        return new DocxDocument(width, height, left, right, top, bottom, headers, footers, bodyElements, paragraphs, tables);
+        return new DocxDocument(
+            width,
+            height,
+            left,
+            right,
+            top,
+            bottom,
+            ReadPageSettings(pageSize, pageMargins),
+            headers,
+            footers,
+            bodyElements,
+            paragraphs,
+            tables);
+    }
+
+    private static DocxPageSettings ReadPageSettings(XElement? pageSize, XElement? pageMargins)
+    {
+        return new DocxPageSettings(
+            (string?)pageSize?.Attribute(WordprocessingNamespace + "w"),
+            (string?)pageSize?.Attribute(WordprocessingNamespace + "h"),
+            (string?)pageSize?.Attribute(WordprocessingNamespace + "orient"),
+            (string?)pageMargins?.Attribute(WordprocessingNamespace + "top"),
+            (string?)pageMargins?.Attribute(WordprocessingNamespace + "right"),
+            (string?)pageMargins?.Attribute(WordprocessingNamespace + "bottom"),
+            (string?)pageMargins?.Attribute(WordprocessingNamespace + "left"));
     }
 
     private static (double Width, double Height) NormalizePageSize(double width, double height)
