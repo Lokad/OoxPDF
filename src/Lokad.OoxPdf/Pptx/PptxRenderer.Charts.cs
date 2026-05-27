@@ -8258,7 +8258,7 @@ internal sealed partial class PptxRenderer
 
         double size = marker.Size;
         ChartSeriesFill fill = marker.Fill ?? new ChartSeriesFill(defaultFill, 1d);
-        ChartSeriesStroke? stroke = marker.Stroke ?? (IsLineOnlyChartMarker(marker.SymbolKind) ? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d)) : null);
+        ChartSeriesStroke? stroke = marker.Stroke ?? new ChartSeriesStroke(defaultStroke, 1d, Math.Max(0.75d, size * 0.16d));
         if (!IsLineOnlyChartMarker(marker.SymbolKind))
         {
             if (fill.Alpha < 1d)

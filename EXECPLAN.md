@@ -10349,3 +10349,19 @@ disappeared from `SummarizeChartStructureDeltas.ps1 -Case
 pptx-ladder-11-chart-sparse-blank-points-probe -ShowBounds -ByRegion`; remaining deltas are now confined to
 the two Office-rendered chart regions, mainly plot-box offsets, marker omissions, legend text/swatch
 differences, and one right-side text classification mismatch.
+
+Revision note, 2026-05-27: Made default chart marker strokes explicit for filled marker symbols as well as
+line-only marker symbols. The previous renderer only synthesized a default stroke for `plus`, `x`, and
+`dash`; filled symbols without `c:marker/c:spPr/a:ln` were filled but not stroked. Office-authored line-marker
+visual cases expose separate marker fill and stroke structures, and the renderer should preserve that PDF
+structure before later marker-size and legend-key work tunes exact geometry. Explicit marker `a:ln` still
+wins; the fallback stroke uses the marker's default series stroke color and the existing marker-width rule.
+
+This is not a sparse/blank probe closure: the sparse probe's current marker count gap is still dominated by
+which source points Office renders and by plot-box offsets, not by this fallback stroke alone. The narrower
+gain is that default filled marker symbols no longer collapse to fill-only PDF shapes when Office-like output
+has a distinct stroke operation.
+
+Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-114557` with unchanged metrics, and
+`pptx-ladder-11-chart-line-markers-port` passed at run `20260527-114627` with graphics/text gates enabled.
