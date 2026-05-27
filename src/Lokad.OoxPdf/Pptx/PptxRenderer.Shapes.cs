@@ -9,6 +9,12 @@ namespace Lokad.OoxPdf.Pptx;
 
 internal sealed partial class PptxRenderer
 {
+    private const int OfficeArrowTailConnectorSamplesPerSegment = 61;
+    private const int OfficeTriangleTailConnectorSamplesPerSegment = 24;
+    private const double OfficeArrowheadLengthFactor = 4.423333d;
+    private const double OfficeTriangleTailMinimumLength = 5d;
+    private const double OfficeTriangleTailLengthFactor = 3.5d;
+
     private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
         if (background.HasFill)
@@ -1941,50 +1947,66 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        int samplesPerSegment = tailKind == LineEndKind.Arrow ? 61 : 24;
-        var samples = new List<CurveSample>(segments.Count * samplesPerSegment + 1);
-        foreach (BezierSegment segment in segments)
-        {
-            int start = samples.Count == 0 ? 0 : 1;
-            for (int i = start; i <= samplesPerSegment; i++)
-            {
-                samples.Add(SampleBezierSegment(segment, i / (double)samplesPerSegment));
-            }
-        }
-
-        if (samples.Count < 2)
+        CurvedConnectorFillPath? path = BuildOfficeCurvedConnectorFillPath(segments, lineWidth, tailKind);
+        if (path is null)
         {
             return false;
         }
 
-        double totalLength = 0d;
-        double[] cumulativeLengths = new double[samples.Count];
-        for (int i = 1; i < samples.Count; i++)
+        if (tailKind == LineEndKind.Arrow)
         {
-            totalLength += Distance(samples[i - 1].X, samples[i - 1].Y, samples[i].X, samples[i].Y);
-            cumulativeLengths[i] = totalLength;
+            AppendClosedLinePath(graphics, path.Value.Points, explicitClosingLine: true);
+            AppendOfficeArrowHeadPath(
+                graphics,
+                path.Value.TipX,
+                path.Value.TipY,
+                -path.Value.DirectionX,
+                -path.Value.DirectionY,
+                -path.Value.NormalX,
+                -path.Value.NormalY,
+                lineWidth,
+                splitTrailingCurve: true);
+            graphics.FillCurrentPath();
+        }
+        else
+        {
+            graphics.FillPolygon(path.Value.Points.ToArray());
         }
 
-        double markerLength = tailKind == LineEndKind.Arrow ? lineWidth * 4.423333d : Math.Max(5d, lineWidth * 3.5d);
+        return true;
+    }
+
+    private static CurvedConnectorFillPath? BuildOfficeCurvedConnectorFillPath(
+        IReadOnlyList<BezierSegment> segments,
+        double lineWidth,
+        LineEndKind tailKind)
+    {
+        int samplesPerSegment = tailKind == LineEndKind.Arrow
+            ? OfficeArrowTailConnectorSamplesPerSegment
+            : OfficeTriangleTailConnectorSamplesPerSegment;
+        List<CurveSample> samples = SampleBezierSegments(segments, samplesPerSegment);
+        if (samples.Count < 2)
+        {
+            return null;
+        }
+
+        double[] cumulativeLengths = BuildCumulativeSampleLengths(samples, out double totalLength);
+        double markerLength = tailKind == LineEndKind.Arrow
+            ? lineWidth * OfficeArrowheadLengthFactor
+            : Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor);
         double baseDistance = Math.Max(0d, totalLength - markerLength);
         CurveSample baseSample = SampleAtDistance(samples, cumulativeLengths, baseDistance);
         double halfWidth = Math.Max(0.1d, lineWidth / 2d);
-        var bodySamples = new List<CurveSample>();
-        for (int i = 0; i < samples.Count && cumulativeLengths[i] < baseDistance; i++)
-        {
-            bodySamples.Add(samples[i]);
-        }
-
-        bodySamples.Add(baseSample);
+        List<CurveSample> bodySamples = SelectBodySamples(samples, cumulativeLengths, baseDistance, baseSample);
         if (bodySamples.Count < 2)
         {
-            return false;
+            return null;
         }
 
         (double X, double Y) direction = Normalize(baseSample.TangentX, baseSample.TangentY);
         if (Math.Abs(direction.X) <= 0.000001d && Math.Abs(direction.Y) <= 0.000001d)
         {
-            return false;
+            return null;
         }
 
         (double X, double Y) normal = (-direction.Y, direction.X);
@@ -1998,12 +2020,10 @@ internal sealed partial class PptxRenderer
 
         if (tailKind != LineEndKind.Arrow)
         {
-            double arrowHalfWidth = Math.Max(5d, lineWidth * 3.5d) * 0.45d;
-            (double X, double Y) leftShoulder = (baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth);
-            (double X, double Y) rightShoulder = (baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth);
-            points.Add(leftShoulder);
+            double arrowHalfWidth = Math.Max(OfficeTriangleTailMinimumLength, lineWidth * OfficeTriangleTailLengthFactor) * 0.45d;
+            points.Add((baseSample.X + normal.X * arrowHalfWidth, baseSample.Y + normal.Y * arrowHalfWidth));
             points.Add(tip);
-            points.Add(rightShoulder);
+            points.Add((baseSample.X - normal.X * arrowHalfWidth, baseSample.Y - normal.Y * arrowHalfWidth));
         }
 
         for (int i = bodySamples.Count - 1; i >= 0; i--)
@@ -2013,18 +2033,51 @@ internal sealed partial class PptxRenderer
             points.Add((sample.X - sampleNormal.X * halfWidth, sample.Y - sampleNormal.Y * halfWidth));
         }
 
-        if (tailKind == LineEndKind.Arrow)
+        return new CurvedConnectorFillPath(points, tip.X, tip.Y, direction.X, direction.Y, normal.X, normal.Y);
+    }
+
+    private static List<CurveSample> SampleBezierSegments(IReadOnlyList<BezierSegment> segments, int samplesPerSegment)
+    {
+        var samples = new List<CurveSample>(segments.Count * samplesPerSegment + 1);
+        foreach (BezierSegment segment in segments)
         {
-            AppendClosedLinePath(graphics, points, explicitClosingLine: true);
-            AppendOfficeArrowHeadPath(graphics, tip.X, tip.Y, -direction.X, -direction.Y, -normal.X, -normal.Y, lineWidth, splitTrailingCurve: true);
-            graphics.FillCurrentPath();
-        }
-        else
-        {
-            graphics.FillPolygon(points.ToArray());
+            int start = samples.Count == 0 ? 0 : 1;
+            for (int i = start; i <= samplesPerSegment; i++)
+            {
+                samples.Add(SampleBezierSegment(segment, i / (double)samplesPerSegment));
+            }
         }
 
-        return true;
+        return samples;
+    }
+
+    private static double[] BuildCumulativeSampleLengths(IReadOnlyList<CurveSample> samples, out double totalLength)
+    {
+        totalLength = 0d;
+        double[] cumulativeLengths = new double[samples.Count];
+        for (int i = 1; i < samples.Count; i++)
+        {
+            totalLength += Distance(samples[i - 1].X, samples[i - 1].Y, samples[i].X, samples[i].Y);
+            cumulativeLengths[i] = totalLength;
+        }
+
+        return cumulativeLengths;
+    }
+
+    private static List<CurveSample> SelectBodySamples(
+        IReadOnlyList<CurveSample> samples,
+        IReadOnlyList<double> cumulativeLengths,
+        double baseDistance,
+        CurveSample baseSample)
+    {
+        var bodySamples = new List<CurveSample>();
+        for (int i = 0; i < samples.Count && cumulativeLengths[i] < baseDistance; i++)
+        {
+            bodySamples.Add(samples[i]);
+        }
+
+        bodySamples.Add(baseSample);
+        return bodySamples;
     }
 
     private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool explicitClosingLine = false)

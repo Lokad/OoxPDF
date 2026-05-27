@@ -816,6 +816,14 @@ High-priority actions:
   public visual gate and high-level operator parity. Triangle-tail connector fills intentionally stay on the prior
   polygon route because private page-17 Office evidence for those connectors is line-only and the polygon path keeps
   the private raster/graphics-operator improvement stable.
+- [x] 2026-05-27: Isolate the remaining curved-connector fill sampling model behind an Office-PDF path builder:
+  the arrow-tail public connector probe already matches Office's structural PDF counts, so the next long-term step
+  is not another count tweak. The filled-connector code now separates preset centerline generation, Office-observed
+  marker lengths, cumulative curve sampling, body point selection, and marker emission. This preserves the current
+  public structural parity while making the remaining sampled body outline a narrow replacement target for a future
+  analytical offset-curve model. Validation: focused non-slow `pptx-shapes` passed (`16 passed, 0 failed, 0
+  skipped`), and `pptx-ladder-06-curved-connector-transform-probe` run `20260527-210014` kept all four Office/candidate
+  fills at `seg=250,line=244,curve=4,move=2,close=2`.
 - [ ] Close the remaining private page-17 slide-clip and derived font-size gaps:
   after the page/background and raster-picture clipping passes, private page 17 is still down to one missing
   high-level `W*` clip and still
