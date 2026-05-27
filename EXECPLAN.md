@@ -1301,6 +1301,12 @@ High-priority actions:
   no-scene compatibility path. Point explosions and data value/category hydration intentionally remain on the
   existing mixed path until the workbook/cache model owns point counts structurally; changing those together
   would risk hiding a real data-source gap behind a style migration.
+- [x] 2026-05-27: Make scene-owned chart axis and gridline strokes authoritative.
+  When a `PptxSceneChartAxis` exists, the renderer now maps its typed axis line plus major/minor gridline
+  lines directly into chart strokes instead of re-scanning axis/gridline `c:spPr` when the scene line is the
+  default empty style. This keeps explicit `a:ln/a:noFill` modeled as the existing transparent zero-width
+  scene line while making absent/default stroke state a scene-owned decision. Raw XML stroke parsing remains
+  only for the no-scene compatibility path.
 - [x] 2026-05-25: Preserve chart title and legend boolean source presence.
   `PptxSceneChartTitle.IsAutoDeleted` now keeps missing `c:autoTitleDeleted` distinct from explicit false,
   and `PptxSceneChartLegend` now separates legend element presence from nullable `c:delete` metadata. The

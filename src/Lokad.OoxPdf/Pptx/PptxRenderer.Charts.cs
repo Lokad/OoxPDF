@@ -5684,13 +5684,13 @@ internal sealed partial class PptxRenderer
     private static ChartGridlineStyle ReadSceneOrXmlChartGridlineStyle(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
     {
         return new ChartGridlineStyle(
-            ReadSceneOrXmlChartGridlineStroke(sceneAxis?.MajorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "majorGridlines"), theme),
-            ReadSceneOrXmlChartGridlineStroke(sceneAxis?.MinorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "minorGridlines"), theme));
+            ReadSceneOrXmlChartGridlineStroke(sceneAxis, sceneAxis?.MajorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "majorGridlines"), theme),
+            ReadSceneOrXmlChartGridlineStroke(sceneAxis, sceneAxis?.MinorGridlineLine ?? default, xmlAxis?.Element(ChartNamespace + "minorGridlines"), theme));
     }
 
-    private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneLineStyle sceneLine, XElement? gridlines, PptxTheme theme)
+    private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneChartAxis? sceneAxis, PptxSceneLineStyle sceneLine, XElement? gridlines, PptxTheme theme)
     {
-        if (sceneLine.HasLine)
+        if (sceneAxis is not null)
         {
             return ToChartSeriesStroke(sceneLine);
         }
@@ -5791,7 +5791,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartSeriesStroke? ReadSceneOrXmlChartAxisStroke(PptxSceneChartAxis? sceneAxis, XElement? xmlAxis, PptxTheme theme)
     {
-        return sceneAxis is not null && sceneAxis.Line.HasLine
+        return sceneAxis is not null
             ? ToChartSeriesStroke(sceneAxis.Line)
             : ReadChartAxisStroke(xmlAxis, theme);
     }
