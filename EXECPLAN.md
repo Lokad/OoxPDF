@@ -1948,6 +1948,15 @@ High-priority actions:
     This consumes preserved `c:dLbl/c:layout/c:manualLayout` only when Office gives an explicit box; default
     Office label-box construction, auto-fit, richer position semantics, and leader-line geometry remain open.
     Validation: focused `pptx-charts` tests passed `40/40`.
+  - [x] 2026-05-27: Preserve and consume chart-wide and series-wide data-label manual-layout boxes:
+    `PptxSceneChartDataLabels` now carries the `c:dLbls/c:layout/c:manualLayout` record beside the existing
+    per-label override layout, and `ChartDataLabelOptions` receives it from both scene-backed and raw XML
+    fallback paths. Scatter, bubble, bar, line, pie, and doughnut label rendering therefore reuse the same
+    manual label-box resolver for chart-level, series-level, and point-level label boxes instead of silently
+    dropping chart-wide layout before rendering. A synthetic scatter chart locks a large chart-wide label
+    shape box driven by `c:dLbls` manual layout. This still leaves automatic Office label-box construction,
+    auto-fit, position-specific defaults, and leader-line routing open. Validation: focused non-slow
+    `pptx-charts` passed (`61 passed, 0 failed, 0 skipped`).
   - [x] Consume category-name and series-name flags for polar data-label text:
     pie and doughnut label rendering now receives the same indexed category-label vector and series-name
     records used by legends and Cartesian labels. `FormatPieDataLabel` builds label text from explicit custom
