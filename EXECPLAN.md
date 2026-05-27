@@ -11245,3 +11245,24 @@ Validation: the new case passed at run `20260527-195451` with mean absolute erro
 dimensions, and no unexpected diagnostics. Manual PDF inspection of that run showed the candidate and Office
 PDFs still differ in plot-box placement and filled-region grouping, so no structural gate was added for this
 case yet.
+
+Revision note, 2026-05-27: Investigated whether formula-only chart references could be activated directly
+from embedded workbook ranges. A narrow prototype promoted workbook sidecar values to active chart points
+only when scene/cache points were absent, but the public sparse/blank Office probe rejected that policy:
+`pptx-ladder-11-chart-sparse-blank-points-probe` rendered an extra candidate clustered-column region while
+the Office reference PDF had no matching region. The formula-only chart in that fixture still has
+`c:externalData` with `c:autoUpdate val="0"` and an embedded workbook, so the presence of readable workbook
+values is not by itself an Office-equivalent renderability signal.
+
+The prototype was backed out before commit. The long-term workbook-backed hydration item remains open, but
+with a sharper constraint: active rendering must distinguish Office's saved chart display state from merely
+available workbook source data. Candidate design directions include tracking chart-side cache freshness,
+`externalData/autoUpdate`, and Office-authored reference evidence per chart family before promoting
+workbook values into renderable series. Workbook values should continue to be preserved as sidecar provenance
+until that structural policy is proven.
+
+Validation evidence for the rejected prototype: focused non-slow `pptx-charts` passed after updating the
+prototype assertions, but the sparse/blank visual failed its chart-graphics structural gate at run
+`20260527-200113` because the candidate gained a third `GridlineAxisPlotBoxCandidate` region absent from
+the Office reference. Raster metrics stayed within the old loose thresholds, which is why the structural gate
+was essential here.
