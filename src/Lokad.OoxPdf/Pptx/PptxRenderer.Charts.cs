@@ -331,6 +331,14 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series
+            .Select(vector => vector.DenseValues())
+            .Where(values => values.Any(value => value is not null))
+            .ToArray();
+    }
+
     private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
         if (plot is not null)
@@ -862,7 +870,7 @@ internal sealed partial class PptxRenderer
                         chartPalette,
                         chartLayout.PlotAreaBox,
                         plotBox,
-                        lineSeries,
+                        lineSeriesVectors,
                         lineStacked,
                         linePercentStacked,
                         lineSeriesStrokes,
@@ -979,7 +987,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeries, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
+                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, stacked, percentStacked, seriesStrokes, markerStyles, smoothSeries, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxisForScale, valueExtents), valueAxisReversed);
                 XElement? categoryAxis = ReadChartCategoryAxisForChart(chartXml, lineChart);
                 PptxSceneChartAxis? categorySceneAxis = ReadSceneChartAxis(sceneChart, linePlot, PptxSceneChartAxisKind.Category);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categorySceneAxis, categoryAxis))
@@ -7258,21 +7266,35 @@ internal sealed partial class PptxRenderer
             .Sum());
     }
 
+    private static double GetCategoryPositiveTotal(IReadOnlyList<IReadOnlyList<double?>> series, int category, bool percentStacked)
+    {
+        if (!percentStacked)
+        {
+            return 1d;
+        }
+
+        return Math.Max(1d, series
+            .Where(values => category < values.Count && values[category] is not null)
+            .Select(values => Math.Max(0d, values[category]!.Value))
+            .Sum());
+    }
+
     private static double NormalizeStackedValue(double value, double positiveTotal, bool percentStacked)
     {
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         graphics.SaveState();
         ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
-        int pointCount = Math.Max(1, series.Max(values => values.Count));
+        int pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
         double maxValue = valueExtents.Max;
         double minValue = valueExtents.Min;
         double valueRange = Math.Max(1d, maxValue - minValue);
@@ -7320,9 +7342,9 @@ internal sealed partial class PptxRenderer
         }
 
         double[] lower = new double[pointCount];
-        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        for (int seriesIndex = 0; seriesIndex < denseSeries.Count; seriesIndex++)
         {
-            IReadOnlyList<double> values = series[seriesIndex];
+            IReadOnlyList<double?> values = denseSeries[seriesIndex];
             if (values.Count == 0)
             {
                 continue;
@@ -7337,31 +7359,32 @@ internal sealed partial class PptxRenderer
 
             SetChartStroke(graphics, stroke);
             var points = new List<(double X, double Y)>(values.Count);
+            var markers = new List<(double X, double Y)>(values.Count);
             for (int i = 0; i < values.Count; i++)
             {
+                if (values[i] is not { } value)
+                {
+                    StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                    points.Clear();
+                    continue;
+                }
+
                 double pointX = plotX + plotWidth * (i + 0.5d) / pointCount;
-                double value = values[i];
-                double positiveTotal = GetCategoryPositiveTotal(series, i, percentStacked);
+                double positiveTotal = GetCategoryPositiveTotal(denseSeries, i, percentStacked);
                 double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
                 double plottedValue = stacked ? lower[i] + normalizedValue : value;
                 double pointY = ChartValueToPlotCoordinate(valueExtents, plottedValue, plotY, plotHeight, valueAxisReversed);
                 points.Add((pointX, pointY));
+                markers.Add((pointX, pointY));
                 if (stacked)
                 {
                     lower[i] = plottedValue;
                 }
             }
 
-            if (IsSmoothSeries(seriesIndex, smoothSeries))
-            {
-                StrokeSmoothChartPath(graphics, points);
-            }
-            else
-            {
-                StrokeStraightChartPath(graphics, points);
-            }
+            StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
 
-            foreach ((double pointX, double pointY) in points)
+            foreach ((double pointX, double pointY) in markers)
             {
                 graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
                 DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
@@ -7378,6 +7401,23 @@ internal sealed partial class PptxRenderer
         {
             SetChartStroke(graphics, categoryAxisStroke);
             DrawLineChartCategoryAxisMajorTicks(graphics, plotX, plotWidth, pointCount, valueAxisCrossingY, axesStyle.CategoryAxisMajorTickMark);
+        }
+    }
+
+    private static void StrokeLineChartPointSegment(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool smooth)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        if (smooth)
+        {
+            StrokeSmoothChartPath(graphics, points);
+        }
+        else
+        {
+            StrokeStraightChartPath(graphics, points);
         }
     }
 
@@ -8491,6 +8531,27 @@ internal sealed partial class PptxRenderer
                 .OrderBy(point => point.Index)
                 .Select(point => point.Value!.Value)
                 .ToArray();
+        }
+
+        public IReadOnlyList<double?> DenseValues()
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
+            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
+            if (pointCount <= 0)
+            {
+                return [];
+            }
+
+            var values = new double?[pointCount];
+            foreach (ChartIndexedNumberPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.Value is { } value)
+                {
+                    values[point.Index] = value;
+                }
+            }
+
+            return values;
         }
     }
 

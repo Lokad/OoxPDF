@@ -1417,6 +1417,18 @@ High-priority actions:
     the renderer consumes indexed points in geometry. Validation: direct `CheckVisualCase` passed for
     run `20260527-031520`, and `CheckVisualFamily.ps1 -Family pptx-charts -OnlyChanged` passed for run
     `20260527-031540`.
+  - [x] Render line-chart geometry from dense indexed points instead of compacted point lists:
+    `ChartIndexedNumberVector.DenseValues()` now preserves missing, blank, and non-numeric cache entries as
+    nullable gaps, and `RenderLineChart` uses that dense domain for point spacing, stacked lower bounds, and
+    marker placement. Missing points break line segments instead of shifting later values into earlier
+    categories. This is deliberately limited to line charts; bar/column and area renderers still compact and
+    remain separate follow-up migrations. Validation: focused non-slow `pptx-charts` passed
+    (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`261 passed, 0 failed, 7 skipped`); sparse/blank visual probe passed at run `20260527-031835` with
+    MAE `5.049121` and changed16 `0.058477`; private run
+    `artifacts/private-visual/lokad-value-based/20260527-031903` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
+    `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
