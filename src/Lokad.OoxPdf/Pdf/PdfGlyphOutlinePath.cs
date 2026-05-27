@@ -12,7 +12,7 @@ internal static class PdfGlyphOutlinePath
         double y,
         double fontSize)
     {
-        if (!font.TryReadGlyphOutline(glyphId, out var outline) || outline.IsCompound)
+        if (!font.TryReadGlyphOutline(glyphId, out var outline) || outline.Contours.Count == 0)
         {
             return false;
         }

@@ -100,6 +100,32 @@ internal static class FontTests
             "Expected at least one off-curve point in Arial 'O'.");
     }
 
+    public static void OpenTypeParserExpandsCompoundGlyphOutlines()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('é');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        TestAssert.True(font.TryReadGlyphOutline(glyph, out var outline), "Expected a readable TrueType outline for Arial 'é'.");
+        if (!outline.IsCompound)
+        {
+            return;
+        }
+
+        TestAssert.True(outline.Contours.Count > 1, "Expected expanded contours from an Arial compound glyph.");
+        TestAssert.True(outline.Contours.Sum(contour => contour.Points.Count) > 10, "Expected expanded compound glyph points.");
+    }
+
     public static void OpenTypeParserRejectsOutOfRangeGlyphOutline()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
@@ -162,6 +188,30 @@ internal static class FontTests
 
         TestAssert.Contains(" c", pdf);
         TestAssert.True(!pdf.Contains("Infinity", StringComparison.Ordinal), "Expected finite cubic control points.");
+    }
+
+    public static void PdfGlyphOutlinePathConvertsCompoundGlyphContours()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('é');
+        if (glyph == 0 || !font.TryReadGlyphOutline(glyph, out var outline) || !outline.IsCompound)
+        {
+            return;
+        }
+
+        var graphics = new PdfGraphicsBuilder();
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 14d), "Expected PDF glyph path conversion for compound Arial 'é'.");
+        string pdf = graphics.ToString();
+
+        TestAssert.True(pdf.Split(" m", StringSplitOptions.None).Length > 2, "Expected multiple contour starts for compound glyph path.");
+        TestAssert.True(!pdf.Contains("NaN", StringComparison.Ordinal), "Expected finite compound glyph path coordinates.");
     }
 
     public static void OpenTypeParserReadsGposPairAdjustments()

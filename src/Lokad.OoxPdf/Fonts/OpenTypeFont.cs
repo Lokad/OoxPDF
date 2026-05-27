@@ -160,8 +160,14 @@ internal sealed class OpenTypeFont
 
     public bool TryReadGlyphOutline(ushort glyphId, out OpenTypeGlyphOutline outline)
     {
+        return TryReadGlyphOutline(glyphId, depth: 0, out outline);
+    }
+
+    private bool TryReadGlyphOutline(ushort glyphId, int depth, out OpenTypeGlyphOutline outline)
+    {
         outline = default;
-        if (glyphId >= GlyphCount ||
+        if (depth > 16 ||
+            glyphId >= GlyphCount ||
             !tables.TryGetValue("head", out TableRecord head) ||
             !tables.TryGetValue("loca", out TableRecord loca) ||
             !tables.TryGetValue("glyf", out TableRecord glyf) ||
@@ -187,8 +193,7 @@ internal sealed class OpenTypeFont
 
         if (contourCount < 0)
         {
-            outline = new OpenTypeGlyphOutline(glyphBounds, [], IsCompound: true);
-            return true;
+            return TryReadCompoundGlyphOutline(glyphOffset + 10, glyphEnd, glyphBounds, depth, out outline);
         }
 
         return TryReadSimpleGlyphOutline(glyphOffset + 10, glyphEnd, contourCount, glyphBounds, out outline);
@@ -334,6 +339,138 @@ internal sealed class OpenTypeFont
         }
 
         outline = new OpenTypeGlyphOutline(bounds, contours, IsCompound: false);
+        return true;
+    }
+
+    private bool TryReadCompoundGlyphOutline(
+        int offset,
+        int glyphEnd,
+        FontBounds bounds,
+        int depth,
+        out OpenTypeGlyphOutline outline)
+    {
+        outline = default;
+        var contours = new List<OpenTypeGlyphContour>();
+        int cursor = offset;
+        ushort flags;
+        do
+        {
+            if (cursor + 4 > glyphEnd)
+            {
+                return false;
+            }
+
+            flags = U16(bytes, cursor);
+            ushort componentGlyphId = U16(bytes, cursor + 2);
+            cursor += 4;
+
+            if ((flags & 0x0002) == 0)
+            {
+                return false;
+            }
+
+            double dx;
+            double dy;
+            if ((flags & 0x0001) != 0)
+            {
+                if (cursor + 4 > glyphEnd)
+                {
+                    return false;
+                }
+
+                dx = I16(bytes, cursor);
+                dy = I16(bytes, cursor + 2);
+                cursor += 4;
+            }
+            else
+            {
+                if (cursor + 2 > glyphEnd)
+                {
+                    return false;
+                }
+
+                dx = unchecked((sbyte)bytes[cursor]);
+                dy = unchecked((sbyte)bytes[cursor + 1]);
+                cursor += 2;
+            }
+
+            double a = 1d;
+            double b = 0d;
+            double c = 0d;
+            double d = 1d;
+            if ((flags & 0x0008) != 0)
+            {
+                if (cursor + 2 > glyphEnd)
+                {
+                    return false;
+                }
+
+                a = d = F2Dot14(bytes, cursor);
+                cursor += 2;
+            }
+            else if ((flags & 0x0040) != 0)
+            {
+                if (cursor + 4 > glyphEnd)
+                {
+                    return false;
+                }
+
+                a = F2Dot14(bytes, cursor);
+                d = F2Dot14(bytes, cursor + 2);
+                cursor += 4;
+            }
+            else if ((flags & 0x0080) != 0)
+            {
+                if (cursor + 8 > glyphEnd)
+                {
+                    return false;
+                }
+
+                a = F2Dot14(bytes, cursor);
+                c = F2Dot14(bytes, cursor + 2);
+                b = F2Dot14(bytes, cursor + 4);
+                d = F2Dot14(bytes, cursor + 6);
+                cursor += 8;
+            }
+
+            if (!TryReadGlyphOutline(componentGlyphId, depth + 1, out OpenTypeGlyphOutline component))
+            {
+                return false;
+            }
+
+            foreach (OpenTypeGlyphContour contour in component.Contours)
+            {
+                var points = new OpenTypeGlyphPoint[contour.Points.Count];
+                for (int i = 0; i < points.Length; i++)
+                {
+                    OpenTypeGlyphPoint point = contour.Points[i];
+                    points[i] = new OpenTypeGlyphPoint(
+                        a * point.X + c * point.Y + dx,
+                        b * point.X + d * point.Y + dy,
+                        point.IsOnCurve);
+                }
+
+                contours.Add(new OpenTypeGlyphContour(points));
+            }
+        }
+        while ((flags & 0x0020) != 0);
+
+        if ((flags & 0x0100) != 0)
+        {
+            if (cursor + 2 > glyphEnd)
+            {
+                return false;
+            }
+
+            ushort instructionLength = U16(bytes, cursor);
+            cursor += 2 + instructionLength;
+            if (cursor > glyphEnd)
+            {
+                return false;
+            }
+        }
+
+        outline = new OpenTypeGlyphOutline(bounds, contours, IsCompound: true);
         return true;
     }
 
@@ -1016,6 +1153,11 @@ internal sealed class OpenTypeFont
         return value / 65536d;
     }
 
+    private static double F2Dot14(byte[] bytes, int offset)
+    {
+        return I16(bytes, offset) / 16384d;
+    }
+
     private static byte[] ExtractCollectionFont(byte[] bytes, int fontIndex)
     {
         if (bytes.Length < 16)
@@ -1105,7 +1247,7 @@ internal sealed class OpenTypeFont
 
     internal readonly record struct OpenTypeGlyphContour(IReadOnlyList<OpenTypeGlyphPoint> Points);
 
-    internal readonly record struct OpenTypeGlyphPoint(short X, short Y, bool IsOnCurve);
+    internal readonly record struct OpenTypeGlyphPoint(double X, double Y, bool IsOnCurve);
 
     internal readonly record struct PostMetrics(
         double ItalicAngle,

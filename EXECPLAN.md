@@ -11367,3 +11367,19 @@ simple-glyph outline path for a public transparent-text fixture that contains on
 
 Validation: focused `fonts` tests passed with `18` tests, including direct PDF path checks for line-heavy
 and curved glyph contours.
+
+Revision note, 2026-05-27: Expanded the TrueType glyph-outline surface to cover compound glyphs instead of
+leaving them as an opaque stop sign. The parser now follows compound components recursively, supports
+word and byte XY offsets, uniform scale, separate X/Y scale, and two-by-two component matrices, then applies
+those transforms to the component contours. Unsupported point-matching compound arguments still fail closed,
+which is preferable to inventing component placement. The recursion has an explicit depth limit.
+
+`PdfGlyphOutlinePath` now accepts expanded compound outlines when contours are available, so accented text
+and other common composite glyphs can flow through the same path conversion as simple glyphs. This materially
+reduces the risk that a transparent-text renderer switch would work only on a narrow ASCII probe. Remaining
+open work before enabling outline emission is mostly renderer ownership: decide exactly which PPTX text
+effects should take the Office-style path route, preserve glyph advances and spacing, and add public
+Office-PDF structural gates for those text cases.
+
+Validation: focused `fonts` tests passed with `20` tests, including compound outline expansion and compound
+PDF path conversion for an accented Arial glyph.
