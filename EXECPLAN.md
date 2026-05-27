@@ -11814,3 +11814,21 @@ own first-class fill/stroke key buckets.
 Validation: `pptx-ladder-11-chart-doughnut-bottom-legend-probe` passed at run `20260527-232347` with the
 new legend-swatch structural gate. `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run
 `20260527-232402`.
+
+Revision note, 2026-05-27: Extended the same first-class legend-swatch gate across the other non-exploded
+public doughnut legend positions. Top, left, and right-overlay legends all expose the same durable structure:
+three small filled swatches immediately left of three legend text runs, while Office and candidate differ
+only in `f*` versus `f` for the closed rectangle fill operator. The manifests now lock those swatches with
+the same additional structure comparison used by the bottom legend probe, covering bounds, fill colors,
+segment counts, and path-command shape without conflating swatch ownership with the polar plot-box gates.
+
+This still leaves exploded doughnut legend variants as a separate follow-up, not because the classifier
+should differ, but because their plot/slice geometry gates carry different tolerances and should be tightened
+only after their own reruns are inspected. The useful long-term direction is to keep legend text, legend
+swatches, and plot geometry as separate structural contracts instead of using one coarse raster score or one
+plot-box heuristic to stand in for all three.
+
+Validation: `pptx-ladder-11-chart-doughnut-top-legend-probe`,
+`pptx-ladder-11-chart-doughnut-left-legend-probe`, and
+`pptx-ladder-11-chart-doughnut-right-overlay-legend-probe` all passed with the new legend-swatch structural
+gate at run `20260527-232542`.
