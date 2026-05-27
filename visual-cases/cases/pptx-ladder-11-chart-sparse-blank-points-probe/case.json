@@ -21,7 +21,15 @@
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
     "compareChartGraphicsStructurePathOperators": true,
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["LegendSwatchCandidate"],
+        "maxBoundsDelta": 4.0,
+        "maxLineWidthDelta": 1.0
+      }
+    ],
     "maxChartTextStructurePositionDeltaByKind": {
+      "LegendText": 3.5,
       "ValueAxisTickLabel": 2.0
     }
   },

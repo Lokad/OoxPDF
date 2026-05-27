@@ -436,11 +436,20 @@ High-priority actions:
   sparse/blank probe run `20260527-182834` passed and reduced region-1 `LegendSwatchCandidate` max bounds
   delta from `7.25 pt` to `3.39 pt` and `LegendText` from `7.11 pt` to `3.29 pt`. Remaining sparse legend
   debt is the filled right-legend content box and the shared horizontal plot/legend reserve.
-- [ ] 2026-05-27: Split sparse filled side-legend layout into an explicit filled-key content box.
-  Region-0 filled right-legend keys still sit about `6.01 pt` from Office after stroke-marker baseline
-  alignment. The next durable step is to model filled square key, thin border, and text as a side-legend
-  content box with its own X/Y reserve instead of reusing either the full-frame fill legend branch or the
-  stroke-key baseline branch.
+- [x] 2026-05-27: Split sparse filled side-legend layout into an explicit filled-key content box.
+  Region-0 filled right-legend keys still sat about `6.01 pt` from Office after stroke-marker baseline
+  alignment because they were borrowing the generic side-fill reserve. `RenderChartLegend` now distinguishes
+  side filled-key legends from full-frame fill legends and stroke-key legends, giving the square key, border,
+  and text their own side content-box X/Y reserve while preserving the existing stroke-marker and full-frame
+  paths. The sparse manifest now gates `LegendSwatchCandidate` as an auxiliary bounds/line-width structural
+  comparison and gates `LegendText` placement, without requiring Office/candidate fill-vs-stroke operator
+  order to match for the composite square key. Validation: focused non-slow `pptx-charts` passed (`56 passed,
+  0 failed, 0 skipped`); sparse/blank probe run `20260527-183037` passed and reduced region-0
+  `LegendSwatchCandidate`, `MarkerCandidate`, and `StrokeMarkerCandidate` max bounds deltas from `6.01 pt` to
+  `0.04 pt`, and region-0 `LegendText` from `7.63 pt` to `1.63 pt`; area 2-series, clustered-bar, and
+  line-marker public chart ports passed serially. Remaining sparse debt is the shared horizontal plot/legend
+  reserve (`~3.3-3.9 pt`), region-1 line/stroke legend drift, chart-series horizontal drift (`3.71 pt`),
+  marker outline width role, and clip-box count parity.
 - [x] 2026-05-27: Gate line-chart data marker geometry in the public structural oracle:
   `pptx-ladder-11-chart-line-markers-port` now includes `MarkerCandidate` in its chart-graphics structure
   comparison, guarded by the existing `0.9 pt` max bounds threshold after the Office-aligned auto marker size

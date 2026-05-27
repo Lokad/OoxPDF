@@ -4523,8 +4523,10 @@ internal sealed partial class PptxRenderer
         bool horizontal = IsHorizontalLegendPosition(layout.PositionKind);
         bool sideStrokeLegend = !horizontal && entries.All(entry => entry.Stroke is not null && entry.Fill is null);
         bool fillLegendInFullFrame = !sideStrokeLegend && IsSameChartBox(plotBox, frame);
+        bool sideFillLegend = !horizontal && !fillLegendInFullFrame && !sideStrokeLegend && entries.Any(entry => entry.Fill is not null);
         bool sideFillLegendInFullFrame = !horizontal && fillLegendInFullFrame;
         double lineHeight = fontSize * (sideStrokeLegend
+            || sideFillLegend
             || sideFillLegendInFullFrame
             ? PptxChartMetricRules.LegendSideStrokeLineHeightFactor
             : PptxChartMetricRules.LegendLineHeightFactor);
@@ -4550,6 +4552,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Left => Math.Max(0d, plotBox.X - width - sideGap),
             _ when horizontal => plotBox.X + (plotBox.Width - width) / 2d,
             _ when sideFillLegendInFullFrame => frame.X + frame.Width - width,
+            _ when sideFillLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillContentBoxReservedBandOffsetFactor,
             _ when !sideStrokeLegend => plotBox.X + plotBox.Width + sideGap + frame.Width * PptxChartMetricRules.LegendSideFillReservedBandOffsetFactor,
             _ => plotBox.X + plotBox.Width + sideGap
         };
@@ -4561,6 +4564,9 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
                 fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor(entries) +
+                (entries.Count - 1) * lineHeight / 2d,
+            _ when sideFillLegend => frame.Y + frame.Height / 2d -
+                fontSize * PptxChartMetricRules.LegendSideFillBaselineCenterOffsetFactor +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !sideStrokeLegend && !horizontal => frame.Y + frame.Height / 2d +
                 (entries.Count - 1) * lineHeight / 2d,
