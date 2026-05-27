@@ -10276,3 +10276,22 @@ blank policies have Office-backed behavior.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`).
+
+Revision note, 2026-05-27: Improved chart text structural classification for multi-chart pages by selecting
+the nearest available plot-box candidate per text operation instead of classifying the whole page against the
+first plot box. This is a tooling-only structural-oracle change: the emitted structure schema is unchanged, but
+text near a lower or right-side chart can now be classified against its local chart frame when the graphics
+classifier has already exposed multiple `GridlineAxisPlotBoxCandidate` or related plot-box candidates.
+
+Reclassifying the public sparse/blank multi-chart probe now surfaces the previously generic lower-chart text as
+axis labels: the reference side moves from `CategoryAxisTickLabel=5`, `ValueAxisTickLabel=4`, and
+`OuterChartText=9` to `CategoryAxisTickLabel=10`, `ValueAxisTickLabel=8`, and no generic outer chart text. The
+candidate side similarly exposes all three chart regions (`CategoryAxisTickLabel=15`, `ValueAxisTickLabel=12`)
+while retaining the extra right-side/legend ambiguity. This does not make the probe gate-ready; it makes the
+remaining mismatch more honest. The next oracle slice should attach graphics structures to chart regions rather
+than deriving page-global `PlotBoxCandidate`, `PlotAreaClipBoxCandidate`, and legend-swatch buckets.
+
+Validation: representative visual gates passed for
+`pptx-ladder-11-chart-column-clustered-port/20260527-112632`,
+`pptx-ladder-11-chart-plot-layout-target-inner-probe/20260527-112632`, and
+`pptx-ladder-11-composite-two-charts-port/20260527-112654`.

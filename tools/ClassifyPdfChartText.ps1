@@ -93,6 +93,64 @@ function Find-PlotBox($structures) {
     return $null
 }
 
+function Find-PlotBoxes($structures) {
+    $priority = @(
+        "GridlineAxisPlotBoxCandidate",
+        "AxisPairPlotBoxCandidate",
+        "PlotBoxCandidate",
+        "PolarPlotBoxCandidate",
+        "PlotAreaClipBoxCandidate"
+    )
+    foreach ($kind in $priority) {
+        $matches = @($structures | Where-Object { $_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
+        if ($matches.Count -gt 0) {
+            return ,$matches
+        }
+    }
+
+    return ,@()
+}
+
+function Distance-ToBox([double]$x, [double]$y, $box) {
+    $dx = 0d
+    if ($x -lt [double]$box.MinX) {
+        $dx = [double]$box.MinX - $x
+    }
+    elseif ($x -gt [double]$box.MaxX) {
+        $dx = $x - [double]$box.MaxX
+    }
+
+    $dy = 0d
+    if ($y -lt [double]$box.MinY) {
+        $dy = [double]$box.MinY - $y
+    }
+    elseif ($y -gt [double]$box.MaxY) {
+        $dy = $y - [double]$box.MaxY
+    }
+
+    return [Math]::Sqrt($dx * $dx + $dy * $dy)
+}
+
+function Find-NearestPlotBox($op, $plotBoxes) {
+    if ($null -eq $plotBoxes -or $plotBoxes.Count -eq 0) {
+        return $null
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $best = $null
+    $bestScore = [double]::PositiveInfinity
+    foreach ($plotBox in $plotBoxes) {
+        $score = Distance-ToBox $x $y $plotBox
+        if ($score -lt $bestScore) {
+            $bestScore = $score
+            $best = $plotBox
+        }
+    }
+
+    return $best
+}
+
 function Has-LegendSwatch($op, $structures, $plotBox, [bool]$isPolarChart = $false) {
     $x = TextX $op
     $y = TextY $op
@@ -402,7 +460,8 @@ if ($PageNumber -gt 0) {
     $structures = @($structures | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
-$plotBox = Find-PlotBox $structures
+$plotBoxes = Find-PlotBoxes $structures
+$plotBox = if ($plotBoxes.Count -gt 0) { $plotBoxes[0] } else { Find-PlotBox $structures }
 $isPolarChart = Is-PolarChart $plotBox $structures
 $polarNumericLabels = if ($isPolarChart) {
     @($textOps | Where-Object { Is-NumericText (TextValue $_) })
@@ -420,8 +479,12 @@ foreach ($op in $textOps) {
     $x = TextX $op
     $y = TextY $op
     $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    $textPlotBox = Find-NearestPlotBox $op $plotBoxes
+    if ($null -eq $textPlotBox) {
+        $textPlotBox = $plotBox
+    }
     $classified.Add([pscustomobject]@{
-        Kind = Classify-Text $op $plotBox $structures $polarNumericLabels $PlotTolerance
+        Kind = Classify-Text $op $textPlotBox $structures $polarNumericLabels $PlotTolerance
         PageNumber = $op.PageNumber
         SourceKind = "Text"
         SourceOperator = $op.Operator
