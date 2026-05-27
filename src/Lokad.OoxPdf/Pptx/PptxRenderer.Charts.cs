@@ -8235,6 +8235,7 @@ internal sealed partial class PptxRenderer
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
+        bool explicitValueAxisScale = false;
         if (plotKind == PptxSceneChartPlotKind.Scatter)
         {
             IReadOnlyList<ScatterSeries> series = ReadSceneOrXmlScatterSeries(plot, plotElement, readBubbleSize: false);
@@ -8246,6 +8247,7 @@ internal sealed partial class PptxRenderer
                     : valueAxes.Count > 0
                         ? valueAxes[0]
                         : new ChartAxisSource(null, chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault());
+                explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxis.XmlAxis);
                 ChartValueExtents valueExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetScatterYValueExtents(series));
                 ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
@@ -8270,6 +8272,7 @@ internal sealed partial class PptxRenderer
             {
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(valueAxis, chartXml);
+                explicitValueAxisScale = HasSceneOrXmlExplicitValueAxisScale(valueAxis.SceneAxis, valueAxisForScale);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(seriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
@@ -8293,10 +8296,34 @@ internal sealed partial class PptxRenderer
                 Math.Max(0, maxValueLabelLength - 3) * PptxChartMetricRules.LineRightLegendExtraValueLabelCharacterPadding
             : frame.Width * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxXRatio;
         double x = frame.X + leftInset;
-        double y = frame.Y + frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxYRatio;
+        double yRatio = explicitValueAxisScale
+            ? PptxChartMetricRules.LineNoTitleRightLegendExplicitScalePlotBoxYRatio
+            : PptxChartMetricRules.LineNoTitleRightLegendPlotBoxYRatio;
+        double heightRatio = explicitValueAxisScale
+            ? PptxChartMetricRules.LineNoTitleRightLegendExplicitScalePlotBoxHeightRatio
+            : PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio;
+        double y = frame.Y + frame.Height * yRatio;
         double width = Math.Max(1d, frame.Width - leftInset - rightReserve);
-        double height = frame.Height * PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio;
+        double height = frame.Height * heightRatio;
         return new ChartPlotBox(x, y, width, height);
+    }
+
+    private static bool HasSceneOrXmlExplicitValueAxisScale(PptxSceneChartAxis? axis, XElement? valueAxis)
+    {
+        if (axis is not null)
+        {
+            return axis.Minimum is not null &&
+                axis.Maximum is not null &&
+                axis.MajorUnit is not null;
+        }
+
+        return valueAxis?
+            .Element(ChartNamespace + "scaling")
+            ?.Element(ChartNamespace + "min") is not null &&
+            valueAxis
+                .Element(ChartNamespace + "scaling")
+                ?.Element(ChartNamespace + "max") is not null &&
+            valueAxis.Element(ChartNamespace + "majorUnit") is not null;
     }
 
     private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)

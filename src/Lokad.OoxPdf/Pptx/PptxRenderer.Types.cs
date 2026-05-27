@@ -956,6 +956,8 @@ internal sealed partial class PptxRenderer
         public const double LineNoTitleRightLegendPlotBoxYRatio = 0.0908d;
         public const double LineNoTitleRightLegendPlotBoxWidthRatio = 0.7687d;
         public const double LineNoTitleRightLegendPlotBoxHeightRatio = 0.8722d;
+        public const double LineNoTitleRightLegendExplicitScalePlotBoxYRatio = 0.10128571428571429d;
+        public const double LineNoTitleRightLegendExplicitScalePlotBoxHeightRatio = 0.8463333333333334d;
         public const double LineRightLegendValueAxisPadding = 35.7d;
         public const double LineRightLegendValueAxisFrameWidthPaddingRatio = 0.05d;
         public const double LineRightLegendExtraValueLabelCharacterPadding = 5.3d;

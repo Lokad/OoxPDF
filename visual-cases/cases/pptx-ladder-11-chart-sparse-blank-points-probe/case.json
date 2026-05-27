@@ -12,14 +12,18 @@
     "maxMeanAbsoluteError": 4.5,
     "maxChangedPixelRatioAtThreshold16": 0.05,
     "maxChartGraphicsStructureBoundsDeltaByKind": {
-      "ChartSeriesLineCandidate": 4.0
+      "ChartSeriesLineCandidate": 4.0,
+      "GridlineAxisPlotBoxCandidate": 4.0
     },
     "maxChartGraphicsStructureLineWidthDelta": 0.3,
-    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate"],
+    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate", "GridlineAxisPlotBoxCandidate"],
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
-    "compareChartGraphicsStructurePathOperators": true
+    "compareChartGraphicsStructurePathOperators": true,
+    "maxChartTextStructurePositionDeltaByKind": {
+      "ValueAxisTickLabel": 2.0
+    }
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_MISSING_CACHED_DATA",

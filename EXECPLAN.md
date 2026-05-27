@@ -412,13 +412,27 @@ High-priority actions:
   run `20260527-143539` passed with the styled-marker deltas unchanged at `6.74 pt`. Remaining marker debt is
   now explicit size-value unit/envelope conversion plus broader style/color-style inheritance, not auto-marker
   default sizing.
-- [ ] 2026-05-27: Resolve sparse no-title/right-legend Cartesian layout as a joint plot-and-legend model.
-  Investigation after the marker-size fixes showed that the sparse line probe's remaining marker/swatch max
-  delta is dominated by right-legend vertical placement, while the gridline plot box has separate top/bottom
-  reserve drift. A local minimum physical-reserve experiment improved sparse gridline/value-axis Y alignment
-  but worsened the legend marker max delta from `6.74 pt` to `7.24 pt`, so the change was discarded. The next
-  durable step is to derive the plot area, inner gridline box, and side legend box together from Office PDF
-  structures instead of independently tuning plot Y/height or legend baselines.
+- [x] 2026-05-27: Resolve the sparse no-title/right-legend explicit-scale Cartesian vertical plot-box model.
+  The public sparse/blank probe showed the same Office vertical plot-box ratios for the no-title right-legend
+  area and line charts with explicit value-axis `min`/`max`/`majorUnit`, while the public auto-scaled
+  line-marker port still needs the older auto-scale vertical reserve. The no-title/right-legend Cartesian
+  layout now selects the Office-observed sparse top/height ratios only when the value axis carries an explicit
+  scale; auto-scaled line charts keep their existing auto-layout ratios. The sparse manifest now gates
+  `GridlineAxisPlotBoxCandidate` beside `ChartSeriesLineCandidate` and gates `ValueAxisTickLabel` text
+  placement, so this alignment is structural at the PDF level. Validation: focused non-slow `pptx-charts`
+  passed (`56 passed, 0 failed, 0 skipped`); sparse/blank probe run `20260527-182459` passed with region-0
+  gridline max bounds delta reduced from `3.23 pt` to `1.91 pt`, region-1 vertical gridline extents exact
+  (`315.27..493.00`), filled-region max bounds delta reduced from `2.20 pt` to `1.91 pt`, and value-axis
+  text max bounds delta reduced to `1.86 pt`; line-marker port run `20260527-182514` passed, confirming the
+  explicit-scale split does not regress the auto-scale chart oracle. Remaining sparse debt is horizontal
+  plot/legend reserve, side-legend baseline placement, and clip-box count parity.
+- [ ] 2026-05-27: Split sparse side-legend layout into typed filled-key and stroke-key content boxes.
+  The vertical plot-box fix deliberately left legend placement untouched because the evidence moves by role:
+  filled right-legend keys remain about `6.01 pt` from Office, while stroke legend keys/text are about `7.25 pt`
+  after the plot-box correction. The durable next step is to model the legend content box explicitly by key
+  role (filled square, stroke line, marker-on-line, text) and only then derive side legend X/Y/baselines from
+  the same content geometry that is emitted to PDF. Avoid another global baseline constant unless it is backed
+  by Office PDF structures across filled and stroke legend cases.
 - [x] 2026-05-27: Gate line-chart data marker geometry in the public structural oracle:
   `pptx-ladder-11-chart-line-markers-port` now includes `MarkerCandidate` in its chart-graphics structure
   comparison, guarded by the existing `0.9 pt` max bounds threshold after the Office-aligned auto marker size
