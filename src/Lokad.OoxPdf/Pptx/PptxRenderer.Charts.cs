@@ -422,7 +422,6 @@ internal sealed partial class PptxRenderer
     {
         return series
             .Select(vector => vector.DenseValues())
-            .Where(values => values.Any(value => value is not null))
             .ToArray();
     }
 
@@ -430,7 +429,6 @@ internal sealed partial class PptxRenderer
     {
         return series
             .Select(vector => vector.DensePoints())
-            .Where(points => points.Any(point => point?.Value is not null))
             .ToArray();
     }
 

@@ -1591,6 +1591,14 @@ High-priority actions:
     projection the only renderer-side vector API and prevents future chart work from reviving the old
     compact-ordinal behavior accidentally. Validation: focused non-slow `pptx-charts` passed
     (`46 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`265 passed, 0 failed, 7 skipped`).
+  - [x] Preserve empty series slots when projecting dense chart vectors:
+    `DensifyChartSeries` and `DensifyChartPointSeries` no longer drop all-empty series before rendering or
+    data-label layout. The chart-level renderability gate still suppresses wholly empty charts, but mixed
+    charts now keep original series indices so fills, strokes, markers, and per-series label options cannot
+    shift onto later non-empty series. `PptxSyntheticLineChartPreservesSeriesStylesAfterBlankSeries` locks a
+    blank leading line series followed by a styled visible series. Validation: focused non-slow `pptx-charts`
+    passed (`52 passed, 0 failed, 0 skipped`); sparse/blank visual probe run `20260527-121215` passed with
+    MAE `2.080923`, changed16 `0.024170`, SSIM `0.662304`, and histogram `0.997863`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
