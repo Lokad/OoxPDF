@@ -1624,6 +1624,14 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-025313` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Preserve workbook sidecar provenance on raw XML chart vectors too:
+    the no-scene compatibility path now builds numeric, scatter, bubble-size, and category label vectors with
+    the same `PptxSceneChartDataSource` formula plus workbook sidecar points used by the scene-owned path.
+    Chart-side caches remain the only renderable points, so formula-only workbook data still does not become
+    active chart geometry by accident; the workbook range shape, missing cells, and cell metadata are available
+    for later layout/source-freshness decisions. Validation: focused non-slow `pptx-charts` passed (`57
+    passed, 0 failed, 0 skipped`) with a regression asserting raw cache points stay render-owned while workbook
+    sidecar points survive on both numeric and category vectors.
   - [x] Route pie/doughnut point-count expansion through the indexed data vectors:
     scene series explosion expansion now asks the numeric/category vectors for effective point counts instead
     of maintaining separate `ptCount`, max-index, and workbook-range helpers. This keeps slice explosion

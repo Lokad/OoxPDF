@@ -10494,7 +10494,7 @@ internal static class PptxTests
         System.Reflection.MethodInfo readCategoryLabelVector = typeof(PptxRenderer).GetMethod(
             "ReadChartCategoryLabelVector",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected raw category-label vector reader.");
-        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
+        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement, null]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
         TestAssert.Equal("Sheet1!$A$2:$B$4", (string?)rawVector.GetType().GetProperty("Formula")?.GetValue(rawVector) ?? string.Empty);
         TestAssert.Equal(3, (int?)rawVector.GetType().GetProperty("PointCount")?.GetValue(rawVector) ?? 0);
 
@@ -11060,6 +11060,74 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
         TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"), "Formula-only embedded workbook references should require chart-side caches for active rendering.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Formula-only supported chart families should report missing cached data rather than a generic unsupported chart.");
+    }
+
+    public static void PptxChartRawVectorsPreserveWorkbookSidecarPoints()
+    {
+        Type workbookType = typeof(PptxRenderer).GetNestedType(
+            "ChartWorkbookData",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["A2"] = "North",
+                ["A4"] = "West",
+                ["B2"] = "8.2",
+                ["B4"] = "1.4"
+            }
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        var readNumberVector = typeof(PptxRenderer)
+            .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Single(method => method.Name == "ReadChartNumberVector" && method.GetParameters().Length == 2);
+        var readCategoryVector = typeof(PptxRenderer)
+            .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 2);
+
+        XElement values = XElement.Parse("""
+            <c:val xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:numRef>
+                <c:f>Sheet1!$B$2:$B$4</c:f>
+                <c:numCache>
+                  <c:formatCode>General</c:formatCode>
+                  <c:ptCount val="4"/>
+                  <c:pt idx="1"><c:v>100</c:v></c:pt>
+                </c:numCache>
+              </c:numRef>
+            </c:val>
+            """);
+        object numberVector = readNumberVector.Invoke(null, [values, workbook]) ?? throw new InvalidOperationException("Expected raw number vector.");
+        object[] cacheNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("Points")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
+        object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
+        TestAssert.True(cacheNumberPoints.Length == 1, "Expected raw vector rendering points to stay bound to the chart cache.");
+        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 1, "Expected raw numeric cache point index to survive.");
+        TestAssert.Equal(100d, (double?)cacheNumberPoints[0].GetType().GetProperty("Value")?.GetValue(cacheNumberPoints[0]) ?? 0d);
+        TestAssert.True(workbookNumberPoints.Length == 3, "Expected raw numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
+        TestAssert.Equal("1.4", (string?)workbookNumberPoints[2].GetType().GetProperty("Text")?.GetValue(workbookNumberPoints[2]) ?? string.Empty);
+
+        XElement chart = XElement.Parse("""
+            <c:barChart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:ser>
+                <c:cat>
+                  <c:strRef>
+                    <c:f>Sheet1!$A$2:$A$4</c:f>
+                    <c:strCache>
+                      <c:ptCount val="4"/>
+                      <c:pt idx="1"><c:v>Cached</c:v></c:pt>
+                    </c:strCache>
+                  </c:strRef>
+                </c:cat>
+              </c:ser>
+            </c:barChart>
+            """);
+        object categoryVector = readCategoryVector.Invoke(null, [chart, workbook]) ?? throw new InvalidOperationException("Expected raw category vector.");
+        object[] cacheTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("Points")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
+        object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
+        TestAssert.True(cacheTextPoints.Length == 1, "Expected raw category rendering points to stay bound to the chart cache.");
+        TestAssert.Equal("Cached", (string?)cacheTextPoints[0].GetType().GetProperty("Text")?.GetValue(cacheTextPoints[0]) ?? string.Empty);
+        TestAssert.True(workbookTextPoints.Length == 3, "Expected raw category vector to keep workbook sidecar text points.");
+        TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
 
     public static void PptxChartWorkbookHydrationPreservesRangePointIndices()
