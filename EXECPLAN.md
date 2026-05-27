@@ -9649,8 +9649,9 @@ stacked value-label reserve adjustment, and the line/no-title/right-legend tick-
 calculations. The reserve formulas and fallback metrics are unchanged; this only aligns the metadata source
 used by layout estimation with the source used by rendering.
 
-The remaining direct axis lookups are mostly raw helper internals and chart-axis style construction; those
-need a separate pass because they mix primary/secondary axis style defaults and fallback XML behavior.
+This note has since been superseded for active plot-owned paths. Chart-axis style construction and the
+bar/line plot-box reservation helpers now start from paired axis sources; the remaining direct axis XML reads
+are narrow fallbacks when a scene/XML source pair is incomplete.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
@@ -9661,8 +9662,9 @@ from `ReadSceneOrXmlChartCategoryAxisForPlot` instead of independently selecting
 raw `catAx`. This complements the earlier line/area/radar category-axis slice while preserving the existing
 bar category label geometry.
 
-Bar plot-box reservation helpers still use direct axis lookups in several places; those remain open until
-the reservation model can be moved to paired sources without changing Office-visible metrics.
+This note has since been superseded for the active reservation helpers. Bar plot-box reservation now reads
+value/category metadata through paired sources where plot context exists; remaining work is Office-visible
+reserve metric discovery, not basic axis-source ownership.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
@@ -9687,9 +9689,10 @@ primary bar axis, additional bar-plot axes, and combo line axes now start from
 secondary-axis and mixed-family bookkeeping behavior unchanged while ensuring those locals no longer come
 from independent scene-axis and raw-XML searches that could drift by `axId`.
 
-The remaining work is to collapse more of the bar/combo secondary-axis flow onto source objects end to end,
-including category-axis pairing and plot-box reservation paths, before changing Office-visible axis crossing
-or reserve metrics.
+This note has since been superseded for source ownership: bar/combo value axes, category axes, and plot-box
+reservation paths now start from paired source objects. The remaining work is to replace the fallback reserve
+formulas themselves with Office-PDF-backed layout rules before changing Office-visible axis crossing or reserve
+metrics.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
@@ -9715,9 +9718,9 @@ keeping independently selected scene and raw-XML axis locals. This is an identit
 typed scene axis exists, downstream rendering now carries the XML axis matched to the same `axId`, and
 XML-only charts keep the existing fallback behavior.
 
-Remaining chart families still have several parallel scene/XML axis locals, especially bar/line combo and
-plot-box reservation paths. Those should continue to move to paired source objects before changing any
-Office-facing chart metrics.
+This note has since been superseded for the active supported chart-family axis locals. Remaining chart work
+should focus on semantic Office rules still encoded as fallback metrics: date-axis tick generation, secondary
+axis reserve formulas, plot-area geometry, and Office-style chart defaults.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
