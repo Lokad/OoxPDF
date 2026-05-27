@@ -596,6 +596,13 @@ High-priority actions:
   evidence before deciding whether the default should be `lineMarker`, `marker`, or another behavior. Validation:
   focused `RadarStyle` passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66` tests,
   `0` failures, and `0` skips; full non-slow suite passed with `314` tests, `0` failures, and `7` slow skips.
+- [x] 2026-05-27: Rechecked the private PPTX acceptance corpus after the chart enum-default ladder.
+  Private run `20260527-225147` compared all `84` reference pages against `84` candidate pages with zero
+  dimension mismatches. Deck-level MAE remained `7.702155`, max page MAE remained `16.412422`, and changed-pixel
+  ratio at threshold 16 remained `0.103230`. The only diagnostic remained the existing private-safe
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR` count of `1`; worst pages by metric remained `53`, `32`, `50`, `36`, and
+  `49`. This confirms the grouping/bar-direction/radar-style/display-blanks default cleanup was behavior-neutral
+  on the current private corpus while making the renderer boundary more explicit.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
