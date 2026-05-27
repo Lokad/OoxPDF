@@ -436,6 +436,13 @@ function Is-OutsideBox($structure, $box, [double]$tolerance) {
         ([double]$structure.CenterY -gt ([double]$box.MaxY + $tolerance))
 }
 
+function Is-BoundsInsideBox($structure, $box, [double]$tolerance) {
+    return ([double]$structure.MinX -ge ([double]$box.MinX - $tolerance)) -and
+        ([double]$structure.MaxX -le ([double]$box.MaxX + $tolerance)) -and
+        ([double]$structure.MinY -ge ([double]$box.MinY - $tolerance)) -and
+        ([double]$structure.MaxY -le ([double]$box.MaxY + $tolerance))
+}
+
 function Is-LegendSwatchShape($structure) {
     $kind = [string]$structure.Kind
     $width = Width $structure
@@ -497,6 +504,26 @@ function Find-RegionPlotBoxes($structures) {
     return @()
 }
 
+function Find-CartesianRegionPlotBoxes($structures) {
+    $priority = @(
+        "GridlineAxisPlotBoxCandidate",
+        "AxisPairPlotBoxCandidate",
+        "CrossingAxisPlotBoxCandidate",
+        "PlotBoxCandidate"
+    )
+
+    foreach ($kind in $priority) {
+        $matches = @($structures |
+            Where-Object { $_.Kind -eq $kind } |
+            Sort-Object -Property PageNumber, RegionIndex, MinY, MinX, MaxY, MaxX)
+        if ($matches.Count -gt 0) {
+            return $matches
+        }
+    }
+
+    return @()
+}
+
 function Assign-RegionIndexes($structures) {
     $plotBoxes = @(Find-RegionPlotBoxes $structures)
     if ($plotBoxes.Count -eq 0) {
@@ -526,6 +553,41 @@ function Assign-RegionIndexes($structures) {
 
         if ($null -ne $best) {
             $structure.RegionIndex = $best.RegionIndex
+        }
+    }
+}
+
+function Reclassify-InPlotSeriesLines($structures, [double]$tolerance) {
+    $plotBoxes = @(Find-CartesianRegionPlotBoxes $structures)
+    if ($plotBoxes.Count -eq 0) {
+        return
+    }
+
+    $snapshot = [object[]]$structures.ToArray()
+    foreach ($structure in $snapshot) {
+        if ($structure.Kind -ne "DataLabelLeaderLineCandidate") {
+            continue
+        }
+
+        $matchingPlotBoxes = @($plotBoxes | Where-Object {
+            [int]$_.PageNumber -eq [int]$structure.PageNumber -and
+            ($null -eq $structure.RegionIndex -or $null -eq $_.RegionIndex -or [int]$_.RegionIndex -eq [int]$structure.RegionIndex)
+        })
+        if ($matchingPlotBoxes.Count -eq 0) {
+            continue
+        }
+
+        $insidePlotBox = $false
+        foreach ($plotBox in $matchingPlotBoxes) {
+            if (Is-BoundsInsideBox $structure $plotBox $tolerance) {
+                $insidePlotBox = $true
+                break
+            }
+        }
+
+        if ($insidePlotBox) {
+            $structures.Add((Copy-StructureAsKind "ChartSeriesLineCandidate" $structure))
+            [void]$structures.Remove($structure)
         }
     }
 }
@@ -841,6 +903,7 @@ if ($polarRegions.Count -gt 1) {
 }
 
 Assign-RegionIndexes ([object[]]$structures.ToArray())
+Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
 
 $ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)
 $ordered | Format-Table -AutoSize

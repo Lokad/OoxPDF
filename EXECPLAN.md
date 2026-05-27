@@ -10651,3 +10651,27 @@ passed (`53 passed, 0 failed, 0 skipped`); `pptx-ladder-11-chart-sparse-blank-po
 `20260527-135330`; and `SummarizeChartStructureDeltas.ps1 -Case
 pptx-ladder-11-chart-sparse-blank-points-probe -ByRegion -ShowBounds` confirmed the swatch/stroke count
 closure while preserving the broader layout deltas.
+
+Revision note, 2026-05-27: Split in-plot Cartesian chart series strokes out of the public
+`DataLabelLeaderLineCandidate` graphics bucket. The sparse/blank probe's apparent candidate-only leader-line
+gap was an oracle schema problem: the classifier was labeling any one- or two-segment diagonal stroke as a
+data-label leader connector, even when the stroke sat wholly inside a gridline/axis-derived Cartesian plot
+box and represented line or area series geometry. `ClassifyPdfChartGraphics.ps1` now reclassifies only those
+fully in-plot strokes as `ChartSeriesLineCandidate`, using chart-local region indexes and axis/gridline/plot
+box evidence rather than fixture coordinates. Polar charts deliberately stay out of this rewrite so the
+existing leader-line probe still exposes real label connectors.
+
+This does not close sparse/blank series geometry. It makes the remaining mismatch more structural: the fresh
+region summary now shows `ChartSeriesLineCandidate` count deltas (`0/4` in the upper bar/line region and
+`2/4` in the lower area region), while `DataLabelLeaderLineCandidate` no longer distracts from the chart
+layout work. The broader sparse-probe gaps remain unchanged: plot-box, axis, gridline, and tick-label offsets
+cluster around `22.6 pt`; legend text/swatch placement still differs; marker sizing and lower-chart marker
+placement still differ; and clip-box counts still differ. The next renderer-side work should derive
+right-legend/no-title Cartesian plot and legend reserves from Office-observed chart structure instead of
+tuning a single ratio or padding constant.
+
+Validation: `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-140054`; the
+`SummarizeChartStructureDeltas.ps1` run with `-ByRegion -ShowBounds` reports the new
+`ChartSeriesLineCandidate` rows and no sparse-probe `DataLabelLeaderLineCandidate` rows; and
+`pptx-ladder-11-chart-pie-data-label-leader-lines-probe` passed at run `20260527-140137`, preserving the
+polar `DataLabelLeaderLineCandidate` structures while its gated polar slice/plot structures still match.
