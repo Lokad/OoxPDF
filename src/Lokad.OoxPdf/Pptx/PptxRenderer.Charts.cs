@@ -967,7 +967,7 @@ internal sealed partial class PptxRenderer
                         secondaryAxisUnits = lineAxisUnits;
                     }
 
-                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, reverseOrder: lineStacked, workbook: workbook));
+                    legendEntries.AddRange(BuildStrokeLegendEntries(theme, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, lineMarkerStyles, reverseOrder: lineStacked, workbook: workbook));
                     RenderLineChart(
                         graphics,
                         theme,
@@ -1107,7 +1107,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: percentStacked ? "0%" : null));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeriesVectors, stacked, percentStacked)));
                 }
-                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, reverseOrder: stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderLineDataLabels(
                     theme,
                     graphics,
@@ -4299,7 +4299,7 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = i < seriesFills.Count && seriesFills[i] is { } explicitFill
                 ? explicitFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, i + paletteOffset), 1d);
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, null, names[i]));
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, fill, null, null, names[i]));
         }
 
         return entries;
@@ -4320,19 +4320,22 @@ internal sealed partial class PptxRenderer
             ChartSeriesFill fill = pointFills.TryGetValue(point.Index, out ChartSeriesFill pointFill)
                 ? pointFill
                 : new ChartSeriesFill(ChartPalette(chartPalette, theme, point.Index), 1d);
-            entries.Add(new ChartLegendEntry(point.Text, fill, null, null));
+            entries.Add(new ChartLegendEntry(point.Text, fill, null, null, null));
         }
 
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, bool reverseOrder = false, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildStrokeLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle>? markerStyles = null, bool reverseOrder = false, ChartWorkbookData? workbook = null)
     {
         IReadOnlyList<ChartSeriesNameRecord> names = ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook);
         var entries = new List<ChartLegendEntry>(names.Count);
         for (int i = 0; i < names.Count; i++)
         {
-            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), names[i]));
+            ChartMarkerStyle? marker = markerStyles is not null && i < markerStyles.Count
+                ? markerStyles[i]
+                : null;
+            entries.Add(new ChartLegendEntry(names[i].ActiveName, null, ChartSeriesStrokeColor(theme, chartPalette, i, seriesStrokes, ChartLineDefaultStrokeWidth), marker, names[i]));
         }
 
         if (reverseOrder)
@@ -4584,8 +4587,13 @@ internal sealed partial class PptxRenderer
             }
             else if (entry.Stroke is { } stroke)
             {
+                double lineY = markerY + markerSize / 2d;
                 SetChartStroke(graphics, stroke);
-                graphics.StrokeLine(entryX, markerY + markerSize / 2d, entryX + markerWidth, markerY + markerSize / 2d);
+                graphics.StrokeLine(entryX, lineY, entryX + markerWidth, lineY);
+                if (entry.Marker is { } marker)
+                {
+                    DrawChartMarker(graphics, entryX + markerWidth / 2d, lineY, marker, stroke.Color, stroke.Color);
+                }
             }
 
             runs.Add(new TextRun(
@@ -9471,7 +9479,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
-    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartSeriesNameRecord? SeriesName);
+    private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName);
 
     private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, ChartShapeStyle ShapeStyle)
     {

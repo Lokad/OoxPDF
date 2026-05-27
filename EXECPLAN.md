@@ -380,6 +380,17 @@ High-priority actions:
   run `artifacts/private-visual/lokad-value-based/20260527-023824` stayed at 84/84 compared pages, zero
   dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-27: Carry line-chart marker styles into stroke legend keys:
+  line and combo-line legends now keep the already-parsed per-series `ChartMarkerStyle` in `ChartLegendEntry`
+  and emit a composite key as a short stroke with the marker centered on it, matching the same PDF structure
+  used by line data-label legend keys. The change is deliberately limited to line plots; a nearby scatter
+  visual case is already MAE-threshold fragile at committed HEAD and needs its own Office-PDF legend pass
+  before scatter legend semantics are broadened. Public sparse/blank chart probe run `20260527-120830` passed
+  with MAE `2.080923`, changed16 `0.024170`, SSIM `0.662304`, and histogram `0.997863`. Structural summary
+  now shows the marker-bearing region-1 legend swatch and stroke-marker counts aligned at `6/6` and `10/10`;
+  remaining public chart debt is still structural: region-0 line legend stroke-marker classification remains
+  `2/0`, plot/gridline/tick-label boxes remain offset by about `22.6 pt`, and clip-box counts remain
+  mismatched.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
