@@ -9599,6 +9599,20 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed standalone line-chart primary value-axis rendering through a paired
+scene/XML axis source. The line renderer now obtains the primary value axis from
+`ReadSceneOrXmlChartValueAxesForPlot` before resolving scale, units, gridlines, crossing, reversed
+orientation, and labels. The previous fallback to the first chart `valAx` for scale remains in place for
+legacy XML-only charts with incomplete plot axis references, but typed scene metadata now travels with the
+matched XML axis when a scene axis exists.
+
+Bar and combo-chart paths still carry more parallel axis locals because secondary-axis and mixed plot-family
+state need additional care. Keep moving those paths to paired source objects before changing crossing or
+reserve metrics.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed area and radar primary value axes through scene/XML axis sources. The
 native area and radar render branches now take their value-axis scale, unit, gridline, crossing, and label
 metadata from the paired `ChartAxisSource` returned by `ReadSceneOrXmlChartValueAxesForPlot` instead of
