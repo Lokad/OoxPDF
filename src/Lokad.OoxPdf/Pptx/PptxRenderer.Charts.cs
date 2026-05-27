@@ -345,8 +345,15 @@ internal sealed partial class PptxRenderer
     private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
         return scenePlot is not null
-            ? scenePlot.RadarStyleKind
-            : PptxSceneBuilder.ParseChartRadarStyle((string?)plotElement.Element(ChartNamespace + "radarStyle")?.Attribute("val"));
+            ? ResolveChartRadarStyle(scenePlot.RadarStyleKind)
+            : ResolveChartRadarStyle(PptxSceneBuilder.ParseChartRadarStyle((string?)plotElement.Element(ChartNamespace + "radarStyle")?.Attribute("val")));
+    }
+
+    private static PptxSceneChartRadarStyle ResolveChartRadarStyle(PptxSceneChartRadarStyle value)
+    {
+        return value == PptxSceneChartRadarStyle.Unknown
+            ? PptxSceneChartRadarStyle.Standard
+            : value;
     }
 
     private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)

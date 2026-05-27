@@ -586,6 +586,16 @@ High-priority actions:
   direction remains the scene-owned column default. Validation: focused `BarDirection` passed (`1` test,
   `0` failures); focused non-slow `pptx-charts` passed with `66` tests, `0` failures, and `0` skips; full
   non-slow suite passed with `313` tests, `0` failures, and `7` slow skips.
+- [x] 2026-05-27: Make chart radar-style defaults explicit without widening scatter behavior.
+  `PptxSceneChartPlot.RadarStyle` continues to preserve unsupported `c:radarStyle` tokens, but renderer-facing
+  radar style now resolves `Unknown -> Standard` before it reaches the two-way filled-vs-marker/default radar
+  layout. The XML fallback path uses the same resolver. A regression pairs a scene plot preserving
+  `radarStyle="bogus"` with a deliberately mismatched XML fallback `radarStyle="filled"` and verifies that the
+  effective style remains the scene-owned standard default. The adjacent `scatterStyle` enum remains deliberately
+  unchanged: unknown scatter style controls line connectivity, and the codebase still needs public Office-PDF
+  evidence before deciding whether the default should be `lineMarker`, `marker`, or another behavior. Validation:
+  focused `RadarStyle` passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66` tests,
+  `0` failures, and `0` skips; full non-slow suite passed with `314` tests, `0` failures, and `7` slow skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
