@@ -9666,6 +9666,20 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Strengthened the public polar data-label probe so Office writes per-point
+`c:dLbl/c:layout/c:manualLayout` records on a pie chart with `showLegendKey`, category, percent, and
+leader-line flags. Office still emits only the chart-frame stroke in the PDF graphics stream for this probe,
+so this is not yet a public leader-line geometry oracle. It is valuable because it exposes that manual data
+label coordinates can be outside the plot frame, and because it forces OOXPDF to keep all four polar data
+labels structurally visible instead of clipping labels to the plot area.
+
+The renderer now lets explicit data-label manual-layout boxes and their text clips extend beyond the plot
+box, while leaving plot-area layout clamped. The remaining open gap is the precise Office coordinate
+semantics for `c:dLbl/c:manualLayout`: the public probe locks label presence with a deliberately broad text
+position tolerance, but exact label X/Y parity remains open until more Office-backed evidence explains how
+PowerPoint maps label `Left`/`Top` through chart frame, plot area, label box, legend key, and multi-line text
+emission.
+
 Revision note, 2026-05-27: Extended category-axis source pairing to include date axes. The scene model
 already preserved `dateAx` as `PptxSceneChartAxisKind.Date`, but renderer category-axis source lookup was
 still `catAx`-only. `ReadSceneOrXmlChartCategoryAxisForPlot` now treats category and date axes as the

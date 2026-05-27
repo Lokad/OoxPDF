@@ -3442,7 +3442,7 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryBuildManualLayoutBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartLayoutBox defaultBox, out ChartLayoutBox box)
+    private static bool TryBuildManualLayoutBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartLayoutBox defaultBox, out ChartLayoutBox box, bool clampToFrame = true)
     {
         box = default;
         if (!layout.HasLayout)
@@ -3452,10 +3452,10 @@ internal sealed partial class PptxRenderer
 
         ChartPlotBoxRatios defaults = GetLayoutBoxRatios(frame, defaultBox);
         double left = layout.X is { } x
-            ? Math.Clamp(ResolveManualLayoutStartRatio(x, layout.XModeKind, defaultBox.X, frame.X, frame.Width), 0d, 1d)
+            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(x, layout.XModeKind, defaultBox.X, frame.X, frame.Width), clampToFrame)
             : defaults.Left;
         double top = layout.Y is { } y
-            ? Math.Clamp(ResolveManualLayoutStartRatio(y, layout.YModeKind, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), 0d, 1d)
+            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(y, layout.YModeKind, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), clampToFrame)
             : defaults.Top;
         double width = layout.Width is { } layoutWidth
             ? Math.Clamp(layoutWidth, 0.02d, 1d)
@@ -3464,10 +3464,10 @@ internal sealed partial class PptxRenderer
             ? Math.Clamp(layoutHeight, 0.02d, 1d)
             : defaults.Height;
         double right = IsManualLayoutEdgeMode(layout.WidthModeKind)
-            ? Math.Clamp(layout.Width ?? defaults.Right, left, 1d)
+            ? ClampManualLayoutEdgeRatio(layout.Width ?? defaults.Right, left, clampToFrame)
             : left + width;
         double bottom = IsManualLayoutEdgeMode(layout.HeightModeKind)
-            ? Math.Clamp(layout.Height ?? defaults.Bottom, top, 1d)
+            ? ClampManualLayoutEdgeRatio(layout.Height ?? defaults.Bottom, top, clampToFrame)
             : top + height;
         double boxWidth = Math.Max(0d, right - left) * frame.Width;
         double boxHeight = Math.Max(0d, bottom - top) * frame.Height;
@@ -3475,6 +3475,16 @@ internal sealed partial class PptxRenderer
         double boxY = frame.Y + frame.Height - bottom * frame.Height;
         box = new ChartLayoutBox(boxX, boxY, boxWidth, boxHeight);
         return boxWidth > 0d && boxHeight > 0d;
+    }
+
+    private static double ClampManualLayoutRatio(double value, bool clampToFrame)
+    {
+        return clampToFrame ? Math.Clamp(value, 0d, 1d) : value;
+    }
+
+    private static double ClampManualLayoutEdgeRatio(double value, double minimum, bool clampToFrame)
+    {
+        return clampToFrame ? Math.Clamp(value, minimum, 1d) : Math.Max(minimum, value);
     }
 
     private static ChartPlotBoxRatios GetPlotBoxRatios(ChartFrameBox frame, ChartPlotBox plotBox)
@@ -4864,7 +4874,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartFrameBox frame = new(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
-        return TryBuildManualLayoutBox(options.Layout, frame, defaultBox, out ChartLayoutBox manualBox)
+        return TryBuildManualLayoutBox(options.Layout, frame, defaultBox, out ChartLayoutBox manualBox, clampToFrame: false)
             ? manualBox
             : defaultBox;
     }
@@ -4966,13 +4976,28 @@ internal sealed partial class PptxRenderer
 
     private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
     {
+        ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
         if (options.CustomTextRuns.Count == 0)
         {
-            runs.Add(CreateChartLabelRun(text, x, y, width, height, plotBox, style, alignment));
+            runs.Add(CreateChartTextRun(text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment));
             return;
         }
 
-        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
+        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment);
+    }
+
+    private static ChartLayoutBox ResolveDataLabelTextClipBox(ChartPlotBox plotBox, ChartDataLabelOptions options, double x, double y, double width, double height)
+    {
+        if (!options.Layout.HasLayout)
+        {
+            return new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
+        }
+
+        double left = Math.Min(plotBox.X, x);
+        double top = Math.Min(plotBox.Y, y);
+        double right = Math.Max(plotBox.X + plotBox.Width, x + width);
+        double bottom = Math.Max(plotBox.Y + plotBox.Height, y + height);
+        return new ChartLayoutBox(left, top, Math.Max(1d, right - left), Math.Max(1d, bottom - top));
     }
 
     private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment)

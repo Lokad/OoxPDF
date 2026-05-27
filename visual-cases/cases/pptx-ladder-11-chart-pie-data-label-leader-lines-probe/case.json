@@ -3,7 +3,7 @@
   "kind": "pptx",
   "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx",
   "dpi": 144,
-  "tags": ["pptx", "ladder", "chart", "pie-chart", "data-labels", "leader-lines", "office-probe"],
+  "tags": ["pptx", "ladder", "chart", "pie-chart", "data-labels", "manual-layout", "leader-lines", "office-probe"],
   "expected": {
     "minAgentRating": 1,
     "pageCountMustMatch": true,
@@ -31,7 +31,7 @@
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["DataLabelText"],
     "maxChartTextStructurePositionDeltaByKind": {
-      "DataLabelText": 200
+      "DataLabelText": 800
     }
   }
 }

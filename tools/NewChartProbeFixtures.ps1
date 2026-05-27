@@ -198,6 +198,31 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
             # The generated PDF remains the source of truth for leader geometry.
         }
 
+        $manualLabelPositions = @(
+            @{ Left = 84; Top = 36 },
+            @{ Left = 462; Top = 182 },
+            @{ Left = 54; Top = 248 },
+            @{ Left = 156; Top = 372 }
+        )
+        for ($i = 1; $i -le $manualLabelPositions.Count; $i++) {
+            $point = $null
+            $pointLabel = $null
+            try {
+                $point = $series.Points($i)
+                $pointLabel = $point.DataLabel
+                $pointLabel.Left = $manualLabelPositions[$i - 1].Left
+                $pointLabel.Top = $manualLabelPositions[$i - 1].Top
+            }
+            catch {
+                # If Office refuses manual label coordinates, keep the automatic
+                # outside-end placement and let the PDF probe expose that fact.
+            }
+            finally {
+                if ($pointLabel -ne $null) { Release-ComObject $pointLabel }
+                if ($point -ne $null) { Release-ComObject $point }
+            }
+        }
+
         if (Test-Path -LiteralPath $output) {
             Remove-Item -LiteralPath $output -Force
         }
