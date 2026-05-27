@@ -10706,3 +10706,32 @@ Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipp
 `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-140953`. Structural summaries with
 `-ShowBounds` confirmed the sparse plot-box improvement, the unchanged large line fixture, the area
 plot/right-legend-X closure, and the frame-centered fill-legend Y improvement.
+
+Revision note, 2026-05-27: Moved vertical category tick labels onto Office's `c:crossBetween` semantics
+instead of the old slot-center fallback. Fresh XML/PDF inspection of the public area and sparse/blank fixtures
+showed that the relevant rule lives on the value axis: `crossBetween="midCat"` makes vertical category labels
+sit on category boundaries/tick marks, while `crossBetween="between"` keeps slot centers. `RenderChartCategoryLabels`
+now receives that scene-or-XML value-axis decision for bar, line, and area charts, and uses boundary coordinates
+only for vertical category labels. The first category label is still emitted; in the large area fixture Office
+and OOXPDF both classify it as `OuterChartText` because it falls outside the plot-box-derived text region.
+
+This retires the previous upper sparse-probe category-label gap. The sparse/blank probe's affected category
+label region is now count-aligned (`5/5`) with a maximum bounds delta of about `2.29 pt` instead of the earlier
+roughly `19 pt` slot-center error, while the lower rendered chart's category labels remain `5/5` with about
+`3.68 pt` maximum delta. The large area fixture now has category tick labels aligned at about `0.71 pt` and
+its outer first label aligned at about `0.85 pt`; the large line fixture remains stable with category labels
+under about `0.68 pt`.
+
+Remaining chart gaps are still structural and should stay open: fill-legend swatch Y has a residual `14.9 pt`
+sparse/area delta, sparse legend text remains about `6-8 pt` off depending on region, candidate line/area
+series strokes are still decomposed differently from Office's multi-segment paths, candidate clip-box counts
+remain lower than Office's repeated clipping structure, and the chart-series-line buckets still expose count
+deltas. These should be addressed through Office-PDF plot/legend/path/clipping structure rules, not by
+case-specific coordinates.
+
+Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-area-2series-port` passed at run `20260527-141906`;
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-141918`;
+`pptx-ladder-11-chart-line-3series-port` passed at run `20260527-141928`; and
+`SummarizeChartStructureDeltas.ps1 -Case pptx-ladder-11-chart-sparse-blank-points-probe -ByRegion -ShowBounds`
+confirmed category tick label count parity and the reduced sparse category-label deltas.

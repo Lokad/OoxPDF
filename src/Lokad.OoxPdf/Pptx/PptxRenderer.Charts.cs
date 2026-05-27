@@ -1012,7 +1012,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisCrossingValue, plotBox.Y, plotBox.Height, valueAxisReversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -1099,7 +1099,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxisForScale)));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1171,7 +1171,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis)));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -5875,7 +5875,7 @@ internal sealed partial class PptxRenderer
         return string.IsNullOrEmpty(options.Separator) ? ", " : options.Separator;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null)
+    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null, bool categoryLabelsOnTickMarks = false)
     {
         IReadOnlyList<string?> labels = labelVector.DenseValues();
         if (labels.Count == 0)
@@ -5919,7 +5919,10 @@ internal sealed partial class PptxRenderer
             {
                 double slotWidth = plotBox.Width / labels.Count;
                 width = slotWidth * PptxChartMetricRules.CategoryAxisVerticalWidthFactor;
-                x = plotBox.X + slotWidth * (i + 0.5d) - width / 2d;
+                double labelCenterX = categoryLabelsOnTickMarks && labels.Count > 1
+                    ? plotBox.X + plotBox.Width * i / (labels.Count - 1)
+                    : plotBox.X + slotWidth * (i + 0.5d);
+                x = labelCenterX - width / 2d;
                 double axisY = verticalAxisY ?? plotBox.Y;
                 y = axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
                 alignment = TextAlignment.Center;
@@ -6915,6 +6918,17 @@ internal sealed partial class PptxRenderer
             PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
 
         return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip, skip);
+    }
+
+    private static bool ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(PptxSceneChartAxis? sceneAxis, XElement? axis)
+    {
+        if (sceneAxis is not null && sceneAxis.CrossBetweenKind != PptxSceneChartAxisCrossBetween.Unknown)
+        {
+            return sceneAxis.CrossBetweenKind == PptxSceneChartAxisCrossBetween.MidpointCategory;
+        }
+
+        string? crossBetween = (string?)axis?.Element(ChartNamespace + "crossBetween")?.Attribute("val");
+        return PptxSceneBuilder.ParseChartAxisCrossBetween(crossBetween) == PptxSceneChartAxisCrossBetween.MidpointCategory;
     }
 
     private static int? ReadChartElementInt(XElement? chartElement, string elementName)
