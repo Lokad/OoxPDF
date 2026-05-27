@@ -1122,11 +1122,11 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(scatterPlot, scatterChart);
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, scatterChart);
-                XElement? xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : null;
-                XElement? yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : ReadChartValueAxisForChart(chartXml, scatterChart);
-                ChartValueExtents xExtents = ReadBubbleChartValueAxisExtents(xValueAxis, GetScatterXValueExtents(scatterSeries));
-                ChartValueExtents yExtents = ReadBubbleChartValueAxisExtents(yValueAxis, GetScatterYValueExtents(scatterSeries));
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, scatterPlot, chartXml, scatterChart);
+                ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
+                ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
+                ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(scatterSeries));
+                ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetScatterYValueExtents(scatterSeries));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderScatterChart(graphics, plotBox, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries, xExtents, yExtents);
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, scatterPlot, scatterChart, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -1146,18 +1146,18 @@ internal sealed partial class PptxRenderer
                 ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, bubblePlot, bubbleChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                IReadOnlyList<XElement> valueAxes = ReadChartValueAxesForChart(chartXml, bubbleChart);
-                XElement? xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : null;
-                XElement? yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : ReadChartValueAxisForChart(chartXml, bubbleChart);
-                ChartValueExtents xExtents = ReadBubbleChartValueAxisExtents(xValueAxis, GetBubbleXValueExtents(bubbleSeries));
-                ChartValueExtents yExtents = ReadBubbleChartValueAxisExtents(yValueAxis, GetBubbleYValueExtents(bubbleSeries));
-                ChartAxisUnits xAxisUnits = ResolveBubbleAxisUnits(ReadChartValueAxisUnits(xValueAxis), xExtents);
-                ChartAxisUnits yAxisUnits = ResolveBubbleAxisUnits(ReadChartValueAxisUnits(yValueAxis), yExtents);
-                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(sceneAxis: null, yValueAxis, theme);
+                IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, bubblePlot, chartXml, bubbleChart);
+                ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
+                ChartAxisSource yValueAxis = valueAxes.Count > 1 ? valueAxes[1] : xValueAxis;
+                ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetBubbleXValueExtents(bubbleSeries));
+                ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetBubbleYValueExtents(bubbleSeries));
+                ChartAxisUnits xAxisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(xValueAxis.SceneAxis, xValueAxis.XmlAxis), xExtents);
+                ChartAxisUnits yAxisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(yValueAxis.SceneAxis, yValueAxis.XmlAxis), yExtents);
+                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(yValueAxis.SceneAxis, yValueAxis.XmlAxis, theme);
                 DrawHorizontalChartGridlines(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, yExtents, yAxisUnits.MajorUnit, crossingValue: null, reversed: false, major: true, gridlineStyle.Major);
                 RenderScatterChart(graphics, plotBox, bubbleSeries, connectLines: false, bubble: true, seriesFills, seriesStrokes, [], [], xExtents, yExtents);
-                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis, null, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
-                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis, null, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisUnits, valueAxisReversed: false, horizontalBars: true));
+                fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisUnits, valueAxisReversed: false, horizontalBars: false));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -3582,6 +3582,25 @@ internal sealed partial class PptxRenderer
     private static ChartValueExtents ReadBubbleChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback)
     {
         return ReadChartValueAxisExtents(valueAxis, fallback, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount);
+    }
+
+    private static ChartValueExtents ReadSceneOrXmlBubbleChartValueAxisExtents(PptxSceneChartAxis? axis, XElement? valueAxis, ChartValueExtents fallback)
+    {
+        if (axis is null)
+        {
+            return ReadBubbleChartValueAxisExtents(valueAxis, fallback);
+        }
+
+        if (!axis.HasScaling)
+        {
+            return fallback;
+        }
+
+        double min = axis.Minimum ?? GetNiceChartAxisMin(fallback.Min, fallback.Max);
+        double max = axis.Maximum ?? GetNiceChartAxisMax(fallback.Max, min, PptxChartMetricRules.BubbleAxisBoundsTickTargetCount);
+        return max > min
+            ? new ChartValueExtents(min, max)
+            : fallback;
     }
 
     private static ChartValueExtents ReadChartValueAxisExtents(XElement? valueAxis, ChartValueExtents fallback, double boundsTickTargetCount, bool useNearMaximumHeadroom = false, double nearMaximumHeadroomRatio = PptxChartMetricRules.AxisNiceNearMaximumHeadroomRatio)

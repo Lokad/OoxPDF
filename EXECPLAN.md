@@ -9586,6 +9586,19 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed scatter and bubble value-axis rendering through scene-owned axis sources.
+The scatter/bubble branches now select their X/Y value axes with `ReadSceneOrXmlChartValueAxesForPlot`,
+derive axis extents and units from `PptxSceneChartAxis` when present, and pass scene axes into bubble
+gridline and label rendering instead of treating raw `valAx` XML as the only renderer input. The
+bubble-specific nice-scale target is preserved, so this is an ownership/alignment step rather than a new
+Office geometry rule.
+
+This does not solve exact bubble/scatter plot-box reserves, crossing behavior, or marker sizing. Those remain
+Office-PDF structural work items that need public evidence before metric changes.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved the remaining chart data-label display flags through the scene and
 renderer option boundary. `PptxSceneChartDataLabels`, per-label overrides, and renderer-facing
 `ChartDataLabelOptions`/`ChartDataLabelOverride` now carry `showLegendKey` and `showBubbleSize` alongside
