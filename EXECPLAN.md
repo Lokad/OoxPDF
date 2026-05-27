@@ -9599,6 +9599,19 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Made bar/combo value-axis locals originate from paired scene/XML sources. The
+primary bar axis, additional bar-plot axes, and combo line axes now start from
+`ReadSceneOrXmlChartValueAxesForPlot` before the existing renderer locals are assigned. This keeps the
+secondary-axis and mixed-family bookkeeping behavior unchanged while ensuring those locals no longer come
+from independent scene-axis and raw-XML searches that could drift by `axId`.
+
+The remaining work is to collapse more of the bar/combo secondary-axis flow onto source objects end to end,
+including category-axis pairing and plot-box reservation paths, before changing Office-visible axis crossing
+or reserve metrics.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed standalone line-chart primary value-axis rendering through a paired
 scene/XML axis source. The line renderer now obtains the primary value axis from
 `ReadSceneOrXmlChartValueAxesForPlot` before resolving scale, units, gridlines, crossing, reversed
