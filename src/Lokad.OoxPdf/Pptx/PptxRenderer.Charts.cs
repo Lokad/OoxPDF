@@ -6920,10 +6920,17 @@ internal sealed partial class PptxRenderer
     {
         if (sceneAxis is not null)
         {
-            return sceneAxis.MajorTickMarkKind;
+            return ResolveChartAxisTickMark(sceneAxis.MajorTickMarkKind);
         }
 
-        return PptxSceneBuilder.ParseChartAxisTickMark((string?)xmlAxis?.Element(ChartNamespace + "majorTickMark")?.Attribute("val") ?? "none");
+        return ResolveChartAxisTickMark(PptxSceneBuilder.ParseChartAxisTickMark((string?)xmlAxis?.Element(ChartNamespace + "majorTickMark")?.Attribute("val") ?? "none"));
+    }
+
+    private static PptxSceneChartAxisTickMark ResolveChartAxisTickMark(PptxSceneChartAxisTickMark tickMark)
+    {
+        return tickMark == PptxSceneChartAxisTickMark.Unknown
+            ? PptxSceneChartAxisTickMark.None
+            : tickMark;
     }
 
     private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)

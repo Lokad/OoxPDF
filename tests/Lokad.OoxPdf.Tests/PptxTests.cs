@@ -11366,6 +11366,33 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDataLabelPosition.OutsideEnd, (PptxSceneChartDataLabelPosition)position);
     }
 
+    public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+        TestAssert.Equal(PptxSceneChartAxisTickMark.Unknown, categoryAxis.MajorTickMarkKind);
+        TestAssert.Equal(string.Empty, categoryAxis.MajorTickMark);
+
+        System.Reflection.MethodInfo readMajorTickMark = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartAxisMajorTickMark",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart major tick-mark resolver.");
+        object tickMark = readMajorTickMark.Invoke(null, [categoryAxis, null]) ?? throw new InvalidOperationException("Expected resolved major tick mark.");
+
+        TestAssert.Equal(PptxSceneChartAxisTickMark.None, (PptxSceneChartAxisTickMark)tickMark);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

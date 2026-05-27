@@ -554,6 +554,13 @@ High-priority actions:
   another silent `_`-arm behavior from chart geometry and keeps the unsupported token available for later
   Office-PDF probes. Validation: focused `UnknownDataLabel` passed (`1` test, `0` failures); focused non-slow
   `pptx-charts` passed with `65` tests, `0` failures, and `0` skips.
+- [x] 2026-05-27: Align scene-backed category-axis major-tick defaults with the raw XML fallback.
+  The scene model still preserves a missing `majorTickMark` as `Unknown` plus an empty raw token, but the
+  renderer boundary now resolves `Unknown -> None` before line-chart category-axis tick geometry runs. This
+  fixes a source/raw mismatch where the no-scene path defaulted missing ticks to `none`, while the scene path
+  could accidentally draw outside ticks because `Unknown` fell through the tick drawing logic. Validation:
+  focused `MajorTickMark` passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66`
+  tests, `0` failures, and `0` skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens
