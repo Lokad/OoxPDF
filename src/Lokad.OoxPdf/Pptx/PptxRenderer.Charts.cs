@@ -321,8 +321,8 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<ChartRadarSeries> CompactRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
-            .Select(vector => new ChartRadarSeries(vector.CompactValues(), vector))
-            .Where(item => item.Values.Count != 0)
+            .Select(vector => new ChartRadarSeries(vector.CompactPoints(), vector))
+            .Where(item => item.Points.Count != 0)
             .ToArray();
     }
 
@@ -3292,7 +3292,7 @@ internal sealed partial class PptxRenderer
             plotBox,
             GetRadarChartGeometry(plotBox, style),
             style,
-            Math.Max(3, series.Max(item => item.Values.Count)),
+            Math.Max(3, series.Max(item => item.Points.Count)),
             ResolveRadarLabelRules(style));
     }
 
@@ -7864,7 +7864,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
     {
-        return GetLineChartValueExtents(series.Select(item => item.Values).ToArray());
+        return GetLineChartValueExtents(series
+            .Select(item => item.Points.Select(point => point.Value!.Value).ToArray())
+            .ToArray());
     }
 
     private static ChartValueExtents GetLineChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
@@ -8438,11 +8440,11 @@ internal sealed partial class PptxRenderer
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<double> values = series[seriesIndex].Values;
+            IReadOnlyList<ChartIndexedNumberPoint> values = series[seriesIndex].Points;
             var points = new (double X, double Y)[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                double value = i < values.Count ? Math.Max(0d, values[i]) : 0d;
+                double value = i < values.Count ? Math.Max(0d, values[i].Value!.Value) : 0d;
                 double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
                 double angle = GetRadarPointAngle(i, pointCount);
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
@@ -8795,7 +8797,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points, ChartIndexedScatterSeries Source);
 
-    private readonly record struct ChartRadarSeries(IReadOnlyList<double> Values, ChartIndexedNumberVector Source);
+    private readonly record struct ChartRadarSeries(IReadOnlyList<ChartIndexedNumberPoint> Points, ChartIndexedNumberVector Source);
 
     private readonly record struct ScatterPoint(
         double X,

@@ -9632,18 +9632,18 @@ visible behavior.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
-Revision note, 2026-05-27: Preserved indexed value vectors through the radar renderer boundary without
-changing radar geometry. Radar layout and drawing still use the same compact numeric values as before, but the
-new `ChartRadarSeries` record carries those values beside the originating `ChartIndexedNumberVector`. This
-keeps source formula/cache metadata, sparse point indices, blank/non-numeric state, workbook sidecars, and
-format-code evidence attached to the radar series while existing filled/marker radar output remains stable.
+Revision note, 2026-05-27: Preserved indexed value points through the radar renderer boundary without
+changing radar geometry. Radar layout and drawing still use the same compact numeric sequence as before, but
+the `ChartRadarSeries` record now carries the active `ChartIndexedNumberPoint` records beside the originating
+`ChartIndexedNumberVector`. This keeps source point indices, active cache values, source formula/cache
+metadata, blank/non-numeric state, workbook sidecars, and format-code evidence attached to the radar series
+while existing filled/marker radar output remains stable.
 
 This does not implement dense sparse-point radar geometry or Office-backed filled-radar gap behavior. It is a
 behavior-neutral prerequisite so a future public radar probe can change point-domain semantics deliberately
 instead of first recovering provenance that the renderer had already discarded.
 
-Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
-skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
 Revision note, 2026-05-27: Removed the obsolete Cartesian data-label formatter overload that accepted

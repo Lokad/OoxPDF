@@ -11313,6 +11313,10 @@ internal static class PptxTests
         typedNumberVectors.SetValue(vector, 0);
         object[] radarSeries = (((System.Collections.IEnumerable?)compactRadarSeries.Invoke(null, [typedNumberVectors])) ?? throw new InvalidOperationException("Expected compact radar series.")).Cast<object>().ToArray();
         TestAssert.True(radarSeries.Length == 1, "Expected positive cache value to remain an active radar series.");
+        object[] radarPoints = (((System.Collections.IEnumerable?)radarSeries[0].GetType().GetProperty("Points")?.GetValue(radarSeries[0])) ?? throw new InvalidOperationException("Expected radar series to preserve active point records.")).Cast<object>().ToArray();
+        TestAssert.True(radarPoints.Length == 1, "Expected radar series to preserve one active point record.");
+        TestAssert.True((int?)radarPoints[0].GetType().GetProperty("Index")?.GetValue(radarPoints[0]) == 0, "Expected radar active point to preserve the source point index.");
+        TestAssert.True((double?)radarPoints[0].GetType().GetProperty("Value")?.GetValue(radarPoints[0]) == 99d, "Expected radar active point to preserve the rendered cache value.");
         object radarSource = radarSeries[0].GetType().GetProperty("Source")?.GetValue(radarSeries[0]) ?? throw new InvalidOperationException("Expected radar series to preserve its source vector.");
         object[] radarWorkbookPoints = (((System.Collections.IEnumerable?)radarSource.GetType().GetProperty("WorkbookPoints")?.GetValue(radarSource)) ?? throw new InvalidOperationException("Expected radar source vector workbook sidecar points.")).Cast<object>().ToArray();
         TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
