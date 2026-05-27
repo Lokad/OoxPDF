@@ -9599,6 +9599,19 @@ Office-PDF structural work items that need public evidence before metric changes
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Routed chart plot-box reservation helpers through paired axis sources where the
+plot context is already available. `HasInsideValueAxisCrossing`, horizontal-bar inner plot-box derivation,
+stacked value-label reserve adjustment, and the line/no-title/right-legend tick-label estimator now use
+`ReadSceneOrXmlChartValueAxesForPlot` or `ReadSceneOrXmlChartCategoryAxisForPlot` for their existing
+calculations. The reserve formulas and fallback metrics are unchanged; this only aligns the metadata source
+used by layout estimation with the source used by rendering.
+
+The remaining direct axis lookups are mostly raw helper internals and chart-axis style construction; those
+need a separate pass because they mix primary/secondary axis style defaults and fallback XML behavior.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Routed main bar-chart category-label rendering through the paired category-axis
 source. The supported bar branch now resolves category-axis visibility, label styling, and label emission
 from `ReadSceneOrXmlChartCategoryAxisForPlot` instead of independently selecting a scene category axis and
