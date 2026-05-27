@@ -11451,6 +11451,42 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)barDirection);
     }
 
+    public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:scatterChart>
+                  <c:scatterStyle val="bogus"/>
+                  <c:ser><c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                </c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, chart.Plots[0].ScatterStyleKind);
+        TestAssert.Equal("bogus", chart.Plots[0].ScatterStyle);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:scatterChart><c:scatterStyle val="lineMarker"/></c:scatterChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "scatterChart").Single();
+        System.Reflection.MethodInfo readScatterStyle = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartScatterStyle",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-style resolver.");
+        object scatterStyle = readScatterStyle.Invoke(null, [chart.Plots[0], mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved scatter style.");
+        System.Reflection.MethodInfo resolveLineConnection = typeof(PptxRenderer).GetMethod(
+            "ResolveChartScatterLineConnection",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected scatter line-connection resolver.");
+        object connectLines = resolveLineConnection.Invoke(null, [scatterStyle]) ?? throw new InvalidOperationException("Expected resolved scatter line-connection state.");
+
+        TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)scatterStyle);
+        TestAssert.True((bool)connectLines == false, "Expected unknown scatterStyle to keep the scene-owned no-line default instead of borrowing XML fallback lineMarker.");
+    }
+
     public static void PptxChartUnknownRadarStyleUsesSceneAuthoritativeDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

@@ -643,6 +643,14 @@ High-priority actions:
   evidence before deciding whether the default should be `lineMarker`, `marker`, or another behavior. Validation:
   focused `RadarStyle` passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66` tests,
   `0` failures, and `0` skips; full non-slow suite passed with `314` tests, `0` failures, and `7` slow skips.
+- [x] 2026-05-27: Name the chart scatter-style line-connection boundary without changing scatter rendering.
+  `ReadSceneOrXmlChartScatterStyle` already kept scene-owned unknown `c:scatterStyle` tokens authoritative, but
+  the renderer still encoded the effective line-connection decision inline as a boolean check. The new
+  `ResolveChartScatterLineConnection` makes the current behavior explicit: only `line` and `lineMarker`
+  connect points with a series line, while `Unknown` keeps the current no-line behavior and does not borrow a
+  mismatched XML fallback. This deliberately does not solve full scatter semantics: Office-PDF evidence is still
+  required before changing `smooth`, `smoothMarker`, or `none` marker/line behavior. Validation: focused
+  non-slow `pptx-charts` passed with `84` tests, `0` failures, and `0` skips.
 - [x] 2026-05-27: Rechecked the private PPTX acceptance corpus after the chart enum-default ladder.
   Private run `20260527-225147` compared all `84` reference pages against `84` candidate pages with zero
   dimension mismatches. Deck-level MAE remained `7.702155`, max page MAE remained `16.412422`, and changed-pixel

@@ -342,6 +342,15 @@ internal sealed partial class PptxRenderer
             : PptxSceneBuilder.ParseChartScatterStyle((string?)plotElement.Element(ChartNamespace + "scatterStyle")?.Attribute("val"));
     }
 
+    private static bool ResolveChartScatterLineConnection(PptxSceneChartScatterStyle scatterStyle)
+    {
+        return scatterStyle switch
+        {
+            PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker => true,
+            _ => false
+        };
+    }
+
     private static PptxSceneChartRadarStyle ReadSceneOrXmlChartRadarStyle(PptxSceneChartPlot? scenePlot, XElement plotElement)
     {
         return scenePlot is not null
@@ -1215,7 +1224,7 @@ internal sealed partial class PptxRenderer
             if (scatterSeries.Count != 0)
             {
                 PptxSceneChartScatterStyle scatterStyle = ReadSceneOrXmlChartScatterStyle(scatterPlot, scatterChart);
-                bool connectLines = scatterStyle is PptxSceneChartScatterStyle.Line or PptxSceneChartScatterStyle.LineMarker;
+                bool connectLines = ResolveChartScatterLineConnection(scatterStyle);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
