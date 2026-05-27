@@ -330,10 +330,12 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
     $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
     $classifyReferenceArgs = @{
         InputPath = $referenceGraphicsOperations
+        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
         Output = $referenceChartStructures
     }
     $classifyCandidateArgs = @{
         InputPath = $candidateGraphicsOperations
+        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
         Output = $candidateChartStructures
     }
     if ($manifest.expected.compareChartGraphicsStructurePageNumber -ne $null) {
@@ -546,10 +548,12 @@ if ($hasChartTextGlobalTolerance -or $hasChartTextKindTolerances) {
     $candidateChartStructures = Join-Path $candidateGraphicsInspect "chart-structures.json"
     $classifyReferenceGraphicsArgs = @{
         InputPath = $referenceGraphicsOperations
+        TextOperations = Join-Path $referenceGraphicsInspect "text-operations.json"
         Output = $referenceChartStructures
     }
     $classifyCandidateGraphicsArgs = @{
         InputPath = $candidateGraphicsOperations
+        TextOperations = Join-Path $candidateGraphicsInspect "text-operations.json"
         Output = $candidateChartStructures
     }
     if ($manifest.expected.compareChartTextStructurePageNumber -ne $null) {

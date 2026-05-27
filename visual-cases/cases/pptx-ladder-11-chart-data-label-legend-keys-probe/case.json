@@ -13,10 +13,17 @@
     "maxChangedPixelRatioAtThreshold16": 0.035,
     "maxChartGraphicsStructureBoundsDeltaByKind": {
       "MarkerCandidate": 20.0,
-      "StrokeMarkerCandidate": 20.0
+      "StrokeMarkerCandidate": 20.0,
+      "DataLabelLegendKeyFillCandidate": 20.0,
+      "DataLabelLegendKeyStrokeCandidate": 20.0
     },
     "maxChartGraphicsStructureLineWidthDelta": 0.1,
-    "compareChartGraphicsStructureKinds": ["MarkerCandidate", "StrokeMarkerCandidate"],
+    "compareChartGraphicsStructureKinds": [
+      "MarkerCandidate",
+      "StrokeMarkerCandidate",
+      "DataLabelLegendKeyFillCandidate",
+      "DataLabelLegendKeyStrokeCandidate"
+    ],
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
     "additionalChartGraphicsStructureComparisons": [
@@ -27,6 +34,17 @@
       },
       {
         "kinds": ["StrokeMarkerCandidate"],
+        "maxBoundsDelta": 20.0,
+        "maxLineWidthDelta": 0.1,
+        "matchStrokeColors": true
+      },
+      {
+        "kinds": ["DataLabelLegendKeyFillCandidate"],
+        "maxBoundsDelta": 20.0,
+        "matchFillColors": true
+      },
+      {
+        "kinds": ["DataLabelLegendKeyStrokeCandidate"],
         "maxBoundsDelta": 20.0,
         "maxLineWidthDelta": 0.1,
         "matchStrokeColors": true

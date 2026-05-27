@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $InputPath,
 
+    [string] $TextOperations,
+
     [string] $Output,
 
     [int] $PageNumber = 0,
@@ -20,6 +22,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Read-JsonArray($path) {
+    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
+        return ,@()
+    }
+
     $items = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
     if ($null -eq $items) {
         return ,@()
@@ -36,10 +42,25 @@ function Width($op) { return [double]$op.MaxX - [double]$op.MinX }
 function Height($op) { return [double]$op.MaxY - [double]$op.MinY }
 function CenterX($op) { return ([double]$op.MinX + [double]$op.MaxX) / 2d }
 function CenterY($op) { return ([double]$op.MinY + [double]$op.MaxY) / 2d }
+function TextX($op) { if ($op.EffectiveX -ne $null) { return [double]$op.EffectiveX } return [double]$op.X }
+function TextY($op) { if ($op.EffectiveY -ne $null) { return [double]$op.EffectiveY } return [double]$op.Y }
 function Round([double]$value) { return [Math]::Round($value, 6) }
 function IntValue($value) { if ($null -eq $value) { return 0 } return [int]$value }
 function Is-ReasonableAxisPairBounds([double]$minX, [double]$minY, [double]$maxX, [double]$maxY) {
     return ($maxX - $minX) -ge 40d -and ($maxY - $minY) -ge 40d
+}
+
+function TextValue($op) {
+    if ($op.DecodedText -ne $null) {
+        return [string]$op.DecodedText
+    }
+
+    return [string]$op.Payload
+}
+
+function Is-NumericText([string]$text) {
+    $trimmed = $text.Trim()
+    return $trimmed -match '^[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)%?$'
 }
 
 function PathOperators($op) {
@@ -592,9 +613,58 @@ function Reclassify-InPlotSeriesLines($structures, [double]$tolerance) {
     }
 }
 
+function Add-DataLabelLegendKeyStructures($structures, $textOps) {
+    if ($null -eq $textOps -or $textOps.Count -eq 0) {
+        return
+    }
+
+    $numericText = @($textOps | Where-Object { Is-NumericText (TextValue $_) })
+    if ($numericText.Count -eq 0) {
+        return
+    }
+
+    $snapshot = [object[]]$structures.ToArray()
+    foreach ($structure in $snapshot) {
+        $kind = [string]$structure.Kind
+        if ($kind -ne "MarkerCandidate" -and $kind -ne "StrokeMarkerCandidate") {
+            continue
+        }
+
+        $width = Width $structure
+        $height = Height $structure
+        if ($width -gt 24d -or $height -gt 24d) {
+            continue
+        }
+
+        $matched = $false
+        foreach ($text in $numericText) {
+            if ([int]$text.PageNumber -ne [int]$structure.PageNumber) {
+                continue
+            }
+
+            $fontSize = if ($text.FontSize -ne $null) { [double]$text.FontSize } else { 0d }
+            $gap = (TextX $text) - [double]$structure.MaxX
+            $verticalTolerance = [Math]::Max(8d, $fontSize * 0.9d)
+            if ($gap -ge 0d -and $gap -le 28d -and [Math]::Abs((TextY $text) - (CenterY $structure)) -le $verticalTolerance) {
+                $matched = $true
+                break
+            }
+        }
+
+        if ($matched) {
+            $targetKind = if ($kind -eq "StrokeMarkerCandidate") { "DataLabelLegendKeyStrokeCandidate" } else { "DataLabelLegendKeyFillCandidate" }
+            $structures.Add((Copy-StructureAsKind $targetKind $structure))
+        }
+    }
+}
+
 $ops = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
     $ops = @($ops | Where-Object { [int]$_.PageNumber -eq $PageNumber })
+}
+$textOps = Read-JsonArray $TextOperations
+if ($PageNumber -gt 0) {
+    $textOps = @($textOps | Where-Object { [int]$_.PageNumber -eq $PageNumber })
 }
 
 $structures = New-Object System.Collections.Generic.List[object]
@@ -904,6 +974,7 @@ if ($polarRegions.Count -gt 1) {
 
 Assign-RegionIndexes ([object[]]$structures.ToArray())
 Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
+Add-DataLabelLegendKeyStructures $structures $textOps
 
 $ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)
 $ordered | Format-Table -AutoSize

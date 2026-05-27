@@ -577,6 +577,15 @@ High-priority actions:
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR` count of `1`; worst pages by metric remained `53`, `32`, `50`, `36`, and `49`.
   This confirms the value-axis orientation/crossing/crossBetween and tick-label-position default cleanup was
   behavior-neutral on the current private corpus while making renderer boundaries more explicit.
+- [x] 2026-05-27: Add first-class public structure buckets for chart data-label legend keys. The existing
+  `pptx-ladder-11-chart-data-label-legend-keys-probe` was still gating those shapes as generic
+  `MarkerCandidate`/`StrokeMarkerCandidate`, which made label keys indistinguishable from plot markers and normal
+  legend swatches. `ClassifyPdfChartGraphics.ps1` now accepts optional inspected text operations and copies small
+  marker-like graphics immediately to the left of numeric data-label text into
+  `DataLabelLegendKeyFillCandidate` and `DataLabelLegendKeyStrokeCandidate` buckets while preserving the generic
+  buckets. The public probe now gates the new buckets for bounds, segment/path counts, fill colors, stroke colors,
+  and line widths. Validation: `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run
+  `20260527-231953`, comparing `8` fill-key and `8` stroke-key structures in both Office and candidate PDFs.
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit
