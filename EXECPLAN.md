@@ -11554,3 +11554,28 @@ glyph paths under the same conditions as regular slide text. Those need public O
 role-specific structural gates are claimed.
 
 Validation: focused non-slow `pptx-charts` passed with `58` tests, `0` failures, and `0` skips.
+
+Revision note, 2026-05-27: Rechecked the private `lokad-value-based` case after the chart-wide data-label
+manual-layout slice. Private run `20260527-214643` compared all `84` reference pages against `84` candidate
+pages with zero dimension mismatches. Deck-level MAE stayed `7.702155`, changed-pixel ratio at threshold 16
+stayed `0.10323`, and the only diagnostic remained the existing private-safe
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remained a non-schema issue with matching dimensions, MAE
+`2.9774262152777777`, changed16 `0.046558641975308644`, and SSIM `0.9182837809349319`.
+
+This keeps the current private signal pointed away from chart schema/data-label layout regressions. The
+remaining private diagnostic is still the known JPEG/PDF recolor architecture gap, and slide-17 follow-up
+should continue through public evidence for ordinary shape/connector/text behavior rather than private deck
+content.
+
+Revision note, 2026-05-27: Investigated the next chart source-policy temptation around `plotVisOnly` and
+did not change rendering. The scene model preserves `c:plotVisOnly`, renderer-facing numeric/text vectors
+already carry workbook sidecars, and `WorkbookPointsForPlotVisibility(true)` can filter hidden source
+rows/columns. However active chart geometry still deliberately uses saved chart-cache points. Promoting the
+workbook visibility projection into active rendering would reopen the rejected formula-only hydration
+heuristic: readable workbook values and hidden-row metadata are not enough to prove Office's saved chart
+display state.
+
+The durable open item is therefore narrower and more explicit: design an Office-PDF-backed source/cache
+policy that decides when `plotVisOnly`, `externalData/autoUpdate`, cache presence, workbook sidecars, and
+hidden rows/columns are allowed to affect active rendered points. Until then, `plotVisOnly` should remain
+preserved and testable as structure, not silently consumed as a workbook-over-cache rule.
