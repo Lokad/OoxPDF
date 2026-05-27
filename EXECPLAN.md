@@ -1773,8 +1773,18 @@ High-priority actions:
     `PptxSceneChartShapeStyle` now carries a nullable `PptxSceneGradientFill`, and chart-area, plot-area,
     title, legend, and data-label shape-style conversion passes it through to the existing PDF axial-shading
     renderer. The raw XML chart-style fallback reuses the same gradient parser instead of a separate
-    chart-local parser. Gradient alpha/effect inheritance remain open. Validation: focused `pptx-charts`
+    chart-local parser. Effect inheritance remains open. Validation: focused `pptx-charts`
     tests passed `40/40`.
+  - [x] Preserve alpha-bearing linear gradient stops and render the exact uniform-alpha subset through
+    PDF graphics state alpha. `TryReadShapeGradientFill` no longer drops otherwise-supported linear
+    gradients only because their stops carry alpha, the renderer's gradient stop value keeps that alpha,
+    and the axial-shading paint path wraps gradients in `/ca` only when every stop has the same alpha.
+    Diagnostics follow the same boundary: uniform stop alpha is supported, while variable stop alpha remains
+    warned instead of approximated. Validation: focused `pptx-charts` passed `52/52`; focused
+    `pptx-shapes` passed `16/16`.
+  - [ ] Add a real PDF soft-mask or equivalent transparency-function backend before rendering non-uniform
+    per-stop gradient alpha. The current PDF axial shading model is RGB-only, so varying stop alpha must
+    remain structurally represented but not approximated by averaged or stop-flattened opacity.
 - [x] 2026-05-24: Move explicit chart-axis line style ownership into `PptxSceneChartAxis`. Supported bar
   and line chart rendering now consumes scene-owned value/category axis strokes first, including the existing
   explicit `a:ln/a:noFill` hidden-axis-line case represented as a transparent zero-width stroke, while raw

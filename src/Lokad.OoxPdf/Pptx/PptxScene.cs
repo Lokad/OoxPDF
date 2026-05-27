@@ -3308,7 +3308,6 @@ internal sealed class PptxSceneBuilder
             .OrderBy(stop => stop.Offset)
             .ToArray();
         if (stops.Length < 2 ||
-            stops.Any(stop => stop.Alpha < 0.999d) ||
             gradientFill.Element(DrawingNamespace + "lin") is not { } linear)
         {
             fill = new PptxSceneGradientFill(false, 0d, []);

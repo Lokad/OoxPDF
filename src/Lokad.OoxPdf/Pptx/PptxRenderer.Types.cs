@@ -1179,7 +1179,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record GradientFill(double AngleDegrees, IReadOnlyList<GradientStop> Stops);
 
-    private readonly record struct GradientStop(double Offset, RgbColor Color);
+    private readonly record struct GradientStop(double Offset, RgbColor Color, double Alpha);
 
     private readonly record struct CropRect(double Left, double Top, double Right, double Bottom)
     {

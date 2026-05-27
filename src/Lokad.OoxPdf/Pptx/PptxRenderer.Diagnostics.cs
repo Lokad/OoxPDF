@@ -161,11 +161,31 @@ internal sealed partial class PptxRenderer
             ?.Elements(DrawingNamespace + "gs")
             .ToArray() ?? [];
         return stops.Length < 2 ||
-            stops.Any(stop => stop.Elements().FirstOrDefault(color => color.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr" or "sysClr" or "scrgbClr" or "hslClr") is null) ||
-            stops.Descendants(DrawingNamespace + "alpha").Any(alpha =>
-                alpha.Attribute("val") is { } value &&
-                int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) &&
-                parsed < 100000);
+            stops.Any(stop => stop.Elements().FirstOrDefault(IsGradientColorElement) is null) ||
+            !HasSupportedGradientStopAlpha(stops);
+    }
+
+    private static bool IsGradientColorElement(XElement color)
+    {
+        return color.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr" or "sysClr" or "scrgbClr" or "hslClr";
+    }
+
+    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
+    {
+        int first = ReadGradientStopAlpha(stops[0]);
+        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
+    }
+
+    private static int ReadGradientStopAlpha(XElement stop)
+    {
+        XElement? alpha = stop
+            .Elements()
+            .FirstOrDefault(IsGradientColorElement)
+            ?.Element(DrawingNamespace + "alpha");
+        return alpha?.Attribute("val") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? Math.Clamp(parsed, 0, 100000)
+            : 100000;
     }
 
     private static bool IsUnsupportedEffect(XElement effect)
@@ -250,6 +270,12 @@ internal sealed partial class PptxRenderer
         XElement? fill = color?.Parent;
         XElement? owner = fill?.Parent;
         XElement? lineOwner = owner?.Parent;
+        XElement? gradientStopList = fill?.Parent;
+        XElement? gradientFill = gradientStopList?.Parent;
+        bool supportedUniformGradientFill = fill?.Name == DrawingNamespace + "gs" &&
+            gradientStopList?.Name == DrawingNamespace + "gsLst" &&
+            gradientFill?.Name == DrawingNamespace + "gradFill" &&
+            !IsUnsupportedGradientFill(gradientFill);
         bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == PresentationNamespace + "spPr";
         bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
@@ -270,6 +296,6 @@ internal sealed partial class PptxRenderer
             owner?.Name == DrawingNamespace + "effectLst";
         bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
             owner?.Name == DrawingNamespace + "effectLst";
-        return !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
+        return !supportedUniformGradientFill && !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
     }
 }

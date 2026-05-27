@@ -755,12 +755,30 @@ internal sealed partial class PptxRenderer
         double half = Math.Abs(dx) * width / 2d + Math.Abs(dy) * height / 2d;
         double centerX = x + width / 2d;
         double centerY = y + height / 2d;
+        bool alphaState = TryGetUniformGradientAlpha(gradient.Stops, out double alpha) && alpha < 0.999d;
+        if (alphaState)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(alpha, 1d);
+        }
+
         graphics.PaintAxialShading(
             centerX - dx * half,
             centerY - dy * half,
             centerX + dx * half,
             centerY + dy * half,
             gradient.Stops.Select(stop => new PdfShadingStop(stop.Offset, stop.Color.Red, stop.Color.Green, stop.Color.Blue)).ToArray());
+        if (alphaState)
+        {
+            graphics.RestoreState();
+        }
+    }
+
+    private static bool TryGetUniformGradientAlpha(IReadOnlyList<GradientStop> stops, out double alpha)
+    {
+        double candidate = stops[0].Alpha;
+        alpha = candidate;
+        return stops.All(stop => Math.Abs(stop.Alpha - candidate) <= 0.001d);
     }
 
     private static void DrawPresetArcStroke(
@@ -2260,7 +2278,7 @@ internal sealed partial class PptxRenderer
     private static GradientFill? ToGradientFill(PptxSceneGradientFill fill)
     {
         return fill.HasGradient
-            ? new GradientFill(fill.AngleDegrees, fill.Stops.Select(stop => new GradientStop(stop.Offset, stop.Color)).ToArray())
+            ? new GradientFill(fill.AngleDegrees, fill.Stops.Select(stop => new GradientStop(stop.Offset, stop.Color, stop.Alpha)).ToArray())
             : null;
     }
 
