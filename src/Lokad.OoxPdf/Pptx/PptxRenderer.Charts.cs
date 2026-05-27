@@ -227,13 +227,6 @@ internal sealed partial class PptxRenderer
         return sources;
     }
 
-    private static string ReadSceneOrXmlChartValue(string? sceneValue, XElement element, string childName, string defaultValue = "")
-    {
-        return !string.IsNullOrEmpty(sceneValue)
-            ? sceneValue
-            : (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? defaultValue;
-    }
-
     private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
     {
         if (scenePlot is not null)
