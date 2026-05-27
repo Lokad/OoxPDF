@@ -11937,6 +11937,7 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
+        TestAssert.Contains(" re W n", pdf);
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Scatter charts with legend-key-only labels should render without static fallback diagnostics.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Scatter charts with legend-key-only labels should not emit unsupported chart diagnostics.");
     }

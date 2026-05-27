@@ -8904,55 +8904,64 @@ internal sealed partial class PptxRenderer
         graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
         graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
 
-        for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
+        graphics.SaveState();
+        try
         {
-            ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
-            ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
-            if (fill.Alpha < 1d || stroke.Alpha < 1d)
+            ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
+            for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
-                graphics.SaveState();
-                graphics.SetAlpha(fill.Alpha, stroke.Alpha);
-            }
-
-            SetChartStroke(graphics, stroke);
-            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
-            foreach (ScatterPoint point in series[seriesIndex].Points)
-            {
-                (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
-                points.Add((pointX, pointY));
-            }
-
-            if (connectLines)
-            {
-                if (IsSmoothSeries(seriesIndex, smoothSeries))
+                ChartSeriesFill fill = ChartSeriesColor(seriesIndex, seriesFills);
+                ChartSeriesStroke stroke = ChartSeriesStrokeColor(seriesIndex, seriesStrokes, 1.2d);
+                if (fill.Alpha < 1d || stroke.Alpha < 1d)
                 {
-                    StrokeSmoothChartPath(graphics, points);
-                }
-                else
-                {
-                    StrokeStraightChartPath(graphics, points);
-                }
-            }
-
-            foreach (ScatterPoint point in series[seriesIndex].Points)
-            {
-                (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
-                if (bubble)
-                {
-                    graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
-                }
-                else
-                {
-                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
+                    graphics.SaveState();
+                    graphics.SetAlpha(fill.Alpha, stroke.Alpha);
                 }
 
-            }
+                SetChartStroke(graphics, stroke);
+                graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+                var points = new List<(double X, double Y)>(series[seriesIndex].Points.Count);
+                foreach (ScatterPoint point in series[seriesIndex].Points)
+                {
+                    (double pointX, double pointY, _) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
+                    points.Add((pointX, pointY));
+                }
 
-            if (fill.Alpha < 1d || stroke.Alpha < 1d)
-            {
-                graphics.RestoreState();
+                if (connectLines)
+                {
+                    if (IsSmoothSeries(seriesIndex, smoothSeries))
+                    {
+                        StrokeSmoothChartPath(graphics, points);
+                    }
+                    else
+                    {
+                        StrokeStraightChartPath(graphics, points);
+                    }
+                }
+
+                foreach (ScatterPoint point in series[seriesIndex].Points)
+                {
+                    (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(plotBox, point, bubble, xExtents, yExtents, maxBubbleSize);
+                    if (bubble)
+                    {
+                        graphics.FillEllipse(pointX - radius, pointY - radius, radius * 2d, radius * 2d);
+                    }
+                    else
+                    {
+                        DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), fill.Color, stroke.Color);
+                    }
+
+                }
+
+                if (fill.Alpha < 1d || stroke.Alpha < 1d)
+                {
+                    graphics.RestoreState();
+                }
             }
+        }
+        finally
+        {
+            graphics.RestoreState();
         }
     }
 

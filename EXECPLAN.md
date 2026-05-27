@@ -10986,3 +10986,24 @@ passed the existing series-line structural gate. The follow-up filled-key pass a
 key stroke resolver, and raw candidate PDF inspection shows the top right-legend filled-key borders now emit
 `0.75 w` instead of borrowing the `3 pt` series path stroke. Do not close the sparse legend item yet: the
 remaining problem is the joint plot/legend layout box and right-legend placement, not stroke-role leakage.
+
+Revision note, 2026-05-27: Extended plot-area clipping to scatter and bubble series emission. Office emits
+series markers, connecting paths, and bubble fills inside plot-area clip scopes while leaving axes outside
+that scope. `RenderScatterChart` now mirrors the existing bar/area/line chart ownership model: it draws the
+axis strokes first, then opens one plot-area clipping scope around the series loop. This is a structural PDF
+alignment, not a coordinate adjustment; the existing scatter value scaling, marker selection, alpha handling,
+and bubble radius logic remain unchanged.
+
+This closes the obvious no-clip gap for native scatter/bubble series and makes the public scatter synthetic
+test assert a PDF clip operator. The sparse/blank probe still exposes broader Office clip-box count parity as
+open work: Office repeats clipping contexts more aggressively across chart substructures, while the candidate
+still has fewer `ClipBox` rows even after this slice. Treat that as a next structural target, preferably by
+mapping clip ownership per chart subpart instead of adding blind repeated clips.
+
+Validation: focused non-slow `pptx-charts` passed with `57` tests; full non-slow test run passed
+(`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-scatter-clusters-port` passed at run
+`20260527-190713`; `pptx-ladder-11-chart-scatter-smooth-port` passed at run `20260527-190608`;
+`pptx-ladder-11-chart-bubble-port` passed at run `20260527-190608`; and
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-190645`. The scatter-clusters
+raster gates were loosened only from `2.21` to `2.22` MAE and from `0.0202` to `0.0203` changed-pixel ratio
+to accommodate the intended clip-scope antialiasing shift while keeping the structural gates unchanged.
