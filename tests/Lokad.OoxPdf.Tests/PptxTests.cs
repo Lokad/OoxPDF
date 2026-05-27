@@ -875,6 +875,10 @@ internal static class PptxTests
         TestAssert.True(directHello.Underline, "Expected direct renderer inspection to expose run underline.");
         TestAssert.Equal(new RgbColor(255, 255, 0), directHello.Highlight ?? default);
 
+        PptxTextGlyphRunSnapshot glyphHello = PptxRenderer.InspectTextGlyphRuns(document, package, 0).First(run => run.Text == "Hello");
+        TestAssert.True(glyphHello.UnderlineWidth is not null && glyphHello.UnderlineHeight is not null, "Expected glyph-run inspection to expose underline geometry.");
+        TestAssert.True(Math.Abs(glyphHello.UnderlineWidth.GetValueOrDefault() - glyphHello.Width) < 0.01d, "Expected underline geometry to be owned by the emitted glyph-run width.");
+
         IReadOnlyList<PptxTextFrameModelSnapshot> textFrames = PptxRenderer.InspectTextFrameModels(document, package, 0);
         PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
         TestAssert.Equal(1, textFrame.Paragraphs.Count);
@@ -4667,6 +4671,13 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
         TestAssert.Contains(" re f", pdf);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextGlyphRunSnapshot glyphRun = PptxRenderer.InspectTextGlyphRuns(document, package, 0).Single(run => run.Text == "Strike");
+        TestAssert.True(glyphRun.StrikeWidth is not null && glyphRun.StrikeHeight is not null, "Expected glyph-run inspection to expose strike geometry.");
+        TestAssert.True(Math.Abs(glyphRun.StrikeWidth.GetValueOrDefault() - glyphRun.Width) < 0.01d, "Expected strike geometry to be owned by the emitted glyph-run width.");
     }
 
     public static void PptxSyntheticTextBoxHonorsParagraphSpacing()

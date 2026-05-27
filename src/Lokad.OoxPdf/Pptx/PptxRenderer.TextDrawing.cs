@@ -44,6 +44,13 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
+                TextDecorationRectangle? underlineRectangle = run.Underline && TryGetUnderlineRectangle(rendered.Font, glyphRun, out TextDecorationRectangle underline)
+                    ? underline
+                    : null;
+                TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike)
+                    ? strike
+                    : null;
+
                 glyphRuns.Add(new PptxTextGlyphRunSnapshot(
                     run.Text,
                     glyphRun.X,
@@ -54,6 +61,14 @@ internal sealed partial class PptxRenderer
                     highlightRectangle?.Y,
                     highlightRectangle?.Width,
                     highlightRectangle?.Height,
+                    underlineRectangle?.X,
+                    underlineRectangle?.Y,
+                    underlineRectangle?.Width,
+                    underlineRectangle?.Height,
+                    strikeRectangle?.X,
+                    strikeRectangle?.Y,
+                    strikeRectangle?.Width,
+                    strikeRectangle?.Height,
                     emissionSpan.FrameIndex,
                     emissionSpan.ParagraphIndex,
                     emissionSpan.LineIndex,
@@ -765,16 +780,19 @@ internal sealed partial class PptxRenderer
             if (run.Underline)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-                double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
-                double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
-                graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
+                if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
+                {
+                    graphics.FillRectangle(underline.X, underline.Y, underline.Width, underline.Height);
+                }
             }
 
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
+                if (TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike))
+                {
+                    graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
+                }
             }
 
             if (needsTextAlpha)
@@ -812,16 +830,19 @@ internal sealed partial class PptxRenderer
             if (run.Underline)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
-                double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
-                double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
-                graphics.FillRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
+                if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
+                {
+                    graphics.FillRectangle(underline.X, underline.Y, underline.Width, underline.Height);
+                }
             }
 
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                graphics.FillRectangle(glyphRun.X, PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize), glyphRun.Width, PptxTextMetricRules.StrikeThickness(run.FontSize));
+                if (TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike))
+                {
+                    graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
+                }
             }
 
             if (needsTextAlpha)
@@ -1096,6 +1117,27 @@ internal sealed partial class PptxRenderer
         double highlightY = baselineY - highlightDescent;
         rectangle = new TextHighlightRectangle(run.X, highlightY, lineWidth, highlightHeight);
         return true;
+    }
+
+    private static bool TryGetUnderlineRectangle(PdfEmbeddedFont embedded, TextGlyphRun glyphRun, out TextDecorationRectangle rectangle)
+    {
+        TextRun run = glyphRun.Source;
+        double underlineScale = run.FontSize / embedded.Font.UnitsPerEm;
+        double underlineThickness = Math.Max(PptxTextMetricRules.MinimumStrokeWidth, Math.Abs(embedded.Font.Post.UnderlineThickness) * underlineScale);
+        double underlineY = glyphRun.BaselineY + (embedded.Font.Post.UnderlinePosition - Math.Abs(embedded.Font.Post.UnderlineThickness)) * underlineScale;
+        rectangle = new TextDecorationRectangle(glyphRun.X, underlineY, glyphRun.Width, underlineThickness);
+        return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && underlineThickness > 0d;
+    }
+
+    private static bool TryGetStrikeRectangle(TextGlyphRun glyphRun, out TextDecorationRectangle rectangle)
+    {
+        TextRun run = glyphRun.Source;
+        rectangle = new TextDecorationRectangle(
+            glyphRun.X,
+            PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize),
+            glyphRun.Width,
+            PptxTextMetricRules.StrikeThickness(run.FontSize));
+        return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && rectangle.Height > 0d;
     }
 
     private static bool BaselineIntersectsClip(TextRun run, double baselineY)

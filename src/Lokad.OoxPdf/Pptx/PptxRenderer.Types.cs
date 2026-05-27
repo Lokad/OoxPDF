@@ -170,6 +170,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct TextHighlightRectangle(double X, double Y, double Width, double Height);
 
+    private readonly record struct TextDecorationRectangle(double X, double Y, double Width, double Height);
+
     private sealed record PptxPositionedTextSpan(
         PptxTextRunModel? SourceRun,
         PptxTextLineBoxLayout? LineBox,

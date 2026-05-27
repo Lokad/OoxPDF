@@ -1316,10 +1316,10 @@ High-priority actions:
 - [x] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
   highlight drawing now consumes positioned spans, line-box baselines, and glyph-span natural widths; underline and
   strike drawing consume emitted glyph-run width from positioned spans for PPTX shape and table text. The glyph-run
-  inspection model now exposes computed highlight rectangle geometry (`HighlightX/Y/Width/Height`) and highlight
-  color, so future Office-PDF rectangle comparisons can target layout-owned geometry directly instead of inferring it
-  from legacy `TextRun` drawing. Validation: focused non-slow `pptx-typography` passed (`87 passed, 0 failed, 2
-  skipped`), and `PptxInspect` builds warning-free.
+  inspection model now exposes computed highlight rectangle geometry (`HighlightX/Y/Width/Height`), underline
+  rectangles, strike rectangles, and highlight color, so future Office-PDF rectangle comparisons can target
+  layout-owned geometry directly instead of inferring it from legacy `TextRun` drawing. Validation: focused non-slow
+  `pptx-typography` passed (`87 passed, 0 failed, 2 skipped`), and `PptxInspect` builds warning-free.
 - [x] Re-run the justified typography probe after glyph-span emission:
   `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
   Office word-position and line-box parity, not a glyph-span bridge regression.
