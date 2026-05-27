@@ -1362,7 +1362,7 @@ High-priority actions:
   presence. Bar/column, line, area, pie/doughnut, Cartesian data labels, category-axis labels, radar labels,
   polar legends, series-name labels, and series-name legend sizing now consume indexed vectors or
   provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
-  radar geometry, some stacked/extent helpers, scatter/bubble entrypoints, polar data-label text, and chart
+  some stacked/extent helpers, scatter/bubble entrypoints, polar data-label text, and chart
   text/layout decisions still need to carry the same typed data records all the way to Office-PDF-backed
   layout and source/cache freshness decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
@@ -1531,6 +1531,16 @@ High-priority actions:
     polar geometry remains matched; private run `artifacts/private-visual/lokad-value-based/20260527-035424`
     stayed at 84/84 compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and
     only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Render radar geometry from the dense indexed value domain:
+    `BuildRadarSeries` now keeps sparse point slots from `ChartIndexedNumberVector.DensePoints()` instead of
+    compacting active points before spoke placement. Missing, blank, or non-numeric values still render as
+    zero-radius radar points for compatibility, but they no longer shift later source indices to earlier
+    spokes. `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` now locks this dense radar projection with
+    an explicit sparse-point record. Validation: focused non-slow `pptx-charts` passed
+    (`46 passed, 0 failed, 0 skipped`); public radar visual cases passed
+    (`pptx-ladder-11-chart-radar-2series-port` run `20260527-095917`,
+    `pptx-ladder-11-chart-radar-filled-port` run `20260527-095933`); full non-slow console runner passed
+    (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source

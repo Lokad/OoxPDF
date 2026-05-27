@@ -355,11 +355,11 @@ internal sealed partial class PptxRenderer
         return normalized < 0d ? normalized + 360d : normalized;
     }
 
-    private static IReadOnlyList<ChartRadarSeries> CompactRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
+    private static IReadOnlyList<ChartRadarSeries> BuildRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
-            .Select(vector => new ChartRadarSeries(vector.CompactPoints(), vector))
-            .Where(item => item.Points.Count != 0)
+            .Select(vector => new ChartRadarSeries(vector.DensePoints(), vector))
+            .Where(item => item.Points.Any(point => point?.Value is not null))
             .ToArray();
     }
 
@@ -1203,7 +1203,7 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
             IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSceneOrXmlChartSeriesVectors(radarPlot, radarChart, workbook);
-            IReadOnlyList<ChartRadarSeries> radarSeries = CompactRadarSeries(radarSeriesVectors);
+            IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
@@ -7825,8 +7825,12 @@ internal sealed partial class PptxRenderer
 
     private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
     {
-        double maxValue = Math.Max(0d, series.SelectMany(item => item.Points).Select(point => point.Value!.Value).DefaultIfEmpty(0d).Max());
-        double minValue = Math.Min(0d, series.SelectMany(item => item.Points).Select(point => point.Value!.Value).DefaultIfEmpty(0d).Min());
+        IEnumerable<double> values = series
+            .SelectMany(item => item.Points)
+            .Where(point => point?.Value is not null)
+            .Select(point => point!.Value!.Value!.Value);
+        double maxValue = Math.Max(0d, values.DefaultIfEmpty(0d).Max());
+        double minValue = Math.Min(0d, values.DefaultIfEmpty(0d).Min());
         return new ChartValueExtents(minValue, maxValue);
     }
 
@@ -8372,11 +8376,11 @@ internal sealed partial class PptxRenderer
 
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<ChartIndexedNumberPoint> values = series[seriesIndex].Points;
+            IReadOnlyList<ChartIndexedNumberPoint?> values = series[seriesIndex].Points;
             var points = new (double X, double Y)[pointCount];
             for (int i = 0; i < pointCount; i++)
             {
-                double value = i < values.Count ? Math.Max(0d, values[i].Value!.Value) : 0d;
+                double value = i < values.Count && values[i]?.Value is { } pointValue ? Math.Max(0d, pointValue) : 0d;
                 double pointRadius = GetChartValuePlotRatio(extents, value, false) * geometry.Radius;
                 double angle = GetRadarPointAngle(i, pointCount);
                 points[i] = (geometry.CenterX + Math.Cos(angle) * pointRadius, geometry.CenterY + Math.Sin(angle) * pointRadius);
@@ -8729,7 +8733,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points, ChartIndexedScatterSeries Source);
 
-    private readonly record struct ChartRadarSeries(IReadOnlyList<ChartIndexedNumberPoint> Points, ChartIndexedNumberVector Source);
+    private readonly record struct ChartRadarSeries(IReadOnlyList<ChartIndexedNumberPoint?> Points, ChartIndexedNumberVector Source);
 
     private readonly record struct ScatterPoint(
         double X,
