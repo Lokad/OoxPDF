@@ -7116,11 +7116,17 @@ internal sealed partial class PptxRenderer
             {
                 if (horizontalBars)
                 {
-                    DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                    RenderInChartPlotAreaClip(
+                        graphics,
+                        plotBox,
+                        () => DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
                 }
                 else
                 {
-                    DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                    RenderInChartPlotAreaClip(
+                        graphics,
+                        plotBox,
+                        () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
                 }
             }
 
@@ -7128,11 +7134,17 @@ internal sealed partial class PptxRenderer
             {
                 if (horizontalBars)
                 {
-                    DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisAutoTickTargetCount);
+                    RenderInChartPlotAreaClip(
+                        graphics,
+                        plotBox,
+                        () => DrawVerticalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major, valueAxisAutoTickTargetCount));
                 }
                 else
                 {
-                    DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+                    RenderInChartPlotAreaClip(
+                        graphics,
+                        plotBox,
+                        () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major));
                 }
             }
 
@@ -7147,7 +7159,7 @@ internal sealed partial class PptxRenderer
                     double axisY = horizontalBars
                         ? (axesStyle.ValueAxisBottomSide ? plotY : plotY + plotHeight)
                         : valueAxisCrossingY;
-                    graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, axisY, plotX + plotWidth, axisY));
                 }
             }
 
@@ -7160,7 +7172,7 @@ internal sealed partial class PptxRenderer
                     double axisX = horizontalBars
                         ? (axesStyle.CategoryAxisRightSide ? plotX + plotWidth : plotX)
                         : (axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX);
-                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
 
@@ -7170,7 +7182,7 @@ internal sealed partial class PptxRenderer
                 {
                     SetChartStroke(graphics, secondaryValueAxisStroke);
                     double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
 

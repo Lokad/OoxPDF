@@ -11115,3 +11115,21 @@ Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed wit
 test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
 passed at run `20260527-193149`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-193206`;
 and `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-193206`.
+
+Revision note, 2026-05-27: Extended gridline/axis subpart plot clips to bar and column charts. `RenderBarChart`
+now brackets vertical or horizontal gridline groups and in-plot axis strokes with the shared even-odd plot clip
+helper, matching the line/area chart ownership rule while leaving bar-series rectangles unchanged for a later
+helper-threading pass. This is deliberately narrower than full bar series clipping because clustered,
+stacked, horizontal, and negative-bar rectangle emission is split across several helpers and should be
+threaded through plot-box ownership as its own slice.
+
+Representative public bar/column fixtures keep their visual and structural gates green. The clustered column
+fixture's candidate dominant plot-clip count rose from `3` to `4`; the clustered horizontal bar fixture kept
+the same gated axis/gridline geometry while using scoped clips around the existing gridline/axis subparts.
+Remaining bar work is explicit: plot-clip ownership for fill/stroke rectangle subparts, including negative
+fallback borders and pattern fills, without changing the existing bar geometry rules.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-column-clustered-port` passed at
+run `20260527-193434`; and `pptx-ladder-11-chart-bar-clustered-port` passed at run `20260527-193451`.
+One earlier parallel visual invocation hit the known shared CLI `obj` lock; the serial rerun passed.
