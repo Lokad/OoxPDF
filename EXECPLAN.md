@@ -11266,3 +11266,22 @@ prototype assertions, but the sparse/blank visual failed its chart-graphics stru
 `20260527-200113` because the candidate gained a third `GridlineAxisPlotBoxCandidate` region absent from
 the Office reference. Raster metrics stayed within the old loose thresholds, which is why the structural gate
 was essential here.
+
+Revision note, 2026-05-27: Corrected the public data-label legend-key probe so it actually carries visible
+data-label legend keys. The first committed generator attempted `ShowLegendKey = $true` while all label text
+payloads were disabled; Office saved that chart with `c:showLegendKey val="0"`, so the resulting PDF only
+contained ordinary bar fills and was not a valid key oracle. The generator now keeps value labels visible
+while enabling legend keys, and the regenerated fixture saves `c:showLegendKey val="1"` plus
+`c:showVal val="1"` for both series.
+
+Fresh PDF inspection at run `20260527-200550` shows eight small filled `MarkerCandidate` structures in both
+Office and candidate PDFs, matching the eight visible data-label keys. Office also emits eight matching
+`StrokeMarkerCandidate` outlines around those keys, while the candidate currently emits only filled keys.
+The manifest now adds a filled-key structural gate with color, segment-count, and path-command checks, but
+does not yet gate key outlines or introduce a global `DataLabelLegendKeyCandidate` classifier because that
+would need text-aware context to avoid confusing these keys with true plot markers in line/scatter charts.
+
+Validation: the corrected `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run
+`20260527-200550` with mean absolute error `2.4059537760416667` and changed-pixel ratio at threshold 16 of
+`0.03015962577160494`. Manual comparison of the filled marker structures passed with `8/8` matches under a
+`20 pt` bounds tolerance while preserving fill color and path-command parity.

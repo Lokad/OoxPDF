@@ -461,7 +461,7 @@ function Configure-LegendKeyDataLabelProbeChart($Chart, [int]$ChartType, [int]$D
         try {
             [void]($series.ApplyDataLabels())
             $labels = $series.DataLabels()
-            $labels.ShowValue = $false
+            $labels.ShowValue = $true
             $labels.ShowSeriesName = $false
             $labels.ShowCategoryName = $false
             $labels.ShowLegendKey = $true

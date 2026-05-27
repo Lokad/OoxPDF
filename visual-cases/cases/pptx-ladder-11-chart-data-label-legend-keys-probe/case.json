@@ -10,7 +10,16 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 2.8,
-    "maxChangedPixelRatioAtThreshold16": 0.035
+    "maxChangedPixelRatioAtThreshold16": 0.035,
+    "additionalChartGraphicsStructureComparisons": [
+      {
+        "kinds": ["MarkerCandidate"],
+        "maxBoundsDelta": 20.0,
+        "matchFillColors": true,
+        "matchSegmentCounts": true,
+        "matchPathCommandCounts": true
+      }
+    ]
   },
   "allowedUnsupportedFeatures": [
     "PPTX_CHART_STATIC_FALLBACK"
