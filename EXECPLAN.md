@@ -11133,3 +11133,24 @@ Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed wit
 test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-column-clustered-port` passed at
 run `20260527-193434`; and `pptx-ladder-11-chart-bar-clustered-port` passed at run `20260527-193451`.
 One earlier parallel visual invocation hit the known shared CLI `obj` lock; the serial rerun passed.
+
+Revision note, 2026-05-27: Threaded plot-box ownership into bar and column series rectangle emission.
+`RenderBarChart` now passes the resolved `ChartPlotBox` through clustered vertical columns, clustered
+horizontal bars, stacked columns, and stacked horizontal bars. Each actual series rectangle fill is bracketed
+with the shared even-odd plot-area clip helper, and each explicit or negative-fallback border is bracketed as
+its own stroke subpart. The border helper deliberately checks whether a real border will be emitted before
+opening a clip, so absent optional strokes do not create clip-only no-ops.
+
+This closes the specific bar-series work item opened by the previous gridline/axis slice without changing
+bar geometry, stacking math, negative-value fallback stroke selection, or pattern-fill internals. Pattern
+fills still use their local rectangle clip inside the fill operation; that remains a separate structural
+question if Office evidence shows a different nested clipping strategy. Legend-key plot clips and
+scatter/bubble subpart ownership remain open, and legend keys should not be blindly plot-clipped because
+legends can live outside the plot area.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-column-clustered-port` passed at
+run `20260527-193715`; `pptx-ladder-11-chart-bar-clustered-port` passed at run `20260527-193728`;
+`pptx-ladder-11-chart-column-negative-port` passed at run `20260527-193742`;
+`pptx-ladder-11-chart-column-stacked-port` passed at run `20260527-193846`; and
+`pptx-ladder-11-chart-bar-stacked-port` passed at run `20260527-193857`.
