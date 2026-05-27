@@ -561,6 +561,14 @@ High-priority actions:
   could accidentally draw outside ticks because `Unknown` fell through the tick drawing logic. Validation:
   focused `MajorTickMark` passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66`
   tests, `0` failures, and `0` skips.
+- [x] 2026-05-27: Make scene-owned `displayBlanksAs` authoritative even for unknown tokens.
+  `PptxSceneChartOptions` still preserves an unknown raw `dispBlanksAs` value, but chart rendering now resolves
+  the effective value from the scene alone when a scene chart exists, using `Unknown -> Gap` as the explicit
+  default. The XML fallback remains only for no-scene chart paths. A regression passes a deliberately
+  mismatched XML fallback with `span` next to a scene chart preserving `dispBlanksAs="bogus"` and verifies that
+  the renderer chooses `Gap`, so future work cannot silently reintroduce renderer-local XML ownership.
+  Validation: focused `DisplayBlanksAs` passed (`2` tests, `0` failures); focused non-slow `pptx-charts`
+  passed with `66` tests, `0` failures, and `0` skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

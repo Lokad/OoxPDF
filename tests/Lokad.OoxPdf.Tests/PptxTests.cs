@@ -11393,6 +11393,35 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartAxisTickMark.None, (PptxSceneChartAxisTickMark)tickMark);
     }
 
+    public static void PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea><c:dispBlanksAs val="bogus"/></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Unknown, chart.Options.DisplayBlanksAsKind);
+        TestAssert.Equal("bogus", chart.Options.DisplayBlanksAs);
+
+        XDocument mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:dispBlanksAs val="span"/></c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readDisplayBlanksAs = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartDisplayBlanksAs",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected display-blanks resolver.");
+        object displayBlanksAs = readDisplayBlanksAs.Invoke(null, [chart, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved display-blanks value.");
+
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)displayBlanksAs);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

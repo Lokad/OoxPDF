@@ -341,17 +341,20 @@ internal sealed partial class PptxRenderer
 
     private static PptxSceneChartDisplayBlanksAs ReadSceneOrXmlChartDisplayBlanksAs(PptxSceneChart? sceneChart, XDocument chartXml)
     {
-        if (sceneChart?.Options.DisplayBlanksAsKind is { } sceneValue && sceneValue != PptxSceneChartDisplayBlanksAs.Unknown)
+        if (sceneChart is not null)
         {
-            return sceneValue;
+            return ResolveChartDisplayBlanksAs(sceneChart.Options.DisplayBlanksAsKind);
         }
 
         XElement? chart = chartXml.Root?.Element(ChartNamespace + "chart");
-        return PptxSceneBuilder.ParseChartDisplayBlanksAs((string?)chart?.Element(ChartNamespace + "dispBlanksAs")?.Attribute("val")) switch
-        {
-            PptxSceneChartDisplayBlanksAs.Unknown => PptxSceneChartDisplayBlanksAs.Gap,
-            PptxSceneChartDisplayBlanksAs parsed => parsed
-        };
+        return ResolveChartDisplayBlanksAs(PptxSceneBuilder.ParseChartDisplayBlanksAs((string?)chart?.Element(ChartNamespace + "dispBlanksAs")?.Attribute("val")));
+    }
+
+    private static PptxSceneChartDisplayBlanksAs ResolveChartDisplayBlanksAs(PptxSceneChartDisplayBlanksAs value)
+    {
+        return value == PptxSceneChartDisplayBlanksAs.Unknown
+            ? PptxSceneChartDisplayBlanksAs.Gap
+            : value;
     }
 
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
