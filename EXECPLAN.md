@@ -10381,3 +10381,20 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`); sparse/blank visual probe passed at run
 `20260527-114937` with unchanged MAE `2.424721016589506`, changed16 `0.028974247685185184`, SSIM
 `0.6863076919549375`, and diagnostic `PPTX_CHART_MISSING_CACHED_DATA` for `/ppt/charts/chart2.xml`.
+
+Revision note, 2026-05-27: Made vertical chart legend clip width content-aware. The sparse/blank probe exposed
+a structural PDF issue after the candidate-only chart was removed: right-side legend text was emitted but
+clipped to short fragments because vertical legend width came from a plot-box ratio even when the renderer had
+the series-name text widths. `RenderChartLegend` now sizes every non-horizontal legend from marker width,
+text gap, and estimated legend text width, while preserving the old plot-box-ratio width as a floor for
+non-frame-anchored filled legends.
+
+This is still not Office-perfect legend layout. It does not solve the sparse probe's plot-box offsets, legend
+swatch size, or exact auto-layout reserve. It removes a narrower PDF-structure mismatch: the legend clipping
+box now encloses the emitted legend text instead of cutting it after a few glyphs.
+
+Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-115440` with full visible legend
+names and MAE `2.5235042920524693`, changed16 `0.02972318672839506`, SSIM `0.6702107685870062`;
+`pptx-ladder-11-chart-line-markers-port` passed at run `20260527-115325`; and
+`pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-115440`.

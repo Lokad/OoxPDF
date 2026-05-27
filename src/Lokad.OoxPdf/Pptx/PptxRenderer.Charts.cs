@@ -4522,9 +4522,11 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.LegendTextGap;
         double width = horizontal
             ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, fontSize, markerSize))
-            : sideFillLegendInFullFrame
-                ? GetFrameAnchoredSideFillLegendWidth(entries, fontSize, markerWidth, textGap)
-            : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio);
+            : Math.Max(
+                sideStrokeLegend || sideFillLegendInFullFrame
+                    ? 0d
+                    : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio),
+                GetSideLegendContentWidth(entries, fontSize, markerWidth, textGap));
         double x = layout.PositionKind switch
         {
             PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
@@ -4629,7 +4631,7 @@ internal sealed partial class PptxRenderer
         return Math.Max(1d, width);
     }
 
-    private static double GetFrameAnchoredSideFillLegendWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerWidth, double textGap)
+    private static double GetSideLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerWidth, double textGap)
     {
         double contentWidth = entries.Count == 0
             ? 0d
