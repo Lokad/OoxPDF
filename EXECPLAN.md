@@ -1271,9 +1271,14 @@ High-priority actions:
 - [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
   offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
   probes before broad visual MAE gates.
-- [ ] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
+- [x] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
   font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
-  `TJ` array construction.
+  `TJ` array construction:
+  `PptxTextSpanLayout` and `PptxPositionedTextSpan` now carry layout-owned glyph spans through wrapping,
+  coalescing, highlighting, table text, fallback-font splitting, and glyph-run inspection. `TextRun` still exists as
+  a source/emission bridge, but it no longer owns glyph placement for shape/table text; the glyph span owns code
+  points, glyph ids, advances, leading hidden-control adjustments, natural/layout widths, and typeface/resource
+  provenance before PDF `TJ` arrays are written.
 - [x] Introduce the first explicit glyph-run emission object:
   `TextGlyphRun` now owns glyph hex, `TJ` positioning array, baseline, line width, and synthetic style
   flags before PDF text operators are written. This is behavior-neutral but separates emission from layout.
