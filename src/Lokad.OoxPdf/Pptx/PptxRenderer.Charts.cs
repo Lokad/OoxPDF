@@ -365,7 +365,7 @@ internal sealed partial class PptxRenderer
 
     private static int CountRenderableSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
-        return series.Count(vector => vector.CompactPoints().Count != 0);
+        return series.Count(vector => vector.DensePoints().Any(point => point?.Value is not null));
     }
 
     private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)

@@ -1552,6 +1552,12 @@ High-priority actions:
     `pptx-ladder-11-chart-scatter-smooth-port` run `20260527-100255`,
     `pptx-ladder-11-chart-bubble-port` run `20260527-100302`); full non-slow console runner passed
     (`265 passed, 0 failed, 7 skipped`).
+  - [x] Move renderability gates off compact chart points:
+    `CountRenderableSeries` now tests dense indexed points for at least one renderable value instead of using
+    `CompactPoints().Count`. This is behavior-neutral for current renderability decisions, but it removes the
+    last generic chart-family gate that depended on compacting sparse source vectors before layout. Validation:
+    focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console runner
+    passed (`265 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
