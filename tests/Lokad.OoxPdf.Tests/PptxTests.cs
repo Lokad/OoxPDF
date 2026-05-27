@@ -11287,6 +11287,8 @@ internal static class PptxTests
             "ToCompactScatterSeries",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected compact scatter-series projection.");
         object compactScatter = toCompactScatterSeries.Invoke(null, [scatterSeries]) ?? throw new InvalidOperationException("Expected compact scatter-series.");
+        object compactScatterSource = compactScatter.GetType().GetProperty("Source")?.GetValue(compactScatter) ?? throw new InvalidOperationException("Expected compact scatter-series to preserve its indexed source vectors.");
+        TestAssert.True((bool?)compactScatterSource.GetType().GetProperty("ReadBubbleSize")?.GetValue(compactScatterSource) == true, "Expected compact scatter-series source to preserve bubble-size channel ownership.");
         object[] scatterPoints = (((System.Collections.IEnumerable?)compactScatter.GetType().GetProperty("Points")?.GetValue(compactScatter)) ?? throw new InvalidOperationException("Expected compact scatter points.")).Cast<object>().ToArray();
         TestAssert.True(scatterPoints.Length == 1, "Expected stale positive cache value to remain an active scatter point.");
         object scatterXPoint = scatterPoints[0].GetType().GetProperty("XPoint")?.GetValue(scatterPoints[0]) ?? throw new InvalidOperationException("Expected scatter point to preserve its active X point.");

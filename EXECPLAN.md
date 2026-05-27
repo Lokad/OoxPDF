@@ -9582,6 +9582,21 @@ current supported label path reflect the long-term data model.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Preserved parent indexed scatter/bubble channel vectors on compact scatter
+series. Individual `ScatterPoint` records already kept active X/Y/bubble points and workbook sidecars, but the
+parent `ScatterSeries` still exposed only rendered point lists. `ScatterSeries` now carries its originating
+`ChartIndexedScatterSeries`, preserving the X, Y, and optional bubble-size vectors, source formulas, point
+counts, cache text, and workbook sidecars beside the current scalar rendering points.
+
+This does not change scatter or bubble chart output, axis scaling, or data-label support. It closes a parent
+ownership gap so future scatter/bubble label layout, source/cache freshness, and `plotVisOnly` work can use
+the same channel vectors that created the rendered points instead of trying to reconstruct them from X/Y/size
+doubles.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Kept series-name records through legend reserve sizing and removed the final
 collapsed `ReadSceneOrXmlChartSeriesNames` helper. Right-legend plot-box heuristics still estimate text width
 from the active legend string, but they now obtain that string from `ChartSeriesNameRecord.ActiveName`, the

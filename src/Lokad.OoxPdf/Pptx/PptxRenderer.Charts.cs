@@ -428,7 +428,7 @@ internal sealed partial class PptxRenderer
         int count = Math.Min(xPoints.Count, yPoints.Count);
         if (count == 0)
         {
-            return new ScatterSeries([]);
+            return new ScatterSeries([], series);
         }
 
         var points = new ScatterPoint[count];
@@ -451,7 +451,7 @@ internal sealed partial class PptxRenderer
                 bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null);
         }
 
-        return new ScatterSeries(points);
+        return new ScatterSeries(points, series);
     }
 
     private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
@@ -8757,7 +8757,7 @@ internal sealed partial class PptxRenderer
             Fallback: fallback));
     }
 
-    private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points);
+    private readonly record struct ScatterSeries(IReadOnlyList<ScatterPoint> Points, ChartIndexedScatterSeries Source);
 
     private readonly record struct ScatterPoint(
         double X,
