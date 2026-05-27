@@ -2015,7 +2015,7 @@ internal sealed partial class PptxRenderer
 
         if (tailKind == LineEndKind.Arrow)
         {
-            AppendClosedLinePath(graphics, points);
+            AppendClosedLinePath(graphics, points, explicitClosingLine: true);
             AppendOfficeArrowHeadPath(graphics, tip.X, tip.Y, -direction.X, -direction.Y, -normal.X, -normal.Y, lineWidth, splitTrailingCurve: true);
             graphics.FillCurrentPath();
         }
@@ -2027,7 +2027,7 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
+    private static void AppendClosedLinePath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points, bool explicitClosingLine = false)
     {
         if (points.Count == 0)
         {
@@ -2038,6 +2038,11 @@ internal sealed partial class PptxRenderer
         for (int i = 1; i < points.Count; i++)
         {
             graphics.LineTo(points[i].X, points[i].Y);
+        }
+
+        if (explicitClosingLine)
+        {
+            graphics.LineTo(points[0].X, points[0].Y);
         }
 
         graphics.ClosePath();

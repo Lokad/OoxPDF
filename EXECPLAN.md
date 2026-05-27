@@ -800,6 +800,16 @@ High-priority actions:
   `seg=244,line=239,curve=3` to `seg=249,line=243,curve=4` against Office `seg=250,line=244,curve=4`. This is a
   structural improvement, not full completion: one body line/segment and the exact analytic offset-curve geometry
   remain open.
+- [x] 2026-05-27: Match Office's explicit close-return line on arrow-tail curved connector fills:
+  the arrow-tail filled connector body now emits the explicit final `l` back to the start point before `h`, which
+  aligns the public connector transform probe's filled-path segment and path-command counts without changing the
+  geometry. The generic visual harness now exposes non-chart graphics segment/path-count gates, and the public
+  connector manifest gates `Fill/f` operations by bounds, operator, segment count, command counts, and command
+  operators. Validation: focused non-slow `pptx-shapes` passed (`16 passed, 0 failed, 0 skipped`); public
+  connector transform probe run `20260527-184334` passed with the four filled connector paths at Office parity
+  (`seg=250,line=244,curve=4,move=2,close=2`). Remaining work is still the long-term analytical offset-curve
+  model: the body is structurally counted like Office, but its connector outline is still sampled rather than
+  derived from exact offset cubic geometry.
 - [x] Make public arrow-tail connector filled outlines curve-bearing without changing triangle-tail behavior:
   the public connector transform probe uses `tailEnd type="arrow"` and Office emits curve-bearing filled regions
   there. Candidate arrow-tail fills now emit smooth cubic PDF segments through the sampled outline, preserving the
