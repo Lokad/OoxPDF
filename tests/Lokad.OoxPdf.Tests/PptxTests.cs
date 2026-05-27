@@ -237,6 +237,10 @@ internal static class PptxTests
                     <cs:lnRef idx="1"/>
                     <cs:spPr><a:ln w="12700" cap="rnd" cmpd="thickThin"><a:solidFill><a:srgbClr val="102030"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></cs:spPr>
                   </cs:gridlineMajor>
+                  <cs:gridlineMinor>
+                    <cs:lnRef idx="1"/>
+                    <cs:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="203040"><a:alpha val="70000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
+                  </cs:gridlineMinor>
                 </cs:style>
                 """,
             ["ppt/embeddings/chart-data.xlsx"] = "fake workbook package bytes for scene resource ownership",
@@ -698,6 +702,14 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.HasLine == true, "Expected hidden chart minor gridline line style in the scene model.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Width ?? -1d);
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineLine.Alpha ?? -1d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineStyleLine.HasLine == true, "Expected chart-style major gridline line candidate in the scene model.");
+        TestAssert.Equal(new RgbColor(16, 32, 48), slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineStyleLine.Color ?? default);
+        TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineStyleLine.Width ?? 0d);
+        TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.Axes[1].MajorGridlineStyleLine.Alpha ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineStyleLine.HasLine == true, "Expected chart-style minor gridline line candidate in the scene model.");
+        TestAssert.Equal(new RgbColor(32, 48, 64), slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineStyleLine.Color ?? default);
+        TestAssert.Equal(0.5d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineStyleLine.Width ?? 0d);
+        TestAssert.Equal(0.7d, slide.SlideNodes[4].Chart?.Axes[1].MinorGridlineStyleLine.Alpha ?? 0d);
         TestAssert.Equal("Aptos", slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(9d, slide.SlideNodes[4].Chart?.Axes[1].TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(101, 67, 33), slide.SlideNodes[4].Chart?.Axes[1].TextStyle.Color ?? default);

@@ -850,6 +850,8 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneLineStyle Line,
     PptxSceneLineStyle MajorGridlineLine,
     PptxSceneLineStyle MinorGridlineLine,
+    PptxSceneLineStyle MajorGridlineStyleLine,
+    PptxSceneLineStyle MinorGridlineStyleLine,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartTickLabelPosition TickLabelPositionKind,
     string TickLabelPosition,
@@ -1851,7 +1853,7 @@ internal sealed class PptxSceneBuilder
             : ReadChartStylePart(package, chartPart.Name, theme);
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme);
-        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme);
+        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, stylePart);
         return new PptxSceneChart(
             relationshipId,
             targetPartName,
@@ -2509,7 +2511,7 @@ internal sealed class PptxSceneBuilder
         return points;
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxSceneChartStyle stylePart)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -2562,6 +2564,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartAxisLine(axis, theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
                 ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
+                ReadChartStyleRoleLine(stylePart, "gridlineMajor"),
+                ReadChartStyleRoleLine(stylePart, "gridlineMinor"),
                 ReadChartTextStyleOverride(axis, theme),
                 ParseChartTickLabelPosition(tickLabelPosition),
                 tickLabelPosition,
@@ -2579,6 +2583,17 @@ internal sealed class PptxSceneBuilder
         }
 
         return axes;
+    }
+
+    private static PptxSceneLineStyle ReadChartStyleRoleLine(PptxSceneChartStyle stylePart, string role)
+    {
+        PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);
+        if (entry.ShapeLine.HasLine)
+        {
+            return entry.ShapeLine;
+        }
+
+        return entry.Line;
     }
 
     private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)

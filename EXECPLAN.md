@@ -1831,6 +1831,11 @@ High-priority actions:
     real chart styles often put gridline defaults under role-local `cs:spPr/a:ln` even when `lnRef @idx`
     is `0`; `PptxSceneChartStyleEntry.ShapeLine` now preserves those direct role lines so the future
     cascade resolver does not have to re-scan raw chart-style XML for the core gridline stroke.
+  - [x] 2026-05-27: Attach chart-style gridline role candidates to chart axes without rendering them yet.
+    `PptxSceneChartAxis.MajorGridlineStyleLine` and `MinorGridlineStyleLine` now expose the typed
+    `gridlineMajor`/`gridlineMinor` style-part role lines beside the existing direct `c:majorGridlines`
+    and `c:minorGridlines` lines. This creates an explicit cascade input while preserving the current
+    renderer behavior until Office precedence and visibility rules are proven.
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
   and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
   font size, and solid text color, and supported category/value axis labels consume those scene styles before
@@ -2758,6 +2763,11 @@ Composite oracle family map:
   shape properties while `lnRef` remains zero. Rendering still waits on a real chart-style cascade and precedence
   model. Validation: focused `pptx-model` passed (`19 passed, 0 failed, 0 skipped`) and focused non-slow
   `pptx-charts` passed (`52 passed, 0 failed, 0 skipped`).
+- Chart axes now carry non-rendered chart-style gridline candidates. `PptxSceneChartAxis` exposes
+  `MajorGridlineStyleLine` and `MinorGridlineStyleLine` from the `gridlineMajor`/`gridlineMinor` style-part
+  roles, keeping inherited style evidence adjacent to direct gridline XML while avoiding a premature rendering
+  behavior change. Validation: focused `pptx-model` passed (`19 passed, 0 failed, 0 skipped`) and focused
+  non-slow `pptx-charts` passed (`52 passed, 0 failed, 0 skipped`).
 - Chart external-data scene ownership now preserves workbook provenance: `PptxSceneChart.ExternalData` records
   `c:externalData/@r:id`, the package-resolved embedded-workbook target, and the `autoUpdate` flag. Workbook
   parsing still remains a renderer-side bridge and does not yet provide stale-cache reconciliation, blank-cell
