@@ -9659,8 +9659,10 @@ paths, pairing the typed scene category axis to raw XML by `axId` and preserving
 scene axis exists. Standalone line, area, and radar category labels now consume that paired source instead
 of independently selecting `PptxSceneChartAxis` and raw `catAx` metadata.
 
-This remains limited to current `catAx` support. Date axes and bar/combo category-axis flows still need
-typed source pairing before category label placement can be treated as structurally Office-aligned.
+This note has since been superseded for axis-source ownership: date axes and bar/combo category labels now
+consume the paired category-like source path. The remaining date-axis gap is semantic rather than ownership:
+OOXPDF still needs Office-PDF-backed rules for date tick intervals, base units, major/minor date units, and
+source-linked serial-date label formatting before date-axis rendering can be treated as structurally complete.
 
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow
 console runner passed (`264 passed, 0 failed, 7 skipped`).
