@@ -9524,3 +9524,18 @@ formats.
 Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`263 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Routed chart data-label value formatting through the typed chart number-format
+bridge. Axis labels already preferred scene-owned `PptxSceneChartNumberFormat` metadata over raw XML strings;
+data-label value text now does the same through `ChartNumberFormat`, falling back to the legacy string only
+when no renderable typed format is present. The focused metadata regression verifies that a typed
+`#,##0.00` label format can format `1234.5` as `1,234.50` even with an empty legacy format string.
+
+This is not source-linked workbook formatting. It deliberately preserves current visible output while
+shrinking another renderer boundary where future Office-PDF-backed priority rules need to combine
+`sourceLinked`, workbook cell styles, cache format codes, and data-label overrides without reparsing raw XML
+at the formatting call site.
+
+Validation: focused `PptxScenePreservesChartNumberFormatMetadata` passed (`1 passed, 0 failed, 0 skipped`);
+focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+(`263 passed, 0 failed, 7 skipped`).

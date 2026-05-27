@@ -10399,6 +10399,19 @@ internal static class PptxTests
         TestAssert.True(valueAxis.NumberFormatInfo.IsDefined, "Expected value-axis number format metadata to be explicit.");
         TestAssert.Equal("0.0%", valueAxis.NumberFormatInfo.FormatCode);
         TestAssert.True(valueAxis.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive value-axis parsing.");
+
+        Type numberFormatType = typeof(PptxRenderer).GetNestedType(
+            "ChartNumberFormat",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected renderer chart number-format bridge.");
+        object typedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "#,##0.00", false]) ?? throw new InvalidOperationException("Expected typed number format.");
+        System.Reflection.MethodInfo formatDataLabelValue = typeof(PptxRenderer).GetMethod(
+            "FormatChartDataLabelValue",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [typeof(double), numberFormatType, typeof(string)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected typed data-label formatter.");
+        string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty]) ?? string.Empty;
+        TestAssert.Equal("1,234.50", typedFormatted);
     }
 
     public static void PptxChartAutoTitleDeletedSuppressesSingleSeriesName()

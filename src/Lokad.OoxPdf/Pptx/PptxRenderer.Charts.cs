@@ -5287,9 +5287,19 @@ internal sealed partial class PptxRenderer
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options)
     {
-        return !string.IsNullOrWhiteSpace(options.NumberFormat) &&
-            !string.Equals(options.NumberFormat, "General", StringComparison.OrdinalIgnoreCase)
-            ? FormatChartNumber(value, options.NumberFormat)
+        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat);
+    }
+
+    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat)
+    {
+        if (IsRenderableChartNumberFormat(numberFormat))
+        {
+            return FormatChartNumber(value, numberFormat.FormatCode);
+        }
+
+        return !string.IsNullOrWhiteSpace(legacyNumberFormat) &&
+            !string.Equals(legacyNumberFormat, "General", StringComparison.OrdinalIgnoreCase)
+            ? FormatChartNumber(value, legacyNumberFormat)
             : FormatChartAxisLabel(value);
     }
 
