@@ -1451,6 +1451,13 @@ High-priority actions:
   keep point line spacing as absolute line box height, model manual-break line boxes explicitly, and compare
   line top, baseline, and highlight rectangle geometry against Office PDF text operations before changing
   broader deck rendering.
+- [x] 2026-05-27: Carry text-decoration geometry through public-safe text-emission diagnostics:
+  `PptxInspect` now writes highlight, underline, and strike rectangles for glyph runs, and
+  `ComparePptxTextEmission.ps1` carries those optional fields into joined Office/candidate text-emission JSON.
+  A local inspection of `pptx-ladder-04-highlighted-headline-runs` exposes the two highlighted rectangles with
+  concrete source color and bounds, and the existing fine font-size probe still compares successfully with older
+  glyph-run JSON. This does not settle the line-height/baseline formula; it removes another observability gap so
+  the eventual Office comparison can use structural rectangle geometry rather than raster-only clues.
 - [x] Port the `pptx-renderer`/CSS rule for explicit percent line spacing:
   `spcPct=100000` now resolves to one font size, not `1.2x` font size. Existing paragraph/list-style tests
   were updated to lock the new text baselines, `pptx-ladder-04-line-spacing-points` remains locked at MAE
