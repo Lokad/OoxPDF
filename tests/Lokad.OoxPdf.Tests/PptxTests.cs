@@ -10660,6 +10660,12 @@ internal static class PptxTests
                   <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart2.xml"/>
                 </Relationships>
                 """),
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                </Relationships>
+                """),
             ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -10688,7 +10694,10 @@ internal static class PptxTests
                   <c:plotArea>
                   <c:layout><c:manualLayout><c:x val="0.2"/><c:y val="0.2"/><c:w val="0.5"/><c:h val="0.5"/></c:manualLayout></c:layout>
                   <c:spPr><a:solidFill><a:srgbClr val="00FFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr>
-                  <c:valAx><c:delete/><c:scaling><c:min val="0"/><c:max val="10"/></c:scaling><c:majorUnit val="2"/><c:minorUnit val="1"/><c:majorGridlines/><c:minorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr></c:valAx><c:lineChart>
+                  <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                  <c:valAx><c:axId val="20"/><c:delete/><c:scaling><c:min val="0"/><c:max val="10"/></c:scaling><c:majorUnit val="2"/><c:minorUnit val="1"/><c:majorGridlines/><c:minorGridlines/><c:spPr><a:ln><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></a:ln></c:spPr><c:crossAx val="10"/></c:valAx><c:lineChart>
+                    <c:axId val="10"/>
+                    <c:axId val="20"/>
                     <c:ser><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA00AA"/></a:solidFill></a:ln></c:spPr>
                     <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Forecast</c:v></c:pt></c:strCache></c:strRef></c:tx>
                     <c:cat><c:strLit><c:pt idx="0"><c:v>Q1</c:v></c:pt><c:pt idx="1"><c:v>Q2</c:v></c:pt><c:pt idx="2"><c:v>Q3</c:v></c:pt></c:strLit></c:cat>
@@ -10725,6 +10734,16 @@ internal static class PptxTests
                     </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
+                """),
+            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          id="42">
+                  <cs:gridlineMajor>
+                    <cs:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="224466"><a:alpha val="85000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
+                  </cs:gridlineMajor>
+                </cs:style>
                 """)
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
@@ -10733,6 +10752,21 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        OoxPackage package = OoxPackage.Open(input);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneChart lineChartScene = scene.Slides[0].SlideNodes
+            .Select(node => node.Chart)
+            .First(chart => chart?.TargetPartName == "/ppt/charts/chart1.xml")!;
+        PptxSceneChartAxis valueAxisScene = lineChartScene.Axes.First(axis => axis.Id == "20");
+
+        TestAssert.Equal("/ppt/charts/style1.xml", lineChartScene.StylePart.PartName ?? string.Empty);
+        TestAssert.Equal("10,20", string.Join(",", lineChartScene.Plots.First(plot => plot.PlotKind == PptxSceneChartPlotKind.Line).AxisIds));
+        TestAssert.True(!valueAxisScene.MajorGridlineLine.HasLine, "Expected the direct empty majorGridlines node to leave styling to chart-style fallback.");
+        TestAssert.True(valueAxisScene.MajorGridlineStyleLine.HasLine, "Expected chart-style major gridline fallback in the scene axis.");
+        TestAssert.Equal(new RgbColor(34, 68, 102), valueAxisScene.MajorGridlineStyleLine.Color);
+        TestAssert.Equal(0.85d, valueAxisScene.MajorGridlineStyleLine.Alpha);
+
         TestAssert.Contains("/ShadingType 2", pdf);
         TestAssert.Contains(" sh", pdf);
         TestAssert.Contains("0.902 0.973 0.816 rg", pdf);
@@ -10745,11 +10779,12 @@ internal static class PptxTests
         TestAssert.Contains("93.6 374.4 m", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){5}S"),
             "Line-chart major gridlines should share one stroked path for the five non-baseline tick marks.");
+        TestAssert.Contains("0.133 0.267 0.4 RG", pdf);
+        TestAssert.Contains("/CA 0.85", pdf);
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 7, "Chart title, axes, legend, and data labels should emit chart text objects.");
         TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
-        TestAssert.Contains("0 0 0 RG", pdf);
         TestAssert.DoesNotContain("0 0.667 0 RG", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);

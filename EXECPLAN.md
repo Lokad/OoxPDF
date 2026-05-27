@@ -1836,6 +1836,15 @@ High-priority actions:
     `gridlineMajor`/`gridlineMinor` style-part role lines beside the existing direct `c:majorGridlines`
     and `c:minorGridlines` lines. This creates an explicit cascade input while preserving the current
     renderer behavior until Office precedence and visibility rules are proven.
+  - [x] 2026-05-27: Consume scene-owned chart-style gridline candidates as the fallback after direct
+    axis gridline lines. `ReadSceneOrXmlChartGridlineStyle` now maps `MajorGridlineStyleLine` and
+    `MinorGridlineStyleLine` to the renderer stroke when the corresponding direct scene line is absent,
+    while keeping raw XML parsing only for the no-scene compatibility path. The public line/pie chart
+    fixture now carries a chart-style part with a direct `gridlineMajor` role line, proves that the
+    scene axis owns that fallback structurally, and locks the emitted PDF stroke color/alpha. A broad
+    black-stroke token check was removed because it was brittle PDF-literal coverage rather than a
+    structural oracle. Validation: focused `pptx-model` passed (`19 passed, 0 failed, 0 skipped`);
+    focused non-slow `pptx-charts` passed (`52 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-24: Move simple chart text-style overrides into the scene model. `PptxSceneChart.TextStyle`
   and `PptxSceneChartAxis.TextStyle` now preserve chart-level and axis-level `c:txPr/a:defRPr` font family,
   font size, and solid text color, and supported category/value axis labels consume those scene styles before
