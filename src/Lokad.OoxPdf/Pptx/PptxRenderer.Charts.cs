@@ -4187,13 +4187,6 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<string> ReadSceneOrXmlChartSeriesNames(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
-    {
-        return ReadSceneOrXmlChartSeriesNameRecords(plot, chartElement, workbook)
-            .Select(name => name.ActiveName)
-            .ToArray();
-    }
-
     private static IReadOnlyList<ChartSeriesNameRecord> ReadSceneOrXmlChartSeriesNameRecords(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
         if (plot is not null)
@@ -7695,14 +7688,14 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind);
-        IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(plot, plotElement);
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(plot, plotElement);
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => EstimateChartTextWidth(name, legendFontSize));
+            : seriesNames.Max(name => EstimateChartTextWidth(name.ActiveName, legendFontSize));
         int maxLegendTextLength = seriesNames.Count == 0
             ? 0
-            : seriesNames.Max(name => name.Length);
+            : seriesNames.Max(name => name.ActiveName.Length);
         double rightReserve = maxLegendTextWidth +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
@@ -7797,14 +7790,14 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
     {
-        IReadOnlyList<string> seriesNames = ReadSceneOrXmlChartSeriesNames(bubblePlot, bubbleChart);
+        IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart);
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => EstimateChartTextWidth(name, legendFontSize));
+            : seriesNames.Max(name => EstimateChartTextWidth(name.ActiveName, legendFontSize));
         int maxLegendTextLength = seriesNames.Count == 0
             ? 0
-            : seriesNames.Max(name => name.Length);
+            : seriesNames.Max(name => name.ActiveName.Length);
         double rightReserve = maxLegendTextWidth +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
             legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +

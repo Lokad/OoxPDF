@@ -9582,6 +9582,14 @@ current supported label path reflect the long-term data model.
 Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Kept series-name records through legend reserve sizing and removed the final
+collapsed `ReadSceneOrXmlChartSeriesNames` helper. Right-legend plot-box heuristics still estimate text width
+from the active legend string, but they now obtain that string from `ChartSeriesNameRecord.ActiveName`, the
+same provenance-preserving record used by legend entries and Cartesian data labels.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Kept series-name provenance attached to fill and stroke legend entries. Legend
 rendering still uses the same active text string for measurement and PDF text emission, but
 `ChartLegendEntry` now carries the originating `ChartSeriesNameRecord` when the entry represents a series.
