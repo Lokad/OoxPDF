@@ -15,7 +15,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repoRoot "tools/Lokad.OoxPdf.PptxInspect/Lokad.OoxPdf.PptxInspect.csproj"
 $dll = Join-Path $repoRoot "tools/Lokad.OoxPdf.PptxInspect/bin/Debug/net10.0/Lokad.OoxPdf.PptxInspect.dll"
-$sourceNewest = Get-ChildItem -LiteralPath (Split-Path -Parent $project) -Recurse -Include *.cs,*.csproj |
+$sourceRoots = @(
+    (Split-Path -Parent $project),
+    (Join-Path $repoRoot "src/Lokad.OoxPdf")
+)
+$sourceNewest = $sourceRoots |
+    ForEach-Object { Get-ChildItem -LiteralPath $_ -Recurse -Include *.cs,*.csproj } |
     Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } |
     Sort-Object LastWriteTimeUtc -Descending |
     Select-Object -First 1

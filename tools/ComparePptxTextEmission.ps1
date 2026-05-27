@@ -43,6 +43,19 @@ function HasValue($value) {
     return $null -ne $value -and [string]$value -ne ""
 }
 
+function OptionalValue($object, [string] $propertyName) {
+    if ($null -eq $object) {
+        return $null
+    }
+
+    $property = $object.PSObject.Properties[$propertyName]
+    if ($null -eq $property) {
+        return $null
+    }
+
+    return $property.Value
+}
+
 function RefX($op) {
     if ($UseEffectiveMatrix -and (HasValue $op.EffectiveX)) {
         return [double]$op.EffectiveX
@@ -147,7 +160,10 @@ foreach ($pair in $pairs) {
             DeltaFontSize = $null
             CandLayoutFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.LayoutFontSize, 6) }
             CandFrameIndex = if ($null -eq $candidate) { $null } else { $candidate.FrameIndex }
+            CandParagraphIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "ParagraphIndex" }
             CandLineIndex = if ($null -eq $candidate) { $null } else { $candidate.LineIndex }
+            CandSpanIndex = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "SpanIndex" }
+            CandLineSpanCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "LineSpanCount" }
             CandFrameTextWidth = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.FrameTextWidth, 6) }
             CandFrameColumnCount = if ($null -eq $candidate) { $null } else { $candidate.FrameColumnCount }
             RefText = if ($IncludeText -and $null -ne $reference) { RefText $reference } else { $null }
@@ -187,7 +203,10 @@ foreach ($pair in $pairs) {
         DeltaFontSize = $deltaFontSize
         CandLayoutFontSize = [Math]::Round([double]$candidate.LayoutFontSize, 6)
         CandFrameIndex = $candidate.FrameIndex
+        CandParagraphIndex = OptionalValue $candidate "ParagraphIndex"
         CandLineIndex = $candidate.LineIndex
+        CandSpanIndex = OptionalValue $candidate "SpanIndex"
+        CandLineSpanCount = OptionalValue $candidate "LineSpanCount"
         CandFrameTextWidth = [Math]::Round([double]$candidate.FrameTextWidth, 6)
         CandFrameColumnCount = $candidate.FrameColumnCount
         RefText = if ($IncludeText) { RefText $reference } else { $null }

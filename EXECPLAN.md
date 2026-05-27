@@ -10315,6 +10315,23 @@ artifacts/probes/font-size-quantization-wide/candidate-text-inspect/glyph-runs.j
 -UseEffectiveMatrix -NoFail` reported `reference=24`, `candidate=24`, `deltas=7` with text omitted, matching
 the expected public font-size/position gap.
 
+Revision note, 2026-05-27: Made the public text-emission inspection tooling expose the new source line-span
+context and fixed stale rebuild detection. `InspectPptxText.ps1` now rebuilds `PptxInspect` when the core
+`src/Lokad.OoxPdf` sources change, and `PptxInspect` writes `SpanIndex` plus `LineSpanCount` to
+`glyph-runs.json`. `ComparePptxTextEmission.ps1` carries paragraph, line, span, and line-span-count context
+into comparison rows while remaining backward-compatible with older JSON.
+
+Fresh public probe comparisons intentionally did not change rendering. They show the secondary Office
+`+0.024 pt` branch is not explained by span splitting alone: it appears on both two-span and single-span
+lines, and the affected integer sizes shift with text-frame geometry (`15/21/24/36 pt` on the wide/no-autofit
+probes, `23/26/29/32/35/38 pt` on the dense probe, `20/23/26/29/32/35/38 pt` on the denser default-inset
+probe, and `21/24/36 pt` on the height scans). The next font-size change must therefore include a geometry
+or fit-ratio rule validated by public probes, not a size-list branch.
+
+Validation: `InspectPptxText.ps1` regenerated current public candidate glyph-run JSON for the
+`font-size-quantization*` probes; `ComparePptxTextEmission.ps1 -MatchByPosition -UseEffectiveMatrix -NoFail`
+regenerated current comparison JSON and preserved the known public deltas.
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only
