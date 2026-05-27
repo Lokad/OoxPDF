@@ -108,6 +108,9 @@ internal sealed record PptxTextRunModelSnapshot(
     double CharacterSpacing,
     string? Typeface,
     bool Underline,
+    string? UnderlineValue,
+    bool Strike,
+    string? StrikeValue,
     RgbColor? Highlight);
 
 internal sealed record PptxTextFlowSnapshot(IReadOnlyList<PptxTextFlowFrameSnapshot> Frames);
@@ -1138,7 +1141,9 @@ internal sealed record PptxSceneRunStyle(
     bool Bold,
     bool Italic,
     bool Underline,
+    string? UnderlineValue,
     bool Strike,
+    string? StrikeValue,
     double CharacterSpacing,
     double BaselineOffset,
     RgbColor? Highlight);
@@ -4217,9 +4222,11 @@ internal sealed class PptxSceneBuilder
             (runProperties?.Attribute("b") is null && paragraphStyle.Bold);
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && paragraphStyle.Italic);
-        bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue &&
+        string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
+        string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
+        bool underline = underlineValue is not null &&
             !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
-        bool strike = IsStrikeEnabled(runProperties, defaultRunProperties);
+        bool strike = IsStrikeEnabled(strikeValue);
         return new PptxSceneRunStyle(
             fontSize,
             color,
@@ -4228,7 +4235,9 @@ internal sealed class PptxSceneBuilder
             bold,
             italic,
             underline,
+            underlineValue,
             strike,
+            strikeValue,
             ReadCharacterSpacing(runProperties, defaultRunProperties),
             ReadBaselineOffset(runProperties, defaultRunProperties, fontSize),
             TryReadHighlightColor(runProperties, out RgbColor highlight) ? highlight : null);
@@ -4257,8 +4266,22 @@ internal sealed class PptxSceneBuilder
 
     private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
     {
-        string? value = (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
+        return IsStrikeEnabled(ReadStrikeValue(runProperties, defaultRunProperties));
+    }
+
+    private static bool IsStrikeEnabled(string? value)
+    {
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ReadUnderlineValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"));
+    }
+
+    private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
     }
 
     private static bool ParseOptionalBoolAttribute(XElement? element, string attributeName)

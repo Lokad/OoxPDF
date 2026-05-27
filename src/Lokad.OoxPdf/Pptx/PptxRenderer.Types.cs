@@ -219,7 +219,9 @@ internal sealed partial class PptxRenderer
         bool Bold,
         bool Italic,
         bool Underline,
+        string? UnderlineValue,
         bool Strike,
+        string? StrikeValue,
         bool KerningEnabled,
         string? Typeface);
 

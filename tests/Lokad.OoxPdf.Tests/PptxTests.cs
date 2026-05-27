@@ -2385,6 +2385,53 @@ internal static class PptxTests
         TestAssert.Equal("futureOverflow", frame.VerticalOverflowValue ?? string.Empty);
     }
 
+    public static void PptxTextModelPreservesRunDecorationTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p>
+                        <a:pPr><a:defRPr u="dbl" strike="dblStrike"/></a:pPr>
+                        <a:r><a:rPr sz="1800" u="futureUnderline" strike="futureStrike"/><a:t>Unknown</a:t></a:r>
+                        <a:r><a:rPr sz="1800" u="none" strike="noStrike"/><a:t>Off</a:t></a:r>
+                        <a:r><a:rPr sz="1800"/><a:t>Default</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextRunModelSnapshot[] runs = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .Single()
+            .Paragraphs.Single()
+            .Runs.ToArray();
+        TestAssert.Equal("futureUnderline", runs[0].UnderlineValue ?? string.Empty);
+        TestAssert.True(runs[0].Underline, "Expected unknown underline tokens to remain enabled until an Office-aligned renderer handles them.");
+        TestAssert.Equal("futureStrike", runs[0].StrikeValue ?? string.Empty);
+        TestAssert.True(runs[0].Strike, "Expected unknown strike tokens to remain enabled until an Office-aligned renderer handles them.");
+        TestAssert.Equal("none", runs[1].UnderlineValue ?? string.Empty);
+        TestAssert.True(!runs[1].Underline, "Expected explicit underline none to remain disabled.");
+        TestAssert.Equal("noStrike", runs[1].StrikeValue ?? string.Empty);
+        TestAssert.True(!runs[1].Strike, "Expected explicit noStrike to remain disabled.");
+        TestAssert.Equal("dbl", runs[2].UnderlineValue ?? string.Empty);
+        TestAssert.Equal("dblStrike", runs[2].StrikeValue ?? string.Empty);
+    }
+
     public static void PptxSyntheticTextBoxHonorsLineBreaks()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

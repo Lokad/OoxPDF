@@ -1961,8 +1961,9 @@ internal sealed partial class PptxRenderer
             (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
             (runProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
-        bool underline = ((string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"))) is { } underlineValue
-            && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
+        string? underlineValue = ReadUnderlineValue(runProperties, defaultRunProperties);
+        string? strikeValue = ReadStrikeValue(runProperties, defaultRunProperties);
+        bool underline = underlineValue is not null && !underlineValue.Equals("none", StringComparison.OrdinalIgnoreCase);
 
         return new ResolvedRunTextStyle(
             nominalFontSize,
@@ -1976,7 +1977,9 @@ internal sealed partial class PptxRenderer
             bold,
             italic,
             underline,
-            IsStrikeEnabled(runProperties, defaultRunProperties),
+            underlineValue,
+            IsStrikeEnabled(strikeValue),
+            strikeValue,
             IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
             typeface);
     }
@@ -2096,8 +2099,22 @@ internal sealed partial class PptxRenderer
 
     private static bool IsStrikeEnabled(XElement? runProperties, XElement? defaultRunProperties)
     {
-        string? value = (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
+        return IsStrikeEnabled(ReadStrikeValue(runProperties, defaultRunProperties));
+    }
+
+    private static bool IsStrikeEnabled(string? value)
+    {
         return value is not null && !value.Equals("noStrike", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ReadUnderlineValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("u") ?? defaultRunProperties?.Attribute("u"));
+    }
+
+    private static string? ReadStrikeValue(XElement? runProperties, XElement? defaultRunProperties)
+    {
+        return (string?)(runProperties?.Attribute("strike") ?? defaultRunProperties?.Attribute("strike"));
     }
 
     private static IReadOnlyList<TextCapsFragment> ApplyTextCaps(string text, XElement? runProperties, XElement? defaultRunProperties)

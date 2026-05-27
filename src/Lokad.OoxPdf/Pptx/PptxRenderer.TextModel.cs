@@ -66,6 +66,9 @@ internal sealed partial class PptxRenderer
             run.Style.CharacterSpacing,
             run.Style.Typeface,
             run.Style.Underline,
+            run.Style.UnderlineValue,
+            run.Style.Strike,
+            run.Style.StrikeValue,
             run.Style.Highlight);
     }
 
