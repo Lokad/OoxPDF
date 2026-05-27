@@ -318,20 +318,17 @@ internal sealed partial class PptxRenderer
         return normalized < 0d ? normalized + 360d : normalized;
     }
 
-    private static IReadOnlyList<IReadOnlyList<double>> CompactChartSeries(IEnumerable<ChartIndexedNumberVector> series)
-    {
-        return series
-            .Select(vector => vector.CompactValues())
-            .Where(values => values.Count != 0)
-            .ToArray();
-    }
-
     private static IReadOnlyList<ChartRadarSeries> CompactRadarSeries(IEnumerable<ChartIndexedNumberVector> series)
     {
         return series
             .Select(vector => new ChartRadarSeries(vector.CompactValues(), vector))
             .Where(item => item.Values.Count != 0)
             .ToArray();
+    }
+
+    private static int CountRenderableSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series.Count(vector => vector.CompactValues().Count != 0);
     }
 
     private static IReadOnlyList<IReadOnlyList<double?>> DensifyChartSeries(IEnumerable<ChartIndexedNumberVector> series)
@@ -762,8 +759,8 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
             IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook);
-            IReadOnlyList<IReadOnlyList<double>> barSeries = CompactChartSeries(barSeriesVectors);
-            if (barSeries.Count != 0)
+            int barSeriesCount = CountRenderableSeries(barSeriesVectors);
+            if (barSeriesCount != 0)
             {
                 PptxSceneChartBarDirection barDirection = ReadSceneOrXmlChartBarDirection(barPlot, barChart);
                 bool horizontalBars = barDirection == PptxSceneChartBarDirection.Bar;
@@ -792,14 +789,14 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
-                int seriesOffset = barSeries.Count;
+                int seriesOffset = barSeriesCount;
                 int barChartIndex = 1;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
                     IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSceneOrXmlChartSeriesVectors(extraBarPlot, extraBarChart, workbook);
-                    IReadOnlyList<IReadOnlyList<double>> extraSeries = CompactChartSeries(extraSeriesVectors);
-                    if (extraSeries.Count == 0)
+                    int extraSeriesCount = CountRenderableSeries(extraSeriesVectors);
+                    if (extraSeriesCount == 0)
                     {
                         barChartIndex++;
                         continue;
@@ -863,7 +860,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlSeriesDataLabelOptions(extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
                         ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook)));
-                    seriesOffset += extraSeries.Count;
+                    seriesOffset += extraSeriesCount;
                     barChartIndex++;
                 }
 
@@ -872,8 +869,7 @@ internal sealed partial class PptxRenderer
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
                     IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook);
-                    IReadOnlyList<IReadOnlyList<double>> lineSeries = CompactChartSeries(lineSeriesVectors);
-                    if (lineSeries.Count == 0)
+                    if (CountRenderableSeries(lineSeriesVectors) == 0)
                     {
                         lineChartIndex++;
                         continue;
@@ -1002,8 +998,7 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
             IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, lineChart, workbook);
-            IReadOnlyList<IReadOnlyList<double>> lineSeries = CompactChartSeries(lineSeriesVectors);
-            if (lineSeries.Count != 0)
+            if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
                 PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(linePlot, lineChart, PptxSceneChartGrouping.Standard);
                 bool stacked = IsStackedChartGrouping(grouping);
@@ -1057,8 +1052,7 @@ internal sealed partial class PptxRenderer
         {
             PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
             IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSceneOrXmlChartSeriesVectors(areaPlot, areaChart, workbook);
-            IReadOnlyList<IReadOnlyList<double>> areaSeries = CompactChartSeries(areaSeriesVectors);
-            if (areaSeries.Count != 0)
+            if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
                 PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(areaPlot, areaChart, PptxSceneChartGrouping.Standard);
                 bool stacked = IsStackedChartGrouping(grouping);
@@ -6684,8 +6678,7 @@ internal sealed partial class PptxRenderer
     private static bool HasInsideValueAxisCrossing(PptxSceneChart? sceneChart, PptxSceneChartPlot? barPlot, XElement barChart, XDocument chartXml)
     {
         IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
-        IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
-        if (series.Count == 0)
+        if (CountRenderableSeries(seriesVectors) == 0)
         {
             return false;
         }
@@ -6896,8 +6889,7 @@ internal sealed partial class PptxRenderer
         }
 
         IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
-        IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
-        if (series.Count == 0)
+        if (CountRenderableSeries(seriesVectors) == 0)
         {
             return plotBox;
         }
@@ -7731,8 +7723,7 @@ internal sealed partial class PptxRenderer
             bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
             IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(plot, plotElement);
-            IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
-            if (series.Count > 0)
+            if (CountRenderableSeries(seriesVectors) > 0)
             {
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, plotElement) ??
                     chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();

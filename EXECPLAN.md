@@ -9573,6 +9573,23 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed the generic `CompactChartSeries` compatibility helper from normal chart
+entrypoints. Bar, line, area, combo, and layout guard code now keep their `ChartIndexedNumberVector` records
+and ask only for the renderable-series count when they need the previous "has any compact values" decision.
+Radar still has its typed `ChartRadarSeries` projection because radar geometry currently consumes compact
+double lists plus the source vector, making that remaining compact boundary explicit rather than hidden in a
+shared list-of-lists helper.
+
+This does not change chart geometry or blank-handling semantics: the renderability check still follows the
+current compact-value rule. It does remove another obsolete collapse path where code could accidentally pass
+anonymous `IReadOnlyList<double>` series onward instead of carrying source formulas, sparse point indices,
+cache text, workbook sidecars, and hidden source-row/column provenance through the renderer-facing chart
+model. Future `dispBlanksAs`, `plotVisOnly`, source/cache freshness, and Office-PDF alignment work should
+now start from typed indexed vectors rather than reviving a flattened compact-series wrapper.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Removed obsolete compact double-list extent overloads for bar/column and area
 charts. Those families already compute extents from `ChartIndexedNumberVector` dense nullable domains, so the
 older `IReadOnlyList<IReadOnlyList<double>>` overloads had no callers and would have preserved a misleading
