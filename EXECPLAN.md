@@ -11036,3 +11036,25 @@ Validation: focused non-slow `pptx-charts` passed with `57` tests; full non-slow
 passed at run `20260527-191648`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-191709`;
 and `pptx-ladder-11-chart-scatter-clusters-port` passed at run `20260527-191723`. Two earlier parallel visual
 runs failed only because simultaneous CLI builds locked shared `obj` files; serial reruns passed.
+
+Revision note, 2026-05-27: Began mapping Office's repeated chart plot clips to explicit line-chart
+subparts instead of multiplying clips blindly. Fresh sparse-probe PDF inspection after the even-odd clip
+slice showed Office emits plot-sized clip boxes immediately before individual line-series and marker
+subparts, while the candidate still had one broad plot clip around the whole line-chart series loop.
+`RenderLineChart` now keeps the broad safety scope but also opens a scoped even-odd plot clip around each
+contiguous visible line run and around each emitted series marker. The helper is intentionally generic
+(`RenderInChartPlotAreaClip`) so future chart-family work can reuse the same ownership primitive.
+
+This is only a first clip-ownership pass. It improves the lower sparse-probe candidate's dominant plot clip
+count from the prior broad-scope shape to `11` while the Office reference still has `36` lower-region
+plot-sized clips and `18` upper-region plot-sized clips. The public line-marker fixture now shows `19`
+candidate plot-sized clips in the single line-chart region. Remaining clip work is still open: axis/gridline
+subpart bracketing, marker fill versus marker stroke bracketing, legend-key plot clips, and equivalent
+subpart scopes for area/bar/scatter families. These should be added only where the renderer has a real
+structural subpart boundary or fresh Office-PDF evidence, not as a count-matching heuristic.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
+passed at run `20260527-192206`; and `pptx-ladder-11-chart-line-markers-port` passed at run
+`20260527-192206`. The combo-line unit test was updated to allow the intended clip operators between stroke
+state setup and the blue line path while keeping the same blue-line geometry assertion.

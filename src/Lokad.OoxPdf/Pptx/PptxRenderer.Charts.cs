@@ -3935,6 +3935,20 @@ internal sealed partial class PptxRenderer
         graphics.ClipRectangleEvenOdd(x, y, width, height);
     }
 
+    private static void RenderInChartPlotAreaClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, Action render)
+    {
+        graphics.SaveState();
+        try
+        {
+            ClipChartPlotArea(graphics, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
+            render();
+        }
+        finally
+        {
+            graphics.RestoreState();
+        }
+    }
+
     private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
     {
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
@@ -8123,7 +8137,7 @@ internal sealed partial class PptxRenderer
                         {
                             if (displayBlanksAs != PptxSceneChartDisplayBlanksAs.Span)
                             {
-                                StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                                StrokeLineChartPointSegmentInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
                                 points.Clear();
                             }
 
@@ -8144,12 +8158,15 @@ internal sealed partial class PptxRenderer
                     }
                 }
 
-                StrokeLineChartPointSegment(graphics, points, IsSmoothSeries(seriesIndex, smoothSeries));
+                StrokeLineChartPointSegmentInPlotClip(graphics, plotBox, points, IsSmoothSeries(seriesIndex, smoothSeries));
 
                 foreach ((double pointX, double pointY) in markers)
                 {
                     graphics.SetFillRgb(stroke.Color.Red, stroke.Color.Green, stroke.Color.Blue);
-                    DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color);
+                    RenderInChartPlotAreaClip(
+                        graphics,
+                        plotBox,
+                        () => DrawChartMarker(graphics, pointX, pointY, ChartMarker(seriesIndex, markerStyles), stroke.Color, stroke.Color));
                 }
 
                 if (stroke.Alpha < 1d)
@@ -8185,6 +8202,16 @@ internal sealed partial class PptxRenderer
         {
             StrokeStraightChartPath(graphics, points);
         }
+    }
+
+    private static void StrokeLineChartPointSegmentInPlotClip(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<(double X, double Y)> points, bool smooth)
+    {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeLineChartPointSegment(graphics, points, smooth));
     }
 
     private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)

@@ -9120,7 +9120,7 @@ internal static class PptxTests
             .ToArray();
         MatchCollection blueLineMatches = Regex.Matches(
             pdf,
-            @"0 0 1 RG\s+[0-9.]+ w\s+\[\] 0 d\s+0 J\s+0 j\s+(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+S");
+            @"0 0 1 RG\s+[0-9.]+ w\s+\[\] 0 d\s+0 J\s+0 j[\s\S]*?(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+S");
         var blueLine = blueLineMatches
             .Cast<Match>()
             .Select(match => new
