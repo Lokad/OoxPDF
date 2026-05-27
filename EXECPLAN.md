@@ -426,6 +426,16 @@ High-priority actions:
   A second operator-aware auxiliary comparison now gates `LegendSwatchCandidate` and `StrokeMarkerCandidate`
   at `1.8 pt` bounds and `1.0 pt` line-width tolerance, reflecting the current composite-key structure without
   pretending its stroke width is exact. Validation: public line-marker port run `20260527-144516` passed.
+- [x] 2026-05-27: Emit straight line-chart series as Office-like contiguous PDF paths instead of one
+  stroked line per adjacent point pair. `StrokeStraightChartPath` now mirrors the existing smooth-path
+  behavior by opening one current path per non-blank run, appending each `l` operator, and stroking once.
+  Unit assertions that intentionally inspect line-chart PDF content now count line-to operations inside the
+  series scope rather than requiring the old `m ... l S` single-segment form. Validation: focused non-slow
+  `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`); public sparse/blank probe run `20260527-144857`
+  passed and moved region-1 `ChartSeriesLineCandidate` structure to count parity (`2/2`) with max bounds
+  delta `3.71 pt`; public line-marker port run `20260527-144840` passed with the existing marker gates intact.
+  Remaining series-structure debt is not closed: the sparse probe still has candidate-only region-0
+  `ChartSeriesLineCandidate` rows, so the classifier/plot-region ownership model still needs a follow-up.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
@@ -10759,11 +10769,12 @@ its outer first label aligned at about `0.85 pt`; the large line fixture remains
 under about `0.68 pt`.
 
 Remaining chart gaps are still structural and should stay open: fill-legend swatch Y has a residual `14.9 pt`
-sparse/area delta, sparse legend text remains about `6-8 pt` off depending on region, candidate line/area
-series strokes are still decomposed differently from Office's multi-segment paths, candidate clip-box counts
-remain lower than Office's repeated clipping structure, and the chart-series-line buckets still expose count
-deltas. These should be addressed through Office-PDF plot/legend/path/clipping structure rules, not by
-case-specific coordinates.
+sparse/area delta, sparse legend text remains about `6-8 pt` off depending on region, candidate clip-box
+counts remain lower than Office's repeated clipping structure, and the chart-series-line buckets still expose
+count deltas. These should be addressed through Office-PDF plot/legend/path/clipping structure rules, not by
+case-specific coordinates. Later on 2026-05-27, straight line-chart series emission was moved to contiguous
+multi-segment paths for visible runs, so the remaining chart-series-line gap is now region/classification
+ownership rather than segment-by-segment stroke emission.
 
 Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
 `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-141906`;
@@ -10794,3 +10805,22 @@ Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipp
 `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-142311`;
 `pptx-ladder-11-chart-bar-clustered-port` passed at run `20260527-142323`; and structural summaries with
 `-ShowBounds` confirmed the fill-legend swatch delta reduction without reopening the text or plot-box gates.
+
+Revision note, 2026-05-27: Aligned straight line-chart series stroke emission with Office's PDF path
+structure. `StrokeStraightChartPath` no longer emits each adjacent point pair as its own `m ... l S` stroke;
+it now opens one path per contiguous visible run, appends all segment `l` operations, and strokes once, just
+as smooth chart paths already did. This is a structural PDF change, not a coordinate heuristic: the rendered
+points and blank-run decisions remain owned by the existing chart data vector and `displayBlanksAs` handling.
+
+The sparse/blank probe now shows the lower rendered chart's `ChartSeriesLineCandidate` count aligned at
+`2/2` with max bounds delta `3.71 pt`, replacing the prior candidate decomposition into one-segment strokes.
+The upper region still reports candidate-only `ChartSeriesLineCandidate` rows (`0/4`), so that gap remains
+open as a plot-region/classifier ownership problem rather than a renderer path-emission problem. Other open
+sparse debts are unchanged: right-legend text/swatch placement, clip-box count parity, and residual plot-box
+offsets still need Office-PDF structural modeling.
+
+Validation: focused non-slow `pptx-charts` passed (`53 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-144857`;
+`pptx-ladder-11-chart-line-markers-port` passed at run `20260527-144840`; and structural summaries with
+`-ByRegion -ShowBounds` confirmed the region-1 chart-series-line count parity while preserving the open
+region-0 classifier debt.

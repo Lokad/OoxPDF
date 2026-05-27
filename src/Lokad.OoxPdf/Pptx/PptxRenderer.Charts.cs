@@ -8342,10 +8342,18 @@ internal sealed partial class PptxRenderer
 
     private static void StrokeStraightChartPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
     {
+        if (points.Count < 2)
+        {
+            return;
+        }
+
+        graphics.MoveTo(points[0].X, points[0].Y);
         for (int i = 1; i < points.Count; i++)
         {
-            graphics.StrokeLine(points[i - 1].X, points[i - 1].Y, points[i].X, points[i].Y);
+            graphics.LineTo(points[i].X, points[i].Y);
         }
+
+        graphics.StrokeCurrentPath();
     }
 
     private static void StrokeSmoothChartPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)

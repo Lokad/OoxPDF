@@ -9104,7 +9104,7 @@ internal static class PptxTests
             .ToArray();
         MatchCollection blueLineMatches = Regex.Matches(
             pdf,
-            @"0 0 1 RG\s+[0-9.]+ w\s+\[\] 0 d\s+0 J\s+0 j\s+(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S");
+            @"0 0 1 RG\s+[0-9.]+ w\s+\[\] 0 d\s+0 J\s+0 j\s+(?<x1>[0-9.]+) (?<y1>[0-9.]+) m\s+(?<x2>[0-9.]+) (?<y2>[0-9.]+) l\s+S");
         var blueLine = blueLineMatches
             .Cast<Match>()
             .Select(match => new
@@ -12147,7 +12147,7 @@ internal static class PptxTests
         TestAssert.True(colorIndex >= 0, $"Expected series stroke color operation '{strokeColorOperation}'.");
         int nextColorIndex = pdf.IndexOf(" RG", colorIndex + strokeColorOperation.Length, StringComparison.Ordinal);
         string seriesScope = nextColorIndex < 0 ? pdf[colorIndex..] : pdf[colorIndex..nextColorIndex];
-        return Regex.Matches(seriesScope, @"[0-9.]+ [0-9.]+ m [0-9.]+ [0-9.]+ l S").Count;
+        return Regex.Matches(seriesScope, @"[0-9.]+ [0-9.]+ l").Count;
     }
 
     public static void PptxChartExplosionsUseCachedPointCount()
