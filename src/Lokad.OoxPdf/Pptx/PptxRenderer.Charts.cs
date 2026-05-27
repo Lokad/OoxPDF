@@ -320,7 +320,12 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<IReadOnlyList<double>> ReadSceneOrXmlChartSeries(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
-        return ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook)
+        return CompactChartSeries(ReadSceneOrXmlChartSeriesVectors(plot, chartElement, workbook));
+    }
+
+    private static IReadOnlyList<IReadOnlyList<double>> CompactChartSeries(IEnumerable<ChartIndexedNumberVector> series)
+    {
+        return series
             .Select(vector => vector.CompactValues())
             .Where(values => values.Count != 0)
             .ToArray();
@@ -712,7 +717,8 @@ internal sealed partial class PptxRenderer
         if (barChart is not null)
         {
             PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
-            IReadOnlyList<IReadOnlyList<double>> barSeries = ReadSceneOrXmlChartSeries(barPlot, barChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> barSeries = CompactChartSeries(barSeriesVectors);
             if (barSeries.Count != 0)
             {
                 PptxSceneChartBarDirection barDirection = ReadSceneOrXmlChartBarDirection(barPlot, barChart);
@@ -747,7 +753,8 @@ internal sealed partial class PptxRenderer
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
-                    IReadOnlyList<IReadOnlyList<double>> extraSeries = ReadSceneOrXmlChartSeries(extraBarPlot, extraBarChart, workbook);
+                    IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSceneOrXmlChartSeriesVectors(extraBarPlot, extraBarChart, workbook);
+                    IReadOnlyList<IReadOnlyList<double>> extraSeries = CompactChartSeries(extraSeriesVectors);
                     if (extraSeries.Count == 0)
                     {
                         barChartIndex++;
@@ -820,7 +827,8 @@ internal sealed partial class PptxRenderer
                 foreach (XElement comboLineChart in ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line))
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
-                    IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, comboLineChart, workbook);
+                    IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook);
+                    IReadOnlyList<IReadOnlyList<double>> lineSeries = CompactChartSeries(lineSeriesVectors);
                     if (lineSeries.Count == 0)
                     {
                         lineChartIndex++;
@@ -949,7 +957,8 @@ internal sealed partial class PptxRenderer
         if (lineChart is not null)
         {
             PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
-            IReadOnlyList<IReadOnlyList<double>> lineSeries = ReadSceneOrXmlChartSeries(linePlot, lineChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, lineChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> lineSeries = CompactChartSeries(lineSeriesVectors);
             if (lineSeries.Count != 0)
             {
                 PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(linePlot, lineChart, PptxSceneChartGrouping.Standard);
@@ -1003,7 +1012,8 @@ internal sealed partial class PptxRenderer
         if (areaChart is not null)
         {
             PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
-            IReadOnlyList<IReadOnlyList<double>> areaSeries = ReadSceneOrXmlChartSeries(areaPlot, areaChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSceneOrXmlChartSeriesVectors(areaPlot, areaChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> areaSeries = CompactChartSeries(areaSeriesVectors);
             if (areaSeries.Count != 0)
             {
                 PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(areaPlot, areaChart, PptxSceneChartGrouping.Standard);
@@ -1119,7 +1129,8 @@ internal sealed partial class PptxRenderer
         if (radarChart is not null)
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
-            IReadOnlyList<IReadOnlyList<double>> radarSeries = ReadSceneOrXmlChartSeries(radarPlot, radarChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSceneOrXmlChartSeriesVectors(radarPlot, radarChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> radarSeries = CompactChartSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(radarPlot, radarChart, theme);
@@ -1152,7 +1163,8 @@ internal sealed partial class PptxRenderer
         if (pieChart is not null)
         {
             PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie);
-            IReadOnlyList<IReadOnlyList<double>> pieSeries = ReadSceneOrXmlChartSeries(piePlot, pieChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSceneOrXmlChartSeriesVectors(piePlot, pieChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> pieSeries = CompactChartSeries(pieSeriesVectors);
             if (pieSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
@@ -1174,7 +1186,8 @@ internal sealed partial class PptxRenderer
         if (doughnutChart is not null)
         {
             PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut);
-            IReadOnlyList<IReadOnlyList<double>> doughnutSeries = ReadSceneOrXmlChartSeries(doughnutPlot, doughnutChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSceneOrXmlChartSeriesVectors(doughnutPlot, doughnutChart, workbook);
+            IReadOnlyList<IReadOnlyList<double>> doughnutSeries = CompactChartSeries(doughnutSeriesVectors);
             if (doughnutSeries.Count != 0)
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
@@ -6487,7 +6500,8 @@ internal sealed partial class PptxRenderer
 
     private static bool HasInsideValueAxisCrossing(PptxSceneChart? sceneChart, PptxSceneChartPlot? barPlot, XElement barChart, XDocument chartXml)
     {
-        IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(barPlot, barChart);
+        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
+        IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
         if (series.Count == 0)
         {
             return false;
@@ -6698,7 +6712,8 @@ internal sealed partial class PptxRenderer
             return plotBox;
         }
 
-        IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(barPlot, barChart);
+        IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart);
+        IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
         if (series.Count == 0)
         {
             return plotBox;
@@ -7456,7 +7471,8 @@ internal sealed partial class PptxRenderer
             PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, plotElement, PptxSceneChartGrouping.Standard);
             bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
-            IReadOnlyList<IReadOnlyList<double>> series = ReadSceneOrXmlChartSeries(plot, plotElement);
+            IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(plot, plotElement);
+            IReadOnlyList<IReadOnlyList<double>> series = CompactChartSeries(seriesVectors);
             if (series.Count > 0)
             {
                 XElement? valueAxis = ReadChartValueAxisForChart(chartXml, plotElement) ??

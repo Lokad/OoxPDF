@@ -1386,6 +1386,17 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-030219` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
     `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Split chart-family entrypoint data acquisition from compact-value rendering:
+    bar, combo-bar, combo-line, standalone line, area, radar, pie, and doughnut entrypoints now obtain
+    `ChartIndexedNumberVector` series first and compact through one explicit `CompactChartSeries` boundary.
+    The old `ReadSceneOrXmlChartSeries` helper remains only as a compatibility wrapper, so future axis
+    scaling, stacked totals, data labels, and slice geometry can migrate one call site at a time without
+    re-parsing scene/XML/workbook data or reintroducing hidden flattening logic. Validation: focused non-slow
+    `pptx-charts` passed (`42 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`261 passed, 0 failed, 7 skipped`); private run
+    `artifacts/private-visual/lokad-value-based/20260527-030624` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
+    `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
