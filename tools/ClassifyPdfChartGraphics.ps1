@@ -658,6 +658,53 @@ function Add-DataLabelLegendKeyStructures($structures, $textOps) {
     }
 }
 
+function Add-LegendSwatchTextProximityStructures($structures, $textOps) {
+    if ($null -eq $textOps -or $textOps.Count -eq 0) {
+        return
+    }
+
+    $legendText = @($textOps | Where-Object {
+        $text = TextValue $_
+        -not [string]::IsNullOrWhiteSpace($text) -and -not (Is-NumericText $text)
+    })
+    if ($legendText.Count -eq 0) {
+        return
+    }
+
+    $snapshot = [object[]]$structures.ToArray()
+    foreach ($structure in $snapshot) {
+        $kind = [string]$structure.Kind
+        if ($kind -ne "MarkerCandidate" -and $kind -ne "StrokeMarkerCandidate") {
+            continue
+        }
+
+        $width = Width $structure
+        $height = Height $structure
+        if ($width -gt 24d -or $height -gt 24d) {
+            continue
+        }
+
+        $matched = $false
+        foreach ($text in $legendText) {
+            if ([int]$text.PageNumber -ne [int]$structure.PageNumber) {
+                continue
+            }
+
+            $fontSize = if ($text.FontSize -ne $null) { [double]$text.FontSize } else { 0d }
+            $gap = (TextX $text) - [double]$structure.MaxX
+            $verticalTolerance = [Math]::Max(8d, $fontSize * 0.9d)
+            if ($gap -ge 0d -and $gap -le 28d -and [Math]::Abs((TextY $text) - (CenterY $structure)) -le $verticalTolerance) {
+                $matched = $true
+                break
+            }
+        }
+
+        if ($matched) {
+            $structures.Add((Copy-StructureAsKind "LegendSwatchCandidate" $structure))
+        }
+    }
+}
+
 $ops = Read-JsonArray $InputPath
 if ($PageNumber -gt 0) {
     $ops = @($ops | Where-Object { [int]$_.PageNumber -eq $PageNumber })
@@ -974,6 +1021,7 @@ if ($polarRegions.Count -gt 1) {
 
 Assign-RegionIndexes ([object[]]$structures.ToArray())
 Reclassify-InPlotSeriesLines $structures $GridlineBoundsTolerance
+Add-LegendSwatchTextProximityStructures $structures $textOps
 Add-DataLabelLegendKeyStructures $structures $textOps
 
 $ordered = @($structures | Sort-Object -Property PageNumber, Kind, MinY, MinX, MaxY, MaxX)

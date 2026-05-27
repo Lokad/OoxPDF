@@ -11794,3 +11794,23 @@ operation; the durable guard now targets operator sequences that would indicate 
 glyph-stroking prototype.
 
 Validation: focused non-slow `pptx-typography` passed with `87` tests and `2` slow skips.
+
+Revision note, 2026-05-27: Extended the chart structural oracle for ordinary legend keys without changing
+renderer behavior. The existing chart graphics classifier already preserved small legend rectangles as
+generic `MarkerCandidate` structures, but the bottom-legend doughnut probe could not promote them through
+the old outside-plot-box rule because the derived polar plot bounds overlap the legend row. The classifier
+now also adds `LegendSwatchCandidate` structures when a small marker-like fill/stroke sits immediately to
+the left of a non-numeric text run on the same page and baseline. The generic marker buckets remain intact,
+so this is an additive oracle refinement rather than a reclassification that would hide raw evidence.
+
+The public `pptx-ladder-11-chart-doughnut-bottom-legend-probe` now has an additional structural gate for
+three `LegendSwatchCandidate` rectangles: bounds, fill colors, segment counts, and path-command shape must
+match Office. The gate deliberately does not require the same fill operator because Office emits these
+rectangles with `f*` while the candidate emits `f`; both are structurally equivalent for these closed
+rectangles, and the long-term issue is legend-key geometry/color alignment rather than winding-rule spelling.
+The data-label legend-key probe was rechecked to make sure the numeric-text classifier path still locks its
+own first-class fill/stroke key buckets.
+
+Validation: `pptx-ladder-11-chart-doughnut-bottom-legend-probe` passed at run `20260527-232347` with the
+new legend-swatch structural gate. `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run
+`20260527-232402`.
