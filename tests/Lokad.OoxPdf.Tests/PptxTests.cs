@@ -10616,7 +10616,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/></c:dLbls></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """)
@@ -10683,6 +10683,9 @@ internal static class PptxTests
         TestAssert.Contains("0.039 0.043 0.047 rg", pdf);
         TestAssert.Contains("/CLD1 9.96 Tf", pdf);
         TestAssert.Contains("1 0 0 1 79.2 357.525 Tm", pdf);
+        TestAssert.Contains("0.267 0.8 0.533 RG", pdf);
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.267 0\.8 0\.533 RG\s+1\.5 w[\s\S]+? m\s+[\s\S]+? l\s+[\s\S]+? l\s+S"),
+            "Expected polar data-label leader lines to render as two-segment stroked paths using the preserved leader-line style.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");

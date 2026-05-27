@@ -4732,6 +4732,7 @@ internal sealed partial class PptxRenderer
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
+                RenderPieDataLabelLeaderLine(graphics, geometry, mid, explosion, labelBox, effectiveOptions);
                 RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
                 double textX = labelBox.X;
                 double textWidth = labelBox.Width;
@@ -4759,6 +4760,46 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CP");
+    }
+
+    private static void RenderPieDataLabelLeaderLine(PdfGraphicsBuilder graphics, ChartPolarGeometry geometry, double angleRadians, double explosion, ChartLayoutBox labelBox, ChartDataLabelOptions options)
+    {
+        if (!options.ShowLeaderLines)
+        {
+            return;
+        }
+
+        ChartSeriesStroke stroke = options.LeaderLines.Stroke ?? ChartDataLabelLeaderLineDefaultStroke;
+        if (stroke.Alpha <= 0.001d || stroke.Width <= 0d)
+        {
+            return;
+        }
+
+        double startX = geometry.CenterX + Math.Cos(angleRadians) * (geometry.Radius + explosion);
+        double startY = geometry.CenterY + Math.Sin(angleRadians) * (geometry.Radius + explosion);
+        double labelCenterX = labelBox.X + labelBox.Width / 2d;
+        double labelCenterY = labelBox.Y + labelBox.Height / 2d;
+        bool labelIsLeft = labelCenterX < geometry.CenterX;
+        double labelEdgeX = labelIsLeft ? labelBox.X + labelBox.Width : labelBox.X;
+        double tail = Math.Min(Math.Max(stroke.Width * 2d, 4d), Math.Max(4d, labelBox.Width * 0.18d));
+        double elbowX = labelIsLeft ? labelEdgeX + tail : labelEdgeX - tail;
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
+        graphics.MoveTo(startX, startY);
+        graphics.LineTo(elbowX, labelCenterY);
+        graphics.LineTo(labelEdgeX, labelCenterY);
+        graphics.StrokeCurrentPath();
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
     }
 
     private static IReadOnlyList<PdfFontResource> RenderBarDataLabels(
@@ -9375,6 +9416,8 @@ internal sealed partial class PptxRenderer
     private static ChartSeriesStroke ChartAxisDefaultStroke { get; } = new(new RgbColor(90, 90, 90), 1d, 0.75d);
 
     private static ChartSeriesStroke ChartNegativeBarDefaultStroke { get; } = new(new RgbColor(0, 0, 0), 1d, 0.75d);
+
+    private static ChartSeriesStroke ChartDataLabelLeaderLineDefaultStroke { get; } = new(new RgbColor(89, 89, 89), 1d, 0.75d);
 
     private static ChartSeriesStroke RadarGridlineDefaultStroke { get; } = new(new RgbColor(134, 134, 134), 1d, 0.75d, null, 0, 1);
 

@@ -1718,6 +1718,18 @@ High-priority actions:
     (`52 passed, 0 failed, 0 skipped`); public leader-line probe passed in run `20260527-122100` with
     the reference `DataLabelLeaderLineCandidate` visible in the structural report. Remaining work is renderer
     leader-line geometry generation and then enabling a structure gate for `DataLabelLeaderLineCandidate`.
+  - [x] Consume preserved leader-line style in polar data-label rendering:
+    pie and doughnut labels with `showLeaderLines` now draw two-segment stroked connector paths from the slice
+    boundary toward the resolved label box, using the scene/raw-XML `c:leaderLines` stroke when present and an
+    Office-like grey fallback otherwise. `PptxSyntheticLineAndPieChartsRenderNativeCharts` locks the preserved
+    leader-line color/width and `m/l/l` path shape in PDF output. Validation: focused non-slow `pptx-charts`
+    passed (`52 passed, 0 failed, 0 skipped`); public leader-line probe run `20260527-122348` passed existing
+    gates and now reports candidate `DataLabelLeaderLineCandidate` structures instead of none.
+  - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
+    the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
+    while Office emits only one visible connector in the current public custom-layout probe. Structural report
+    `20260527-122348` shows reference/candidate `DataLabelLeaderLineCandidate` counts `1/4`; keep the kind
+    ungated until label-box placement, clipping, and Office's per-label leader visibility rule are understood.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
