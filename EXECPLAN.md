@@ -9650,6 +9650,20 @@ secondary quantization branch from public line/frame/PDF evidence before changin
 
 Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`).
 
+Revision note, 2026-05-27: Added `tools/ComparePptxTextEmission.ps1` so Office PDF text operations can be
+compared directly against candidate `InspectPptxText` glyph-run emission without retyping ad hoc PowerShell.
+The tool compares reference X/Y/font size to candidate X/baseline/PDF font size by sequence or nearest
+position, carries candidate layout font size plus frame/line/column context into the report, omits text by
+default, and has an explicit `-IncludeText` switch for public probes only. This makes the secondary `/Tf`
+work repeatable at the PDF-structure boundary: a run can now show both the Office-visible mismatch and the
+candidate structural context that might explain it.
+
+Validation: `pwsh tools/ComparePptxTextEmission.ps1 -ReferenceTextOperations
+artifacts/probes/font-size-quantization-wide/inspect/text-operations.json -CandidateGlyphRuns
+artifacts/probes/font-size-quantization-wide/candidate-text-inspect/glyph-runs.json -MatchByPosition
+-UseEffectiveMatrix -NoFail` reported `reference=24`, `candidate=24`, `deltas=7` with text omitted, matching
+the expected public font-size/position gap.
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only
