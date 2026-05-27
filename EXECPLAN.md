@@ -11285,3 +11285,19 @@ Validation: the corrected `pptx-ladder-11-chart-data-label-legend-keys-probe` pa
 `20260527-200550` with mean absolute error `2.4059537760416667` and changed-pixel ratio at threshold 16 of
 `0.03015962577160494`. Manual comparison of the filled marker structures passed with `8/8` matches under a
 `20 pt` bounds tolerance while preserving fill color and path-command parity.
+
+Revision note, 2026-05-27: Added Office-style outlines to filled data-label legend keys. The corrected
+legend-key probe showed that Office emits each filled key as a fill operation plus a same-color `0.75 pt`
+stroke rectangle. `RenderFillDataLabelLegendKey` now preserves the existing fill and text-width behavior,
+then strokes the same key box with the series color at the filled-series default stroke width, including the
+same alpha state when the series fill is transparent.
+
+The visual manifest now enables the main chart-graphics gate for the legend-key probe and compares both
+`MarkerCandidate` and `StrokeMarkerCandidate` structures. The broad `20 pt` bounds tolerance is intentional:
+label placement still differs, but key count, filled/stroked structure, stroke width, color, segment count,
+and path-command shape are now evidence-gated. A future text-aware classifier can rename these to
+`DataLabelLegendKeyCandidate`; this slice avoids that until the classifier can distinguish keys from true
+line/scatter plot markers.
+
+Validation: `pptx-ladder-11-chart-data-label-legend-keys-probe` passed at run `20260527-201112`; the normal
+runner reported `16/16` key structures matched, including `8/8` filled markers and `8/8` stroked markers.

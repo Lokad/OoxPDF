@@ -5128,6 +5128,20 @@ internal sealed partial class PptxRenderer
         double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
         double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
         FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, fill);
+        var stroke = new ChartSeriesStroke(fill.Color, fill.Alpha, ChartFilledSeriesInheritedStrokeWidth);
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
+        graphics.StrokeRectangle(labelBox.X, swatchY, swatchSize, swatchSize);
+        if (stroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+
         return swatchSize + swatchGap;
     }
 

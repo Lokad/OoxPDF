@@ -11,13 +11,25 @@
     "diagnosticsMustBeEmpty": false,
     "maxMeanAbsoluteError": 2.8,
     "maxChangedPixelRatioAtThreshold16": 0.035,
+    "maxChartGraphicsStructureBoundsDeltaByKind": {
+      "MarkerCandidate": 20.0,
+      "StrokeMarkerCandidate": 20.0
+    },
+    "maxChartGraphicsStructureLineWidthDelta": 0.1,
+    "compareChartGraphicsStructureKinds": ["MarkerCandidate", "StrokeMarkerCandidate"],
+    "compareChartGraphicsStructureSegmentCounts": true,
+    "compareChartGraphicsStructurePathCommandCounts": true,
     "additionalChartGraphicsStructureComparisons": [
       {
         "kinds": ["MarkerCandidate"],
         "maxBoundsDelta": 20.0,
-        "matchFillColors": true,
-        "matchSegmentCounts": true,
-        "matchPathCommandCounts": true
+        "matchFillColors": true
+      },
+      {
+        "kinds": ["StrokeMarkerCandidate"],
+        "maxBoundsDelta": 20.0,
+        "maxLineWidthDelta": 0.1,
+        "matchStrokeColors": true
       }
     ]
   },
