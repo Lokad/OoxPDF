@@ -1113,6 +1113,12 @@ internal sealed partial class PptxRenderer
 
     private static void DrawGlyphText(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
     {
+        if (ShouldDrawGlyphOutlinePath(glyphRun))
+        {
+            DrawGlyphOutlinePath(graphics, glyphRun);
+            return;
+        }
+
         TextRun run = glyphRun.Source;
         double pdfFontSize = glyphRun.PdfFontSize;
         if (glyphRun.PositioningArray is null)
@@ -1151,6 +1157,78 @@ internal sealed partial class PptxRenderer
                 strokeBlue: TextStrokeColor(glyphRun).Blue,
                 strokeWidth: TextStrokeWidth(glyphRun));
         }
+    }
+
+    private static bool ShouldDrawGlyphOutlinePath(TextGlyphRun glyphRun)
+    {
+        TextRun run = glyphRun.Source;
+        if (run.Alpha >= 1d - PptxTextMetricRules.TextStateTolerance ||
+            run.Outline is not null ||
+            glyphRun.SyntheticBold ||
+            glyphRun.SyntheticItalic ||
+            glyphRun.Glyphs.Count == 0)
+        {
+            return false;
+        }
+
+        bool hasDrawableGlyph = false;
+        foreach (TextGlyphAtom glyph in glyphRun.Glyphs)
+        {
+            if (!glyphRun.Font.Font.TryReadGlyphOutline(glyph.GlyphId, out var outline) ||
+                outline.Contours.Count == 0)
+            {
+                if (IsAdvanceOnlyGlyph(glyph))
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            hasDrawableGlyph = true;
+        }
+
+        return hasDrawableGlyph;
+    }
+
+    private static void DrawGlyphOutlinePath(PdfGraphicsBuilder graphics, TextGlyphRun glyphRun)
+    {
+        TextRun run = glyphRun.Source;
+        graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
+
+        double cursorX = glyphRun.X;
+        bool hasPath = false;
+        for (int i = 0; i < glyphRun.Glyphs.Count; i++)
+        {
+            TextGlyphAtom glyph = glyphRun.Glyphs[i];
+            if (i > 0)
+            {
+                cursorX += glyph.AdjustmentBefore;
+            }
+
+            if (PdfGlyphOutlinePath.TryAppendGlyphPath(
+                graphics,
+                glyphRun.Font.Font,
+                glyph.GlyphId,
+                cursorX,
+                glyphRun.BaselineY,
+                glyphRun.PdfFontSize))
+            {
+                hasPath = true;
+            }
+
+            cursorX += glyph.Advance;
+        }
+
+        if (hasPath)
+        {
+            graphics.FillCurrentPath();
+        }
+    }
+
+    private static bool IsAdvanceOnlyGlyph(TextGlyphAtom glyph)
+    {
+        return Rune.IsWhiteSpace(new Rune(glyph.CodePoint));
     }
 
     private static int TextRenderingMode(TextGlyphRun glyphRun)

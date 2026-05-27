@@ -11383,3 +11383,25 @@ Office-PDF structural gates for those text cases.
 
 Validation: focused `fonts` tests passed with `20` tests, including compound outline expansion and compound
 PDF path conversion for an accented Arial glyph.
+
+Revision note, 2026-05-27: Wired the glyph-outline path into PPTX text emission for the first Office-backed
+case. Semi-transparent filled text now emits alpha-scoped filled glyph paths when every visible glyph has a
+decoded outline; whitespace is treated as an advance-only glyph so public text with spaces does not fall
+back to searchable `TJ` text. The gate intentionally excludes text outlines and synthetic bold/italic until
+those effect combinations have their own Office-PDF evidence.
+
+The public `pptx-ladder-04-transparent-text` manifest no longer claims `needs-text-outline`. It now carries
+a structural graphics gate: Office and candidate must both expose a single filled glyph-outline operation
+with operator `f`, `326` path segments, and matching `20/97/209/20` move/line/curve/close command counts.
+Raster thresholds remain approximate because text placement and antialiasing still differ, but the PDF-level
+representation is now aligned with Office for this case.
+
+The synthetic chart manual-title test was kept opaque so it continues to probe manualLayout placement through
+PDF text matrices. Transparent text has its own glyph-outline unit and visual coverage now; mixing both in the
+chart layout fixture made the intended baseline assertion unobservable once Office-aligned transparent text
+stopped emitting `Tj`/`TJ` operators.
+
+Validation: focused non-slow `pptx-typography` passed with `84` tests and `2` slow skips; focused `fonts`
+passed with `20` tests; focused non-slow `pptx-charts` passed with `57` tests; full non-slow suite passed
+with `296` tests and `7` slow skips; `pptx-ladder-04-transparent-text` passed at run `20260527-203332` with
+the new glyph-outline structural gate.
