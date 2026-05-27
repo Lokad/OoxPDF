@@ -2269,6 +2269,14 @@ High-priority actions:
   `layoutTarget`, x/y edge semantics, inner-vs-outer plot area semantics, title/legend overlay interactions,
   and reuse across area/scatter/radar/pie/doughnut chart families still need structural modeling before plot
   bounds can be treated as Office-aligned instead of approximate geometry.
+  - [x] 2026-05-27: Use the typed `PptxSceneChartManualLayoutTarget` ladder, not raw `layoutTarget`
+    token presence, when deciding whether horizontal-bar manual layout should take the target-specific default
+    plot box. Unknown target tokens now stay in the normal manual-layout path instead of accidentally enabling
+    an `inner`/`outer`-specific geometry branch. A synthetic horizontal-bar chart with `layoutTarget="bogus"`
+    locks the fallback plot-area rectangle. This is a source-token cleanup only; real `inner`/`outer`
+    semantics, overlay interactions, and non-bar/line family plot boxes remain open. Validation: focused
+    unknown-target test passed; focused non-slow `pptx-charts` passed with `63` tests, `0` failures, and `0`
+    skips.
 - [x] 2026-05-24: Extend scene-owned chart data-label metadata beyond value/percent visibility. The scene
   model now preserves category-name, series-name, and leader-line flags plus label position, separator, and
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered
