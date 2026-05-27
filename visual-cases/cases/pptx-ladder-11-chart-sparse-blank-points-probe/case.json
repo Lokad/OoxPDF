@@ -13,10 +13,12 @@
     "maxChangedPixelRatioAtThreshold16": 0.05,
     "maxChartGraphicsStructureBoundsDeltaByKind": {
       "ChartSeriesLineCandidate": 4.0,
-      "GridlineAxisPlotBoxCandidate": 4.0
+      "GridlineAxisPlotBoxCandidate": 4.0,
+      "HorizontalGridlineGroupCandidate": 4.0,
+      "HorizontalLine": 4.0
     },
     "maxChartGraphicsStructureLineWidthDelta": 0.3,
-    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate", "GridlineAxisPlotBoxCandidate"],
+    "compareChartGraphicsStructureKinds": ["ChartSeriesLineCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "HorizontalLine"],
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,
@@ -29,6 +31,7 @@
       }
     ],
     "maxChartTextStructurePositionDeltaByKind": {
+      "CategoryAxisTickLabel": 4.0,
       "LegendText": 3.5,
       "ValueAxisTickLabel": 2.0
     }

@@ -11866,6 +11866,20 @@ proves a promotion rule.
 
 Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-27: Tightened the public sparse/blank chart oracle around currently matched
+Office-visible structures. The `pptx-ladder-11-chart-sparse-blank-points-probe` manifest now also gates
+horizontal axis/gridline line structures and category-axis tick-label text positions, in addition to the
+existing series-line, gridline/axis plot-box, legend text, value-axis label, and legend-swatch checks.
+The stronger gate passed at run `20260527-233501`.
+
+This intentionally does not gate `ClipBox` counts or filled-region operators. Fresh inspection still shows
+the real open structural gaps: Office has `26/38` clip boxes by chart region while the candidate has `21/31`,
+and closed fill spelling still differs in places where Office uses `f*` and the candidate uses `f`. The
+new guard narrows the unfenced surface without pretending those remaining PDF-structure mismatches are done.
+
+Validation: `pptx-ladder-11-chart-sparse-blank-points-probe` passed with the expanded chart graphics/text
+structure gates at run `20260527-233501`.
+
 Revision note, 2026-05-27: Exposed the remaining chart-wide option policy fields through scene inspection
 without changing rendering. In addition to the previously exposed `plotVisOnly`, snapshots now report
 nullable `date1904`, nullable `roundedCorners`, nullable `showDLblsOverMax`, and the raw `dispBlanksAs`
