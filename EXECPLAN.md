@@ -9571,3 +9571,19 @@ only the subset that happened to be immediately renderable by the current dense 
 Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Preserved indexed value provenance through pie and doughnut slice construction.
+`ChartIndexedPieSlice` used to collapse an active chart point to only an index and value, which was enough for
+current wedge geometry but lost the rendered point record and matching workbook sidecar point before future
+data-label, leader-line, `dispBlanksAs`, or source/cache reconciliation work could use them. Pie/doughnut
+slices now carry the active `ChartIndexedNumberPoint` and the workbook point with the same index when one is
+available. Rendering still reads the same `Index` and `Value`, so the PDF output is intentionally unchanged.
+
+This does not implement Office pie-label placement or workbook freshness policy. It removes one more
+renderer-local collapse point: future polar chart label layout can start from the same sparse point identity,
+cache text, workbook cell, hidden-state, and style provenance as Cartesian chart logic instead of rejoining
+those facts after slice geometry has already been computed.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).

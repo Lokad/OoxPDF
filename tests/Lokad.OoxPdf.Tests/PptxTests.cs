@@ -11267,6 +11267,15 @@ internal static class PptxTests
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
         TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        System.Reflection.MethodInfo buildPieSlices = typeof(PptxRenderer).GetMethod(
+            "BuildChartIndexedPieSlices",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected indexed pie-slice builder.");
+        object[] pieSlices = (((System.Collections.IEnumerable?)buildPieSlices.Invoke(null, [vector])) ?? throw new InvalidOperationException("Expected indexed pie slices.")).Cast<object>().ToArray();
+        TestAssert.True(pieSlices.Length == 1, "Expected stale positive cache value to remain an active pie slice.");
+        object slicePoint = pieSlices[0].GetType().GetProperty("Point")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve its active point record.");
+        object sliceWorkbookPoint = pieSlices[0].GetType().GetProperty("WorkbookPoint")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
+        TestAssert.True((double?)slicePoint.GetType().GetProperty("Value")?.GetValue(slicePoint) == 99d, "Expected pie slice active point to preserve the rendered cache value.");
+        TestAssert.True((double?)sliceWorkbookPoint.GetType().GetProperty("Value")?.GetValue(sliceWorkbookPoint) == 8.2d, "Expected pie slice workbook sidecar point to preserve the workbook source value.");
         var blankSource = source with { Formula = "Sheet1!$B$2:$B$4" };
         object blankVector = buildVector.Invoke(
             null,

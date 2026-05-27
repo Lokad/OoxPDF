@@ -8651,10 +8651,17 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartIndexedPieSlice> BuildChartIndexedPieSlices(ChartIndexedNumberVector values)
     {
+        IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints = (values.WorkbookPoints ?? [])
+            .GroupBy(point => point.Index)
+            .ToDictionary(group => group.Key, group => group.First());
         return (values.Points ?? [])
             .Where(point => point.Value is > 0d)
             .OrderBy(point => point.Index)
-            .Select(point => new ChartIndexedPieSlice(point.Index, point.Value!.Value))
+            .Select(point => new ChartIndexedPieSlice(
+                point.Index,
+                point.Value!.Value,
+                point,
+                workbookPoints.TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null))
             .ToArray();
     }
 
@@ -8789,7 +8796,11 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberVector BubbleSizes,
         bool ReadBubbleSize);
 
-    private readonly record struct ChartIndexedPieSlice(int Index, double Value);
+    private readonly record struct ChartIndexedPieSlice(
+        int Index,
+        double Value,
+        ChartIndexedNumberPoint Point,
+        ChartIndexedNumberPoint? WorkbookPoint);
 
     private readonly record struct ChartIndexedNumberVector(
         IReadOnlyList<ChartIndexedNumberPoint> Points,
