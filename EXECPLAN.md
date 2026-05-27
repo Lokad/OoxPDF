@@ -9573,6 +9573,16 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Removed obsolete compact double-list extent overloads for bar/column and area
+charts. Those families already compute extents from `ChartIndexedNumberVector` dense nullable domains, so the
+older `IReadOnlyList<IReadOnlyList<double>>` overloads had no callers and would have preserved a misleading
+compact-only route for future axis work. The line/radar compact overload remains intentionally because radar
+geometry still uses compact values until a public Office-backed sparse-radar fixture justifies changing that
+visible behavior.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved indexed value vectors through the radar renderer boundary without
 changing radar geometry. Radar layout and drawing still use the same compact numeric values as before, but the
 new `ChartRadarSeries` record carries those values beside the originating `ChartIndexedNumberVector`. This

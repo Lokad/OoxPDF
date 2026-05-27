@@ -6953,17 +6953,6 @@ internal sealed partial class PptxRenderer
         return labelWidth + sideGap;
     }
 
-    private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, PptxSceneChartGrouping grouping)
-    {
-        int categoryCount = Math.Max(1, series.Max(values => values.Count));
-        bool stacked = IsStackedChartGrouping(grouping);
-        bool percentStacked = IsPercentStackedChartGrouping(grouping);
-        (double min, double max) = stacked
-            ? GetStackedValueExtents(series, categoryCount, percentStacked)
-            : GetClusteredValueExtents(series);
-        return new ChartValueExtents(min, max);
-    }
-
     private static ChartValueExtents GetBarChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, PptxSceneChartGrouping grouping)
     {
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
@@ -8436,20 +8425,6 @@ internal sealed partial class PptxRenderer
                 graphics.RestoreState();
             }
         }
-    }
-
-    private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked)
-    {
-        if (percentStacked)
-        {
-            return new ChartValueExtents(0d, 1d);
-        }
-
-        int pointCount = Math.Max(1, series.Max(values => values.Count));
-        (double minValue, double maxValue) = stacked
-            ? GetStackedValueExtents(series, pointCount, percentStacked)
-            : GetClusteredValueExtents(series);
-        return new ChartValueExtents(minValue, maxValue);
     }
 
     private static ChartValueExtents GetAreaChartValueExtents(IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked)
