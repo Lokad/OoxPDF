@@ -306,16 +306,19 @@ internal sealed partial class PptxRenderer
     {
         if (scenePlot is not null)
         {
-            return string.IsNullOrEmpty(scenePlot.Grouping)
-                ? defaultGrouping
-                : scenePlot.GroupingKind;
+            return ResolveChartGrouping(scenePlot.GroupingKind, defaultGrouping);
         }
 
-        return PptxSceneBuilder.ParseChartGrouping((string?)plotElement.Element(ChartNamespace + "grouping")?.Attribute("val")) switch
-        {
-            PptxSceneChartGrouping.Unknown => defaultGrouping,
-            PptxSceneChartGrouping parsed => parsed
-        };
+        return ResolveChartGrouping(
+            PptxSceneBuilder.ParseChartGrouping((string?)plotElement.Element(ChartNamespace + "grouping")?.Attribute("val")),
+            defaultGrouping);
+    }
+
+    private static PptxSceneChartGrouping ResolveChartGrouping(PptxSceneChartGrouping value, PptxSceneChartGrouping defaultGrouping)
+    {
+        return value == PptxSceneChartGrouping.Unknown
+            ? defaultGrouping
+            : value;
     }
 
     private static PptxSceneChartBarDirection ReadSceneOrXmlChartBarDirection(PptxSceneChartPlot? scenePlot, XElement plotElement)

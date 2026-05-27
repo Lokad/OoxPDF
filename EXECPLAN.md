@@ -569,6 +569,15 @@ High-priority actions:
   the renderer chooses `Gap`, so future work cannot silently reintroduce renderer-local XML ownership.
   Validation: focused `DisplayBlanksAs` passed (`2` tests, `0` failures); focused non-slow `pptx-charts`
   passed with `66` tests, `0` failures, and `0` skips.
+- [x] 2026-05-27: Resolve chart grouping unknowns through an explicit default while preserving the raw token.
+  `PptxSceneChartPlot.Grouping` continues to carry unsupported `c:grouping` values for diagnostics and future
+  enum-ladder work, but renderer-facing grouping now resolves `Unknown` through the plot-family default
+  (`Clustered` for bars, `Standard` for line/area) instead of letting `Unknown` leak as a third behavioral
+  state. The no-scene XML fallback uses the same resolver. A focused regression supplies a scene plot with
+  `grouping="bogus"` and a deliberately mismatched XML fallback with `grouping="stacked"` and verifies that
+  the effective grouping is the scene-owned default, not the XML fallback. Validation: focused `Grouping`
+  passed (`1` test, `0` failures); focused non-slow `pptx-charts` passed with `66` tests, `0` failures, and
+  `0` skips; full non-slow suite passed with `312` tests, `0` failures, and `7` slow skips.
 - [x] Preserve DOCX paragraph-alignment source tokens in the document model:
   `DocxParagraph` now carries the resolved raw `w:jc @w:val` beside the existing normalized
   `DocxTextAlignment`. Direct known tokens (`center`), inherited style tokens (`both`), unsupported tokens

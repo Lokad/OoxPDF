@@ -11366,6 +11366,37 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDataLabelPosition.OutsideEnd, (PptxSceneChartDataLabelPosition)position);
     }
 
+    public static void PptxChartUnknownGroupingUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:grouping val="bogus"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(PptxSceneChartGrouping.Unknown, chart.Plots[0].GroupingKind);
+        TestAssert.Equal("bogus", chart.Plots[0].Grouping);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart><c:grouping val="stacked"/></c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "lineChart").Single();
+        System.Reflection.MethodInfo readGrouping = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartGrouping",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart grouping resolver.");
+        object grouping = readGrouping.Invoke(null, [chart.Plots[0], mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved grouping.");
+
+        TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)grouping);
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
