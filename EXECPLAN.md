@@ -10323,3 +10323,29 @@ Validation: `SummarizeChartStructureDeltas.ps1 -Case pptx-ladder-11-chart-sparse
 -UngatedOnly -SkipProbe -ByRegion` completed; representative visual gates passed for
 `pptx-ladder-11-chart-column-clustered-port/20260527-113327` and
 `pptx-ladder-11-composite-two-charts-port/20260527-113327`.
+
+Revision note, 2026-05-27: Closed the first source/cache freshness policy with public Office evidence from
+the sparse/blank multi-chart probe. The Office reference for
+`pptx-ladder-11-chart-sparse-blank-points-probe` renders only the line and area charts; the clustered-column
+chart part is present and has an embedded workbook with usable formulas, but its chart XML has formulas
+without cached category/value points and `c:externalData/c:autoUpdate val="0"`. OOXPDF was more eager than
+Office: it promoted embedded workbook range cells into active chart points and rendered a candidate-only
+third chart region. The native chart path now treats scene chart caches as the active rendering source,
+preserves workbook range cells only as sidecar/provenance points, and limits automatic cache hydration to the
+legacy no-scene fallback path. Formula-only embedded workbook charts are therefore ignored for active
+rendering until an Office-backed fixture proves a case where Office itself materializes the workbook values.
+
+This deliberately keeps `HydrateChartReferenceCaches` and typed workbook parsing alive. They remain useful for
+legacy fallback parsing, workbook provenance, structured references, defined names, hidden rows/columns, and
+future source-linked formatting, but they no longer override missing chart caches in the scene-backed native
+renderer. The public sparse/blank case now allows the explicit `PPTX_UNSUPPORTED_CHART` diagnostic for the
+known formula-only chart part, making the diagnostic honest instead of silently drawing a non-Office chart.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`51 passed, 0 failed, 0 skipped`); sparse/blank visual probe passed at run
+`20260527-114306` with MAE `2.424721016589506`, changed16 `0.028974247685185184`, SSIM
+`0.6863076919549375`, and histogram `0.8502148523558424`. The previous candidate-only `RegionIndex=2`
+disappeared from `SummarizeChartStructureDeltas.ps1 -Case
+pptx-ladder-11-chart-sparse-blank-points-probe -ShowBounds -ByRegion`; remaining deltas are now confined to
+the two Office-rendered chart regions, mainly plot-box offsets, marker omissions, legend text/swatch
+differences, and one right-side text classification mismatch.

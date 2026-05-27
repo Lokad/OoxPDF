@@ -13,6 +13,7 @@
     "maxChangedPixelRatioAtThreshold16": 0.05
   },
   "allowedUnsupportedFeatures": [
+    "PPTX_UNSUPPORTED_CHART",
     "PPTX_CHART_STATIC_FALLBACK"
   ]
 }

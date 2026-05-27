@@ -10833,7 +10833,7 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }
 
-    public static void PptxEmbeddedWorkbookReferencesHydrateMissingChartCaches()
+    public static void PptxEmbeddedWorkbookReferencesDoNotRenderMissingChartCaches()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -10903,10 +10903,10 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int pathStartCount = Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count;
-        TestAssert.True(pathStartCount >= 3, $"Expected workbook-backed chart references to produce native doughnut paths; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
-        TestAssert.True(CountTextMatrices(pdf) >= 3, "Expected workbook-backed category references to feed native legend text without requiring chart-side string caches.");
+        TestAssert.True(pathStartCount == 0, $"Expected formula-only embedded workbook references to remain inactive without chart-side caches; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
+        TestAssert.True(CountTextMatrices(pdf) == 0, "Expected formula-only embedded workbook category references not to feed native legend text without chart-side string caches.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Charts with formulas and embedded workbook data should not require chart-side caches.");
+        TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART"), "Formula-only embedded workbook references should require chart-side caches for active rendering.");
     }
 
     public static void PptxChartWorkbookHydrationPreservesRangePointIndices()
@@ -11333,6 +11333,16 @@ internal static class PptxTests
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
         TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        var noCacheSource = source with { HasCachedPoints = false };
+        object noCacheVector = buildVector.Invoke(
+            null,
+            [Array.Empty<double>(), Array.Empty<PptxSceneChartNumberPoint>(), null, "General", noCacheSource, workbook]) ?? throw new InvalidOperationException("Expected formula-only indexed chart vector.");
+        object[] noCacheActivePoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetProperty("Points")?.GetValue(noCacheVector)) ?? throw new InvalidOperationException("Expected formula-only active chart points.")).Cast<object>().ToArray();
+        object[] noCacheWorkbookPoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheVector)) ?? throw new InvalidOperationException("Expected formula-only workbook sidecar points.")).Cast<object>().ToArray();
+        object[] noCacheDensePoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetMethod("DensePoints")?.Invoke(noCacheVector, [])) ?? throw new InvalidOperationException("Expected formula-only dense active point projection.")).Cast<object>().ToArray();
+        TestAssert.True(noCacheActivePoints.Length == 0, "Expected formula-only workbook numeric values to remain inactive when chart caches are absent.");
+        TestAssert.True(noCacheDensePoints.Length == 0, "Expected formula-only workbook numeric values not to create dense rendered point slots.");
+        TestAssert.True(noCacheWorkbookPoints.Length == 2, "Expected formula-only workbook numeric values to remain available as sidecar points.");
         System.Reflection.MethodInfo buildPieSlices = typeof(PptxRenderer).GetMethod(
             "BuildChartIndexedPieSlices",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected indexed pie-slice builder.");
@@ -11446,6 +11456,21 @@ internal static class PptxTests
         TestAssert.True(visibleLabelWorkbookPoints.Length == 2, "Expected plot-visible-only projection to exclude the hidden worksheet row while preserving visible label points.");
         object visibleLabelCell = visibleLabelWorkbookPoints[1].GetType().GetProperty("WorkbookCell")?.GetValue(visibleLabelWorkbookPoints[1]) ?? throw new InvalidOperationException("Expected visible text point cell provenance.");
         TestAssert.Equal("A4", (string?)visibleLabelCell.GetType().GetProperty("Reference")?.GetValue(visibleLabelCell) ?? string.Empty);
+        var noCacheLabelSource = labelSource with { HasCachedPoints = false };
+        object noCacheTextVector = buildTextVector.Invoke(
+            null,
+            [
+                Array.Empty<string>(),
+                Array.Empty<PptxSceneChartStringPoint>(),
+                null,
+                new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
+                noCacheLabelSource,
+                parsedWorkbook
+            ]) ?? throw new InvalidOperationException("Expected formula-only indexed chart text vector.");
+        object[] noCacheTextActivePoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("Points")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only active text points.")).Cast<object>().ToArray();
+        object[] noCacheTextWorkbookPoints = (((System.Collections.IEnumerable?)noCacheTextVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheTextVector)) ?? throw new InvalidOperationException("Expected formula-only text workbook sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True(noCacheTextActivePoints.Length == 0, "Expected formula-only workbook text values to remain inactive when chart caches are absent.");
+        TestAssert.True(noCacheTextWorkbookPoints.Length == 3, "Expected formula-only workbook text values to remain available as sidecar points.");
     }
 
     public static void PptxChartSeriesNamesPreserveWorkbookSidecarPoints()
@@ -11854,15 +11879,15 @@ internal static class PptxTests
         return Regex.Matches(seriesScope, @"[0-9.]+ [0-9.]+ m [0-9.]+ [0-9.]+ l S").Count;
     }
 
-    public static void PptxChartExplosionsUseWorkbookPointCount()
+    public static void PptxChartExplosionsUseCachedPointCount()
     {
         const string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:doughnutChart>
                 <c:ser><c:explosion val="25"/>
-                  <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
-                  <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f></c:numRef></c:val>
+                  <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f><c:strCache><c:ptCount val="3"/><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="2"><c:v>West</c:v></c:pt></c:strCache></c:strRef></c:cat>
+                  <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:ptCount val="3"/><c:pt idx="0"><c:v>8.2</c:v></c:pt><c:pt idx="2"><c:v>1.4</c:v></c:pt></c:numCache></c:numRef></c:val>
                 </c:ser>
               </c:doughnutChart></c:plotArea></c:chart>
             </c:chartSpace>
