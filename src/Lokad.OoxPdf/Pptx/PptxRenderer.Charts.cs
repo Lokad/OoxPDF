@@ -4560,7 +4560,7 @@ internal sealed partial class PptxRenderer
             PptxSceneChartLegendPosition.Bottom => Math.Max(0d, plotBox.Y - lineHeight * PptxChartMetricRules.LegendBottomOffsetFactor),
             PptxSceneChartLegendPosition.Top => plotBox.Y + plotBox.Height + lineHeight * PptxChartMetricRules.LegendTopOffsetFactor,
             _ when sideStrokeLegend => plotBox.Y + plotBox.Height / 2d -
-                fontSize * PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor +
+                fontSize * GetLegendSideStrokeBaselineCenterOffsetFactor(entries) +
                 (entries.Count - 1) * lineHeight / 2d,
             _ when !sideStrokeLegend && !horizontal => frame.Y + frame.Height / 2d +
                 (entries.Count - 1) * lineHeight / 2d,
@@ -4658,6 +4658,14 @@ internal sealed partial class PptxRenderer
         }
 
         return RenderTextRuns(runs, graphics, "CL");
+    }
+
+    private static double GetLegendSideStrokeBaselineCenterOffsetFactor(IReadOnlyList<ChartLegendEntry> entries)
+    {
+        return entries.Any(entry => entry.Marker is { } marker &&
+            marker.Size >= PptxChartMarkerMetricRules.StyledLineChartMarkerSize - PptxChartMetricRules.AxisValueEpsilon)
+            ? PptxChartMetricRules.LegendSideStrokeStyledMarkerBaselineCenterOffsetFactor
+            : PptxChartMetricRules.LegendSideStrokeBaselineCenterOffsetFactor;
     }
 
     private static ChartSeriesStroke ResolveFilledLegendKeyStroke(ChartSeriesStroke stroke)
