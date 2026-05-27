@@ -132,6 +132,19 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Sh1 sh", pdf);
     }
 
+    public static void WritesJpegImageColorSpaceFromFrameMetadata()
+    {
+        PdfImageXObject image = PdfImageXObject.Jpeg(1, 1, [0xFF, 0xD8, 0xFF, 0xD9], componentCount: 1, bitsPerComponent: 8);
+        var page = new PdfPage(100, 100, string.Empty, [], [new PdfImageResource("Im1", image)]);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Contains("/Subtype /Image", pdf);
+        TestAssert.Contains("/ColorSpace /DeviceGray", pdf);
+        TestAssert.Contains("/BitsPerComponent 8", pdf);
+        TestAssert.Contains("/Filter /DCTDecode", pdf);
+    }
+
     public static void WritesStitchedAxialShadingFunctionForMultipleStops()
     {
         var graphics = new PdfGraphicsBuilder();

@@ -11950,6 +11950,21 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
+`JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
+PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
+image color space and bit depth from the image object instead of forcing every embedded image to
+`/DeviceRGB` and `8` bits. PNG/BMP raster paths still emit decoded RGB data as `/DeviceRGB`.
+
+This is not a JPEG recolor fix. The private `duotone|image/jpeg` diagnostic remains the real long-term
+gap, and implementing it still requires either a dependency-free JPEG decode/re-encode path or a PDF-level
+color transform architecture backed by Office-PDF evidence. This slice removes a narrower structural
+misalignment first: grayscale and CMYK-like JPEGs no longer get mislabeled as RGB at the PDF boundary, and
+future JPEG recolor work can reason from component count, precision, and frame marker rather than from
+width/height alone.
+
+Validation: full non-slow console runner passed with `320` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Consolidated the duplicated right-legend plot reserve calculation behind a
 `ChartRightLegendReserve` record without changing chart layout behavior. Line/area/scatter no-title
 right-legend layout and bubble title/right-legend layout now both call `ResolveRightLegendReserve`, which

@@ -736,7 +736,7 @@ internal sealed partial class PptxRenderer
                         Fallback: "Original image"));
                 }
 
-                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes);
+                return PdfImageXObject.Jpeg(info.Width, info.Height, bytes, info.ComponentCount, info.BitsPerComponent);
             }
 
             if (contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))

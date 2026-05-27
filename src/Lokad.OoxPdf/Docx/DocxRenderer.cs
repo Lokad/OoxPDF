@@ -301,7 +301,7 @@ internal sealed class DocxRenderer
                 image.ContentType.Equals("image/jpg", StringComparison.OrdinalIgnoreCase))
             {
                 JpegInfo info = JpegInfo.Read(image.Bytes);
-                return PdfImageXObject.Jpeg(info.Width, info.Height, image.Bytes);
+                return PdfImageXObject.Jpeg(info.Width, info.Height, image.Bytes, info.ComponentCount, info.BitsPerComponent);
             }
 
             if (image.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))

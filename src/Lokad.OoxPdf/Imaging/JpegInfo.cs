@@ -1,6 +1,6 @@
 namespace Lokad.OoxPdf.Imaging;
 
-internal readonly record struct JpegInfo(int Width, int Height)
+internal readonly record struct JpegInfo(int Width, int Height, int BitsPerComponent, int ComponentCount, byte FrameMarker)
 {
     public static JpegInfo Read(ReadOnlySpan<byte> bytes)
     {
@@ -41,9 +41,16 @@ internal readonly record struct JpegInfo(int Width, int Height)
 
             if (marker is >= 0xC0 and <= 0xC3 or >= 0xC5 and <= 0xC7 or >= 0xC9 and <= 0xCB or >= 0xCD and <= 0xCF)
             {
+                if (length < 8)
+                {
+                    break;
+                }
+
+                int bitsPerComponent = bytes[offset + 2];
                 int height = (bytes[offset + 3] << 8) | bytes[offset + 4];
                 int width = (bytes[offset + 5] << 8) | bytes[offset + 6];
-                return new JpegInfo(width, height);
+                int componentCount = bytes[offset + 7];
+                return new JpegInfo(width, height, bitsPerComponent, componentCount, marker);
             }
 
             offset += length;

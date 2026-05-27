@@ -211,7 +211,7 @@ internal sealed class PdfDocumentWriter
     {
         string smask = objects.SoftMask is null ? string.Empty : FormattableString.Invariant($" /SMask {objects.SoftMask.Value} 0 R");
         writer.WriteStreamObject(objects.Image, FormattableString.Invariant(
-            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter {image.Filter}{smask}"), image.Bytes);
+            $"/Type /XObject /Subtype /Image /Width {image.Width} /Height {image.Height} /ColorSpace {image.ColorSpace} /BitsPerComponent {image.BitsPerComponent} /Filter {image.Filter}{smask}"), image.Bytes);
         if (image.Alpha is not null && objects.SoftMask is not null)
         {
             writer.WriteStreamObject(objects.SoftMask.Value, FormattableString.Invariant(

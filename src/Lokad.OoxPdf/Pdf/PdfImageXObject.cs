@@ -4,12 +4,14 @@ internal sealed class PdfImageXObject
 {
     private string? resourceKey;
 
-    private PdfImageXObject(int width, int height, byte[] bytes, string filter, byte[]? alpha)
+    private PdfImageXObject(int width, int height, byte[] bytes, string filter, string colorSpace, int bitsPerComponent, byte[]? alpha)
     {
         Width = width;
         Height = height;
         Bytes = bytes;
         Filter = filter;
+        ColorSpace = colorSpace;
+        BitsPerComponent = bitsPerComponent;
         Alpha = alpha;
     }
 
@@ -21,18 +23,28 @@ internal sealed class PdfImageXObject
 
     public string Filter { get; }
 
+    public string ColorSpace { get; }
+
+    public int BitsPerComponent { get; }
+
     public byte[]? Alpha { get; }
 
-    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{Bytes.Length}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes))[..16]}";
+    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes))[..16]}";
 
-    public static PdfImageXObject Jpeg(int width, int height, byte[] bytes)
+    public static PdfImageXObject Jpeg(int width, int height, byte[] bytes, int componentCount = 3, int bitsPerComponent = 8)
     {
-        return new PdfImageXObject(width, height, bytes, "/DCTDecode", null);
+        string colorSpace = componentCount switch
+        {
+            1 => "/DeviceGray",
+            4 => "/DeviceCMYK",
+            _ => "/DeviceRGB"
+        };
+        return new PdfImageXObject(width, height, bytes, "/DCTDecode", colorSpace, bitsPerComponent, null);
     }
 
     public static PdfImageXObject RgbPng(int width, int height, byte[] rgb, byte[]? alpha)
     {
-        return new PdfImageXObject(width, height, Compress(rgb), "/FlateDecode", alpha is null ? null : Compress(alpha));
+        return new PdfImageXObject(width, height, Compress(rgb), "/FlateDecode", "/DeviceRGB", 8, alpha is null ? null : Compress(alpha));
     }
 
     private static byte[] Compress(byte[] bytes)

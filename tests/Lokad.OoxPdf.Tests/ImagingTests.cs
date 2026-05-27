@@ -25,6 +25,33 @@ internal static class ImagingTests
 
         TestAssert.Equal(5, info.Width);
         TestAssert.Equal(3, info.Height);
+        TestAssert.Equal(8, info.BitsPerComponent);
+        TestAssert.Equal(3, info.ComponentCount);
+        TestAssert.Equal(0xC0, info.FrameMarker);
+    }
+
+    public static void JpegInfoReadsGrayscaleFrameMetadata()
+    {
+        byte[] jpegHeader =
+        [
+            0xFF, 0xD8,
+            0xFF, 0xC0,
+            0x00, 0x0B,
+            0x08,
+            0x00, 0x01,
+            0x00, 0x01,
+            0x01,
+            0x01, 0x11, 0x00,
+            0xFF, 0xD9
+        ];
+
+        JpegInfo info = JpegInfo.Read(jpegHeader);
+
+        TestAssert.Equal(1, info.Width);
+        TestAssert.Equal(1, info.Height);
+        TestAssert.Equal(8, info.BitsPerComponent);
+        TestAssert.Equal(1, info.ComponentCount);
+        TestAssert.Equal(0xC0, info.FrameMarker);
     }
 
     public static void PngImageReadsIndexedPalettePixels()
