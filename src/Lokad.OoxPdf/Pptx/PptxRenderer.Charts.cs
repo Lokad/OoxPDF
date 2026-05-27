@@ -7101,8 +7101,6 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
-        graphics.SaveState();
-        try
         {
             int categoryCount = Math.Max(1, denseSeries.Max(values => values.Count));
             bool stacked = IsStackedChartGrouping(grouping);
@@ -7229,10 +7227,6 @@ internal sealed partial class PptxRenderer
                     StrokeChartPointRectangleInPlotClip(graphics, plotBox, seriesIndex, category, pointStrokes, barX, barY, barWidth, barHeight, ResolveNegativeBarFallbackStroke(pointStrokes, seriesIndex, category, value));
                 }
             }
-        }
-        finally
-        {
-            graphics.RestoreState();
         }
     }
 
@@ -8069,11 +8063,9 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
-        graphics.SaveState();
         int pointCount = 0;
         double valueAxisCrossingY = 0d;
         ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
-        try
         {
             pointCount = Math.Max(1, denseSeries.Max(values => values.Count));
             double maxValue = valueExtents.Max;
@@ -8193,11 +8185,6 @@ internal sealed partial class PptxRenderer
                 }
             }
         }
-        finally
-        {
-            graphics.RestoreState();
-        }
-
         if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
         {
             SetChartStroke(graphics, categoryAxisStroke);
@@ -8764,8 +8751,6 @@ internal sealed partial class PptxRenderer
         double plotHeight = plotBox.Height;
         IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
-        graphics.SaveState();
-        try
         {
             if (minorGridlines)
             {
@@ -8810,10 +8795,6 @@ internal sealed partial class PptxRenderer
                     RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
-        }
-        finally
-        {
-            graphics.RestoreState();
         }
     }
 
@@ -9003,8 +8984,6 @@ internal sealed partial class PptxRenderer
         graphics.StrokeLine(plotX, plotY, plotX + plotWidth, plotY);
         graphics.StrokeLine(plotX, plotY, plotX, plotY + plotHeight);
 
-        graphics.SaveState();
-        try
         {
             for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
             {
@@ -9049,10 +9028,6 @@ internal sealed partial class PptxRenderer
                     graphics.RestoreState();
                 }
             }
-        }
-        finally
-        {
-            graphics.RestoreState();
         }
     }
 

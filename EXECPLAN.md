@@ -11190,3 +11190,22 @@ test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-spars
 passed at run `20260527-194329`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-194345`;
 `pptx-ladder-11-chart-area-2series-port`, `pptx-ladder-11-chart-column-clustered-port`, and
 `pptx-ladder-11-chart-scatter-clusters-port` passed at run `20260527-194403`.
+
+Revision note, 2026-05-27: Removed the redundant outer `q`/`Q` save/restore wrappers left after broad
+plot-area clip removal from bar/column, line, area, scatter, and bubble chart bodies. The renderer now relies
+on explicit subpart-level graphics-state ownership for plot clips and alpha scopes, instead of wrapping an
+entire chart-family body in an otherwise empty graphics state. This is PDF-operator structure cleanup only:
+chart coordinates, chart metrics, blank segmentation, stroke/fill provenance, and data-label/legend behavior
+are unchanged.
+
+The remaining chart-structure work is deliberately still open rather than silently trimmed: legend/data-label
+key semantics need fresh Office-PDF evidence because legends can sit outside the plot area; residual sparse
+layout offsets and marker/legend placement still point to chart-layout model gaps; pattern fills still have
+their own nested rectangle clip that should only change after Office structure says so; and there should be a
+broader `q`/`Q` audit outside these Cartesian chart-family bodies.
+
+Validation: focused non-slow `pptx-charts` passed with `57` tests before the plan update; serial visual
+reruns passed for `pptx-ladder-11-chart-line-markers-port` at run `20260527-194707`,
+`pptx-ladder-11-chart-column-clustered-port` at run `20260527-194721`, and
+`pptx-ladder-11-chart-area-2series-port` at run `20260527-194732`. `git diff --check` passed, and the full
+non-slow test run passed with `288 passed, 0 failed, 7 skipped`.
