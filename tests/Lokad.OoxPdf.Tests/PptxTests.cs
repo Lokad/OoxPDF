@@ -3697,6 +3697,16 @@ internal static class PptxTests
         TestAssert.Equal("normal", glyphRunTexts[4]);
         TestAssert.Equal(" ", glyphRunTexts[5]);
         TestAssert.Equal("text", glyphRunTexts[6]);
+        int[] glyphRunLineIndexes = glyphRuns.Select(run => run.LineIndex).ToArray();
+        TestAssert.True(
+            glyphRunLineIndexes.SequenceEqual(new[] { 0, 0, 0, 0, 0, 0, 1 }),
+            "Expected glyph-run line indexes to follow the two wrapped layout lines. Actual: " + string.Join(",", glyphRunLineIndexes));
+        TestAssert.True(
+            glyphRuns.Take(6).All(run => Math.Abs(run.LineTopY - glyphRuns[0].LineTopY) < 0.01d),
+            "Expected all first-line glyph runs to preserve the same line top.");
+        TestAssert.True(
+            Math.Abs(glyphRuns[6].LineTopY - glyphRuns[0].LineTopY) > 0.01d,
+            "Expected the wrapped glyph run to preserve a distinct second-line top.");
     }
 
     public static void PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries()

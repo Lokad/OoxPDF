@@ -9586,6 +9586,19 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Added a public wrapped/highlighted text guard for the new PPTX glyph-run line
+context. `PptxHighlightedHeadlineTextWrapsBeforeFinalWord` now asserts that the first six emitted glyph
+runs retain line index `0` and a shared line top, while the final wrapped word retains line index `1` and a
+distinct line top.
+
+This is intentionally diagnostic coverage, not a layout behavior change. It keeps the line identity and
+line-box metrics exposed by `InspectTextGlyphRuns` anchored to a real public wrap/highlight case, so future
+private page-17 derived-font-size work can discriminate line/frame context without reintroducing document
+specific font-size exceptions.
+
+Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`); full non-slow
+console runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
 The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
 data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only
