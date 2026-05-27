@@ -11254,6 +11254,46 @@ internal static class PptxTests
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
         TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+
+        using MemoryStream embeddedWorkbookStream = new(EmbeddedChartWorkbook());
+        OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream);
+        var readWorkbookData = typeof(PptxRenderer).GetMethod(
+            "ReadWorkbookData",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected workbook reader helper.");
+        object parsedWorkbook = readWorkbookData.Invoke(null, [embeddedWorkbookPackage]) ?? throw new InvalidOperationException("Expected parsed workbook data.");
+        var hiddenColumnSource = source with { Formula = "Sheet1!$B$2:$B$4" };
+        object hiddenColumnVector = buildVector.Invoke(
+            null,
+            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 3, "General", hiddenColumnSource, parsedWorkbook]) ?? throw new InvalidOperationException("Expected hidden-column indexed chart vector.");
+        object[] allHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [false])) ?? throw new InvalidOperationException("Expected unfiltered workbook points.")).Cast<object>().ToArray();
+        object[] visibleHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered workbook points.")).Cast<object>().ToArray();
+        TestAssert.True(allHiddenColumnWorkbookPoints.Length == 3, "Expected plot visibility projection to start from the full workbook source vector.");
+        TestAssert.True(visibleHiddenColumnWorkbookPoints.Length == 0, "Expected plot-visible-only projection to exclude workbook points from a hidden source column.");
+
+        var labelSource = new PptxSceneChartDataSource(
+            "Sheet1!$A$2:$A$4",
+            PptxSceneChartDataSourceReferenceKind.StringReference,
+            "strRef",
+            PptxSceneChartDataSourceCacheKind.StringCache,
+            "strCache",
+            HasCachedPoints: true);
+        System.Reflection.MethodInfo buildTextVector = typeof(PptxRenderer).GetMethod(
+            "BuildChartIndexedTextVector",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected indexed chart text vector builder.");
+        object textVector = buildTextVector.Invoke(
+            null,
+            [
+                new[] { "Cached" },
+                Array.Empty<PptxSceneChartStringPoint>(),
+                3,
+                new List<IReadOnlyList<PptxSceneChartStringPoint>>(),
+                labelSource,
+                parsedWorkbook
+            ]) ?? throw new InvalidOperationException("Expected indexed chart text vector.");
+        object[] visibleLabelWorkbookPoints = (((System.Collections.IEnumerable?)textVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(textVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered text workbook points.")).Cast<object>().ToArray();
+        TestAssert.True(visibleLabelWorkbookPoints.Length == 2, "Expected plot-visible-only projection to exclude the hidden worksheet row while preserving visible label points.");
+        object visibleLabelCell = visibleLabelWorkbookPoints[1].GetType().GetProperty("WorkbookCell")?.GetValue(visibleLabelWorkbookPoints[1]) ?? throw new InvalidOperationException("Expected visible text point cell provenance.");
+        TestAssert.Equal("A4", (string?)visibleLabelCell.GetType().GetProperty("Reference")?.GetValue(visibleLabelCell) ?? string.Empty);
     }
 
     public static void PptxBubbleChartRendersNativeAxesGridlinesLegendAndBubbles()

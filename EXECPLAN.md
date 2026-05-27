@@ -9508,3 +9508,19 @@ re-opening workbook XML or rehydrating ranges after the renderer has already cho
 Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`263 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Added the missing renderer-facing visibility projection for workbook-backed chart
+points. The workbook parser already preserved row and column hidden flags, and the indexed vectors now keep
+workbook sidecar points even when chart caches remain the active rendering source. `ChartIndexedNumberVector`
+and `ChartIndexedTextVector` now expose full versus `plotVisOnly`-filtered workbook point projections, plus
+dense workbook-value projections, so future Office-PDF-backed source/cache reconciliation can apply hidden
+row/column semantics without re-reading worksheet XML or inventing point-index rules at draw time.
+
+This still does not change visible chart output or implement `plotVisOnly`. The important closure is the
+structural prerequisite: hidden source rows and columns can be evaluated against the same workbook sidecar
+points that will later be compared with chart caches, stale workbook values, `dispBlanksAs`, and source-linked
+formats.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`44 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`263 passed, 0 failed, 7 skipped`).

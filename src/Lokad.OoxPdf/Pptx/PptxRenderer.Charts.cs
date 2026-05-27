@@ -8799,6 +8799,35 @@ internal sealed partial class PptxRenderer
 
             return values;
         }
+
+        public IReadOnlyList<ChartIndexedNumberPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = WorkbookPoints ?? [];
+            return plotVisibleOnly
+                ? points.Where(point => IsWorkbookPointVisible(point.WorkbookCell)).ToArray()
+                : points;
+        }
+
+        public IReadOnlyList<double?> WorkbookDenseValues(bool plotVisibleOnly)
+        {
+            IReadOnlyList<ChartIndexedNumberPoint> points = WorkbookPointsForPlotVisibility(plotVisibleOnly);
+            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
+            if (pointCount <= 0)
+            {
+                return [];
+            }
+
+            var values = new double?[pointCount];
+            foreach (ChartIndexedNumberPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.Value is { } value)
+                {
+                    values[point.Index] = value;
+                }
+            }
+
+            return values;
+        }
     }
 
     private readonly record struct ChartIndexedNumberPoint(
@@ -8845,6 +8874,40 @@ internal sealed partial class PptxRenderer
 
             return values;
         }
+
+        public IReadOnlyList<ChartIndexedTextPoint> WorkbookPointsForPlotVisibility(bool plotVisibleOnly)
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = WorkbookPoints ?? [];
+            return plotVisibleOnly
+                ? points.Where(point => IsWorkbookPointVisible(point.WorkbookCell)).ToArray()
+                : points;
+        }
+
+        public IReadOnlyList<string?> WorkbookDenseValues(bool plotVisibleOnly)
+        {
+            IReadOnlyList<ChartIndexedTextPoint> points = WorkbookPointsForPlotVisibility(plotVisibleOnly);
+            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
+            if (pointCount <= 0)
+            {
+                return [];
+            }
+
+            var values = new string?[pointCount];
+            foreach (ChartIndexedTextPoint point in points)
+            {
+                if (point.Index >= 0 && point.Index < pointCount && point.HasText)
+                {
+                    values[point.Index] = point.Text;
+                }
+            }
+
+            return values;
+        }
+    }
+
+    private static bool IsWorkbookPointVisible(ChartWorkbookRangeCell cell)
+    {
+        return !cell.RowHidden && !cell.ColumnHidden;
     }
 
     private readonly record struct ChartIndexedTextPoint(
