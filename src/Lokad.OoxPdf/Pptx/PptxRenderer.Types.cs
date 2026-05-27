@@ -168,6 +168,8 @@ internal sealed partial class PptxRenderer
         bool SyntheticBold,
         bool SyntheticItalic);
 
+    private readonly record struct TextHighlightRectangle(double X, double Y, double Width, double Height);
+
     private sealed record PptxPositionedTextSpan(
         PptxTextRunModel? SourceRun,
         PptxTextLineBoxLayout? LineBox,

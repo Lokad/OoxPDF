@@ -41,6 +41,11 @@ foreach (PptxSlide slide in slides)
             Round(run.X),
             Round(run.BaselineY),
             Round(run.Width),
+            FormatColor(run.HighlightColor),
+            RoundNullable(run.HighlightX),
+            RoundNullable(run.HighlightY),
+            RoundNullable(run.HighlightWidth),
+            RoundNullable(run.HighlightHeight),
             run.FrameIndex,
             run.ParagraphIndex,
             run.LineIndex,
@@ -126,6 +131,20 @@ static double Round(double value)
     return Math.Round(value, 6, MidpointRounding.AwayFromZero);
 }
 
+static double? RoundNullable(double? value)
+{
+    return value is null ? null : Round(value.Value);
+}
+
+static string? FormatColor(RgbColor? color)
+{
+    return color is null
+        ? null
+        : string.Create(
+            CultureInfo.InvariantCulture,
+            $"{color.Value.Red:X2}{color.Value.Green:X2}{color.Value.Blue:X2}");
+}
+
 internal sealed record PptxGlyphRunRecord(
     int Slide,
     string? Text,
@@ -133,6 +152,11 @@ internal sealed record PptxGlyphRunRecord(
     double X,
     double BaselineY,
     double Width,
+    string? HighlightColor,
+    double? HighlightX,
+    double? HighlightY,
+    double? HighlightWidth,
+    double? HighlightHeight,
     int FrameIndex,
     int ParagraphIndex,
     int LineIndex,

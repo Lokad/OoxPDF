@@ -34,11 +34,26 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
+                TextHighlightRectangle? highlightRectangle = null;
+                if (run.HighlightColor is not null)
+                {
+                    double highlightBaselineY = emissionSpan.LineBox?.BaselineY ?? run.Y + run.BaselineOffset;
+                    if (TryGetHighlightRectangle(rendered.Font, run, highlightBaselineY, emissionSpan.GlyphSpan.NaturalWidth, out TextHighlightRectangle rectangle))
+                    {
+                        highlightRectangle = rectangle;
+                    }
+                }
+
                 glyphRuns.Add(new PptxTextGlyphRunSnapshot(
                     run.Text,
                     glyphRun.X,
                     glyphRun.BaselineY,
                     glyphRun.Width,
+                    run.HighlightColor,
+                    highlightRectangle?.X,
+                    highlightRectangle?.Y,
+                    highlightRectangle?.Width,
+                    highlightRectangle?.Height,
                     emissionSpan.FrameIndex,
                     emissionSpan.ParagraphIndex,
                     emissionSpan.LineIndex,
@@ -1050,7 +1065,7 @@ internal sealed partial class PptxRenderer
 
     private static void DrawHighlightRectangle(PdfGraphicsBuilder graphics, PdfEmbeddedFont embedded, TextRun run, RgbColor highlight, double baselineY, double lineWidth)
     {
-        if (!BaselineIntersectsClip(run, baselineY))
+        if (!TryGetHighlightRectangle(embedded, run, baselineY, lineWidth, out TextHighlightRectangle rectangle))
         {
             return;
         }
@@ -1063,12 +1078,24 @@ internal sealed partial class PptxRenderer
 
         graphics.ClipRectangleEvenOdd(run.ClipX, run.ClipY, run.ClipWidth, run.ClipHeight);
         graphics.SetFillRgb(highlight.Red, highlight.Green, highlight.Blue);
+        graphics.FillRectangleEvenOdd(rectangle.X, rectangle.Y, rectangle.Width, rectangle.Height);
+        graphics.RestoreState();
+    }
+
+    private static bool TryGetHighlightRectangle(PdfEmbeddedFont embedded, TextRun run, double baselineY, double lineWidth, out TextHighlightRectangle rectangle)
+    {
+        rectangle = default;
+        if (!BaselineIntersectsClip(run, baselineY))
+        {
+            return false;
+        }
+
         double fontScale = run.FontSize / embedded.Font.UnitsPerEm;
         double highlightDescent = PptxTextMetricRules.HighlightDescent(embedded, run.FontSize, fontScale);
         double highlightHeight = PptxTextMetricRules.HighlightHeight(embedded, run.FontSize, fontScale);
         double highlightY = baselineY - highlightDescent;
-        graphics.FillRectangleEvenOdd(run.X, highlightY, lineWidth, highlightHeight);
-        graphics.RestoreState();
+        rectangle = new TextHighlightRectangle(run.X, highlightY, lineWidth, highlightHeight);
+        return true;
     }
 
     private static bool BaselineIntersectsClip(TextRun run, double baselineY)

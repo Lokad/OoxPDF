@@ -1313,9 +1313,13 @@ High-priority actions:
 - [x] Route PPTX table-cell text through positioned glyph spans:
   table text now reuses the same text-frame and glyph-span layout path as shape text before PDF emission,
   matching the `pptx-renderer` pattern where tables delegate cell text to the common text-body renderer.
-- [ ] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
-  highlight drawing still receives legacy `TextRun`s today, while underline/strike now use glyph-run width
-  from positioned spans for PPTX shape text.
+- [x] Move highlight, underline, and strike geometry to layout-owned line boxes and glyph spans:
+  highlight drawing now consumes positioned spans, line-box baselines, and glyph-span natural widths; underline and
+  strike drawing consume emitted glyph-run width from positioned spans for PPTX shape and table text. The glyph-run
+  inspection model now exposes computed highlight rectangle geometry (`HighlightX/Y/Width/Height`) and highlight
+  color, so future Office-PDF rectangle comparisons can target layout-owned geometry directly instead of inferring it
+  from legacy `TextRun` drawing. Validation: focused non-slow `pptx-typography` passed (`87 passed, 0 failed, 2
+  skipped`), and `PptxInspect` builds warning-free.
 - [x] Re-run the justified typography probe after glyph-span emission:
   `pptx-ladder-04-typography-justify-port` stayed behavior-compatible at MAE `4.210743`; remaining drift is
   Office word-position and line-box parity, not a glyph-span bridge regression.
@@ -1328,9 +1332,12 @@ High-priority actions:
   `boundary-invariance` MAE `2.835927` with a text-op gate failure, `inventory-opti` MAE `1.148489`, and
   `accent-spacing` MAE `2.149007`. The failures point to baseline/line-box parity and Office word-position
   strategy before broader private-deck tuning.
-- [ ] Keep highlighted PPTX text on the legacy emission path until highlight geometry is ported cleanly:
-  an attempted line-box/glyph-span highlight migration regressed the locked `highlight-single` visual gate,
-  so highlight needs an Office-PDF text and rectangle geometry pass before switching.
+- [x] Keep highlighted PPTX text on the legacy emission path until highlight geometry is ported cleanly:
+  this guard is now retired because the later span-owned highlight migration succeeded without the earlier
+  `highlight-single` regression. Highlighted text uses the same positioned glyph-span emission path as ordinary PPTX
+  shape/table text, while highlight rectangles use even-odd fills and are observable through glyph-run inspection.
+  Preserve this history because the failed migration explains why highlight geometry must stay inspected and gated
+  separately from text emission.
 - [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
   paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.

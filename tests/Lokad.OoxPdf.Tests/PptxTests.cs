@@ -4043,6 +4043,21 @@ internal static class PptxTests
         TestAssert.True(
             Math.Abs(glyphRuns[6].LineTopY - glyphRuns[0].LineTopY) > 0.01d,
             "Expected the wrapped glyph run to preserve a distinct second-line top.");
+
+        PptxTextGlyphRunSnapshot highlighted = glyphRuns.Single(run => run.Text == "highlighted");
+        TestAssert.True(
+            highlighted.HighlightColor is { } highlight && highlight.Equals(new RgbColor(255, 255, 0)),
+            "Expected glyph-run inspection to expose the source highlight color.");
+        TestAssert.True(
+            highlighted.HighlightX is not null && highlighted.HighlightY is not null,
+            "Expected highlighted glyph runs to expose rectangle origin.");
+        TestAssert.True(
+            highlighted.HighlightWidth is not null && highlighted.HighlightHeight is not null,
+            "Expected highlighted glyph runs to expose rectangle size.");
+        double actualHighlightWidth = highlighted.HighlightWidth.GetValueOrDefault();
+        double actualHighlightHeight = highlighted.HighlightHeight.GetValueOrDefault();
+        TestAssert.True(Math.Abs(actualHighlightWidth - highlighted.Width) < 0.01d, "Expected highlight geometry to be owned by the positioned glyph span width.");
+        TestAssert.True(actualHighlightHeight > highlighted.LayoutFontSize * 0.5d, "Expected highlight geometry to use a line-height-sized rectangle.");
     }
 
     public static void PptxBoundaryInvarianceProbeCoalescesLeftAlignedHighlightBoundaries()
