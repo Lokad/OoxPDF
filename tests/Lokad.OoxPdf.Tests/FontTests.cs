@@ -114,6 +114,56 @@ internal static class FontTests
         TestAssert.True(!font.TryReadGlyphOutline(ushort.MaxValue, out _), "Expected out-of-range glyph outline reads to fail.");
     }
 
+    public static void PdfGlyphOutlinePathConvertsSimpleGlyphContours()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('A');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        var graphics = new PdfGraphicsBuilder();
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 10d, 20d, 12d), "Expected PDF glyph path conversion for Arial 'A'.");
+        string pdf = graphics.ToString();
+
+        TestAssert.Contains(" m", pdf);
+        TestAssert.Contains(" l", pdf);
+        TestAssert.Contains("h", pdf);
+        TestAssert.True(!pdf.Contains("NaN", StringComparison.Ordinal), "Expected finite glyph path coordinates.");
+    }
+
+    public static void PdfGlyphOutlinePathConvertsQuadraticCurvesToCubics()
+    {
+        string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
+        string arial = Path.Combine(fontsDirectory, "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        OpenTypeFont font = OpenTypeFont.Load(arial);
+        ushort glyph = font.MapCodePoint('O');
+        if (glyph == 0)
+        {
+            return;
+        }
+
+        var graphics = new PdfGraphicsBuilder();
+        TestAssert.True(PdfGlyphOutlinePath.TryAppendGlyphPath(graphics, font, glyph, 0d, 0d, 18d), "Expected PDF glyph path conversion for Arial 'O'.");
+        string pdf = graphics.ToString();
+
+        TestAssert.Contains(" c", pdf);
+        TestAssert.True(!pdf.Contains("Infinity", StringComparison.Ordinal), "Expected finite cubic control points.");
+    }
+
     public static void OpenTypeParserReadsGposPairAdjustments()
     {
         string fontsDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");

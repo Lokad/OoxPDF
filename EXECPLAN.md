@@ -11351,3 +11351,19 @@ with another and gives the eventual transparent/no-fill/outline text emitter a r
 
 Validation: focused `fonts` tests passed with `16` tests, including new checks for simple Arial glyph
 outlines, curved off-curve points, and out-of-range glyph rejection.
+
+Revision note, 2026-05-27: Added the PDF-side glyph outline path bridge without changing renderer behavior.
+`PdfGlyphOutlinePath` converts decoded simple TrueType contours into `PdfGraphicsBuilder` path operations:
+line segments remain `l`, quadratic segments become cubic `c` operators, consecutive off-curve points get
+the TrueType-implied midpoint on-curve point, and each contour is closed with `h`. The conversion uses the
+font units-per-em and target font size to place glyph geometry in PDF user space.
+
+This closes the second prerequisite for Office-style transparent text outlines for simple glyphs, but it
+still is not enough for a production emitter. Compound glyph expansion remains open, and the eventual PPTX
+text switch must preserve existing text positioning, glyph advances, character spacing, italic shear, fill
+alpha, outline strokes, and accessibility tradeoffs deliberately instead of toggling all transparent text
+blindly. The next durable slice should either expand compound glyphs structurally or add a renderer-gated
+simple-glyph outline path for a public transparent-text fixture that contains only simple glyphs.
+
+Validation: focused `fonts` tests passed with `18` tests, including direct PDF path checks for line-heavy
+and curved glyph contours.
