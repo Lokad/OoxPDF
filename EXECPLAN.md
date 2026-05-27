@@ -1307,6 +1307,26 @@ High-priority actions:
   default empty style. This keeps explicit `a:ln/a:noFill` modeled as the existing transparent zero-width
   scene line while making absent/default stroke state a scene-owned decision. Raw XML stroke parsing remains
   only for the no-scene compatibility path.
+- [x] 2026-05-27: Make pie/doughnut point explosions scene-authoritative when a typed plot exists.
+  `PptxRenderer.Charts` now treats `PptxSceneChartSeries.Explosion` and per-point scene explosion overrides
+  as the supported-path source of truth, with raw XML fallback only when no typed plot exists. Series-level
+  explosion now derives its slice count from scene cache `ptCount`, indexed value/category points, compressed
+  scene values/categories, and workbook range cell indices so workbook-only charts do not lose slice offsets
+  while eliminating another renderer-local chart XML scan. A regression test now locks workbook-backed sparse
+  point-count expansion for scene-owned series explosions. Validation: focused `pptx-charts` tests passed
+  `42/42`, the full non-slow runner passed `260/260` with `7` skips, and private run
+  `artifacts/private-visual/lokad-value-based/20260527-021332` stayed stable at 84/84 compared pages, zero
+  dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only one
+  `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [ ] Introduce a renderer-level indexed chart data vector before removing the remaining chart value/category
+  XML fallbacks. The scene and workbook layers already preserve `ptCount`, sparse point indices, blank or
+  non-numeric points, multi-area/structured-reference workbook cell indices, and category string-point
+  presence, but supported chart renderers still consume compressed `IReadOnlyList<double>` and
+  `IReadOnlyList<string>` payloads. Removing `ReadSceneOrXmlChartSeries`,
+  `ReadSceneOrXmlScatterSeries`, and `ReadSceneOrXmlCategoryLabels` fallbacks safely requires a typed data
+  vector that carries indexed points, blank/missing state, source formula/cell metadata, and the Office
+  cache-vs-workbook precedence into axis scaling, stacked totals, category labels, data labels, and
+  pie/doughnut slice construction.
 - [x] 2026-05-25: Preserve chart title and legend boolean source presence.
   `PptxSceneChartTitle.IsAutoDeleted` now keeps missing `c:autoTitleDeleted` distinct from explicit false,
   and `PptxSceneChartLegend` now separates legend element presence from nullable `c:delete` metadata. The

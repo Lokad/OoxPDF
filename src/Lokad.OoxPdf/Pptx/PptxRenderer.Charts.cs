@@ -471,14 +471,14 @@ internal sealed partial class PptxRenderer
         return ReadChartPointStrokes(chartElement, theme);
     }
 
-    private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement)
+    private static IReadOnlyDictionary<int, double> ReadSceneOrXmlChartPointExplosions(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
     {
-        IReadOnlyDictionary<int, double>? explosions = plot?.Series.Count > 0
-            ? ReadSceneChartPointExplosions(plot.Series[0])
-            : null;
-        return explosions is { Count: > 0 }
-            ? explosions
-            : ReadChartPointExplosions(chartElement);
+        if (plot is not null)
+        {
+            return plot.Series.Count > 0 ? ReadSceneChartPointExplosions(plot.Series[0], workbook) : new Dictionary<int, double>();
+        }
+
+        return ReadChartPointExplosions(chartElement);
     }
 
     private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneChartPointFills(PptxSceneChartSeries series)
@@ -509,13 +509,13 @@ internal sealed partial class PptxRenderer
         return strokes;
     }
 
-    private static IReadOnlyDictionary<int, double> ReadSceneChartPointExplosions(PptxSceneChartSeries series)
+    private static IReadOnlyDictionary<int, double> ReadSceneChartPointExplosions(PptxSceneChartSeries series, ChartWorkbookData? workbook)
     {
         var explosions = new Dictionary<int, double>();
         if (series.Explosion is { } seriesExplosion)
         {
             double fraction = Math.Clamp(seriesExplosion / 100d, 0d, 1d);
-            int pointCount = Math.Max(series.Values.Count, series.Categories.Count);
+            int pointCount = ResolveSceneChartSeriesPointCount(series, workbook);
             for (int index = 0; index < pointCount; index++)
             {
                 explosions[index] = fraction;
@@ -531,6 +531,57 @@ internal sealed partial class PptxRenderer
         }
 
         return explosions;
+    }
+
+    private static int ResolveSceneChartSeriesPointCount(PptxSceneChartSeries series, ChartWorkbookData? workbook)
+    {
+        int pointCount = Math.Max(series.Values.Count, series.Categories.Count);
+        pointCount = Math.Max(pointCount, series.ValuePointCount ?? 0);
+        pointCount = Math.Max(pointCount, series.CategoryPointCount ?? 0);
+        pointCount = Math.Max(pointCount, MaxSceneChartNumberPointIndex(series.ValuePoints) + 1);
+        pointCount = Math.Max(pointCount, MaxSceneChartStringPointIndex(series.CategoryPoints) + 1);
+
+        if (workbook is not null)
+        {
+            pointCount = Math.Max(pointCount, ReadWorkbookNumericPointCount(workbook, series.DataSources.Values));
+            pointCount = Math.Max(pointCount, ReadWorkbookTextPointCount(workbook, series.DataSources.Categories));
+        }
+
+        return pointCount;
+    }
+
+    private static int MaxSceneChartNumberPointIndex(IReadOnlyList<PptxSceneChartNumberPoint> points)
+    {
+        int max = -1;
+        foreach (PptxSceneChartNumberPoint point in points)
+        {
+            max = Math.Max(max, point.Index);
+        }
+
+        return max;
+    }
+
+    private static int MaxSceneChartStringPointIndex(IReadOnlyList<PptxSceneChartStringPoint> points)
+    {
+        int max = -1;
+        foreach (PptxSceneChartStringPoint point in points)
+        {
+            max = Math.Max(max, point.Index);
+        }
+
+        return max;
+    }
+
+    private static int ReadWorkbookNumericPointCount(ChartWorkbookData workbook, PptxSceneChartDataSource source)
+    {
+        ChartWorkbookNumericValue[] values = workbook.ReadNumericRange(source.Formula);
+        return values.Length == 0 ? 0 : values.Max(value => value.Cell.Index) + 1;
+    }
+
+    private static int ReadWorkbookTextPointCount(ChartWorkbookData workbook, PptxSceneChartDataSource source)
+    {
+        ChartWorkbookTextValue[] values = workbook.ReadTextRange(source.Formula);
+        return values.Length == 0 ? 0 : values.Max(value => value.Cell.Index) + 1;
     }
 
     private static ChartSeriesFill? ToChartSeriesFill(PptxSceneFillStyle fill, PptxScenePatternFill patternFill)
@@ -1014,7 +1065,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
@@ -1036,7 +1087,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
                 IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart);
+                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart, workbook);
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);

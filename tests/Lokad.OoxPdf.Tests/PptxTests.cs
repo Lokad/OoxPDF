@@ -11114,6 +11114,50 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Bubble charts should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxChartExplosionsUseWorkbookPointCount()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart>
+                <c:ser><c:explosion val="25"/>
+                  <c:cat><c:strRef><c:f>Sheet1!$A$2:$A$4</c:f></c:strRef></c:cat>
+                  <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f></c:numRef></c:val>
+                </c:ser>
+              </c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChartPlot plot = BuildSingleChartScene(chartXml)?.Plots.Single()
+            ?? throw new InvalidOperationException("Expected one chart plot.");
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "doughnutChart").Single();
+        Type workbookType = typeof(PptxRenderer).GetNestedType(
+            "ChartWorkbookData",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart workbook data type.");
+        var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Sheet1"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["A2"] = "North",
+                ["A4"] = "West",
+                ["B2"] = "8.2",
+                ["B4"] = "1.4"
+            }
+        };
+        object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
+        System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartPointExplosions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");
+
+        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [plot, chartElement, workbook])
+            ?? throw new InvalidOperationException("Expected point explosions."));
+
+        TestAssert.Equal(3, explosions.Count);
+        TestAssert.Equal(0.25d, explosions[0]);
+        TestAssert.Equal(0.25d, explosions[1]);
+        TestAssert.Equal(0.25d, explosions[2]);
+    }
+
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
         string input = Path.Combine(
