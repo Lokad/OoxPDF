@@ -8068,12 +8068,18 @@ internal sealed partial class PptxRenderer
 
             if (minorGridlines)
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                RenderInChartPlotAreaClip(
+                    graphics,
+                    plotBox,
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
             }
 
             if (majorGridlines)
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+                RenderInChartPlotAreaClip(
+                    graphics,
+                    plotBox,
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major));
             }
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
@@ -8082,7 +8088,7 @@ internal sealed partial class PptxRenderer
                 if (categoryAxisStroke.Alpha > 0.001d)
                 {
                     SetChartStroke(graphics, categoryAxisStroke);
-                    graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY));
                 }
             }
 
@@ -8092,7 +8098,7 @@ internal sealed partial class PptxRenderer
                 {
                     SetChartStroke(graphics, valueAxisStroke);
                     double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
-                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
 
                 if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
@@ -8101,7 +8107,7 @@ internal sealed partial class PptxRenderer
                     {
                         SetChartStroke(graphics, secondaryValueAxisStroke);
                         double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                        graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                     }
                 }
             }
@@ -8749,12 +8755,18 @@ internal sealed partial class PptxRenderer
             ClipChartPlotArea(graphics, plotX, plotY, plotWidth, plotHeight);
             if (minorGridlines)
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor);
+                RenderInChartPlotAreaClip(
+                    graphics,
+                    plotBox,
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MinorUnit, valueAxisCrossingValue, valueAxisReversed, major: false, gridlineStyle.Minor));
             }
 
             if (majorGridlines)
             {
-                DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
+                RenderInChartPlotAreaClip(
+                    graphics,
+                    plotBox,
+                    () => DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major));
             }
 
             RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs);
@@ -8765,7 +8777,7 @@ internal sealed partial class PptxRenderer
             if (axesStyle.CategoryAxisVisible && categoryAxisStroke.Alpha > 0.001d)
             {
                 SetChartStroke(graphics, categoryAxisStroke);
-                graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY);
+                RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(plotX, valueAxisCrossingY, plotX + plotWidth, valueAxisCrossingY));
             }
 
             if (axesStyle.ValueAxisVisible)
@@ -8774,14 +8786,14 @@ internal sealed partial class PptxRenderer
                 {
                     SetChartStroke(graphics, valueAxisStroke);
                     double axisX = axesStyle.ValueAxisRightSide ? plotX + plotWidth : plotX;
-                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
 
                 if (axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke && secondaryValueAxisStroke.Alpha > 0.001d)
                 {
                     SetChartStroke(graphics, secondaryValueAxisStroke);
                     double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                    RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
                 }
             }
         }

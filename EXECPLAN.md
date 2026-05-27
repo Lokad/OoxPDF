@@ -11095,3 +11095,23 @@ Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed wit
 test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
 passed at run `20260527-192839`; `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-192853`;
 and `pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-192909`.
+
+Revision note, 2026-05-27: Added scoped plot clips around line/area gridline groups and in-plot axis lines.
+Sparse Office-PDF inspection showed plot-sized clips bracketing not only series shapes but also gridline and
+axis subparts. `RenderLineChart` and `RenderAreaChart` now use the shared plot clip helper around their
+existing horizontal gridline emissions and value/category axis strokes. Scatter axes remain outside this
+change because prior scatter/bubble evidence showed the axes outside the plot clip while only the series
+emission is clipped.
+
+This reduces the remaining sparse clip-count gap without moving any chart geometry or broadening the rule to
+unproven families. The sparse probe now reports region-0 clips at `22/26` and region-1 clips at `32/38`,
+up from `20/26` and `30/38` after the area-series subpart pass. The public line-marker and area fixtures
+also keep their visual gates green, with candidate dominant plot-clip counts increasing only where those
+subparts are actually emitted. Remaining clip work should now focus on legend-key plot clips and bar/scatter/
+bubble subpart ownership, plus investigating any residual Office clips that do not correspond to currently
+modeled renderer subparts.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
+passed at run `20260527-193149`; `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-193206`;
+and `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-193206`.
