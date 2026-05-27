@@ -519,14 +519,6 @@ internal sealed partial class PptxRenderer
         return points.Count == 0 ? null : points.Max(point => point.Index) + 1;
     }
 
-    private static IReadOnlyList<string> ReadWorkbookTextValues(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
-    {
-        return workbook?
-            .ReadTextRange(source.Formula)
-            .Select(value => value.Text)
-            .ToArray() ?? [];
-    }
-
     private static IReadOnlyList<ChartSeriesFill?> ReadSceneOrXmlSeriesFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
     {
         if (plot is not null)
