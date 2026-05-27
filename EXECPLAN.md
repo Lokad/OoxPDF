@@ -11949,3 +11949,18 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-27: Consolidated the duplicated right-legend plot reserve calculation behind a
+`ChartRightLegendReserve` record without changing chart layout behavior. Line/area/scatter no-title
+right-legend layout and bubble title/right-legend layout now both call `ResolveRightLegendReserve`, which
+keeps the current legend text width, marker width, gap, padding, long-name padding, and area extra reserve
+fields in one named object.
+
+This is still an approximation, not the final Office rule. The point is to stop spreading the same
+hard-coded reserve formula across chart families while preserving the evidence trail for future replacement.
+The remaining long-term work is to derive right-legend plot-area negotiation from Office PDF structure:
+legend bounding box, value-axis label reserve, entry text width, overlay semantics, and chart-family-specific
+plot area should be solved together instead of tuned through unrelated constants.
+
+Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.

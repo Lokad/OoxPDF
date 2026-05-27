@@ -8413,23 +8413,10 @@ internal sealed partial class PptxRenderer
 
         PptxSceneChartPlot? plot = ReadSceneChartPlot(sceneChart, plotKind);
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(plot, plotElement);
-        double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
-        double maxLegendTextWidth = seriesNames.Count == 0
-            ? 0d
-            : seriesNames.Max(name => EstimateChartTextWidth(name.ActiveName, legendFontSize));
-        int maxLegendTextLength = seriesNames.Count == 0
-            ? 0
-            : seriesNames.Max(name => name.ActiveName.Length);
-        double rightReserve = maxLegendTextWidth +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeMarkerWidthFactor +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor +
-            legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor +
-            PptxChartMetricRules.LineRightLegendReservePadding +
-            Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding;
-        if (plotKind == PptxSceneChartPlotKind.Area)
-        {
-            rightReserve += frame.Width * PptxChartMetricRules.AreaRightLegendReserveFrameWidthFactor;
-        }
+        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(
+            frame,
+            seriesNames,
+            includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area);
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
@@ -8501,7 +8488,7 @@ internal sealed partial class PptxRenderer
             ? PptxChartMetricRules.LineNoTitleRightLegendExplicitScalePlotBoxHeightRatio
             : PptxChartMetricRules.LineNoTitleRightLegendPlotBoxHeightRatio;
         double y = frame.Y + frame.Height * yRatio;
-        double width = Math.Max(1d, frame.Width - leftInset - rightReserve);
+        double width = Math.Max(1d, frame.Width - leftInset - rightLegendReserve.Width);
         double height = frame.Height * heightRatio;
         return new ChartPlotBox(x, y, width, height);
     }
@@ -8548,6 +8535,17 @@ internal sealed partial class PptxRenderer
     private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
     {
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart);
+        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, includeAreaReserve: false);
+
+        double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
+        double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
+        double width = Math.Max(1d, frame.Width - (x - frame.X) - rightLegendReserve.Width);
+        double height = frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio;
+        return new ChartPlotBox(x, y, width, height);
+    }
+
+    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, bool includeAreaReserve)
+    {
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
@@ -8561,12 +8559,12 @@ internal sealed partial class PptxRenderer
             legendFontSize * PptxChartMetricRules.LegendSideStrokeGapFactor +
             PptxChartMetricRules.LineRightLegendReservePadding +
             Math.Max(0, maxLegendTextLength - 6) * PptxChartMetricRules.LineRightLegendExtraLegendCharacterPadding;
+        if (includeAreaReserve)
+        {
+            rightReserve += frame.Width * PptxChartMetricRules.AreaRightLegendReserveFrameWidthFactor;
+        }
 
-        double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
-        double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
-        double width = Math.Max(1d, frame.Width - (x - frame.X) - rightReserve);
-        double height = frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxHeightRatio;
-        return new ChartPlotBox(x, y, width, height);
+        return new ChartRightLegendReserve(rightReserve, legendFontSize, maxLegendTextWidth, maxLegendTextLength, includeAreaReserve);
     }
 
     private static ChartValueExtents GetRadarChartValueExtents(IReadOnlyList<ChartRadarSeries> series)
@@ -9829,6 +9827,13 @@ internal sealed partial class PptxRenderer
         double TextGap,
         bool Horizontal,
         bool SideStrokeLegend);
+
+    private readonly record struct ChartRightLegendReserve(
+        double Width,
+        double FontSize,
+        double MaxTextWidth,
+        int MaxTextLength,
+        bool IncludesAreaReserve);
 
     private readonly record struct ChartAxisSource(PptxSceneChartAxis? SceneAxis, XElement? XmlAxis);
 
