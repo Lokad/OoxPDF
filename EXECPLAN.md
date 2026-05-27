@@ -10398,3 +10398,22 @@ Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipp
 names and MAE `2.5235042920524693`, changed16 `0.02972318672839506`, SSIM `0.6702107685870062`;
 `pptx-ladder-11-chart-line-markers-port` passed at run `20260527-115325`; and
 `pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-115440`.
+
+Revision note, 2026-05-27: Consumed `c:dispBlanksAs="gap"` in native area chart geometry. The sparse/blank
+probe showed an Office-observable area rule that differs from the previous renderer behavior: missing cached
+area points break the filled polygon, and isolated one-point islands are not drawn as triangular fills to the
+zero baseline. `RenderAreaChart` now carries the scene-or-XML display-blanks policy into area rendering;
+`gap` renders only contiguous nonblank runs with at least two points, while non-gap modes deliberately keep
+the previous zero-fill path until public evidence distinguishes Office's `span` and `zero` area behavior.
+
+This is a structural chart-data improvement, not plot-layout closure. It removes the false filled regions
+through missing points in the lower area chart of the sparse/blank probe, but remaining deltas still include
+plot-box offsets, legend-swatch geometry, marker counts, clip boxes, and tick-label placement. Those should be
+addressed through Office-PDF structural rules for chart auto-layout and marker/legend decomposition, not by
+adding fixture-specific coordinates.
+
+Validation: focused non-slow `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`);
+`pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-115747` with MAE
+`2.076725983796296`, changed16 `0.02411988811728395`, SSIM `0.6626860241264197`, and histogram
+`0.9978587357915978`; `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-115927`; and
+`pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-115927`.

@@ -1167,7 +1167,8 @@ internal sealed partial class PptxRenderer
                     valueExtents,
                     axisUnits,
                     ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxis.XmlAxis, valueExtents),
-                    valueAxisReversed);
+                    valueAxisReversed,
+                    ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
                     fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false));
@@ -8499,7 +8500,8 @@ internal sealed partial class PptxRenderer
         ChartValueExtents valueExtents,
         ChartAxisUnits axisUnits,
         double? valueAxisCrossingValue,
-        bool valueAxisReversed)
+        bool valueAxisReversed,
+        PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -8521,7 +8523,7 @@ internal sealed partial class PptxRenderer
                 DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
             }
 
-            RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed);
+            RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, displayBlanksAs);
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
             ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
@@ -8555,7 +8557,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -8571,62 +8573,106 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            var upperPoints = new (double X, double Y)[pointCount];
-            var lowerPoints = new (double X, double Y)[pointCount];
-            for (int i = 0; i < pointCount; i++)
+            if (displayBlanksAs == PptxSceneChartDisplayBlanksAs.Gap)
             {
-                double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
-                double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
-                double lowerValue = stacked ? lower[i] : 0d;
-                double positiveTotal = GetCategoryPositiveTotal(series, i, percentStacked);
-                double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
-                double upperValue = stacked ? lower[i] + normalizedValue : value;
-                upperPoints[i] = (pointX, ChartValueToPlotCoordinate(valueExtents, upperValue, plotY, plotHeight, valueAxisReversed));
-                lowerPoints[i] = (pointX, ChartValueToPlotCoordinate(valueExtents, lowerValue, plotY, plotHeight, valueAxisReversed));
-                if (stacked)
+                int start = 0;
+                while (start < pointCount)
                 {
-                    lower[i] = upperValue;
+                    while (start < pointCount && (start >= values.Count || values[start] is null))
+                    {
+                        start++;
+                    }
+
+                    int end = start;
+                    while (end < pointCount && end < values.Count && values[end] is not null)
+                    {
+                        end++;
+                    }
+
+                    if (end - start >= 2)
+                    {
+                        RenderAreaChartSeriesSegment(graphics, theme, chartPalette, plotBox, values, start, end, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series);
+                    }
+
+                    start = Math.Max(end, start + 1);
                 }
+
+                continue;
             }
 
-            var polygon = new (double X, double Y)[pointCount * 2];
-            for (int i = 0; i < pointCount; i++)
-            {
-                polygon[i] = upperPoints[i];
-                polygon[polygon.Length - i - 1] = lowerPoints[i];
-            }
+            RenderAreaChartSeriesSegment(graphics, theme, chartPalette, plotBox, values, 0, pointCount, lower, stacked, percentStacked, seriesIndex, seriesFills, seriesStrokes, valueExtents, valueAxisReversed, series);
+        }
+    }
 
-            ChartSeriesFill fill = ChartSeriesColor(theme, chartPalette, seriesIndex, seriesFills);
-            if (fill.Alpha < 1d)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(fill.Alpha, 1d);
-            }
+    private static void RenderAreaChartSeriesSegment(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<double?> values, int startIndex, int endIndex, double[] lower, bool stacked, bool percentStacked, int seriesIndex, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed, IReadOnlyList<IReadOnlyList<double?>> allSeries)
+    {
+        double plotX = plotBox.X;
+        double plotY = plotBox.Y;
+        double plotWidth = plotBox.Width;
+        double plotHeight = plotBox.Height;
+        int pointCount = lower.Length;
+        int segmentPointCount = Math.Max(0, endIndex - startIndex);
+        if (segmentPointCount < 2)
+        {
+            return;
+        }
 
-            graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-            graphics.FillPolygon(polygon);
-            if (fill.Alpha < 1d)
+        var upperPoints = new (double X, double Y)[segmentPointCount];
+        var lowerPoints = new (double X, double Y)[segmentPointCount];
+        for (int i = startIndex; i < endIndex; i++)
+        {
+            double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
+            double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
+            double lowerValue = stacked ? lower[i] : 0d;
+            double positiveTotal = GetCategoryPositiveTotal(allSeries, i, percentStacked);
+            double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
+            double upperValue = stacked ? lower[i] + normalizedValue : value;
+            int segmentIndex = i - startIndex;
+            upperPoints[segmentIndex] = (pointX, ChartValueToPlotCoordinate(valueExtents, upperValue, plotY, plotHeight, valueAxisReversed));
+            lowerPoints[segmentIndex] = (pointX, ChartValueToPlotCoordinate(valueExtents, lowerValue, plotY, plotHeight, valueAxisReversed));
+            if (stacked)
             {
-                graphics.RestoreState();
+                lower[i] = upperValue;
             }
+        }
 
-            ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
-            if (stroke.Alpha < 1d)
-            {
-                graphics.SaveState();
-                graphics.SetAlpha(1d, stroke.Alpha);
-            }
+        var polygon = new (double X, double Y)[segmentPointCount * 2];
+        for (int i = 0; i < segmentPointCount; i++)
+        {
+            polygon[i] = upperPoints[i];
+            polygon[polygon.Length - i - 1] = lowerPoints[i];
+        }
 
-            SetChartStroke(graphics, stroke);
-            for (int i = 1; i < upperPoints.Length; i++)
-            {
-                graphics.StrokeLine(upperPoints[i - 1].X, upperPoints[i - 1].Y, upperPoints[i].X, upperPoints[i].Y);
-            }
+        ChartSeriesFill fill = ChartSeriesColor(theme, chartPalette, seriesIndex, seriesFills);
+        if (fill.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(fill.Alpha, 1d);
+        }
 
-            if (stroke.Alpha < 1d)
-            {
-                graphics.RestoreState();
-            }
+        graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
+        graphics.FillPolygon(polygon);
+        if (fill.Alpha < 1d)
+        {
+            graphics.RestoreState();
+        }
+
+        ChartSeriesStroke stroke = ChartSeriesStrokeColor(theme, chartPalette, seriesIndex, seriesStrokes, ChartLineDefaultStrokeWidth);
+        if (stroke.Alpha < 1d)
+        {
+            graphics.SaveState();
+            graphics.SetAlpha(1d, stroke.Alpha);
+        }
+
+        SetChartStroke(graphics, stroke);
+        for (int i = 1; i < upperPoints.Length; i++)
+        {
+            graphics.StrokeLine(upperPoints[i - 1].X, upperPoints[i - 1].Y, upperPoints[i].X, upperPoints[i].Y);
+        }
+
+        if (stroke.Alpha < 1d)
+        {
+            graphics.RestoreState();
         }
     }
 
