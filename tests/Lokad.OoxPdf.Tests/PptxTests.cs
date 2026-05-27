@@ -11267,6 +11267,15 @@ internal static class PptxTests
         TestAssert.True((double?)workbookPoints[0].GetType().GetProperty("Value")?.GetValue(workbookPoints[0]) == 8.2d, "Expected workbook sidecar point to preserve workbook numeric value.");
         object workbookCell = workbookPoints[0].GetType().GetProperty("WorkbookCell")?.GetValue(workbookPoints[0]) ?? throw new InvalidOperationException("Expected workbook sidecar point cell provenance.");
         TestAssert.Equal("B2", (string?)workbookCell.GetType().GetProperty("Reference")?.GetValue(workbookCell) ?? string.Empty);
+        var blankSource = source with { Formula = "Sheet1!$B$2:$B$4" };
+        object blankVector = buildVector.Invoke(
+            null,
+            [new[] { 99d }, Array.Empty<PptxSceneChartNumberPoint>(), 3, "General", blankSource, workbook]) ?? throw new InvalidOperationException("Expected blank-aware indexed chart vector.");
+        object[] blankAwareWorkbookPoints = (((System.Collections.IEnumerable?)blankVector.GetType().GetProperty("WorkbookPoints")?.GetValue(blankVector)) ?? throw new InvalidOperationException("Expected blank-aware workbook sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True(blankAwareWorkbookPoints.Length == 3, "Expected workbook sidecar points to preserve missing cells inside the source range.");
+        TestAssert.True(blankAwareWorkbookPoints[2].GetType().GetProperty("Value")?.GetValue(blankAwareWorkbookPoints[2]) is null, "Expected missing workbook source cells to remain nullable sidecar points.");
+        object blankWorkbookCell = blankAwareWorkbookPoints[2].GetType().GetProperty("WorkbookCell")?.GetValue(blankAwareWorkbookPoints[2]) ?? throw new InvalidOperationException("Expected blank workbook cell provenance.");
+        TestAssert.True((bool?)blankWorkbookCell.GetType().GetProperty("HasCell")?.GetValue(blankWorkbookCell) == false, "Expected missing workbook source cells to preserve HasCell=false.");
 
         using MemoryStream embeddedWorkbookStream = new(EmbeddedChartWorkbook());
         OoxPackage embeddedWorkbookPackage = OoxPackage.Open(embeddedWorkbookStream);

@@ -446,11 +446,10 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource source,
         ChartWorkbookData? workbook)
     {
-        IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = workbook is null
-            ? []
-            : workbook.ReadNumericRange(source.Formula)
-                .Select(value => new ChartIndexedNumberPoint(value.Cell.Index, value.Value, value.Cell.Text, value.Cell.HasValue, value.Cell))
-                .ToArray();
+        IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
+        IReadOnlyList<ChartIndexedNumberPoint> workbookNumericPoints = workbookPoints
+            .Where(point => point.Value is not null)
+            .ToArray();
         if (compactValues.Count != 0 || workbook is null)
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Count != 0
@@ -464,8 +463,8 @@ internal sealed partial class PptxRenderer
         }
 
         return new ChartIndexedNumberVector(
-            workbookPoints,
-            workbookPoints.Count == 0 ? pointCount : Math.Max(pointCount ?? 0, workbookPoints.Max(value => value.Index) + 1),
+            workbookNumericPoints,
+            workbookNumericPoints.Count == 0 ? pointCount : Math.Max(pointCount ?? 0, workbookNumericPoints.Max(value => value.Index) + 1),
             source.Formula,
             formatCode,
             source,
@@ -480,11 +479,10 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource source,
         ChartWorkbookData? workbook)
     {
-        IReadOnlyList<ChartIndexedTextPoint> workbookPoints = workbook is null
-            ? []
-            : workbook.ReadTextRange(source.Formula)
-                .Select(value => new ChartIndexedTextPoint(value.Cell.Index, value.Text, value.Cell.HasValue, value.Cell))
-                .ToArray();
+        IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
+        IReadOnlyList<ChartIndexedTextPoint> workbookTextPoints = workbookPoints
+            .Where(point => point.HasText)
+            .ToArray();
         if (compactValues.Count != 0 || workbook is null)
         {
             IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Count != 0
@@ -501,12 +499,33 @@ internal sealed partial class PptxRenderer
         }
 
         return new ChartIndexedTextVector(
-            workbookPoints,
-            workbookPoints.Count == 0 ? pointCount : Math.Max(pointCount ?? 0, workbookPoints.Max(value => value.Index) + 1),
+            workbookTextPoints,
+            workbookTextPoints.Count == 0 ? pointCount : Math.Max(pointCount ?? 0, workbookTextPoints.Max(value => value.Index) + 1),
             [],
             source.Formula,
             source,
             workbookPoints);
+    }
+
+    private static IReadOnlyList<ChartIndexedNumberPoint> ReadWorkbookNumberPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
+    {
+        return workbook?
+            .ReadRangeCells(source.Formula)
+            .Select(cell => new ChartIndexedNumberPoint(
+                cell.Index,
+                double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ? value : null,
+                cell.Text,
+                cell.HasValue,
+                cell))
+            .ToArray() ?? [];
+    }
+
+    private static IReadOnlyList<ChartIndexedTextPoint> ReadWorkbookTextPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
+    {
+        return workbook?
+            .ReadRangeCells(source.Formula)
+            .Select(cell => new ChartIndexedTextPoint(cell.Index, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
+            .ToArray() ?? [];
     }
 
     private static int? InferPointCount(IReadOnlyList<ChartIndexedNumberPoint> points)
@@ -4202,14 +4221,6 @@ internal sealed partial class PptxRenderer
         return ReadChartSeriesNames(chartElement)
             .Select(name => new ChartSeriesNameRecord(name, name, default, []))
             .ToArray();
-    }
-
-    private static IReadOnlyList<ChartIndexedTextPoint> ReadWorkbookTextPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
-    {
-        return workbook?
-            .ReadTextRange(source.Formula)
-            .Select(value => new ChartIndexedTextPoint(value.Cell.Index, value.Text, value.Cell.HasValue, value.Cell))
-            .ToArray() ?? [];
     }
 
     private static IReadOnlyList<string> ReadChartSeriesNames(XElement chartElement)

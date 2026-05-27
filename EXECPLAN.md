@@ -9555,3 +9555,19 @@ and source-linked text/number-format choices.
 Validation: focused `PptxChartSeriesNamesPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Preserved blank and missing workbook source cells in renderer-facing chart sidecar
+vectors. The first workbook-sidecar implementation reused typed numeric/text range projections, which were
+correct for compatibility rendering fallbacks but silently dropped blank, non-numeric, or absent cells inside
+the source range. `BuildChartIndexedNumberVector` and `BuildChartIndexedTextVector` now build their sidecars
+from `ReadRangeCells`, then derive the active workbook fallback from renderable numeric/text points only. This
+keeps current visible chart output unchanged while preserving source-cell gaps, `HasCell=false` records, raw
+text, index positions, styles, formulas, and hidden row/column provenance for future Office-backed decisions.
+
+This is still not `dispBlanksAs`, stale-cache freshness policy, or non-numeric coercion. The narrower
+long-term closure is that source/cache reconciliation can now see the full workbook range geometry instead of
+only the subset that happened to be immediately renderable by the current dense compatibility path.
+
+Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
