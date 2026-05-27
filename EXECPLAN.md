@@ -412,6 +412,13 @@ High-priority actions:
   run `20260527-143539` passed with the styled-marker deltas unchanged at `6.74 pt`. Remaining marker debt is
   now explicit size-value unit/envelope conversion plus broader style/color-style inheritance, not auto-marker
   default sizing.
+- [ ] 2026-05-27: Resolve sparse no-title/right-legend Cartesian layout as a joint plot-and-legend model.
+  Investigation after the marker-size fixes showed that the sparse line probe's remaining marker/swatch max
+  delta is dominated by right-legend vertical placement, while the gridline plot box has separate top/bottom
+  reserve drift. A local minimum physical-reserve experiment improved sparse gridline/value-axis Y alignment
+  but worsened the legend marker max delta from `6.74 pt` to `7.24 pt`, so the change was discarded. The next
+  durable step is to derive the plot area, inner gridline box, and side legend box together from Office PDF
+  structures instead of independently tuning plot Y/height or legend baselines.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
