@@ -564,6 +564,12 @@ High-priority actions:
   `crossBetween="bogus"` with a mismatched XML fallback `midCat` and verifies labels do not move onto tick marks.
   Validation: focused `PptxChartUnknownAxisCrossBetweenUsesSceneAuthoritativeDefault` passed; focused non-slow
   `pptx-charts` passed (`82 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Make chart tick-label-position defaults explicit. Axis label visibility and value-axis label side
+  placement now route through `ResolveChartTickLabelPosition`, naming the existing Office-compatible
+  `Unknown -> nextTo/visible` behavior instead of relying on `Unknown != None` and switch fallthrough. A synthetic
+  scene-authoritative test pairs `tickLblPos="bogus"` with a mismatched XML fallback `none` and verifies the scene
+  default remains visible. Validation: focused `PptxChartUnknownTickLabelPositionUsesSceneAuthoritativeDefault`
+  passed; focused non-slow `pptx-charts` passed (`83 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit

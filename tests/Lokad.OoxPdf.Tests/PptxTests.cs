@@ -11565,6 +11565,40 @@ internal static class PptxTests
         TestAssert.True(!(bool)onTickMarks, "Unknown scene-owned crossBetween should resolve to the Office default between, not fall back to mismatched XML.");
     }
 
+    public static void PptxChartUnknownTickLabelPositionUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="bogus"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+        TestAssert.Equal(PptxSceneChartTickLabelPosition.Unknown, categoryAxis.TickLabelPositionKind);
+        TestAssert.Equal("bogus", categoryAxis.TickLabelPosition);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:catAx><c:tickLblPos val="none"/></c:catAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "catAx").Single();
+        System.Reflection.MethodInfo labelVisible = typeof(PptxRenderer).GetMethod(
+            "IsSceneOrXmlChartAxisLabelVisible",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected axis label visibility resolver.");
+        object visible = labelVisible.Invoke(null, [categoryAxis, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved axis label visibility.");
+
+        TestAssert.True((bool)visible, "Unknown scene-owned tickLblPos should resolve to the Office default nextTo/visible, not fall back to mismatched XML.");
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

@@ -6964,6 +6964,13 @@ internal sealed partial class PptxRenderer
             : tickMark;
     }
 
+    private static PptxSceneChartTickLabelPosition ResolveChartTickLabelPosition(PptxSceneChartTickLabelPosition position)
+    {
+        return position == PptxSceneChartTickLabelPosition.Unknown
+            ? PptxSceneChartTickLabelPosition.NextTo
+            : position;
+    }
+
     private static bool ResolveSceneOrXmlValueAxisRightSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultRightSide)
     {
         if (sceneAxis is not null)
@@ -7041,7 +7048,7 @@ internal sealed partial class PptxRenderer
         }
 
         string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
-        return PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition) != PptxSceneChartTickLabelPosition.None;
+        return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) != PptxSceneChartTickLabelPosition.None;
     }
 
     private static bool IsSceneOrXmlChartAxisLabelVisible(PptxSceneChartAxis? sceneAxis, XElement? axis)
@@ -7052,13 +7059,13 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneAxis.IsDeleted != true &&
-            sceneAxis.TickLabelPositionKind != PptxSceneChartTickLabelPosition.None;
+            ResolveChartTickLabelPosition(sceneAxis.TickLabelPositionKind) != PptxSceneChartTickLabelPosition.None;
     }
 
     private static bool ResolveValueAxisLabelsRightSide(XElement? axis, bool defaultRightSide)
     {
         string? tickLabelPosition = (string?)axis?.Element(ChartNamespace + "tickLblPos")?.Attribute("val");
-        return PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition) switch
+        return ResolveChartTickLabelPosition(PptxSceneBuilder.ParseChartTickLabelPosition(tickLabelPosition)) switch
         {
             PptxSceneChartTickLabelPosition.High => true,
             PptxSceneChartTickLabelPosition.Low => false,
@@ -7073,7 +7080,7 @@ internal sealed partial class PptxRenderer
             return ResolveValueAxisLabelsRightSide(axis, defaultRightSide);
         }
 
-        return sceneAxis.TickLabelPositionKind switch
+        return ResolveChartTickLabelPosition(sceneAxis.TickLabelPositionKind) switch
         {
             PptxSceneChartTickLabelPosition.High => true,
             PptxSceneChartTickLabelPosition.Low => false,
