@@ -366,11 +366,12 @@ internal sealed class DocxReader
         {
             if (element.Name == WordprocessingNamespace + "p")
             {
-                if (element
+                XElement? pageBreakBefore = element
                     .Element(WordprocessingNamespace + "pPr")
-                    ?.Element(WordprocessingNamespace + "pageBreakBefore") is not null)
+                    ?.Element(WordprocessingNamespace + "pageBreakBefore");
+                if (ReadOnOff(pageBreakBefore) == true)
                 {
-                    elements.Add(new DocxPageBreakElement());
+                    elements.Add(new DocxPageBreakElement("pageBreakBefore", (string?)pageBreakBefore?.Attribute(WordprocessingNamespace + "val")));
                 }
 
                 DocxParagraph? paragraph = ReadParagraph(element, styles, numbering, numberingCounters, package, relationships);

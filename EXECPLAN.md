@@ -432,6 +432,12 @@ High-priority actions:
   rather than inferred from grid widths or document-specific heuristics. Validation: focused non-slow
   `docx-tables` passed (`5 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`275 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX `pageBreakBefore` on/off source tokens in the body model:
+  `DocxPageBreakElement` now records its source kind and raw `w:val` token, and the reader uses the shared
+  OOXML on/off parser instead of treating element presence as true. Explicit `w:val="0"` no longer creates a
+  page break, while explicit `on` and implicit true remain observable as body break elements. Validation:
+  focused non-slow `docx-page` passed (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`276 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

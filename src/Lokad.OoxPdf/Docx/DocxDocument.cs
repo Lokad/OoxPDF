@@ -25,7 +25,7 @@ internal sealed record DocxParagraphElement(DocxParagraph Paragraph) : DocxBodyE
 
 internal sealed record DocxTableElement(DocxTable Table) : DocxBodyElement;
 
-internal sealed record DocxPageBreakElement : DocxBodyElement;
+internal sealed record DocxPageBreakElement(string SourceKind, string? Value) : DocxBodyElement;
 
 internal sealed record DocxParagraph(
     IReadOnlyList<DocxTextRun> Runs,
