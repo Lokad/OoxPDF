@@ -27,11 +27,6 @@
     "maxChartGraphicsStructurePathGeometryDelta": 28,
     "maxChartGraphicsStructurePathGeometryDeltaByKind": {
       "PolarSliceCandidate": 28
-    },
-    "compareChartTextStructurePageNumber": 1,
-    "compareChartTextStructureKinds": ["DataLabelText"],
-    "maxChartTextStructurePositionDeltaByKind": {
-      "DataLabelText": 800
     }
   }
 }

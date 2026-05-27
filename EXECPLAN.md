@@ -1707,11 +1707,17 @@ High-priority actions:
     swatch-adjacent polar text run as chart `LegendText`; existing public doughnut legend probes remain gated
     as `LegendText`. Validation: public data-label probe passed as `DataLabelText` in run `20260527-102703`;
     public doughnut right-overlay, left, and top legend probes passed in run `20260527-102718`.
-  - [ ] Build a stronger public leader-line geometry probe before rendering leader lines:
-    the same generated OOXML includes `showLeaderLines` and styled `c:leaderLines`, but the Office PDF for the
-    current layout did not expose separate leader-line strokes. Create a public Office-authored probe that
-    forces visible leader-line strokes in the reference PDF, then add a first-class chart-graphics
-    classification for those connector strokes before implementing renderer-side leader-line geometry.
+  - [x] Build a stronger public leader-line geometry probe before rendering leader lines:
+    `tools/NewChartProbeFixtures.ps1 -DataLabelsOnly` now drives a custom-positioned Office pie-label layout
+    that makes the Office reference PDF emit a real two-segment leader-line stroke. `ClassifyPdfChartGraphics.ps1`
+    now classifies non-axis one- or two-segment connector strokes as `DataLabelLeaderLineCandidate`, and the
+    regenerated public probe exposes one reference leader-line structure while the candidate still exposes none.
+    The case intentionally no longer gates `DataLabelText` counts because the stronger custom layout changes
+    Office category/percent text grouping; pie and doughnut data-label text placement remains covered by the
+    dedicated public polar cases. Validation: focused non-slow `pptx-charts` passed
+    (`52 passed, 0 failed, 0 skipped`); public leader-line probe passed in run `20260527-122100` with
+    the reference `DataLabelLeaderLineCandidate` visible in the structural report. Remaining work is renderer
+    leader-line geometry generation and then enabling a structure gate for `DataLabelLeaderLineCandidate`.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient

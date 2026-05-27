@@ -555,6 +555,17 @@ foreach ($op in $ops) {
         $width -le $MarkerMaxSize -and $height -le $MarkerMaxSize) {
         $structures.Add((New-Structure "StrokeMarkerCandidate" $op))
     }
+    elseif ($op.Kind -eq "Stroke" -and
+        (IntValue $op.MoveCount) -eq 1 -and
+        (IntValue $op.LineCount) -ge 1 -and
+        (IntValue $op.LineCount) -le 2 -and
+        (IntValue $op.CurveCount) -eq 0 -and
+        (IntValue $op.CloseCount) -eq 0 -and
+        $width -gt $LineTolerance -and
+        $height -gt $LineTolerance -and
+        ($width -ge $MinLineLength -or $height -ge $MinLineLength)) {
+        $structures.Add((New-Structure "DataLabelLeaderLineCandidate" $op))
+    }
 
     if (($op.Kind -eq "Fill" -or $op.Kind -eq "FillStroke") -and $width -gt 0 -and $height -gt 0) {
         if ($width -ge $MarkerMinSize -and $height -ge $MarkerMinSize -and

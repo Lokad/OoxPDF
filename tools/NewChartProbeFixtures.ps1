@@ -140,7 +140,7 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
         $slide = $presentation.Slides.Add(1, 12)
         $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
 
-        $chartShape = $slide.Shapes.AddChart(5, 144, 36, 576, 432)
+        $chartShape = $slide.Shapes.AddChart(5, 144, 60, 520, 360)
         $chart = $chartShape.Chart
         [void]($chart.HasTitle = $false)
         [void]($chart.HasLegend = $false)
@@ -180,8 +180,8 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
         $labels.ShowValue = $false
         $labels.ShowPercentage = $true
         $labels.ShowSeriesName = $false
-        $labels.ShowLegendKey = $true
-        $labels.Separator = "`n"
+        $labels.ShowLegendKey = $false
+        $labels.Separator = " "
         $labels.Position = 2
         try {
             $series.HasLeaderLines = $true
@@ -191,18 +191,18 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
             # do not expose this property until the chart is laid out.
         }
         try {
-            $series.LeaderLines.Format.Line.ForeColor.RGB = Rgb 89 89 89
-            $series.LeaderLines.Format.Line.Weight = 0.75
+            $series.LeaderLines.Format.Line.ForeColor.RGB = Rgb 255 0 0
+            $series.LeaderLines.Format.Line.Weight = 2.25
         }
         catch {
             # The generated PDF remains the source of truth for leader geometry.
         }
 
         $manualLabelPositions = @(
-            @{ Left = 84; Top = 36 },
-            @{ Left = 462; Top = 182 },
-            @{ Left = 54; Top = 248 },
-            @{ Left = 156; Top = 372 }
+            @{ Left = 10; Top = 20 },
+            @{ Left = 650; Top = 40 },
+            @{ Left = 0; Top = 330 },
+            @{ Left = 640; Top = 390 }
         )
         for ($i = 1; $i -le $manualLabelPositions.Count; $i++) {
             $point = $null
@@ -210,6 +210,12 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
             try {
                 $point = $series.Points($i)
                 $pointLabel = $point.DataLabel
+                try {
+                    $pointLabel.Position = 7
+                }
+                catch {
+                    # Some Office builds keep custom placement implicit after Left/Top.
+                }
                 $pointLabel.Left = $manualLabelPositions[$i - 1].Left
                 $pointLabel.Top = $manualLabelPositions[$i - 1].Top
             }
@@ -221,6 +227,14 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
                 if ($pointLabel -ne $null) { Release-ComObject $pointLabel }
                 if ($point -ne $null) { Release-ComObject $point }
             }
+        }
+        try {
+            $series.HasLeaderLines = $true
+            $series.LeaderLines.Format.Line.ForeColor.RGB = Rgb 255 0 0
+            $series.LeaderLines.Format.Line.Weight = 2.25
+        }
+        catch {
+            # The generated PDF remains the source of truth for leader geometry.
         }
 
         if (Test-Path -LiteralPath $output) {
