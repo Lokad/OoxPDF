@@ -1004,6 +1004,15 @@ High-priority actions:
     therefore tied to absolute baseline/text-matrix placement, likely after Office's page-coordinate quantization,
     not to source height, text length, font family, or a per-size lookup. Keep renderer behavior unchanged until the
     baseline quantization condition is reproduced from public probes.
+  - [x] 2026-05-27: Add a fine single-size public-safe Y scan before attempting a coordinate rule. The ignored
+    `font-size-quantization-y-scan-21pt` probe steps 21 pt text by 18 pt from Y `18` to `504`; the secondary
+    branch appears at Y `18`, `144`, `270`, `378`, `396`, and `504`. The narrower ignored
+    `font-size-quantization-y-scan-21pt-fine` probe steps by 3 pt around the Y `144` transition and shows a band,
+    not a single coordinate: Office emits `21.024` from Y `135` through `153`, while Y `120` through `132` and
+    `156` through `201` remain `21.000`. The inspected PDF text matrices are identity-scaled (`A=D=1`), so these
+    are literal Office `/Tf` choices rather than an inspector artifact from CTM composition. This strengthens the
+    long-term requirement: the next renderer change must derive a page-coordinate/baseline quantization model from
+    public probes, not introduce a Y-value lookup.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
