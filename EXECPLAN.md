@@ -425,6 +425,13 @@ High-priority actions:
   instead of re-reading XML or adding narrow special cases. Validation: focused non-slow `docx-text` passed
   (`5 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`274 passed, 0 failed, 7 skipped`).
+- [x] Preserve DOCX table-layout source tokens before changing table width algorithms:
+  `DocxTable` now carries the raw `w:tblLayout @w:type` value beside the existing column-width and row/cell
+  model. The DOCX table ladder locks `fixed`, `autofit`, and absent layout tokens without changing current
+  rendering. This keeps future fixed-vs-autofit table width behavior tied to WordprocessingML structure
+  rather than inferred from grid widths or document-specific heuristics. Validation: focused non-slow
+  `docx-tables` passed (`5 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`275 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

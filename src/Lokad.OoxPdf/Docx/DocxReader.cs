@@ -452,6 +452,10 @@ internal sealed class DocxReader
 
     private static DocxTable? ReadTable(XElement table)
     {
+        string? layoutValue = (string?)table
+            .Element(WordprocessingNamespace + "tblPr")
+            ?.Element(WordprocessingNamespace + "tblLayout")
+            ?.Attribute(WordprocessingNamespace + "type");
         IReadOnlyList<double> columns = table
             .Element(WordprocessingNamespace + "tblGrid")
             ?.Elements(WordprocessingNamespace + "gridCol")
@@ -491,7 +495,7 @@ internal sealed class DocxReader
             columns = Enumerable.Repeat(72d, maxCells).ToArray();
         }
 
-        return new DocxTable(columns, rows);
+        return new DocxTable(layoutValue, columns, rows);
     }
 
     private static double? ReadTableRowHeight(XElement row)

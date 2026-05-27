@@ -50,7 +50,7 @@ internal sealed record DocxTextRun(
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName);
 
-internal sealed record DocxTable(IReadOnlyList<double> ColumnWidthsPoints, IReadOnlyList<DocxTableRow> Rows);
+internal sealed record DocxTable(string? LayoutValue, IReadOnlyList<double> ColumnWidthsPoints, IReadOnlyList<DocxTableRow> Rows);
 
 internal sealed record DocxTableRow(IReadOnlyList<DocxTableCell> Cells, double? HeightPoints);
 
