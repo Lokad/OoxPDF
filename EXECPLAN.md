@@ -9573,6 +9573,22 @@ Validation: focused `PptxChartIndexedVectorsPreserveWorkbookSidecarPoints` passe
 skipped`); focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`264 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Preserved raw multi-level chart category caches through the renderer fallback.
+The scene parser already retained multi-level category points and per-level buckets, but both scene and raw
+data-source metadata only counted direct cache points, so `multiLvlStrCache/lvl/pt` looked like a formula-only
+reference. The raw category-label vector reader now keeps `multiLvlStrCache` points, level groupings, blank
+value elements, source formula, reference kind, cache kind, and nested cache-point presence instead of
+collapsing the fallback to a flat string formula plus default source metadata.
+
+This intentionally does not implement Office hierarchical category-axis layout, source/cache freshness, or
+multi-level tick placement. It removes another renderer-local structural blind spot: later PDF-level
+alignment can compare Office/candidate output while still knowing which category labels came from workbook
+references, which cache kind Office stored, which blanks were explicit, and how the category levels were
+grouped before the current dense flat label renderer consumes them.
+
+Validation: focused non-slow `pptx-charts` passed (`45 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`264 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Removed the generic `CompactChartSeries` compatibility helper from normal chart
 entrypoints. Bar, line, area, combo, and layout guard code now keep their `ChartIndexedNumberVector` records
 and ask only for the renderable-series count when they need the previous "has any compact values" decision.

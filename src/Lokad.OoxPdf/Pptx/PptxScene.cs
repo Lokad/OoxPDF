@@ -2287,7 +2287,7 @@ internal sealed class PptxSceneBuilder
                 .Elements()
                 .FirstOrDefault(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Cache", StringComparison.Ordinal));
             bool hasCachedPoints = cache?
-                .Elements(ChartNamespace + "pt")
+                .Descendants(ChartNamespace + "pt")
                 .Any() == true;
             return new PptxSceneChartDataSource(
                 (string?)reference.Element(ChartNamespace + "f"),

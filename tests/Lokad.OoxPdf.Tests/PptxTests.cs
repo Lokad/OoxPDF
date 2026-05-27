@@ -10307,7 +10307,7 @@ internal static class PptxTests
 
     public static void PptxScenePreservesChartMultiLevelCategoryPoints()
     {
-        PptxSceneChart? chart = BuildSingleChartScene("""
+        string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:lineChart><c:ser>
@@ -10326,10 +10326,12 @@ internal static class PptxTests
                 <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
               </c:ser></c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
-            """);
+            """;
+        PptxSceneChart? chart = BuildSingleChartScene(chartXml);
 
         PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
+        TestAssert.True(series.DataSources.Categories.HasCachedPoints, "Expected multi-level category cache point presence to survive scene parsing.");
         TestAssert.Equal(3, series.CategoryPointCount ?? 0);
         TestAssert.Equal(5, series.CategoryPoints.Count);
         TestAssert.Equal(2, series.CategoryLevels.Count);
@@ -10342,6 +10344,31 @@ internal static class PptxTests
         TestAssert.Equal(1, series.CategoryLevels[1][1].Index);
         TestAssert.Equal(string.Empty, series.CategoryLevels[1][1].Text);
         TestAssert.True(series.CategoryLevels[1][1].HasText, "Expected blank multi-level category value to preserve its value element.");
+
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "lineChart").Single();
+        System.Reflection.MethodInfo readCategoryLabelVector = typeof(PptxRenderer).GetMethod(
+            "ReadChartCategoryLabelVector",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected raw category-label vector reader.");
+        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
+        TestAssert.Equal("Sheet1!$A$2:$B$4", (string?)rawVector.GetType().GetProperty("Formula")?.GetValue(rawVector) ?? string.Empty);
+        TestAssert.Equal(3, (int?)rawVector.GetType().GetProperty("PointCount")?.GetValue(rawVector) ?? 0);
+
+        object rawSource = rawVector.GetType().GetProperty("Source")?.GetValue(rawVector) ?? throw new InvalidOperationException("Expected raw category source metadata.");
+        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
+        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.MultiLevelStringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
+        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected raw multi-level category cache point presence to survive fallback parsing.");
+
+        object[] rawPoints = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Points")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected raw category points.")).Cast<object>().ToArray();
+        TestAssert.Equal(5, rawPoints.Length);
+        object[] rawLevels = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Levels")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected raw category levels.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, rawLevels.Length);
+        object[] rawFirstLevel = (((System.Collections.IEnumerable?)rawLevels[0]) ?? throw new InvalidOperationException("Expected first raw category level.")).Cast<object>().ToArray();
+        object[] rawSecondLevel = (((System.Collections.IEnumerable?)rawLevels[1]) ?? throw new InvalidOperationException("Expected second raw category level.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, rawFirstLevel.Length);
+        TestAssert.Equal(3, rawSecondLevel.Length);
+        TestAssert.Equal(string.Empty, (string?)rawSecondLevel[1].GetType().GetProperty("Text")?.GetValue(rawSecondLevel[1]) ?? string.Empty);
+        TestAssert.True((bool?)rawSecondLevel[1].GetType().GetProperty("HasText")?.GetValue(rawSecondLevel[1]) == true, "Expected raw blank multi-level category value to preserve its value element.");
     }
 
     public static void PptxScenePreservesChartNumberFormatMetadata()

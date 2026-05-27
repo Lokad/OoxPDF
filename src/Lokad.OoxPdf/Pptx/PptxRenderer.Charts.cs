@@ -4112,28 +4112,44 @@ internal sealed partial class PptxRenderer
             .Concat(categories.Descendants(ChartNamespace + "strLit"))
             .Concat(categories.Descendants(ChartNamespace + "numCache"))
             .Concat(categories.Descendants(ChartNamespace + "numLit"))
+            .Concat(categories.Descendants(ChartNamespace + "multiLvlStrCache"))
             .FirstOrDefault();
         if (cache is null)
         {
             return default;
         }
 
-        ChartIndexedTextPoint[] points = cache
-            .Elements(ChartNamespace + "pt")
+        IEnumerable<XElement> pointElements = cache.Name.LocalName == "multiLvlStrCache"
+            ? cache.Descendants(ChartNamespace + "pt")
+            : cache.Elements(ChartNamespace + "pt");
+        ChartIndexedTextPoint[] points = ReadChartIndexedTextPoints(pointElements);
+        IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = cache.Name.LocalName == "multiLvlStrCache"
+            ? cache
+                .Elements(ChartNamespace + "lvl")
+                .Select(level => ReadChartIndexedTextPoints(level.Elements(ChartNamespace + "pt")))
+                .Where(level => level.Length != 0)
+                .ToArray()
+            : [];
+        PptxSceneChartDataSource source = ReadChartDataSource(categories, "strRef", "numRef", "multiLvlStrRef");
+        return new ChartIndexedTextVector(
+            points,
+            ReadChartPointCount(cache) ?? InferPointCount(points),
+            levels,
+            source.Formula,
+            source,
+            []);
+    }
+
+    private static ChartIndexedTextPoint[] ReadChartIndexedTextPoints(IEnumerable<XElement> sourcePoints)
+    {
+        return sourcePoints
             .Select((point, fallbackIndex) =>
             {
                 XElement? valueElement = point.Element(ChartNamespace + "v");
                 string text = valueElement?.Value.Trim() ?? string.Empty;
-                return new ChartIndexedTextPoint(ReadChartCachePointIndex(point) ?? fallbackIndex, text, !string.IsNullOrEmpty(text), default);
+                return new ChartIndexedTextPoint(ReadChartCachePointIndex(point) ?? fallbackIndex, text, valueElement is not null, default);
             })
             .ToArray();
-        return new ChartIndexedTextVector(
-            points,
-            ReadChartPointCount(cache) ?? InferPointCount(points),
-            [],
-            (string?)categories.Descendants(ChartNamespace + "f").FirstOrDefault(),
-            default,
-            []);
     }
 
     private static IReadOnlyList<ChartLegendEntry> BuildFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyList<ChartSeriesFill?> seriesFills, int paletteOffset = 0, ChartWorkbookData? workbook = null)
@@ -4260,7 +4276,7 @@ internal sealed partial class PptxRenderer
                 .Elements()
                 .FirstOrDefault(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Cache", StringComparison.Ordinal));
             bool hasCachedPoints = cache?
-                .Elements(ChartNamespace + "pt")
+                .Descendants(ChartNamespace + "pt")
                 .Any() == true;
             return new PptxSceneChartDataSource(
                 (string?)reference.Element(ChartNamespace + "f"),
