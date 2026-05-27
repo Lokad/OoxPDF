@@ -2978,14 +2978,10 @@ internal sealed class PptxSceneBuilder
             XElement? lineReference = roleElement
                 .Descendants()
                 .FirstOrDefault(element => element.Name.LocalName == "lnRef");
-            if (lineReference is null)
-            {
-                continue;
-            }
-
-            int lineReferenceIndexValue = ParseOptionalIntAttribute(lineReference, "idx", 0);
+            int lineReferenceIndexValue = lineReference is null ? 0 : ParseOptionalIntAttribute(lineReference, "idx", 0);
             int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
             PptxSceneLineStyle line = lineReferenceIndex is not null &&
+                lineReference is not null &&
                 TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle resolvedLine)
                     ? resolvedLine
                     : default;
@@ -2994,15 +2990,33 @@ internal sealed class PptxSceneBuilder
                     .Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
                 theme);
+            PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme);
+            if (lineReference is null &&
+                !shapeLine.HasLine &&
+                !HasChartTextStyleOverride(textStyle))
+            {
+                continue;
+            }
+
             entries.Add(new PptxSceneChartStyleEntry(
                 roleElement.Name.LocalName,
                 lineReferenceIndex,
                 line,
                 shapeLine,
-                ReadChartStyleRoleTextStyle(roleElement, theme)));
+                textStyle));
         }
 
         return entries;
+    }
+
+    private static bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)
+    {
+        return textStyle.FontFamily is not null ||
+            textStyle.FontSize is not null ||
+            textStyle.Color is not null ||
+            textStyle.Alpha is not null ||
+            textStyle.Bold is not null ||
+            textStyle.Italic is not null;
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme)

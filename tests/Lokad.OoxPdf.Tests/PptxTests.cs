@@ -242,7 +242,6 @@ internal static class PptxTests
                     <cs:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="203040"><a:alpha val="70000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
                   </cs:gridlineMinor>
                   <cs:title>
-                    <cs:lnRef idx="0"/>
                     <cs:fontRef idx="major"><a:schemeClr val="accent6"><a:alpha val="50000"/></a:schemeClr></cs:fontRef>
                     <cs:defRPr sz="1400" b="1" i="0"/>
                   </cs:title>

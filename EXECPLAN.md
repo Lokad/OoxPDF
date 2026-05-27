@@ -1871,6 +1871,13 @@ High-priority actions:
     major/minor theme font family, font size, font color/alpha, bold, and italic. This does not yet apply
     inherited defaults to title, axis, legend, or data-label rendering; it removes the raw-XML dependency
     that the future chart-style text cascade would otherwise need.
+  - [x] 2026-05-27: Preserve text-only chart-style roles instead of requiring a line reference. The
+    chart-style scene parser now keeps any role that contributes a theme line reference, a direct role
+    `spPr/a:ln`, or a role-local text default, and skips only structurally empty roles. This closes a narrow
+    ownership gap where title/legend/label style defaults without `lnRef` would have remained visible only in
+    raw style XML. Rendering remains unchanged until the chart-style cascade precedence is proven.
+    Validation: focused `pptx-model` passed `19/19`; focused `pptx-charts --skip-slow` passed `52/52`
+    after a transient build-file lock was rerun serially.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.
