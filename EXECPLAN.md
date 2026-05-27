@@ -2170,6 +2170,13 @@ High-priority actions:
     raw style XML. Rendering remains unchanged until the chart-style cascade precedence is proven.
     Validation: focused `pptx-model` passed `19/19`; focused `pptx-charts --skip-slow` passed `52/52`
     after a transient build-file lock was rerun serially.
+  - [x] 2026-05-27: Consume the typed chart-style `title` role in chart-title text rendering. The renderer now
+    merges `PptxSceneChart.StylePart.Entries["title"].TextStyle` after chart-level defaults and before direct
+    `c:title/c:txPr`, so title role defaults no longer remain passive scene data when no direct title text
+    properties exist. A synthetic chart-style package locks role-owned title color and Office-grid font-size
+    emission. This intentionally does not claim the same cascade for legend, axis, or data-label role styles
+    yet; those need separate role mapping and precedence probes. Validation: focused non-slow `pptx-charts`
+    passed with `59` tests, `0` failures, and `0` skips.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.

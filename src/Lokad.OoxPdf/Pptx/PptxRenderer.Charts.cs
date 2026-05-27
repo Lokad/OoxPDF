@@ -4177,6 +4177,7 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
+        style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "title"));
         ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(sceneChart.Title.TextStyle);
         return ResolveAutoChartTitleTextStyle(MergeChartTextStyle(style, titleStyle), titleStyle, isAutoTitle);
     }
@@ -5561,6 +5562,12 @@ internal sealed partial class PptxRenderer
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
     {
         return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color, style.Alpha, style.Bold, style.Italic);
+    }
+
+    private static ChartTextStyleOverride ReadChartStyleRoleTextStyle(PptxSceneChartStyle stylePart, string role)
+    {
+        PptxSceneChartStyleEntry entry = stylePart.Entries.FirstOrDefault(item => item.Role == role);
+        return ToChartTextStyleOverride(entry.TextStyle);
     }
 
     private static string? ResolveChartThemeFontFamily(PptxTheme theme)
