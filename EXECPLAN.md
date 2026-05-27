@@ -916,6 +916,15 @@ High-priority actions:
   `12.984`. The remaining rule is therefore not font-family-specific; it is tied to Office's wrapped/split text-line
   PDF emission. Do not change `PptxPdfTextEmissionProfile` until the per-line condition is known well enough to lock
   with a public probe instead of a private slide-specific branch.
+  - [x] 2026-05-27: Re-inspect the public-safe `font-size-quantization-wrap13b` compare JSON before changing
+    text emission. With candidate glyph-run metadata matched by effective Office text positions, the `12.984 pt`
+    branch appears at compare indices 13 and 21 only: both are 13 pt layout text in frame 7, with line indices 6
+    and 14, while adjacent wrapped lines in the same frame remain at `12.96 pt`. One branch has two candidate
+    spans on the line and one has a single candidate span, so the rule is not simply "all wrapped lines" or
+    "multi-span lines". This is an evidence update, not an implementation change; the emission profile must
+    still wait for a structural condition that explains why Office picks the secondary grid on those operations.
+    Validation artifact: `artifacts/probes/font-size-quantization-wrap13b/text-emission-compare-current-with-text.json`
+    generated with `tools/ComparePptxTextEmission.ps1 -MatchByPosition -UseEffectiveMatrix -IncludeText -NoFail`.
 - [ ] Explain Office `/Tf` dependence on text-frame geometry before extending the font-size profile:
   denser ignored public-safe font-size probes showed that the secondary `+0.024 pt` branch is not a pure function
   of requested point size. The same nominal sizes can emit exact values or `+0.024`/nearby branches depending on
