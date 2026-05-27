@@ -10614,6 +10614,63 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Line and pie charts should not emit unsupported chart diagnostics.");
     }
 
+    public static void PptxSyntheticPieChartUsesSparsePointIndicesForSliceStyles()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """),
+            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart><c:plotArea><c:pieChart>
+                    <c:ser>
+                      <c:dPt><c:idx val="4"/><c:spPr><a:solidFill><a:srgbClr val="123456"/></a:solidFill></c:spPr></c:dPt>
+                      <c:val><c:numLit>
+                        <c:ptCount val="5"/>
+                        <c:pt idx="0"><c:v></c:v></c:pt>
+                        <c:pt idx="2"><c:v>30</c:v></c:pt>
+                        <c:pt idx="4"><c:v>70</c:v></c:pt>
+                      </c:numLit></c:val>
+                    </c:ser>
+                  </c:pieChart></c:plotArea></c:chart>
+                </c:chartSpace>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var collector = new DiagnosticCollector();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = collector.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Sparse pie charts should render through the native chart path.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Sparse pie charts should not emit unsupported chart diagnostics.");
+    }
+
     public static void PptxSyntheticAreaScatterRadarAndDoughnutChartsRenderNativeCharts()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>

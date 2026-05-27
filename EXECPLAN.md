@@ -1350,8 +1350,8 @@ High-priority actions:
   `IReadOnlyList<string>` payloads. Removing `ReadSceneOrXmlChartSeries`,
   `ReadSceneOrXmlScatterSeries`, and `ReadSceneOrXmlCategoryLabels` fallbacks safely requires a typed data
   vector that carries indexed points, blank/missing state, source formula/cell metadata, and the Office
-  cache-vs-workbook precedence into axis scaling, stacked totals, category labels, data labels, and
-  pie/doughnut slice construction.
+  cache-vs-workbook precedence into category labels, data labels, legends, scatter/bubble channels, and the
+  remaining chart text/layout decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
@@ -1461,6 +1461,19 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-032914` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
     `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:
+    polar slice construction now builds `ChartIndexedPieSlice` records from `ChartIndexedNumberVector`, so
+    point fills, strokes, explosions, palette fallback, and visible data-label overrides resolve by OOXML
+    point index even when blank or non-numeric points precede visible values. A new sparse-pie synthetic test
+    locks `c:dPt idx="4"` styling on a visible slice whose compact ordinal would otherwise be `1`. The
+    public pie and doughnut structural checks confirmed matching polar slice geometry, but both still expose
+    existing chart text-anchor deltas (`ChartTitleText` for the pie case and `DataLabelText`/legend anchors
+    for doughnut), so the indexed-data item remains open for chart text/layout ownership rather than being
+    closed as a pure data-vector migration. Validation: focused non-slow `pptx-charts` passed
+    (`43 passed, 0 failed, 0 skipped`); full non-slow console runner passed (`261 passed, 0 failed, 7 skipped`);
+    private run `artifacts/private-visual/lokad-value-based/20260527-033524` stayed at 84/84 compared pages,
+    zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, `ReadSceneOrXmlCategoryLabels`, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source
