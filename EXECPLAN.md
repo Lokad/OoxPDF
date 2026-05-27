@@ -4093,6 +4093,14 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260527-223838` after the chart enum/fallback
+  boundary cleanups:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `7.702155`; max mean absolute error: `16.412422`; mean changed-pixel ratio at
+    threshold 16: `0.103230`.
+  - Diagnostics remain limited to one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - Worst-page public-safe metric summary was pages 53, 32, 50, 36, and 49 by MAE; no private slide content
+    was copied into this plan.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260524-191516` after the custom-geometry
   path `stroke` boolean normalization slice:
   - 84/84 pages compared with zero dimension mismatches.
