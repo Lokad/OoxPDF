@@ -10896,6 +10896,8 @@ internal static class PptxTests
         TestAssert.Equal("m/d/yy", (string?)styleNumberFormatCodeProperty.GetValue(firstParsedCell) ?? string.Empty);
         System.Reflection.PropertyInfo styleAppliesNumberFormatProperty = firstParsedCell.GetType().GetProperty("StyleAppliesNumberFormat") ?? throw new InvalidOperationException("Expected range-cell style number-format apply flag.");
         TestAssert.True((bool?)styleAppliesNumberFormatProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to preserve applyNumberFormat.");
+        System.Reflection.PropertyInfo styleNumberFormatIsDateLikeProperty = firstParsedCell.GetType().GetProperty("StyleNumberFormatIsDateLike") ?? throw new InvalidOperationException("Expected range-cell style date-like number-format flag.");
+        TestAssert.True((bool?)styleNumberFormatIsDateLikeProperty.GetValue(firstParsedCell) == true, "Expected worksheet cell style to classify its date-like number format before chart formatting consumes it.");
         System.Reflection.PropertyInfo rowHiddenProperty = firstParsedCell.GetType().GetProperty("RowHidden") ?? throw new InvalidOperationException("Expected range-cell row-hidden flag.");
         System.Reflection.PropertyInfo columnHiddenProperty = firstParsedCell.GetType().GetProperty("ColumnHidden") ?? throw new InvalidOperationException("Expected range-cell column-hidden flag.");
         TestAssert.True((bool?)rowHiddenProperty.GetValue(firstParsedCell) == false, "Expected visible worksheet row to remain visible in range metadata.");

@@ -1629,10 +1629,89 @@ internal sealed partial class PptxRenderer
             string numberFormatCode = numberFormatId is { } id && customNumberFormats.TryGetValue(id, out string? customCode)
                 ? customCode
                 : string.Empty;
-            cellFormats.Add(new ChartWorkbookCellFormat(numberFormatId, numberFormatCode, applyNumberFormat));
+            cellFormats.Add(new ChartWorkbookCellFormat(
+                numberFormatId,
+                numberFormatCode,
+                applyNumberFormat,
+                IsWorkbookDateLikeNumberFormat(numberFormatId, numberFormatCode)));
         }
 
         return new ChartWorkbookStyles(customNumberFormats, cellFormats);
+    }
+
+    private static bool IsWorkbookDateLikeNumberFormat(int? numberFormatId, string formatCode)
+    {
+        if (numberFormatId is { } id && IsBuiltInWorkbookDateLikeNumberFormatId(id))
+        {
+            return true;
+        }
+
+        return ContainsWorkbookDateTimeFormatToken(formatCode);
+    }
+
+    private static bool IsBuiltInWorkbookDateLikeNumberFormatId(int numberFormatId)
+    {
+        return (numberFormatId >= 14 && numberFormatId <= 22) ||
+            (numberFormatId >= 27 && numberFormatId <= 36) ||
+            (numberFormatId >= 45 && numberFormatId <= 47) ||
+            (numberFormatId >= 50 && numberFormatId <= 58);
+    }
+
+    private static bool ContainsWorkbookDateTimeFormatToken(string formatCode)
+    {
+        if (string.IsNullOrWhiteSpace(formatCode) ||
+            string.Equals(formatCode, "General", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < formatCode.Length; i++)
+        {
+            char c = formatCode[i];
+            if (c == '"')
+            {
+                i++;
+                while (i < formatCode.Length && formatCode[i] != '"')
+                {
+                    i++;
+                }
+
+                continue;
+            }
+
+            if (c == '\\' || c == '_' || c == '*')
+            {
+                i++;
+                continue;
+            }
+
+            if (c == '[')
+            {
+                int closingBracket = formatCode.IndexOf(']', i + 1);
+                if (closingBracket < 0)
+                {
+                    closingBracket = formatCode.Length - 1;
+                }
+
+                string bracketToken = formatCode.Substring(i + 1, Math.Max(0, closingBracket - i - 1)).Trim();
+                if (bracketToken.Length > 0 &&
+                    bracketToken.All(c => c == 'h' || c == 'H' || c == 'm' || c == 'M' || c == 's' || c == 'S'))
+                {
+                    return true;
+                }
+
+                i = closingBracket;
+                continue;
+            }
+
+            char lower = char.ToLowerInvariant(c);
+            if (lower == 'y' || lower == 'd' || lower == 'h' || lower == 's')
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static ChartWorksheetData ReadWorksheetData(OoxPart worksheetPart, IReadOnlyList<ChartWorkbookSharedString> sharedStrings)
@@ -1989,7 +2068,8 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartWorkbookCellFormat(
         int? NumberFormatId,
         string NumberFormatCode,
-        bool? ApplyNumberFormat);
+        bool? ApplyNumberFormat,
+        bool NumberFormatIsDateLike);
 
     private readonly record struct ChartWorkbookTable(
         string Name,
@@ -2129,6 +2209,7 @@ internal sealed partial class PptxRenderer
         int? StyleNumberFormatId,
         string StyleNumberFormatCode,
         bool? StyleAppliesNumberFormat,
+        bool StyleNumberFormatIsDateLike,
         bool RowHidden,
         bool ColumnHidden);
 
@@ -2430,6 +2511,7 @@ internal sealed partial class PptxRenderer
                         format.NumberFormatId,
                         format.NumberFormatCode,
                         format.ApplyNumberFormat,
+                        format.NumberFormatIsDateLike,
                         worksheet.HiddenRows.Contains(row),
                         worksheet.HiddenColumns.Contains(column)));
                     index++;

@@ -9461,3 +9461,20 @@ through the value-selection layer instead of being recoverable only by re-readin
 
 Validation: focused non-slow `pptx-charts` passed (`41 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`248 passed, 0 failed, 7 skipped`).
+
+Revision note, 2026-05-27: Preserved date/time-like workbook number-format classification at the range-cell
+metadata boundary. `ReadWorkbookStyles` now classifies built-in Excel date/time `numFmtId` ranges and
+conservative custom date/time format tokens, and `ChartWorkbookRangeCell.StyleNumberFormatIsDateLike` carries
+that result next to the resolved style number-format ID, format code, and apply flag. The embedded workbook
+fixture now locks the existing custom `m/d/yy` style as date-like, while current rendering still consumes the
+same dense numeric/text compatibility projections as before.
+
+This is not date serial rendering. It prevents future source-linked chart label and axis formatting work from
+rediscovering date-like styles from raw workbook XML or ad hoc format-code scans at each renderer call site.
+The open semantic step remains to connect `sourceLinked`, cache format codes, chart/axis/data-label `numFmt`,
+workbook `date1904`, locale/calendar sections, and Office's visible PDF text choice against public
+Office-authored evidence before changing emitted chart text.
+
+Validation: focused `PptxChartWorkbookHydrationPreservesRangePointIndices` passed (`1 passed, 0 failed, 0
+skipped`); focused non-slow `pptx-charts` passed (`43 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`262 passed, 0 failed, 7 skipped`).
