@@ -1178,6 +1178,7 @@ internal sealed partial class PptxRenderer
                     bubble: false,
                     xExtents,
                     yExtents,
+                    seriesFills,
                     ReadSceneOrXmlDataLabelOptions(scatterPlot, scatterChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(scatterPlot, scatterChart, theme),
                     ReadSceneOrXmlChartSeriesNameRecords(scatterPlot, scatterChart, workbook)));
@@ -1216,6 +1217,7 @@ internal sealed partial class PptxRenderer
                     bubble: true,
                     xExtents,
                     yExtents,
+                    seriesFills,
                     ReadSceneOrXmlDataLabelOptions(bubblePlot, bubbleChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(bubblePlot, bubbleChart, theme),
                     ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook)));
@@ -4946,11 +4948,12 @@ internal sealed partial class PptxRenderer
         bool bubble,
         ChartValueExtents xExtents,
         ChartValueExtents yExtents,
+        IReadOnlyList<ChartSeriesFill?> seriesFills,
         ChartDataLabelOptions labelOptions,
         IReadOnlyList<ChartDataLabelOptions> seriesLabelOptions,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
-        if ((!labelOptions.HasVisibleText && !seriesLabelOptions.Any(options => options.HasVisibleText)) || series.Count == 0)
+        if ((!labelOptions.HasVisibleContent && !seriesLabelOptions.Any(options => options.HasVisibleContent)) || series.Count == 0)
         {
             return [];
         }
@@ -4964,7 +4967,7 @@ internal sealed partial class PptxRenderer
                 ChartDataLabelOptions effectiveOptions = ResolveChartDataLabelOptions(
                     ResolveChartDataLabelOptionsForSeries(labelOptions, seriesLabelOptions, seriesIndex),
                     point.Index);
-                if (!effectiveOptions.HasVisibleText)
+                if (!effectiveOptions.HasVisibleContent)
                 {
                     continue;
                 }
@@ -4973,14 +4976,17 @@ internal sealed partial class PptxRenderer
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 string label = FormatScatterDataLabel(point, seriesIndex, effectiveOptions, seriesNames);
-                if (string.IsNullOrEmpty(label))
+                if (string.IsNullOrEmpty(label) && !effectiveOptions.ShowLegendKey)
                 {
                     continue;
                 }
 
+                double legendKeyWidth = effectiveOptions.ShowLegendKey
+                    ? fontSize * (PptxChartMetricRules.DataLabelLegendKeySizeFactor + PptxChartMetricRules.DataLabelLegendKeyTextGapFactor)
+                    : 0d;
                 double labelWidth = Math.Max(
                     PptxChartMetricRules.CartesianDataLabelMinimumWidth,
-                    EstimateChartTextWidth(label, fontSize) + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+                    EstimateChartTextWidth(label, fontSize) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
                 (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(
                     plotBox,
                     point,
@@ -4996,17 +5002,33 @@ internal sealed partial class PptxRenderer
                     labelHeight);
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
                 RenderChartShapeStyle(graphics, labelBox.X, labelBox.Y, labelBox.Width, labelBox.Height, effectiveOptions.ShapeStyle);
-                AddChartLabelRuns(
-                    runs,
-                    label,
-                    effectiveOptions,
-                    labelBox.X,
-                    labelBox.Y,
-                    labelBox.Width,
-                    labelBox.Height,
-                    plotBox,
-                    style,
-                    alignment);
+                double textX = labelBox.X;
+                double textWidth = labelBox.Width;
+                if (effectiveOptions.ShowLegendKey)
+                {
+                    double swatchSize = fontSize * PptxChartMetricRules.DataLabelLegendKeySizeFactor;
+                    double swatchGap = fontSize * PptxChartMetricRules.DataLabelLegendKeyTextGapFactor;
+                    double swatchY = labelBox.Y + Math.Max(0d, (labelBox.Height - swatchSize) / 2d);
+                    FillChartRectangle(graphics, labelBox.X, swatchY, swatchSize, swatchSize, ChartSeriesColor(seriesIndex, seriesFills));
+                    textX += swatchSize + swatchGap;
+                    textWidth = Math.Max(1d, textWidth - swatchSize - swatchGap);
+                    alignment = TextAlignment.Left;
+                }
+
+                if (!string.IsNullOrEmpty(label))
+                {
+                    AddChartLabelRuns(
+                        runs,
+                        label,
+                        effectiveOptions,
+                        textX,
+                        labelBox.Y,
+                        textWidth,
+                        labelBox.Height,
+                        plotBox,
+                        style,
+                        alignment);
+                }
             }
         }
 

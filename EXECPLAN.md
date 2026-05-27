@@ -10195,6 +10195,22 @@ the renderer despite already being present in the scene model and bubble-size ve
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`47 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-27: Consumed scatter/bubble `showLegendKey` as visible data-label content instead
+of leaving it behind the text-only label gate. `RenderScatterDataLabels` now uses `HasVisibleContent`,
+draws the legend-key swatch from the same resolved series fill used by the scatter marker or bubble, and
+only emits text runs when the formatted label string is non-empty. The new public synthetic scatter case
+uses a legend-key-only `c:dLbls` record with a unique label shape fill, proving that the renderer emits the
+data-label box and swatch even when `showVal` is disabled and there is no label text.
+
+This is still not Office-perfect scatter/bubble data-label layout. It deliberately reuses the existing
+Cartesian automatic label box placement, legend-key size factors, and series-fill resolution until public
+Office-PDF probes explain exact XY label-box, swatch, and manual-layout coordinate semantics. The structural
+gain is that `showLegendKey` no longer dies after being parsed into the scene/options boundary, matching the
+earlier polar label closure without adding a chart-local XML reread.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`48 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-27: Routed scatter chart `showVal` data labels through the same structured
 scatter/bubble label renderer. The scatter branch now reads plot and series data-label options from the scene
 or chart XML, preserves series-name provenance through `ChartSeriesNameRecord`, and formats the active Y
