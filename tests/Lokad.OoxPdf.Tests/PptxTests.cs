@@ -172,7 +172,7 @@ internal static class PptxTests
                     <c:varyColors val="false"/>
                     <c:gapWidth val="175"/>
                     <c:overlap val="25"/>
-                    <c:dLbls><c:showVal/><c:showPercent val="false"/><c:showCatName/><c:showSerName val="0"/><c:showLeaderLines/><c:showLegendKey/><c:showBubbleSize val="0"/><c:leaderLines><c:spPr><a:ln w="6350" cap="sq"><a:solidFill><a:srgbClr val="778899"><a:alpha val="40000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/></a:ln></c:spPr></c:leaderLines><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="850" b="1"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>ZX</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>Q</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName/><c:showLegendKey val="0"/><c:showBubbleSize/><c:dLblPos val="ctr"/><c:layout><c:manualLayout><c:x val="0.44"/><c:y val="0.28"/><c:w val="0.1"/><c:h val="0.08"/></c:manualLayout></c:layout><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
+                    <c:dLbls><c:showVal/><c:showPercent val="false"/><c:showCatName/><c:showSerName val="0"/><c:showLeaderLines/><c:showLegendKey/><c:showBubbleSize val="0"/><c:leaderLines><c:spPr><a:ln w="6350" cap="sq"><a:solidFill><a:srgbClr val="778899"><a:alpha val="40000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/></a:ln></c:spPr></c:leaderLines><c:dLblPos val="outEnd"/><c:separator>; </c:separator><c:numFmt formatCode="#,##0.0"/><c:spPr><a:solidFill><a:srgbClr val="FFEACC"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000" b="1" i="0"><a:solidFill><a:srgbClr val="0A0B0C"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr><c:dLbl><c:idx val="1"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="850" b="1"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:rPr><a:t>ZX</a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Arial"/></a:rPr><a:t>Q</a:t></a:r></a:p></c:rich></c:tx><c:showVal val="0"/><c:showSerName/><c:showLegendKey val="0"/><c:showBubbleSize/><c:leaderLines><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="AA3366"><a:alpha val="75000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLblPos val="ctr"/><c:layout><c:manualLayout><c:x val="0.44"/><c:y val="0.28"/><c:w val="0.1"/><c:h val="0.08"/></c:manualLayout></c:layout><c:separator> / </c:separator><c:numFmt formatCode="0%"/><c:spPr><a:solidFill><a:srgbClr val="CCEEFF"/></a:solidFill></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="0" i="1"><a:solidFill><a:srgbClr val="334455"/></a:solidFill><a:latin typeface="Calibri"/></a:defRPr></a:pPr></a:p></c:txPr></c:dLbl></c:dLbls>
                     <c:ser>
                       <c:idx val="7"/>
                       <c:order val="3"/>
@@ -582,6 +582,11 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShowSeriesName == true, "Expected per-label show-series-name override in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShowLegendKey == false, "Expected per-label show-legend-key override in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].ShowBubbleSize == true, "Expected per-label show-bubble-size override in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].LeaderLines.IsDefined == true, "Expected per-label leader-line source element in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].LeaderLines.Line.HasLine == true, "Expected per-label leader-line style in the scene model.");
+        TestAssert.Equal(new RgbColor(170, 51, 102), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].LeaderLines.Line.Color ?? default);
+        TestAssert.Equal(2d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].LeaderLines.Line.Width ?? 0d);
+        TestAssert.Equal(0.75d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].LeaderLines.Line.Alpha ?? 0d);
         TestAssert.Equal("ZXQ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomText ?? string.Empty);
         TestAssert.Equal(2, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns.Count ?? 0);
         TestAssert.Equal("ZX", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[0].Text ?? string.Empty);
@@ -11211,7 +11216,7 @@ internal static class PptxTests
                       <c:pt idx="0"><c:v>35</c:v></c:pt>
                       <c:pt idx="1"><c:v>25</c:v></c:pt>
                       <c:pt idx="2"><c:v>40</c:v></c:pt>
-                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbls></c:ser>
+                    </c:numLit></c:val><c:dLbls><c:showVal val="1"/><c:showPercent val="1"/><c:showLeaderLines val="1"/><c:leaderLines><c:spPr><a:ln w="19050"><a:solidFill><a:srgbClr val="44CC88"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:dLbl><c:idx val="1"/><c:leaderLines><c:spPr><a:ln w="28575"><a:solidFill><a:srgbClr val="CC11AA"/></a:solidFill></a:ln></c:spPr></c:leaderLines></c:dLbl></c:dLbls></c:ser>
                   </c:pieChart></c:plotArea></c:chart>
                 </c:chartSpace>
                 """),
@@ -11307,6 +11312,8 @@ internal static class PptxTests
         TestAssert.Contains("0.267 0.8 0.533 RG", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"0\.267 0\.8 0\.533 RG\s+1\.5 w[\s\S]+? m\s+[\s\S]+? l\s+[\s\S]+? l\s+S"),
             "Expected polar data-label leader lines to render as two-segment stroked paths using the preserved leader-line style.");
+        TestAssert.True(Regex.IsMatch(pdf, @"0\.8 0\.067 0\.667 RG\s+2\.25 w[\s\S]+? m\s+[\s\S]+? l\s+[\s\S]+? l\s+S"),
+            "Expected per-label polar leader-line style to override the chart-wide leader-line style.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <0025>"), "Expected percentage labels to include a percent glyph in the ToUnicode map.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <002C>"), "Expected combined value/percentage labels to include the default comma separator.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Supported chart rendering should not emit static fallback diagnostics.");

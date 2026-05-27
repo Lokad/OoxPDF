@@ -2031,6 +2031,12 @@ High-priority actions:
     leader-line color/width and `m/l/l` path shape in PDF output. Validation: focused non-slow `pptx-charts`
     passed (`52 passed, 0 failed, 0 skipped`); public leader-line probe run `20260527-122348` passed existing
     gates and now reports candidate `DataLabelLeaderLineCandidate` structures instead of none.
+  - [x] Preserve and consume per-label leader-line source/style:
+    `PptxSceneChartDataLabelOverride` now carries a typed `LeaderLines` record from `c:dLbl/c:leaderLines`,
+    and both scene-backed and raw XML fallback data-label override conversion pass that style into the shared
+    label-option resolver. Per-label polar leader lines can now override chart-wide or series-wide leader-line
+    stroke style without re-scanning XML at draw time. Validation: focused scene-builder and native line/pie
+    render tests passed after one transient parallel build-file lock was rerun serially.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
