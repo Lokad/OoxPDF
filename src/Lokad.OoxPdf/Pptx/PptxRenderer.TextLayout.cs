@@ -671,12 +671,14 @@ internal sealed partial class PptxRenderer
                 Line = line,
                 LineIndex = lineIndex
             }))
-            .SelectMany(lineState => lineState.Line.Spans.Select(span => new PptxPositionedTextSpan(
+            .SelectMany(lineState => lineState.Line.Spans.Select((span, spanIndex) => new PptxPositionedTextSpan(
                 span.SourceRun,
                 lineState.Line.Box,
                 lineState.FrameIndex,
                 lineState.ParagraphIndex,
                 lineState.LineIndex,
+                spanIndex,
+                lineState.Line.Spans.Count,
                 lineState.Frame.Model.FontScale,
                 OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.X),
                 OoxUnits.EmuToPoints(lineState.Frame.Model.Bounds.Y),

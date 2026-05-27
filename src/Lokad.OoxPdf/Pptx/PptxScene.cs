@@ -227,6 +227,8 @@ internal sealed record PptxTextGlyphRunSnapshot(
     int FrameIndex,
     int ParagraphIndex,
     int LineIndex,
+    int SpanIndex,
+    int LineSpanCount,
     double FrameFontScale,
     double FrameShapeX,
     double FrameShapeTopY,

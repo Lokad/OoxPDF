@@ -3825,6 +3825,12 @@ internal static class PptxTests
             glyphRunLineIndexes.SequenceEqual(new[] { 0, 0, 0, 0, 0, 0, 1 }),
             "Expected glyph-run line indexes to follow the two wrapped layout lines. Actual: " + string.Join(",", glyphRunLineIndexes));
         TestAssert.True(
+            glyphRuns.All(run => run.SpanIndex >= 0 && run.SpanIndex < lines[run.LineIndex].Spans.Count),
+            "Expected glyph-run inspection to preserve each source span ordinal inside its wrapped line.");
+        TestAssert.True(
+            glyphRuns.All(run => run.LineSpanCount == lines[run.LineIndex].Spans.Count),
+            "Expected glyph-run inspection to expose the source span count for each wrapped line before PDF text emission.");
+        TestAssert.True(
             glyphRuns.Take(6).All(run => Math.Abs(run.LineTopY - glyphRuns[0].LineTopY) < 0.01d),
             "Expected all first-line glyph runs to preserve the same line top.");
         TestAssert.True(

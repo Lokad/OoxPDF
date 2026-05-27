@@ -10291,6 +10291,16 @@ secondary quantization branch from public line/frame/PDF evidence before changin
 
 Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`).
 
+Revision note, 2026-05-27: Extended the text emission context with source line-span ordinals. Each
+`PptxPositionedTextSpan`, `PptxPdfTextEmissionContext`, and `PptxTextGlyphRunSnapshot` now carries the span
+index and source span count within its wrapped line. The data survives highlight-boundary splitting,
+coalescing, and glyph-typeface splitting, so public glyph-run inspection can distinguish first/middle/last
+line fragments before any `/Tf` rule changes. This is still diagnostic plumbing only: the PDF font-size
+profile remains the same first-order 600-DPI grid, and the secondary Office `+0.024 pt` branch remains open
+until the public evidence explains it structurally.
+
+Validation: focused non-slow `pptx-typography` passed (`83 passed, 0 failed, 2 skipped`).
+
 Revision note, 2026-05-27: Added `tools/ComparePptxTextEmission.ps1` so Office PDF text operations can be
 compared directly against candidate `InspectPptxText` glyph-run emission without retyping ad hoc PowerShell.
 The tool compares reference X/Y/font size to candidate X/baseline/PDF font size by sequence or nearest
