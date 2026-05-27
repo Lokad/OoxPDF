@@ -45,6 +45,7 @@ internal sealed record DocxTextRun(
     bool Bold,
     bool Italic,
     bool Underline,
+    string? UnderlineValue,
     string? FontFamily);
 
 internal sealed record DocxInlineImage(double WidthPoints, double HeightPoints, string ContentType, byte[] Bytes, string? PartName);

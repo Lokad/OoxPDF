@@ -320,6 +320,7 @@ internal sealed class DocxReader
                     resolvedRun.Bold ?? false,
                     resolvedRun.Italic ?? false,
                     resolvedRun.Underline ?? false,
+                    resolvedRun.UnderlineValue,
                     resolvedRun.FontFamily));
             }
 
@@ -331,7 +332,7 @@ internal sealed class DocxReader
             string? instruction = (string?)field.Attribute(WordprocessingNamespace + "instr");
             if (instruction?.Contains("PAGE", StringComparison.OrdinalIgnoreCase) == true)
             {
-                runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null));
+                runs.Add(new DocxTextRun("{PAGE}", 11d, null, false, false, false, null, null));
             }
         }
 
@@ -755,10 +756,13 @@ internal sealed class DocxReader
             ?.Attribute(WordprocessingNamespace + "ascii");
         bool? bold = ReadOnOff(properties?.Element(WordprocessingNamespace + "b"));
         bool? italic = ReadOnOff(properties?.Element(WordprocessingNamespace + "i"));
-        bool? underline = properties?.Element(WordprocessingNamespace + "u") is { } underlineElement
-            ? !string.Equals((string?)underlineElement.Attribute(WordprocessingNamespace + "val"), "none", StringComparison.OrdinalIgnoreCase)
+        string? underlineValue = (string?)properties?
+            .Element(WordprocessingNamespace + "u")
+            ?.Attribute(WordprocessingNamespace + "val");
+        bool? underline = properties?.Element(WordprocessingNamespace + "u") is not null
+            ? !string.Equals(underlineValue, "none", StringComparison.OrdinalIgnoreCase)
             : null;
-        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline);
+        return new DocxResolvedRunProperties(fontSize, color, fontFamily, bold, italic, underline, underlineValue);
     }
 
     private static bool? ReadOnOff(XElement? element)
@@ -816,7 +820,7 @@ internal sealed class DocxReader
         IReadOnlyDictionary<string, DocxStyle> CharacterStyles)
     {
         public static DocxStyleSet Empty { get; } = new(
-            new DocxResolvedRunProperties(null, null, null, null, null, null),
+            new DocxResolvedRunProperties(null, null, null, null, null, null, null),
             new DocxResolvedParagraphProperties(null, null, null, null, null, null),
             new Dictionary<string, DocxStyle>(),
             new Dictionary<string, DocxStyle>());
@@ -861,7 +865,8 @@ internal sealed class DocxReader
         string? FontFamily,
         bool? Bold,
         bool? Italic,
-        bool? Underline)
+        bool? Underline,
+        string? UnderlineValue)
     {
         public DocxResolvedRunProperties Merge(DocxResolvedRunProperties other)
         {
@@ -871,7 +876,8 @@ internal sealed class DocxReader
                 other.FontFamily ?? FontFamily,
                 other.Bold ?? Bold,
                 other.Italic ?? Italic,
-                other.Underline ?? Underline);
+                other.Underline ?? Underline,
+                other.UnderlineValue ?? UnderlineValue);
         }
     }
 }

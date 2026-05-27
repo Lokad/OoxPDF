@@ -417,6 +417,14 @@ High-priority actions:
   OOXML from the conservative left-aligned fallback. Validation: focused non-slow `docx-text` passed
   (`4 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`273 passed, 0 failed, 7 skipped`); attempted aggregate `docx` group is not defined by the runner.
+- [x] Preserve DOCX run underline source tokens before broadening underline geometry:
+  `DocxTextRun` now carries the resolved raw `w:u @w:val` beside the existing boolean underline fallback.
+  Direct enabled tokens (`single`), explicit disabling (`none`), inherited character-style tokens (`wave`),
+  and absent tokens are covered by the DOCX text ladder. Rendering still uses the conservative boolean path,
+  but future double/wavy/word-only underline work can now be driven by observable WordprocessingML values
+  instead of re-reading XML or adding narrow special cases. Validation: focused non-slow `docx-text` passed
+  (`5 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`274 passed, 0 failed, 7 skipped`).
 - [x] Start the OOXML enum ladder with PPTX text-body properties:
   unknown `a:bodyPr` `vert`, `anchor`, `wrap`, and `vertOverflow` values now remain observable as
   `Unknown` in the text-frame model instead of being collapsed into Office defaults at parse time. Rendering

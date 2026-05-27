@@ -323,6 +323,69 @@ internal static class DocxTests
         TestAssert.True(document.Paragraphs[3].AlignmentValue is null, "Expected default alignment to keep a null source token.");
     }
 
+    public static void DocxReaderPreservesParagraphRunUnderlineTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="character" w:styleId="WaveUnderline">
+                    <w:rPr><w:u w:val="wave"/></w:rPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:rPr><w:u w:val="single"/></w:rPr><w:t>Single</w:t></w:r>
+                      <w:r><w:rPr><w:u w:val="none"/></w:rPr><w:t>None</w:t></w:r>
+                      <w:r><w:rPr><w:rStyle w:val="WaveUnderline"/></w:rPr><w:t>Wave</w:t></w:r>
+                      <w:r><w:t>Default</w:t></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        DocxDocument document = new DocxReader().Read(package);
+        DocxTextRun[] runs = document.Paragraphs[0].Runs.ToArray();
+
+        TestAssert.True(runs[0].Underline, "Expected w:u single to keep underline enabled.");
+        TestAssert.Equal("single", runs[0].UnderlineValue ?? string.Empty);
+        TestAssert.True(!runs[1].Underline, "Expected w:u none to disable underline.");
+        TestAssert.Equal("none", runs[1].UnderlineValue ?? string.Empty);
+        TestAssert.True(runs[2].Underline, "Expected inherited w:u wave to keep underline enabled.");
+        TestAssert.Equal("wave", runs[2].UnderlineValue ?? string.Empty);
+        TestAssert.True(runs[3].UnderlineValue is null, "Expected missing underline to keep a null source token.");
+    }
+
     public static void DocxSyntheticParagraphsBreakAcrossPages()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
