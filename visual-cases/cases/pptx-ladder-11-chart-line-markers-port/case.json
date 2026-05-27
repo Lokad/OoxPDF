@@ -13,7 +13,7 @@
     "maxChangedPixelRatioAtThreshold16": 0.027,
     "maxChartGraphicsStructureBoundsDelta": 0.9,
     "maxChartGraphicsStructureLineWidthDelta": 0.05,
-    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "VerticalLine", "PlotAreaClipBoxCandidate"],
+    "compareChartGraphicsStructureKinds": ["AxisPairPlotBoxCandidate", "GridlineAxisPlotBoxCandidate", "HorizontalGridlineGroupCandidate", "VerticalLine", "PlotAreaClipBoxCandidate", "MarkerCandidate"],
     "compareChartTextStructurePageNumber": 1,
     "compareChartTextStructureKinds": ["CategoryAxisTickLabel", "ValueAxisTickLabel", "LegendText"],
     "maxChartTextStructurePositionDeltaByKind": {

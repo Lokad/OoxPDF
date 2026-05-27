@@ -419,6 +419,14 @@ High-priority actions:
   but worsened the legend marker max delta from `6.74 pt` to `7.24 pt`, so the change was discarded. The next
   durable step is to derive the plot area, inner gridline box, and side legend box together from Office PDF
   structures instead of independently tuning plot Y/height or legend baselines.
+- [x] 2026-05-27: Gate line-chart data marker geometry in the public structural oracle:
+  `pptx-ladder-11-chart-line-markers-port` now includes `MarkerCandidate` in its chart-graphics structure
+  comparison, guarded by the existing `0.9 pt` max bounds threshold after the Office-aligned auto marker size
+  work brought marker bounds to `0.77 pt`. Validation: public line-marker port run `20260527-144231` passed.
+  `LegendSwatchCandidate` and `StrokeMarkerCandidate` were deliberately left ungated for this case because the
+  current nearest-bounds comparator still reports fill/stroke ordering and stroke-vs-fill operator deltas for
+  composite legend keys even when marker bounds are close; that is an oracle/classifier gap, not a renderer
+  size gap.
 - [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
   progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
   PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
