@@ -547,6 +547,16 @@ High-priority actions:
   fall back to mismatched XML `maxMin`. Validation: focused
   `PptxChartUnknownAxisOrientationUsesSceneAuthoritativeDefault` passed; focused non-slow `pptx-charts` passed
   (`66 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-27: Make chart value-axis crossing defaults explicit and tighten chart test grouping.
+  `PptxSceneChartAxis` already preserves raw `c:crosses` tokens; `ReadSceneOrXmlValueAxisCrossingValue` now resolves
+  both scene and XML fallback values through `ResolveChartAxisCrosses`, making `Unknown -> autoZero` a named boundary
+  rule before crossing-line and gridline geometry runs. A synthetic scene-authoritative test pairs
+  `c:crosses val="bogus"` with a mismatched XML fallback `max` and verifies that the crossing remains the auto-zero
+  value instead of re-reading XML. While validating this, the `pptx-charts` group was found to miss chart tests whose
+  names also contained `Scene` or `Layout`; the test catalog now classifies `Chart` before model keywords so the chart
+  validation group covers the chart enum/default ladder. Validation: focused
+  `PptxChartUnknownAxisCrossesUsesSceneAuthoritativeDefault` passed; focused non-slow `pptx-charts` now passes with
+  the broader chart set (`81 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Make the chart legend-position fallback explicit at the typed renderer boundary.
   `PptxSceneChartLegend` still preserves unknown raw `legendPos` tokens as `Unknown` plus the original token,
   but `ReadSceneOrXmlChartLegendLayout` now resolves the effective layout position through an explicit

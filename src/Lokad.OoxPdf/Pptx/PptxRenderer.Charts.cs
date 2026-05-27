@@ -6389,8 +6389,8 @@ internal sealed partial class PptxRenderer
         }
 
         PptxSceneChartAxisCrosses crosses = sceneAxis is not null
-            ? sceneAxis.CrossesKind
-            : PptxSceneBuilder.ParseChartAxisCrosses((string?)valueAxis?.Element(ChartNamespace + "crosses")?.Attribute("val") ?? "autoZero");
+            ? ResolveChartAxisCrosses(sceneAxis.CrossesKind)
+            : ResolveChartAxisCrosses(PptxSceneBuilder.ParseChartAxisCrosses((string?)valueAxis?.Element(ChartNamespace + "crosses")?.Attribute("val") ?? "autoZero"));
         if (crosses == PptxSceneChartAxisCrosses.Maximum)
         {
             return extents.Max;
@@ -6407,6 +6407,13 @@ internal sealed partial class PptxRenderer
         }
 
         return extents.Min > 0d ? extents.Min : extents.Max;
+    }
+
+    private static PptxSceneChartAxisCrosses ResolveChartAxisCrosses(PptxSceneChartAxisCrosses crosses)
+    {
+        return crosses == PptxSceneChartAxisCrosses.Unknown
+            ? PptxSceneChartAxisCrosses.AutoZero
+            : crosses;
     }
 
     private static bool ReadSceneOrXmlValueAxisReversed(PptxSceneChartAxis? sceneAxis, XElement? valueAxis)

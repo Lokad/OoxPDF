@@ -43,6 +43,11 @@ internal static class TestCatalog
             return "pptx-composition";
         }
 
+        if (name.Contains("Chart", StringComparison.Ordinal))
+        {
+            return "pptx-charts";
+        }
+
         if (name.Contains("Scene", StringComparison.Ordinal) ||
             name.Contains("Theme", StringComparison.Ordinal) ||
             name.Contains("Layout", StringComparison.Ordinal) ||
@@ -80,11 +85,6 @@ internal static class TestCatalog
             name.Contains("Arrow", StringComparison.Ordinal))
         {
             return "pptx-shapes";
-        }
-
-        if (name.Contains("Chart", StringComparison.Ordinal))
-        {
-            return "pptx-charts";
         }
 
         return "pptx-core";

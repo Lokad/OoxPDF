@@ -11493,6 +11493,44 @@ internal static class PptxTests
         TestAssert.True(!(bool)reversed, "Unknown scene-owned value-axis orientation should resolve to the Office default minMax, not fall back to mismatched XML.");
     }
 
+    public static void PptxChartUnknownAxisCrossesUsesSceneAuthoritativeDefault()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:scaling><c:min val="-5"/><c:max val="5"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/><c:crosses val="bogus"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+        TestAssert.Equal(PptxSceneChartAxisCrosses.Unknown, valueAxis.CrossesKind);
+        TestAssert.Equal("bogus", valueAxis.Crosses);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:valAx><c:crosses val="max"/></c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "valAx").Single();
+        Type extentsType = typeof(PptxRenderer).GetNestedType(
+            "ChartValueExtents",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents type.");
+        object extents = Activator.CreateInstance(extentsType, [-5d, 5d]) ?? throw new InvalidOperationException("Expected chart value extents.");
+        System.Reflection.MethodInfo readCrossingValue = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlValueAxisCrossingValue",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis crossing resolver.");
+        object crossingValue = readCrossingValue.Invoke(null, [valueAxis, mismatchedXmlFallback, extents]) ?? throw new InvalidOperationException("Expected resolved axis crossing.");
+
+        TestAssert.Equal(0d, (double)crossingValue);
+    }
+
     public static void PptxChartMissingMajorTickMarkResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
