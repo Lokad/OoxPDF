@@ -11076,3 +11076,22 @@ structure.
 Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
 test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-line-markers-port` passed at run
 `20260527-192615`; and `pptx-ladder-11-chart-sparse-blank-points-probe` passed at run `20260527-192629`.
+
+Revision note, 2026-05-27: Added area-series subpart plot clips at the fill and outline operations.
+The renderer already emits area fills and outlines as distinct PDF operations on the same polygon path, so
+`RenderAreaChartSeriesSegment` now brackets each operation with the shared even-odd plot-area clip helper.
+This extends the same structural ownership rule used for line series and markers without changing area
+coordinates, blank-run segmentation, stacking, or stroke/fill provenance.
+
+This improves the upper sparse area-chart clip structure without pretending to finish it. The sparse probe's
+region-0 clip count moved from `16` candidate clips to `20` against Office's `26`, while region 1 remained
+`30` against Office's `38`. Public area 2-series and stacked fixtures also show higher dominant plot-clip
+counts (`5` and `7` candidate instances respectively) with their visible gates still green. Remaining clip
+work is now concentrated on gridline/axis subpart bracketing, legend-key plot clips, bar/scatter/bubble
+subpart ownership, and the residual Office clips that likely come from chart adornments rather than series
+geometry.
+
+Validation: `git diff --check` passed; focused non-slow `pptx-charts` passed with `57` tests; full non-slow
+test run passed (`288 passed, 0 failed, 7 skipped`); `pptx-ladder-11-chart-sparse-blank-points-probe`
+passed at run `20260527-192839`; `pptx-ladder-11-chart-area-2series-port` passed at run `20260527-192853`;
+and `pptx-ladder-11-chart-area-stacked-port` passed at run `20260527-192909`.

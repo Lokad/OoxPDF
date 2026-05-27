@@ -8885,7 +8885,7 @@ internal sealed partial class PptxRenderer
         }
 
         graphics.SetFillRgb(fill.Color.Red, fill.Color.Green, fill.Color.Blue);
-        graphics.FillPolygon(polygon);
+        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.FillPolygon(polygon));
         if (fill.Alpha < 1d)
         {
             graphics.RestoreState();
@@ -8899,7 +8899,7 @@ internal sealed partial class PptxRenderer
         }
 
         SetChartStroke(graphics, stroke);
-        graphics.StrokePolygon(polygon);
+        RenderInChartPlotAreaClip(graphics, plotBox, () => graphics.StrokePolygon(polygon));
 
         if (stroke.Alpha < 1d)
         {
