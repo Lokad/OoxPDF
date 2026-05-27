@@ -11866,6 +11866,19 @@ proves a promotion rule.
 
 Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-27: Exposed the remaining chart-wide option policy fields through scene inspection
+without changing rendering. In addition to the previously exposed `plotVisOnly`, snapshots now report
+nullable `date1904`, nullable `roundedCorners`, nullable `showDLblsOverMax`, and the raw `dispBlanksAs`
+source token. The underlying scene model already owned these values; this makes them inspectable through
+the same private-safe snapshot surface used by the source/cache and legend-policy checks.
+
+This keeps the sparse/blank and date-axis tracks honest. Future work can distinguish a missing chart option
+from an explicit Office source token before changing blank-point interpolation, serial-date conversion, or
+over-maximum label behavior. The renderer still keeps its current behavior; this slice only closes another
+observability gap before any semantic policy change.
+
+Validation: non-slow test runner passed with `318` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Exposed chart legend layout policy fields through scene inspection without
 changing rendering. The scene model already retained `c:legendPos`, `c:overlay`, nullable `c:delete`, and
 manual legend layout factors, but snapshot consumers could not assert those layout inputs without reaching

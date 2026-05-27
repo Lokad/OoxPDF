@@ -455,12 +455,16 @@ internal static class PptxTests
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
+        TestAssert.True(slideSnapshot.SlideNodes[4].ChartDate1904 == true, "Expected scene inspection to expose chart date-system policy.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.RoundedCorners == false, "Expected chart rounded-corners flag ownership in the scene model.");
+        TestAssert.True(slideSnapshot.SlideNodes[4].ChartRoundedCorners == false, "Expected scene inspection to expose chart rounded-corners policy.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartPlotVisibleOnly == false, "Expected scene inspection to expose chart plot-visible-only policy.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximum == true, "Expected show-data-labels-over-maximum flag ownership in the scene model.");
+        TestAssert.True(slideSnapshot.SlideNodes[4].ChartShowDataLabelsOverMaximum == true, "Expected scene inspection to expose chart over-maximum data-label policy.");
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
         TestAssert.Equal("span", slide.SlideNodes[4].Chart?.Options.DisplayBlanksAs ?? string.Empty);
+        TestAssert.Equal("span", slideSnapshot.SlideNodes[4].ChartDisplayBlanksAs);
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.PaletteColors?[0] ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.IsDefined == true, "Expected chart color-style ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/colors1.xml", slide.SlideNodes[4].Chart?.ColorStyle.PartName ?? string.Empty);
