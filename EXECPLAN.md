@@ -10211,6 +10211,21 @@ earlier polar label closure without adding a chart-local XML reread.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed (`48 passed, 0 failed, 0 skipped`).
 
+Revision note, 2026-05-27: Closed the same `showLegendKey` text-gate drop for bar/column data labels,
+using the bar renderer's existing point/series/vary-colors fill resolver instead of a separate label-color
+rule. `RenderBarDataLabels` now receives the chart palette, series fills, point fills, and `varyColors`
+state, treats legend keys as visible content, and emits the label box plus swatch even when the formatted
+label string is empty. The new public synthetic bar case locks a legend-key-only label with a unique
+data-label shape fill so the structural emission cannot silently disappear behind `showVal=false`.
+
+This deliberately does not generalize line-chart `showLegendKey` yet: line labels need Office-PDF-backed
+evidence for whether the key follows series stroke, marker fill, marker stroke, or a composite legend symbol.
+Bar/column, polar, scatter, and bubble now consume the fill-backed cases without reopening XML; line remains
+an explicit semantic gap rather than a guessed rectangle fill.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed (`49 passed, 0 failed, 0 skipped`).
+
 Revision note, 2026-05-27: Routed scatter chart `showVal` data labels through the same structured
 scatter/bubble label renderer. The scatter branch now reads plot and series data-label options from the scene
 or chart XML, preserves series-name provenance through `ChartSeriesNameRecord`, and formats the active Y
