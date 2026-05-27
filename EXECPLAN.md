@@ -9603,6 +9603,20 @@ lookup.
 Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
 runner passed (`265 passed, 0 failed, 7 skipped`).
 
+Revision note, 2026-05-27: Restricted first-`valAx` fallback after paired value-axis lookup. Standalone line
+rendering, chart-axis style construction, and the right-legend Cartesian tick-label estimator now use
+`ResolveXmlValueAxisForSource`: if the paired source has XML, use it; if there is no scene axis at all, keep
+the XML-only compatibility fallback to the first `valAx`; if a scene axis exists but its matching XML axis is
+missing, leave the XML side null instead of attaching an unrelated first `valAx`.
+
+This is another source-alignment change, not a visible metric change for normal chart XML. It prevents future
+malformed or partially scene-backed charts from combining a typed scene axis with unrelated XML styling,
+scaling, gridline, or number-format metadata. The long-term rule remains that plot-owned source pairing must
+fail closed before metric heuristics are applied.
+
+Validation: focused non-slow `pptx-charts` passed (`46 passed, 0 failed, 0 skipped`); full non-slow console
+runner passed (`265 passed, 0 failed, 7 skipped`).
+
 Revision note, 2026-05-27: Removed obsolete single-axis and XML-only chart-axis helper bypasses after the
 category/date-axis source pairing work. `ReadSceneChartAxis`, `ReadChartValueAxisForChart`,
 `ReadChartCategoryAxisForChart`, and the `EstimateVerticalValueAxisLabelStripWidth` overload that always

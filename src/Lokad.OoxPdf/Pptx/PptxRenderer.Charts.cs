@@ -252,6 +252,18 @@ internal sealed partial class PptxRenderer
         return new ChartAxisSource(sceneAxis, matchedXmlAxis);
     }
 
+    private static XElement? ResolveXmlValueAxisForSource(ChartAxisSource source, XDocument chartXml)
+    {
+        if (source.XmlAxis is not null)
+        {
+            return source.XmlAxis;
+        }
+
+        return source.SceneAxis is null
+            ? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault()
+            : null;
+    }
+
     private static PptxSceneChartGrouping ReadSceneOrXmlChartGrouping(PptxSceneChartPlot? scenePlot, XElement plotElement, PptxSceneChartGrouping defaultGrouping)
     {
         if (scenePlot is not null)
@@ -1036,7 +1048,7 @@ internal sealed partial class PptxRenderer
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, linePlot, chartXml, theme, lineChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, linePlot, chartXml, lineChart).FirstOrDefault();
-                XElement? valueAxisForScale = valueAxis.XmlAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+                XElement? valueAxisForScale = ResolveXmlValueAxisForSource(valueAxis, chartXml);
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueAxis.SceneAxis, valueAxisForScale, theme);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
@@ -6286,7 +6298,7 @@ internal sealed partial class PptxRenderer
     private static ChartAxesStyle ReadSceneOrXmlChartAxesStyle(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, PptxTheme theme, XElement chartElement)
     {
         ChartAxisSource valueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, chartElement).FirstOrDefault();
-        XElement? valueAxisElement = valueAxisSource.XmlAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+        XElement? valueAxisElement = ResolveXmlValueAxisForSource(valueAxisSource, chartXml);
         ChartAxisSource categoryAxisSource = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, plot, chartXml, chartElement);
         XElement? categoryAxisElement = categoryAxisSource.XmlAxis;
         XElement? secondaryValueAxisElement = ReadSecondaryValueAxisForChart(chartXml, valueAxisElement);
@@ -7759,7 +7771,7 @@ internal sealed partial class PptxRenderer
             if (CountRenderableSeries(seriesVectors) > 0)
             {
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, plot, chartXml, plotElement).FirstOrDefault();
-                XElement? valueAxisForScale = valueAxis.XmlAxis ?? chartXml.Descendants(ChartNamespace + "valAx").FirstOrDefault();
+                XElement? valueAxisForScale = ResolveXmlValueAxisForSource(valueAxis, chartXml);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(seriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
