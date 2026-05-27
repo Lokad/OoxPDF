@@ -1048,7 +1048,7 @@ internal sealed partial class PptxRenderer
                     chartPalette,
                     chartLayout.PlotAreaBox,
                     plotBox,
-                    areaSeries,
+                    areaSeriesVectors,
                     stacked,
                     percentStacked,
                     seriesFills,
@@ -7857,7 +7857,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<RgbColor>? chartPalette,
         ChartLayoutBox plotAreaBox,
         ChartPlotBox plotBox,
-        IReadOnlyList<IReadOnlyList<double>> series,
+        IReadOnlyList<ChartIndexedNumberVector> series,
         bool stacked,
         bool percentStacked,
         IReadOnlyList<ChartSeriesFill?> seriesFills,
@@ -7876,6 +7876,7 @@ internal sealed partial class PptxRenderer
         double plotY = plotBox.Y;
         double plotWidth = plotBox.Width;
         double plotHeight = plotBox.Height;
+        IReadOnlyList<IReadOnlyList<double?>> denseSeries = DensifyChartSeries(series);
         RenderChartShapeStyle(graphics, plotAreaBox.X, plotAreaBox.Y, plotAreaBox.Width, plotAreaBox.Height, plotAreaStyle);
         graphics.SaveState();
         try
@@ -7891,7 +7892,7 @@ internal sealed partial class PptxRenderer
                 DrawHorizontalChartGridlines(graphics, plotX, plotY, plotWidth, plotHeight, valueExtents, axisUnits.MajorUnit, valueAxisCrossingValue, valueAxisReversed, major: true, gridlineStyle.Major);
             }
 
-            RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, series, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed);
+            RenderAreaChartSeries(graphics, theme, chartPalette, plotBox, denseSeries, stacked, percentStacked, seriesFills, seriesStrokes, valueExtents, valueAxisReversed);
 
             ChartSeriesStroke valueAxisStroke = axesStyle.ValueAxis ?? ChartAxisDefaultStroke;
             ChartSeriesStroke categoryAxisStroke = axesStyle.CategoryAxis ?? ChartAxisDefaultStroke;
@@ -7925,7 +7926,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed)
+    private static void RenderAreaChartSeries(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartPlotBox plotBox, IReadOnlyList<IReadOnlyList<double?>> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, ChartValueExtents valueExtents, bool valueAxisReversed)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -7935,7 +7936,7 @@ internal sealed partial class PptxRenderer
         double[] lower = new double[pointCount];
         for (int seriesIndex = 0; seriesIndex < series.Count; seriesIndex++)
         {
-            IReadOnlyList<double> values = series[seriesIndex];
+            IReadOnlyList<double?> values = series[seriesIndex];
             if (values.Count == 0)
             {
                 continue;
@@ -7946,7 +7947,7 @@ internal sealed partial class PptxRenderer
             for (int i = 0; i < pointCount; i++)
             {
                 double pointX = plotX + (pointCount == 1 ? plotWidth / 2d : plotWidth * i / (pointCount - 1));
-                double value = i < values.Count ? values[i] : 0d;
+                double value = i < values.Count && values[i] is { } indexedValue ? indexedValue : 0d;
                 double lowerValue = stacked ? lower[i] : 0d;
                 double positiveTotal = GetCategoryPositiveTotal(series, i, percentStacked);
                 double normalizedValue = NormalizeStackedValue(value, positiveTotal, percentStacked);
