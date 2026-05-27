@@ -10631,6 +10631,7 @@ internal static class PptxTests
                   <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
                   <c:ser><c:marker><c:symbol val="plus"/><c:size val="9"/></c:marker><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
                   <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:ser><c:marker><c:spPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill></c:spPr></c:marker><c:val><c:numLit><c:pt idx="0"><c:v>5</c:v></c:pt></c:numLit></c:val></c:ser>
                 </c:lineChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
@@ -10647,6 +10648,9 @@ internal static class PptxTests
         TestAssert.True(plot.Series[2].Marker.IsDefined == false, "Expected missing sibling markers to stay missing even when their effective style is modeled.");
         TestAssert.Equal("triangle", plot.Series[2].Marker.Symbol);
         TestAssert.Equal(5d, plot.Series[2].Marker.Size);
+        TestAssert.True(plot.Series[3].Marker.IsDefined == true, "Expected styled series marker XML to stay explicit.");
+        TestAssert.Equal("x", plot.Series[3].Marker.Symbol);
+        TestAssert.Equal(9d, plot.Series[3].Marker.Size);
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()

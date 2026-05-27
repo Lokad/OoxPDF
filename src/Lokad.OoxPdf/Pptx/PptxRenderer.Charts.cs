@@ -6621,10 +6621,12 @@ internal sealed partial class PptxRenderer
                 (lineChart
                     ? chartMarkerEnabled ? AutoLineChartMarkerSymbol(styles.Count) : "none"
                     : "circle");
-            double size = marker?.Element(ChartNamespace + "size")?.Attribute("val") is { } value &&
-                double.TryParse(value.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-                    ? Math.Clamp(parsed, 2d, 30d)
-                    : lineChart && chartMarkerEnabled && marker is null ? 5d : 4d;
+            double size = PptxChartMarkerMetricRules.ResolveSize(
+                (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val"),
+                plotKind,
+                chartMarkerEnabled,
+                marker is not null,
+                marker?.Element(ChartNamespace + "spPr") is not null);
             XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
             ChartSeriesFill? fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
                 ? new ChartSeriesFill(fillColor, fillAlpha)

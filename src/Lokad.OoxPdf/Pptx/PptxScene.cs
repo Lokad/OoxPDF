@@ -2203,10 +2203,12 @@ internal sealed class PptxSceneBuilder
         string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
             ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
         string? sizeValue = (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val");
-        double size = sizeValue is not null &&
-            double.TryParse(sizeValue, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-                ? Math.Clamp(parsed, 2d, 30d)
-                : plotKind == PptxSceneChartPlotKind.Line && chartMarkersEnabled && marker is null ? 5d : 4d;
+        double size = PptxChartMarkerMetricRules.ResolveSize(
+            sizeValue,
+            plotKind,
+            chartMarkersEnabled,
+            marker is not null,
+            marker?.Element(ChartNamespace + "spPr") is not null);
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
         PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
