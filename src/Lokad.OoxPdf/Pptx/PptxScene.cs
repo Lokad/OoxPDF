@@ -528,7 +528,8 @@ internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
     int? LineReferenceIndex,
     PptxSceneLineStyle Line,
-    PptxSceneLineStyle ShapeLine);
+    PptxSceneLineStyle ShapeLine,
+    PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartPlot(
     PptxSceneChartPlotKind PlotKind,
@@ -2993,10 +2994,53 @@ internal sealed class PptxSceneBuilder
                     .Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
                 theme);
-            entries.Add(new PptxSceneChartStyleEntry(roleElement.Name.LocalName, lineReferenceIndex, line, shapeLine));
+            entries.Add(new PptxSceneChartStyleEntry(
+                roleElement.Name.LocalName,
+                lineReferenceIndex,
+                line,
+                shapeLine,
+                ReadChartStyleRoleTextStyle(roleElement, theme)));
         }
 
         return entries;
+    }
+
+    private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme)
+    {
+        XElement? defaultRunProperties = roleElement
+            .Elements()
+            .FirstOrDefault(element => element.Name.LocalName == "defRPr");
+        XElement? fontReference = roleElement
+            .Elements()
+            .FirstOrDefault(element => element.Name.LocalName == "fontRef");
+        string? typeface = (string?)defaultRunProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
+            (string?)defaultRunProperties?.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
+            (string?)defaultRunProperties?.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        if (string.IsNullOrWhiteSpace(typeface))
+        {
+            typeface = (string?)fontReference?.Attribute("idx") switch
+            {
+                "major" => "+mj-lt",
+                "minor" => "+mn-lt",
+                _ => null
+            };
+        }
+
+        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
+            ? null
+            : theme.ResolveTypeface(typeface);
+        double? fontSize = defaultRunProperties?.Attribute("sz") is { } sizeAttribute &&
+            int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
+            sizeHundredths > 0
+                ? sizeHundredths / 100d
+                : null;
+        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha) ||
+            TryReadSolidColorWithAlpha(fontReference, theme, out parsedColor, out alpha)
+                ? parsedColor
+                : null;
+        bool? bold = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");
+        bool? italic = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
+        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)

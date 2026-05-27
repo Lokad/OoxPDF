@@ -1866,6 +1866,11 @@ High-priority actions:
     default category/value axis-title placement is still open. This is distinct from tick-label styling and
     should be solved with Office-PDF-backed placement evidence for horizontal and rotated axis-title boxes,
     overlay/reserve interaction, and chart-style inherited defaults, not with frame-relative text nudges.
+  - [x] 2026-05-27: Preserve chart-style role text defaults structurally. `PptxSceneChartStyleEntry.TextStyle`
+    now decodes role-local `fontRef` and `defRPr` into the existing chart text-style override shape:
+    major/minor theme font family, font size, font color/alpha, bold, and italic. This does not yet apply
+    inherited defaults to title, axis, legend, or data-label rendering; it removes the raw-XML dependency
+    that the future chart-style text cascade would otherwise need.
   - [x] Consume explicit manual-layout axis titles:
     the chart renderer now emits `PptxSceneChartAxis.Title` only when `c:title/c:layout/c:manualLayout` gives
     a structural title box, and the raw XML fallback follows the same shared title text/style/shape parsers.
@@ -2768,6 +2773,11 @@ Composite oracle family map:
   roles, keeping inherited style evidence adjacent to direct gridline XML while avoiding a premature rendering
   behavior change. Validation: focused `pptx-model` passed (`19 passed, 0 failed, 0 skipped`) and focused
   non-slow `pptx-charts` passed (`52 passed, 0 failed, 0 skipped`).
+- Chart style-part entries now preserve role text defaults from `fontRef` and `defRPr` as
+  `PptxSceneChartStyleEntry.TextStyle`. This gives the future chart-style text cascade typed defaults for
+  titles, axes, legends, and labels without reopening the style XML in the renderer. Validation: focused
+  `pptx-model` passed (`19 passed, 0 failed, 0 skipped`) and focused non-slow `pptx-charts` passed
+  (`52 passed, 0 failed, 0 skipped`).
 - Chart external-data scene ownership now preserves workbook provenance: `PptxSceneChart.ExternalData` records
   `c:externalData/@r:id`, the package-resolved embedded-workbook target, and the `autoUpdate` flag. Workbook
   parsing still remains a renderer-side bridge and does not yet provide stale-cache reconciliation, blank-cell

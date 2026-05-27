@@ -241,6 +241,11 @@ internal static class PptxTests
                     <cs:lnRef idx="1"/>
                     <cs:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="203040"><a:alpha val="70000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
                   </cs:gridlineMinor>
+                  <cs:title>
+                    <cs:lnRef idx="0"/>
+                    <cs:fontRef idx="major"><a:schemeClr val="accent6"><a:alpha val="50000"/></a:schemeClr></cs:fontRef>
+                    <cs:defRPr sz="1400" b="1" i="0"/>
+                  </cs:title>
                 </cs:style>
                 """,
             ["ppt/embeddings/chart-data.xlsx"] = "fake workbook package bytes for scene resource ownership",
@@ -476,6 +481,14 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneLineCompound.ThickThin, majorGridlineStyle.ShapeLine.Compound);
         TestAssert.Equal("rnd", majorGridlineStyle.ShapeLine.CapValue ?? string.Empty);
         TestAssert.Equal(2, majorGridlineStyle.ShapeLine.Join);
+        PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
+        TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
+        TestAssert.Equal("Arial", titleStyle.TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal(14d, titleStyle.TextStyle.FontSize ?? 0d);
+        TestAssert.Equal(new RgbColor(51, 102, 153), titleStyle.TextStyle.Color ?? default);
+        TestAssert.Equal(0.5d, titleStyle.TextStyle.Alpha ?? 0d);
+        TestAssert.True(titleStyle.TextStyle.Bold == true, "Expected chart style-part title bold default in the scene model.");
+        TestAssert.True(titleStyle.TextStyle.Italic == false, "Expected chart style-part title italic default in the scene model.");
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StyleId ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);
