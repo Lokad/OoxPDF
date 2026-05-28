@@ -945,6 +945,13 @@ High-priority actions:
   regression now asserts model-visible `FF0000` and `Points/3000` before checking the emitted PDF font/color
   operators. Validation: focused non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full
   non-slow console runner passed (`402 passed, 0 failed, 7 skipped`).
+- [x] Resolve empty PPTX paragraph spacing in the text model:
+  `PptxTextParagraphModel` now carries `EmptySpacingBefore` and `EmptySpacingAfter`, computed from the resolved
+  paragraph spacing ladder using the resolved end-paragraph font size. Empty-paragraph line layout and
+  vertical-anchor height estimation consume those model fields instead of re-reading paragraph XML. The
+  existing end-paragraph vertical-anchor fixture now asserts the model-visible `72 pt` spacing before layout.
+  Validation: focused non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full non-slow
+  console runner passed (`402 passed, 0 failed, 7 skipped`).
 - [x] Extend the OOXML enum ladder to PPTX run-style tokens:
   `ResolvedRunTextStyle`, `PptxSceneRunStyle`, and `PptxTextRunModelSnapshot` now preserve raw DrawingML
   underline, strike, and capitalization values next to the existing booleans/rendering behavior. The synthetic
@@ -7011,6 +7018,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   `buFont`, `buClr`, `buSzPct`, and `buSzPts` from merged paragraph XML during line layout. The model now
   carries the resolved color and raw size tokens, and layout only combines them with the first visible run's
   fallback text style.
+- Observation: Empty PPTX paragraphs still had a paragraph-spacing XML back edge.
+  Evidence: The text model owned `EndParagraphStyle`, but empty paragraph layout and vertical-anchor height
+  estimation still called `ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, ...)` using
+  the end-paragraph font size. The model now resolves those empty spacing values once, alongside the
+  end-paragraph style they depend on.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7304,6 +7316,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   style only when those bullet properties are absent, so carrying the bullet style tokens in
   `PptxParagraphBulletModel` keeps the source decision structural and prevents future Office bullet tuning
   from becoming another renderer-local XML branch.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Store empty-paragraph spacing as resolved paragraph model values.
+  Rationale: Empty paragraph spacing is a paragraph style decision whose numeric value depends on the resolved
+  end-paragraph font size. Computing it during text-model construction keeps vertical anchoring and line layout
+  on the same typed facts and removes another layout-stage XML read without changing the Office-like spacing
+  formula.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14819,6 +14837,21 @@ This removes the remaining bullet-specific merged-paragraph XML read from line l
 Office bullet parity: picture bullets, richer theme-token provenance, and exact bullet/run baseline alignment
 remain future work. The important architectural change is that the PDF bullet font/color/size outcome is now
 traceable through model-visible paragraph state before glyph placement.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `402` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Empty PPTX paragraph spacing is now resolved by the text paragraph model.
+`PptxTextParagraphModel` carries `EmptySpacingBefore` and `EmptySpacingAfter`, computed from the same
+paragraph spacing ladder as visible paragraphs but using `EndParagraphStyle.FontSize`. Both empty-paragraph
+line layout and vertical-anchor text-height estimation now consume those fields instead of calling
+`ReadParagraphSpacing` against paragraph/default XML during layout.
+
+This closes the spacing back edge that remained after end-paragraph style ownership moved into the model. The
+remaining paragraph model work is now mostly provenance depth and full cascade naming: visible paragraph
+spacing already has resolved numeric fields, but its source tokens and some default-run/style-layer facts are
+not yet as inspectable as body properties, bullets, tabs, and empty spacing.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner

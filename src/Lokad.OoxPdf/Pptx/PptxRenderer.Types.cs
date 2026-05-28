@@ -437,6 +437,8 @@ internal sealed partial class PptxRenderer
         XElement? Properties,
         XElement? EndParagraphProperties,
         ResolvedEndParagraphTextStyle EndParagraphStyle,
+        double EmptySpacingBefore,
+        double EmptySpacingAfter,
         bool HasVisibleContent,
         bool HasManualLineBreak,
         double FirstLineFallbackFontSize,

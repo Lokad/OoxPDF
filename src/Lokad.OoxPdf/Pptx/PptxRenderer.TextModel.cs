@@ -106,6 +106,8 @@ internal sealed partial class PptxRenderer
             paragraph.EndParagraphStyle.Typeface,
             paragraph.EndParagraphStyle.Bold,
             paragraph.EndParagraphStyle.Italic,
+            paragraph.EmptySpacingBefore,
+            paragraph.EmptySpacingAfter,
             paragraph.HasVisibleContent,
             paragraph.HasManualLineBreak,
             paragraph.FirstLineFallbackFontSize,
@@ -710,11 +712,14 @@ internal sealed partial class PptxRenderer
             PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
+            ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
                 endParagraphProperties,
-                ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale),
+                endParagraphStyle,
+                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", endParagraphStyle.FontSize),
+                ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", endParagraphStyle.FontSize),
                 runs.Count > 0,
                 runs.Any(run => run.Kind == PptxTextRunKind.Break),
                 paragraphStyle.FontSize,

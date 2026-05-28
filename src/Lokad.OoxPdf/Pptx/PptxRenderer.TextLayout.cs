@@ -808,9 +808,7 @@ internal sealed partial class PptxRenderer
                 if (ParagraphHasLayoutContent(paragraph))
                 {
                     double emptyFontSize = paragraph.EndParagraphStyle.FontSize;
-                    double emptySpacingBefore = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
-                    double emptySpacingAfter = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
-                    cursorLineTop -= (hasPlacedParagraph ? emptySpacingBefore : 0d) + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
+                    cursorLineTop -= (hasPlacedParagraph ? paragraph.EmptySpacingBefore : 0d) + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + paragraph.EmptySpacingAfter;
                     hasPlacedParagraph = true;
                 }
 
@@ -2984,14 +2982,14 @@ internal sealed partial class PptxRenderer
                         : paragraph.EndParagraphStyle.FontSize;
                     if (hasEstimatedParagraph)
                     {
-                        height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
+                        height += paragraph.EmptySpacingBefore;
                     }
 
                     string? emptyTypeface = paragraph.EndParagraphStyle.Typeface;
                     bool emptyBold = paragraph.EndParagraphStyle.Bold;
                     bool emptyItalic = paragraph.EndParagraphStyle.Italic;
                     height += ReadEstimatedAnchorEmptyLineAdvance(lineSpacing, emptyFontSize, emptyTypeface, emptyBold, emptyItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
-                    height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
+                    height += paragraph.EmptySpacingAfter;
                     hasEstimatedParagraph = true;
                 }
 
