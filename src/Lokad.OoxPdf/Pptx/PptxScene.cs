@@ -896,7 +896,13 @@ internal sealed record PptxSceneChartShapeStyle(
     PptxSceneShapePictureFill PictureFill,
     PptxSceneLineStyle Line,
     PptxSceneGlow Glow,
-    PptxSceneOuterShadow OuterShadow);
+    PptxSceneOuterShadow OuterShadow,
+    PptxSceneChartEffectFamily Effects);
+
+internal readonly record struct PptxSceneChartEffectFamily(
+    bool HasEffectList,
+    bool HasEffectDag,
+    IReadOnlyList<string> UnsupportedEffectNames);
 
 internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
@@ -2288,7 +2294,7 @@ internal sealed class PptxSceneBuilder
                 NumberFormatInfo: default,
                 Layout: default,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
-                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
+                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
                 RejectedOverrideIndexValues: [],
                 Overrides: [],
                 IsDefined: false);
@@ -2430,7 +2436,8 @@ internal sealed class PptxSceneBuilder
             noFill ? default : ReadChartPictureFill(shapeProperties),
             ReadChartLine(shapeProperties, theme),
             TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
-            TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
+            TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
+            ReadChartEffects(shapeProperties));
     }
 
     private static PptxSceneShapePictureFill ReadChartPictureFill(XElement? shapeProperties)
@@ -2455,6 +2462,26 @@ internal sealed class PptxSceneBuilder
             ReadPictureAlpha(shapeProperties!),
             ReadPictureAlphaValue(shapeProperties!),
             ReadPictureTile(shapeProperties!));
+    }
+
+    private static PptxSceneChartEffectFamily ReadChartEffects(XElement? shapeProperties)
+    {
+        XElement? effectList = shapeProperties?.Element(DrawingNamespace + "effectLst");
+        XElement? effectDag = shapeProperties?.Element(DrawingNamespace + "effectDag");
+        IReadOnlyList<string> unsupportedEffects = effectList is null
+            ? []
+            : effectList
+                .Elements()
+                .Where(IsUnsupportedChartEffect)
+                .Select(effect => effect.Name.LocalName)
+                .ToArray();
+        return new PptxSceneChartEffectFamily(effectList is not null, effectDag is not null, unsupportedEffects);
+    }
+
+    private static bool IsUnsupportedChartEffect(XElement effect)
+    {
+        return effect.Name != DrawingNamespace + "outerShdw" &&
+            effect.Name != DrawingNamespace + "glow";
     }
 
     private static string ReadChartElementValue(XElement element, string childName)
@@ -3309,7 +3336,7 @@ internal sealed class PptxSceneBuilder
                     Overlay: null,
                     OverlayValue: string.Empty,
                     default,
-                    new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
+                    new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
                     default);
         }
 
@@ -3355,7 +3382,7 @@ internal sealed class PptxSceneBuilder
             Overlay: null,
             OverlayValue: string.Empty,
             default,
-            new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
+            new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
             default);
     }
 
@@ -3375,7 +3402,7 @@ internal sealed class PptxSceneBuilder
                 IsDeleted: null,
                 IsDeletedValue: string.Empty,
                 default,
-                new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
+                new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
                 default);
         }
 
@@ -3630,7 +3657,9 @@ internal sealed class PptxSceneBuilder
             style.PictureFill.HasPicture ||
             style.Line.HasLine ||
             style.Glow.HasGlow ||
-            style.OuterShadow.HasShadow;
+            style.OuterShadow.HasShadow ||
+            style.Effects.HasEffectDag ||
+            style.Effects.UnsupportedEffectNames?.Count > 0;
     }
 
     private static bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)

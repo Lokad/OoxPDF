@@ -3778,6 +3778,10 @@ High-priority actions:
       without a resolvable relationship id. Rendering remains intentionally deferred until chart picture-fill
       drawing can share the same image/pattern pipeline as other shape fills instead of adding chart-specific
       XML scans.
+    - [x] Preserve chart-area/plot-area effect-family provenance in scene shape-style records: `a:effectLst`
+      presence, unsupported effect element names, and `a:effectDag` presence now survive beside parsed
+      `a:glow`/`a:outerShdw`. This keeps unsupported chart effects and chart-style entries visible without
+      collapsing them into renderer-local XML diagnostics or narrow supported-effect checks.
   - [x] Add and consume scene-owned chart-axis line styles for supported bar and line charts, including
     explicit `a:ln/a:noFill`, so axis stroke handling follows the typed axis catalog instead of renderer
     XML scans on the main path.

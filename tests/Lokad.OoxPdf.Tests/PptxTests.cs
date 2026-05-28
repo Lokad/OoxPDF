@@ -12416,6 +12416,40 @@ internal static class PptxTests
         TestAssert.Equal("x", plotArea.Tile.FlipValue ?? string.Empty);
     }
 
+    public static void PptxChartShapeStylePreservesUnsupportedEffectTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:spPr>
+                <a:effectLst>
+                  <a:outerShdw dist="12700" dir="0"><a:srgbClr val="010203"/></a:outerShdw>
+                  <a:reflection blurRad="6350"/>
+                  <a:softEdge rad="12700"/>
+                </a:effectLst>
+              </c:spPr>
+              <c:chart><c:plotArea>
+                <c:spPr><a:effectDag/></c:spPr>
+                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartEffectFamily chartArea = chart?.ChartAreaStyle.Effects
+            ?? throw new InvalidOperationException("Expected chart area effects.");
+        TestAssert.True(chartArea.HasEffectList, "Expected chart area effect list presence to be preserved.");
+        TestAssert.True(!chartArea.HasEffectDag, "Expected chart area effectDag absence to remain distinct.");
+        TestAssert.Equal("reflection,softEdge", string.Join(",", chartArea.UnsupportedEffectNames));
+        TestAssert.True(chart?.ChartAreaStyle.OuterShadow.HasShadow == true, "Expected supported outer shadow to remain parsed beside unsupported effects.");
+
+        PptxSceneChartEffectFamily plotArea = chart?.PlotAreaStyle.Effects
+            ?? throw new InvalidOperationException("Expected plot area effects.");
+        TestAssert.True(!plotArea.HasEffectList, "Expected plot area effect list absence to remain distinct.");
+        TestAssert.True(plotArea.HasEffectDag, "Expected plot area effectDag presence to be preserved.");
+        TestAssert.Equal(string.Empty, string.Join(",", plotArea.UnsupportedEffectNames));
+    }
+
     public static void PptxScenePreservesChartSeriesDataSourceReferences()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""
