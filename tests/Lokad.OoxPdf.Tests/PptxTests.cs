@@ -7995,6 +7995,8 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(17, 34, 51), recolor.Dark);
         TestAssert.Equal(new RgbColor(68, 85, 102), recolor.Light);
         PptxSceneChart chart = scene.Slides[0].SlideNodes[3].Chart ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal("accent5", chart.ColorMap.ResolveSchemeColor("bg1"));
+        TestAssert.Equal("accent6", chart.ColorMap.ResolveSchemeColor("tx1"));
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.ChartAreaStyle.PatternFill.Foreground);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.ChartAreaStyle.PatternFill.Background);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.ChartAreaStyle.Line.Color);

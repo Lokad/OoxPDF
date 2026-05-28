@@ -3930,6 +3930,13 @@ High-priority actions:
   (`99 passed, 0 failed, 2 skipped`); focused non-slow `pptx-tables` passed
   (`10 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`409 passed, 0 failed, 7 skipped`).
+  2026-05-28 progress: `PptxSceneChart` now retains the effective `PptxColorMap` used when parsing the chart
+  from its owning slide/layout/master source. The color-map regression asserts the chart-owned map alongside
+  resolved chart colors, which gives future renderer fallback paths a structural owner instead of inferring
+  chart color ownership from the current slide. Keep this item open: direct chart XML fallback helpers still
+  need to consume `sceneChart.ColorMap`/source maps systematically rather than using default-map overloads.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+  `pptx-model` passed (`25 passed, 0 failed, 1 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
