@@ -12093,6 +12093,20 @@ fallback behavior is locked by tests instead of generalized by assumption.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Routed the primary and extra bar-chart value-axis paths through
+`ChartValueAxisRenderOptions`. Bar rendering now uses the typed axis contract for percent-stacked units,
+crossing values, reversal, gridline visibility/style, category-axis crossing placement, value-axis labels,
+and bar data-label reversal. Extra bar plots also feed secondary-axis unit state from the same contract instead
+of resolving units separately before rendering.
+
+This keeps the cleanup structural: bar geometry and right-legend reserves are unchanged, but the renderer has
+one fewer place where a chart branch can accidentally combine scene-owned axis state with fallback XML. Combo
+line overlays and secondary-axis label helpers still have local value-axis reads and should be treated as their
+own follow-up because they mix primary and secondary axis ownership.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Made PPTX chart cache-point index fallback observable in the scene model.
 `PptxSceneChartNumberPoint` and `PptxSceneChartStringPoint` now carry `HasParsedIndex` beside the resolved
 integer index and raw `idx` token. Valid sparse cache points remain marked parsed, while missing or malformed
