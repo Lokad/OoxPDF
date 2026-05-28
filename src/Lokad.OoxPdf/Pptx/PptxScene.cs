@@ -893,6 +893,7 @@ internal sealed record PptxSceneChartShapeStyle(
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill? GradientFill,
     PptxScenePatternFill PatternFill,
+    PptxSceneShapePictureFill PictureFill,
     PptxSceneLineStyle Line,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow);
@@ -2287,7 +2288,7 @@ internal sealed class PptxSceneBuilder
                 NumberFormatInfo: default,
                 Layout: default,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
-                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
+                ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
                 RejectedOverrideIndexValues: [],
                 Overrides: [],
                 IsDefined: false);
@@ -2426,9 +2427,34 @@ internal sealed class PptxSceneBuilder
             fill,
             !noFill && TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
             noFill ? default : ReadChartPatternFill(shapeProperties, theme),
+            noFill ? default : ReadChartPictureFill(shapeProperties),
             ReadChartLine(shapeProperties, theme),
             TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
+    }
+
+    private static PptxSceneShapePictureFill ReadChartPictureFill(XElement? shapeProperties)
+    {
+        XElement? blipFill = shapeProperties?.Element(DrawingNamespace + "blipFill");
+        if (blipFill is null)
+        {
+            return default;
+        }
+
+        string relationshipId = (string?)blipFill
+            .Element(DrawingNamespace + "blip")
+            ?.Attribute(RelationshipsNamespace + "embed")
+            ?? string.Empty;
+        return new PptxSceneShapePictureFill(
+            true,
+            relationshipId,
+            null,
+            null,
+            ReadPictureCrop(shapeProperties!),
+            ReadPictureFill(shapeProperties!),
+            ReadPictureAlpha(shapeProperties!),
+            ReadPictureAlphaValue(shapeProperties!),
+            ReadPictureTile(shapeProperties!));
     }
 
     private static string ReadChartElementValue(XElement element, string childName)
@@ -3283,7 +3309,7 @@ internal sealed class PptxSceneBuilder
                     Overlay: null,
                     OverlayValue: string.Empty,
                     default,
-                    new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
+                    new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
                     default);
         }
 
@@ -3329,7 +3355,7 @@ internal sealed class PptxSceneBuilder
             Overlay: null,
             OverlayValue: string.Empty,
             default,
-            new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
+            new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
             default);
     }
 
@@ -3349,7 +3375,7 @@ internal sealed class PptxSceneBuilder
                 IsDeleted: null,
                 IsDeletedValue: string.Empty,
                 default,
-                new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
+                new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default),
                 default);
         }
 
@@ -3601,6 +3627,7 @@ internal sealed class PptxSceneBuilder
             style.Fill.HasFill ||
             style.GradientFill?.HasGradient == true ||
             style.PatternFill.HasPattern ||
+            style.PictureFill.HasPicture ||
             style.Line.HasLine ||
             style.Glow.HasGlow ||
             style.OuterShadow.HasShadow;

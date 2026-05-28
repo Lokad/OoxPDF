@@ -12368,6 +12368,54 @@ internal static class PptxTests
         TestAssert.True(title?.IsAutoDeleted is null, "Expected missing autoTitleDeleted metadata to remain distinguishable from false.");
     }
 
+    public static void PptxChartShapeStylePreservesPictureFillTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <c:spPr>
+                <a:blipFill>
+                  <a:blip r:embed="rIdImage"><a:alphaModFix amt="42000"/></a:blip>
+                  <a:srcRect l="10000" t="20000"/>
+                  <a:stretch><a:fillRect r="30000" b="40000"/></a:stretch>
+                </a:blipFill>
+              </c:spPr>
+              <c:chart><c:plotArea>
+                <c:spPr>
+                  <a:blipFill>
+                    <a:blip><a:alphaModFix amt="62500"/></a:blip>
+                    <a:tile algn="ctr" flip="x"/>
+                  </a:blipFill>
+                </c:spPr>
+                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneShapePictureFill chartArea = chart?.ChartAreaStyle.PictureFill
+            ?? throw new InvalidOperationException("Expected chart area picture fill.");
+        TestAssert.True(chartArea.HasPicture, "Expected chart area picture fill to be scene-visible.");
+        TestAssert.Equal("rIdImage", chartArea.RelationshipId);
+        TestAssert.Equal("10000", chartArea.Crop.LeftValue ?? string.Empty);
+        TestAssert.Equal("20000", chartArea.Crop.TopValue ?? string.Empty);
+        TestAssert.Equal("30000", chartArea.Fill.RightValue ?? string.Empty);
+        TestAssert.Equal("40000", chartArea.Fill.BottomValue ?? string.Empty);
+        TestAssert.Equal(0.42d, chartArea.Alpha);
+        TestAssert.Equal("42000", chartArea.AlphaValue ?? string.Empty);
+
+        PptxSceneShapePictureFill plotArea = chart?.PlotAreaStyle.PictureFill
+            ?? throw new InvalidOperationException("Expected plot area picture fill.");
+        TestAssert.True(plotArea.HasPicture, "Expected plot area picture fill to be scene-visible even without a resolvable relationship.");
+        TestAssert.Equal(string.Empty, plotArea.RelationshipId);
+        TestAssert.Equal(0.625d, plotArea.Alpha);
+        TestAssert.Equal("62500", plotArea.AlphaValue ?? string.Empty);
+        TestAssert.True(plotArea.Tile.HasTile, "Expected chart plot area picture tile mode to be preserved.");
+        TestAssert.Equal("ctr", plotArea.Tile.AlignmentValue ?? string.Empty);
+        TestAssert.Equal("x", plotArea.Tile.FlipValue ?? string.Empty);
+    }
+
     public static void PptxScenePreservesChartSeriesDataSourceReferences()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

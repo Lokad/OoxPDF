@@ -3773,6 +3773,11 @@ High-priority actions:
     chart pattern-fill renderer path as series and point fills.
   - [ ] Extend chart area and plot area style records to cover the remaining shape-style family instead of
     only direct solid fill/no-fill, pattern fill, and simple line.
+    - [x] Preserve chart-area and plot-area `a:blipFill` picture-fill presence, relationship id, alpha,
+      crop/fill rectangles, and tile tokens in scene shape-style records, including malformed picture fills
+      without a resolvable relationship id. Rendering remains intentionally deferred until chart picture-fill
+      drawing can share the same image/pattern pipeline as other shape fills instead of adding chart-specific
+      XML scans.
   - [x] Add and consume scene-owned chart-axis line styles for supported bar and line charts, including
     explicit `a:ln/a:noFill`, so axis stroke handling follows the typed axis catalog instead of renderer
     XML scans on the main path.
