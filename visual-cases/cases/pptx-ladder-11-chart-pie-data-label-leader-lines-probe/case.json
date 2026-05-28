@@ -19,6 +19,12 @@
       "PolarPlotBoxCandidate",
       "PolarSliceCandidate"
     ],
+    "compareChartTextStructureKinds": [
+      "DataLabelText"
+    ],
+    "maxChartTextStructurePositionDeltaByKind": {
+      "DataLabelText": 300
+    },
     "compareChartGraphicsStructureOperators": true,
     "compareChartGraphicsStructureSegmentCounts": true,
     "compareChartGraphicsStructurePathCommandCounts": true,

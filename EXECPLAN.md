@@ -2573,6 +2573,11 @@ High-priority actions:
     (`370 passed, 0 failed, 7 skipped`); private run `20260528-151650` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+    2026-05-28 update: tightened the public leader-line probe manifest to compare `DataLabelText` structures
+    with a deliberately loose `300pt` bounds tolerance. Run `20260528-151851` passed this new text gate with
+    reference/candidate counts `8/8`, while still leaving `DataLabelLeaderLineCandidate` ungated. This prevents
+    regressions back to combined polar label strings without pretending the unresolved manual-layout geometry
+    is solved.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
