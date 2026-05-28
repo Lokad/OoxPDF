@@ -193,6 +193,9 @@ High-priority actions:
   the dependency-free console runner passed with `363 passed, 0 failed, 0 skipped`. `dotnet test
   Lokad.OoxPdf.slnx` only restored projects because this repo does not use SDK test adapters; keep using the
   console runner for future full-suite gates.
+- [x] 2026-05-28 package validation after the same slices:
+  `dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --no-restore` succeeded and
+  wrote the ignored NuGet package under `artifacts/nuget/`.
 - [x] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
   text layout, group transforms, shape geometry, fills/strokes, images, tables, charts, SmartArt, and oracle
   tooling.
