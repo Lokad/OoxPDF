@@ -15286,3 +15286,17 @@ gap is the automatic fallback palette path (`ChartPalette`/series default accent
 broader call-boundary cleanup because palette fallback feeds series, point, marker, legend-key, and data-label
 swatch defaults. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
 non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: automatic chart palette fallbacks now receive the chart source color map across chart
+drawing, legends, and data-label legend-key swatches. The color-map-aware palette path is used for bar,
+line, area, scatter, bubble, radar, pie, and doughnut renderer fallbacks, including clustered/stacked bar
+helper paths and polar slice defaults. Legacy no-chart-context overloads remain for callers that deliberately
+do not carry a chart source map, but the chart render pipeline no longer silently resolves automatic
+`accentN` fallbacks through the default map once source-map context is available.
+
+This closes the direct source-color-map leak for automatic chart palette fallbacks. It does not resolve the
+larger Office chart-style/color-style cascade: `colorsN.xml` variation semantics, chart-style role precedence,
+marker defaults, explicit XML/scene overrides, and structural PDF evidence for Office's palette selection
+still need to be modeled before more paint decisions should move out of local fallback logic. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
+with `136` tests, `0` failures, and `0` skips.
