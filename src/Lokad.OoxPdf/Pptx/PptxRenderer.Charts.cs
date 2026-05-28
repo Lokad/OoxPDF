@@ -5597,6 +5597,7 @@ internal sealed partial class PptxRenderer
             Layout = dataLabel.Layout.HasLayout ? dataLabel.Layout : options.Layout,
             TextStyle = textStyle,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
+            FlagOptions = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions),
             Overrides = EmptyChartDataLabelOverrides
         };
     }
@@ -6106,6 +6107,35 @@ internal sealed partial class PptxRenderer
             ["showLegendKey"] = new(label.ShowLegendKey == true, label.ShowLegendKeyValue, label.ShowLegendKey is not null),
             ["showBubbleSize"] = new(label.ShowBubbleSize == true, label.ShowBubbleSizeValue, label.ShowBubbleSize is not null)
         };
+    }
+
+    private static IReadOnlyDictionary<string, ChartBooleanOption> ResolveChartDataLabelFlagOptions(
+        IReadOnlyDictionary<string, ChartBooleanOption> baseFlags,
+        IReadOnlyDictionary<string, ChartBooleanOption> overrideFlags)
+    {
+        if (overrideFlags.Count == 0)
+        {
+            return baseFlags;
+        }
+
+        var resolved = new Dictionary<string, ChartBooleanOption>(ChartDataLabelFlagNames.Length, StringComparer.Ordinal);
+        foreach (string flagName in ChartDataLabelFlagNames)
+        {
+            if (overrideFlags.TryGetValue(flagName, out ChartBooleanOption overrideOption) && overrideOption.IsDefined)
+            {
+                resolved[flagName] = overrideOption;
+            }
+            else if (baseFlags.TryGetValue(flagName, out ChartBooleanOption baseOption))
+            {
+                resolved[flagName] = baseOption;
+            }
+            else
+            {
+                resolved[flagName] = new ChartBooleanOption(false, string.Empty, false);
+            }
+        }
+
+        return resolved;
     }
 
     private static string FormatChartPercentageLabel(double fraction)

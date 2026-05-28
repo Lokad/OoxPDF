@@ -12475,6 +12475,9 @@ internal static class PptxTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label option resolver.");
+        System.Reflection.MethodInfo resolveOptions = typeof(PptxRenderer).GetMethod(
+            "ResolveChartDataLabelOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label override resolver.");
         object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
 
         object sceneShowValue = ChartDataLabelFlagOption(sceneOptions, "showVal");
@@ -12496,6 +12499,14 @@ internal static class PptxTests
         object sceneOverrideShowLegendKey = ChartDataLabelFlagOption(sceneOverride, "showLegendKey");
         TestAssert.True(ChartBooleanOptionValue(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey presence to remain explicit.");
+        object resolvedSceneOptions = resolveOptions.Invoke(null, [sceneOptions, 0]) ?? throw new InvalidOperationException("Expected resolved scene-backed label options.");
+        object resolvedSceneShowValue = ChartDataLabelFlagOption(resolvedSceneOptions, "showVal");
+        TestAssert.True(!ChartBooleanOptionValue(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 to replace base shorthand showVal.");
+        TestAssert.True(ChartBooleanOptionIsDefined(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(resolvedSceneShowValue));
+        object resolvedSceneShowPercent = ChartDataLabelFlagOption(resolvedSceneOptions, "showPercent");
+        TestAssert.True(!ChartBooleanOptionValue(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to inherit base showPercent=0.");
+        TestAssert.True(ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to retain base explicit state.");
 
         object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
         object xmlShowValue = ChartDataLabelFlagOption(xmlOptions, "showVal");
@@ -12514,6 +12525,11 @@ internal static class PptxTests
         TestAssert.True(!ChartBooleanOptionValue(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 to resolve false.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 presence to remain explicit.");
         TestAssert.Equal("0", ChartBooleanOptionRawValue(xmlOverrideShowLegendKey));
+        object resolvedXmlOptions = resolveOptions.Invoke(null, [xmlOptions, 0]) ?? throw new InvalidOperationException("Expected resolved XML-backed label options.");
+        object resolvedXmlShowLegendKey = ChartDataLabelFlagOption(resolvedXmlOptions, "showLegendKey");
+        TestAssert.True(!ChartBooleanOptionValue(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 to replace base showLegendKey=1.");
+        TestAssert.True(ChartBooleanOptionIsDefined(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(resolvedXmlShowLegendKey));
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
