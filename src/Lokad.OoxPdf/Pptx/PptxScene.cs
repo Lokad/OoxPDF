@@ -63,11 +63,17 @@ internal sealed record PptxSceneNodeSnapshot(
     string TableStyleAccent,
     bool TableStyleIsSupported,
     bool TableStyleFirstRow,
+    string TableStyleFirstRowValue,
     bool TableStyleLastRow,
+    string TableStyleLastRowValue,
     bool TableStyleFirstColumn,
+    string TableStyleFirstColumnValue,
     bool TableStyleLastColumn,
+    string TableStyleLastColumnValue,
     bool TableStyleBandRow,
+    string TableStyleBandRowValue,
     bool TableStyleBandColumn,
+    string TableStyleBandColumnValue,
     int TableStyleFillCellCount,
     int TableStyleTextColorCellCount,
     int TableStyleTextBoldCellCount,
@@ -1213,11 +1219,17 @@ internal readonly record struct PptxSceneTableStyle(
     string Accent,
     bool IsSupported,
     bool FirstRow,
+    string FirstRowValue,
     bool LastRow,
+    string LastRowValue,
     bool FirstColumn,
+    string FirstColumnValue,
     bool LastColumn,
+    string LastColumnValue,
     bool BandRow,
-    bool BandColumn)
+    string BandRowValue,
+    bool BandColumn,
+    string BandColumnValue)
 {
     public bool HasStyle => StyleId is not null;
 }
@@ -3728,11 +3740,17 @@ internal sealed class PptxSceneBuilder
             supported ? style.Accent : string.Empty,
             supported,
             ReadTablePropertyFlag(tableProperties, "firstRow"),
+            ReadTablePropertyFlagValue(tableProperties, "firstRow"),
             ReadTablePropertyFlag(tableProperties, "lastRow"),
+            ReadTablePropertyFlagValue(tableProperties, "lastRow"),
             ReadTablePropertyFlag(tableProperties, "firstCol"),
+            ReadTablePropertyFlagValue(tableProperties, "firstCol"),
             ReadTablePropertyFlag(tableProperties, "lastCol"),
+            ReadTablePropertyFlagValue(tableProperties, "lastCol"),
             ReadTablePropertyFlag(tableProperties, "bandRow"),
-            ReadTablePropertyFlag(tableProperties, "bandCol"));
+            ReadTablePropertyFlagValue(tableProperties, "bandRow"),
+            ReadTablePropertyFlag(tableProperties, "bandCol"),
+            ReadTablePropertyFlagValue(tableProperties, "bandCol"));
     }
 
     private static bool ReadTablePropertyFlag(XElement? tableProperties, string name)
@@ -3748,6 +3766,11 @@ internal sealed class PptxSceneBuilder
         }
 
         return tableProperties.Element(DrawingNamespace + name) is not null;
+    }
+
+    private static string ReadTablePropertyFlagValue(XElement? tableProperties, string name)
+    {
+        return (string?)tableProperties?.Attribute(name) ?? string.Empty;
     }
 
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)

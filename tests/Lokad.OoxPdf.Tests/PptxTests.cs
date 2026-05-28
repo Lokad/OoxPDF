@@ -355,7 +355,9 @@ internal static class PptxTests
         TestAssert.Equal("Medium-Style-2", slideSnapshot.SlideNodes[2].TableStyleName);
         TestAssert.Equal("accent6", slideSnapshot.SlideNodes[2].TableStyleAccent);
         TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleFirstRow, "Expected scene inspection to expose table first-row state.");
+        TestAssert.Equal("1", slideSnapshot.SlideNodes[2].TableStyleFirstRowValue);
         TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleBandRow, "Expected scene inspection to expose table band-row state.");
+        TestAssert.Equal("1", slideSnapshot.SlideNodes[2].TableStyleBandRowValue);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleFillCellCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextColorCellCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextBoldCellCount);
@@ -1039,6 +1041,32 @@ internal static class PptxTests
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].Advance > 0d, "Expected layout line boxes to expose line advance before paragraph stacking.");
         TestAssert.True(layoutFrame.Paragraphs[0].Lines[0].BaselineOffset > 0d, "Expected layout line boxes to own baseline offset separately from text spans.");
         TestAssert.Equal("Default", layoutFrame.Paragraphs[0].Lines[0].LineSpacingKind);
+    }
+
+    public static void PptxSceneTableStylePreservesConditionalFormatFlagTokens()
+    {
+        XElement table = XElement.Parse("""
+            <a:tbl xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <a:tblPr firstRow="false" lastRow="1" firstCol="0" lastCol="true" bandRow="false" bandCol="1">
+                <a:tableStyleId>{93296810-A885-4BE3-A3E7-6D5BEEA58F35}</a:tableStyleId>
+              </a:tblPr>
+            </a:tbl>
+            """);
+
+        PptxSceneTableStyle style = PptxSceneBuilder.ReadTableStyle(table);
+
+        TestAssert.True(!style.FirstRow, "Expected parsed false first-row flag.");
+        TestAssert.Equal("false", style.FirstRowValue);
+        TestAssert.True(style.LastRow, "Expected numeric true last-row flag.");
+        TestAssert.Equal("1", style.LastRowValue);
+        TestAssert.True(!style.FirstColumn, "Expected numeric false first-column flag.");
+        TestAssert.Equal("0", style.FirstColumnValue);
+        TestAssert.True(style.LastColumn, "Expected textual true last-column flag.");
+        TestAssert.Equal("true", style.LastColumnValue);
+        TestAssert.True(!style.BandRow, "Expected parsed false band-row flag.");
+        TestAssert.Equal("false", style.BandRowValue);
+        TestAssert.True(style.BandColumn, "Expected numeric true band-column flag.");
+        TestAssert.Equal("1", style.BandColumnValue);
     }
 
     public static void PptxImageRecolorPreservesRawOoxmlTokens()

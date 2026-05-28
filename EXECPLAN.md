@@ -3638,6 +3638,13 @@ High-priority actions:
   - [ ] Replace `PptxTableStyleResolver`'s supported-style formulas with a real Office table-style cascade:
     parse table style parts/theme style matrices, conditional formatting priority, `phClr` replacement, and
     unsupported-style diagnostics instead of expanding GUID-specific logic.
+    - [x] Preserve raw table conditional-format flag tokens in the scene model:
+      `PptxSceneTableStyle` now carries the original `a:tblPr` values for `firstRow`, `lastRow`, `firstCol`,
+      `lastCol`, `bandRow`, and `bandCol` beside the parsed booleans, and scene inspection exposes the same
+      private-safe values. A focused model test locks mixed lexical forms (`false`, `1`, `0`, `true`) without
+      changing the current limited resolver formulas. Validation: focused non-slow `pptx-model` passed
+      (`14 passed, 0 failed, 1 skipped`); focused non-slow `pptx-tables` passed (`9 passed, 0 failed,
+      0 skipped`).
     - [x] Expose table-style resolver provenance through private-safe scene inspection:
       `PptxSceneNodeSnapshot` now carries the table style id, resolved built-in family/accent, support flag,
       conditional-format booleans, and counts of cells that received resolver-derived fill, text color, and bold
