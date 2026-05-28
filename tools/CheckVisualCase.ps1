@@ -681,6 +681,19 @@ if ($allowedUnsupportedFeatures.Count -ne 0 -and $diagnosticItems.Count -ne 0) {
     }
 }
 
+$requiredDiagnostics = @($manifest.expected.requiredDiagnostics)
+if ($requiredDiagnostics.Count -ne 0) {
+    $missingDiagnostics = @($requiredDiagnostics | Where-Object {
+        $required = $_
+        -not ($diagnosticItems | Where-Object {
+            $_.Id -eq $required -or $_.Feature -eq $required
+        } | Select-Object -First 1)
+    })
+    if ($missingDiagnostics.Count -ne 0) {
+        throw "Missing required diagnostics: $($missingDiagnostics -join ', ')."
+    }
+}
+
 $assessment = @"
 # Visual assessment: $($manifest.id)
 

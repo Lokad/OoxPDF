@@ -4482,6 +4482,13 @@ High-priority actions:
   buffers and `ApplyImageRecolor`. `JpegInfo` is deliberately only a header reader, so closing the private
   warning requires either a real JPEG pixel decoder or a structurally equivalent PDF colorization path; a
   per-document or content-type branch would reintroduce the hard-coded logic this plan is eliminating.
+  2026-05-28 public limitation rung: `CheckVisualCase.ps1` now supports
+  `expected.requiredDiagnostics`, and `pptx-ladder-07-jpeg-duotone-recolor-diagnostic` locks the current JPEG
+  duotone-plus-alpha fallback as an explicit public visual case instead of a private-only warning. The fixture
+  is derived from the valid public JPEG image deck with a narrow `a:duotone`/`a:alphaModFix` blip effect, and
+  the visual run `20260528-120756` passed with the required `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic,
+  MAE `0.582500`, changed16 `0.020000`, and SSIM `0.992915`. This does not close the strategy item: the
+  long-term target remains decoded-pixel or PDF-structural recolor, not permanent JPEG passthrough.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension

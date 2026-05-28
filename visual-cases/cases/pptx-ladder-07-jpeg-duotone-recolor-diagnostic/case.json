@@ -1,0 +1,16 @@
+{
+  "id": "pptx-ladder-07-jpeg-duotone-recolor-diagnostic",
+  "kind": "pptx",
+  "input": "../../../tests/Lokad.OoxPdf.Tests/Cases/pptx-ladder-07-jpeg-duotone-recolor-diagnostic.pptx",
+  "dpi": 144,
+  "tags": ["pptx", "ladder", "images", "jpeg", "recolor", "duotone", "diagnostic"],
+  "expected": {
+    "minAgentRating": 1,
+    "pageCountMustMatch": true,
+    "dimensionsMustMatch": true,
+    "requiredDiagnostics": ["PPTX_UNSUPPORTED_IMAGE_RECOLOR"],
+    "maxMeanAbsoluteError": 0.75,
+    "maxChangedPixelRatioAtThreshold16": 0.021
+  },
+  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_IMAGE_RECOLOR"]
+}
