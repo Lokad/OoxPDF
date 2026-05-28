@@ -10784,7 +10784,7 @@ internal sealed partial class PptxRenderer
 
         public ChartIndexedNumberPoint? WorkbookPointForIndex(int index)
         {
-            foreach (ChartIndexedNumberPoint point in WorkbookPoints ?? [])
+            foreach (ChartIndexedNumberPoint point in WorkbookPointsForPlotVisibility(PlotVisibleOnly))
             {
                 if (point.Index == index)
                 {

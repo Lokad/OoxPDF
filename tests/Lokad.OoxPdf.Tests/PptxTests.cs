@@ -16676,6 +16676,8 @@ internal static class PptxTests
         object[] visibleHiddenColumnWorkbookPoints = (((System.Collections.IEnumerable?)hiddenColumnVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(hiddenColumnVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered workbook points.")).Cast<object>().ToArray();
         TestAssert.True(allHiddenColumnWorkbookPoints.Length == 3, "Expected plot visibility projection to start from the full workbook source vector.");
         TestAssert.True(visibleHiddenColumnWorkbookPoints.Length == 0, "Expected plot-visible-only projection to exclude workbook points from a hidden source column.");
+        object? hiddenWorkbookPoint = hiddenColumnVector.GetType().GetMethod("WorkbookPointForIndex")?.Invoke(hiddenColumnVector, [0]);
+        TestAssert.True(hiddenWorkbookPoint is null, "Expected indexed workbook source lookup to honor the vector's plot-visible-only policy.");
         object noCacheHiddenColumnVector = buildVector.Invoke(
             null,
             [Array.Empty<double>(), Array.Empty<PptxSceneChartNumberPoint>(), null, "General", hiddenColumnSource, parsedWorkbook]) ?? throw new InvalidOperationException("Expected no-cache hidden-column indexed chart vector.");

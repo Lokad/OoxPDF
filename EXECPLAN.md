@@ -2282,6 +2282,15 @@ High-priority actions:
     (`370 passed, 0 failed, 7 skipped`); private run `20260528-150717` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] 2026-05-28 carry plot-visible-only source filtering into indexed workbook lookups:
+    the indexed vectors already preserved workbook range cells, hidden row/column flags, and a
+    `PlotVisibleOnly` policy, but `WorkbookPointForIndex` still returned hidden workbook source points when
+    data-label formatting asked for source-linked provenance. That made source/cache alignment depend on a
+    sidecar lookup that ignored the vector policy. The lookup now filters through the vector's own visibility
+    projection, with a regression on a hidden source column. Cached chart geometry remains cache-owned; this
+    closes only the provenance boundary used by source-linked formatting. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
+    `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`).
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
