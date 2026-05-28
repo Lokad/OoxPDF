@@ -6350,6 +6350,13 @@ internal static class PptxTests
                 node.HasChart,
                 node.ChartPlotCount,
                 node.ChartAxisCount,
+                node.ChartSeriesCount,
+                node.ChartSeriesMarkerCount,
+                node.ChartSeriesPointStyleCount,
+                node.ChartSeriesPointExplosionCount,
+                node.ChartDataLabelsDefinedCount,
+                node.ChartDataLabelOverrideCount,
+                node.ChartDataLabelManualLayoutCount,
                 node.HasChartColorStyle,
                 node.ChartColorStyleMethod,
                 node.ChartColorStyleColorCount,
@@ -14948,13 +14955,14 @@ internal static class PptxTests
                 <c:pieChart>
                   <c:ser>
                     <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
-                    <c:dPt><c:idx val="0"/><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr></c:dPt>
+                    <c:marker><c:symbol val="circle"/><c:size val="7"/></c:marker>
+                    <c:dPt><c:idx val="0"/><c:explosion val="25"/><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr></c:dPt>
                     <c:dPt><c:idx val="-1"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr></c:dPt>
                     <c:dPt><c:idx val="futurePoint"/><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr></c:dPt>
                     <c:dPt><c:spPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></c:spPr></c:dPt>
                   </c:ser>
                   <c:dLbls>
-                    <c:dLbl><c:idx val="0"/><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="0"/><c:layout><c:manualLayout><c:x val="0.1"/><c:y val="0.2"/></c:manualLayout></c:layout><c:showVal val="1"/></c:dLbl>
                     <c:dLbl><c:idx val="-1"/><c:showVal val="1"/></c:dLbl>
                     <c:dLbl><c:idx val="futureLabel"/><c:showVal val="1"/></c:dLbl>
                     <c:dLbl><c:showVal val="1"/></c:dLbl>
@@ -14966,19 +14974,29 @@ internal static class PptxTests
         PptxSceneChart chart = BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
 
         PptxSceneChartSeries series = chart.Plots[0].Series[0];
+        TestAssert.True(series.Marker.IsDefined, "Expected explicit chart marker to remain observable.");
         TestAssert.Equal(1, series.PointStyles.Count);
+        TestAssert.Equal(25d, series.PointStyles[0].Explosion ?? -1d);
         TestAssert.Equal(3, series.RejectedPointStyleIndexValues.Count);
         TestAssert.Equal("-1", series.RejectedPointStyleIndexValues[0]);
         TestAssert.Equal("futurePoint", series.RejectedPointStyleIndexValues[1]);
         TestAssert.Equal(string.Empty, series.RejectedPointStyleIndexValues[2]);
 
         TestAssert.Equal(1, chart.Plots[0].DataLabels.Overrides.Count);
+        TestAssert.True(chart.Plots[0].DataLabels.Overrides[0].Layout.HasLayout, "Expected data-label manual layout to remain observable.");
         TestAssert.Equal(3, chart.Plots[0].DataLabels.RejectedOverrideIndexValues.Count);
         TestAssert.Equal("-1", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[0]);
         TestAssert.Equal("futureLabel", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[1]);
         TestAssert.Equal(string.Empty, chart.Plots[0].DataLabels.RejectedOverrideIndexValues[2]);
 
         PptxSceneNodeSnapshot snapshot = BuildSingleChartSceneSnapshot(chartXml);
+        TestAssert.Equal(1, snapshot.ChartSeriesCount);
+        TestAssert.Equal(1, snapshot.ChartSeriesMarkerCount);
+        TestAssert.Equal(1, snapshot.ChartSeriesPointStyleCount);
+        TestAssert.Equal(1, snapshot.ChartSeriesPointExplosionCount);
+        TestAssert.Equal(1, snapshot.ChartDataLabelsDefinedCount);
+        TestAssert.Equal(1, snapshot.ChartDataLabelOverrideCount);
+        TestAssert.Equal(1, snapshot.ChartDataLabelManualLayoutCount);
         TestAssert.Equal(3, snapshot.ChartRejectedPointStyleIndexCount);
         TestAssert.Equal("-1", snapshot.ChartRejectedPointStyleIndexValues[0]);
         TestAssert.Equal("futurePoint", snapshot.ChartRejectedPointStyleIndexValues[1]);

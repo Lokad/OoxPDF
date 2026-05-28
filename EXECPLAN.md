@@ -12061,6 +12061,24 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Extended private-safe chart scene snapshots for series-level and label-level
+structural state that was already parsed but mostly invisible to diagnostics. `PptxSceneNodeSnapshot` now
+reports chart series count, explicit marker count, accepted point-style override count, point/series explosion
+count, data-label definition count, accepted data-label override count, and data-label manual-layout count.
+The private layout JSON flattener carries the same counters, and the keyed override preservation test now
+locks both rejected invalid indices and accepted marker/point-style/data-label/manual-layout observability.
+
+This is deliberately not a renderer behavior change. The long-term value is distinguishing "scene model did
+not preserve this Office surface" from "renderer has not consumed the modeled surface yet" while investigating
+private decks and public chart probes. The remaining gap is semantic: chart style/color cascades, markers,
+data-label boxes, and point-specific overrides still need Office-PDF-backed rules before they should drive
+new geometry or paint decisions beyond the currently supported paths.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxScenePreservesRejectedChartKeyedOverrideIndices` passed; focused non-slow `pptx-charts` passed with
+`105` tests, `0` failures, and `0` skips; full non-slow console runner passed with `346` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Started consolidating value-axis render decisions behind a typed option boundary.
 The ordinary line-chart branch now resolves value-axis units, reversed orientation, crossing value, major/minor
 gridline visibility, and gridline stroke style through `ChartValueAxisRenderOptions` instead of collecting

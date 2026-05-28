@@ -41,6 +41,10 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
+        IReadOnlyList<PptxSceneChartPlot> chartPlots = node.Chart?.Plots ?? [];
+        IReadOnlyList<PptxSceneChartSeries> chartSeries = chartPlots
+            .SelectMany(plot => plot.Series)
+            .ToArray();
         IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
             node.Chart?.ColorStyle.Declarations ?? [];
         IReadOnlyList<string> chartColorDeclarationKinds = chartColorDeclarations
@@ -87,6 +91,19 @@ internal sealed partial class PptxRenderer
             node.Chart is not null,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
+            chartSeries.Count,
+            chartSeries.Count(series => series.Marker.IsDefined),
+            chartSeries.Sum(series => series.PointStyles.Count),
+            chartSeries.Sum(series => series.PointStyles.Count(point => point.Explosion is not null)) +
+                chartSeries.Count(series => series.Explosion is not null),
+            chartPlots.Count(plot => plot.DataLabels.IsDefined) +
+                chartSeries.Count(series => series.DataLabels.IsDefined),
+            chartPlots.Sum(plot => plot.DataLabels.Overrides.Count) +
+                chartSeries.Sum(series => series.DataLabels.Overrides.Count),
+            chartPlots.Count(plot => plot.DataLabels.Layout.HasLayout) +
+                chartSeries.Count(series => series.DataLabels.Layout.HasLayout) +
+                chartPlots.Sum(plot => plot.DataLabels.Overrides.Count(label => label.Layout.HasLayout)) +
+                chartSeries.Sum(series => series.DataLabels.Overrides.Count(label => label.Layout.HasLayout)),
             node.Chart?.ColorStyle.IsDefined ?? false,
             node.Chart?.ColorStyle.PartName ?? string.Empty,
             node.Chart?.ColorStyle.Method ?? string.Empty,
