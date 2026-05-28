@@ -73,7 +73,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedPatternFill))
+        if (HasUnsupportedPatternFill(sceneSlide, slideXml))
         {
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
@@ -366,6 +366,32 @@ internal sealed partial class PptxRenderer
     private static bool IsUnsupportedPatternFill(XElement patternFill)
     {
         return !IsSupportedDiagonalPatternFill((string?)patternFill.Attribute("prst"));
+    }
+
+    private static bool HasUnsupportedPatternFill(PptxSceneSlide sceneSlide, XDocument slideXml)
+    {
+        return HasUnsupportedShapePatternFill(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(DrawingNamespace + "pattFill").Any(IsUnsupportedNonShapePatternFill);
+    }
+
+    private static bool HasUnsupportedShapePatternFill(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is { PatternFill.HasUnsupportedPattern: true }) ||
+                HasUnsupportedShapePatternFill(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnsupportedNonShapePatternFill(XElement patternFill)
+    {
+        return patternFill.Parent?.Name != PresentationNamespace + "spPr" &&
+            IsUnsupportedPatternFill(patternFill);
     }
 
     private static bool HasGraphicDataUri(XDocument slideXml, string marker)

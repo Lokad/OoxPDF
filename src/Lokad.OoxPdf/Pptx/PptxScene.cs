@@ -46,6 +46,8 @@ internal sealed record PptxSceneNodeSnapshot(
     bool ShapeHasUnsupportedCustomGeometry,
     bool ShapeHasGradientSource,
     bool ShapeHasUnsupportedGradient,
+    bool ShapeHasPatternSource,
+    bool ShapeHasUnsupportedPattern,
     bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
@@ -571,6 +573,8 @@ internal readonly record struct PptxSceneGradientStop(
 
 internal readonly record struct PptxScenePatternFill(
     bool HasPattern,
+    bool HasPatternSource,
+    bool HasUnsupportedPattern,
     string Preset,
     RgbColor Foreground,
     RgbColor Background,
@@ -2794,9 +2798,11 @@ internal sealed class PptxSceneBuilder
             : new RgbColor(255, 255, 255);
         return new PptxScenePatternFill(
             HasPattern: true,
-            (string?)patternFill.Attribute("prst") ?? "pct50",
-            foreground,
-            background,
+            HasPatternSource: true,
+            HasUnsupportedPattern: false,
+            Preset: (string?)patternFill.Attribute("prst") ?? "pct50",
+            Foreground: foreground,
+            Background: background,
             Alpha: 1d);
     }
 
@@ -4433,7 +4439,7 @@ internal sealed class PptxSceneBuilder
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
             ReadShapeGradientFill(shapeProperties, theme, colorMap),
-            TryReadShapePatternFill(shapeProperties, theme, colorMap, out PptxScenePatternFill patternFill) ? patternFill : default,
+            ReadShapePatternFill(shapeProperties, theme, colorMap),
             ReadShapePictureFill(shapeProperties, package, relationships),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
@@ -4810,13 +4816,25 @@ internal sealed class PptxSceneBuilder
         return false;
     }
 
+    private static PptxScenePatternFill ReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
+        TryReadShapePatternFill(shapeProperties, theme, colorMap, out PptxScenePatternFill fill);
+        return fill;
+    }
+
     private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxScenePatternFill fill)
     {
         XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
         string? preset = (string?)patternFill?.Attribute("prst");
-        if (patternFill is null || !IsSupportedDiagonalPatternFill(preset))
+        if (patternFill is null)
         {
             fill = default;
+            return false;
+        }
+
+        if (!IsSupportedDiagonalPatternFill(preset))
+        {
+            fill = new PptxScenePatternFill(false, true, true, preset ?? string.Empty, default, default, 1d);
             return false;
         }
 
@@ -4826,7 +4844,7 @@ internal sealed class PptxSceneBuilder
         RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
-        fill = new PptxScenePatternFill(true, preset!, foreground, background, 1d);
+        fill = new PptxScenePatternFill(true, true, false, preset!, foreground, background, 1d);
         return true;
     }
 

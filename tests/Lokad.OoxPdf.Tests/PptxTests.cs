@@ -7039,6 +7039,8 @@ internal static class PptxTests
                 node.ShapeHasUnsupportedCustomGeometry,
                 node.ShapeHasGradientSource,
                 node.ShapeHasUnsupportedGradient,
+                node.ShapeHasPatternSource,
+                node.ShapeHasUnsupportedPattern,
                 node.ShapeNoFill,
                 node.ShapeLineNoFill,
                 node.ShapeHasEffectList,
@@ -17532,6 +17534,46 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported shape gradients should be diagnostic-covered from scene-owned gradient provenance.");
+    }
+
+    public static void PptxUnsupportedPatternDiagnosticsUseSceneShapePattern()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:spPr><a:pattFill prst="pct25"/></p:spPr></p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxSceneShape shape = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Shape
+                ?? throw new InvalidOperationException("Expected shape scene node.");
+            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+
+            TestAssert.True(shape.PatternFill.HasPatternSource, "Expected unsupported shape pattern provenance to remain scene-owned.");
+            TestAssert.True(shape.PatternFill.HasUnsupportedPattern, "Expected unsupported shape pattern state to remain scene-owned.");
+            TestAssert.True(snapshot.ShapeHasPatternSource, "Expected private-safe scene inspection to expose shape pattern provenance.");
+            TestAssert.True(snapshot.ShapeHasUnsupportedPattern, "Expected private-safe scene inspection to expose unsupported shape pattern provenance.");
+        }
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_PATTERN_FILL"), "Unsupported shape patterns should be diagnostic-covered from scene-owned pattern provenance.");
     }
 
     public static void PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag()

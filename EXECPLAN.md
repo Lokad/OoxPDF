@@ -13220,6 +13220,24 @@ passed; the attempted focused console-runner filters for
 `0` skips; focused non-slow `pptx-model` passed with `19` tests, `0` failures, and `1` slow skip; full
 non-slow runner passed with `394` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Shape pattern-fill diagnostics now follow the same scene-owned provenance path
+as shape gradients. `PptxScenePatternFill` distinguishes a missing pattern source from a present but
+unsupported source, and `PptxSceneBuilder` preserves unsupported slide-shape pattern fills such as `pct25`
+instead of collapsing them to the default empty pattern. Supported diagonal shape patterns keep their
+renderable `HasPattern` state; chart pattern fills continue to preserve arbitrary chart presets as chart
+style data without being folded into slide-shape diagnostics.
+
+`PptxRenderer.Diagnostics` now emits `PPTX_UNSUPPORTED_PATTERN_FILL` from scene-owned slide-shape pattern
+state, with a narrow raw fallback only for non-shape pattern owners still outside the scene model. The
+remaining fill/transparency diagnostic debt is now mostly background/text fill provenance and alpha
+provenance: raw `a:alpha` scanning still conflates supported shape transparency, text transparency, picture
+effects, and chart-part alpha until those owners expose typed unsupported-alpha state.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; `git diff --check`
+passed; focused non-slow `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow
+`pptx-model` passed with `20` tests, `0` failures, and `1` slow skip; full non-slow runner passed with `395`
+tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved ordinary-shape effect-family provenance in the PPTX scene model.
 `PptxSceneShape` now carries an `Effects` sidecar that records direct `a:effectLst` presence,
 `a:effectDag` presence, and unsupported direct effect element names while continuing to parse supported
