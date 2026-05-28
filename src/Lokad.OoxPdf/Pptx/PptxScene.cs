@@ -44,6 +44,8 @@ internal sealed record PptxSceneNodeSnapshot(
     string ShapePreset,
     bool ShapeHasCustomGeometry,
     bool ShapeHasUnsupportedCustomGeometry,
+    bool ShapeHasGradientSource,
+    bool ShapeHasUnsupportedGradient,
     bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
@@ -557,6 +559,8 @@ internal readonly record struct PptxSceneFillStyle(
 
 internal sealed record PptxSceneGradientFill(
     bool HasGradient,
+    bool HasGradientSource,
+    bool HasUnsupportedGradient,
     double AngleDegrees,
     IReadOnlyList<PptxSceneGradientStop> Stops);
 
@@ -2570,7 +2574,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneChartShapeStyle(
             noFill,
             fill,
-            !noFill && TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
+            noFill ? new PptxSceneGradientFill(false, false, false, 0d, []) : ReadShapeGradientFill(shapeProperties, theme, colorMap),
             noFill ? default : ReadChartPatternFill(shapeProperties, theme, colorMap),
             noFill ? default : ReadChartPictureFill(shapeProperties),
             ReadChartLine(shapeProperties, theme, colorMap),
@@ -4428,7 +4432,7 @@ internal sealed class PptxSceneBuilder
             TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
-            TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
+            ReadShapeGradientFill(shapeProperties, theme, colorMap),
             TryReadShapePatternFill(shapeProperties, theme, colorMap, out PptxScenePatternFill patternFill) ? patternFill : default,
             ReadShapePictureFill(shapeProperties, package, relationships),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
@@ -4464,18 +4468,32 @@ internal sealed class PptxSceneBuilder
         return TryReadShapeGradientFill(shapeProperties, theme, PptxColorMap.Default, out fill);
     }
 
+    private static PptxSceneGradientFill ReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
+        TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill fill);
+        return fill;
+    }
+
     internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientFill fill)
     {
         XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
-        if (gradientFill is null || gradientStopList is null)
+        if (gradientFill is null)
         {
-            fill = new PptxSceneGradientFill(false, 0d, []);
+            fill = new PptxSceneGradientFill(false, false, false, 0d, []);
             return false;
         }
 
-        PptxSceneGradientStop[] stops = gradientStopList
+        if (gradientStopList is null)
+        {
+            fill = new PptxSceneGradientFill(false, true, true, 0d, []);
+            return false;
+        }
+
+        XElement[] rawStops = gradientStopList
             .Elements(DrawingNamespace + "gs")
+            .ToArray();
+        PptxSceneGradientStop[] stops = rawStops
             .Select(stop => TryReadGradientStop(stop, theme, colorMap, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
             .Where(stop => stop is not null)
             .Select(stop => stop!.Value)
@@ -4484,13 +4502,22 @@ internal sealed class PptxSceneBuilder
         if (stops.Length < 2 ||
             gradientFill.Element(DrawingNamespace + "lin") is not { } linear)
         {
-            fill = new PptxSceneGradientFill(false, 0d, []);
+            fill = new PptxSceneGradientFill(false, true, true, 0d, []);
             return false;
         }
 
         double angleDegrees = ReadLong(linear, "ang", 0) / 60000d;
-        fill = new PptxSceneGradientFill(true, angleDegrees, stops);
+        bool hasUnsupportedGradient =
+            stops.Length != rawStops.Length ||
+            !HasSupportedGradientStopAlpha(stops);
+        fill = new PptxSceneGradientFill(true, true, hasUnsupportedGradient, angleDegrees, stops);
         return true;
+    }
+
+    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<PptxSceneGradientStop> stops)
+    {
+        double alpha = stops[0].Alpha;
+        return stops.All(stop => Math.Abs(stop.Alpha - alpha) <= 0.001d);
     }
 
     private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)

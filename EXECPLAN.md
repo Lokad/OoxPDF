@@ -13197,6 +13197,29 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Shape gradient diagnostics now preserve and consume scene-owned provenance
+instead of relying on raw shape XML scans. `PptxSceneGradientFill` distinguishes no gradient source,
+renderable gradient source, and unsupported gradient source; it also flags variable stop alpha as unsupported
+while preserving the renderable gradient stops. `PptxSceneBuilder` now keeps the returned gradient record even
+when the old `TryReadShapeGradientFill` boolean is false, so an unrenderable `<a:gradFill/>` remains visible
+to diagnostics and private-safe scene inspection rather than collapsing to the same state as an absent
+gradient.
+
+`PptxRenderer.Diagnostics` now emits `PPTX_UNSUPPORTED_GRADIENT_FILL` from scene-owned shape gradient state.
+It intentionally keeps a narrow raw-XML fallback for non-shape gradient owners, because background gradients
+and text-run gradients still do not have full scene-owned gradient records. That is the next fill-diagnostic
+gap: background fills, text fills, pattern fills, and broad alpha/transparency diagnostics need typed
+provenance before their raw scans can be removed without losing coverage.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; `git diff --check`
+passed; the attempted focused console-runner filters for
+`PptxUnsupportedGradientDiagnosticsUseSceneShapeGradient`,
+`PptxSyntheticVariableAlphaGradientShapeEmitsDiagnosticUntilSoftMaskExists`, and
+`PptxUnsupportedFeaturesEmitDiagnostics` each executed the full suite and passed with `401` tests,
+`0` failures, and `0` skips. Focused non-slow `pptx-shapes` passed with `18` tests, `0` failures, and
+`0` skips; focused non-slow `pptx-model` passed with `19` tests, `0` failures, and `1` slow skip; full
+non-slow runner passed with `394` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved ordinary-shape effect-family provenance in the PPTX scene model.
 `PptxSceneShape` now carries an `Effects` sidecar that records direct `a:effectLst` presence,
 `a:effectDag` presence, and unsupported direct effect element names while continuing to parse supported

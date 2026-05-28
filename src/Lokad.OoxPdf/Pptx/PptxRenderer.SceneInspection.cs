@@ -90,6 +90,8 @@ internal sealed partial class PptxRenderer
             node.Shape?.Preset ?? string.Empty,
             node.Shape?.HasCustomGeometry ?? false,
             node.Shape?.CustomGeometry.HasUnsupportedGeometry ?? false,
+            node.Shape?.GradientFill.HasGradientSource ?? false,
+            node.Shape?.GradientFill.HasUnsupportedGradient ?? false,
             node.Shape?.NoFill ?? false,
             node.Shape?.FillReference.Index ?? 0,
             node.Shape?.FillReference.Style is not null,

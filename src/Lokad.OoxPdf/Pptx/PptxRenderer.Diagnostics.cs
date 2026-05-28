@@ -68,7 +68,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedGradientFill))
+        if (HasUnsupportedGradientFill(sceneSlide, slideXml))
         {
             Emit("PPTX_UNSUPPORTED_GRADIENT_FILL", "gradient fill");
         }
@@ -208,6 +208,32 @@ internal sealed partial class PptxRenderer
         return stops.Length < 2 ||
             stops.Any(stop => stop.Elements().FirstOrDefault(IsGradientColorElement) is null) ||
             !HasSupportedGradientStopAlpha(stops);
+    }
+
+    private static bool HasUnsupportedGradientFill(PptxSceneSlide sceneSlide, XDocument slideXml)
+    {
+        return HasUnsupportedShapeGradientFill(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill);
+    }
+
+    private static bool HasUnsupportedShapeGradientFill(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is { GradientFill.HasUnsupportedGradient: true }) ||
+                HasUnsupportedShapeGradientFill(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnsupportedNonShapeGradientFill(XElement gradientFill)
+    {
+        return gradientFill.Parent?.Name != PresentationNamespace + "spPr" &&
+            IsUnsupportedGradientFill(gradientFill);
     }
 
     private static bool IsGradientColorElement(XElement color)
