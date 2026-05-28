@@ -65,6 +65,9 @@ internal sealed partial class PptxRenderer
         return new PptxTextRunModelSnapshot(
             run.Kind.ToString(),
             run.Text,
+            run.Cascade.Sources.Count(source => source is not null),
+            run.Cascade.Layers.Select(layer => layer.Name).ToArray(),
+            run.Cascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
             run.Style.FontSize,
             run.Style.CharacterSpacing,
             run.Style.Typeface,
@@ -575,10 +578,12 @@ internal sealed partial class PptxRenderer
             if (child.Name == DrawingNamespace + "br")
             {
                 XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
+                PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, paragraphStyle.DefaultRunProperties);
                 runs.Add(new PptxTextRunModel(
                     PptxTextRunKind.Break,
                     child,
                     breakProperties,
+                    breakCascade,
                     "\n",
                     ResolveRunTextStyle(breakProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
                 continue;
@@ -590,14 +595,31 @@ internal sealed partial class PptxRenderer
             }
 
             XElement? runProperties = child.Element(DrawingNamespace + "rPr");
+            PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, paragraphStyle.DefaultRunProperties);
             runs.Add(new PptxTextRunModel(
                 child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
                 child,
                 runProperties,
+                textRunCascade,
                 ReadTextElementText(child, slideNumber),
                 ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
         }
 
         return runs;
+    }
+
+    private static PptxRunStyleCascade BuildRunStyleCascade(
+        string runPropertiesLayerName,
+        XElement? runProperties,
+        XElement? paragraphDefaultRunProperties)
+    {
+        return new PptxRunStyleCascade(
+        [
+            new PptxRunStyleLayer(runPropertiesLayerName, PptxRunStyleLayerKind.RunProperties, runProperties),
+            new PptxRunStyleLayer(
+                "paragraph.defRPr",
+                PptxRunStyleLayerKind.ParagraphDefaultRunProperties,
+                paragraphDefaultRunProperties)
+        ]);
     }
 }

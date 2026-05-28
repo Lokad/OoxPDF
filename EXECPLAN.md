@@ -1367,6 +1367,11 @@ High-priority actions:
   `InheritedPlaceholderListStyle`, `InheritedTextStyle`, `DefaultTextStyle`) alongside the descriptive layer names,
   and `InspectTextFrameModels` exposes `CascadeLayerKinds`. This keeps current behavior unchanged while giving the
   future seven-level resolver a non-stringly inspection surface for structural parity checks.
+- [x] Add named run-style cascade diagnostics before layout:
+  `PptxTextRunModel` now carries a `PptxRunStyleCascade` with explicit `run.rPr`/`break.rPr` and
+  `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable
+  layer kinds. This makes the direct run `rPr` versus inherited paragraph default `defRPr` split testable without
+  changing run-style resolution or PDF emission.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape

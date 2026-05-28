@@ -135,6 +135,9 @@ internal sealed record PptxTextParagraphModelSnapshot(
 internal sealed record PptxTextRunModelSnapshot(
     string Kind,
     string Text,
+    int ResolvedCascadeSourceCount,
+    IReadOnlyList<string> CascadeLayerNames,
+    IReadOnlyList<string> CascadeLayerKinds,
     double FontSize,
     double CharacterSpacing,
     string? Typeface,

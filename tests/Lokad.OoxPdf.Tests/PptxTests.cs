@@ -897,6 +897,11 @@ internal static class PptxTests
         TestAssert.Equal("Break", textFrame.Paragraphs[0].Runs[1].Kind);
         TestAssert.Equal("Field", textFrame.Paragraphs[0].Runs[2].Kind);
         TestAssert.Equal("Hello", textFrame.Paragraphs[0].Runs[0].Text);
+        TestAssert.True(textFrame.Paragraphs[0].Runs[0].ResolvedCascadeSourceCount >= 2, "Expected run model to expose direct and inherited run-style inputs.");
+        TestAssert.Contains("run.rPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
+        TestAssert.Contains("paragraph.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
+        TestAssert.Contains("RunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
+        TestAssert.Contains("ParagraphDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
         TestAssert.Equal(26d, textFrame.Paragraphs[0].Runs[0].FontSize);
         TestAssert.True(textFrame.Paragraphs[0].Runs[0].Underline, "Expected text model to preserve resolved run underline before layout.");
         TestAssert.Equal(new RgbColor(255, 255, 0), textFrame.Paragraphs[0].Runs[0].Highlight ?? default);
@@ -5977,6 +5982,9 @@ internal static class PptxTests
                             run.Kind,
                             length = run.Text.Length,
                             hash = ShortHash(run.Text),
+                            run.ResolvedCascadeSourceCount,
+                            run.CascadeLayerNames,
+                            run.CascadeLayerKinds,
                             run.FontSize,
                             run.CharacterSpacing,
                             run.Typeface,

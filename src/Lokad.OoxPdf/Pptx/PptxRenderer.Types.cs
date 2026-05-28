@@ -396,8 +396,25 @@ internal sealed partial class PptxRenderer
         PptxTextRunKind Kind,
         XElement Source,
         XElement? Properties,
+        PptxRunStyleCascade Cascade,
         string Text,
         ResolvedRunTextStyle Style);
+
+    private sealed record PptxRunStyleCascade(IReadOnlyList<PptxRunStyleLayer> Layers)
+    {
+        public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
+    }
+
+    private enum PptxRunStyleLayerKind
+    {
+        RunProperties,
+        ParagraphDefaultRunProperties
+    }
+
+    private sealed record PptxRunStyleLayer(
+        string Name,
+        PptxRunStyleLayerKind Kind,
+        XElement? Source);
 
     private sealed record PptxTextFlowModel(IReadOnlyList<PptxTextFlowFrame> Frames);
 
