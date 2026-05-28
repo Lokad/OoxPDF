@@ -455,10 +455,10 @@ internal sealed partial class PptxRenderer
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
         PptxTextBodyPropertySource columnSource = ReadTextColumnsSource(textBody);
         (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
-        (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: false);
-        (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: false);
-        (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: false);
-        (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: false);
+        (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
+        (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
+        (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
+        (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
         XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxTextBodyProperties(
             ReadTextInsets(textBody),
@@ -468,7 +468,7 @@ internal sealed partial class PptxRenderer
             ParseTextVerticalAnchor(verticalAnchor),
             verticalAnchor,
             verticalAnchorSource,
-            OoxBoolean.ParseOptionalAttribute(bodyPr, "anchorCtr"),
+            anchorCenter is null ? null : OoxBoolean.IsTrue(anchorCenter),
             anchorCenter,
             anchorCenterSource,
             ParseTextWrapMode(wrap),

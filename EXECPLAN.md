@@ -1390,9 +1390,13 @@ High-priority actions:
 - [x] Name current bodyPr property sources in the text-frame model:
   `PptxTextBodyProperties` now records whether orientation, vertical anchor, anchor-center, wrap, vertical
   overflow, and column settings came from direct `a:bodyPr`, inherited placeholder `a:bodyPr`, table-cell style
-  adaptation, or default values. This deliberately exposes the remaining asymmetry: only `vert` currently uses
-  inherited placeholder `bodyPr` in the generic shape path, while other body properties still need an Office-backed
-  inheritance resolver before the bodyPr stage can be called complete.
+  adaptation, or default values.
+- [x] Inherit scalar placeholder bodyPr properties through the text-frame model:
+  the generic shape path now applies inherited layout/master placeholder `a:bodyPr` for `vert`, `anchor`,
+  `anchorCtr`, `wrap`, and `vertOverflow` when the slide shape's own `a:bodyPr` omits those attributes. A public
+  synthetic layout-placeholder fixture locks both the resolved values and the `InheritedBodyPr` source tags. This
+  intentionally leaves per-edge insets, column settings, autofit child elements, and rotation as separate bodyPr
+  inheritance work because they need mixed direct/inherited/default provenance rather than a single flattened source.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
