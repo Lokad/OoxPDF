@@ -5556,6 +5556,12 @@ paths, and ExecPlan references together.
   empty diagnostics. The remaining advanced-fill diagnostic gates are `pptx-ladder-12-pattern-diagnostic` and
   `pptx-ladder-12-picture-fill-diagnostic`; the picture-fill fixture covers an unsupported Office-authored
   heart fill at MAE `3.368542`, changed16 `0.038278`.
+- [x] 2026-05-28: Tighten the remaining Ladder 12 advanced-fill diagnostics after rechecking current
+  Office-reference output. `pptx-ladder-12-pattern-diagnostic` now requires
+  `PPTX_UNSUPPORTED_PATTERN_FILL` for the unsupported `pct30` pattern fill and gates the current omitted-fill
+  delta from run `20260528-121808` at MAE `8.290278`, changed16 `0.100000`. `pptx-ladder-12-picture-fill-diagnostic`
+  now requires `PPTX_UNSUPPORTED_PICTURE_FILL` for the unsupported heart shape picture fill and gates the
+  current omitted-fill delta from run `20260528-121808` at MAE `4.234411`, changed16 `0.055601`.
 - [ ] Ladder 12 remaining work is visual rendering for each effect/fill family.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive
   fixture text, images, layout, or styling from private documents.

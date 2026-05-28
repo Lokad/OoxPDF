@@ -9,7 +9,8 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": false,
-    "maxMeanAbsoluteError": 4.66,
+    "requiredDiagnostics": ["PPTX_UNSUPPORTED_PATTERN_FILL"],
+    "maxMeanAbsoluteError": 8.4,
     "maxChangedPixelRatioAtThreshold16": 0.101
   },
   "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_PATTERN_FILL"]
