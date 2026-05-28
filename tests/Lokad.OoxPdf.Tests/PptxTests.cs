@@ -13296,6 +13296,44 @@ internal static class PptxTests
         TestAssert.True((bool)(optionsType.GetProperty("MajorGridlines")?.GetValue(options) ?? true) == false, "Expected missing scene gridlines to stay missing, not import fallback XML gridlines.");
     }
 
+    public static void PptxChartAxisNumberFormatUsesSceneAuthoritativeAbsence()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>1.25</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+        TestAssert.True(valueAxis.NumberFormatInfo.IsDefined == false, "Expected scene value axis to carry an authoritative missing number format.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:valAx><c:axId val="20"/><c:numFmt formatCode="0%" sourceLinked="0"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "valAx").Single();
+        System.Reflection.MethodInfo formatAxisLabel = typeof(PptxRenderer).GetMethod(
+            "FormatSceneOrXmlChartAxisLabel",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart axis label formatter.");
+
+        string sceneLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, valueAxis, mismatchedXmlFallback, null]) ?? string.Empty;
+        string xmlOnlyLabel = (string?)formatAxisLabel.Invoke(null, [1.25d, null, mismatchedXmlFallback, null]) ?? string.Empty;
+
+        TestAssert.Equal("1.25", sceneLabel);
+        TestAssert.Equal("125%", xmlOnlyLabel);
+    }
+
     public static void PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

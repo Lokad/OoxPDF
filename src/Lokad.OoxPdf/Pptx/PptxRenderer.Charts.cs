@@ -6841,7 +6841,7 @@ internal sealed partial class PptxRenderer
 
     private static ChartNumberFormat ReadSceneOrXmlChartAxisNumberFormat(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        if (sceneAxis?.NumberFormatInfo.IsDefined == true)
+        if (sceneAxis is not null)
         {
             return ToChartNumberFormat(sceneAxis.NumberFormatInfo);
         }

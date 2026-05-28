@@ -353,6 +353,17 @@ High-priority actions:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
   passed (`114 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`358 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Make chart axis number-format absence scene-authoritative:
+  `ReadSceneOrXmlChartAxisNumberFormat` no longer repairs a scene-backed axis with no `c:numFmt` by importing
+  a mismatched raw XML axis `numFmt`. A non-null `PptxSceneChartAxis` is now the source boundary: explicit scene
+  number formats still render through the typed `PptxSceneChartNumberFormat` bridge, while absent scene number
+  formats fall through to Office/default label formatting; XML-only rendering still parses raw XML number
+  formats. The regression pairs a scene value axis with a deliberately mismatched fallback XML percent format and
+  verifies scene-backed label text remains `1.25` while XML-only label text remains `125%`. This closes another
+  renderer-local fallback path where unrelated XML could silently change scene-owned axis labels and distort
+  downstream PDF text-structure comparisons. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed; focused non-slow `pptx-charts` passed (`115 passed, 0 failed, 0 skipped`); full non-slow
+  console runner passed (`359 passed, 0 failed, 7 skipped`).
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains
