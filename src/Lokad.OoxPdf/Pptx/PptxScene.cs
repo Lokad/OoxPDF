@@ -1383,6 +1383,7 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneFillStyle StyleFill,
     PptxSceneTableCellTextStyle StyleText,
     XElement? TextBody,
+    XElement? LayoutTextBody,
     bool HasUnsupportedTextOrientation,
     bool HasUnsupportedVerticalOverflow,
     int LeadingEmptyTextParagraphCount);
@@ -4205,6 +4206,7 @@ internal sealed class PptxSceneBuilder
         (PptxSceneTableCellVerticalAnchor verticalAnchor, string? verticalAnchorValue, PptxSceneTableCellVerticalAnchorSource verticalAnchorSource) = ReadTableCellVerticalAnchorInfo(cell);
         XElement? textBody = cell.Element(DrawingNamespace + "txBody");
         XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
+        int leadingEmptyParagraphCount = CountLeadingEmptyTableCellTextParagraphs(textBody);
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
@@ -4220,9 +4222,26 @@ internal sealed class PptxSceneBuilder
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             textBody,
+            BuildTableCellLayoutTextBody(textBody, leadingEmptyParagraphCount),
             HasUnsupportedTextOrientation(bodyProperties),
             HasUnsupportedTextVerticalOverflow(bodyProperties),
-            CountLeadingEmptyTableCellTextParagraphs(textBody));
+            leadingEmptyParagraphCount);
+    }
+
+    private static XElement? BuildTableCellLayoutTextBody(XElement? textBody, int leadingEmptyParagraphCount)
+    {
+        if (textBody is null)
+        {
+            return null;
+        }
+
+        var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
+        foreach (XElement paragraph in textBodyCopy.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
+        {
+            paragraph.Remove();
+        }
+
+        return textBodyCopy;
     }
 
     private static int CountLeadingEmptyTableCellTextParagraphs(XElement? textBody)

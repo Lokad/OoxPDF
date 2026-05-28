@@ -14610,6 +14610,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
 console runner passed with `400` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX table-cell layout text bodies are now scene-owned. `PptxSceneTableCell`
+keeps the original `TextBody` as source evidence and also records `LayoutTextBody`, the effective text body
+after the scene-owned leading-empty-paragraph pruning rule has been applied. The table renderer now passes
+that layout body directly into the shared text-frame model instead of cloning and pruning raw `a:txBody`
+inside `PptxRenderer.Tables`.
+
+This is still narrower than common table/shape text-frame unification. Table-cell text continues to use the
+same raw OOXML body as its paragraph/run source, but the rendering decision about which paragraphs participate
+in layout has moved out of the table renderer and into inspectable scene state. The remaining long-term table
+gap is to make cell text consume a fully resolved text-frame model, including body properties, paragraph
+cascade, runs, and inherited/default style sources, without table-local layout repair.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused `Table`
+invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
+console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

@@ -9697,6 +9697,8 @@ internal static class PptxTests
                 ?? throw new InvalidOperationException("Expected table cell scene node.");
 
             TestAssert.Equal(1, cell.LeadingEmptyTextParagraphCount);
+            TestAssert.Equal(2, cell.TextBody?.Elements(XName.Get("p", "http://schemas.openxmlformats.org/drawingml/2006/main")).Count() ?? 0);
+            TestAssert.Equal(1, cell.LayoutTextBody?.Elements(XName.Get("p", "http://schemas.openxmlformats.org/drawingml/2006/main")).Count() ?? 0);
         }
 
         OoxPdfConverter.Convert(input, output);

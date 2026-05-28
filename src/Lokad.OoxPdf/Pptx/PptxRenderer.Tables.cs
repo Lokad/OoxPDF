@@ -431,16 +431,15 @@ internal sealed partial class PptxRenderer
 
     private static void AddTableCellTextSpans(PptxRenderContext context, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
-        XElement? textBody = sceneCell.TextBody;
+        XElement? textBody = sceneCell.LayoutTextBody;
         if (textBody is null)
         {
             return;
         }
 
         TextInsets insets = ToTextInsets(sceneCell.TextInsets);
-        XElement tableTextBody = BuildTableCellTextBody(textBody, sceneCell.LeadingEmptyTextParagraphCount);
         var tableTextFrame = new PptxTableCellTextFrame(
-            tableTextBody,
+            textBody,
             x,
             y,
             width,
@@ -490,26 +489,6 @@ internal sealed partial class PptxRenderer
             PptxSceneTableCellVerticalAnchorSource.CellProperties => PptxTextBodyPropertySource.TableCellProperties,
             _ => PptxTextBodyPropertySource.TableCellStyle
         };
-    }
-
-    private static XElement BuildTableCellTextBody(XElement textBody, int leadingEmptyParagraphCount)
-    {
-        var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
-        PruneLeadingEmptyTableParagraphs(textBodyCopy, leadingEmptyParagraphCount);
-        return textBodyCopy;
-    }
-
-    private static void PruneLeadingEmptyTableParagraphs(XElement textBody, int leadingEmptyParagraphCount)
-    {
-        if (leadingEmptyParagraphCount <= 0)
-        {
-            return;
-        }
-
-        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
-        {
-            paragraph.Remove();
-        }
     }
 
     private static long PointsToEmu(double points)
