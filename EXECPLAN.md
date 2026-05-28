@@ -364,6 +364,18 @@ High-priority actions:
   downstream PDF text-structure comparisons. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
   minimal` passed; focused non-slow `pptx-charts` passed (`115 passed, 0 failed, 0 skipped`); full non-slow
   console runner passed (`359 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Make chart axis text-style absence scene-authoritative when the scene axis is missing:
+  `ReadSceneOrXmlChartTextStyle` no longer merges raw XML `c:txPr` text properties in a scene-backed path just
+  because the caller has no `PptxSceneChartAxis`. The scene branch now uses chart-wide scene text style, optional
+  chart-style role text defaults, and a typed scene-axis text style when one exists; XML `txPr` remains confined
+  to XML-only compatibility. This closes a source-boundary leak discovered while auditing the remaining
+  `ReadSceneOrXml*` chart bridges: a mismatched XML value axis could previously change a scene-owned missing-axis
+  text size/boldness, undermining structural PDF text comparisons even though axis source selection had already
+  become scene-authoritative. The regression verifies that scene-backed missing-axis text stays at fallback scene
+  defaults while XML-only rendering still reads a deliberately mismatched `sz="4000" b="1"` axis `txPr`.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+  `pptx-charts` passed (`116 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`360 passed, 0 failed, 7 skipped`).
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains

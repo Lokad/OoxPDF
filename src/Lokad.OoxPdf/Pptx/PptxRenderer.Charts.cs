@@ -5820,9 +5820,11 @@ internal sealed partial class PptxRenderer
             style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, chartStyleRole));
         }
 
-        style = sceneAxis is null
-            ? MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme))
-            : MergeChartTextStyle(style, ToChartTextStyleOverride(sceneAxis.TextStyle));
+        if (sceneAxis is not null)
+        {
+            style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneAxis.TextStyle));
+        }
+
         return style;
     }
 
