@@ -1611,11 +1611,6 @@ internal sealed partial class PptxRenderer
         return series;
     }
 
-    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook)
-    {
-        return ReadChartNumberVector(container, workbook, plotVisibleOnly: true);
-    }
-
     private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         if (container is null)
@@ -4942,11 +4937,6 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault();
     }
 
-    private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook)
-    {
-        return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly: true);
-    }
-
     private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         XElement? categories = chartElement
@@ -8219,14 +8209,6 @@ internal sealed partial class PptxRenderer
             TryReadLineWithAlpha(shapeProperties, theme, out RgbColor color, out double width, out double alpha)
                 ? new ChartSeriesStroke(color, alpha, width)
                 : null;
-    }
-
-    private static IReadOnlyList<ScatterSeries> ReadScatterSeries(XElement chartElement, bool readBubbleSize)
-    {
-        return ReadScatterSeriesVectors(chartElement, readBubbleSize)
-            .Select(BuildScatterSeries)
-            .Where(series => series.Points.Count != 0)
-            .ToArray();
     }
 
     private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)

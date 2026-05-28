@@ -13767,8 +13767,8 @@ internal static class PptxTests
         XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "lineChart").Single();
         System.Reflection.MethodInfo readCategoryLabelVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 2);
-        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement, null]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
+            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 3);
+        object rawVector = readCategoryLabelVector.Invoke(null, [chartElement, null, true]) ?? throw new InvalidOperationException("Expected raw category-label vector.");
         TestAssert.Equal("Sheet1!$A$2:$B$4", (string?)rawVector.GetType().GetProperty("Formula")?.GetValue(rawVector) ?? string.Empty);
         TestAssert.Equal(3, (int?)rawVector.GetType().GetProperty("PointCount")?.GetValue(rawVector) ?? 0);
 
@@ -16094,10 +16094,10 @@ internal static class PptxTests
         object workbook = Activator.CreateInstance(workbookType, [sheets]) ?? throw new InvalidOperationException("Expected workbook instance.");
         var readNumberVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartNumberVector" && method.GetParameters().Length == 2);
+            .Single(method => method.Name == "ReadChartNumberVector" && method.GetParameters().Length == 3);
         var readCategoryVector = typeof(PptxRenderer)
             .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 2);
+            .Single(method => method.Name == "ReadChartCategoryLabelVector" && method.GetParameters().Length == 3);
 
         XElement values = XElement.Parse("""
             <c:val xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
@@ -16112,7 +16112,7 @@ internal static class PptxTests
               </c:numRef>
             </c:val>
             """);
-        object numberVector = readNumberVector.Invoke(null, [values, workbook]) ?? throw new InvalidOperationException("Expected raw number vector.");
+        object numberVector = readNumberVector.Invoke(null, [values, workbook, true]) ?? throw new InvalidOperationException("Expected raw number vector.");
         object[] cacheNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("Points")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
         TestAssert.True(cacheNumberPoints.Length == 2, "Expected raw vector rendering points to stay bound to the chart cache.");
@@ -16141,7 +16141,7 @@ internal static class PptxTests
               </c:ser>
             </c:barChart>
             """);
-        object categoryVector = readCategoryVector.Invoke(null, [chart, workbook]) ?? throw new InvalidOperationException("Expected raw category vector.");
+        object categoryVector = readCategoryVector.Invoke(null, [chart, workbook, true]) ?? throw new InvalidOperationException("Expected raw category vector.");
         object[] cacheTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("Points")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
         TestAssert.True(cacheTextPoints.Length == 2, "Expected raw category rendering points to stay bound to the chart cache.");

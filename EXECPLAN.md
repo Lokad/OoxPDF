@@ -2316,6 +2316,13 @@ High-priority actions:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused non-slow `pptx-charts`
     passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console runner passed
     (`406 passed, 0 failed, 7 skipped`).
+  - [x] 2026-05-28 remove stale cache-only chart vector wrappers:
+    after the workbook/visibility threading, the remaining two-argument raw XML wrappers for number vectors,
+    category vectors, and scatter series were dead. They have been removed so future call sites must choose
+    the scene-or-XML adapter or explicitly pass workbook and `plotVisOnly` into the raw indexed-vector reader.
+    Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused non-slow
+    `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console runner passed
+    (`406 passed, 0 failed, 7 skipped`).
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
