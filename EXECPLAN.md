@@ -515,12 +515,12 @@ High-priority actions:
   `ChartSeriesLineCandidate` structural gate, and raw candidate PDF inspection shows the top filled right-legend
   key borders now emit `0.75 w` instead of `3 w`. Remaining sparse legend debt is placement and layout-box
   alignment, not thick-stroke leakage.
-- [ ] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
-  progress ladders for incomplete enum families instead of implementing one-off values. Priority families:
-  PPTX text orientation (`a:bodyPr @vert`), paragraph alignment/anchor/overflow/autofit, line dash/cap/join
-  and arrowhead presets, preset geometries and adjustments, fills/color transforms, picture crop/tile/recolor
-  modes, table borders/anchors, chart types/marker styles, and DOCX alignment, breaks, table layout,
-  numbering, underline/border/shading, drawing wrap, and section/page settings.
+- [x] Survey OOXML enumeration handling across PPTX and DOCX readers/renderers, then create explicit
+  progress ladders for incomplete enum families instead of implementing one-off values:
+  the survey has been done and the active enum/defaulting ladders are now captured as narrower progress items below
+  for PPTX text, shape stroke/line ends, pictures, charts, and DOCX source-token preservation. This does not mean all
+  enum families are complete; it retires the broad survey parent so future work happens through typed scene/model
+  ownership and family-specific Office evidence rather than more one-off token handling.
 - [x] 2026-05-27: Survey the current OOXML enum-ownership pattern before adding more one-off cases:
   PPTX is materially ahead of DOCX because many scene records now keep both normalized enum values and raw
   DrawingML tokens for text body properties, paragraph alignment, run underline/strike/caps, line dash/cap/join
