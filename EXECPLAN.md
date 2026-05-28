@@ -1626,6 +1626,15 @@ High-priority actions:
   synthetic layout-placeholder fixture locks both the resolved values and the `InheritedBodyPr` source tags. This
   intentionally leaves per-edge insets, column settings, autofit child elements, and rotation as separate bodyPr
   inheritance work because they need mixed direct/inherited/default provenance rather than a single flattened source.
+- [x] Audit and close the remaining scalar bodyPr inheritance slice:
+  a follow-up code/test audit found that per-edge insets, `numCol`/`spcCol`, autofit child mode, rotation,
+  `fontScale`, line-spacing reduction, and compatible-line-spacing are now resolved direct-first, inherited-second,
+  default-last with per-property source/value provenance in `PptxTextBodyProperties`. The locking tests include
+  mixed direct/inherited/default coverage in `PptxTextModelInheritsPlaceholderBodyProperties` and invalid-token
+  observability in `PptxTextModelPreservesInvalidNumericBodyPropertyTokens`. The open cascade work below is
+  therefore no longer about adding those scalar inheritance branches; it is about replacing the remaining
+  scattered resolver calls with a named Office-order stage model across paragraph, run, bodyPr, geometry, and theme
+  fallback inputs.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
