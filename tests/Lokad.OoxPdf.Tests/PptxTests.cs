@@ -14898,6 +14898,45 @@ internal static class PptxTests
         TestAssert.Equal(0.25d, explosions[0]);
     }
 
+    public static void PptxScenePreservesRejectedChartKeyedOverrideIndices()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+                <c:pieChart>
+                  <c:ser>
+                    <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                    <c:dPt><c:idx val="0"/><c:spPr><a:solidFill><a:srgbClr val="AA0000"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:idx val="-1"/><c:spPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:idx val="futurePoint"/><c:spPr><a:solidFill><a:srgbClr val="0000AA"/></a:solidFill></c:spPr></c:dPt>
+                    <c:dPt><c:spPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></c:spPr></c:dPt>
+                  </c:ser>
+                  <c:dLbls>
+                    <c:dLbl><c:idx val="0"/><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="-1"/><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:idx val="futureLabel"/><c:showVal val="1"/></c:dLbl>
+                    <c:dLbl><c:showVal val="1"/></c:dLbl>
+                  </c:dLbls>
+                </c:pieChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        PptxSceneChartSeries series = chart.Plots[0].Series[0];
+        TestAssert.Equal(1, series.PointStyles.Count);
+        TestAssert.Equal(3, series.RejectedPointStyleIndexValues.Count);
+        TestAssert.Equal("-1", series.RejectedPointStyleIndexValues[0]);
+        TestAssert.Equal("futurePoint", series.RejectedPointStyleIndexValues[1]);
+        TestAssert.Equal(string.Empty, series.RejectedPointStyleIndexValues[2]);
+
+        TestAssert.Equal(1, chart.Plots[0].DataLabels.Overrides.Count);
+        TestAssert.Equal(3, chart.Plots[0].DataLabels.RejectedOverrideIndexValues.Count);
+        TestAssert.Equal("-1", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[0]);
+        TestAssert.Equal("futureLabel", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[1]);
+        TestAssert.Equal(string.Empty, chart.Plots[0].DataLabels.RejectedOverrideIndexValues[2]);
+    }
+
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
         string input = Path.Combine(

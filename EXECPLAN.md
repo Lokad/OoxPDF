@@ -12544,6 +12544,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `98` tests, `0` failures, and `0` skips; full non-slow console runner passed with `339` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Added the rejected-key sidecar called for above without changing rendering.
+`PptxSceneChartSeries` now carries `RejectedPointStyleIndexValues` for `c:dPt` elements whose `idx` is
+missing, malformed, or negative, and `PptxSceneChartDataLabels` carries `RejectedOverrideIndexValues` for
+rejected `c:dLbl` overrides. Accepted point styles and data-label overrides still use the existing parsed
+non-negative key policy; rejected elements remain non-rendering diagnostics rather than invented ordinal
+fallbacks.
+
+This closes the diagnostic-preservation gap for keyed point-style and data-label override surfaces. The
+remaining long-term key policy question is semantic, not observability: if public Office-PDF evidence shows
+that rejected keys affect output, OOXPDF can now make that decision from scene-owned source state instead of
+rescanning raw chart XML.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `104` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `345` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Kept chart series `smooth` decisions as typed boolean options at the renderer
 boundary. `ChartLinePlotOptions` and `ChartScatterPlotOptions` now carry `ChartBooleanOption` records for
 per-series smooth state instead of bare booleans, preserving the effective value, raw token, and whether the

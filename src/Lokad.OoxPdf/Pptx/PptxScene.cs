@@ -748,6 +748,7 @@ internal sealed record PptxSceneChartDataLabels(
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
     PptxSceneChartShapeStyle ShapeStyle,
+    IReadOnlyList<string> RejectedOverrideIndexValues,
     IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
     bool IsDefined);
 
@@ -897,6 +898,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneLineStyle Line,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
+    IReadOnlyList<string> RejectedPointStyleIndexValues,
     double? Explosion,
     string ExplosionValue,
     bool? Smooth,
@@ -2197,6 +2199,7 @@ internal sealed class PptxSceneBuilder
                 Layout: default,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null),
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default),
+                RejectedOverrideIndexValues: [],
                 Overrides: [],
                 IsDefined: false);
         }
@@ -2233,6 +2236,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartManualLayout(labels),
                 ReadChartTextStyleOverride(labels, theme),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
+                ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme),
                 IsDefined: true);
     }
@@ -2439,6 +2443,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme, plotKind, chartMarkersEnabled, seriesIndex),
                 ReadChartPointStyles(seriesElement, theme),
+                ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
                 explosion,
                 explosionValue,
                 smooth,
@@ -2554,6 +2559,20 @@ internal sealed class PptxSceneBuilder
         indexValue = (string?)element.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
         return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
             index >= 0;
+    }
+
+    private static IReadOnlyList<string> ReadRejectedChartNonNegativeIndexValues(XElement parent, string elementName)
+    {
+        var rejected = new List<string>();
+        foreach (XElement element in parent.Elements(ChartNamespace + elementName))
+        {
+            if (!TryReadChartNonNegativeIndex(element, out _, out string indexValue))
+            {
+                rejected.Add(indexValue);
+            }
+        }
+
+        return rejected;
     }
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme)
