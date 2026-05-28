@@ -756,6 +756,10 @@ internal static class PptxTests
         TestAssert.Equal(1d, slide.SlideNodes[4].Chart?.Axes[1].MinorUnit ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMajorGridlines == true, "Expected chart major gridline visibility in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMinorGridlines == false, "Expected hidden chart minor gridline visibility in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMajorGridlineElement == true, "Expected visible chart major gridline element presence in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[1].HasMinorGridlineElement == true, "Expected hidden chart minor gridline element presence to remain distinct from missing gridlines.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].HasMajorGridlineElement == false, "Expected missing category-axis major gridline element to remain distinct from hidden gridlines.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].HasMinorGridlineElement == false, "Expected missing category-axis minor gridline element to remain distinct from hidden gridlines.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Axes[0].Line.HasLine == true, "Expected hidden chart axis line ownership in the scene model.");
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[0].Line.Width ?? -1d);
         TestAssert.Equal(0d, slide.SlideNodes[4].Chart?.Axes[0].Line.Alpha ?? -1d);

@@ -1012,6 +1012,8 @@ internal sealed record PptxSceneChartAxis(
     string MinorUnitValue,
     bool HasMajorGridlines,
     bool HasMinorGridlines,
+    bool HasMajorGridlineElement,
+    bool HasMinorGridlineElement,
     PptxSceneLineStyle Line,
     PptxSceneLineStyle MajorGridlineLine,
     PptxSceneLineStyle MinorGridlineLine,
@@ -2859,6 +2861,8 @@ internal sealed class PptxSceneBuilder
             (int? tickMarkSkip, string tickMarkSkipValue) = ReadChartElementIntWithValue(axis, "tickMarkSkip");
             (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete");
             (bool? noMultiLevelLabels, string noMultiLevelLabelsValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "noMultiLvlLbl");
+            XElement? majorGridlines = axis.Element(ChartNamespace + "majorGridlines");
+            XElement? minorGridlines = axis.Element(ChartNamespace + "minorGridlines");
             axes.Add(new PptxSceneChartAxis(
                 id,
                 ParseChartAxisKind(axis.Name.LocalName),
@@ -2886,11 +2890,13 @@ internal sealed class PptxSceneBuilder
                 majorUnitValue,
                 minorUnit,
                 minorUnitValue,
-                IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
-                IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines")),
+                IsChartGridlineVisible(majorGridlines),
+                IsChartGridlineVisible(minorGridlines),
+                majorGridlines is not null,
+                minorGridlines is not null,
                 ReadChartAxisLine(axis, theme),
-                ReadChartGridlineLine(axis.Element(ChartNamespace + "majorGridlines"), theme),
-                ReadChartGridlineLine(axis.Element(ChartNamespace + "minorGridlines"), theme),
+                ReadChartGridlineLine(majorGridlines, theme),
+                ReadChartGridlineLine(minorGridlines, theme),
                 ReadChartStyleRoleLine(stylePart, "gridlineMajor"),
                 ReadChartStyleRoleLine(stylePart, "gridlineMinor"),
                 ReadChartTextStyleOverride(axis, theme),

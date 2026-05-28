@@ -12488,6 +12488,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 tests, `0` failures, and `0` skips; full non-slow console runner passed with `342` tests, `0` failures,
 and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved chart-axis gridline element presence in the scene model. `PptxSceneChartAxis`
+now distinguishes the effective visibility of major/minor gridlines from whether the corresponding
+`c:majorGridlines` or `c:minorGridlines` element existed at all. The rich scene fixture now locks visible
+major gridlines, hidden minor gridlines with `a:noFill`, and completely missing category-axis gridline
+elements as three separate states.
+
+This is not a gridline drawing change. The renderer still consumes the effective visibility and line style,
+but future PDF-structural chart work can now tell "Office omitted the gridline element" from "Office had a
+gridline element that resolved hidden" without inspecting raw axis XML or inferring from a zero-width line.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed with `101` tests,
+`0` failures, and `0` skips; full non-slow console runner passed with `342` tests, `0` failures, and `7`
+slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current
