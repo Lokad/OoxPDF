@@ -1977,8 +1977,8 @@ High-priority actions:
   presence. Bar/column, line, area, pie/doughnut, Cartesian data labels, category-axis labels, radar labels,
   polar legends, series-name labels, and series-name legend sizing now consume indexed vectors or
   provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
-  some stacked/extent helpers and chart text/layout decisions still need to carry the same typed data records
-  all the way to Office-PDF-backed layout and source/cache freshness decisions.
+  chart text/layout decisions still need to carry the same typed data records all the way to
+  Office-PDF-backed placement, formatting, and source/cache freshness decisions.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
@@ -2118,6 +2118,14 @@ High-priority actions:
     labels plus radar category labels consume that point view instead of flattening to primitive strings at the
     renderer boundary. The visible text output is unchanged, but source indices, explicit text presence, and
     workbook sidecar reachability now survive through label slotting and layout decisions. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-charts`
+    passed (`109 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 remove obsolete scalar dense chart-vector helpers:
+    after bar/line/area geometry, axis extents, Cartesian data labels, category-axis labels, radar labels, and
+    polar legend paths moved onto indexed point records, the renderer-local `DenseValues()` and
+    `WorkbookDenseValues()` helpers had no remaining call sites. They were removed from both numeric and text
+    vectors so new chart code cannot silently flatten source indices, blank/non-numeric state, explicit text
+    presence, or workbook sidecar provenance back to primitive arrays. Validation:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-charts`
     passed (`109 passed, 0 failed, 0 skipped`).
   - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:

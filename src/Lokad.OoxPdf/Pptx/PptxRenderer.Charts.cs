@@ -9915,13 +9915,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints)
     {
-        public IReadOnlyList<double?> DenseValues()
-        {
-            return DensePoints()
-                .Select(point => point?.Value)
-                .ToArray();
-        }
-
         public IReadOnlyList<ChartIndexedNumberPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
@@ -9949,27 +9942,6 @@ internal sealed partial class PptxRenderer
             return plotVisibleOnly
                 ? points.Where(point => IsWorkbookPointVisible(point.WorkbookCell)).ToArray()
                 : points;
-        }
-
-        public IReadOnlyList<double?> WorkbookDenseValues(bool plotVisibleOnly)
-        {
-            IReadOnlyList<ChartIndexedNumberPoint> points = WorkbookPointsForPlotVisibility(plotVisibleOnly);
-            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
-            if (pointCount <= 0)
-            {
-                return [];
-            }
-
-            var values = new double?[pointCount];
-            foreach (ChartIndexedNumberPoint point in points)
-            {
-                if (point.Index >= 0 && point.Index < pointCount && point.Value is { } value)
-                {
-                    values[point.Index] = value;
-                }
-            }
-
-            return values;
         }
 
         public ChartIndexedNumberPoint? WorkbookPointForIndex(int index)
@@ -10002,13 +9974,6 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints)
     {
-        public IReadOnlyList<string?> DenseValues()
-        {
-            return DensePoints()
-                .Select(point => point?.Text)
-                .ToArray();
-        }
-
         public IReadOnlyList<ChartIndexedTextPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
@@ -10036,27 +10001,6 @@ internal sealed partial class PptxRenderer
             return plotVisibleOnly
                 ? points.Where(point => IsWorkbookPointVisible(point.WorkbookCell)).ToArray()
                 : points;
-        }
-
-        public IReadOnlyList<string?> WorkbookDenseValues(bool plotVisibleOnly)
-        {
-            IReadOnlyList<ChartIndexedTextPoint> points = WorkbookPointsForPlotVisibility(plotVisibleOnly);
-            int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
-            if (pointCount <= 0)
-            {
-                return [];
-            }
-
-            var values = new string?[pointCount];
-            foreach (ChartIndexedTextPoint point in points)
-            {
-                if (point.Index >= 0 && point.Index < pointCount && point.HasText)
-                {
-                    values[point.Index] = point.Text;
-                }
-            }
-
-            return values;
         }
     }
 
