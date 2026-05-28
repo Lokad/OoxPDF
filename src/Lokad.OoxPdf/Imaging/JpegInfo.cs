@@ -2,6 +2,28 @@ namespace Lokad.OoxPdf.Imaging;
 
 internal readonly record struct JpegInfo(int Width, int Height, int BitsPerComponent, int ComponentCount, byte FrameMarker)
 {
+    public bool IsBaselineDct => FrameMarker == 0xC0;
+
+    public bool IsProgressiveDct => FrameMarker == 0xC2;
+
+    public string FrameProfileName => FrameMarker switch
+    {
+        0xC0 => "baseline DCT",
+        0xC1 => "extended sequential DCT",
+        0xC2 => "progressive DCT",
+        0xC3 => "lossless sequential",
+        0xC5 => "differential sequential DCT",
+        0xC6 => "differential progressive DCT",
+        0xC7 => "differential lossless",
+        0xC9 => "extended sequential arithmetic",
+        0xCA => "progressive arithmetic",
+        0xCB => "lossless arithmetic",
+        0xCD => "differential sequential arithmetic",
+        0xCE => "differential progressive arithmetic",
+        0xCF => "differential lossless arithmetic",
+        _ => "unknown"
+    };
+
     public static JpegInfo Read(ReadOnlySpan<byte> bytes)
     {
         if (bytes.Length < 4 || bytes[0] != 0xFF || bytes[1] != 0xD8)

@@ -28,6 +28,9 @@ internal static class ImagingTests
         TestAssert.Equal(8, info.BitsPerComponent);
         TestAssert.Equal(3, info.ComponentCount);
         TestAssert.Equal(0xC0, info.FrameMarker);
+        TestAssert.True(info.IsBaselineDct, "SOF0 should be classified as baseline DCT.");
+        TestAssert.True(!info.IsProgressiveDct, "SOF0 should not be classified as progressive DCT.");
+        TestAssert.Equal("baseline DCT", info.FrameProfileName);
     }
 
     public static void JpegInfoReadsGrayscaleFrameMetadata()
@@ -52,6 +55,34 @@ internal static class ImagingTests
         TestAssert.Equal(8, info.BitsPerComponent);
         TestAssert.Equal(1, info.ComponentCount);
         TestAssert.Equal(0xC0, info.FrameMarker);
+        TestAssert.True(info.IsBaselineDct, "SOF0 grayscale should be classified as baseline DCT.");
+    }
+
+    public static void JpegInfoClassifiesProgressiveFrameMetadata()
+    {
+        byte[] jpegHeader =
+        [
+            0xFF, 0xD8,
+            0xFF, 0xC2,
+            0x00, 0x11,
+            0x08,
+            0x00, 0x02,
+            0x00, 0x04,
+            0x03,
+            0x01, 0x11, 0x00,
+            0x02, 0x11, 0x00,
+            0x03, 0x11, 0x00,
+            0xFF, 0xD9
+        ];
+
+        JpegInfo info = JpegInfo.Read(jpegHeader);
+
+        TestAssert.Equal(4, info.Width);
+        TestAssert.Equal(2, info.Height);
+        TestAssert.Equal(0xC2, info.FrameMarker);
+        TestAssert.True(!info.IsBaselineDct, "SOF2 should not be classified as baseline DCT.");
+        TestAssert.True(info.IsProgressiveDct, "SOF2 should be classified as progressive DCT.");
+        TestAssert.Equal("progressive DCT", info.FrameProfileName);
     }
 
     public static void PngImageReadsIndexedPalettePixels()

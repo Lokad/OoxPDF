@@ -729,7 +729,7 @@ internal sealed partial class PptxRenderer
                     diagnosticSink?.Invoke(new OoxPdfDiagnostic(
                         "PPTX_UNSUPPORTED_IMAGE_RECOLOR",
                         OoxPdfSeverity.Warning,
-                        $"PPTX {recolor.KindName} image recolor could not be applied to {contentType} image data and was ignored.",
+                        $"PPTX {recolor.KindName} image recolor could not be applied to {contentType} {info.FrameProfileName} image data and was ignored.",
                         partName,
                         SlideIndex: slideIndex,
                         Feature: "image recolor",

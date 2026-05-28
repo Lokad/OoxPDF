@@ -4642,6 +4642,15 @@ High-priority actions:
   dependency-free JPEG decoder boundary or an explicitly proven PDF-level transform over decoded samples, not
   a renderer-local color-space shortcut. Keep the public limitation rung as the guardrail until that backend
   exists.
+  2026-05-28 update: made `JpegInfo` classify SOF frame profiles (`baseline DCT`, `progressive DCT`, and the
+  other supported header markers) and threaded that profile into the unsupported JPEG recolor diagnostic. This
+  does not decode pixels or remove the warning, but it moves the future decision point to the image backend:
+  a baseline-only decoder can now be introduced explicitly without conflating progressive/lossless JPEGs with
+  the common baseline path. Validation: focused `imaging` passed (`9 passed, 0 failed, 0 skipped`); focused
+  `pptx-images` initially hit a parallel build file lock and then passed serially (`17 passed, 0 failed,
+  0 skipped`); full non-slow runner passed (`371 passed, 0 failed, 7 skipped`). Private run
+  `20260528-153316` remained stable at 84/84 compared pages, zero dimension mismatches, deck MAE `6.715278`,
+  changed16 `0.093542`, and the single `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
