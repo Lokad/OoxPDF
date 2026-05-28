@@ -4479,6 +4479,14 @@ internal static class PptxTests
         OoxPackage package = OoxPackage.Open(stream);
         PptxDocument document = new PptxReader().Read(package);
 
+        PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .Single()
+            .Paragraphs
+            .Single();
+        TestAssert.Equal("Character", paragraph.BulletKind);
+        TestAssert.Equal("\u2022", paragraph.BulletCharacter);
+        TestAssert.Equal("\u2022", paragraph.BulletResolvedCharacter);
+
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         IReadOnlyList<string> spanTexts = layout.Frames
             .SelectMany(frame => frame.Paragraphs)
@@ -4528,6 +4536,16 @@ internal static class PptxTests
         OoxPackage package = OoxPackage.Open(stream);
         PptxDocument document = new PptxReader().Read(package);
 
+        PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .Single()
+            .Paragraphs
+            .Single();
+        TestAssert.Equal("Character", paragraph.BulletKind);
+        TestAssert.Equal("\u00A7", paragraph.BulletCharacter);
+        TestAssert.Equal("\uF0A7", paragraph.BulletResolvedCharacter);
+        TestAssert.Equal("Wingdings", paragraph.BulletFontTypeface);
+        TestAssert.Equal("2", paragraph.BulletFontCharset);
+
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextSpanLayoutSnapshot bullet = layout.Frames
             .SelectMany(frame => frame.Paragraphs)
@@ -4568,6 +4586,22 @@ internal static class PptxTests
                 """
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            IReadOnlyList<PptxTextParagraphModelSnapshot> paragraphs = PptxRenderer.InspectTextFrameModels(document, package, 0)
+                .Single()
+                .Paragraphs;
+
+            TestAssert.Equal("AutoNumber", paragraphs[0].BulletKind);
+            TestAssert.Equal("arabicPeriod", paragraphs[0].BulletAutoNumberType);
+            TestAssert.Equal("1", paragraphs[0].BulletAutoNumberStartAtValue);
+            TestAssert.Equal("AutoNumber", paragraphs[1].BulletKind);
+            TestAssert.Equal("arabicPeriod", paragraphs[1].BulletAutoNumberType);
+            TestAssert.Equal(null, paragraphs[1].BulletAutoNumberStartAtValue);
+        }
 
         OoxPdfConverter.Convert(input, output);
 

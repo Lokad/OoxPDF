@@ -445,7 +445,26 @@ internal sealed partial class PptxRenderer
         PptxParagraphStyleCascade Cascade,
         PptxParagraphStyleCascade ResolvedStyleCascade,
         ResolvedParagraphTextStyle Style,
+        PptxParagraphBulletModel Bullet,
         IReadOnlyList<PptxTextRunModel> Runs);
+
+    private sealed record PptxParagraphBulletModel(
+        PptxParagraphBulletKind Kind,
+        string? Character,
+        string? ResolvedCharacter,
+        string? AutoNumberType,
+        string? AutoNumberStartAtValue,
+        int? AutoNumberStartAt,
+        string? FontTypeface,
+        string? FontCharset);
+
+    private enum PptxParagraphBulletKind
+    {
+        None,
+        Character,
+        AutoNumber,
+        Blip
+    }
 
     private sealed record PptxParagraphStyleCascade(
         string LevelName,

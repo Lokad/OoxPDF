@@ -119,6 +119,13 @@ internal sealed partial class PptxRenderer
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.AlignmentValue,
             paragraph.Style.FontSize,
+            paragraph.Bullet.Kind.ToString(),
+            paragraph.Bullet.Character,
+            paragraph.Bullet.ResolvedCharacter,
+            paragraph.Bullet.AutoNumberType,
+            paragraph.Bullet.AutoNumberStartAtValue,
+            paragraph.Bullet.FontTypeface,
+            paragraph.Bullet.FontCharset,
             paragraph.Style.SpacingBefore,
             paragraph.Style.SpacingAfter,
             paragraph.Style.LineSpacing.Value,
@@ -697,6 +704,7 @@ internal sealed partial class PptxRenderer
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties());
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             paragraphs.Add(new PptxTextParagraphModel(
@@ -712,10 +720,55 @@ internal sealed partial class PptxRenderer
                 cascade,
                 resolvedStyleCascade,
                 paragraphStyle,
+                bullet,
                 runs));
         }
 
         return paragraphs;
+    }
+
+    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties)
+    {
+        if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
+        {
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, null, null);
+        }
+
+        XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
+        string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
+        string? fontCharset = (string?)bulletFont?.Attribute("charset");
+
+        if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } character)
+        {
+            string resolvedCharacter = IsSymbolBulletFont(bulletFont)
+                ? MapSymbolBulletText(character)
+                : character;
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset);
+        }
+
+        if (paragraphProperties.Element(DrawingNamespace + "buAutoNum") is { } autoNumber)
+        {
+            string? startAtValue = (string?)autoNumber.Attribute("startAt");
+            int? startAt = int.TryParse(startAtValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedStartAt) && parsedStartAt > 0
+                ? parsedStartAt
+                : null;
+            return new PptxParagraphBulletModel(
+                PptxParagraphBulletKind.AutoNumber,
+                null,
+                null,
+                (string?)autoNumber.Attribute("type"),
+                startAtValue,
+                startAt,
+                fontTypeface,
+                fontCharset);
+        }
+
+        if (paragraphProperties.Element(DrawingNamespace + "buBlip") is not null)
+        {
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset);
+        }
+
+        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset);
     }
 
     private static ResolvedEndParagraphTextStyle ResolveEndParagraphTextStyle(XElement? endRunProperties, XElement? defaultRunProperties, double fontScale)

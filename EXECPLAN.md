@@ -930,6 +930,14 @@ High-priority actions:
   renderer-local XML scans or document-specific tab offsets. Validation: focused non-slow `pptx-typography`
   passed (`98 passed, 0 failed, 2 skipped`); full non-slow console runner passed
   (`402 passed, 0 failed, 7 skipped`).
+- [x] Preserve PPTX paragraph bullet marker provenance in the text model:
+  `PptxTextParagraphModel` now carries the resolved bullet marker kind, source character, symbol-mapped
+  character, auto-number type/start token, and bullet font identity from the resolved paragraph style cascade.
+  Layout consumes this typed bullet record when deciding emitted bullet text, and the existing inherited,
+  symbol-font, and auto-number bullet tests now assert the model state before checking layout/PDF output.
+  Bullet color and size still use the older resolved paragraph XML path and remain a narrower style-provenance
+  follow-up. Validation: focused non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full
+  non-slow console runner passed (`402 passed, 0 failed, 7 skipped`).
 - [x] Extend the OOXML enum ladder to PPTX run-style tokens:
   `ResolvedRunTextStyle`, `PptxSceneRunStyle`, and `PptxTextRunModelSnapshot` now preserve raw DrawingML
   underline, strike, and capitalization values next to the existing booleans/rendering behavior. The synthetic
@@ -6986,6 +6994,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   but `ReadTabStops` only inspected direct `a:pPr/a:tabLst`; inherited `a:lvlNpPr/a:tabLst` from the resolved
   list-style/default paragraph cascade was ignored. The model now reads the direct tab list before falling back
   to resolved defaults, and inspection exposes the inherited tab-stop positions.
+- Observation: PPTX bullet marker text was still a layout-time XML decision.
+  Evidence: The paragraph model had the resolved paragraph style cascade, but `BuildTextFrameLayout` called
+  `ReadBulletText` against merged paragraph XML to decide `buChar`, symbol mapping, `buAutoNum`, and `buNone`.
+  The paragraph model now carries the marker facts directly; the remaining XML dependency is bullet visual
+  style (`buFont`, `buClr`, `buSz*`) while text marker selection has moved to typed state.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7266,6 +7279,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: Tab expansion is layout behavior, but the authored tab-stop list is paragraph style state. Keeping
   the resolved point positions in `PptxTextParagraphModelSnapshot` makes the PDF-level tab outcome traceable to
   DrawingML structure and avoids compensating for inherited tabs with ad hoc span offsets during rendering.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Treat bullet marker identity as paragraph model state, not line-layout state.
+  Rationale: Whether a paragraph has no bullet, a character bullet, an auto-numbered bullet, a symbol-font
+  mapping, or an unsupported blip bullet is determined by the resolved paragraph style cascade before line
+  construction starts. Moving that marker record into `PptxTextParagraphModel` keeps future Office numbering
+  and bullet parity tied to OOXML structure while leaving the still-open color/size bullet style path explicit.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14751,6 +14770,22 @@ This closes a small but important half-migration. Layout was already consuming `
 the model did not include inherited tab lists, which left future Office tab parity vulnerable to renderer-local
 offset heuristics. Remaining paragraph work is now tighter: bullet source/provenance, first-baseline source
 provenance, and paragraph spacing/default-run ladders still need the same model-first treatment.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `402` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: PPTX paragraph bullet marker facts now live on the text paragraph model.
+`PptxParagraphBulletModel` records whether the resolved paragraph style has no bullet, a character bullet, an
+auto-number bullet, or a blip bullet; it also preserves the raw character, the symbol-font-mapped character,
+auto-number type/start tokens, and bullet font face/charset. `BuildTextFrameLayout` now uses this typed marker
+record for emitted bullet text instead of re-deciding `buChar`/`buAutoNum` from merged paragraph XML.
+
+This is intentionally not the full bullet-style migration. Bullet color and bullet size are still resolved by
+`ReadBulletStyle` from paragraph XML because they depend on run color/font-size context and should become a
+separate resolved style record rather than being hidden in this marker-only slice. The net architectural
+improvement is that bullet identity and numbering are now model-visible and test-covered before layout/PDF
+emission, which removes a branch of layout-owned OOXML interpretation.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner

@@ -819,7 +819,7 @@ internal sealed partial class PptxRenderer
             }
 
             XElement? bulletProperties = paragraph.ResolvedStyleCascade.ResolveDefaultProperties();
-            string? bulletText = ReadBulletText(bulletProperties, ref autoNumberValue);
+            string? bulletText = ReadBulletText(paragraph.Bullet, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
             double effectiveTextWidth = columnWrapWidth;
             double bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
@@ -2774,35 +2774,29 @@ internal sealed partial class PptxRenderer
             ascenderRatio < PptxTextMetricRules.OfficeBaselineFloorMetricThreshold;
     }
 
-    private static string? ReadBulletText(XElement? paragraphProperties, ref int autoNumberValue)
+    private static string? ReadBulletText(PptxParagraphBulletModel bullet, ref int autoNumberValue)
     {
-        if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
+        if (bullet.Kind == PptxParagraphBulletKind.None || bullet.Kind == PptxParagraphBulletKind.Blip)
         {
             return null;
         }
 
-        if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } bullet)
+        if (bullet.Kind == PptxParagraphBulletKind.Character)
         {
-            XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
-            return IsSymbolBulletFont(bulletFont)
-                ? MapSymbolBulletText(bullet)
-                : bullet;
+            return bullet.ResolvedCharacter;
         }
 
-        XElement? autoNumber = paragraphProperties.Element(DrawingNamespace + "buAutoNum");
-        if (autoNumber is null)
+        if (bullet.Kind != PptxParagraphBulletKind.AutoNumber)
         {
             return null;
         }
 
-        if (autoNumber.Attribute("startAt") is { } startAt &&
-            int.TryParse(startAt.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int start) &&
-            start > 0)
+        if (bullet.AutoNumberStartAt is { } start)
         {
             autoNumberValue = start;
         }
 
-        string result = FormatAutoNumber(autoNumberValue, (string?)autoNumber.Attribute("type"));
+        string result = FormatAutoNumber(autoNumberValue, bullet.AutoNumberType);
         autoNumberValue++;
         return result;
     }
