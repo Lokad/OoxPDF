@@ -998,6 +998,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
+                bool secondaryAxisReversed = false;
                 int seriesOffset = barSeriesCount;
                 int barChartIndex = 1;
                 foreach (XElement extraBarChart in barCharts.Skip(1))
@@ -1029,6 +1030,7 @@ internal sealed partial class PptxRenderer
                         secondaryValueSceneAxis = extraValueSceneAxis;
                         secondaryValueExtents = extraValueExtents;
                         secondaryAxisUnits = extraValueAxisOptions.Units;
+                        secondaryAxisReversed = extraValueAxisOptions.Reversed;
                     }
 
                     legendEntries.AddRange(BuildFillLegendEntries(theme, chartPalette, extraBarPlot, extraBarChart, extraSeriesFills, extraSeriesStrokes, seriesOffset, workbook));
@@ -1095,8 +1097,7 @@ internal sealed partial class PptxRenderer
                     PptxSceneChartAxis? lineValueSceneAxis = lineValueAxisSource.SceneAxis;
                     ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, comboLineChart, PptxSceneChartGrouping.Standard);
                     ChartValueExtents lineValueExtents = ReadPercentStackedAwareValueAxisExtents(lineValueSceneAxis, lineValueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked);
-                    ChartAxisUnits lineAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(lineValueSceneAxis, lineValueAxisForScale), lineOptions.PercentStacked);
-                    bool lineValueAxisReversed = ReadSceneOrXmlValueAxisReversed(lineValueSceneAxis, lineValueAxisForScale);
+                    ChartValueAxisRenderOptions lineValueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(lineValueSceneAxis, lineValueAxisForScale, theme, lineValueExtents, lineOptions.PercentStacked);
                     IReadOnlyList<ChartSeriesStroke?> lineSeriesStrokes = ReadSceneOrXmlSeriesStrokes(linePlot, comboLineChart, theme, ChartSeriesInheritedStrokeWidth);
                     IReadOnlyList<ChartMarkerStyle> lineMarkerStyles = ReadSceneOrXmlMarkerStyles(linePlot, comboLineChart, theme);
                     if (secondaryValueAxis is null && IsSceneOrXmlVisibleValueAxis(lineValueSceneAxis, lineValueAxis))
@@ -1104,7 +1105,8 @@ internal sealed partial class PptxRenderer
                         secondaryValueAxis = lineValueAxis;
                         secondaryValueSceneAxis = lineValueSceneAxis;
                         secondaryValueExtents = lineValueExtents;
-                        secondaryAxisUnits = lineAxisUnits;
+                        secondaryAxisUnits = lineValueAxisOptions.Units;
+                        secondaryAxisReversed = lineValueAxisOptions.Reversed;
                     }
 
                     legendEntries.AddRange(BuildStrokeLegendEntries(theme, chartPalette, linePlot, comboLineChart, lineSeriesStrokes, lineMarkerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook));
@@ -1126,9 +1128,9 @@ internal sealed partial class PptxRenderer
                         axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
                         ChartShapeStyle.Empty,
                         lineValueExtents,
-                        lineAxisUnits,
-                        ReadSceneOrXmlValueAxisCrossingValue(lineValueSceneAxis, lineValueAxisForScale, lineValueExtents),
-                        lineValueAxisReversed,
+                        lineValueAxisOptions.Units,
+                        lineValueAxisOptions.CrossingValue,
+                        lineValueAxisOptions.Reversed,
                         lineOptions.DisplayBlanksAs);
                     fonts.AddRange(RenderLineDataLabels(
                         theme,
@@ -1136,7 +1138,7 @@ internal sealed partial class PptxRenderer
                         plotBox,
                         lineSeriesVectors,
                         lineValueExtents,
-                        lineValueAxisReversed,
+                        lineValueAxisOptions.Reversed,
                         lineSeriesStrokes,
                         lineMarkerStyles,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme),
@@ -1178,7 +1180,7 @@ internal sealed partial class PptxRenderer
                         {
                             bool secondaryValueAxisRightSide = ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide);
                             int sideSlot = GetValueAxisSideSlot(valueSceneAxis, valueAxis, secondaryValueSceneAxis, secondaryValueAxis, defaultPrimaryRightSide: axesStyle.ValueAxisRightSide, defaultSecondaryRightSide: secondaryValueAxisRightSide);
-                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, ReadSceneOrXmlValueAxisReversed(secondaryValueSceneAxis, secondaryValueAxis), horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
+                            fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: secondaryValueAxisRightSide, axisSideSlot: sideSlot, useTextSizedWidth: sideSlot > 0));
                         }
                         else
                         {
@@ -1188,7 +1190,7 @@ internal sealed partial class PptxRenderer
                 }
                 else if (!horizontalBars && secondaryValueAxis is not null && IsSceneOrXmlChartAxisLabelVisible(secondaryValueSceneAxis, secondaryValueAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, ReadSceneOrXmlValueAxisReversed(secondaryValueSceneAxis, secondaryValueAxis), horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide)));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderBarDataLabels(

@@ -12093,6 +12093,19 @@ fallback behavior is locked by tests instead of generalized by assumption.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Routed bar-chart combo-line value-axis state through
+`ChartValueAxisRenderOptions`. Combo line overlays in a bar chart now use the same typed contract for units,
+crossing, and reversal, and the selected secondary value axis carries both units and reversal from that
+contract into label rendering instead of re-reading orientation later.
+
+This keeps secondary-axis behavior explicit without trying to solve secondary-axis layout negotiation. The
+remaining direct value-axis reads are now mostly unit-only paths for bubble/scatter/radar/layout estimation
+or helper-local crossing calculations, where the right boundary may need a family-specific option record rather
+than forcing every chart type through the Cartesian render contract.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Routed the primary and extra bar-chart value-axis paths through
 `ChartValueAxisRenderOptions`. Bar rendering now uses the typed axis contract for percent-stacked units,
 crossing values, reversal, gridline visibility/style, category-axis crossing placement, value-axis labels,
