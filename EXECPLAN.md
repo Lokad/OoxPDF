@@ -12125,6 +12125,24 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `335` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated pie/doughnut point-style and first-slice resolution behind
+`ChartPolarPointOptions`. Pie and doughnut rendering now resolve point fills, point strokes, point explosions,
+and `firstSliceAng` once at the polar renderer boundary before layout, slice emission, data labels, and
+category legend entries consume that same option record. The XML-only fallback behavior remains available,
+but supported scene polar charts no longer scatter independent point-style, explosion, and first-slice bridge
+reads through the pie/doughnut branches.
+
+The new mismatch guard feeds a scene pie chart with no point styles and no `firstSliceAng` beside fallback XML
+that requests a point explosion and `firstSliceAng=270`. The resolved polar options must keep the scene-owned
+defaults: no point explosions and a `0` degree first-slice angle. This is a direct prerequisite for the
+long-term polar layout work because explosion envelopes and first-slice basis now have one renderer contract
+that can later be aligned against Office PDF structure instead of being recomputed at multiple call sites.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `95` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `336` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing

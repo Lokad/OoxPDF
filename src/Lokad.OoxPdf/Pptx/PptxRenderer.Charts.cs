@@ -818,6 +818,21 @@ internal sealed partial class PptxRenderer
         return ReadChartPointExplosions(chartElement);
     }
 
+    private readonly record struct ChartPolarPointOptions(
+        IReadOnlyDictionary<int, ChartSeriesFill> PointFills,
+        IReadOnlyDictionary<int, ChartSeriesStroke> PointStrokes,
+        IReadOnlyDictionary<int, double> PointExplosions,
+        double FirstSliceAngle);
+
+    private static ChartPolarPointOptions ReadSceneOrXmlChartPolarPointOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme, ChartWorkbookData? workbook = null)
+    {
+        return new ChartPolarPointOptions(
+            ReadSceneOrXmlChartPointFills(plot, chartElement, theme),
+            ReadSceneOrXmlChartPointStrokes(plot, chartElement, theme),
+            ReadSceneOrXmlChartPointExplosions(plot, chartElement, workbook),
+            ReadSceneOrXmlFirstSliceAngle(plot, chartElement));
+    }
+
     private static IReadOnlyDictionary<int, ChartSeriesFill> ReadSceneChartPointFills(PptxSceneChartSeries series)
     {
         var fills = new Dictionary<int, ChartSeriesFill>();
@@ -1402,17 +1417,15 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, piePlot, pieChart, theme),
                     seriesIndex: 0);
-                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(piePlot, pieChart, theme);
-                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(piePlot, pieChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(piePlot, pieChart, workbook);
+                ChartPolarPointOptions polarPoints = ReadSceneOrXmlChartPolarPointOptions(piePlot, pieChart, theme, workbook);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, pointExplosions, legend);
-                RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSlices, pointFills, pointStrokes, pointExplosions, ReadSceneOrXmlFirstSliceAngle(piePlot, pieChart));
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, pieSlices, pointFills, pointExplosions, 0d, labelOptions, categoryLabels, seriesNames));
-                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, pointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend);
+                RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, labelOptions, categoryLabels, seriesNames));
+                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1431,18 +1444,16 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme),
                     seriesIndex: 0);
-                IReadOnlyDictionary<int, ChartSeriesFill> pointFills = ReadSceneOrXmlChartPointFills(doughnutPlot, doughnutChart, theme);
-                IReadOnlyDictionary<int, ChartSeriesStroke> pointStrokes = ReadSceneOrXmlChartPointStrokes(doughnutPlot, doughnutChart, theme);
-                IReadOnlyDictionary<int, double> pointExplosions = ReadSceneOrXmlChartPointExplosions(doughnutPlot, doughnutChart, workbook);
+                ChartPolarPointOptions polarPoints = ReadSceneOrXmlChartPolarPointOptions(doughnutPlot, doughnutChart, theme, workbook);
                 double holeSize = ReadSceneDoughnutHoleSize(doughnutPlot, doughnutChart);
                 ChartFrameBox frame = GetChartFrameBox(document, bounds);
                 ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, pointExplosions, legend);
-                RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSlices, pointFills, pointStrokes, pointExplosions, holeSize, ReadSceneOrXmlFirstSliceAngle(doughnutPlot, doughnutChart));
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, doughnutSlices, pointFills, pointExplosions, holeSize, labelOptions, categoryLabels, seriesNames));
-                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, pointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, polarPoints.PointExplosions, legend);
+                RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, holeSize, polarPoints.FirstSliceAngle);
+                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, holeSize, labelOptions, categoryLabels, seriesNames));
+                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }

@@ -12333,6 +12333,43 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartRadarStyle.Standard, (PptxSceneChartRadarStyle)(optionsType.GetProperty("RadarStyle")?.GetValue(options) ?? default(PptxSceneChartRadarStyle)));
     }
 
+    public static void PptxChartPolarPointOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:pieChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:pieChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.True(plot.FirstSliceAngle is null, "Expected missing firstSliceAng metadata to remain distinct from the effective renderer default.");
+        TestAssert.True(plot.Series[0].PointStyles.Count == 0, "Expected no scene point styles.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:pieChart>
+                <c:ser><c:dPt><c:idx val="0"/><c:explosion val="25"/></c:dPt></c:ser>
+                <c:firstSliceAng val="270"/>
+              </c:pieChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "pieChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartPolarPointOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart polar-point option resolver.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null]) ?? throw new InvalidOperationException("Expected resolved polar point options.");
+        Type optionsType = options.GetType();
+        object pointExplosions = optionsType.GetProperty("PointExplosions")?.GetValue(options) ?? throw new InvalidOperationException("Expected point explosion options.");
+
+        TestAssert.True(((System.Collections.IEnumerable)pointExplosions).Cast<object>().Count() == 0, "Expected missing scene point explosions to stay empty, not import fallback XML dPt explosion.");
+        TestAssert.Equal(0d, (double)(optionsType.GetProperty("FirstSliceAngle")?.GetValue(options) ?? double.NaN));
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
