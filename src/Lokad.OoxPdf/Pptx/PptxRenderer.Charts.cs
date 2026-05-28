@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
 
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts))
         {
-            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
+            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber));
             fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
             return;
         }
@@ -106,7 +106,7 @@ internal sealed partial class PptxRenderer
             HydrateChartReferenceCaches(chartWorkbook, resolvedChartXml);
             if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts))
             {
-                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
+                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber));
                 fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
                 return;
             }
@@ -4298,7 +4298,16 @@ internal sealed partial class PptxRenderer
             : ToChartShapeStyle(sceneChart.Title.ShapeStyle);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderManualChartAxisTitles(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static IReadOnlyList<PdfFontResource> RenderManualChartAxisTitles(
+        PptxDocument document,
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ShapeBounds bounds,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart,
+        Action<OoxPdfDiagnostic>? diagnosticSink,
+        string? chartPartName,
+        int slideIndex)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         var fonts = new List<PdfFontResource>();
@@ -4306,6 +4315,12 @@ internal sealed partial class PptxRenderer
         {
             foreach (PptxSceneChartAxis axis in sceneChart.Axes)
             {
+                if (!string.IsNullOrWhiteSpace(axis.Title.Text) && !axis.Title.Layout.HasLayout)
+                {
+                    EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                    continue;
+                }
+
                 fonts.AddRange(RenderManualChartAxisTitle(
                     theme,
                     graphics,
@@ -4335,13 +4350,20 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
+            PptxSceneChartManualLayout layout = ReadManualLayout(title);
+            if (!layout.HasLayout)
+            {
+                EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                continue;
+            }
+
             fonts.AddRange(RenderManualChartAxisTitle(
                 theme,
                 graphics,
                 frame,
                 text,
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme)),
-                ReadManualLayout(title),
+                layout,
                 ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme),
                 ReadChartTextStyleFromTxPr(title, theme)));

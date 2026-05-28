@@ -2607,9 +2607,11 @@ High-priority actions:
   the value forward so future compound-stroke rendering does not need to re-scan source XML. The renderer
   still emits simple PDF strokes for compound lines; theme line style references and chart-style inherited
   defaults remain open before gridlines can be considered fully structurally aligned with Office.
-- [ ] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join/compound lines: theme style
-  references and chart-style inherited defaults still need typed ownership before gridlines can be considered
-  fully structurally aligned with Office.
+- [x] Extend chart gridline styling beyond direct solid/noFill/dash/cap/join/compound lines:
+  scene-owned chart-style role entries and theme-resolved line references now feed gridline strokes after
+  direct axis gridline lines. This closes the ownership/cascade gap that originally kept this parent item open;
+  actual compound-stroke PDF geometry remains a separate line-rendering feature rather than a missing
+  gridline-style source.
   - [x] 2026-05-27: Decode chart-style line references into scene-owned role entries. `PptxSceneChart.StylePart`
     now carries `PptxSceneChartStyleEntry` records keyed by chart-style role name, preserving the `lnRef`
     index and resolving the referenced theme line into the same typed `PptxSceneLineStyle` fields used by
@@ -2665,6 +2667,12 @@ High-priority actions:
     default category/value axis-title placement is still open. This is distinct from tick-label styling and
     should be solved with Office-PDF-backed placement evidence for horizontal and rotated axis-title boxes,
     overlay/reserve interaction, and chart-style inherited defaults, not with frame-relative text nudges.
+  - [x] 2026-05-28 Make default-placement axis-title omission diagnostic-covered:
+    supported native charts already render explicit manual-layout axis titles, but default-placement axis
+    titles still need an Office layout model before they can be drawn structurally. The renderer now emits
+    `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` when it encounters a chart axis title without a manual layout,
+    and the focused synthetic test verifies that the title is not silently emitted through the manual-title
+    `/CAT` path. Validation: full console runner passed (`369 passed, 0 failed, 0 skipped`).
   - [x] 2026-05-27: Preserve chart-style role text defaults structurally. `PptxSceneChartStyleEntry.TextStyle`
     now decodes role-local `fontRef` and `defRPr` into the existing chart text-style override shape:
     major/minor theme font family, font size, font color/alpha, bold, and italic. This does not yet apply
