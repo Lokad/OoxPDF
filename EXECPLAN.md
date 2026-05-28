@@ -2564,6 +2564,15 @@ High-priority actions:
     `PptxSceneBuilder.ReadChartTextRuns` instead of flattening rich title text before emission. This keeps the
     legacy fallback no richer than the typed scene path while reducing parser duplication. Validation: focused
     `pptx-charts` tests passed `40/40`.
+  - [x] 2026-05-28 Preserve and emit chart text underline/strike style:
+    `PptxSceneChartTextStyleOverride` and the renderer's `ChartTextStyleOverride` now carry underline and
+    strike state from chart `txPr`, chart-style role text defaults, direct title/legend/axis/data-label
+    styles, and rich text runs. Chart title, legend, category/value/radar axis labels, and data-label text
+    emission now pass those flags into `TextRun` instead of hard-coding both decorations off. This removes a
+    chart-specific text-style truncation while reusing the existing generic underline/strike PDF support.
+    Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`, focused non-slow
+    `pptx-model` (`11 passed, 0 failed, 1 skipped`), and focused non-slow `pptx-charts`
+    (`109 passed, 0 failed, 0 skipped`) passed.
 - [x] 2026-05-24: Move simple plot-area manual-layout ownership into `PptxSceneChart.PlotAreaLayout`.
   Supported bar and line chart layouts now consume scene-owned `c:plotArea/c:layout/c:manualLayout`
   factors before XML fallback, preserving the existing candidate geometry while moving another chart layout

@@ -160,12 +160,12 @@ internal static class PptxTests
                   <c:roundedCorners val="0"/>
                   <c:style val="10"/>
                   <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln><a:effectLst><a:outerShdw dist="12700" dir="0"><a:srgbClr val="010203"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></c:spPr>
-                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1" u="sng" strike="sngStrike"><a:solidFill><a:srgbClr val="101112"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
                   <c:plotVisOnly val="false"/>
                   <c:dispBlanksAs val="span"/>
                   <c:showDLblsOverMax val="1"/>
-                  <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln><a:effectLst><a:glow rad="25400"><a:srgbClr val="0A0B0C"><a:alpha val="40000"/></a:srgbClr></a:glow></a:effectLst></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
+                  <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln><a:effectLst><a:glow rad="25400"><a:srgbClr val="0A0B0C"><a:alpha val="40000"/></a:srgbClr></a:glow></a:effectLst></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0" u="none" strike="noStrike"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
                   <c:plotArea><c:layout><c:manualLayout><c:layoutTarget val="inner"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.12"/><c:y val="0.18"/><c:w val="0.72"/><c:h val="0.66"/></c:manualLayout></c:layout><c:spPr><a:noFill/><a:ln w="25400"><a:solidFill><a:srgbClr val="112244"><a:alpha val="60000"/></a:srgbClr></a:solidFill></a:ln></c:spPr><c:barChart>
                     <c:barDir val="bar"/>
                     <c:grouping val="stacked"/>
@@ -559,6 +559,8 @@ internal static class PptxTests
         TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.TextStyle.Alpha ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Bold == true, "Expected chart-level default run bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Italic == true, "Expected chart-level default run italic style in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Underline == true, "Expected chart-level default run underline style in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.TextStyle.Strike == true, "Expected chart-level default run strike style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.PlotAreaLayout.HasLayout == true, "Expected chart plot-area manual layout in the scene model.");
         TestAssert.Equal(0.12d, slide.SlideNodes[4].Chart?.PlotAreaLayout.X ?? 0d);
         TestAssert.Equal(0.18d, slide.SlideNodes[4].Chart?.PlotAreaLayout.Y ?? 0d);
@@ -864,6 +866,8 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(17, 34, 170), slide.SlideNodes[4].Chart?.Title.TextStyle.Color ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Bold == true, "Expected chart title bold style in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Italic == false, "Expected explicit chart title italic disable in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Underline == false, "Expected explicit chart title underline disable in the scene model.");
+        TestAssert.True(slide.SlideNodes[4].Chart?.Title.TextStyle.Strike == false, "Expected explicit chart title strike disable in the scene model.");
         TestAssert.Equal("b", slide.SlideNodes[4].Chart?.Legend.Position ?? string.Empty);
         TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, slide.SlideNodes[4].Chart?.Legend.PositionKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Legend.IsDefined == true, "Expected chart legend presence in the scene model.");
