@@ -418,6 +418,27 @@ internal sealed partial class PptxRenderer
 
     private static bool CanCoalesceTextSpan(PptxPositionedTextSpan left, PptxPositionedTextSpan right, bool compareHighlight = true)
     {
+        if (left.SourceRun is not null &&
+            right.SourceRun is not null &&
+            !ReferenceEquals(left.SourceRun, right.SourceRun))
+        {
+            bool hasHighlightBoundary = left.Run.HighlightColor is not null || right.Run.HighlightColor is not null;
+            bool canMergeOfficeObservedHighlightBoundary =
+                compareHighlight &&
+                !PreservesHighlightTextOperationBoundaries(left, right) &&
+                hasHighlightBoundary;
+            bool preservesUnhighlightedEmphasisBoundary =
+                !hasHighlightBoundary &&
+                (left.Run.Bold || right.Run.Bold ||
+                    left.Run.Italic || right.Run.Italic ||
+                    left.Run.Underline || right.Run.Underline ||
+                    left.Run.Strike || right.Run.Strike);
+            if (!canMergeOfficeObservedHighlightBoundary && preservesUnhighlightedEmphasisBoundary)
+            {
+                return false;
+            }
+        }
+
         return CanCoalesceTextRun(left.Run, right.Run, compareHighlight, PreservesHighlightTextOperationBoundaries(left, right));
     }
 

@@ -5994,9 +5994,21 @@ paths, and ExecPlan references together.
     `4.841984` to `4.832328`, changed16 `0.061900` to `0.061755`, and SSIM `0.748935` to `0.749210`; deck-wide
     MAE improved on 21 pages with no regressions. Candidate page-56 graphics counts now match the Office
     counts for the relevant operators: `f:2; f*:10; S:14; W*:60`.
-  - [ ] Continue slide-56 text-list parity: bold list emphasis and right-side 18 pt text splitting still
-    differ from the Office PDF, so isolate those as public typography fixtures rather than treating the slide
-    as resolved.
+  - [x] Preserve same-style emphasized source-run boundaries during text coalescing: positioned text spans
+    that originate from distinct unhighlighted OOXML runs no longer merge into one PDF text operation just
+    because their resolved bold/italic/underline/strike style matches. The narrower rule keeps the
+    Office-observed left-aligned highlighted boundary probe coalesced while
+    `PptxSyntheticTextBoxPreservesSameStyleEmphasisSourceRunBoundaries` locks the public structural
+    behavior needed for emphasized list text. Final private run `20260528-135021` kept page-56 raster metrics unchanged versus
+    `20260528-133829` (`MAE 4.832328`, `changed16 0.061755`, `SSIM 0.749210`) while moving the right-side
+    18 pt text from two candidate text operations to four, matching the Office reference operation count and
+    font bucket for that region. Deck-wide MAE was effectively neutral versus `20260528-133829`
+    (`6.717284` to `6.717332`), with four tiny page upticks that round to `0.00` MAE; the only candidate
+    diagnostic remains the known unsupported JPEG duotone recolor.
+  - [ ] Continue slide-56 text-list parity: bold list emphasis and residual 18 pt positioning/advance
+    differences still differ from the Office PDF even after run-boundary parity. Isolate those as public
+    typography fixtures rather than treating the slide as resolved; likely next probes are Office baseline
+    placement and per-font advance rounding for bold Calibri-like runs.
 - [ ] Private-deck sweep loop: iterate over all `lokad-value-based` slides, keep a public-safe issue inventory,
   and for each visible problem add a minimal synthetic public case before implementing the generic fix.
   - [x] After custom arc geometry support, the private deck no longer has unsupported custom-geometry
