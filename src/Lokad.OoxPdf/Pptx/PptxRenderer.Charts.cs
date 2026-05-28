@@ -8870,7 +8870,7 @@ internal sealed partial class PptxRenderer
         double maxLabelWidth = tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0")
-            .Max(label => textMeasurer.Measure(label, fontSize));
+            .Max(label => textMeasurer.Measure(label, style));
         double labelWidth = Math.Max(
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
@@ -9548,17 +9548,17 @@ internal sealed partial class PptxRenderer
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
         ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend, legendTextStyle, workbook, plotVisibleOnly, fontResolver);
+        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, theme, chartXml, sceneChart, title, legend, legendTextStyle, workbook, plotVisibleOnly, fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, ChartTextStyle legendTextStyle, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, ChartTextStyle legendTextStyle, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         bool hasLineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is not null;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle)
+            ? GetCartesianNoTitleRightLegendPlotBox(frame, theme, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle)
             : hasTitle && hasRightLegend && hasLineChart
                 ? GetLineTitleRightLegendPlotBox(frame)
                 : GetDefaultChartPlotBox(frame);
@@ -9572,7 +9572,7 @@ internal sealed partial class PptxRenderer
         return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
     }
 
-    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
+    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, PptxTheme theme, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
     {
         XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
@@ -9622,12 +9622,13 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetScatterYValueExtents(series));
                 ChartAxisUnits axisUnits = ResolveBubbleAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), valueExtents);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
+                ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxis.XmlAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxis.XmlAxis, defaultNumberFormat: null))
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => textMeasurer.Measure(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);
@@ -9647,12 +9648,13 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(seriesVectors, stacked, percentStacked), percentStacked, useNearMaximumHeadroom: !percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), percentStacked);
                 IReadOnlyList<double> tickValues = GetChartAxisTickValues(valueExtents, axisUnits.MajorUnit, includeEndpoints: true);
+                ChartTextStyle valueAxisTextStyle = ReadSceneOrXmlChartTextStyle(theme, sceneChart, valueAxis.SceneAxis, chartXml, valueAxisForScale, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
                 string[] tickLabels = tickValues
                     .Select(value => FormatSceneOrXmlChartAxisLabel(value, valueAxis.SceneAxis, valueAxisForScale, percentStacked ? "0%" : null))
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => textMeasurer.Measure(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => textMeasurer.Measure(label, valueAxisTextStyle));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);

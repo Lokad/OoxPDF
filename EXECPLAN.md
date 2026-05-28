@@ -15135,3 +15135,13 @@ right-side plot space. This still leaves the broader Office-PDF legend negotiati
 hidden hard-coded text-style assumption from the reserve path. Validation: `dotnet build Lokad.OoxPdf.slnx
 --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed with `134` tests, `0` failures,
 and `0` skips; full non-slow console runner passed with `407` tests, `0` failures, and `7` slow skips.
+
+Follow-up, 2026-05-28: right-legend value-axis reserve measurement now uses the resolved value-axis chart text
+style instead of measuring tick labels at `ValueAxisFallbackFontSize`. `GetLineChartPlotLayout` now threads the
+theme into `GetCartesianNoTitleRightLegendPlotBox`, which lets line/area/scatter no-title right-legend layout
+measure the adjacent value-axis labels through the same `ReadSceneOrXmlChartTextStyle(..., "valueAxis")` cascade
+used by rendering. The stacked-bar vertical-axis reserve helper also measures with the full `ChartTextStyle`
+rather than only its font size. A regression verifies that increasing the value-axis `txPr` font size increases
+the left-side plot reserve. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
+focused non-slow `pptx-charts` passed with `135` tests, `0` failures, and `0` skips; full non-slow console
+runner passed with `408` tests, `0` failures, and `7` slow skips.
