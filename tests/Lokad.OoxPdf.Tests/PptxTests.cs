@@ -14086,7 +14086,7 @@ internal static class PptxTests
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Area, scatter, radar, and doughnut charts should not emit unsupported chart diagnostics.");
     }
 
-    public static void PptxChartEmbeddedWorkbookReferencesRenderFormulaOnlyWhenPlotVisibleOnlyDisabled()
+    public static void PptxChartEmbeddedWorkbookFormulaOnlyReferencesReportMissingCachedData()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -14156,10 +14156,10 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int pathStartCount = Regex.Matches(pdf, @"[0-9.]+ [0-9.]+ m").Count;
-        TestAssert.True(pathStartCount > 0, $"Expected formula-only embedded workbook references to render from workbook-backed indexed vectors; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
-        TestAssert.True(CountTextMatrices(pdf) > 0, "Expected formula-only embedded workbook category references to feed native chart text when plot-visible-only filtering is disabled.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Workbook-backed chart references should render through the native chart path.");
-        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_MISSING_CACHED_DATA"), "Formula-only embedded workbook references should use visible workbook values when chart-side caches are absent.");
+        TestAssert.True(pathStartCount == 0, $"Expected formula-only embedded workbook references to stay out of active chart rendering without chart-side caches; saw {pathStartCount} path starts and diagnostics: {string.Join(", ", collector.Diagnostics.Select(d => d.Id))}.");
+        TestAssert.True(CountTextMatrices(pdf) == 0, "Expected formula-only embedded workbook category references to stay out of native chart text without chart-side caches.");
+        TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_CHART_STATIC_FALLBACK"), "Formula-only charts should not fall back to static chart rendering.");
+        TestAssert.True(collector.Diagnostics.Any(d => d.Id == "PPTX_CHART_MISSING_CACHED_DATA"), "Formula-only embedded workbook references should report missing chart-side caches while preserving workbook values as provenance.");
         TestAssert.True(collector.Diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_CHART"), "Formula-only supported chart families should report missing cached data rather than a generic unsupported chart.");
     }
 
@@ -14673,8 +14673,7 @@ internal static class PptxTests
         object[] noCacheWorkbookPoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetProperty("WorkbookPoints")?.GetValue(noCacheVector)) ?? throw new InvalidOperationException("Expected formula-only workbook sidecar points.")).Cast<object>().ToArray();
         object[] noCacheDensePoints = (((System.Collections.IEnumerable?)noCacheVector.GetType().GetMethod("DensePoints")?.Invoke(noCacheVector, [])) ?? throw new InvalidOperationException("Expected formula-only dense active point projection.")).Cast<object>().ToArray();
         TestAssert.True(noCacheActivePoints.Length == 0, "Expected formula-only workbook numeric values to remain absent from cache-owned active points.");
-        TestAssert.True(noCacheDensePoints.Length == 2, "Expected formula-only workbook numeric values to populate dense rendered point slots when chart caches are absent.");
-        TestAssert.True((double?)noCacheDensePoints[0].GetType().GetProperty("Value")?.GetValue(noCacheDensePoints[0]) == 8.2d, "Expected no-cache dense projection to preserve workbook numeric values.");
+        TestAssert.True(noCacheDensePoints.Length == 0, "Expected formula-only workbook numeric values to stay out of dense rendered point slots when chart caches are absent.");
         TestAssert.True(noCacheWorkbookPoints.Length == 2, "Expected formula-only workbook numeric values to remain available as sidecar points.");
         System.Reflection.MethodInfo buildPieSlices = typeof(PptxRenderer).GetMethod(
             "BuildChartIndexedPieSlices",

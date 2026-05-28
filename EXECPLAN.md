@@ -2219,6 +2219,17 @@ High-priority actions:
     presence, or workbook sidecar provenance back to primitive arrays. Validation:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-charts`
     passed (`109 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 close the cache-authoritative chart data policy gap found by the sparse/blank probe:
+    Office's PDF for the public sparse/blank chart fixture omits the formula-only chart whose chart XML has
+    formulas and an embedded workbook relationship but no chart-side cache points. OOXPDF now keeps embedded
+    workbook values as sidecar provenance only; `ChartIndexedNumberVector.DensePoints()` and
+    `ChartIndexedTextVector.DensePoints()` no longer promote workbook ranges into active render data when
+    chart caches are empty. Supported formula-only chart families emit `PPTX_CHART_MISSING_CACHED_DATA`
+    instead of silently inventing a chart from workbook sidecars, and the sparse manifest now requires that
+    diagnostic while rejecting static fallback. Validation: focused non-slow `pptx-charts` passed
+    (`117 passed, 0 failed, 0 skipped`); sparse/blank visual run `20260528-123234` passed with MAE
+    `0.854480`, changed16 `0.009532`, required diagnostic `PPTX_CHART_MISSING_CACHED_DATA`, and zero gated
+    chart-graphics deltas.
   - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:
     polar slice construction now builds `ChartIndexedPieSlice` records from `ChartIndexedNumberVector`, so
     point fills, strokes, explosions, palette fallback, and visible data-label overrides resolve by OOXML

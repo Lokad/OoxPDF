@@ -34,10 +34,12 @@
       "CategoryAxisTickLabel": 4.0,
       "LegendText": 3.5,
       "ValueAxisTickLabel": 2.0
-    }
+    },
+    "requiredDiagnostics": [
+      "PPTX_CHART_MISSING_CACHED_DATA"
+    ]
   },
   "allowedUnsupportedFeatures": [
-    "PPTX_CHART_MISSING_CACHED_DATA",
-    "PPTX_CHART_STATIC_FALLBACK"
+    "PPTX_CHART_MISSING_CACHED_DATA"
   ]
 }

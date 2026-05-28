@@ -114,7 +114,7 @@ internal sealed partial class PptxRenderer
 
         if (HasSupportedSceneChartWithoutRenderableCachedValues(sceneChart))
         {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_MISSING_CACHED_DATA", OoxPdfSeverity.Warning, "Supported chart references formula-only data without cached numeric values, and no visible embedded-workbook values were available for active rendering.", chartPartName, context.SlideNumber, "Ignored");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_MISSING_CACHED_DATA", OoxPdfSeverity.Warning, "Supported chart references formula-only data without chart-side cached numeric values. Embedded workbook values are preserved as provenance but are not used as active rendering data.", chartPartName, context.SlideNumber, "Ignored");
             return;
         }
 
@@ -10052,11 +10052,6 @@ internal sealed partial class PptxRenderer
         public IReadOnlyList<ChartIndexedNumberPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
-            if (points.Count == 0)
-            {
-                points = WorkbookPointsForPlotVisibility(PlotVisibleOnly);
-            }
-
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
             {
@@ -10117,11 +10112,6 @@ internal sealed partial class PptxRenderer
         public IReadOnlyList<ChartIndexedTextPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
-            if (points.Count == 0)
-            {
-                points = WorkbookPointsForPlotVisibility(PlotVisibleOnly);
-            }
-
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
             {
