@@ -3570,6 +3570,13 @@ High-priority actions:
   profile and justified-text parity items, not under missing line-height semantics.
 - [ ] Port `pptx-renderer` run style behavior: font family, size, bold/italic, underline, strike, color,
   highlight, character spacing, kerning thresholds, caps, superscript/subscript, and hyperlink style.
+  2026-05-28 audit: shape text already preserves and renders most run-style features through the text model,
+  including raw underline/strike/caps tokens, highlight, character spacing, baseline shifts, small caps,
+  per-run typefaces, and source-bearing theme typeface resolution in the direct text-model path. Keep this
+  item open for the long-term architecture: chart text style parsing still has local run-property readers and
+  plain typeface resolution, and the scene run-style path still does not expose the same source-bearing
+  theme-font diagnostics as direct text snapshots. The next durable slice should centralize chart/scene run
+  style resolution into the cascade/theme-source machinery instead of adding more per-consumer XML reads.
 - [ ] Port `pptx-renderer` whitespace behavior: regular spaces, repeated spaces, non-breaking spaces,
   tabs, soft hyphens, explicit line breaks, fields, and end-paragraph runs must remain observable.
 - [ ] Port `pptx-renderer` bullet and numbering behavior: bullet suppression for metadata placeholders,
