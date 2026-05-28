@@ -1372,6 +1372,11 @@ High-priority actions:
   `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable
   layer kinds. This makes the direct run `rPr` versus inherited paragraph default `defRPr` split testable without
   changing run-style resolution or PDF emission.
+- [x] Expose the resolved paragraph-style cascade separately from default paragraph inputs:
+  paragraph snapshots now keep the inherited/default cascade (`shape.lstStyle`, placeholders, inherited text style,
+  `defaultTextStyle`) and a second resolved-style provenance chain that appends direct `paragraph.pPr` as a typed
+  `ParagraphProperties` layer. This preserves the existing merge and layout behavior while making the paragraph
+  stage of the seven-level cascade auditable before line layout.
 - [x] Name run text-color fallback sources in resolved styles:
   `ResolvedRunTextStyle` now records whether color came from direct no-fill/solid fill, table text style,
   theme hyperlink color, shape `fontRef`, inherited default no-fill/solid fill, or fallback black. Text-frame

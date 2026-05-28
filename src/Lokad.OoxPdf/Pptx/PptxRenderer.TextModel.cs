@@ -55,6 +55,9 @@ internal sealed partial class PptxRenderer
             paragraph.Cascade.Sources.Count(source => source is not null),
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
             paragraph.Cascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
+            paragraph.ResolvedStyleCascade.Sources.Count(source => source is not null),
+            paragraph.ResolvedStyleCascade.Layers.Select(layer => layer.Name).ToArray(),
+            paragraph.ResolvedStyleCascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.AlignmentValue,
             paragraph.Style.FontSize,
@@ -528,6 +531,7 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleCascade cascade = BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, levelName);
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
+            PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
@@ -535,6 +539,7 @@ internal sealed partial class PptxRenderer
                 defaultParagraphProperties,
                 paragraphLevel,
                 cascade,
+                resolvedStyleCascade,
                 paragraphStyle,
                 runs));
         }
@@ -571,6 +576,20 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleLayerKind.DefaultTextStyle,
             FindDefaultTextStyle(placeholderSources, levelName)));
         return new PptxParagraphStyleCascade(levelName, layers);
+    }
+
+    private static PptxParagraphStyleCascade BuildResolvedParagraphStyleCascade(
+        PptxParagraphStyleCascade defaultCascade,
+        XElement? paragraphProperties)
+    {
+        var layers = new List<PptxParagraphStyleLayer>(defaultCascade.Layers)
+        {
+            new(
+                "paragraph.pPr",
+                PptxParagraphStyleLayerKind.ParagraphProperties,
+                paragraphProperties)
+        };
+        return new PptxParagraphStyleCascade(defaultCascade.LevelName, layers);
     }
 
     private static IReadOnlyList<PptxTextRunModel> BuildRunModels(

@@ -894,6 +894,9 @@ internal static class PptxTests
         TestAssert.Contains("ShapeListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.Contains("InheritedTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.Contains("DefaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
+        TestAssert.True(textFrame.Paragraphs[0].ResolvedStyleSourceCount >= textFrame.Paragraphs[0].ResolvedCascadeSourceCount + 1, "Expected resolved paragraph style provenance to include direct paragraph properties after inherited defaults.");
+        TestAssert.Contains("paragraph.pPr", string.Join("|", textFrame.Paragraphs[0].ResolvedStyleLayerNames));
+        TestAssert.Contains("ParagraphProperties", string.Join("|", textFrame.Paragraphs[0].ResolvedStyleLayerKinds));
         TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
         TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
         TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);
@@ -6066,6 +6069,9 @@ internal static class PptxTests
                         paragraph.ResolvedCascadeSourceCount,
                         paragraph.CascadeLayerNames,
                         paragraph.CascadeLayerKinds,
+                        paragraph.ResolvedStyleSourceCount,
+                        paragraph.ResolvedStyleLayerNames,
+                        paragraph.ResolvedStyleLayerKinds,
                         runs = paragraph.Runs.Select(run => new
                         {
                             run.Kind,

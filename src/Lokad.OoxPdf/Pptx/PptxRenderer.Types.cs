@@ -384,6 +384,7 @@ internal sealed partial class PptxRenderer
         XElement? DefaultProperties,
         int Level,
         PptxParagraphStyleCascade Cascade,
+        PptxParagraphStyleCascade ResolvedStyleCascade,
         ResolvedParagraphTextStyle Style,
         IReadOnlyList<PptxTextRunModel> Runs);
 
@@ -399,7 +400,8 @@ internal sealed partial class PptxRenderer
         ShapeListStyle,
         InheritedPlaceholderListStyle,
         InheritedTextStyle,
-        DefaultTextStyle
+        DefaultTextStyle,
+        ParagraphProperties
     }
 
     private sealed record PptxParagraphStyleLayer(
