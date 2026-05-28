@@ -6176,9 +6176,80 @@ internal sealed partial class PptxRenderer
 
     private static ChartDataLabelOptions ResolveChartDataLabelOptionsForSeries(ChartDataLabelOptions plotOptions, IReadOnlyList<ChartDataLabelOptions> seriesOptions, int seriesIndex)
     {
-        return seriesIndex < seriesOptions.Count && seriesOptions[seriesIndex].IsDefined
-            ? seriesOptions[seriesIndex]
-            : plotOptions;
+        if (seriesIndex >= seriesOptions.Count || !seriesOptions[seriesIndex].IsDefined)
+        {
+            return plotOptions;
+        }
+
+        return MergeChartDataLabelOptions(plotOptions, seriesOptions[seriesIndex]);
+    }
+
+    private static ChartDataLabelOptions MergeChartDataLabelOptions(ChartDataLabelOptions baseOptions, ChartDataLabelOptions overrideOptions)
+    {
+        IReadOnlyDictionary<string, ChartBooleanOption> flags = ResolveChartDataLabelFlagOptions(baseOptions.FlagOptions, overrideOptions.FlagOptions);
+        ChartTextStyleOverride textStyle = new(
+            overrideOptions.TextStyle.FontFamily ?? baseOptions.TextStyle.FontFamily,
+            overrideOptions.TextStyle.FontSize ?? baseOptions.TextStyle.FontSize,
+            overrideOptions.TextStyle.Color ?? baseOptions.TextStyle.Color,
+            overrideOptions.TextStyle.Alpha ?? baseOptions.TextStyle.Alpha,
+            overrideOptions.TextStyle.Bold ?? baseOptions.TextStyle.Bold,
+            overrideOptions.TextStyle.Italic ?? baseOptions.TextStyle.Italic,
+            overrideOptions.TextStyle.Underline ?? baseOptions.TextStyle.Underline,
+            overrideOptions.TextStyle.Strike ?? baseOptions.TextStyle.Strike,
+            overrideOptions.TextStyle.FontFamily is null ? baseOptions.TextStyle.RequestedTypeface : overrideOptions.TextStyle.RequestedTypeface,
+            overrideOptions.TextStyle.FontFamily is null ? baseOptions.TextStyle.TypefaceSource : overrideOptions.TextStyle.TypefaceSource);
+
+        return baseOptions with
+        {
+            ShowValue = ChartDataLabelFlagValue(flags, "showVal"),
+            ShowPercent = ChartDataLabelFlagValue(flags, "showPercent"),
+            ShowCategoryName = ChartDataLabelFlagValue(flags, "showCatName"),
+            ShowSeriesName = ChartDataLabelFlagValue(flags, "showSerName"),
+            ShowLeaderLines = ChartDataLabelFlagValue(flags, "showLeaderLines"),
+            ShowLegendKey = ChartDataLabelFlagValue(flags, "showLegendKey"),
+            ShowBubbleSize = ChartDataLabelFlagValue(flags, "showBubbleSize"),
+            LeaderLines = overrideOptions.LeaderLines.IsDefined ? overrideOptions.LeaderLines : baseOptions.LeaderLines,
+            CustomText = string.IsNullOrEmpty(overrideOptions.CustomText) ? baseOptions.CustomText : overrideOptions.CustomText,
+            CustomTextRuns = overrideOptions.CustomTextRuns.Count == 0 ? baseOptions.CustomTextRuns : overrideOptions.CustomTextRuns,
+            PositionKind = string.IsNullOrEmpty(overrideOptions.Position) ? baseOptions.PositionKind : overrideOptions.PositionKind,
+            Position = string.IsNullOrEmpty(overrideOptions.Position) ? baseOptions.Position : overrideOptions.Position,
+            Separator = string.IsNullOrEmpty(overrideOptions.Separator) ? baseOptions.Separator : overrideOptions.Separator,
+            NumberFormat = string.IsNullOrEmpty(overrideOptions.NumberFormat) ? baseOptions.NumberFormat : overrideOptions.NumberFormat,
+            NumberFormatInfo = overrideOptions.NumberFormatInfo.IsDefined ? overrideOptions.NumberFormatInfo : baseOptions.NumberFormatInfo,
+            Layout = overrideOptions.Layout.HasLayout ? overrideOptions.Layout : baseOptions.Layout,
+            TextStyle = textStyle,
+            TextBodyProperties = IsChartTextBodyPropertiesEmpty(overrideOptions.TextBodyProperties) ? baseOptions.TextBodyProperties : overrideOptions.TextBodyProperties,
+            ShapeStyle = overrideOptions.ShapeStyle.IsEmpty ? baseOptions.ShapeStyle : overrideOptions.ShapeStyle,
+            FlagOptions = flags,
+            Overrides = MergeChartDataLabelOverrides(baseOptions.Overrides, overrideOptions.Overrides),
+            IsDefined = baseOptions.IsDefined || overrideOptions.IsDefined
+        };
+    }
+
+    private static bool ChartDataLabelFlagValue(IReadOnlyDictionary<string, ChartBooleanOption> flags, string name)
+    {
+        return flags.TryGetValue(name, out ChartBooleanOption option) && option.Value;
+    }
+
+    private static IReadOnlyDictionary<int, ChartDataLabelOverride> MergeChartDataLabelOverrides(IReadOnlyDictionary<int, ChartDataLabelOverride> baseOverrides, IReadOnlyDictionary<int, ChartDataLabelOverride> overrideOverrides)
+    {
+        if (baseOverrides.Count == 0)
+        {
+            return overrideOverrides;
+        }
+
+        if (overrideOverrides.Count == 0)
+        {
+            return baseOverrides;
+        }
+
+        var merged = new Dictionary<int, ChartDataLabelOverride>(baseOverrides);
+        foreach (KeyValuePair<int, ChartDataLabelOverride> item in overrideOverrides)
+        {
+            merged[item.Key] = item.Value;
+        }
+
+        return merged;
     }
 
     private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)

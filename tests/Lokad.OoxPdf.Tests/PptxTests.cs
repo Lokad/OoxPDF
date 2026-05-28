@@ -14616,6 +14616,12 @@ internal static class PptxTests
         System.Reflection.MethodInfo resolveOptions = typeof(PptxRenderer).GetMethod(
             "ResolveChartDataLabelOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label override resolver.");
+        System.Reflection.MethodInfo readSeriesOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSeriesDataLabelOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label option resolver.");
+        System.Reflection.MethodInfo resolveSeriesOptions = typeof(PptxRenderer).GetMethod(
+            "ResolveChartDataLabelOptionsForSeries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label merge resolver.");
         object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
 
         object sceneShowValue = ChartDataLabelFlagOption(sceneOptions, "showVal");
@@ -14686,6 +14692,33 @@ internal static class PptxTests
         object resolvedXmlBody = ChartDataLabelTextBodyProperties(resolvedXmlOptions);
         TestAssert.Equal(40d, ChartTextBodyRotationDegrees(resolvedXmlBody) ?? 0d);
         TestAssert.Equal("2400000", ChartTextBodyRotationValue(resolvedXmlBody));
+
+        XElement xmlWithSeriesLabels = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart>
+                <c:dLbls><c:showVal/><c:showPercent val="0"/><c:separator>, </c:separator></c:dLbls>
+                <c:ser>
+                  <c:dLbls><c:showLegendKey/><c:separator>; </c:separator></c:dLbls>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        object plotOptions = readOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected plot label options.");
+        object seriesOptions = readSeriesOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected series label options.");
+        object resolvedSeriesOptions = resolveSeriesOptions.Invoke(null, [plotOptions, seriesOptions, 0]) ?? throw new InvalidOperationException("Expected resolved series label options.");
+        object seriesShowValue = ChartDataLabelFlagOption(resolvedSeriesOptions, "showVal");
+        TestAssert.True(ChartBooleanOptionValue(seriesShowValue), "Expected missing series showVal to inherit the plot-level explicit showVal.");
+        TestAssert.True(ChartBooleanOptionIsDefined(seriesShowValue), "Expected inherited plot-level showVal presence to remain explicit.");
+        object seriesShowPercent = ChartDataLabelFlagOption(resolvedSeriesOptions, "showPercent");
+        TestAssert.True(!ChartBooleanOptionValue(seriesShowPercent), "Expected missing series showPercent to inherit the plot-level explicit false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(seriesShowPercent), "Expected inherited plot-level showPercent presence to remain explicit.");
+        object seriesShowLegendKey = ChartDataLabelFlagOption(resolvedSeriesOptions, "showLegendKey");
+        TestAssert.True(ChartBooleanOptionValue(seriesShowLegendKey), "Expected series-level showLegendKey to override the plot-level default.");
+        TestAssert.True(ChartBooleanOptionIsDefined(seriesShowLegendKey), "Expected series-level showLegendKey presence to remain explicit.");
+        TestAssert.Equal("; ", (string?)resolvedSeriesOptions.GetType().GetProperty("Separator")?.GetValue(resolvedSeriesOptions) ?? string.Empty);
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()

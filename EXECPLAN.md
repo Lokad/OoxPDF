@@ -2686,6 +2686,15 @@ High-priority actions:
     (`pptx-ladder-11-chart-pie-5-categories-port` run `20260527-101245`,
     `pptx-ladder-11-chart-doughnut-port` run `20260527-101253`); full non-slow console runner passed
     (`265 passed, 0 failed, 7 skipped`).
+  - [x] 2026-05-28 merge series-level data-label options over plot-level options instead of replacing them:
+    `ResolveChartDataLabelOptionsForSeries` previously treated any defined series `dLbls` as a full
+    replacement, so a series-level separator or legend-key flag could accidentally drop plot-level `showVal`,
+    explicit false flags, number format, layout, or text defaults. Series options now merge over plot options
+    using the preserved boolean presence records, with series-level point overrides winning by index. The
+    regression locks plot `showVal` and explicit false `showPercent` surviving a series-level `separator` plus
+    `showLegendKey`. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed,
+    focused non-slow `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console
+    runner passed (`406 passed, 0 failed, 7 skipped`).
   - [x] Add a public Office-backed polar data-label probe for structural oracle work:
     `tools/NewChartProbeFixtures.ps1 -DataLabelsOnly` now generates
     `pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx`, and the matching visual case locks
