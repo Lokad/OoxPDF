@@ -8362,6 +8362,52 @@ internal static class PptxTests
         TestAssert.Contains(" TJ", pdf);
     }
 
+    public static void PptxSyntheticUnsupportedTableStyleEmitsDiagnosticUntilCascadeExists()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
+            ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PresentationRelationship()),
+            ["ppt/presentation.xml"] = TestFixtures.Utf8(BasicPresentation()),
+            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                        <a:tbl>
+                          <a:tblPr firstRow="1" bandRow="1"><a:tableStyleId>{11111111-1111-1111-1111-111111111111}</a:tableStyleId></a:tblPr>
+                          <a:tblGrid><a:gridCol w="1828800"/></a:tblGrid>
+                          <a:tr h="914400">
+                            <a:tc>
+                              <a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Unsupported style</a:t></a:r></a:p></a:txBody>
+                              <a:tcPr><a:solidFill><a:srgbClr val="D9EAD3"/></a:solidFill></a:tcPr>
+                            </a:tc>
+                          </a:tr>
+                        </a:tbl>
+                      </a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """)
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
+        TestAssert.True(diagnostics.Any(d =>
+            d.Id == "PPTX_UNSUPPORTED_TABLE_STYLE" &&
+            d.PartName == "/ppt/slides/slide1.xml" &&
+            d.Feature == "table style" &&
+            d.Fallback == "DefaultStyle"),
+            "Unknown table styles should stay diagnostic-covered until the Office table-style cascade exists.");
+    }
+
     public static void PptxSyntheticGroupedTableUsesGroupTransform()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

@@ -3314,6 +3314,19 @@ High-priority actions:
       `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`, focused `pptx-model` passed
       (`13 passed, 0 failed, 0 skipped`), and focused non-slow `pptx-tables` passed (`8 passed, 0 failed,
       0 skipped`).
+    - [x] Emit `PPTX_UNSUPPORTED_TABLE_STYLE` when a table carries a style id outside the current supported
+      built-in subset. This does not replace the needed Office table-style cascade, but it makes the present
+      default-style fallback explicit during rendering and avoids silently treating unknown style GUIDs as if
+      the cascade had been modeled. Validation: focused non-slow `pptx-tables` passed (`9 passed, 0 failed,
+      0 skipped`), `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and `git diff --check`
+      passed. Public visual `pptx-tables` was also run and exposed two still-open fidelity gates with no
+      diagnostics: `pptx-ladder-10-basic-table` MAE `0.050810` against limit `0.05`, and
+      `pptx-ladder-10-vertical-align` MAE `0.028289` against limit `0.014`.
+    - [ ] Investigate the current `pptx-tables` visual gate drift instead of treating the table ladder as closed:
+      `pptx-ladder-10-basic-table` is barely over its MAE gate and `pptx-ladder-10-vertical-align` has regressed
+      from the recorded `0.013784` MAE to `0.028289`. The long-term fix should come from shared text-frame
+      metrics for table cells and structural table draw-order alignment, not from widening gates or adding
+      fixture-specific offsets.
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.

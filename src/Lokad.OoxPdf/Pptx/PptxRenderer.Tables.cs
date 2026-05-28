@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Xml.Linq;
+using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
 
@@ -63,7 +64,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return BuildTableFrameLayout(context, bounds, node.Table)?.TextSpans ?? [];
+        return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false)?.TextSpans ?? [];
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
@@ -71,7 +72,7 @@ internal sealed partial class PptxRenderer
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table);
+        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: true);
         if (layout is null)
         {
             return [];
@@ -81,7 +82,7 @@ internal sealed partial class PptxRenderer
         return layout.TextSpans;
     }
 
-    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable)
+    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         var cellFills = new List<TableCellFill>();
@@ -92,6 +93,21 @@ internal sealed partial class PptxRenderer
 
         IReadOnlyList<double> rawColumnWidths = sceneTable.ColumnWidths;
         PptxSceneTableStyle tableStyle = sceneTable.Style;
+        if (emitUnsupportedStyleDiagnostic &&
+            tableStyle.HasStyle &&
+            !tableStyle.IsSupported)
+        {
+            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "PPTX_UNSUPPORTED_TABLE_STYLE",
+                OoxPdfSeverity.Warning,
+                "Table style is not in the supported built-in style subset and was rendered without Office table-style cascade formatting.",
+                context.Slide.PartName,
+                context.SlideNumber,
+                null,
+                "table style",
+                "DefaultStyle"));
+        }
+
         IReadOnlyList<PptxSceneTableRow> rows = sceneTable.Rows;
         if (rawColumnWidths.Count == 0 || rows.Count == 0)
         {
