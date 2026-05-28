@@ -427,6 +427,7 @@ internal sealed partial class PptxRenderer
     private sealed record PptxTextParagraphModel(
         XElement Source,
         XElement? Properties,
+        XElement? EndParagraphProperties,
         XElement? DefaultProperties,
         int Level,
         PptxParagraphStyleCascade Cascade,

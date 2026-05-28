@@ -14561,6 +14561,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `407` tests, `0` failures, and `0` skips; full non-slow console runner passed with `400` tests, `0` failures,
 and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX text paragraph `endParaRPr` is now owned by the renderer text model instead
+of being rediscovered by layout-time paragraph XML scans. `PptxTextParagraphModel` records the end-paragraph
+run properties during text-model construction, `PptxTextParagraphModelSnapshot` exposes
+`HasEndParagraphProperties`, and empty/trailing paragraph layout plus vertical-anchor height estimation now
+consume that typed field. The existing end-paragraph font-size fixture also asserts that the inspection model
+sees both end-paragraph property owners.
+
+This is a deliberately narrow source-boundary cleanup. It preserves the existing Office-like behavior for
+empty paragraphs and trailing breaks while removing another place where layout logic re-parsed `a:endParaRPr`
+from raw paragraph XML. Remaining text-model XML reads are now easier to classify: visible-content and manual
+break discovery still depend on paragraph/run XML structure, and future slices should lift those into typed
+paragraph/run summaries before changing line-flow behavior.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused
+`EndParagraph` invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

@@ -3794,7 +3794,9 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
+        PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, 0).ToArray();
         TestAssert.Equal(2, layout.Frames.Count);
+        TestAssert.Equal(2, models.Count(model => model.Paragraphs.Any(paragraph => paragraph.HasEndParagraphProperties)));
 
         PptxTextLineLayoutSnapshot largeEndParagraphLine = layout.Frames[0]
             .Paragraphs

@@ -804,9 +804,9 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = flowParagraph.Style;
             if (!ParagraphHasVisibleContent(paragraph.Source))
             {
-                if (ParagraphHasLayoutContent(paragraph.Source))
+                if (ParagraphHasLayoutContent(paragraph))
                 {
-                    XElement? endRunProperties = paragraph.Source.Element(DrawingNamespace + "endParaRPr");
+                    XElement? endRunProperties = paragraph.EndParagraphProperties;
                     double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties) * frame.FontScale;
                     double emptySpacingBefore = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     double emptySpacingAfter = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
@@ -1935,10 +1935,9 @@ internal sealed partial class PptxRenderer
             child.Name == DrawingNamespace + "br");
     }
 
-    private static bool ParagraphHasLayoutContent(XElement paragraph)
+    private static bool ParagraphHasLayoutContent(PptxTextParagraphModel paragraph)
     {
-        return paragraph.Element(DrawingNamespace + "pPr") is not null ||
-            paragraph.Element(DrawingNamespace + "endParaRPr") is not null;
+        return paragraph.Properties is not null || paragraph.EndParagraphProperties is not null;
     }
 
     private static ResolvedParagraphTextStyle ResolveParagraphTextStyle(
@@ -2631,7 +2630,7 @@ internal sealed partial class PptxRenderer
 
     private static double ReadEndParagraphFontSize(PptxTextParagraphModel paragraph, double fallbackFontSize, double fontScale)
     {
-        XElement? endRunProperties = paragraph.Source.Element(DrawingNamespace + "endParaRPr");
+        XElement? endRunProperties = paragraph.EndParagraphProperties;
         return endRunProperties is null
             ? fallbackFontSize
             : ReadFontSize(endRunProperties, paragraph.Style.DefaultRunProperties) * fontScale;
@@ -3008,9 +3007,9 @@ internal sealed partial class PptxRenderer
             LineSpacing lineSpacing = paragraphStyle.LineSpacing;
             if (!ParagraphHasVisibleContent(paragraph.Source))
             {
-                if (ParagraphHasLayoutContent(paragraph.Source))
+                if (ParagraphHasLayoutContent(paragraph))
                 {
-                    XElement? endRunProperties = paragraph.Source.Element(DrawingNamespace + "endParaRPr");
+                    XElement? endRunProperties = paragraph.EndParagraphProperties;
                     double emptyFontSize = ReadEndParagraphFontSize(paragraph, paragraphStyle.FontSize, bodyProperties.FontScale);
                     if (hasEstimatedParagraph)
                     {
