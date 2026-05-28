@@ -198,6 +198,7 @@ internal sealed partial class PptxRenderer
                 entry.ShapeStyle?.PatternFill.HasPattern == true ||
                 entry.ShapeStyle?.GradientFill?.HasGradient == true),
             chartStyleEntries.Count(entry => entry.FillReferenceIndex is not null),
+            chartStyleEntries.Count(entry => entry.FillReferenceFill.HasFill),
             chartStyleEntries.Count(entry => entry.EffectReferenceIndex is not null),
             chartStyleEntries.Count(entry => !string.IsNullOrWhiteSpace(entry.FontReferenceIndex)),
             rejectedPointStyleIndexValues.Count,

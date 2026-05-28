@@ -238,7 +238,10 @@ internal static class PptxTests
                       <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
                     </a:fontScheme>
                     <a:fmtScheme name="Test">
-                      <a:fillStyleLst/>
+                      <a:fillStyleLst>
+                        <a:solidFill><a:srgbClr val="010101"/></a:solidFill>
+                        <a:solidFill><a:srgbClr val="BBDDEE"><a:alpha val="65000"/></a:srgbClr></a:solidFill>
+                      </a:fillStyleLst>
                       <a:lnStyleLst>
                         <a:ln w="25400" cap="sq" cmpd="dbl">
                           <a:solidFill><a:srgbClr val="ABC123"><a:alpha val="60000"/></a:srgbClr></a:solidFill>
@@ -647,6 +650,7 @@ internal static class PptxTests
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleShapeStyleCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleShapeFillCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleResolvedFillReferenceCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEffectReferenceCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFontReferenceCount);
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
@@ -657,6 +661,9 @@ internal static class PptxTests
         TestAssert.Equal("1", majorGridlineStyle.LineReferenceIndexValue);
         TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
         TestAssert.Equal("2", majorGridlineStyle.FillReferenceIndexValue);
+        TestAssert.True(majorGridlineStyle.FillReferenceFill.HasFill, "Expected chart style fill-reference theme resolution in the scene model.");
+        TestAssert.Equal(new RgbColor(187, 221, 238), majorGridlineStyle.FillReferenceFill.Color);
+        TestAssert.Equal(0.65d, majorGridlineStyle.FillReferenceFill.Alpha);
         TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
         TestAssert.Equal("1", majorGridlineStyle.EffectReferenceIndexValue);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
@@ -7329,6 +7336,7 @@ internal static class PptxTests
                 node.ChartStyleShapeStyleCount,
                 node.ChartStyleShapeFillCount,
                 node.ChartStyleFillReferenceCount,
+                node.ChartStyleResolvedFillReferenceCount,
                 node.ChartStyleEffectReferenceCount,
                 node.ChartStyleFontReferenceCount,
                 node.HasGroupTransform

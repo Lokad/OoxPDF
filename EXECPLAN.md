@@ -15348,3 +15348,15 @@ This does not change duplicate-role precedence or renderer selection. It preserv
 Office behavior later without conflating duplicate local-name entries or namespace-distinct elements into one
 anonymous role string. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: chart style fill references now keep their resolved solid-fill scene evidence when the
+theme format scheme can resolve the referenced fill style. `PptxSceneChartStyleEntry` now carries
+`FillReferenceFill`, scene inspection reports the number of resolved fill references, and the chart-style
+preservation fixture exercises a second theme fill style reached through `cs:fillRef idx="2"`.
+
+This still does not apply chart style fill references to rendering. It closes a structural asymmetry first:
+line references already had a typed resolved style, while fill references only had an index. The broader
+Office-backed cascade remains open until precedence between style references, role-local `spPr`, explicit chart
+XML, color-style variations, and per-series/point overrides is validated against Office PDFs. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
+non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.

@@ -140,6 +140,7 @@ internal sealed record PptxSceneNodeSnapshot(
     int ChartStyleShapeStyleCount,
     int ChartStyleShapeFillCount,
     int ChartStyleFillReferenceCount,
+    int ChartStyleResolvedFillReferenceCount,
     int ChartStyleEffectReferenceCount,
     int ChartStyleFontReferenceCount,
     int ChartRejectedPointStyleIndexCount,
@@ -824,6 +825,7 @@ internal readonly record struct PptxSceneChartStyleEntry(
     string LineReferenceIndexValue,
     int? FillReferenceIndex,
     string FillReferenceIndexValue,
+    PptxSceneFillStyle FillReferenceFill,
     int? EffectReferenceIndex,
     string EffectReferenceIndexValue,
     string FontReferenceIndex,
@@ -4020,6 +4022,7 @@ internal sealed class PptxSceneBuilder
             string fillReferenceIndexRaw = (string?)fillReference?.Attribute("idx") ?? string.Empty;
             int fillReferenceIndexValue = fillReference is null ? 0 : ParseOptionalIntAttribute(fillReference, "idx", 0);
             int? fillReferenceIndex = fillReferenceIndexValue > 0 ? fillReferenceIndexValue : null;
+            PptxSceneFillStyle fillReferenceFill = ReadChartStyleFillReference(fillReference, theme, colorMap);
             XElement? effectReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "effectRef");
@@ -4075,6 +4078,7 @@ internal sealed class PptxSceneBuilder
                 lineReferenceIndexRaw,
                 fillReferenceIndex,
                 fillReferenceIndexRaw,
+                fillReferenceFill,
                 effectReferenceIndex,
                 effectReferenceIndexRaw,
                 fontReferenceIndex,
@@ -4086,6 +4090,27 @@ internal sealed class PptxSceneBuilder
         }
 
         return entries;
+    }
+
+    private static PptxSceneFillStyle ReadChartStyleFillReference(XElement? fillReference, PptxTheme theme, PptxColorMap colorMap)
+    {
+        int fillReferenceIndex = PptxFormatSchemeResolver.ReadIndex(fillReference);
+        XElement? fillStyle = null;
+        if (fillReferenceIndex > 0)
+        {
+            theme.TryGetFillStyle(fillReferenceIndex, out fillStyle);
+        }
+
+        if (fillStyle is not null &&
+            TryReadSolidColorWithAlpha(fillStyle, theme, colorMap, fillReference, out RgbColor color, out double alpha))
+        {
+            return new PptxSceneFillStyle(true, color, alpha);
+        }
+
+        return fillReferenceIndex > 0 &&
+            TryReadSolidColorWithAlpha(fillReference, theme, colorMap, out color, out alpha)
+            ? new PptxSceneFillStyle(true, color, alpha)
+            : default;
     }
 
     private static bool HasChartShapeStyle(PptxSceneChartShapeStyle style)
