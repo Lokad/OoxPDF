@@ -18,7 +18,8 @@ internal sealed class PptxTheme
         string? minorEastAsianFont,
         string? minorComplexScriptFont,
         IReadOnlyList<XElement> fillStyles,
-        IReadOnlyList<XElement> lineStyles)
+        IReadOnlyList<XElement> lineStyles,
+        IReadOnlyList<XElement> effectStyles)
     {
         Colors = colors;
         MajorLatinFont = majorLatinFont;
@@ -29,6 +30,7 @@ internal sealed class PptxTheme
         MinorComplexScriptFont = minorComplexScriptFont;
         FillStyles = fillStyles;
         LineStyles = lineStyles;
+        EffectStyles = effectStyles;
     }
 
     public IReadOnlyDictionary<string, RgbColor> Colors { get; }
@@ -49,7 +51,9 @@ internal sealed class PptxTheme
 
     public IReadOnlyList<XElement> LineStyles { get; }
 
-    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], []);
+    public IReadOnlyList<XElement> EffectStyles { get; }
+
+    public static PptxTheme Empty { get; } = new(new Dictionary<string, RgbColor>(), null, null, null, null, null, null, [], [], []);
 
     public static PptxTheme Load(OoxPackage package, string presentationPartName)
     {
@@ -130,8 +134,13 @@ internal sealed class PptxTheme
             .Elements(DrawingNamespace + "ln")
             .Select(element => new XElement(element))
             .ToArray() ?? [];
+        IReadOnlyList<XElement> effectStyles = formatScheme?
+            .Element(DrawingNamespace + "effectStyleLst")?
+            .Elements(DrawingNamespace + "effectStyle")
+            .Select(element => new XElement(element))
+            .ToArray() ?? [];
 
-        return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript, fillStyles, lineStyles);
+        return new PptxTheme(colors, majorLatin, majorEastAsian, majorComplexScript, minorLatin, minorEastAsian, minorComplexScript, fillStyles, lineStyles, effectStyles);
     }
 
     public bool TryResolveColor(string schemeColor, out RgbColor color)
@@ -191,6 +200,18 @@ internal sealed class PptxTheme
         }
 
         lineStyle = null!;
+        return false;
+    }
+
+    public bool TryGetEffectStyle(int index, out XElement effectStyle)
+    {
+        if (index > 0 && index <= EffectStyles.Count)
+        {
+            effectStyle = EffectStyles[index - 1];
+            return true;
+        }
+
+        effectStyle = null!;
         return false;
     }
 

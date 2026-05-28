@@ -249,7 +249,9 @@ internal static class PptxTests
                           <a:round/>
                         </a:ln>
                       </a:lnStyleLst>
-                      <a:effectStyleLst/>
+                      <a:effectStyleLst>
+                        <a:effectStyle><a:effectLst><a:blur rad="6350"/></a:effectLst></a:effectStyle>
+                      </a:effectStyleLst>
                       <a:bgFillStyleLst/>
                     </a:fmtScheme>
                   </a:themeElements>
@@ -652,6 +654,7 @@ internal static class PptxTests
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleResolvedFillReferenceCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEffectReferenceCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleResolvedEffectReferenceCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFontReferenceCount);
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
@@ -666,6 +669,8 @@ internal static class PptxTests
         TestAssert.Equal(0.65d, majorGridlineStyle.FillReferenceFill.Alpha);
         TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
         TestAssert.Equal("1", majorGridlineStyle.EffectReferenceIndexValue);
+        TestAssert.True(majorGridlineStyle.EffectReferenceEffects.HasEffectList, "Expected chart style effect-reference theme resolution in the scene model.");
+        TestAssert.Equal("blur", majorGridlineStyle.EffectReferenceEffects.UnsupportedEffectNames[0]);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
         TestAssert.Equal(new RgbColor(171, 193, 35), majorGridlineStyle.Line.Color);
         TestAssert.Equal(2d, majorGridlineStyle.Line.Width);
@@ -7338,6 +7343,7 @@ internal static class PptxTests
                 node.ChartStyleFillReferenceCount,
                 node.ChartStyleResolvedFillReferenceCount,
                 node.ChartStyleEffectReferenceCount,
+                node.ChartStyleResolvedEffectReferenceCount,
                 node.ChartStyleFontReferenceCount,
                 node.HasGroupTransform
             };

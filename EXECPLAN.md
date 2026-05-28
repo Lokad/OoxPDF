@@ -15287,6 +15287,19 @@ broader call-boundary cleanup because palette fallback feeds series, point, mark
 swatch defaults. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
 non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
 
+Follow-up, 2026-05-28: theme effect styles are now preserved and chart style effect references can resolve to
+typed effect-family evidence. `PptxTheme` keeps `effectStyleLst` entries with a `TryGetEffectStyle` accessor,
+`PptxSceneChartStyleEntry` carries `EffectReferenceEffects`, and private-safe scene inspection reports resolved
+effect-reference counts. The chart-style preservation fixture now proves that `cs:effectRef idx="1"` can reach
+an effect style containing an unsupported `a:blur` without falling back to raw XML scans.
+
+This still does not render effect-style references. It removes another structural blind spot before the broader
+cascade work: Office-backed investigations can now compare explicit chart `spPr` effects, chart-style effect
+references, and renderer diagnostics from typed scene state instead of treating `effectRef` as an opaque index.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0`
+errors; focused non-slow `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused non-slow
+`pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
 Follow-up, 2026-05-28: automatic chart palette fallbacks now receive the chart source color map across chart
 drawing, legends, and data-label legend-key swatches. The color-map-aware palette path is used for bar,
 line, area, scatter, bubble, radar, pie, and doughnut renderer fallbacks, including clustered/stacked bar

@@ -142,6 +142,7 @@ internal sealed record PptxSceneNodeSnapshot(
     int ChartStyleFillReferenceCount,
     int ChartStyleResolvedFillReferenceCount,
     int ChartStyleEffectReferenceCount,
+    int ChartStyleResolvedEffectReferenceCount,
     int ChartStyleFontReferenceCount,
     int ChartRejectedPointStyleIndexCount,
     IReadOnlyList<string> ChartRejectedPointStyleIndexValues,
@@ -828,6 +829,7 @@ internal readonly record struct PptxSceneChartStyleEntry(
     PptxSceneFillStyle FillReferenceFill,
     int? EffectReferenceIndex,
     string EffectReferenceIndexValue,
+    PptxSceneChartEffectFamily EffectReferenceEffects,
     string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneChartShapeStyle ShapeStyle,
@@ -4029,6 +4031,7 @@ internal sealed class PptxSceneBuilder
             string effectReferenceIndexRaw = (string?)effectReference?.Attribute("idx") ?? string.Empty;
             int effectReferenceIndexValue = effectReference is null ? 0 : ParseOptionalIntAttribute(effectReference, "idx", 0);
             int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
+            PptxSceneChartEffectFamily effectReferenceEffects = ReadChartStyleEffectReference(effectReference, theme);
             string fontReferenceIndex = (string?)roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fontRef")
@@ -4081,6 +4084,7 @@ internal sealed class PptxSceneBuilder
                 fillReferenceFill,
                 effectReferenceIndex,
                 effectReferenceIndexRaw,
+                effectReferenceEffects,
                 fontReferenceIndex,
                 line,
                 shapeStyle,
@@ -4110,6 +4114,15 @@ internal sealed class PptxSceneBuilder
         return fillReferenceIndex > 0 &&
             TryReadSolidColorWithAlpha(fillReference, theme, colorMap, out color, out alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
+            : default;
+    }
+
+    private static PptxSceneChartEffectFamily ReadChartStyleEffectReference(XElement? effectReference, PptxTheme theme)
+    {
+        int effectReferenceIndex = PptxFormatSchemeResolver.ReadIndex(effectReference);
+        return effectReferenceIndex > 0 &&
+            theme.TryGetEffectStyle(effectReferenceIndex, out XElement effectStyle)
+            ? ReadChartEffects(effectStyle)
             : default;
     }
 
