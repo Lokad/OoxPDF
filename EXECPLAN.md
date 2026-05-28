@@ -12041,6 +12041,20 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Made PPTX chart cache-point index fallback observable in the scene model.
+`PptxSceneChartNumberPoint` and `PptxSceneChartStringPoint` now carry `HasParsedIndex` beside the resolved
+integer index and raw `idx` token. Valid sparse cache points remain marked parsed, while missing or malformed
+`idx` attributes keep the existing ordinal fallback index but are now distinguishable in model tests.
+
+This deliberately preserves current rendering behavior; it does not decide Office-equivalent handling for
+malformed or missing cache-point indices. The long-term improvement is that the implicit fallback is no
+longer invisible. Future point-key policy can compare Office PDF output against explicit source states
+instead of inferring whether a point index was genuine from the densified vector shape.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `97` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `338` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Consolidated bar-chart renderer option resolution behind `ChartBarPlotOptions`.
 The bar renderer path now resolves grouping, bar direction, `varyColors`, `gapWidth`, and `overlap` once at
 the scene/XML boundary and then passes the typed option record through primary bars, secondary/combo bars,

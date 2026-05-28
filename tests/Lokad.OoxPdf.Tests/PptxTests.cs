@@ -11745,10 +11745,12 @@ internal static class PptxTests
         TestAssert.Equal("6", lineSeries.CategoryPointCountValue);
         TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
         TestAssert.Equal("0", lineSeries.CategoryPoints[0].IndexValue);
+        TestAssert.True(lineSeries.CategoryPoints[0].HasParsedIndex, "Expected valid category cache point index tokens to remain marked parsed.");
         TestAssert.Equal("Alpha", lineSeries.CategoryPoints[0].Text);
         TestAssert.True(lineSeries.CategoryPoints[0].HasText, "Expected category cache point text presence to be explicit.");
         TestAssert.Equal(2, lineSeries.CategoryPoints[1].Index);
         TestAssert.Equal("2", lineSeries.CategoryPoints[1].IndexValue);
+        TestAssert.True(lineSeries.CategoryPoints[1].HasParsedIndex, "Expected sparse category cache point index tokens to remain marked parsed.");
         TestAssert.Equal(string.Empty, lineSeries.CategoryPoints[1].Text);
         TestAssert.True(lineSeries.CategoryPoints[1].HasText, "Expected blank category cache point to preserve its value element.");
         TestAssert.Equal(4, lineSeries.CategoryPoints[2].Index);
@@ -11763,9 +11765,11 @@ internal static class PptxTests
         TestAssert.Equal("0.00", lineSeries.ValueFormatCode ?? string.Empty);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
         TestAssert.Equal("0", lineSeries.ValuePoints[0].IndexValue);
+        TestAssert.True(lineSeries.ValuePoints[0].HasParsedIndex, "Expected valid numeric cache point index tokens to remain marked parsed.");
         TestAssert.Equal(1.25d, lineSeries.ValuePoints[0].Value ?? 0d);
         TestAssert.Equal(2, lineSeries.ValuePoints[1].Index);
         TestAssert.Equal("2", lineSeries.ValuePoints[1].IndexValue);
+        TestAssert.True(lineSeries.ValuePoints[1].HasParsedIndex, "Expected sparse numeric cache point index tokens to remain marked parsed.");
         TestAssert.True(lineSeries.ValuePoints[1].HasValueElement, "Expected blank numeric value element presence to remain explicit.");
         TestAssert.True(lineSeries.ValuePoints[1].Value is null, "Expected blank numeric point value to remain explicit.");
         TestAssert.Equal(string.Empty, lineSeries.ValuePoints[1].Text);
@@ -11796,6 +11800,46 @@ internal static class PptxTests
         TestAssert.Equal("0", scatterSeries.BubbleSizeFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.BubbleSizePoints[0].Index);
         TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
+    }
+
+    public static void PptxSceneMarksFallbackChartPointIndices()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart><c:ser>
+                <c:cat><c:strLit>
+                  <c:pt idx="futureCategory"><c:v>Alpha</c:v></c:pt>
+                  <c:pt><c:v>Beta</c:v></c:pt>
+                  <c:pt idx="4"><c:v>Gamma</c:v></c:pt>
+                </c:strLit></c:cat>
+                <c:val><c:numLit>
+                  <c:pt idx="futureValue"><c:v>1</c:v></c:pt>
+                  <c:pt><c:v>2</c:v></c:pt>
+                  <c:pt idx="4"><c:v>3</c:v></c:pt>
+                </c:numLit></c:val>
+              </c:ser></c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
+        TestAssert.Equal(0, series.CategoryPoints[0].Index);
+        TestAssert.Equal("futureCategory", series.CategoryPoints[0].IndexValue);
+        TestAssert.True(!series.CategoryPoints[0].HasParsedIndex, "Expected malformed category cache point index to be marked as an ordinal fallback.");
+        TestAssert.Equal(1, series.CategoryPoints[1].Index);
+        TestAssert.Equal(string.Empty, series.CategoryPoints[1].IndexValue);
+        TestAssert.True(!series.CategoryPoints[1].HasParsedIndex, "Expected missing category cache point index to be marked as an ordinal fallback.");
+        TestAssert.Equal(4, series.CategoryPoints[2].Index);
+        TestAssert.True(series.CategoryPoints[2].HasParsedIndex, "Expected valid category cache point index to be marked parsed.");
+
+        TestAssert.Equal(0, series.ValuePoints[0].Index);
+        TestAssert.Equal("futureValue", series.ValuePoints[0].IndexValue);
+        TestAssert.True(!series.ValuePoints[0].HasParsedIndex, "Expected malformed numeric cache point index to be marked as an ordinal fallback.");
+        TestAssert.Equal(1, series.ValuePoints[1].Index);
+        TestAssert.Equal(string.Empty, series.ValuePoints[1].IndexValue);
+        TestAssert.True(!series.ValuePoints[1].HasParsedIndex, "Expected missing numeric cache point index to be marked as an ordinal fallback.");
+        TestAssert.Equal(4, series.ValuePoints[2].Index);
+        TestAssert.True(series.ValuePoints[2].HasParsedIndex, "Expected valid numeric cache point index to be marked parsed.");
     }
 
     public static void PptxScenePreservesChartMultiLevelCategoryPoints()
@@ -13650,7 +13694,7 @@ internal static class PptxTests
         TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
         object sparseRadarVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 44d, "44", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse indexed chart vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 44d, "44", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse indexed chart vector.");
         Array sparseRadarVectors = Array.CreateInstance(vector.GetType(), 1);
         sparseRadarVectors.SetValue(sparseRadarVector, 0);
         object[] sparseRadarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [sparseRadarVectors])) ?? throw new InvalidOperationException("Expected sparse radar series.")).Cast<object>().ToArray();
@@ -13676,13 +13720,13 @@ internal static class PptxTests
         TestAssert.True((double?)scatterXWorkbookPoint.GetType().GetProperty("Value")?.GetValue(scatterXWorkbookPoint) == 8.2d, "Expected scatter workbook sidecar point to preserve the workbook source value.");
         object sparseScatterXVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 12d, "12", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 12d, "12", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
         object sparseScatterYVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 34d, "34", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 34d, "34", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
         object sparseScatterSizeVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 5d, "5", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", true, 5d, "5", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
         object sparseScatterSeriesRecord = Activator.CreateInstance(scatterSeriesType, [sparseScatterXVector, sparseScatterYVector, sparseScatterSizeVector, true]) ?? throw new InvalidOperationException("Expected sparse indexed scatter-series instance.");
         object sparseRenderedScatter = buildScatterSeries.Invoke(null, [sparseScatterSeriesRecord]) ?? throw new InvalidOperationException("Expected sparse rendered scatter-series.");
         object[] sparseScatterPoints = (((System.Collections.IEnumerable?)sparseRenderedScatter.GetType().GetProperty("Points")?.GetValue(sparseRenderedScatter)) ?? throw new InvalidOperationException("Expected sparse rendered scatter points.")).Cast<object>().ToArray();
