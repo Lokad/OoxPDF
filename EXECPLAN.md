@@ -3680,6 +3680,13 @@ High-priority actions:
   built-in table style aliases, and inherited placeholder style maps also remain open. Validation:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed
   (`17` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: chart direct formatting now carries the same source `PptxColorMap` through typed plot
+  series, point overrides, markers, data labels, per-label overrides, leader lines, custom label runs, axis
+  lines, gridlines, axis text overrides, and axis titles. The model regression now maps those surfaces through
+  an overriding slide color map alongside chart-space/title/legend coverage. Keep this item open for chart
+  color-style/style-part cascade semantics, direct renderer-only color paths, built-in table style aliases, and
+  inherited placeholder style maps. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed; focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

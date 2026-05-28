@@ -7568,6 +7568,75 @@ internal static class PptxTests
                     </c:title>
                     <c:plotArea>
                       <c:spPr><a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln></c:spPr>
+                      <c:barChart>
+                        <c:barDir val="col"/>
+                        <c:grouping val="clustered"/>
+                        <c:ser>
+                          <c:idx val="0"/>
+                          <c:order val="0"/>
+                          <c:spPr>
+                            <a:pattFill prst="pct50">
+                              <a:fgClr><a:schemeClr val="bg1"/></a:fgClr>
+                              <a:bgClr><a:schemeClr val="tx1"/></a:bgClr>
+                            </a:pattFill>
+                            <a:solidFill><a:schemeClr val="bg1"/></a:solidFill>
+                            <a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>
+                          </c:spPr>
+                          <c:marker>
+                            <c:spPr>
+                              <a:solidFill><a:schemeClr val="bg1"/></a:solidFill>
+                              <a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>
+                            </c:spPr>
+                          </c:marker>
+                          <c:dPt>
+                            <c:idx val="0"/>
+                            <c:spPr>
+                              <a:pattFill prst="ltHorz">
+                                <a:fgClr><a:schemeClr val="tx1"/></a:fgClr>
+                                <a:bgClr><a:schemeClr val="bg1"/></a:bgClr>
+                              </a:pattFill>
+                              <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
+                              <a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+                            </c:spPr>
+                          </c:dPt>
+                          <c:dLbls>
+                            <c:spPr>
+                              <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>
+                              <a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln>
+                            </c:spPr>
+                            <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                            <c:leaderLines><c:spPr><a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln></c:spPr></c:leaderLines>
+                            <c:dLbl>
+                              <c:idx val="0"/>
+                              <c:tx><c:rich><a:bodyPr/><a:p><a:r><a:rPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:rPr><a:t>Label</a:t></a:r></a:p></c:rich></c:tx>
+                              <c:spPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></c:spPr>
+                              <c:leaderLines><c:spPr><a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln></c:spPr></c:leaderLines>
+                            </c:dLbl>
+                          </c:dLbls>
+                          <c:val><c:numLit><c:ptCount val="1"/><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>
+                        </c:ser>
+                        <c:axId val="10"/>
+                        <c:axId val="20"/>
+                      </c:barChart>
+                      <c:catAx>
+                        <c:axId val="10"/>
+                        <c:scaling><c:orientation val="minMax"/></c:scaling>
+                        <c:axPos val="b"/>
+                        <c:majorGridlines><c:spPr><a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
+                        <c:title>
+                          <c:spPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></c:spPr>
+                          <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                        </c:title>
+                        <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                        <c:spPr><a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln></c:spPr>
+                        <c:crossAx val="20"/>
+                      </c:catAx>
+                      <c:valAx>
+                        <c:axId val="20"/>
+                        <c:scaling><c:orientation val="minMax"/></c:scaling>
+                        <c:axPos val="l"/>
+                        <c:crossAx val="10"/>
+                      </c:valAx>
                     </c:plotArea>
                     <c:legend>
                       <c:spPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></c:spPr>
@@ -7603,6 +7672,29 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.Title.TextStyle.Color ?? default);
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.PlotAreaStyle.Line.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.Legend.ShapeStyle.Fill.Color);
+        PptxSceneChartSeries series = chart.Plots[0].Series[0];
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.Fill.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.PatternFill.Foreground);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.PatternFill.Background);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.Line.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.Marker.Fill.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.Marker.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.PointStyles[0].Fill.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.PointStyles[0].PatternFill.Foreground);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.PointStyles[0].PatternFill.Background);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.PointStyles[0].Line.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.DataLabels.TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.DataLabels.ShapeStyle.Fill.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.DataLabels.ShapeStyle.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.DataLabels.LeaderLines.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), series.DataLabels.Overrides[0].CustomTextRuns[0].TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.DataLabels.Overrides[0].ShapeStyle.Fill.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), series.DataLabels.Overrides[0].LeaderLines.Line.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.Axes[0].MajorGridlineLine.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.Axes[0].Title.ShapeStyle.Fill.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].Title.TextStyle.Color ?? default);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()

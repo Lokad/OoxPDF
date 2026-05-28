@@ -2204,8 +2204,8 @@ internal sealed class PptxSceneBuilder
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
             : ReadChartStylePart(package, chartPart.Name, theme);
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
-        IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme);
-        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, stylePart);
+        IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
+        IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart);
         return new PptxSceneChart(
             relationshipId,
             targetPartName,
@@ -2251,7 +2251,7 @@ internal sealed class PptxSceneBuilder
             displayBlanksAs);
     }
 
-    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme)
+    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -2291,7 +2291,7 @@ internal sealed class PptxSceneBuilder
                 kindIndex,
                 plot.Elements(ChartNamespace + "ser").Count(),
                 axisIds,
-                ReadChartSeries(plot, theme, plotKind, markersEnabled == true),
+                ReadChartSeries(plot, theme, colorMap, plotKind, markersEnabled == true),
                 ParseChartGrouping(grouping),
                 grouping,
                 ParseChartBarDirection(barDirection),
@@ -2312,14 +2312,14 @@ internal sealed class PptxSceneBuilder
                 holeSizeValue,
                 firstSliceAngle,
                 firstSliceAngleValue,
-                ReadChartDataLabels(plot, theme),
+                ReadChartDataLabels(plot, theme, colorMap),
                 plot));
         }
 
         return plots;
     }
 
-    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme)
+    private static PptxSceneChartDataLabels ReadChartDataLabels(XElement plot, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? labels = plot.Element(ChartNamespace + "dLbls") ??
             plot.Elements(ChartNamespace + "ser")
@@ -2380,30 +2380,40 @@ internal sealed class PptxSceneBuilder
                 showLegendKeyValue,
                 showBubbleSize,
                 showBubbleSizeValue,
-                ReadChartLeaderLines(labels, theme),
+                ReadChartLeaderLines(labels, theme, colorMap),
                 ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
                 labels.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 numberFormat.FormatCode,
                 numberFormat,
                 ReadChartManualLayout(labels),
-                ReadChartTextStyleOverride(labels, theme),
+                ReadChartTextStyleOverride(labels, theme, colorMap),
                 ReadChartTextBodyProperties(labels),
-                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
+                ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme, colorMap),
                 ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
-                ReadChartDataLabelOverrides(labels, theme),
+                ReadChartDataLabelOverrides(labels, theme, colorMap),
                 IsDefined: true);
     }
 
     private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme)
     {
+        return ReadChartLeaderLines(labels, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneChartLeaderLines ReadChartLeaderLines(XElement labels, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? leaderLines = labels.Element(ChartNamespace + "leaderLines");
         return leaderLines is null
             ? default
-            : new PptxSceneChartLeaderLines(true, ReadChartLine(leaderLines.Element(ChartNamespace + "spPr"), theme));
+            : new PptxSceneChartLeaderLines(true, ReadChartLine(leaderLines.Element(ChartNamespace + "spPr"), theme, colorMap));
     }
 
     private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme)
+    {
+        return ReadChartDataLabelOverrides(labels, theme, PptxColorMap.Default);
+    }
+
+    private static IReadOnlyList<PptxSceneChartDataLabelOverride> ReadChartDataLabelOverrides(XElement labels, PptxTheme theme, PptxColorMap colorMap)
     {
         var overrides = new List<PptxSceneChartDataLabelOverride>();
         foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
@@ -2438,18 +2448,18 @@ internal sealed class PptxSceneBuilder
                 showLegendKeyValue,
                 showBubbleSize,
                 showBubbleSizeValue,
-                ReadChartLeaderLines(label, theme),
+                ReadChartLeaderLines(label, theme, colorMap),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
-                ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme),
+                ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme, colorMap),
                 ParseChartDataLabelPosition(ReadChartElementValue(label, "dLblPos")),
                 ReadChartElementValue(label, "dLblPos"),
                 label.Element(ChartNamespace + "separator")?.Value ?? string.Empty,
                 numberFormat.FormatCode,
                 numberFormat,
                 ReadChartManualLayout(label),
-                ReadChartTextStyleOverride(label, theme),
+                ReadChartTextStyleOverride(label, theme, colorMap),
                 ReadChartTextBodyProperties(label),
-                ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme)));
+                ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme, colorMap)));
         }
 
         return overrides;
@@ -2597,7 +2607,7 @@ internal sealed class PptxSceneBuilder
             : (IsOoxmlBooleanElementEnabled(marker), (string?)marker.Attribute("val") ?? string.Empty);
     }
 
-    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
+    private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
     {
         var series = new List<PptxSceneChartSeries>();
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
@@ -2644,17 +2654,17 @@ internal sealed class PptxSceneBuilder
                 bubbleSizePointCount,
                 bubbleSizePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "bubbleSize"),
-                ReadChartSeriesFill(seriesElement, theme),
-                ReadChartSeriesPatternFill(seriesElement, theme),
-                ReadChartSeriesLine(seriesElement, theme),
-                ReadChartMarker(seriesElement, theme, plotKind, chartMarkersEnabled, seriesIndex),
-                ReadChartPointStyles(seriesElement, theme),
+                ReadChartSeriesFill(seriesElement, theme, colorMap),
+                ReadChartSeriesPatternFill(seriesElement, theme, colorMap),
+                ReadChartSeriesLine(seriesElement, theme, colorMap),
+                ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex),
+                ReadChartPointStyles(seriesElement, theme, colorMap),
                 ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
                 explosion,
                 explosionValue,
                 smooth,
                 smoothValue,
-                ReadChartDataLabels(seriesElement, theme)));
+                ReadChartDataLabels(seriesElement, theme, colorMap)));
         }
 
         return series;
@@ -2662,20 +2672,35 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme)
     {
+        return ReadChartSeriesFill(series, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneFillStyle ReadChartSeriesFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? shapeProperties = series.Element(ChartNamespace + "spPr");
-        return TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
+        return TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
 
     private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme)
     {
-        return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme);
+        return ReadChartSeriesLine(series, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneLineStyle ReadChartSeriesLine(XElement series, PptxTheme theme, PptxColorMap colorMap)
+    {
+        return ReadChartLine(series.Element(ChartNamespace + "spPr"), theme, colorMap);
     }
 
     private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme)
     {
-        return ReadChartPatternFill(series.Element(ChartNamespace + "spPr"), theme);
+        return ReadChartSeriesPatternFill(series, theme, PptxColorMap.Default);
+    }
+
+    private static PptxScenePatternFill ReadChartSeriesPatternFill(XElement series, PptxTheme theme, PptxColorMap colorMap)
+    {
+        return ReadChartPatternFill(series.Element(ChartNamespace + "spPr"), theme, colorMap);
     }
 
     private static PptxScenePatternFill ReadChartPatternFill(XElement? shapeProperties, PptxTheme theme)
@@ -2707,6 +2732,11 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
+        return ReadChartMarker(series, theme, PptxColorMap.Default, plotKind, chartMarkersEnabled, seriesIndex);
+    }
+
+    private static PptxSceneChartMarker ReadChartMarker(XElement series, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
+    {
         XElement? marker = series.Element(ChartNamespace + "marker");
         string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
             ReadDefaultChartMarkerSymbol(plotKind, chartMarkersEnabled, seriesIndex);
@@ -2718,10 +2748,10 @@ internal sealed class PptxSceneBuilder
             marker is not null,
             marker?.Element(ChartNamespace + "spPr") is not null);
         XElement? shapeProperties = marker?.Element(ChartNamespace + "spPr");
-        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+        PptxSceneFillStyle fill = TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
             : default;
-        return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme));
+        return new PptxSceneChartMarker(marker is not null, ParseChartMarkerSymbol(symbol), symbol, sizeValue, size, fill, ReadChartLine(shapeProperties, theme, colorMap));
     }
 
     private static string ReadDefaultChartMarkerSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
@@ -2742,6 +2772,11 @@ internal sealed class PptxSceneBuilder
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
     {
+        return ReadChartPointStyles(series, theme, PptxColorMap.Default);
+    }
+
+    private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme, PptxColorMap colorMap)
+    {
         var styles = new List<PptxSceneChartPointStyle>();
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
@@ -2755,9 +2790,9 @@ internal sealed class PptxSceneBuilder
             styles.Add(new PptxSceneChartPointStyle(
                 index,
                 indexValue,
-                ReadChartPointFill(shapeProperties, theme),
-                ReadChartPointPatternFill(shapeProperties, theme),
-                ReadChartLine(shapeProperties, theme),
+                ReadChartPointFill(shapeProperties, theme, colorMap),
+                ReadChartPointPatternFill(shapeProperties, theme, colorMap),
+                ReadChartLine(shapeProperties, theme, colorMap),
                 explosion,
                 explosionValue));
         }
@@ -2788,14 +2823,24 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme)
     {
-        return TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor color, out double alpha)
+        return ReadChartPointFill(shapeProperties, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
+        return TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
 
     private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme)
     {
-        return ReadChartPatternFill(shapeProperties, theme);
+        return ReadChartPointPatternFill(shapeProperties, theme, PptxColorMap.Default);
+    }
+
+    private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
+        return ReadChartPatternFill(shapeProperties, theme, colorMap);
     }
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)
@@ -2907,6 +2952,11 @@ internal sealed class PptxSceneBuilder
 
     internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme)
     {
+        return ReadChartTextRuns(text, theme, PptxColorMap.Default);
+    }
+
+    internal static IReadOnlyList<PptxSceneChartTextRun> ReadChartTextRuns(XElement? text, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? rich = text?.Element(ChartNamespace + "rich");
         if (rich is null)
         {
@@ -2928,7 +2978,7 @@ internal sealed class PptxSceneBuilder
                 continue;
             }
 
-            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(run.Element(DrawingNamespace + "rPr"), theme)));
+            runs.Add(new PptxSceneChartTextRun(runText, ReadChartTextRunStyle(run.Element(DrawingNamespace + "rPr"), theme, colorMap)));
         }
 
         return runs;
@@ -3059,7 +3109,7 @@ internal sealed class PptxSceneBuilder
         return points;
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxSceneChartStyle stylePart)
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap, PptxSceneChartStyle stylePart)
     {
         XElement? plotArea = chartXml?
             .Descendants(ChartNamespace + "plotArea")
@@ -3129,12 +3179,12 @@ internal sealed class PptxSceneBuilder
                 IsChartGridlineVisible(minorGridlines),
                 majorGridlines is not null,
                 minorGridlines is not null,
-                ReadChartAxisLine(axis, theme),
-                ReadChartGridlineLine(majorGridlines, theme),
-                ReadChartGridlineLine(minorGridlines, theme),
+                ReadChartAxisLine(axis, theme, colorMap),
+                ReadChartGridlineLine(majorGridlines, theme, colorMap),
+                ReadChartGridlineLine(minorGridlines, theme, colorMap),
                 ReadChartStyleRoleLine(stylePart, "gridlineMajor"),
                 ReadChartStyleRoleLine(stylePart, "gridlineMinor"),
-                ReadChartTextStyleOverride(axis, theme),
+                ReadChartTextStyleOverride(axis, theme, colorMap),
                 ParseChartTickLabelPosition(tickLabelPosition),
                 tickLabelPosition,
                 ParseChartAxisTickMark(majorTickMark),
@@ -3151,7 +3201,7 @@ internal sealed class PptxSceneBuilder
                 noMultiLevelLabelsValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
-                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme)));
+                ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme, colorMap)));
         }
 
         return axes;
@@ -3170,6 +3220,11 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme)
     {
+        return ReadChartAxisLine(axis, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneLineStyle ReadChartAxisLine(XElement axis, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? shapeProperties = axis.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
@@ -3177,7 +3232,7 @@ internal sealed class PptxSceneBuilder
             return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null);
         }
 
-        return ReadChartLine(shapeProperties, theme);
+        return ReadChartLine(shapeProperties, theme, colorMap);
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartTextStyleOverride(XElement? parent, PptxTheme theme)
@@ -3236,6 +3291,11 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme)
     {
+        return ReadChartTextRunStyle(runProperties, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
         if (runProperties is null)
         {
             return default;
@@ -3252,7 +3312,7 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha)
+        RgbColor? color = TryReadSolidColorWithAlpha(runProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = ReadOptionalOoxmlBooleanAttribute(runProperties, "b");
@@ -3339,6 +3399,11 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
     {
+        return ReadChartGridlineLine(gridlines, theme, PptxColorMap.Default);
+    }
+
+    private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? shapeProperties = gridlines?.Element(ChartNamespace + "spPr");
         XElement? line = shapeProperties?.Element(DrawingNamespace + "ln");
         if (line?.Element(DrawingNamespace + "noFill") is not null)
@@ -3346,7 +3411,7 @@ internal sealed class PptxSceneBuilder
             return new PptxSceneLineStyle(true, new RgbColor(0, 0, 0), 0d, 0d, [], null, null, null, null, null, null, null);
         }
 
-        return ReadChartLine(shapeProperties, theme);
+        return ReadChartLine(shapeProperties, theme, colorMap);
     }
 
     private static double? ReadChartAxisScalingValue(XElement axis, string elementName)
@@ -3447,7 +3512,7 @@ internal sealed class PptxSceneBuilder
 
         return new PptxSceneChartTitle(
             string.IsNullOrWhiteSpace(text) ? null : text,
-            ReadChartTextRuns(textElement, theme),
+            ReadChartTextRuns(textElement, theme, colorMap),
             isAutoDeleted,
             isAutoDeletedValue,
             IsAutoGenerated: false,
