@@ -1088,6 +1088,43 @@ internal static class PptxTests
         TestAssert.Equal("-25400", tile.OffsetYValue ?? string.Empty);
     }
 
+    public static void PptxPlaceholderMatchingPrefersExactThenIndex()
+    {
+        XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";
+        XElement slideShape = XElement.Parse("""
+            <p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+              <p:nvSpPr><p:cNvPr id="1" name="Slide"/><p:nvPr><p:ph type="body" idx="7"/></p:nvPr></p:nvSpPr>
+            </p:sp>
+            """);
+        XDocument exactSource = XDocument.Parse("""
+            <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+              <p:cSld><p:spTree>
+                <p:sp><p:nvSpPr><p:cNvPr id="2" name="IndexOnly"/><p:nvPr><p:ph idx="7"/></p:nvPr></p:nvSpPr></p:sp>
+                <p:sp><p:nvSpPr><p:cNvPr id="3" name="Exact"/><p:nvPr><p:ph type="body" idx="7"/></p:nvPr></p:nvSpPr></p:sp>
+              </p:spTree></p:cSld>
+            </p:sldLayout>
+            """);
+        XDocument indexSource = XDocument.Parse("""
+            <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+              <p:cSld><p:spTree>
+                <p:sp><p:nvSpPr><p:cNvPr id="4" name="TypeOnly"/><p:nvPr><p:ph type="body" idx="8"/></p:nvPr></p:nvSpPr></p:sp>
+                <p:sp><p:nvSpPr><p:cNvPr id="5" name="IndexOnly"/><p:nvPr><p:ph idx="7"/></p:nvPr></p:nvSpPr></p:sp>
+              </p:spTree></p:cSld>
+            </p:sldLayout>
+            """);
+        System.Reflection.MethodInfo findInheritedPlaceholders = typeof(PptxRenderer).GetMethod(
+            "FindInheritedPlaceholderShapes",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected placeholder matcher.");
+
+        object exactResult = findInheritedPlaceholders.Invoke(null, [slideShape, new[] { exactSource }]) ?? throw new InvalidOperationException("Expected exact placeholder result.");
+        object indexResult = findInheritedPlaceholders.Invoke(null, [slideShape, new[] { indexSource }]) ?? throw new InvalidOperationException("Expected index placeholder result.");
+        IReadOnlyList<XElement> exactMatches = (IReadOnlyList<XElement>)exactResult;
+        IReadOnlyList<XElement> indexMatches = (IReadOnlyList<XElement>)indexResult;
+
+        TestAssert.Equal("Exact", exactMatches[0].Descendants(p + "cNvPr").First().Attribute("name")?.Value ?? string.Empty);
+        TestAssert.Equal("IndexOnly", indexMatches[0].Descendants(p + "cNvPr").First().Attribute("name")?.Value ?? string.Empty);
+    }
+
     public static void PptxSyntheticShapesProduceDrawingOperators()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

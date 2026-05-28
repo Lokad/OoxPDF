@@ -3095,6 +3095,14 @@ High-priority actions:
   behind slide content, and treat placeholders as inheritance templates for geometry/body/text styles.
 - [ ] Port `pptx-renderer` placeholder matching rules: match by `idx` before type, handle default/body/title
   fallback consistently, and keep placeholder geometry separate from text-body inheritance.
+  - [x] 2026-05-28 Tighten text placeholder matching to explicit exact-match before fallback:
+    the renderer text-model/layout matcher and the scene text-style matcher now select explicit `type+idx`
+    placeholder matches before falling back to same-`idx` or normalized type matches, and missing placeholder
+    type is normalized to `body` only for the fallback stage. A focused matcher regression locks the case where
+    an idx-only placeholder appears before a later exact body placeholder, plus the case where idx fallback
+    should beat a different-index type match. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+    passed with zero warnings; focused `pptx-model` passed (`13 passed, 0 failed, 0 skipped`); focused non-slow
+    `pptx-typography` passed (`92 passed, 0 failed, 2 skipped`).
 - [ ] Port `pptx-renderer` text cascade layers as explicit records:
   `defaultTextStyle`, master text styles, master placeholder, layout placeholder, shape list style,
   paragraph properties, default run properties, and run properties.
