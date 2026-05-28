@@ -13351,6 +13351,49 @@ internal static class PptxTests
         TestAssert.True(xmlBacked is null, "Expected XML-only fallback to report the missing bar plot instead of using scene data.");
     }
 
+    public static void PptxChartPlotElementsSelectionUsesSceneSources()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:barDir val="col"/>
+                  <c:axId val="10"/><c:axId val="20"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+                <c:barChart>
+                  <c:barDir val="bar"/>
+                  <c:axId val="10"/><c:axId val="30"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        XDocument mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readPlotElements = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartPlotElements",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot elements resolver.");
+        object sceneBacked = readPlotElements.Invoke(null, [chart, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected scene-backed bar plots.");
+        object xmlBacked = readPlotElements.Invoke(null, [null, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected XML-backed plot list.");
+
+        IReadOnlyList<XElement> scenePlots = (IReadOnlyList<XElement>)sceneBacked;
+        IReadOnlyList<XElement> xmlPlots = (IReadOnlyList<XElement>)xmlBacked;
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        TestAssert.Equal(2, scenePlots.Count);
+        TestAssert.Equal("col", scenePlots[0].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("bar", scenePlots[1].Element(chartNamespace + "barDir")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal(0, xmlPlots.Count);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

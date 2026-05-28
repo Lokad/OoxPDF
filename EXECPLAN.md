@@ -2601,11 +2601,13 @@ High-priority actions:
     while individual children continue moving into typed fields. The chart-title bar-baseline resolver uses
     this scene-owned source element instead of asking the fallback chart XML for the first `barChart`; the
     line/right-legend plot-box branch now uses the same scene-or-XML selector for line/area/scatter plot-kind
-    existence and series-name layout. The XML lookup remains only for no-scene compatibility. A regression
-    pairs a scene-owned horizontal bar chart with mismatched fallback line-chart XML and verifies scene-backed
-    selection still returns the bar plot while XML-only selection reports no bar plot. Validation:
+    existence and series-name layout, and the multi-bar visible-value-axis adjustment now enumerates scene plot
+    sources instead of pairing typed plots with independently scanned raw XML by ordinal. The XML lookup remains
+    only for no-scene compatibility. Regressions pair scene-owned bar charts with mismatched fallback line-chart
+    XML and verify scene-backed selection still returns the bar plot/source list while XML-only selection reports
+    no bar plots. Validation:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-charts`
-    passed (`111 passed, 0 failed, 0 skipped`).
+    passed (`112 passed, 0 failed, 0 skipped`).
   - [x] 2026-05-28 Preserve and emit chart text underline/strike style:
     `PptxSceneChartTextStyleOverride` and the renderer's `ChartTextStyleOverride` now carry underline and
     strike state from chart `txPr`, chart-style role text defaults, direct title/legend/axis/data-label

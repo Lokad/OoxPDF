@@ -194,6 +194,18 @@ internal sealed partial class PptxRenderer
         return ReadChartPlotElements(chartXml, kind).FirstOrDefault();
     }
 
+    private static IReadOnlyList<XElement> ReadSceneOrXmlChartPlotElements(PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlotKind kind)
+    {
+        if (sceneChart is not null)
+        {
+            return ReadSceneChartPlots(sceneChart, kind)
+                .Select(plot => plot.Source)
+                .ToArray();
+        }
+
+        return ReadChartPlotElements(chartXml, kind);
+    }
+
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {
         return chart?.Plots
@@ -7862,8 +7874,8 @@ internal sealed partial class PptxRenderer
             return plotBox;
         }
 
-        IReadOnlyList<XElement> barCharts = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Bar);
         IReadOnlyList<PptxSceneChartPlot> barPlots = ReadSceneChartPlots(sceneChart, PptxSceneChartPlotKind.Bar);
+        IReadOnlyList<XElement> barCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         int plotCount = Math.Max(barCharts.Count, barPlots.Count);
         if (plotCount < 2)
         {
