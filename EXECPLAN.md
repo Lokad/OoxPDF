@@ -1387,6 +1387,10 @@ High-priority actions:
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
   `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
   tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
+- [x] Cover unsupported PPTX gradient text fill explicitly:
+  a targeted synthetic test now proves `a:rPr/a:gradFill` remains diagnostic-covered and does not get mistaken
+  for the supported shape/background linear-gradient path. The current renderer still falls back to black text for
+  this unsupported text fill; the diagnostic keeps the missing structural text-gradient renderer visible.
 - [x] Next PPTX typography sequence: add diagnostics for Office-vs-candidate word starts per visual line,
   then use those diagnostics to tighten justified text spacing without relying on late-game MAE.
   `tools/ComparePdfTextLineStarts.ps1` now groups inspected PDF text operations by visual line and compares

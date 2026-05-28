@@ -151,6 +151,12 @@ internal sealed partial class PptxRenderer
 
     private static bool IsUnsupportedGradientFill(XElement gradientFill)
     {
+        XName? ownerName = gradientFill.Parent?.Name;
+        if (ownerName != PresentationNamespace + "spPr" && ownerName != PresentationNamespace + "bgPr")
+        {
+            return true;
+        }
+
         if (gradientFill.Element(DrawingNamespace + "lin") is null)
         {
             return true;
@@ -272,9 +278,12 @@ internal sealed partial class PptxRenderer
         XElement? lineOwner = owner?.Parent;
         XElement? gradientStopList = fill?.Parent;
         XElement? gradientFill = gradientStopList?.Parent;
+        XElement? gradientOwner = gradientFill?.Parent;
         bool supportedUniformGradientFill = fill?.Name == DrawingNamespace + "gs" &&
             gradientStopList?.Name == DrawingNamespace + "gsLst" &&
             gradientFill?.Name == DrawingNamespace + "gradFill" &&
+            gradientOwner?.Name is { } ownerName &&
+            (ownerName == PresentationNamespace + "spPr" || ownerName == PresentationNamespace + "bgPr") &&
             !IsUnsupportedGradientFill(gradientFill);
         bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
             owner?.Name == PresentationNamespace + "spPr";

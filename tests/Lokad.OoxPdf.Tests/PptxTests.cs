@@ -2502,6 +2502,55 @@ internal static class PptxTests
         TestAssert.DoesNotContain(" h\r\nS", pdf);
     }
 
+    public static void PptxSyntheticGradientTextFillEmitsDiagnosticUntilTextGradientExists()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr/><a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="2400">
+                        <a:gradFill><a:gsLst>
+                          <a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs>
+                          <a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs>
+                        </a:gsLst><a:lin ang="0"/></a:gradFill>
+                        <a:latin typeface="Arial"/>
+                      </a:rPr><a:t>Gradient text</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Runs)
+            .Single(textRun => textRun.Text == "Gradient text");
+        TestAssert.Equal("FallbackBlack", run.ColorSource);
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Gradient text fill should remain diagnostic-covered until text gradients are rendered structurally.");
+    }
+
     public static void PptxSyntheticTextBoxUsesThemeHyperlinkColor()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
