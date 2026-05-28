@@ -2710,6 +2710,11 @@ High-priority actions:
     verified the join path with four COM label records while preserving the existing PDF structural deltas
     (`DataLabelText` `8/8`, cluster max delta `262.481pt`, leader-line counts `1/4`). The next real Office
     regeneration can now compare COM coordinates, saved XML factors, and Office PDF boxes in one summary.
+    2026-05-28 update: the summary tool also auto-discovers
+    `artifacts/office-probe-metadata/<pptx-basename>/com-metadata.json` when `-Pptx` is supplied, keeping
+    explicit `-ComMetadataJson` as the override. A temporary ignored sidecar verified the default path reports
+    `ChartComMetadataDataLabelCount=4`, so future Office regeneration does not need an extra manual argument
+    to keep COM/PDF/XML evidence together.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report

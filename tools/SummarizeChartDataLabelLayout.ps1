@@ -51,6 +51,29 @@ function Read-JsonObject($path) {
     return Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
 }
 
+function Resolve-ComMetadataJsonPath([string] $explicitPath, [string] $pptxPath) {
+    if (-not [string]::IsNullOrWhiteSpace($explicitPath)) {
+        return $explicitPath
+    }
+
+    if ([string]::IsNullOrWhiteSpace($pptxPath)) {
+        return ""
+    }
+
+    $fixtureName = [System.IO.Path]::GetFileNameWithoutExtension($pptxPath)
+    if ([string]::IsNullOrWhiteSpace($fixtureName)) {
+        return ""
+    }
+
+    $repoRoot = Split-Path -Parent $PSScriptRoot
+    $candidate = Join-Path $repoRoot ("artifacts/office-probe-metadata/{0}/com-metadata.json" -f $fixtureName)
+    if (Test-Path -LiteralPath $candidate) {
+        return $candidate
+    }
+
+    return ""
+}
+
 function Round([double] $value) {
     return [Math]::Round($value, 6)
 }
@@ -654,6 +677,7 @@ $referenceLabelClusters = Group-TextClusters $referenceLabels
 $candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
+$ComMetadataJson = Resolve-ComMetadataJsonPath $ComMetadataJson $Pptx
 $comMetadata = Read-JsonObject $ComMetadataJson
 $chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml $Pptx $ChartPart $comMetadata
 $referencePolarPlotBox = Select-PrimaryKind $referenceGraphics "PolarPlotBoxCandidate"
