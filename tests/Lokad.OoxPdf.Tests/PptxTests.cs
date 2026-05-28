@@ -2880,6 +2880,8 @@ internal static class PptxTests
         TestAssert.Equal(0d, frame.InsetRight);
         TestAssert.Equal(36d, frame.InsetTop);
         TestAssert.Equal(0d, frame.InsetBottom);
+        TestAssert.Equal(180d, frame.TextHeight);
+        TestAssert.True(frame.VerticalOffset > 162d, "Expected inherited normAutofit scale to affect bottom-anchor height estimation.");
         TestAssert.Equal("InheritedBodyPr", frame.InsetLeftSource);
         TestAssert.Equal("DirectBodyPr", frame.InsetRightSource);
         TestAssert.Equal("InheritedBodyPr", frame.InsetTopSource);
@@ -6176,6 +6178,8 @@ internal static class PptxTests
                 {
                     models[frameIndex].TextX,
                     models[frameIndex].TextWidth,
+                    models[frameIndex].TextHeight,
+                    models[frameIndex].VerticalOffset,
                     models[frameIndex].InsetLeft,
                     models[frameIndex].InsetRight,
                     models[frameIndex].InsetTop,

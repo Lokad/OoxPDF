@@ -104,6 +104,8 @@ internal sealed record PptxTextRunSnapshot(
 internal sealed record PptxTextFrameModelSnapshot(
     double TextX,
     double TextWidth,
+    double TextHeight,
+    double VerticalOffset,
     double InsetLeft,
     double InsetRight,
     double InsetTop,

@@ -28,6 +28,8 @@ internal sealed partial class PptxRenderer
         return new PptxTextFrameModelSnapshot(
             frame.TextX,
             frame.TextWidth,
+            frame.TextHeight,
+            frame.VerticalOffset,
             frame.Insets.Left,
             frame.Insets.Right,
             frame.Insets.Top,
@@ -251,12 +253,12 @@ internal sealed partial class PptxRenderer
         {
             TextVerticalAnchor.Top when inheritedTextBody is not null => ReadTextVerticalAnchor(inheritedTextBody) switch
             {
-                TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)) / 2d),
-                TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)),
+                TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)) / 2d),
+                TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)),
                 _ => 0d
             },
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)),
             _ => 0d
         };
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
@@ -399,8 +401,8 @@ internal sealed partial class PptxRenderer
             BuildParagraphStyleCascade(textBody, textBody, inheritedPlaceholders: [], placeholderSources, "lvl1pPr").Sources.ToArray());
         double verticalOffset = bodyProperties.VerticalAnchor switch
         {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, tableFrame.TextStyle)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, tableFrame.TextStyle)),
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties, tableFrame.TextStyle)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties, tableFrame.TextStyle)),
             _ => 0d
         };
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(

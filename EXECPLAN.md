@@ -12040,6 +12040,25 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: The PPTX vertical-anchor text-height estimator now consumes resolved
+`PptxTextBodyProperties` instead of re-reading only the local `a:bodyPr`. `EstimateTextHeight` applies the
+model-owned `normAutofit @fontScale`, `@lnSpcReduction` line-spacing scale, inherited `compatLnSpc`, and
+resolved wrap mode when calculating the height used for middle/bottom anchoring. Shape text and table-cell
+text both pass their resolved body-property model into this estimate, while table text still carries the
+table-style bold/italic context that affects wrapping.
+
+The private-safe frame-model snapshot now exposes `TextHeight` and `VerticalOffset`, so future deck probes can
+compare anchor geometry structurally without relying on screenshots or private text. The mixed placeholder
+body-property regression locks the important inherited case: inherited `normAutofit` scale now changes the
+bottom-anchor offset through the same model state used by actual line layout. Remaining bodyPr work is no
+longer the estimator itself; the next durable gaps are raw-token preservation for invalid/future numeric
+bodyPr values and continued replacement of raw-XML render-site lookups with model-owned state as those
+features are touched.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `88` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-28: Inherited PPTX text-body insets now resolve structurally from the same
 shape -> inherited placeholder `a:bodyPr` chain as the other scalar body properties. `PptxTextBodyProperties`
 keeps per-edge inset source tags, `PptxTextFrameModelSnapshot` exposes both inset values and per-edge

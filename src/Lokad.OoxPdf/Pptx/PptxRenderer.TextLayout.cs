@@ -3011,25 +3011,32 @@ internal sealed partial class PptxRenderer
         XElement? defaultParagraphProperties,
         PptxTheme theme,
         double textWidth,
+        PptxTextBodyProperties? bodyProperties = null,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
-        bool compatibleLineSpacing = HasCompatibleLineSpacing(textBody);
-        bool allowWrapping = TextBodyAllowsWrapping(textBody);
+        double fontScale = bodyProperties?.FontScale ?? 1d;
+        double lineSpacingScale = bodyProperties?.LineSpacingScale ?? 1d;
+        bool compatibleLineSpacing = bodyProperties?.CompatibleLineSpacing ?? HasCompatibleLineSpacing(textBody);
+        bool allowWrapping = bodyProperties is { } resolvedBodyProperties
+            ? TextBodyAllowsWrapping(resolvedBodyProperties)
+            : TextBodyAllowsWrapping(textBody);
         bool hasEstimatedParagraph = false;
         foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
         {
             XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
             XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
                 defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
-            LineSpacing lineSpacing = ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing);
+            LineSpacing lineSpacing = ApplyCompatibleLineSpacing(
+                ReadLineSpacing(paragraphProperties, defaultParagraphProperties),
+                compatibleLineSpacing).ScaleExplicit(lineSpacingScale);
             if (!ParagraphHasVisibleContent(paragraph))
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {
                     XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                    double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties);
+                    double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties) * fontScale;
                     if (hasEstimatedParagraph)
                     {
                         height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", emptyFontSize);
@@ -3043,7 +3050,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties);
+            double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties) * fontScale;
             if (hasEstimatedParagraph)
             {
                 height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", paragraphFontSize);
@@ -3075,7 +3082,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-                double fontSize = ReadFontSize(runProperties, defaultRunProperties);
+                double fontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
                 string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
                 bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
                     (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
