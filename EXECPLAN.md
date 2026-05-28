@@ -3672,6 +3672,14 @@ High-priority actions:
   this item open: chart colors, direct renderer paths, built-in table style color aliases, and inherited
   placeholder style maps still need source-aware color-map ownership. Validation: focused non-slow `pptx-model`
   passed (`17` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: scene chart parsing now threads the current source `PptxColorMap` into chart-owned
+  chart-space, plot-area, title, and legend style consumers: explicit fills, lines, pattern fills, gradients,
+  glow, outer shadow, and chart text-style overrides resolve `schemeClr` aliases through the slide/layout/master
+  source map instead of the default aliases. Keep this item open: chart series, point, marker, data-label,
+  axis, color-style, and chart-style-part colors still need source-aware map ownership; direct renderer paths,
+  built-in table style aliases, and inherited placeholder style maps also remain open. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed
+  (`17` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

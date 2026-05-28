@@ -7480,6 +7480,7 @@ internal static class PptxTests
                   <Default Extension="xml" ContentType="application/xml"/>
                   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
                   <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
                   <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
                 </Types>
                 """,
@@ -7489,6 +7490,12 @@ internal static class PptxTests
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
                   <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """,
             ["ppt/presentation.xml"] = BasicPresentation(),
@@ -7508,7 +7515,10 @@ internal static class PptxTests
                 """,
             ["ppt/slides/slide1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr>
                       <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>
@@ -7530,9 +7540,40 @@ internal static class PptxTests
                   <p:pic>
                     <p:blipFill><a:blip><a:duotone><a:schemeClr val="bg1"/><a:schemeClr val="tx1"/></a:duotone></a:blip></p:blipFill>
                     <p:spPr><a:xfrm><a:off x="1828800" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr>
-                  </p:pic></p:spTree></p:cSld>
+                  </p:pic>
+                  <p:graphicFrame>
+                    <p:xfrm><a:off x="2743200" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
+                    <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rIdChart"/></a:graphicData></a:graphic>
+                  </p:graphicFrame></p:spTree></p:cSld>
                   <p:clrMapOvr><a:overrideClrMapping bg1="accent5" tx1="accent6"/></p:clrMapOvr>
                 </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:spPr>
+                    <a:pattFill prst="pct25">
+                      <a:fgClr><a:schemeClr val="bg1"/></a:fgClr>
+                      <a:bgClr><a:schemeClr val="tx1"/></a:bgClr>
+                    </a:pattFill>
+                    <a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>
+                    <a:effectLst><a:glow rad="63500"><a:schemeClr val="bg1"/></a:glow></a:effectLst>
+                  </c:spPr>
+                  <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                  <c:chart>
+                    <c:title>
+                      <c:spPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></c:spPr>
+                      <c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>
+                    </c:title>
+                    <c:plotArea>
+                      <c:spPr><a:ln><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:ln></c:spPr>
+                    </c:plotArea>
+                    <c:legend>
+                      <c:spPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></c:spPr>
+                    </c:legend>
+                  </c:chart>
+                </c:chartSpace>
                 """
         });
 
@@ -7552,6 +7593,16 @@ internal static class PptxTests
         PptxSceneImageRecolor recolor = scene.Slides[0].SlideNodes[2].Picture!.Recolor;
         TestAssert.Equal(new RgbColor(17, 34, 51), recolor.Dark);
         TestAssert.Equal(new RgbColor(68, 85, 102), recolor.Light);
+        PptxSceneChart chart = scene.Slides[0].SlideNodes[3].Chart ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ChartAreaStyle.PatternFill.Foreground);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ChartAreaStyle.PatternFill.Background);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ChartAreaStyle.Line.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ChartAreaStyle.Glow.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.Title.ShapeStyle.Fill.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.Title.TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.PlotAreaStyle.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.Legend.ShapeStyle.Fill.Color);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()
