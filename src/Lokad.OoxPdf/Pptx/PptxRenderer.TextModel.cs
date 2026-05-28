@@ -641,7 +641,7 @@ internal sealed partial class PptxRenderer
             XElement? defaultParagraphProperties = MergeParagraphProperties(cascade.Sources.ToArray());
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
@@ -724,6 +724,7 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxTextRunModel> BuildRunModels(
         XElement paragraph,
         ResolvedParagraphTextStyle paragraphStyle,
+        PptxParagraphStyleCascade resolvedParagraphStyleCascade,
         RgbColor? shapeFontColor,
         PptxTheme theme,
         int slideNumber,
@@ -736,7 +737,7 @@ internal sealed partial class PptxRenderer
             if (child.Name == DrawingNamespace + "br")
             {
                 XElement? breakProperties = child.Element(DrawingNamespace + "rPr");
-                PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, paragraphStyle.DefaultRunProperties);
+                PptxRunStyleCascade breakCascade = BuildRunStyleCascade("break.rPr", breakProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
                 runs.Add(new PptxTextRunModel(
                     PptxTextRunKind.Break,
                     child,
@@ -753,7 +754,7 @@ internal sealed partial class PptxRenderer
             }
 
             XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-            PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, paragraphStyle.DefaultRunProperties);
+            PptxRunStyleCascade textRunCascade = BuildRunStyleCascade("run.rPr", runProperties, resolvedParagraphStyleCascade, paragraphStyle.DefaultRunProperties);
             runs.Add(new PptxTextRunModel(
                 child.Name == DrawingNamespace + "fld" ? PptxTextRunKind.Field : PptxTextRunKind.Text,
                 child,
@@ -769,15 +770,37 @@ internal sealed partial class PptxRenderer
     private static PptxRunStyleCascade BuildRunStyleCascade(
         string runPropertiesLayerName,
         XElement? runProperties,
+        PptxParagraphStyleCascade resolvedParagraphStyleCascade,
         XElement? paragraphDefaultRunProperties)
     {
-        return new PptxRunStyleCascade(
-        [
-            new PptxRunStyleLayer(runPropertiesLayerName, PptxRunStyleLayerKind.RunProperties, runProperties),
-            new PptxRunStyleLayer(
+        var layers = new List<PptxRunStyleLayer>
+        {
+            new(runPropertiesLayerName, PptxRunStyleLayerKind.RunProperties, runProperties),
+            new(
                 "paragraph.defRPr",
                 PptxRunStyleLayerKind.ParagraphDefaultRunProperties,
                 paragraphDefaultRunProperties)
-        ]);
+        };
+        layers.AddRange(resolvedParagraphStyleCascade.Layers
+            .Select(layer => new PptxRunStyleLayer(
+                $"{layer.Name}.defRPr",
+                RunDefaultLayerKind(layer.Kind),
+                layer.Source?.Element(DrawingNamespace + "defRPr"))));
+        return new PptxRunStyleCascade(layers);
+    }
+
+    private static PptxRunStyleLayerKind RunDefaultLayerKind(PptxParagraphStyleLayerKind paragraphLayerKind)
+    {
+        return paragraphLayerKind switch
+        {
+            PptxParagraphStyleLayerKind.ShapeListStyle => PptxRunStyleLayerKind.ShapeListStyleDefaultRunProperties,
+            PptxParagraphStyleLayerKind.MasterPlaceholderListStyle => PptxRunStyleLayerKind.MasterPlaceholderDefaultRunProperties,
+            PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle => PptxRunStyleLayerKind.LayoutPlaceholderDefaultRunProperties,
+            PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle => PptxRunStyleLayerKind.InheritedPlaceholderDefaultRunProperties,
+            PptxParagraphStyleLayerKind.InheritedTextStyle => PptxRunStyleLayerKind.InheritedTextStyleDefaultRunProperties,
+            PptxParagraphStyleLayerKind.DefaultTextStyle => PptxRunStyleLayerKind.DefaultTextStyleDefaultRunProperties,
+            PptxParagraphStyleLayerKind.ParagraphProperties => PptxRunStyleLayerKind.ParagraphPropertiesDefaultRunProperties,
+            _ => PptxRunStyleLayerKind.ParagraphDefaultRunProperties
+        };
     }
 }

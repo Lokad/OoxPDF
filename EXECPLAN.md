@@ -1415,6 +1415,14 @@ High-priority actions:
   `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable
   layer kinds. This makes the direct run `rPr` versus inherited paragraph default `defRPr` split testable without
   changing run-style resolution or PDF emission.
+- [x] Expand run-style cascade diagnostics back to paragraph/default provenance:
+  run snapshots still expose the resolved flattened `paragraph.defRPr` layer used for current behavior, but they now
+  also list each contributing paragraph/default `defRPr` source (`layout.placeholder.lstStyle.defRPr`,
+  `inherited.txStyle.defRPr`, `defaultTextStyle.defRPr`, and related kinds). This keeps the existing text output
+  unchanged while making run default ownership auditable before the eventual full seven-level resolver replaces
+  flattened XML inputs. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` and
+  `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
+  passed (`92 passed, 0 failed, 2 skipped`).
 - [x] Expose the resolved paragraph-style cascade separately from default paragraph inputs:
   paragraph snapshots now keep the inherited/default cascade (`shape.lstStyle`, placeholders, inherited text style,
   `defaultTextStyle`) and a second resolved-style provenance chain that appends direct `paragraph.pPr` as a typed

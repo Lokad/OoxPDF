@@ -469,7 +469,14 @@ internal sealed partial class PptxRenderer
     private enum PptxRunStyleLayerKind
     {
         RunProperties,
-        ParagraphDefaultRunProperties
+        ParagraphDefaultRunProperties,
+        ParagraphPropertiesDefaultRunProperties,
+        ShapeListStyleDefaultRunProperties,
+        InheritedPlaceholderDefaultRunProperties,
+        MasterPlaceholderDefaultRunProperties,
+        LayoutPlaceholderDefaultRunProperties,
+        InheritedTextStyleDefaultRunProperties,
+        DefaultTextStyleDefaultRunProperties
     }
 
     private sealed record PptxRunStyleLayer(

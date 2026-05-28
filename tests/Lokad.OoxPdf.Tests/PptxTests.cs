@@ -987,8 +987,14 @@ internal static class PptxTests
         TestAssert.True(textFrame.Paragraphs[0].Runs[0].ResolvedCascadeSourceCount >= 2, "Expected run model to expose direct and inherited run-style inputs.");
         TestAssert.Contains("run.rPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
         TestAssert.Contains("paragraph.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
+        TestAssert.Contains("layout.placeholder.lstStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
+        TestAssert.Contains("inherited.txStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
+        TestAssert.Contains("defaultTextStyle.defRPr", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerNames));
         TestAssert.Contains("RunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
         TestAssert.Contains("ParagraphDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
+        TestAssert.Contains("LayoutPlaceholderDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
+        TestAssert.Contains("InheritedTextStyleDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
+        TestAssert.Contains("DefaultTextStyleDefaultRunProperties", string.Join("|", textFrame.Paragraphs[0].Runs[0].CascadeLayerKinds));
         TestAssert.Equal(26d, textFrame.Paragraphs[0].Runs[0].FontSize);
         TestAssert.True(textFrame.Paragraphs[0].Runs[0].Underline, "Expected text model to preserve resolved run underline before layout.");
         TestAssert.Equal(new RgbColor(255, 255, 0), textFrame.Paragraphs[0].Runs[0].Highlight ?? default);
