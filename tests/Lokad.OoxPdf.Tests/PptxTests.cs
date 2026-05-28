@@ -1401,7 +1401,23 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output);
 
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneNode shapeNode = scene.Slides[0].SlideNodes[0];
+        PptxSceneNodeSnapshot shapeSnapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
         string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Equal(0, shapeNode.Shape?.FillReference.Index ?? -1);
+        TestAssert.True(shapeNode.Shape?.FillReference.Reference is not null, "Expected fillRef provenance even when idx=0 does not resolve a theme style.");
+        TestAssert.True(shapeNode.Shape?.FillReference.Style is null, "Expected idx=0 fillRef to remain unresolved against the theme fill style list.");
+        TestAssert.Equal(2, shapeNode.Shape?.LineReference.Index ?? 0);
+        TestAssert.True(shapeNode.Shape?.LineReference.Reference is not null, "Expected line reference XML ownership in the shape scene model.");
+        TestAssert.True(shapeNode.Shape?.LineReference.Style is not null, "Expected line reference to resolve through the theme line style list.");
+        TestAssert.Equal(0, shapeSnapshot.ShapeFillReferenceIndex);
+        TestAssert.True(!shapeSnapshot.ShapeFillReferenceResolved, "Expected private-safe inspection to expose unresolved fillRef state.");
+        TestAssert.Equal(2, shapeSnapshot.ShapeLineReferenceIndex);
+        TestAssert.True(shapeSnapshot.ShapeLineReferenceResolved, "Expected private-safe inspection to expose resolved lnRef state.");
         TestAssert.Contains("1.5 w", pdf);
         TestAssert.Contains("0.753 0 0 RG", pdf);
         TestAssert.Contains("72 396 144 72 re S", pdf);

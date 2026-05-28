@@ -42,6 +42,10 @@ internal sealed record PptxSceneNodeSnapshot(
     bool FlipVertical,
     bool HasShape,
     string ShapePreset,
+    int ShapeFillReferenceIndex,
+    bool ShapeFillReferenceResolved,
+    int ShapeLineReferenceIndex,
+    bool ShapeLineReferenceResolved,
     bool HasTextBody,
     int TextParagraphCount,
     int TextRunCount,
@@ -484,6 +488,8 @@ internal sealed record PptxSceneShape(
     IReadOnlyDictionary<string, double> PresetAdjustments,
     bool HasCustomGeometry,
     PptxSceneCustomGeometry CustomGeometry,
+    PptxFormatSchemeReference FillReference,
+    PptxFormatSchemeReference LineReference,
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
@@ -4227,7 +4233,9 @@ internal sealed class PptxSceneBuilder
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-        PptxSceneLineStyle line = TryReadShapeLine(shape, shapeProperties, theme, colorMap, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
+        PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        PptxSceneLineStyle line = TryReadShapeLine(shapeProperties, theme, colorMap, lineReference, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
             ? new PptxSceneLineStyle(
                 true,
                 lineColor,
@@ -4252,7 +4260,9 @@ internal sealed class PptxSceneBuilder
             ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
-            TryReadShapeFill(shape, shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
+            fillReference,
+            lineReference,
+            TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
             TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
@@ -4608,7 +4618,13 @@ internal sealed class PptxSceneBuilder
              preset.Contains("DnDiag", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool TryReadShapeFill(XElement shape, XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
+    private static bool TryReadShapeFill(
+        XElement? shapeProperties,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        PptxFormatSchemeReference fillReference,
+        out RgbColor color,
+        out double alpha)
     {
         if (shapeProperties?.Element(DrawingNamespace + "noFill") is not null)
         {
@@ -4622,7 +4638,6 @@ internal sealed class PptxSceneBuilder
             return true;
         }
 
-        PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
         if (fillReference.Style is not null &&
             TryReadSolidColorWithAlpha(fillReference.Style, theme, colorMap, fillReference.Reference, out color, out alpha))
         {
@@ -4632,7 +4647,14 @@ internal sealed class PptxSceneBuilder
         return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, colorMap, out color, out alpha);
     }
 
-    private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double lineWidth, out double alpha)
+    private static bool TryReadShapeLine(
+        XElement? shapeProperties,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        PptxFormatSchemeReference lineReference,
+        out RgbColor color,
+        out double lineWidth,
+        out double alpha)
     {
         XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
         if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
@@ -4643,7 +4665,7 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        double? styleLineWidth = TryReadStyleLineWidth(shape, theme, out double inheritedLineWidth)
+        double? styleLineWidth = TryReadStyleLineWidth(lineReference, out double inheritedLineWidth)
             ? inheritedLineWidth
             : null;
         if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, styleLineWidth))
@@ -4651,7 +4673,6 @@ internal sealed class PptxSceneBuilder
             return true;
         }
 
-        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
         if (lineReference.Style is null)
         {
             color = default;
@@ -4674,9 +4695,8 @@ internal sealed class PptxSceneBuilder
         return false;
     }
 
-    private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
+    private static bool TryReadStyleLineWidth(PptxFormatSchemeReference lineReference, out double lineWidth)
     {
-        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
         if (lineReference.Style?.Attribute("w") is { } widthAttribute)
         {
             lineWidth = OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture));

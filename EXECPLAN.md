@@ -3705,6 +3705,16 @@ High-priority actions:
   provenance instead of renderer-local decisions. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
   --nologo -v minimal` passed with zero warnings; focused non-slow `pptx-model` passed (`13 passed, 0 failed,
   1 skipped`) and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
+  2026-05-28 progress: shape scene records now preserve resolved `fillRef`/`lnRef` provenance directly as
+  `PptxFormatSchemeReference` values, including the raw reference node, parsed index, and resolved theme
+  style when available. Scene inspection exposes private-safe fill/line reference index and resolved-state
+  fields, and `ReadShape` now resolves each reference once before feeding shape fill/line construction. Keep
+  this item open: chart-style format references still use their separate typed entry model, `effectRef` and
+  `fontRef` are not structurally resolved through the same format-scheme stage, and default shape style/fallback
+  ordering still needs an Office-aligned resolver rather than scattered renderer-local defaults. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-shapes` passed
+  (`18` passed, `0` failed, `0` skipped); focused non-slow `pptx-model` passed (`17` passed, `0` failed,
+  `1` skipped).
 - [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
   text direction, vertical text, multi-column text, and unsupported diagnostics where rendering is absent.
   2026-05-28 audit: shape text already has model-owned source-tagged `bodyPr` handling for insets, anchors,
