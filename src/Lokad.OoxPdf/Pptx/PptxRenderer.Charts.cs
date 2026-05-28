@@ -4284,7 +4284,8 @@ internal sealed partial class PptxRenderer
             width,
             height,
             style,
-            TextAlignment.Center);
+            TextAlignment.Center,
+            fontResolver);
         return RenderTextRuns(runs, graphics, "CT", fontResolver);
     }
 
@@ -4529,7 +4530,7 @@ internal sealed partial class PptxRenderer
         style = MergeChartTextStyle(style, titleTextStyle);
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
-        double textWidth = Math.Max(style.FontSize, EstimateChartTextWidth(trimmed, style.FontSize));
+        double textWidth = Math.Max(style.FontSize, MeasureChartTextWidth(trimmed, style, fontResolver));
         if (!IsRenderableDefaultChartAxisTitle(axisKind, positionKind))
         {
             return [];
@@ -4614,7 +4615,8 @@ internal sealed partial class PptxRenderer
             frame.Width,
             frame.Height,
             style,
-            TextAlignment.Center);
+            TextAlignment.Center,
+            fontResolver);
         return RenderTextRuns(runs, graphics, "CAT", fontResolver);
     }
 
@@ -4661,7 +4663,8 @@ internal sealed partial class PptxRenderer
             frame.Width,
             frame.Height,
             style,
-            TextAlignment.Left);
+            TextAlignment.Left,
+            fontResolver);
         double rotation = -90d;
         for (int i = 0; i < runs.Count; i++)
         {
@@ -4718,7 +4721,8 @@ internal sealed partial class PptxRenderer
             titleBox.Width,
             titleBox.Height,
             style,
-            TextAlignment.Center);
+            TextAlignment.Center,
+            fontResolver);
         return RenderTextRuns(runs, graphics, "CAT", fontResolver);
     }
 
@@ -5244,7 +5248,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style);
+        ChartLegendBox legendBox = ResolveChartLegendBox(frame, plotBox, entries, layout, style, fontResolver);
 
         RenderChartShapeStyle(graphics, legendBox.X, legendBox.ClipY, legendBox.Width, legendBox.ClipHeight, layout.ShapeStyle);
 
@@ -5252,8 +5256,8 @@ internal sealed partial class PptxRenderer
         for (int i = 0; i < entries.Count; i++)
         {
             ChartLegendEntry entry = entries[i];
-            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(entries, style.FontSize, legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
-            double entryWidth = legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style.FontSize, legendBox.MarkerSize) : legendBox.Width;
+            double entryX = legendBox.Horizontal ? GetPackedHorizontalLegendEntryX(entries, style, fontResolver, legendBox.MarkerSize, legendBox.X, i) : legendBox.X;
+            double entryWidth = legendBox.Horizontal ? GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, fontResolver, legendBox.MarkerSize) : legendBox.Width;
             double y = legendBox.Horizontal ? legendBox.FirstY : legendBox.FirstY - i * legendBox.LineHeight;
             double markerBaselineFactor = legendBox.Horizontal || legendBox.SideStrokeLegend
                 ? PptxChartMetricRules.LegendHorizontalMarkerBaselineFactor
@@ -5324,7 +5328,7 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CL", fontResolver);
     }
 
-    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style)
+    private static ChartLegendBox ResolveChartLegendBox(ChartFrameBox frame, ChartPlotBox plotBox, IReadOnlyList<ChartLegendEntry> entries, ChartLegendLayout layout, ChartTextStyle style, PresentationFontResolver? fontResolver)
     {
         double fontSize = style.FontSize;
         double markerSize = fontSize * PptxChartMetricRules.LegendMarkerSizeFactor;
@@ -5348,12 +5352,12 @@ internal sealed partial class PptxRenderer
             ? fontSize * PptxChartMetricRules.LegendSideStrokeTextGapFactor
             : PptxChartMetricRules.LegendTextGap;
         double width = horizontal
-            ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, fontSize, markerSize))
+            ? Math.Min(plotBox.Width, GetPackedHorizontalLegendWidth(entries, style, fontResolver, markerSize))
             : Math.Max(
                 sideStrokeLegend || sideFillLegendInFullFrame
                     ? 0d
                     : Math.Max(PptxChartMetricRules.LegendMinimumSideWidth, plotBox.Width * PptxChartMetricRules.LegendSideWidthRatio),
-                GetSideLegendContentWidth(entries, fontSize, markerWidth, textGap));
+                GetSideLegendContentWidth(entries, style, fontResolver, markerWidth, textGap));
         double x = layout.PositionKind switch
         {
             PptxSceneChartLegendPosition.Left when sideFillLegendInFullFrame => frame.X + frame.Width * PptxChartMetricRules.LegendFullFrameSideInsetRatio,
@@ -5414,23 +5418,23 @@ internal sealed partial class PptxRenderer
             : stroke;
     }
 
-    private static double GetPackedHorizontalLegendWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerSize)
+    private static double GetPackedHorizontalLegendWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, PresentationFontResolver? fontResolver, double markerSize)
     {
         double width = 0d;
         foreach (ChartLegendEntry entry in entries)
         {
-            width += GetPackedHorizontalLegendEntryWidth(entry.Name, fontSize, markerSize);
+            width += GetPackedHorizontalLegendEntryWidth(entry.Name, style, fontResolver, markerSize);
         }
 
         return Math.Max(1d, width);
     }
 
-    private static double GetSideLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerWidth, double textGap)
+    private static double GetSideLegendContentWidth(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, PresentationFontResolver? fontResolver, double markerWidth, double textGap)
     {
         double contentWidth = entries.Count == 0
             ? 0d
-            : entries.Max(entry => markerWidth + textGap + EstimateChartTextWidth(entry.Name, fontSize));
-        return Math.Max(fontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
+            : entries.Max(entry => markerWidth + textGap + MeasureChartTextWidth(entry.Name, style, fontResolver));
+        return Math.Max(style.FontSize * PptxChartMetricRules.LegendSideFillMinimumWidthFactor, contentWidth);
     }
 
     private static bool IsSameChartBox(ChartPlotBox plotBox, ChartFrameBox frame)
@@ -5442,20 +5446,20 @@ internal sealed partial class PptxRenderer
             Math.Abs(plotBox.Height - frame.Height) <= tolerance;
     }
 
-    private static double GetPackedHorizontalLegendEntryX(IReadOnlyList<ChartLegendEntry> entries, double fontSize, double markerSize, double legendX, int entryIndex)
+    private static double GetPackedHorizontalLegendEntryX(IReadOnlyList<ChartLegendEntry> entries, ChartTextStyle style, PresentationFontResolver? fontResolver, double markerSize, double legendX, int entryIndex)
     {
         double x = legendX;
         for (int i = 0; i < entryIndex; i++)
         {
-            x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, fontSize, markerSize);
+            x += GetPackedHorizontalLegendEntryWidth(entries[i].Name, style, fontResolver, markerSize);
         }
 
         return x;
     }
 
-    private static double GetPackedHorizontalLegendEntryWidth(string name, double fontSize, double markerSize)
+    private static double GetPackedHorizontalLegendEntryWidth(string name, ChartTextStyle style, PresentationFontResolver? fontResolver, double markerSize)
     {
-        return markerSize + PptxChartMetricRules.LegendTextGap + EstimateChartTextWidth(name, fontSize);
+        return markerSize + PptxChartMetricRules.LegendTextGap + MeasureChartTextWidth(name, style, fontResolver);
     }
 
     private static bool IsOoxmlTrue(string? value)
@@ -5541,7 +5545,7 @@ internal sealed partial class PptxRenderer
 
                 if (!string.IsNullOrEmpty(label))
                 {
-                    AddPolarChartLabelRuns(runs, labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment);
+                    AddPolarChartLabelRuns(runs, labelParts, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver);
                 }
             }
             angle += sweep;
@@ -5670,7 +5674,7 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left);
+                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, TextAlignment.Left, fontResolver);
                         }
                     }
                 }
@@ -5728,7 +5732,7 @@ internal sealed partial class PptxRenderer
 
                         if (!string.IsNullOrEmpty(label))
                         {
-                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment);
+                            AddChartLabelRuns(runs, label, effectiveOptions, textX, labelBox.Y, textWidth, labelBox.Height, plotBox, style, alignment, fontResolver);
                         }
                     }
                 }
@@ -5798,7 +5802,7 @@ internal sealed partial class PptxRenderer
                         ? GetStrokeMarkerDataLabelLegendKeyWidth(fontSize, ChartMarker(seriesIndex, markerStyles))
                         : 0d;
                     double effectiveLabelWidth = effectiveOptions.ShowLegendKey
-                        ? Math.Max(labelWidth, EstimateChartTextWidth(label, fontSize) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
+                        ? Math.Max(labelWidth, MeasureChartTextWidth(label, style, fontResolver) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor)
                         : labelWidth;
                     (double labelX, double labelY, TextAlignment alignment) = ResolveLineDataLabelPosition(
                         effectiveOptions.PositionKind,
@@ -5832,7 +5836,8 @@ internal sealed partial class PptxRenderer
                             labelBox.Height,
                             plotBox,
                             style,
-                            alignment);
+                            alignment,
+                            fontResolver);
                     }
                 }
             }
@@ -5991,7 +5996,7 @@ internal sealed partial class PptxRenderer
                     : 0d;
                 double labelWidth = Math.Max(
                     PptxChartMetricRules.CartesianDataLabelMinimumWidth,
-                    EstimateChartTextWidth(label, fontSize) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
+                    MeasureChartTextWidth(label, style, fontResolver) + legendKeyWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
                 (double pointX, double pointY, double radius) = ResolveScatterPointGeometry(
                     plotBox,
                     point,
@@ -6029,7 +6034,8 @@ internal sealed partial class PptxRenderer
                         labelBox.Height,
                         plotBox,
                         style,
-                        alignment);
+                        alignment,
+                        fontResolver);
                 }
             }
         }
@@ -6187,7 +6193,7 @@ internal sealed partial class PptxRenderer
         return CreateChartTextRun(text, x, y, width, height, plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height, style, alignment);
     }
 
-    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
+    private static void AddChartLabelRuns(List<TextRun> runs, string text, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver = null)
     {
         ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
         if (options.CustomTextRuns.Count == 0)
@@ -6196,30 +6202,30 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment);
+        AddChartRichTextRuns(runs, options.CustomTextRuns, text, x, y, width, height, clipBox.X, clipBox.Y, clipBox.Width, clipBox.Height, style, alignment, fontResolver);
     }
 
-    private static void AddPolarChartLabelRuns(List<TextRun> runs, IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
+    private static void AddPolarChartLabelRuns(List<TextRun> runs, IReadOnlyList<string> parts, string fallbackText, ChartDataLabelOptions options, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver = null)
     {
         ChartLayoutBox clipBox = ResolveDataLabelTextClipBox(plotBox, options, x, y, width, height);
         if (parts.Count <= 1 || options.CustomTextRuns.Count > 0 || !ShouldSplitPolarDataLabelParts(options))
         {
-            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment);
+            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
             return;
         }
 
         ChartTextRunLayout[] labelRuns = parts
             .Where(part => !string.IsNullOrWhiteSpace(part))
-            .Select(part => new ChartTextRunLayout(part, style, Math.Max(0d, EstimateChartTextWidth(part, style.FontSize))))
+            .Select(part => new ChartTextRunLayout(part, style, Math.Max(0d, MeasureChartTextWidth(part, style, fontResolver))))
             .Where(run => run.Width > 0d)
             .ToArray();
         if (labelRuns.Length <= 1)
         {
-            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment);
+            AddChartLabelRuns(runs, fallbackText, options, x, y, width, height, plotBox, style, alignment, fontResolver);
             return;
         }
 
-        double separatorWidth = EstimateChartTextWidth(GetChartDataLabelSeparator(options), style.FontSize);
+        double separatorWidth = MeasureChartTextWidth(GetChartDataLabelSeparator(options), style, fontResolver);
         double totalWidth = labelRuns.Sum(run => run.Width) + separatorWidth * Math.Max(0, labelRuns.Length - 1);
         double cursor = alignment switch
         {
@@ -6256,7 +6262,7 @@ internal sealed partial class PptxRenderer
         return new ChartLayoutBox(left, top, Math.Max(1d, right - left), Math.Max(1d, bottom - top));
     }
 
-    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment)
+    private static void AddChartRichTextRuns(List<TextRun> runs, IReadOnlyList<ChartTextRunOverride> richTextRuns, string fallbackText, double x, double y, double width, double height, double clipX, double clipY, double clipWidth, double clipHeight, ChartTextStyle style, TextAlignment alignment, PresentationFontResolver? fontResolver = null)
     {
         if (richTextRuns.Count == 0)
         {
@@ -6269,7 +6275,7 @@ internal sealed partial class PptxRenderer
             .Select(run =>
             {
                 ChartTextStyle runStyle = MergeChartTextStyle(style, run.TextStyle);
-                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, EstimateChartTextWidth(run.Text, runStyle.FontSize)));
+                return new ChartTextRunLayout(run.Text, runStyle, Math.Max(0d, MeasureChartTextWidth(run.Text, runStyle, fontResolver)));
             })
             .Where(run => run.Width > 0d)
             .ToArray();
@@ -7112,7 +7118,7 @@ internal sealed partial class PptxRenderer
         double maxLabelWidth = tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0")
-            .Max(label => EstimateChartTextWidth(label, fontSize));
+            .Max(label => MeasureChartTextWidth(label, style, fontResolver));
         double valueAxisLabelWidth = Math.Max(
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
@@ -7192,19 +7198,27 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount;
     }
 
-    private static double EstimateChartTextWidth(string text, double fontSize)
+    private static double MeasureChartTextWidth(string text, ChartTextStyle style, PresentationFontResolver? fontResolver)
     {
-        double width = 0d;
-        foreach (char ch in text)
-        {
-            width += char.IsWhiteSpace(ch)
-                ? fontSize * PptxChartMetricRules.ValueAxisLabelWhitespaceWidthFactor
-                : char.IsDigit(ch)
-                    ? fontSize * PptxChartMetricRules.ValueAxisLabelDigitWidthFactor
-                    : fontSize * PptxChartMetricRules.ValueAxisLabelCharacterWidthFactor;
-        }
+        return MeasureChartTextWidth(
+            text,
+            style.FontSize,
+            style.FontFamily,
+            style.Bold,
+            style.Italic,
+            fontResolver);
+    }
 
-        return width;
+    private static double MeasureChartTextWidth(string text, double fontSize, string? fontFamily = null, bool bold = false, bool italic = false, PresentationFontResolver? fontResolver = null)
+    {
+        var estimator = new TextAdvanceEstimator(fontResolver);
+        return estimator.Measure(
+            text,
+            fontSize,
+            fontFamily,
+            bold,
+            italic,
+            kerningEnabled: true);
     }
 
     private static int GetValueAxisSideSlot(PptxSceneChartAxis? primarySceneAxis, XElement? primaryAxis, PptxSceneChartAxis? secondarySceneAxis, XElement secondaryAxis, bool defaultPrimaryRightSide, bool defaultSecondaryRightSide)
@@ -8778,7 +8792,7 @@ internal sealed partial class PptxRenderer
         double maxLabelWidth = tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0")
-            .Max(label => EstimateChartTextWidth(label, fontSize));
+            .Max(label => MeasureChartTextWidth(label, fontSize));
         double labelWidth = Math.Max(
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
@@ -9531,7 +9545,7 @@ internal sealed partial class PptxRenderer
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => EstimateChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => MeasureChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);
@@ -9556,7 +9570,7 @@ internal sealed partial class PptxRenderer
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => EstimateChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => MeasureChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);
@@ -9650,7 +9664,7 @@ internal sealed partial class PptxRenderer
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => EstimateChartTextWidth(name.ActiveName, legendFontSize));
+            : seriesNames.Max(name => MeasureChartTextWidth(name.ActiveName, legendFontSize));
         int maxLegendTextLength = seriesNames.Count == 0
             ? 0
             : seriesNames.Max(name => name.ActiveName.Length);
@@ -10454,14 +10468,14 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, i, pointCount);
+            ChartRadarLabelFrame frame = ResolveRadarCategoryLabelFrame(layout, label, style, fontResolver, i, pointCount);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
         }
 
         return RenderTextRuns(runs, graphics, "RCA", fontResolver);
     }
 
-    private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, int index, int pointCount)
+    private static ChartRadarLabelFrame ResolveRadarCategoryLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, PresentationFontResolver? fontResolver, int index, int pointCount)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
@@ -10473,7 +10487,7 @@ internal sealed partial class PptxRenderer
         double cosine = Math.Cos(angle);
         double anchorX = geometry.CenterX + cosine * (geometry.Radius + horizontalGap);
         double anchorY = geometry.CenterY + Math.Sin(angle) * (geometry.Radius + verticalGap);
-        double width = Math.Max(fontSize * 2d, EstimateChartTextWidth(label, fontSize) + fontSize);
+        double width = Math.Max(fontSize * 2d, MeasureChartTextWidth(label, style, fontResolver) + fontSize);
         TextAlignment alignment = cosine > 0.25d
             ? TextAlignment.Left
             : cosine < -0.25d

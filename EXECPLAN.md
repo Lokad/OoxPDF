@@ -15007,6 +15007,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 passed with `99` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `406`
 tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: chart text layout width measurement no longer uses the renderer-local
+`EstimateChartTextWidth` character-count heuristic. Chart titles, axis titles, legends, rich data-label runs,
+value-axis strip reserves, right-legend reserves, and radar category-label frames now measure text through
+`TextAdvanceEstimator`, using the resolved chart text style and `PresentationFontResolver` when that context is
+available and the default presentation font boundary for older plot-reservation paths that still only carry a
+fallback font size. The obsolete whitespace/digit/character width constants were removed from
+`PptxChartMetricRules`.
+
+This is a structural alignment step, not the endpoint. The plot-box reservation helpers for line/area/scatter,
+bubble, and multi-value-axis bar charts still do not receive the fully resolved chart text style or font
+resolver; they now avoid the worst character heuristic, but the long-term fix is to make chart layout consume a
+typed chart-text measurement service sourced from the common text-frame model instead of ad hoc style reads.
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `133` tests, `0` failures, and `0` skips; full non-slow console runner passed with
+`406` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
