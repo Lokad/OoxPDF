@@ -15145,3 +15145,12 @@ rather than only its font size. A regression verifies that increasing the value-
 the left-side plot reserve. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
 focused non-slow `pptx-charts` passed with `135` tests, `0` failures, and `0` skips; full non-slow console
 runner passed with `408` tests, `0` failures, and `7` slow skips.
+
+Follow-up, 2026-05-28: radar value-axis label frames now use `ChartTextMeasurer` instead of only
+`fontSize * ValueWidthFactor`. The existing radar value-label width factor remains as a minimum, but long
+numeric labels can now expand their text frame from the resolved value-axis `ChartTextStyle`, matching the
+measurement boundary already used by radar category labels and Cartesian value-axis labels. A focused
+reflection regression verifies that a longer radar value-axis label produces a wider frame. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
+with `136` tests, `0` failures, and `0` skips; full non-slow console runner passed with `409` tests, `0`
+failures, and `7` slow skips.

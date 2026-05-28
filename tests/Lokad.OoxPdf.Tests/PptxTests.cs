@@ -14086,6 +14086,49 @@ internal static class PptxTests
         TestAssert.True(largeX > smallX, "Expected larger value-axis text style to reserve more left-side plot space.");
     }
 
+    public static void PptxChartRadarValueAxisLabelFrameMeasuresTextWidth()
+    {
+        Type plotBoxType = typeof(PptxRenderer).GetNestedType(
+            "ChartPlotBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart plot box.");
+        Type geometryType = typeof(PptxRenderer).GetNestedType(
+            "ChartPolarGeometry",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart polar geometry.");
+        Type radarStyleType = typeof(PptxRenderer).GetNestedType(
+            "ChartRadarStyle",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart radar style.");
+        Type labelRulesType = typeof(PptxRenderer).GetNestedType(
+            "ChartRadarLabelRules",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart radar label rules.");
+        Type layoutType = typeof(PptxRenderer).GetNestedType(
+            "ChartRadarLayout",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart radar layout.");
+        Type textStyleType = typeof(PptxRenderer).GetNestedType(
+            "ChartTextStyle",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text style.");
+        Type textMeasurerType = typeof(PptxRenderer).GetNestedType(
+            "ChartTextMeasurer",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart text measurer.");
+
+        object plotBox = Activator.CreateInstance(plotBoxType, [0d, 0d, 300d, 200d]) ?? throw new InvalidOperationException("Expected chart plot box.");
+        object geometry = Activator.CreateInstance(geometryType, [150d, 100d, 80d]) ?? throw new InvalidOperationException("Expected chart geometry.");
+        object radarStyle = Enum.Parse(radarStyleType, "Marker");
+        object labelRules = Activator.CreateInstance(labelRulesType, [0.65d, 0.41d, -0.309d, -0.005d, 0.397d, 1.01d, 0.25d, 3.0d]) ?? throw new InvalidOperationException("Expected radar label rules.");
+        object layout = Activator.CreateInstance(layoutType, [plotBox, geometry, radarStyle, 4, labelRules]) ?? throw new InvalidOperationException("Expected radar layout.");
+        object style = Activator.CreateInstance(textStyleType, ["Arial", 8.5d, new RgbColor(0, 0, 0), 1d, false, false, false, false, null, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+        object textMeasurer = Activator.CreateInstance(textMeasurerType, [null]) ?? throw new InvalidOperationException("Expected chart text measurer.");
+        System.Reflection.MethodInfo resolveFrame = typeof(PptxRenderer).GetMethod(
+            "ResolveRadarValueAxisLabelFrame",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected radar value-axis label frame resolver.");
+
+        object shortFrame = resolveFrame.Invoke(null, [layout, "1", style, textMeasurer, 0.5d]) ?? throw new InvalidOperationException("Expected short radar frame.");
+        object longFrame = resolveFrame.Invoke(null, [layout, "1000000", style, textMeasurer, 0.5d]) ?? throw new InvalidOperationException("Expected long radar frame.");
+        double shortWidth = (double)(shortFrame.GetType().GetProperty("Width")?.GetValue(shortFrame) ?? 0d);
+        double longWidth = (double)(longFrame.GetType().GetProperty("Width")?.GetValue(longFrame) ?? 0d);
+
+        TestAssert.True(longWidth > shortWidth, "Expected radar value-axis label frames to expand for measured label text.");
+    }
+
     public static void PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

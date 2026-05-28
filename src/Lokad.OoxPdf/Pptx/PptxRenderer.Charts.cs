@@ -10613,25 +10613,28 @@ internal sealed partial class PptxRenderer
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         ChartPlotBox plotBox = layout.PlotBox;
+        var textMeasurer = new ChartTextMeasurer(fontResolver);
         var runs = new List<TextRun>();
         foreach (double tickValue in GetChartAxisTickValues(extents, axisUnits.MajorUnit, includeEndpoints: true))
         {
             double ratio = GetChartValuePlotRatio(extents, tickValue, false);
             string label = FormatSceneOrXmlChartAxisLabel(tickValue, sceneAxis, valueAxis);
-            ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, style, ratio);
+            ChartRadarLabelFrame frame = ResolveRadarValueAxisLabelFrame(layout, label, style, textMeasurer, ratio);
             runs.Add(CreateChartLabelRun(label, frame.X, frame.Y, frame.Width, frame.Height, plotBox, style, frame.Alignment));
         }
 
         return RenderTextRuns(runs, graphics, "RVA", fontResolver);
     }
 
-    private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, ChartTextStyle style, double ratio)
+    private static ChartRadarLabelFrame ResolveRadarValueAxisLabelFrame(ChartRadarLayout layout, string label, ChartTextStyle style, ChartTextMeasurer textMeasurer, double ratio)
     {
         ChartPolarGeometry geometry = layout.Geometry;
         double fontSize = style.FontSize;
         double height = fontSize * PptxChartMetricRules.AxisLabelHeightFactor;
         ChartRadarLabelRules labelRules = layout.LabelRules;
-        double width = fontSize * labelRules.ValueWidthFactor;
+        double width = Math.Max(
+            fontSize * labelRules.ValueWidthFactor,
+            textMeasurer.Measure(label, style) + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
         double x = geometry.CenterX - width - fontSize * labelRules.ValueGapFactor;
         double y = ResolveRadarValueAxisLabelBaselineY(layout, ratio, height);
         return new ChartRadarLabelFrame(x, y, width, height, TextAlignment.Right);
