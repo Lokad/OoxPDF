@@ -42,6 +42,7 @@ internal sealed record PptxSceneNodeSnapshot(
     bool FlipVertical,
     bool HasShape,
     string ShapePreset,
+    bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
     int ShapeLineReferenceIndex,
@@ -490,6 +491,7 @@ internal sealed record PptxSceneShape(
     PptxSceneCustomGeometry CustomGeometry,
     PptxFormatSchemeReference FillReference,
     PptxFormatSchemeReference LineReference,
+    bool NoFill,
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
@@ -4402,6 +4404,7 @@ internal sealed class PptxSceneBuilder
             ReadCustomGeometry(shapeProperties),
             fillReference,
             lineReference,
+            shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
             TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,

@@ -13197,6 +13197,21 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved explicit PPTX shape `a:noFill` provenance in the scene model.
+`PptxSceneShape` now carries `NoFill` separately from `Fill.HasFill`, and `PptxSceneNodeSnapshot` plus the
+private-safe layout diagnostic expose `ShapeNoFill`. This closes a structural ambiguity where explicit
+no-fill, absent fill, and unresolved fill-reference state all collapsed to the same false solid-fill value.
+
+The shape renderer now honors scene-owned `NoFill` before consulting the legacy source-XML fill fallback.
+This does not remove all `PptxRenderer.Shapes` XML fallback yet: absent/unresolved solid fill, pattern/gradient
+fallback, effects, and some geometry still need typed scene ownership before the source XML can disappear.
+The next shape slices should keep splitting explicit OOXML intent from effective rendering state instead of
+adding another narrow fallback branch.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`17` tests, `0` failures, and `1` slow skip.
+
 Revision note, 2026-05-28: Chart data-label text-body rotation now survives the renderer option boundary.
 `ChartDataLabelOptions` and `ChartDataLabelOverride` carry the scene-owned or XML fallback
 `txPr/a:bodyPr @rot` metadata as `PptxSceneChartTextBodyProperties`, and per-label override resolution

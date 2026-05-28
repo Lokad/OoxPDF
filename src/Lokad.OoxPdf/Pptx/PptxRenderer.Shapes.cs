@@ -80,6 +80,7 @@ internal sealed partial class PptxRenderer
             shape.Shape.PresetAdjustments,
             shape.Shape.HasCustomGeometry,
             shape.Shape.CustomGeometry,
+            shape.Shape.NoFill,
             ToFillStyle(shape.Shape.Fill),
             ToGradientFill(shape.Shape.GradientFill),
             ToShapePatternFill(shape.Shape.PatternFill),
@@ -107,6 +108,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, double>? presetAdjustmentsOverride,
         bool hasCustomGeometry,
         PptxSceneCustomGeometry? customGeometryOverride,
+        bool noFillOverride,
         FillStyle? fillOverride,
         GradientFill? gradientFillOverride,
         ShapePatternFill? patternFillOverride,
@@ -140,6 +142,12 @@ internal sealed partial class PptxRenderer
             fill = resolvedFill.Color;
             fillAlpha = resolvedFill.Alpha;
             hasFill = true;
+        }
+        else if (noFillOverride)
+        {
+            fill = default;
+            fillAlpha = 1d;
+            hasFill = false;
         }
         else
         {
