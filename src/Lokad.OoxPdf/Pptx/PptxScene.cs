@@ -2241,7 +2241,7 @@ internal sealed class PptxSceneBuilder
             : ReadChartColorStyle(package, chartPart.Name, theme, colorMap);
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
-            : ReadChartStylePart(package, chartPart.Name, theme);
+            : ReadChartStylePart(package, chartPart.Name, theme, colorMap);
         IReadOnlyList<RgbColor>? paletteColors = colorStyle.Colors.Count == 0 ? null : colorStyle.Colors;
         IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
         IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart);
@@ -3782,7 +3782,7 @@ internal sealed class PptxSceneBuilder
         return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
     }
 
-    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme)
+    private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap)
     {
         OoxRelationship? styleRelationship = package.GetRelationships(chartPartName)
             .FirstOrDefault(relationship => !relationship.IsExternal &&
@@ -3805,10 +3805,10 @@ internal sealed class PptxSceneBuilder
             stylePart.Name,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
             document,
-            ReadChartStyleEntries(document, theme));
+            ReadChartStyleEntries(document, theme, colorMap));
     }
 
-    private static IReadOnlyList<PptxSceneChartStyleEntry> ReadChartStyleEntries(XDocument document, PptxTheme theme)
+    private static IReadOnlyList<PptxSceneChartStyleEntry> ReadChartStyleEntries(XDocument document, PptxTheme theme, PptxColorMap colorMap)
     {
         if (document.Root is null)
         {
@@ -3839,20 +3839,29 @@ internal sealed class PptxSceneBuilder
                 ?.Attribute("idx") ?? string.Empty;
             PptxSceneLineStyle line = lineReferenceIndex is not null &&
                 lineReference is not null &&
-                TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle resolvedLine)
+                TryReadThemeLineReference(
+                    new PptxFormatSchemeReference(
+                        lineReference,
+                        PptxFormatSchemeResolver.ReadIndex(lineReference),
+                        null),
+                    theme,
+                    colorMap,
+                    out PptxSceneLineStyle resolvedLine)
                     ? resolvedLine
                     : default;
             PptxSceneLineStyle shapeLine = ReadChartLine(
                 roleElement
                     .Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
-                theme);
+                theme,
+                colorMap);
             PptxSceneChartShapeStyle shapeStyle = ReadChartShapeStyle(
                 roleElement
                     .Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
-                theme);
-            PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme);
+                theme,
+                colorMap);
+            PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme, colorMap);
             if (lineReference is null &&
                 fillReference is null &&
                 effectReference is null &&
@@ -3907,7 +3916,7 @@ internal sealed class PptxSceneBuilder
             textStyle.Strike is not null;
     }
 
-    private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme)
+    private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? defaultRunProperties = roleElement
             .Elements()
@@ -3937,8 +3946,8 @@ internal sealed class PptxSceneBuilder
             sizeHundredths > 0
                 ? sizeHundredths / 100d
                 : null;
-        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha) ||
-            TryReadSolidColorWithAlpha(fontReference, theme, out parsedColor, out alpha)
+        RgbColor? color = TryReadSolidColorWithAlpha(defaultRunProperties?.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha) ||
+            TryReadSolidColorWithAlpha(fontReference, theme, colorMap, out parsedColor, out alpha)
                 ? parsedColor
                 : null;
         bool? bold = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "b");

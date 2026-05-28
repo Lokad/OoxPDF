@@ -7531,6 +7531,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
                   <Relationship Id="rIdColors" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                  <Relationship Id="rIdStyle" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
                 </Relationships>
                 """,
             ["ppt/presentation.xml"] = BasicPresentation(),
@@ -7687,6 +7688,23 @@ internal static class PptxTests
                   <a:schemeClr val="bg1"/>
                   <a:schemeClr val="tx1"/>
                 </cs:colorStyle>
+                """,
+            ["ppt/charts/style1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          id="5">
+                  <cs:title>
+                    <cs:spPr>
+                      <a:solidFill><a:schemeClr val="bg1"/></a:solidFill>
+                      <a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>
+                    </cs:spPr>
+                    <cs:defRPr><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></cs:defRPr>
+                  </cs:title>
+                  <cs:legend>
+                    <cs:fontRef idx="minor"><a:schemeClr val="bg1"/></cs:fontRef>
+                  </cs:legend>
+                </cs:style>
                 """
         });
 
@@ -7743,6 +7761,12 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Colors[1]);
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Declarations[0].Color ?? default);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Declarations[1].Color ?? default);
+        PptxSceneChartStyleEntry titleStyle = chart.StylePart.Entries.First(entry => entry.Role == "title");
+        TestAssert.Equal(new RgbColor(17, 34, 51), titleStyle.ShapeStyle.Fill.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), titleStyle.ShapeStyle.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), titleStyle.TextStyle.Color ?? default);
+        PptxSceneChartStyleEntry legendStyle = chart.StylePart.Entries.First(entry => entry.Role == "legend");
+        TestAssert.Equal(new RgbColor(17, 34, 51), legendStyle.TextStyle.Color ?? default);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()

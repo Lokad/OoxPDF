@@ -3705,10 +3705,14 @@ High-priority actions:
   built-in table style aliases, and inherited placeholder style maps. Validation: `dotnet build
   Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed (`17` passed,
   `0` failed, `1` skipped); focused non-slow `pptx-charts` passed (`128` passed, `0` failed, `0` skipped).
-  2026-05-28 audit: chart-style-part text colors still have a source-map gap: `cs:defRPr/a:solidFill` and
-  `cs:fontRef` colors are parsed through default-map color helpers while the chart-style part itself is owned
-  by a slide/layout/master source map. Keep this item open until chart-style entries carry the same effective
-  `PptxColorMap` provenance as chart-space/title/legend/axis/data-label direct formatting.
+  2026-05-28 progress: chart-style-part entries now receive the chart source `PptxColorMap` for role-local
+  `spPr` fills/lines, `lnRef` theme-line resolution, `cs:defRPr/a:solidFill`, and `cs:fontRef` colors. The
+  existing color-map scene regression now covers chart-style `defRPr` and `fontRef` colors plus role-local
+  shape fill/line colors. Keep this item open for chart-style/color-style cascade ordering, variation-branch
+  selection and precedence, direct renderer-only color paths, built-in table style aliases, and inherited
+  placeholder style maps. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
+  focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped); focused non-slow
+  `pptx-charts` passed (`128` passed, `0` failed, `0` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
