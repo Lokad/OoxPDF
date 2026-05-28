@@ -261,6 +261,11 @@ function Looks-LikeAbovePlotChartTitle($op, $plotBox, [double]$tolerance) {
     $maxY = [double]$plotBox.MaxY
     $plotBoxWidth = StructureWidth $plotBox
     $plotWidth = [Math]::Max(1d, $plotBoxWidth)
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    if ($fontSize -lt 14d) {
+        return $false
+    }
+
     if ($y -le ($maxY + $tolerance)) {
         return $false
     }
@@ -270,9 +275,7 @@ function Looks-LikeAbovePlotChartTitle($op, $plotBox, [double]$tolerance) {
     }
 
     $text = TextValue $op
-    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
     return $text.Length -gt 6 -and
-        $fontSize -ge 10d -and
         $x -ge ($minX - $plotWidth * 0.25d) -and
         $x -le ($maxX + $plotWidth * 0.25d)
 }
@@ -308,14 +311,16 @@ function Looks-LikeAxisTitle($op, $plotBox, [double]$tolerance, [bool]$horizonta
     $farLeftOrRight = $x -lt ($minX - ($tolerance * 2d)) -or $x -gt ($maxX + ($tolerance * 2d))
 
     if (Is-RotatedText $op) {
-        return $farLeftOrRight -and $axisBandY
+        $nearSideEdge = $x -le ($minX + $tolerance) -or $x -ge ($maxX - $tolerance)
+        return ($farLeftOrRight -or $nearSideEdge) -and $axisBandY
     }
 
     if ($horizontalValueAxisChart) {
         return ($insideY -and $farLeftOrRight) -or ($insideX -and $farBelowOrAbove)
     }
 
-    return ($insideX -and $farBelowOrAbove) -or ($insideY -and $farLeftOrRight) -or
+    $nearTopOrBottomEdge = $y -le ($minY + $tolerance) -or $y -ge ($maxY - $tolerance)
+    return ($insideX -and ($farBelowOrAbove -or $nearTopOrBottomEdge)) -or ($insideY -and $farLeftOrRight) -or
         ($axisBandX -and $farBelowOrAbove)
 }
 

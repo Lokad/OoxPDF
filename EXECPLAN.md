@@ -2813,6 +2813,17 @@ High-priority actions:
       manifest gates `AxisTitleText` text hashes plus chart plot/gridline structures with deliberately loose
       placement tolerances while plot-box reservation remains approximate. Validation: visual run
       `20260528-161057` passed with empty diagnostics.
+    - [x] 2026-05-28 Add top/right default-axis-title public evidence:
+      `tools/NewChartProbeFixtures.ps1 -AxisTitlesOnly` now also generates
+      `pptx-ladder-11-chart-top-right-default-axis-titles-probe`, using Office-authored `crosses=max` axes to
+      save `catAx axPos="t"` and `valAx axPos="r"` without manual title layout. The chart text classifier now
+      treats title-sized text at top/right plot edges as `AxisTitleText` rather than chart-title or data-label
+      text, so the manifest can gate both title hashes. This is deliberately text-structural evidence only:
+      the first failed run exposed that the candidate's derived plot clip is still wider/taller than Office's
+      top/right reserved plot box, so plot-box reservation remains open instead of being hidden by a graphics
+      tolerance. Validation: the new visual run `20260528-162233` passed, the existing default and horizontal
+      bar default-axis-title visual probes still passed at `20260528-162303`, and focused non-slow
+      `pptx-charts` passed (`119 passed, 0 failed, 0 skipped`).
   - [x] 2026-05-28 Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise
     supported chart branches: successful native chart rendering now emits
     `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION` when a default axis title cannot be rendered because the

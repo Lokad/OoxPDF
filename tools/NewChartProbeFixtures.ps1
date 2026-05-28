@@ -504,6 +504,104 @@ function New-BarDefaultAxisTitleProbe($PowerPoint, $Cases) {
     return $output
 }
 
+function New-TopRightDefaultAxisTitleProbe($PowerPoint, $Cases) {
+    $output = Join-Path $Cases "pptx-ladder-11-chart-top-right-default-axis-titles-probe.pptx"
+    $presentation = $null
+    $workbook = $null
+    $worksheet = $null
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartShape = $slide.Shapes.AddChart(51, 120, 66, 540, 366)
+        $chart = $chartShape.Chart
+        [void]($chart.HasTitle = $false)
+        [void]($chart.HasLegend = $false)
+        [void]($chart.ChartData.Activate())
+
+        $workbook = $chart.ChartData.Workbook
+        $worksheet = $workbook.Worksheets.Item(1)
+        $worksheet.Cells.Clear()
+        $worksheet.Cells.Item(1, 1).Value = "Category"
+        $worksheet.Cells.Item(1, 2).Value = "Primary"
+        $worksheet.Cells.Item(1, 3).Value = "Secondary"
+        $worksheet.Cells.Item(2, 1).Value = "North"
+        $worksheet.Cells.Item(2, 2).Value = 42.0
+        $worksheet.Cells.Item(2, 3).Value = 35.0
+        $worksheet.Cells.Item(3, 1).Value = "South"
+        $worksheet.Cells.Item(3, 2).Value = 68.0
+        $worksheet.Cells.Item(3, 3).Value = 44.0
+        $worksheet.Cells.Item(4, 1).Value = "West"
+        $worksheet.Cells.Item(4, 2).Value = 31.0
+        $worksheet.Cells.Item(4, 3).Value = 52.0
+        $worksheet.Cells.Item(5, 1).Value = "East"
+        $worksheet.Cells.Item(5, 2).Value = 55.0
+        $worksheet.Cells.Item(5, 3).Value = 39.0
+
+        [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$C`$5"))
+        [void]($chart.ChartType = 51)
+
+        $categoryAxis = $chart.Axes(1, 1)
+        [void]($categoryAxis.HasTitle = $true)
+        $categoryAxis.AxisTitle.Text = "Category Axis"
+        $categoryAxis.AxisTitle.Format.TextFrame2.TextRange.Font.Size = 12
+        $categoryAxis.TickLabels.Font.Size = 9
+        $categoryAxis.TickLabels.Font.Color = Rgb 89 89 89
+
+        $valueAxis = $chart.Axes(2, 1)
+        [void]($valueAxis.HasTitle = $true)
+        $valueAxis.AxisTitle.Text = "Value Axis"
+        $valueAxis.AxisTitle.Format.TextFrame2.TextRange.Font.Size = 12
+        $valueAxis.TickLabels.Font.Size = 9
+        $valueAxis.TickLabels.Font.Color = Rgb 89 89 89
+        $valueAxis.MinimumScale = 0
+        $valueAxis.MaximumScale = 80
+        $valueAxis.MajorUnit = 20
+
+        # xlMaximum = 2. These crossings make Office save the category axis at the top
+        # and the value axis at the right without manually positioning the titles.
+        $valueAxis.Crosses = 2
+        $categoryAxis.Crosses = 2
+
+        try {
+            [void]($workbook.Application.CalculateFull())
+            [void]($chart.Refresh())
+        }
+        catch {
+            # Some Office builds do not expose chart refresh for embedded hosts;
+            # saved chart caches are still verified by the visual harness.
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        Release-ComObject $worksheet
+        $worksheet = $null
+        Close-ChartWorkbook $workbook
+        $workbook = $null
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        if ($worksheet -ne $null) { Release-ComObject $worksheet }
+        if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
 function New-SparseBlankChartProbe($PowerPoint, $Cases) {
     $output = Join-Path $Cases "pptx-ladder-11-chart-sparse-blank-points-probe.pptx"
     $presentation = $null
@@ -733,6 +831,9 @@ try {
             -PowerPoint $powerPoint `
             -Cases $cases
         $output = New-BarDefaultAxisTitleProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+        $output = New-TopRightDefaultAxisTitleProbe `
             -PowerPoint $powerPoint `
             -Cases $cases
     }
