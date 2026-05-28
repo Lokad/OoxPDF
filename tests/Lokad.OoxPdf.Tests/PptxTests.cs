@@ -340,7 +340,7 @@ internal static class PptxTests
                     <cs:spPr><a:solidFill><a:srgbClr val="445566"><a:alpha val="75000"/></a:srgbClr></a:solidFill><a:ln w="12700" cap="rnd" cmpd="thickThin"><a:solidFill><a:srgbClr val="102030"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></cs:spPr>
                   </cs:gridlineMajor>
                   <cs:gridlineMinor>
-                    <cs:lnRef idx="1"/>
+                    <cs:lnRef idx="0"/>
                     <cs:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="203040"><a:alpha val="70000"/></a:srgbClr></a:solidFill></a:ln></cs:spPr>
                   </cs:gridlineMinor>
                   <cs:title>
@@ -648,8 +648,11 @@ internal static class PptxTests
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
         TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
+        TestAssert.Equal("1", majorGridlineStyle.LineReferenceIndexValue);
         TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
+        TestAssert.Equal("2", majorGridlineStyle.FillReferenceIndexValue);
         TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
+        TestAssert.Equal("1", majorGridlineStyle.EffectReferenceIndexValue);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
         TestAssert.Equal(new RgbColor(171, 193, 35), majorGridlineStyle.Line.Color);
         TestAssert.Equal(2d, majorGridlineStyle.Line.Width);
@@ -669,6 +672,9 @@ internal static class PptxTests
         TestAssert.True(majorGridlineStyle.ShapeStyle.Fill.HasFill, "Expected chart style role-local shape fill ownership in the scene model.");
         TestAssert.Equal(new RgbColor(68, 85, 102), majorGridlineStyle.ShapeStyle.Fill.Color);
         TestAssert.Equal(0.75d, majorGridlineStyle.ShapeStyle.Fill.Alpha);
+        PptxSceneChartStyleEntry minorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMinor") ?? default;
+        TestAssert.Equal(null, minorGridlineStyle.LineReferenceIndex);
+        TestAssert.Equal("0", minorGridlineStyle.LineReferenceIndexValue);
         PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
         TestAssert.Equal("major", titleStyle.FontReferenceIndex);

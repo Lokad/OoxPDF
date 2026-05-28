@@ -15313,3 +15313,16 @@ scene evidence instead of reverse-engineering groups from declaration indexes af
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed
 with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `136` tests,
 `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: chart style role references now preserve their raw `idx` tokens alongside the resolved
+positive indexes. `PptxSceneChartStyleEntry` keeps `LineReferenceIndexValue`, `FillReferenceIndexValue`, and
+`EffectReferenceIndexValue`, so an absent reference, explicit `idx="0"`, invalid token, and resolved positive
+index remain distinguishable in scene state. The chart-style preservation regression now checks both positive
+tokens and an explicit zero line-reference token.
+
+This does not change chart-style rendering. It removes another provenance loss before the broader
+Office-backed style cascade work: future chart paint logic can reason from source tokens and resolved theme
+style references instead of guessing whether a missing nullable index meant absent XML, `idx="0"`, or an
+unsupported future token. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
+with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and
+`0` skips.

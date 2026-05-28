@@ -816,8 +816,11 @@ internal sealed record PptxSceneChartStyle(
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
     int? LineReferenceIndex,
+    string LineReferenceIndexValue,
     int? FillReferenceIndex,
+    string FillReferenceIndexValue,
     int? EffectReferenceIndex,
+    string EffectReferenceIndexValue,
     string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneChartShapeStyle ShapeStyle,
@@ -3991,16 +3994,19 @@ internal sealed class PptxSceneBuilder
             XElement? lineReference = roleElement
                 .Descendants()
                 .FirstOrDefault(element => element.Name.LocalName == "lnRef");
+            string lineReferenceIndexRaw = (string?)lineReference?.Attribute("idx") ?? string.Empty;
             int lineReferenceIndexValue = lineReference is null ? 0 : ParseOptionalIntAttribute(lineReference, "idx", 0);
             int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
             XElement? fillReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "fillRef");
+            string fillReferenceIndexRaw = (string?)fillReference?.Attribute("idx") ?? string.Empty;
             int fillReferenceIndexValue = fillReference is null ? 0 : ParseOptionalIntAttribute(fillReference, "idx", 0);
             int? fillReferenceIndex = fillReferenceIndexValue > 0 ? fillReferenceIndexValue : null;
             XElement? effectReference = roleElement
                 .Elements()
                 .FirstOrDefault(element => element.Name.LocalName == "effectRef");
+            string effectReferenceIndexRaw = (string?)effectReference?.Attribute("idx") ?? string.Empty;
             int effectReferenceIndexValue = effectReference is null ? 0 : ParseOptionalIntAttribute(effectReference, "idx", 0);
             int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
             string fontReferenceIndex = (string?)roleElement
@@ -4046,8 +4052,11 @@ internal sealed class PptxSceneBuilder
             entries.Add(new PptxSceneChartStyleEntry(
                 roleElement.Name.LocalName,
                 lineReferenceIndex,
+                lineReferenceIndexRaw,
                 fillReferenceIndex,
+                fillReferenceIndexRaw,
                 effectReferenceIndex,
+                effectReferenceIndexRaw,
                 fontReferenceIndex,
                 line,
                 shapeStyle,
