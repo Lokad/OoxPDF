@@ -5933,6 +5933,12 @@ paths, and ExecPlan references together.
     gray operator alignment, the next residuals are fractional Office font-size variants that the candidate
     still rounds away in some inherited/autofit paths, plus ordering/segment-count differences around filled
     clipped regions. Build public fixtures for those structural cases before touching private-deck behavior.
+  - [x] Add a public guard for a simple filled-and-stroked shape clip/fill ordering case and move the repeated
+    slide clip before the untransformed filled region instead of between fill and stroke. This is a generic
+    Office-style PDF-structure alignment, but private rerun
+    `artifacts/private-visual/lokad-value-based/20260528-130928` kept slide 17 at MAE `2.785230`,
+    changed16 `0.044118`, SSIM `0.923374`; the page-filtered inspection still shows the same fill/clip
+    residual pairs, so the remaining slide-17 issue is not this simple shape-stroke ordering path.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape

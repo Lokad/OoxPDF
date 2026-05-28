@@ -1235,6 +1235,42 @@ internal static class PptxTests
         TestAssert.Contains(" re W n", pdf);
     }
 
+    public static void PptxSyntheticFilledStrokedShapeRepeatsSlideClipBeforeFill()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr>
+                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                      <a:prstGeom prst="rect"/>
+                      <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+                      <a:ln w="12700"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln>
+                    </p:spPr>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        int shapeClip = pdf.IndexOf("0 0 720 540 re W* n\r\n1 0 0 rg", StringComparison.Ordinal);
+        int fill = pdf.IndexOf("72 396 144 72 re f*", StringComparison.Ordinal);
+        int strokeColor = pdf.IndexOf("0 0 1 RG", StringComparison.Ordinal);
+        TestAssert.True(shapeClip >= 0, "Expected the repeated slide clip to precede the filled shape region.");
+        TestAssert.True(fill > shapeClip, "Expected the shape fill after the repeated slide clip.");
+        TestAssert.True(strokeColor > fill, "Expected the stroke state after the filled region.");
+        TestAssert.True(pdf.IndexOf("re f*\r\n0 0 720 540 re W* n", fill, StringComparison.Ordinal) < 0, "Filled/stroked shapes should not repeat the slide clip between fill and stroke.");
+    }
+
     public static void PptxSyntheticArrowAndConnectorShapesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

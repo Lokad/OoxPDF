@@ -476,6 +476,12 @@ internal sealed partial class PptxRenderer
             return;
         }
 
+        bool repeatSlideClipBeforeFill = hasStroke && hasFill && !transformed;
+        if (repeatSlideClipBeforeFill)
+        {
+            ClipSlideBoundsEvenOdd(document, graphics);
+        }
+
         if (gradientFill is not null)
         {
             graphics.SaveState();
@@ -547,7 +553,7 @@ internal sealed partial class PptxRenderer
 
         if (hasStroke)
         {
-            if (hasFill)
+            if (hasFill && !repeatSlideClipBeforeFill)
             {
                 if (transformed)
                 {
