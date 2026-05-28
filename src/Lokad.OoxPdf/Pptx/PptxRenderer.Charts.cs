@@ -4657,7 +4657,7 @@ internal sealed partial class PptxRenderer
 
         if (!sceneChart.Legend.IsDefined)
         {
-            return ReadChartLegendLayout(theme, chartXml);
+            return ChartLegendLayout.Hidden;
         }
 
         return sceneChart.Legend.IsDeleted != true

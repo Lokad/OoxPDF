@@ -13017,6 +13017,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `107` tests, `0` failures, and `0` skips; full non-slow console runner passed with `349` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Chart legend layout now treats a scene-backed missing legend as a typed hidden
+legend instead of re-reading fallback XML. `ReadSceneOrXmlChartLegendLayout` still reads XML for XML-only
+compatibility, but once a `PptxSceneChart` exists, `Legend.IsDefined == false` is authoritative and returns
+`ChartLegendLayout.Hidden`. This prevents a mismatched raw chart XML source from inventing legend geometry,
+legend reserves, or legend text paths after scene construction.
+
+The new regression pairs a scene chart with no `c:legend` against fallback XML that does contain a bottom
+legend. The scene-backed path remains hidden while the XML-only path remains visible and bottom-positioned.
+This is another structural cleanup before Office-PDF legend negotiation work: the renderer must not patch a
+typed chart model by consulting a separate XML source when the model already says the legend is absent.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout` passed; focused non-slow `pptx-charts` passed
+with `108` tests, `0` failures, and `0` skips; full non-slow console runner passed with `350` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

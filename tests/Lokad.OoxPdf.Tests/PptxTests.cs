@@ -12192,6 +12192,37 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartLegendPosition.Right, (PptxSceneChartLegendPosition)positionKind);
     }
 
+    public static void PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.True(!chart.Legend.IsDefined, "Expected absent scene legend to remain distinct from an explicit legend.");
+
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea/><c:legend><c:legendPos val="b"/></c:legend></c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLegendLayout",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
+        object sceneLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
+        object xmlOnlyLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart legend layout.");
+
+        TestAssert.True((bool)(sceneLayout.GetType().GetProperty("Visible")?.GetValue(sceneLayout) ?? true) == false, "Expected missing scene legend not to be repaired from fallback XML.");
+        TestAssert.True((bool)(xmlOnlyLayout.GetType().GetProperty("Visible")?.GetValue(xmlOnlyLayout) ?? false), "Expected XML-only legend layout to keep reading XML.");
+        TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, (PptxSceneChartLegendPosition)(xmlOnlyLayout.GetType().GetProperty("PositionKind")?.GetValue(xmlOnlyLayout) ?? default(PptxSceneChartLegendPosition)));
+    }
+
     public static void PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
