@@ -12069,10 +12069,11 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `338` tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-28: Threaded chart point-index provenance through the renderer's private indexed
-vectors. `ChartIndexedNumberPoint` and `ChartIndexedTextPoint` now retain `HasParsedIndex` for scene-backed
+vectors. `ChartIndexedNumberPoint` and `ChartIndexedTextPoint` now retain source information for scene-backed
 points, XML-only cache reads, compact fallback vectors, and workbook sidecar points. Raw-vector tests now
 lock both a parsed sparse point index and a malformed `idx` token that keeps the current ordinal fallback
-while marking it as fallback-derived.
+while marking it as fallback-derived. The renderer field shape is the `ChartPointIndexSource` enum described
+above, not the scene-level `HasParsedIndex` boolean.
 
 Rendering remains behavior-compatible: dense vectors still use the resolved integer point index, and malformed
 raw `idx` tokens still occupy their historical ordinal slot. The structural improvement is that future
