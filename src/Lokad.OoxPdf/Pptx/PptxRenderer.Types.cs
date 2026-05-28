@@ -932,7 +932,7 @@ internal sealed partial class PptxRenderer
         public const double SmallCapsFallbackScale = 0.8d;
         public const double DefaultTextOutlineWidth = 0.75d;
         public const double SyntheticBoldStrokeWidthRatio = 1d / 35d;
-        public const double StrikePositionFallback = 0.211d;
+        public const double OfficeStrikePositionFontScale = 0.211d;
         public const double StrikeThicknessFallback = 0.05d;
         public const double HighlightDescenderPaddingFontUnits = 32d;
         public const double HighlightMaximumDescentFontScale = 0.23d;
@@ -963,15 +963,7 @@ internal sealed partial class PptxRenderer
 
         public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
         {
-            double fontScale = fontSize / embedded.Font.UnitsPerEm;
-            double strikeoutSize = embedded.Font.Os2.StrikeoutSize * fontScale;
-            double strikeoutPosition = embedded.Font.Os2.StrikeoutPosition * fontScale;
-            if (strikeoutSize <= 0d || strikeoutPosition <= 0d)
-            {
-                return baselineY + fontSize * StrikePositionFallback;
-            }
-
-            return baselineY + strikeoutPosition - strikeoutSize / 2d;
+            return baselineY + fontSize * OfficeStrikePositionFontScale;
         }
 
         public static double StrikeThickness(PdfEmbeddedFont embedded, double fontSize)

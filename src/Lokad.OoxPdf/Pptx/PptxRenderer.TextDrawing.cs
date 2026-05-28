@@ -803,7 +803,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
                 {
-                    graphics.FillRectangle(underline.X, underline.Y, underline.Width, underline.Height);
+                    graphics.FillRectangleEvenOdd(underline.X, underline.Y, underline.Width, underline.Height);
                 }
             }
 
@@ -812,7 +812,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
-                    graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
+                    graphics.FillRectangleEvenOdd(strike.X, strike.Y, strike.Width, strike.Height);
                 }
             }
 
@@ -853,7 +853,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetUnderlineRectangle(embedded, glyphRun, out TextDecorationRectangle underline))
                 {
-                    graphics.FillRectangle(underline.X, underline.Y, underline.Width, underline.Height);
+                    graphics.FillRectangleEvenOdd(underline.X, underline.Y, underline.Width, underline.Height);
                 }
             }
 
@@ -862,7 +862,7 @@ internal sealed partial class PptxRenderer
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
                 if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
-                    graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
+                    graphics.FillRectangleEvenOdd(strike.X, strike.Y, strike.Width, strike.Height);
                 }
             }
 

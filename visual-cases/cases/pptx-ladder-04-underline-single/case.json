@@ -14,7 +14,12 @@
     "maxTextOperationPositionDelta": 0.05,
     "maxTextOperationFontSizeDelta": 0.05,
     "matchTextOperationsByPosition": true,
-    "compareDecodedTextOperations": true
+    "compareDecodedTextOperations": true,
+    "maxGraphicsOperationBoundsDelta": 0.3,
+    "compareGraphicsOperationKinds": ["Fill"],
+    "compareGraphicsOperationOperators": ["f*"],
+    "matchGraphicsOperationOperators": true,
+    "matchGraphicsOperationsByBounds": true
   },
   "allowedUnsupportedFeatures": []
 }
