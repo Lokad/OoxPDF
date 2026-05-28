@@ -428,6 +428,7 @@ if (HasValue $OutputSummaryJson) {
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
         ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateFrameTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeTopY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateLineTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateLineIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineIndex) + "|" + (BranchKey $row) }
