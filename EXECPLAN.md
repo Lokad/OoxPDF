@@ -15452,3 +15452,14 @@ having to reopen raw `styleN.xml` just to distinguish local-name matches. Valida
 Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
 `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with
 `138` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: scene-backed secondary value-axis selection no longer scans XML fallback inputs before
+checking the scene boundary. `ReadSceneOrXmlSecondaryRightValueAxis` and
+`ReadSceneOrXmlSecondaryValueAxisForChart` now defer `ReadSecondary*` XML lookups to the XML-only branch, while
+scene-backed calls continue to match the axis XML through `sceneChart.ChartXml` by scene axis id.
+
+This is behavior-neutral for the current tests, but it removes another source-boundary leak from the remaining
+`ReadSceneOrXml*` bridge layer: a mismatched XML fallback should not even be consulted when a typed scene chart
+is present. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings
+and `0` errors after rerunning outside the parallel test process; focused non-slow `pptx-charts` passed with
+`138` tests, `0` failures, and `0` skips.

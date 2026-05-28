@@ -316,10 +316,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartAxisSource ReadSceneOrXmlSecondaryRightValueAxis(PptxSceneChart? sceneChart, XDocument chartXml)
     {
-        XElement? xmlAxis = ReadSecondaryRightValueAxis(chartXml);
         if (sceneChart is null)
         {
-            return new ChartAxisSource(null, xmlAxis);
+            return new ChartAxisSource(null, ReadSecondaryRightValueAxis(chartXml));
         }
 
         PptxSceneChartAxis? sceneAxis = sceneChart.Axes.FirstOrDefault(axis =>
@@ -336,10 +335,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartAxisSource ReadSceneOrXmlSecondaryValueAxisForChart(PptxSceneChart? sceneChart, XDocument chartXml, ChartAxisSource primaryValueAxis)
     {
-        XElement? xmlAxis = ReadSecondaryValueAxisForChart(chartXml, primaryValueAxis.XmlAxis);
         if (sceneChart is null)
         {
-            return new ChartAxisSource(null, xmlAxis);
+            return new ChartAxisSource(null, ReadSecondaryValueAxisForChart(chartXml, primaryValueAxis.XmlAxis));
         }
 
         string? primaryAxisId = primaryValueAxis.SceneAxis?.Id;
