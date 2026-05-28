@@ -4365,6 +4365,11 @@ High-priority actions:
   Do not special-case the private slide. Choose between a dependency-free JPEG pixel decoder, a principled PDF
   color-transform approach that matches Office output, or an explicit documented limitation with a public
   Office-authored rung that keeps the diagnostic stable.
+  2026-05-28 audit: `PptxRenderer.Images.CreateImage` still emits `PPTX_UNSUPPORTED_IMAGE_RECOLOR` before
+  returning `PdfImageXObject.Jpeg(...)` for JPEG inputs, while PNG/BMP recolor routes through decoded RGB
+  buffers and `ApplyImageRecolor`. `JpegInfo` is deliberately only a header reader, so closing the private
+  warning requires either a real JPEG pixel decoder or a structurally equivalent PDF colorization path; a
+  per-document or content-type branch would reintroduce the hard-coded logic this plan is eliminating.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
