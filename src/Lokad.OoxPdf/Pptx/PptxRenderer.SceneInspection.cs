@@ -91,6 +91,7 @@ internal sealed partial class PptxRenderer
             node.Shape?.NoFill ?? false,
             node.Shape?.FillReference.Index ?? 0,
             node.Shape?.FillReference.Style is not null,
+            node.Shape?.LineNoFill ?? false,
             node.Shape?.LineReference.Index ?? 0,
             node.Shape?.LineReference.Style is not null,
             node.TextBody is not null,

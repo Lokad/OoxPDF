@@ -7025,6 +7025,7 @@ internal static class PptxTests
                 node.FlipVertical,
                 node.ShapePreset,
                 node.ShapeNoFill,
+                node.ShapeLineNoFill,
                 node.HasTextBody,
                 node.TextParagraphCount,
                 node.TextRunCount,
@@ -9115,6 +9116,20 @@ internal static class PptxTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
         OoxPdfConverter.Convert(input, output);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneNode textNode = scene.Slides[0].SlideNodes[0];
+        PptxSceneNode coverNode = scene.Slides[0].SlideNodes[1];
+        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
+        TestAssert.True(textNode.Shape?.LineNoFill == true, "Expected text shape line noFill provenance in the scene model.");
+        TestAssert.True(coverNode.Shape?.LineNoFill == true, "Expected cover shape line noFill provenance in the scene model.");
+        TestAssert.True(textNode.Shape?.Line.HasLine == false, "Expected explicit line noFill to suppress scene line rendering.");
+        TestAssert.True(coverNode.Shape?.Line.HasLine == false, "Expected explicit cover line noFill to suppress scene line rendering.");
+        TestAssert.True(snapshot.Slides[0].SlideNodes[0].ShapeLineNoFill, "Expected private-safe inspection to expose text shape line noFill.");
+        TestAssert.True(snapshot.Slides[0].SlideNodes[1].ShapeLineNoFill, "Expected private-safe inspection to expose cover shape line noFill.");
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int textIndex = pdf.IndexOf(" TJ", StringComparison.Ordinal);

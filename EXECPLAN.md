@@ -13212,6 +13212,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
 `17` tests, `0` failures, and `1` slow skip.
 
+Revision note, 2026-05-28: Preserved explicit PPTX shape line `a:ln/a:noFill` provenance beside the
+effective line style. `PptxSceneShape.LineNoFill` and `PptxSceneNodeSnapshot.ShapeLineNoFill` now distinguish
+an intentional hidden stroke from an absent or unresolved stroke. The private-safe layout diagnostic reports
+the new flag, and the sibling-order fixture now asserts both scene and snapshot ownership for line-less
+covering shapes.
+
+This is paired with the previous shape fill no-fill slice: long-term renderer cleanup needs typed source
+intent and effective rendering state to remain separate. Shape line rendering was already consuming the scene
+line override in the normal path; the improvement here is that future PDF-structural probes can tell whether
+Office hid the line explicitly or whether OOXPDF simply had no resolved line to draw.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`17` tests, `0` failures, and `1` slow skip.
+
 Revision note, 2026-05-28: Chart data-label text-body rotation now survives the renderer option boundary.
 `ChartDataLabelOptions` and `ChartDataLabelOverride` carry the scene-owned or XML fallback
 `txPr/a:bodyPr @rot` metadata as `PptxSceneChartTextBodyProperties`, and per-label override resolution

@@ -45,6 +45,7 @@ internal sealed record PptxSceneNodeSnapshot(
     bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
+    bool ShapeLineNoFill,
     int ShapeLineReferenceIndex,
     bool ShapeLineReferenceResolved,
     bool HasTextBody,
@@ -492,6 +493,7 @@ internal sealed record PptxSceneShape(
     PptxFormatSchemeReference FillReference,
     PptxFormatSchemeReference LineReference,
     bool NoFill,
+    bool LineNoFill,
     PptxSceneFillStyle Fill,
     PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
@@ -4405,6 +4407,7 @@ internal sealed class PptxSceneBuilder
             fillReference,
             lineReference,
             shapeProperties?.Element(DrawingNamespace + "noFill") is not null,
+            shapeProperties?.Element(DrawingNamespace + "ln")?.Element(DrawingNamespace + "noFill") is not null,
             TryReadShapeFill(shapeProperties, theme, colorMap, fillReference, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
