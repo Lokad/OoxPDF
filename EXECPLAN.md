@@ -2843,6 +2843,12 @@ High-priority actions:
   rotation, full non-default tick-label offset ladders, multi-level category labels, default-placement axis-title
   cascades, and richer chart-style text dimensions still need structural modeling before chart text can match
   Office without renderer heuristics.
+  - [x] Preserve chart-style text roles that only carry underline/strike:
+    `HasChartTextStyleOverride` now treats parsed underline and strike values as structural text-style fields,
+    so `cs:defRPr @u` / `@strike` roles are not pruned from `PptxSceneChart.StylePart` merely because they
+    lack font family, size, color, bold, or italic attributes. This closes a scene-model information-loss gap;
+    applying those inherited decorations across every chart text surface remains part of the broader chart text
+    cascade work.
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
@@ -3791,8 +3797,12 @@ High-priority actions:
   - [x] Preserve and consume scene-owned chart line dash/cap/join fields through chart strokes, including
     gridlines, axes, series, markers, points, and chart/plot-area borders.
   - [x] Preserve scene-owned line compound style through chart gridlines and the renderer stroke adapter.
-  - [ ] Extend scene-owned gridline style records to cover theme style references and chart-style inherited
-    defaults.
+  - [x] Extend scene-owned gridline style records to cover theme style references and chart-style inherited
+    defaults. Rechecked 2026-05-28 against `PptxSceneChart.StylePart`, `PptxSceneChartAxis.MajorGridlineStyleLine`
+    / `MinorGridlineStyleLine`, `ReadChartStyleRoleLine`, and `ReadSceneOrXmlChartGridlineStyle`: theme-resolved
+    chart-style role lines are preserved and consumed after direct axis gridline lines. The older detailed
+    revision note below remains the source of record; compound-stroke PDF geometry and broader chart-style
+    cascade questions stay tracked separately.
   - [x] Add scene-owned chart-level, axis-level, title, and legend text-style overrides for the supported
     `txPr/defRPr` subset: font family, font size, solid color, bold, and italic.
   - [ ] Extend chart text-style records to cover the remaining rich-text surfaces, rotation, full non-default

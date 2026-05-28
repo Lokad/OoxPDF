@@ -16590,6 +16590,48 @@ internal static class PptxTests
         TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[2]);
     }
 
+    public static void PptxScenePreservesChartStyleUnderlineStrikeOnlyTextRoles()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml, new Dictionary<string, byte[]>
+        {
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                          id="91">
+                  <cs:legend>
+                    <cs:defRPr u="sng" strike="sngStrike"/>
+                  </cs:legend>
+                </cs:style>
+                """)
+        });
+
+        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Chart
+            ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartStyleEntry legendStyle = chart.StylePart.Entries.FirstOrDefault(entry => entry.Role == "legend");
+
+        TestAssert.True(chart.StylePart.IsDefined, "Expected chart style-part ownership in the scene model.");
+        TestAssert.Equal("legend", legendStyle.Role ?? string.Empty);
+        TestAssert.True(legendStyle.TextStyle.Underline == true, "Expected underline-only chart-style text role to remain scene-visible.");
+        TestAssert.True(legendStyle.TextStyle.Strike == true, "Expected strike-only chart-style text role to remain scene-visible.");
+        TestAssert.Equal(null, legendStyle.TextStyle.FontFamily);
+        TestAssert.Equal(null, legendStyle.TextStyle.Color);
+    }
+
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
         string input = Path.Combine(

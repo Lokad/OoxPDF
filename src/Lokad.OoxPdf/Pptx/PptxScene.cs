@@ -3669,7 +3669,9 @@ internal sealed class PptxSceneBuilder
             textStyle.Color is not null ||
             textStyle.Alpha is not null ||
             textStyle.Bold is not null ||
-            textStyle.Italic is not null;
+            textStyle.Italic is not null ||
+            textStyle.Underline is not null ||
+            textStyle.Strike is not null;
     }
 
     private static PptxSceneChartTextStyleOverride ReadChartStyleRoleTextStyle(XElement roleElement, PptxTheme theme)
