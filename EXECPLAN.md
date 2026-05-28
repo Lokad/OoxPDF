@@ -12041,6 +12041,21 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
+auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
+and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing
+`c:externalData/c:autoUpdate val="0"` case through both the model and snapshot.
+
+This is deliberately behavior-neutral. It removes another lossy parse boundary from the chart scene model so
+future workbook-sidecar and Office-PDF alignment work can distinguish missing, `0`, `1`, `true`, and `false`
+inputs without re-reading chart XML at render sites. Nearby chart boolean token gaps remain on title/legend
+overlay/delete state, data-label show flags, plot/series options, and axis delete flags.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed
+with `88` tests, `0` failures, and `0` skips; full non-slow console runner passed with `329` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw `c:numFmt/@sourceLinked` token through the chart scene model
 and renderer number-format bridge. `PptxSceneChartNumberFormat` and the renderer-local `ChartNumberFormat`
 now carry `SourceLinkedValue` beside the existing parsed `SourceLinked` boolean, so plot data labels,

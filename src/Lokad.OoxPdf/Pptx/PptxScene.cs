@@ -65,6 +65,7 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartExternalDataRelationshipId,
     string ChartExternalDataTargetPartName,
     bool? ChartExternalDataAutoUpdate,
+    string ChartExternalDataAutoUpdateValue,
     bool HasChartExternalDataResource,
     string ChartExternalDataContentType,
     bool? ChartDate1904,
@@ -598,7 +599,8 @@ internal readonly record struct PptxSceneChartExternalData(
     string? RelationshipId,
     string? TargetPartName,
     PptxScenePackageResource? Resource,
-    bool? AutoUpdate);
+    bool? AutoUpdate,
+    string AutoUpdateValue);
 
 internal readonly record struct PptxSceneChartOptions(
     bool? Date1904,
@@ -3165,12 +3167,14 @@ internal sealed class PptxSceneBuilder
                 ?.ResolvedTarget;
         }
 
+        (bool? autoUpdate, string autoUpdateValue) = ReadOptionalOoxmlBooleanElementWithValue(externalData, "autoUpdate");
         return new PptxSceneChartExternalData(
             true,
             relationshipId,
             targetPartName,
             ReadPackageResource(package, targetPartName),
-            ReadOptionalOoxmlBooleanElement(externalData, "autoUpdate"));
+            autoUpdate,
+            autoUpdateValue);
     }
 
     private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme)

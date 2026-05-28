@@ -80,6 +80,7 @@ internal sealed partial class PptxRenderer
             node.Chart?.ExternalData.RelationshipId ?? string.Empty,
             node.Chart?.ExternalData.TargetPartName ?? string.Empty,
             node.Chart?.ExternalData.AutoUpdate,
+            node.Chart?.ExternalData.AutoUpdateValue ?? string.Empty,
             node.Chart?.ExternalData.Resource is not null,
             node.Chart?.ExternalData.Resource?.ContentType ?? string.Empty,
             node.Chart?.Options.Date1904,

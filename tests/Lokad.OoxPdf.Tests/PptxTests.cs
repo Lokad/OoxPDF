@@ -456,9 +456,11 @@ internal static class PptxTests
         TestAssert.Equal("rId3", slideSnapshot.SlideNodes[4].ChartExternalDataRelationshipId);
         TestAssert.Equal("/ppt/embeddings/chart-data.xlsx", slideSnapshot.SlideNodes[4].ChartExternalDataTargetPartName);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartExternalDataAutoUpdate == false, "Expected scene inspection to expose chart external-data auto-update policy.");
+        TestAssert.Equal("0", slideSnapshot.SlideNodes[4].ChartExternalDataAutoUpdateValue);
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartExternalDataResource, "Expected scene inspection to expose embedded workbook resource ownership without package bytes.");
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
+        TestAssert.Equal("0", slide.SlideNodes[4].Chart?.ExternalData.AutoUpdateValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
         TestAssert.Equal("true", slide.SlideNodes[4].Chart?.Options.Date1904Value ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartDate1904 == true, "Expected scene inspection to expose chart date-system policy.");
