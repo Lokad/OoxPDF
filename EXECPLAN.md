@@ -12457,6 +12457,22 @@ and `PptxChartSmoothOptionsPreserveRawBooleanState` passed; focused non-slow `pp
 `99` tests, `0` failures, and `0` skips; full non-slow console runner passed with `340` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Kept chart plot `varyColors` decisions as typed boolean options at the renderer
+boundary. `ChartBarPlotOptions` now carries a `ChartBooleanOption` for `varyColors` instead of a bare
+boolean, preserving the effective value, raw token, and whether the element was present. The XML-only
+compatibility parser uses the shared OOXML boolean-element semantics, so shorthand `<c:varyColors/>`,
+explicit `val="0"`, and omission remain distinguishable.
+
+This intentionally leaves the actual bar/column and data-label drawing routines on the effective boolean.
+The structural gain is at the option boundary: future Office-PDF-backed color, legend, and label work can
+tell absence from explicit true/false without re-reading chart XML or adding special-case fallback logic.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regressions
+`PptxChartBarOptionsUseSceneAuthoritativeDefaults` and
+`PptxChartVaryColorsOptionsPreserveRawBooleanState` passed; focused non-slow `pptx-charts` passed with
+`100` tests, `0` failures, and `0` skips; full non-slow console runner passed with `341` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current

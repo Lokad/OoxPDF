@@ -395,17 +395,17 @@ internal sealed partial class PptxRenderer
         return ReadDoughnutHoleSize(doughnutChart);
     }
 
-    private static bool ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
+    private static ChartBooleanOption ReadSceneOrXmlChartVaryColors(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
-            ? plot.VaryColors ?? true
-            : ReadChartVaryColors(chartElement);
+            ? new ChartBooleanOption(plot.VaryColors ?? true, plot.VaryColorsValue, plot.VaryColors is not null)
+            : ReadChartVaryColorsOption(chartElement);
     }
 
     private readonly record struct ChartBarPlotOptions(
         PptxSceneChartGrouping Grouping,
         PptxSceneChartBarDirection BarDirection,
-        bool VaryColors,
+        ChartBooleanOption VaryColors,
         double GapWidth,
         double Overlap);
 
@@ -994,7 +994,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions.Grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barOptions.VaryColors, barOptions.GapWidth, barOptions.Overlap);
+                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions.Grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barOptions.VaryColors.Value, barOptions.GapWidth, barOptions.Overlap);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -1056,7 +1056,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
-                        extraBarOptions.VaryColors,
+                        extraBarOptions.VaryColors.Value,
                         extraBarOptions.GapWidth,
                         extraBarOptions.Overlap);
                     fonts.AddRange(RenderBarDataLabels(
@@ -1070,7 +1070,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         extraSeriesFills,
                         extraPointFills,
-                        extraBarOptions.VaryColors,
+                        extraBarOptions.VaryColors.Value,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
@@ -1203,7 +1203,7 @@ internal sealed partial class PptxRenderer
                     valueAxisReversed,
                     seriesFills,
                     pointFills,
-                    barOptions.VaryColors,
+                    barOptions.VaryColors.Value,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
@@ -7048,9 +7048,13 @@ internal sealed partial class PptxRenderer
         return line?.Element(DrawingNamespace + "noFill") is null;
     }
 
-    private static bool ReadChartVaryColors(XElement chartElement)
+    private static ChartBooleanOption ReadChartVaryColorsOption(XElement chartElement)
     {
-        return IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "varyColors"), defaultValue: true);
+        XElement? varyColors = chartElement.Element(ChartNamespace + "varyColors");
+        return new ChartBooleanOption(
+            IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true),
+            (string?)varyColors?.Attribute("val") ?? string.Empty,
+            varyColors is not null);
     }
 
     private static double ReadChartGapWidth(XElement chartElement)

@@ -12220,7 +12220,10 @@ internal static class PptxTests
 
         TestAssert.Equal(PptxSceneChartGrouping.Clustered, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
         TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)(optionsType.GetProperty("BarDirection")?.GetValue(options) ?? default(PptxSceneChartBarDirection)));
-        TestAssert.True((bool)(optionsType.GetProperty("VaryColors")?.GetValue(options) ?? false), "Expected missing effective scene varyColors to use the scene default, not the XML fallback.");
+        object varyColors = optionsType.GetProperty("VaryColors")?.GetValue(options) ?? throw new InvalidOperationException("Expected varyColors option.");
+        TestAssert.True(ChartBooleanOptionValue(varyColors), "Expected missing effective scene varyColors to use the scene default, not the XML fallback.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(varyColors), "Expected missing scene varyColors state to remain distinguishable from an explicit true token.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(varyColors));
         TestAssert.Equal(150d, (double)(optionsType.GetProperty("GapWidth")?.GetValue(options) ?? double.NaN));
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("Overlap")?.GetValue(options) ?? double.NaN));
     }
@@ -12389,6 +12392,54 @@ internal static class PptxTests
         TestAssert.True(!ChartBooleanOptionValue(smoothSeries[2]), "Expected missing smooth element to use the renderer default false.");
         TestAssert.True(!ChartBooleanOptionIsDefined(smoothSeries[2]), "Expected missing smooth element to remain distinct from explicit false.");
         TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(smoothSeries[2]));
+    }
+
+    public static void PptxChartVaryColorsOptionsPreserveRawBooleanState()
+    {
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartBarOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-option resolver.");
+
+        object shorthand = ReadBarOptions("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart><c:varyColors/></c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        object explicitFalse = ReadBarOptions("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart><c:varyColors val="0"/></c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        object missing = ReadBarOptions("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart/></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        object shorthandVaryColors = shorthand.GetType().GetProperty("VaryColors")?.GetValue(shorthand) ?? throw new InvalidOperationException("Expected shorthand varyColors option.");
+        TestAssert.True(ChartBooleanOptionValue(shorthandVaryColors), "Expected shorthand varyColors element to resolve through the shared OOXML boolean parser.");
+        TestAssert.True(ChartBooleanOptionIsDefined(shorthandVaryColors), "Expected shorthand varyColors element presence to remain explicit.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(shorthandVaryColors));
+
+        object explicitFalseVaryColors = explicitFalse.GetType().GetProperty("VaryColors")?.GetValue(explicitFalse) ?? throw new InvalidOperationException("Expected explicit false varyColors option.");
+        TestAssert.True(!ChartBooleanOptionValue(explicitFalseVaryColors), "Expected explicit varyColors=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(explicitFalseVaryColors), "Expected explicit varyColors=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(explicitFalseVaryColors));
+
+        object missingVaryColors = missing.GetType().GetProperty("VaryColors")?.GetValue(missing) ?? throw new InvalidOperationException("Expected missing varyColors option.");
+        TestAssert.True(ChartBooleanOptionValue(missingVaryColors), "Expected missing varyColors element to use the renderer default true.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(missingVaryColors), "Expected missing varyColors element to remain distinct from explicit true.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(missingVaryColors));
+
+        object ReadBarOptions(string xml)
+        {
+            XElement chartElement = XDocument.Parse(xml).Descendants(c + "barChart").Single();
+            return readOptions.Invoke(null, [null, chartElement, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
+        }
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
