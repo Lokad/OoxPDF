@@ -976,13 +976,18 @@ High-priority actions:
   repeatable text-emission quantization before writing `/Tf`; a separate non-picture graphics-structure gap still
   accounts for the missing even-odd clip. Public image evidence rules out normal stretched raster pictures as the
   remaining source.
-  - [ ] 2026-05-28 private acceptance baseline after the chart-style/effect slices:
+  - [x] 2026-05-28 private acceptance baseline after the chart-style/effect slices:
     private run `artifacts/private-visual/lokad-value-based/20260528-102720` compared all 84 pages with zero
     dimension mismatches; page 17 remained dimension-matched at MAE `2.785230`, RMSE `18.891917`, changed16
     `0.044118`, changed32 `0.034128`, SSIM `0.923374`, and foreground-color histogram correlation `0.999944`.
     This is an evidence checkpoint only: it records that recent chart and text-model work did not resolve the
     still-open page-17 structural text/font branch, and it keeps the next work item tied to public-safe probes
     rather than a private slide-specific rule.
+  - [x] 2026-05-28 private acceptance baseline after chart scene-source and placeholder-cascade slices:
+    private run `artifacts/private-visual/lokad-value-based/20260528-105312` compared all 84 pages with zero
+    dimension mismatches, deck MAE `7.536827`, max page MAE `16.412422`, changed16 `0.101039`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. This remained behavior-neutral against the previous private baseline,
+    so the still-open page-17 work remains the public-safe text/font emission branch rather than a new regression.
 - [x] 2026-05-27: Close the remaining private page-17 graphics-operator clip gap with an Office-like
   stroke-phase slide clip:
   public `pptx-ladder-05-basic-shapes` showed the same pattern as the private slide: Office emits a slide-sized
