@@ -69,6 +69,30 @@ function BoundsDelta($reference, $candidate) {
         Select-Object -ExpandProperty Maximum
 }
 
+function BoundsDistance($left, $right) {
+    if ($null -eq $left -or $null -eq $right) {
+        return $null
+    }
+
+    $dx = 0d
+    if ([double]$left.MaxX -lt [double]$right.MinX) {
+        $dx = [double]$right.MinX - [double]$left.MaxX
+    }
+    elseif ([double]$right.MaxX -lt [double]$left.MinX) {
+        $dx = [double]$left.MinX - [double]$right.MaxX
+    }
+
+    $dy = 0d
+    if ([double]$left.MaxY -lt [double]$right.MinY) {
+        $dy = [double]$right.MinY - [double]$left.MaxY
+    }
+    elseif ([double]$right.MaxY -lt [double]$left.MinY) {
+        $dy = [double]$left.MinY - [double]$right.MaxY
+    }
+
+    return Round ([Math]::Sqrt($dx * $dx + $dy * $dy))
+}
+
 function Select-PrimaryKind($items, [string] $kind) {
     $matches = @($items | Where-Object { [string]$_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX)
     if ($matches.Count -eq 0) {
@@ -480,6 +504,64 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
     return ,$rows.ToArray()
 }
 
+function Build-ManualLayoutHashIndexMap($manualLayouts) {
+    $map = @{}
+    foreach ($layout in $manualLayouts) {
+        $key = [string]$layout.ExpectedTextHashSetKey
+        if (-not [string]::IsNullOrWhiteSpace($key) -and -not $map.ContainsKey($key)) {
+            $map[$key] = [string]$layout.Index
+        }
+    }
+
+    return $map
+}
+
+function Find-NearestCluster($line, $clusters) {
+    $best = $null
+    $bestDistance = [double]::PositiveInfinity
+    foreach ($cluster in $clusters) {
+        $distance = BoundsDistance $line $cluster
+        if ($null -eq $distance) {
+            continue
+        }
+
+        if ([double]$distance -lt $bestDistance) {
+            $bestDistance = [double]$distance
+            $best = $cluster
+        }
+    }
+
+    return $best
+}
+
+function Build-LeaderLineClusterEvidenceForSide([string] $side, $leaderLines, $clusters, $hashIndexMap) {
+    $rows = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $leaderLines.Count; $i++) {
+        $line = $leaderLines[$i]
+        $cluster = Find-NearestCluster $line $clusters
+        $hashSetKey = if ($null -eq $cluster) { "" } else { Hash-SetKey ([string]$cluster.TextHash).Split("+") }
+        $rows.Add([pscustomobject]@{
+            Side = $side
+            LeaderLineIndex = $i
+            LeaderLineBounds = Format-Bounds $line
+            NearestClusterBounds = Format-Bounds $cluster
+            NearestClusterDistance = BoundsDistance $line $cluster
+            NearestClusterTextHashSetKey = $hashSetKey
+            NearestManualIndex = if (-not [string]::IsNullOrWhiteSpace($hashSetKey) -and $hashIndexMap.ContainsKey($hashSetKey)) { $hashIndexMap[$hashSetKey] } else { "" }
+        })
+    }
+
+    return ,$rows.ToArray()
+}
+
+function Build-LeaderLineClusterEvidence($referenceLeaderLines, $candidateLeaderLines, $referenceClusters, $candidateClusters, $manualLayouts) {
+    $hashIndexMap = Build-ManualLayoutHashIndexMap $manualLayouts
+    return ,@(
+        Build-LeaderLineClusterEvidenceForSide "reference" $referenceLeaderLines $referenceClusters $hashIndexMap
+        Build-LeaderLineClusterEvidenceForSide "candidate" $candidateLeaderLines $candidateClusters $hashIndexMap
+    )
+}
+
 function Ensure-ChartTextStructures($side, $textOperations, $chartStructures, $chartTextStructures) {
     if (-not [string]::IsNullOrWhiteSpace($chartTextStructures) -and (Test-Path -LiteralPath $chartTextStructures)) {
         return $chartTextStructures
@@ -539,6 +621,7 @@ $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
 $labelClusterMatches = Match-Nearest $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
 $manualLayoutCoordinateEvidence = Build-ManualLayoutCoordinateEvidence $chartManualLayouts $referenceLabelClusters $candidateLabelClusters $referencePolarPlotBox $candidatePolarPlotBox
+$leaderLineClusterEvidence = Build-LeaderLineClusterEvidence $referenceLeaderLines $candidateLeaderLines $referenceLabelClusters $candidateLabelClusters $chartManualLayouts
 
 $summary = [pscustomobject]@{
     DataLabelTextReferenceCount = $referenceLabels.Count
@@ -558,6 +641,7 @@ $summary = [pscustomobject]@{
     DataLabelTextMatches = $labelMatches
     DataLabelTextClusterMatches = $labelClusterMatches
     DataLabelLeaderLineMatches = $leaderLineMatches
+    DataLabelLeaderLineClusterEvidence = $leaderLineClusterEvidence
 }
 
 $summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount
@@ -590,6 +674,12 @@ if ($leaderLineMatches.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label leader-line nearest matches:"
     $leaderLineMatches | Format-Table -AutoSize Kind, ReferenceIndex, CandidateIndex, BoundsDelta, CenterDeltaX, CenterDeltaY, ReferenceBounds, CandidateBounds
+}
+
+if ($leaderLineClusterEvidence.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Data-label leader-line cluster evidence:"
+    $leaderLineClusterEvidence | Format-Table -AutoSize Side, LeaderLineIndex, LeaderLineBounds, NearestClusterDistance, NearestManualIndex, NearestClusterBounds
 }
 
 if (-not [string]::IsNullOrWhiteSpace($OutputJson)) {

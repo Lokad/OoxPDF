@@ -2703,6 +2703,12 @@ High-priority actions:
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
     `20260527-122348` shows reference/candidate `DataLabelLeaderLineCandidate` counts `1/4`; keep the kind
     ungated until label-box placement, clipping, and Office's per-label leader visibility rule are understood.
+    2026-05-28 update: `tools/SummarizeChartDataLabelLayout.ps1` now attaches each leader-line structure to
+    the nearest hash-identified label cluster. On public run `20260528-152722`, Office's only visible leader
+    line is nearest source label index `2` (`Gamma`/`17%`) at distance `49.91pt`, while the candidate emits
+    four connectors nearest indices `3`, `2`, `0`, and `1`. This makes the remaining gate content-aware: do
+    not reduce candidate leader lines by a count-only or quadrant-only heuristic; derive visibility from the
+    final Office-aligned label boxes and then assert the surviving connector against the matched label index.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
