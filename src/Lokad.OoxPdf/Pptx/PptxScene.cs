@@ -724,12 +724,19 @@ internal enum PptxSceneChartPlotKind
 
 internal sealed record PptxSceneChartDataLabels(
     bool? ShowValue,
+    string ShowValueValue,
     bool? ShowPercent,
+    string ShowPercentValue,
     bool? ShowCategoryName,
+    string ShowCategoryNameValue,
     bool? ShowSeriesName,
+    string ShowSeriesNameValue,
     bool? ShowLeaderLines,
+    string ShowLeaderLinesValue,
     bool? ShowLegendKey,
+    string ShowLegendKeyValue,
     bool? ShowBubbleSize,
+    string ShowBubbleSizeValue,
     PptxSceneChartLeaderLines LeaderLines,
     PptxSceneChartDataLabelPosition PositionKind,
     string Position,
@@ -746,12 +753,19 @@ internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
     string IndexValue,
     bool? ShowValue,
+    string ShowValueValue,
     bool? ShowPercent,
+    string ShowPercentValue,
     bool? ShowCategoryName,
+    string ShowCategoryNameValue,
     bool? ShowSeriesName,
+    string ShowSeriesNameValue,
     bool? ShowLeaderLines,
+    string ShowLeaderLinesValue,
     bool? ShowLegendKey,
+    string ShowLegendKeyValue,
     bool? ShowBubbleSize,
+    string ShowBubbleSizeValue,
     PptxSceneChartLeaderLines LeaderLines,
     string CustomText,
     IReadOnlyList<PptxSceneChartTextRun> CustomTextRuns,
@@ -2149,12 +2163,19 @@ internal sealed class PptxSceneBuilder
         {
             return new PptxSceneChartDataLabels(
                 ShowValue: null,
+                ShowValueValue: string.Empty,
                 ShowPercent: null,
+                ShowPercentValue: string.Empty,
                 ShowCategoryName: null,
+                ShowCategoryNameValue: string.Empty,
                 ShowSeriesName: null,
+                ShowSeriesNameValue: string.Empty,
                 ShowLeaderLines: null,
+                ShowLeaderLinesValue: string.Empty,
                 ShowLegendKey: null,
+                ShowLegendKeyValue: string.Empty,
                 ShowBubbleSize: null,
+                ShowBubbleSizeValue: string.Empty,
                 LeaderLines: default,
                 PositionKind: PptxSceneChartDataLabelPosition.Unknown,
                 Position: string.Empty,
@@ -2169,14 +2190,28 @@ internal sealed class PptxSceneBuilder
         }
 
         PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(labels);
+        (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showVal");
+        (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showPercent");
+        (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showCatName");
+        (bool? showSeriesName, string showSeriesNameValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showSerName");
+        (bool? showLeaderLines, string showLeaderLinesValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLeaderLines");
+        (bool? showLegendKey, string showLegendKeyValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showLegendKey");
+        (bool? showBubbleSize, string showBubbleSizeValue) = ReadOptionalOoxmlBooleanElementWithValue(labels, "showBubbleSize");
         return new PptxSceneChartDataLabels(
-                ReadOptionalOoxmlBooleanElement(labels, "showVal"),
-                ReadOptionalOoxmlBooleanElement(labels, "showPercent"),
-                ReadOptionalOoxmlBooleanElement(labels, "showCatName"),
-                ReadOptionalOoxmlBooleanElement(labels, "showSerName"),
-                ReadOptionalOoxmlBooleanElement(labels, "showLeaderLines"),
-                ReadOptionalOoxmlBooleanElement(labels, "showLegendKey"),
-                ReadOptionalOoxmlBooleanElement(labels, "showBubbleSize"),
+                showValue,
+                showValueValue,
+                showPercent,
+                showPercentValue,
+                showCategoryName,
+                showCategoryNameValue,
+                showSeriesName,
+                showSeriesNameValue,
+                showLeaderLines,
+                showLeaderLinesValue,
+                showLegendKey,
+                showLegendKeyValue,
+                showBubbleSize,
+                showBubbleSizeValue,
                 ReadChartLeaderLines(labels, theme),
                 ParseChartDataLabelPosition(ReadChartElementValue(labels, "dLblPos")),
                 ReadChartElementValue(labels, "dLblPos"),
@@ -2211,16 +2246,30 @@ internal sealed class PptxSceneBuilder
             }
 
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
+            (bool? showValue, string showValueValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showVal");
+            (bool? showPercent, string showPercentValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showPercent");
+            (bool? showCategoryName, string showCategoryNameValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showCatName");
+            (bool? showSeriesName, string showSeriesNameValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showSerName");
+            (bool? showLeaderLines, string showLeaderLinesValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showLeaderLines");
+            (bool? showLegendKey, string showLegendKeyValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showLegendKey");
+            (bool? showBubbleSize, string showBubbleSizeValue) = ReadOptionalOoxmlBooleanElementWithValue(label, "showBubbleSize");
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
                 indexValue,
-                ReadOptionalOoxmlBooleanElement(label, "showVal"),
-                ReadOptionalOoxmlBooleanElement(label, "showPercent"),
-                ReadOptionalOoxmlBooleanElement(label, "showCatName"),
-                ReadOptionalOoxmlBooleanElement(label, "showSerName"),
-                ReadOptionalOoxmlBooleanElement(label, "showLeaderLines"),
-                ReadOptionalOoxmlBooleanElement(label, "showLegendKey"),
-                ReadOptionalOoxmlBooleanElement(label, "showBubbleSize"),
+                showValue,
+                showValueValue,
+                showPercent,
+                showPercentValue,
+                showCategoryName,
+                showCategoryNameValue,
+                showSeriesName,
+                showSeriesNameValue,
+                showLeaderLines,
+                showLeaderLinesValue,
+                showLegendKey,
+                showLegendKeyValue,
+                showBubbleSize,
+                showBubbleSizeValue,
                 ReadChartLeaderLines(label, theme),
                 ReadChartText(label.Element(ChartNamespace + "tx")) ?? string.Empty,
                 ReadChartTextRuns(label.Element(ChartNamespace + "tx"), theme),

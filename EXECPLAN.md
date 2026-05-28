@@ -12074,6 +12074,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 attempt hit a transient test DLL write lock, then the serial rerun passed with `89` tests, `0` failures, and
 `0` skips; full non-slow console runner passed with `330` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML boolean tokens for chart data-label flags. Both
+`PptxSceneChartDataLabels` and `PptxSceneChartDataLabelOverride` now carry source-token strings beside the
+parsed nullable booleans for `showVal`, `showPercent`, `showCatName`, `showSerName`, `showLeaderLines`,
+`showLegendKey`, and `showBubbleSize`. The rich resolved-node fixture now asserts absent `val`, textual
+`false`, numeric `0`, and per-label override tokens through the typed scene model.
+
+This is a structural alignment slice, not a data-label placement change. It removes another lossy parse
+boundary before the renderer makes label-content decisions, which is useful for future Office-PDF comparisons
+where explicit false, omitted flags, and shorthand empty elements should remain distinguishable without
+falling back to raw XML inspection. Remaining boolean-token gaps now concentrate around plot/series options
+(`varyColors`, `marker`, `smooth`) and axis visibility/deletion state.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `89` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `330` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw `c:numFmt/@sourceLinked` token through the chart scene model
 and renderer number-format bridge. `PptxSceneChartNumberFormat` and the renderer-local `ChartNumberFormat`
 now carry `SourceLinkedValue` beside the existing parsed `SourceLinked` boolean, so plot data labels,
