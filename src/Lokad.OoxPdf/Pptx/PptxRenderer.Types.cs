@@ -758,11 +758,16 @@ internal sealed partial class PptxRenderer
 
     private sealed class TextAdvanceEstimator
     {
-        private readonly WindowsFontResolver resolver = new();
+        private readonly PresentationFontResolver resolver;
         private readonly Dictionary<string, OpenTypeFont?> fonts = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, FontResolution?> resolutions = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, bool> requestedMathTables = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ResolvedGlyphFont?> glyphFonts = new(StringComparer.OrdinalIgnoreCase);
+
+        public TextAdvanceEstimator(PresentationFontResolver? resolver = null)
+        {
+            this.resolver = resolver ?? new PresentationFontResolver();
+        }
 
         public double Measure(string text, double fontSize, string? familyName, bool bold = false, bool italic = false, double characterSpacing = 0d, bool kerningEnabled = true)
         {

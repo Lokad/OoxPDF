@@ -10,6 +10,13 @@ namespace Lokad.OoxPdf.Docx;
 
 internal sealed class DocxRenderer
 {
+    private readonly IFontResolver fontResolver;
+
+    public DocxRenderer(IFontResolver? fontResolver = null)
+    {
+        this.fontResolver = fontResolver ?? new WindowsFontResolver();
+    }
+
     public IReadOnlyList<PdfPage> RenderBlankPages(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         if (document.BodyElements.Count == 0 && document.HeaderParagraphs.Count == 0 && document.FooterParagraphs.Count == 0)
@@ -17,10 +24,10 @@ internal sealed class DocxRenderer
             return [new PdfPage(document.PageWidthPoints, document.PageHeightPoints)];
         }
 
-        return RenderParagraphs(document, diagnosticSink);
+        return RenderParagraphs(document, fontResolver, diagnosticSink);
     }
 
-    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, Action<OoxPdfDiagnostic>? diagnosticSink)
+    private static IReadOnlyList<PdfPage> RenderParagraphs(DocxDocument document, IFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         string familyName = document.Paragraphs
             .Concat(document.HeaderParagraphs)
@@ -28,7 +35,7 @@ internal sealed class DocxRenderer
             .SelectMany(p => p.Runs)
             .Select(r => r.FontFamily)
             .FirstOrDefault(f => !string.IsNullOrWhiteSpace(f)) ?? "Arial";
-        FontResolution resolution = new WindowsFontResolver().Resolve(new FontRequest(familyName));
+        FontResolution resolution = fontResolver.Resolve(new FontRequest(familyName));
         IReadOnlyList<DocxTextRun> allRuns = document.Paragraphs
             .Concat(document.HeaderParagraphs)
             .Concat(document.FooterParagraphs)

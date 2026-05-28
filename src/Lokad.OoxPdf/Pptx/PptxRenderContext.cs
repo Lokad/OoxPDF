@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
+using Lokad.OoxPdf.Fonts;
 using Lokad.OoxPdf.Pdf;
 
 namespace Lokad.OoxPdf.Pptx;
@@ -11,6 +12,7 @@ internal sealed record PptxRenderContext(
     XDocument SlideXml,
     PptxSceneSlide SceneSlide,
     IReadOnlyList<XDocument> InheritedXml,
+    PresentationFontResolver FontResolver,
     Dictionary<string, PdfImageXObject?> ImageCache,
     Action<OoxPdfDiagnostic>? DiagnosticSink)
 {

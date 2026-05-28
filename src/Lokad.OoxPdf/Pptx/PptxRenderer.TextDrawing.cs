@@ -13,7 +13,7 @@ internal sealed partial class PptxRenderer
     internal static IReadOnlyList<PptxTextGlyphRunSnapshot> InspectTextGlyphRuns(PptxDocument document, OoxPackage package, int slideIndex)
     {
         IReadOnlyList<PptxPositionedTextSpan> textSpans = ReadSlideTextSpansForInspection(document, package, slideIndex);
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, []);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, [], new PresentationFontResolver());
         textSpans = SplitLeadingSpacesAtHighlightBoundaries(textSpans);
         textSpans = CoalesceAdjacentTextSpans(textSpans, compareHighlight: true);
         textSpans = CoalesceUnderlineSpans(textSpans);
@@ -126,7 +126,7 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, resourcePrefix);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, new PresentationFontResolver(), resourcePrefix);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }
@@ -141,13 +141,17 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textSpans, legacyTextRuns, new PresentationFontResolver());
         DrawTextSpansWithFonts(textSpans, graphics, renderedFonts.Fonts);
         DrawTextRunsWithFonts(legacyTextRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<PptxPositionedTextSpan> textSpans, IReadOnlyList<TextRun> legacyTextRuns, string resourcePrefix = "F")
+    private static RenderedFonts CreateRenderedFonts(
+        IReadOnlyList<PptxPositionedTextSpan> textSpans,
+        IReadOnlyList<TextRun> legacyTextRuns,
+        PresentationFontResolver fontResolver,
+        string resourcePrefix = "F")
     {
         var uses = new List<TextFontUse>();
         foreach (PptxPositionedTextSpan span in textSpans)
@@ -166,10 +170,10 @@ internal sealed partial class PptxRenderer
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
-        return CreateRenderedFonts(uses, resourcePrefix);
+        return CreateRenderedFonts(uses, fontResolver, resourcePrefix);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, string resourcePrefix = "F")
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextRun> textRuns, PresentationFontResolver fontResolver, string resourcePrefix = "F")
     {
         if (textRuns.Count == 0)
         {
@@ -184,23 +188,22 @@ internal sealed partial class PptxRenderer
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
-            .ToArray(), resourcePrefix);
+            .ToArray(), fontResolver, resourcePrefix);
     }
 
-    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, string resourcePrefix)
+    private static RenderedFonts CreateRenderedFonts(IReadOnlyList<TextFontUse> uses, PresentationFontResolver fontResolver, string resourcePrefix)
     {
         if (uses.Count == 0)
         {
             return new RenderedFonts(new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase), []);
         }
 
-        var resolver = new WindowsFontResolver();
         var fonts = new Dictionary<string, RenderedFont>(StringComparer.OrdinalIgnoreCase);
         var resources = new List<PdfFontResource>();
         foreach (IGrouping<string, TextFontUse> group in uses.GroupBy(use => FontKey(use.FamilyName, use.Bold, use.Italic), StringComparer.OrdinalIgnoreCase))
         {
             TextFontUse first = group.First();
-            FontResolution resolution = resolver.ResolvePresentationTextFace(new FontRequest(first.FamilyName, first.Bold, first.Italic));
+            FontResolution resolution = fontResolver.ResolvePresentationTextFace(new FontRequest(first.FamilyName, first.Bold, first.Italic));
             if (resolution.FontFilePath is null || !File.Exists(resolution.FontFilePath))
             {
                 continue;

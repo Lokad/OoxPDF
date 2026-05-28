@@ -15,6 +15,12 @@ internal sealed partial class PptxRenderer
     private static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     private static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     private static readonly XNamespace RelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private readonly PresentationFontResolver fontResolver;
+
+    public PptxRenderer(IFontResolver? fontResolver = null)
+    {
+        this.fontResolver = new PresentationFontResolver(fontResolver);
+    }
 
     public IReadOnlyList<PdfPage> RenderBlankPages(PptxDocument document)
     {
@@ -42,7 +48,7 @@ internal sealed partial class PptxRenderer
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
-            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
+            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, fontResolver, imageCache, diagnosticSink);
 
             RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
             RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
@@ -52,7 +58,7 @@ internal sealed partial class PptxRenderer
             int imageIndex = 1;
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
-            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray());
+            RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver);
             RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
             RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
             RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.Slide.PartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
@@ -84,7 +90,7 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
+        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, new PresentationFontResolver(), imageCache, diagnosticSink);
     }
 
     private static PptxRenderContext CreateRenderContext(
@@ -93,10 +99,11 @@ internal sealed partial class PptxRenderer
         PptxSlide slide,
         XDocument slideXml,
         PptxSceneSlide sceneSlide,
+        PresentationFontResolver fontResolver,
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        return new PptxRenderContext(document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), imageCache, diagnosticSink);
+        return new PptxRenderContext(document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), fontResolver, imageCache, diagnosticSink);
     }
 
     private static IReadOnlyList<XDocument> BuildInheritedXmlSources(PptxSceneSlide sceneSlide)

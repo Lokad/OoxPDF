@@ -14973,6 +14973,24 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
 passed with `403` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: `OoxPdfOptions.FontResolver` is no longer an inert public option for the main
+text paths. Conversion now passes the supplied resolver into DOCX text embedding and into PPTX shape/table
+text layout and PDF font embedding. PPTX uses an internal `PresentationFontResolver` boundary so the public
+`IFontResolver` interface remains stable while the default Windows resolver can still apply presentation-text
+face selection and provide the discovered-font catalog used by downstream glyph fallback. Public regression
+tests now assert that DOCX and PPTX text conversions call a supplied resolver.
+
+Discovery kept as an open architecture item: chart text still reaches `RenderTextRuns` through static chart
+helpers that construct a default resolver. This means the option is honored for normal PPTX shape/table text,
+but not yet for native chart labels/titles/legends. The long-term fix is to push chart text emission through
+the same scene/render context font boundary rather than adding another chart-local resolver parameter chain.
+That work belongs with the broader chart text-frame convergence track.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `api`
+passed with `5` tests, `0` failures, and `0` skips; focused non-slow `pptx-typography` passed with `99`
+tests, `0` failures, and `2` slow skips; focused non-slow `docx-text` passed with `6` tests, `0` failures,
+and `0` skips; full non-slow console runner passed with `405` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

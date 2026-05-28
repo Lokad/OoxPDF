@@ -299,7 +299,7 @@ internal sealed partial class PptxRenderer
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextLayoutModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+        return BuildTextLayoutModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver);
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
@@ -308,9 +308,10 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         int slideNumber,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        PresentationFontResolver? fontResolver = null)
     {
-        var advanceEstimator = new TextAdvanceEstimator();
+        var advanceEstimator = new TextAdvanceEstimator(fontResolver);
         var frames = new List<PptxTextFrameLayout>();
         IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
         foreach (PptxTextFrameModel frameModel in frameModels)
@@ -1175,7 +1176,7 @@ internal sealed partial class PptxRenderer
     {
         return node.TextBody is null
             ? []
-            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
+            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
@@ -1183,7 +1184,7 @@ internal sealed partial class PptxRenderer
         PptxRenderContext context,
         bool includePlaceholders)
     {
-        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml);
+        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
@@ -1192,7 +1193,8 @@ internal sealed partial class PptxRenderer
         PptxTheme theme,
         int slideNumber,
         bool includePlaceholders,
-        IReadOnlyList<XDocument> placeholderSources)
+        IReadOnlyList<XDocument> placeholderSources,
+        PresentationFontResolver? fontResolver = null)
     {
         XElement current = new(shape);
         foreach (XElement group in shape.Ancestors(PresentationNamespace + "grpSp"))
@@ -1211,13 +1213,13 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources, fontResolver));
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
     {
         PptxTextFrameModel frameModel = BuildTextFrameModel(tableFrame, context.Document, context.Theme, context.SlideNumber, context.InheritedXml);
-        PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator());
+        PptxTextFrameLayout layout = BuildTextFrameLayout(frameModel, context.Document, new TextAdvanceEstimator(context.FontResolver));
         return FlattenTextLayoutToSpans(new PptxTextLayoutModel([layout]));
     }
 
