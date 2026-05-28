@@ -6598,7 +6598,9 @@ internal sealed partial class PptxRenderer
 
     private static double? ReadSceneOrXmlValueAxisCrossingValue(PptxSceneChartAxis? sceneAxis, XElement? valueAxis, ChartValueExtents extents)
     {
-        double? crossesAt = sceneAxis?.CrossesAt ?? ReadChartElementDouble(valueAxis, "crossesAt");
+        double? crossesAt = sceneAxis is not null
+            ? sceneAxis.CrossesAt
+            : ReadChartElementDouble(valueAxis, "crossesAt");
         if (crossesAt is { } explicitCrossing)
         {
             return explicitCrossing;

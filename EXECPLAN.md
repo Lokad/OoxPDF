@@ -13001,6 +13001,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 passed with `106` tests, `0` failures, and `0` skips; full non-slow console runner passed with `348`
 tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Chart value-axis crossing resolution is now scene-authoritative for `crossesAt`
+as well as `crosses`. `ReadSceneOrXmlValueAxisCrossingValue` no longer imports `c:crossesAt` from fallback
+XML when a `PptxSceneChartAxis` exists but its parsed `CrossesAt` is absent. In that case it resolves the
+scene-owned `CrossesKind` through the explicit Office default ladder (`max`, `min`, `autoZero`) and keeps
+the raw `CrossesAtValue` as provenance for later Office evidence.
+
+The regression pairs `crossesAt="futureCross"` in the scene with `crossesAt="2"` in mismatched fallback XML:
+the scene-backed resolver uses the scene `crosses="max"` and returns the axis maximum, while the XML-only
+compatibility path still reads `2`. This closes another nullable-axis scalar merge point and keeps future
+axis layout work aligned with typed scene state instead of repairing model gaps inside the renderer.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxChartInvalidAxisCrossesAtUsesSceneAuthoritativeCrosses` passed; focused non-slow `pptx-charts` passed
+with `107` tests, `0` failures, and `0` skips; full non-slow console runner passed with `349` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
