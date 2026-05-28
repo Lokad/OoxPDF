@@ -15260,3 +15260,16 @@ reflection regression verifies that a longer radar value-axis label produces a w
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
 with `136` tests, `0` failures, and `0` skips; full non-slow console runner passed with `409` tests, `0`
 failures, and `7` slow skips.
+
+Follow-up, 2026-05-28: chart data-label fallback readers now carry the chart source color map through the
+XML-only compatibility path. Plot/series `c:dLbls`, per-label overrides, leader-line `spPr`, data-label
+`txPr`, override rich text runs, and data-label shape styles now resolve theme colors through the same source
+map as the owning chart instead of silently using the default map. Render-time data-label fallback text style
+resolution also uses the chart color map for its default `tx1` text color across bar, line, scatter, bubble,
+pie, and doughnut data labels.
+
+This closes only the data-label color-map leak. The broader chart-style/color-style cascade remains open:
+Office-backed precedence across `colorsN.xml` variations, chart-style role references, explicit chart XML
+overrides, markers, labels, axes, legends, and series/point surfaces still needs structural evidence before it
+should drive more paint decisions. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.

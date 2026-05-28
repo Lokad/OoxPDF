@@ -14787,7 +14787,7 @@ internal static class PptxTests
         System.Reflection.MethodInfo resolveSeriesOptions = typeof(PptxRenderer).GetMethod(
             "ResolveChartDataLabelOptionsForSeries",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series data-label merge resolver.");
-        object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
+        object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
 
         object sceneShowValue = ChartDataLabelFlagOption(sceneOptions, "showVal");
         TestAssert.True(ChartBooleanOptionValue(sceneShowValue), "Expected scene-backed shorthand showVal to resolve true.");
@@ -14826,7 +14826,7 @@ internal static class PptxTests
         TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(resolvedSceneBody) ?? 0d);
         TestAssert.Equal("-1200000", ChartTextBodyRotationValue(resolvedSceneBody));
 
-        object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
+        object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
         object xmlShowValue = ChartDataLabelFlagOption(xmlOptions, "showVal");
         TestAssert.True(!ChartBooleanOptionValue(xmlShowValue), "Expected XML showVal=0 to resolve false.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlShowValue), "Expected XML showVal=0 presence to remain explicit.");
@@ -14871,8 +14871,8 @@ internal static class PptxTests
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
-        object plotOptions = readOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected plot label options.");
-        object seriesOptions = readSeriesOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected series label options.");
+        object plotOptions = readOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected plot label options.");
+        object seriesOptions = readSeriesOptions.Invoke(null, [null, null, xmlWithSeriesLabels, PptxTheme.Empty, PptxColorMap.Default]) ?? throw new InvalidOperationException("Expected series label options.");
         object resolvedSeriesOptions = resolveSeriesOptions.Invoke(null, [plotOptions, seriesOptions, 0]) ?? throw new InvalidOperationException("Expected resolved series label options.");
         object seriesShowValue = ChartDataLabelFlagOption(resolvedSeriesOptions, "showVal");
         TestAssert.True(ChartBooleanOptionValue(seriesShowValue), "Expected missing series showVal to inherit the plot-level explicit showVal.");
