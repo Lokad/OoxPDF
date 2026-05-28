@@ -1271,6 +1271,76 @@ internal static class PptxTests
         TestAssert.True(pdf.IndexOf("re f*\r\n0 0 720 540 re W* n", fill, StringComparison.Ordinal) < 0, "Filled/stroked shapes should not repeat the slide clip between fill and stroke.");
     }
 
+    public static void PptxSyntheticShapeExplicitLineColorInheritsStyleLineWidth()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="LineWidthTheme">
+                  <a:themeElements>
+                    <a:clrScheme name="LineWidthTheme">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent1><a:srgbClr val="4472C4"/></a:accent1>
+                    </a:clrScheme>
+                    <a:fontScheme name="LineWidthTheme"><a:majorFont/><a:minorFont/></a:fontScheme>
+                    <a:fmtScheme name="LineWidthTheme">
+                      <a:fillStyleLst/>
+                      <a:lnStyleLst>
+                        <a:ln w="12700"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                        <a:ln w="19050"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln>
+                      </a:lnStyleLst>
+                      <a:effectStyleLst/>
+                      <a:bgFillStyleLst/>
+                    </a:fmtScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:style>
+                          <a:lnRef idx="2"><a:schemeClr val="accent1"/></a:lnRef>
+                          <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+                          <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+                          <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
+                        </p:style>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                          <a:noFill/>
+                          <a:ln><a:solidFill><a:srgbClr val="C00000"/></a:solidFill></a:ln>
+                        </p:spPr>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+
+        OoxPdfConverter.Convert(input, output);
+
+        string pdf = File.ReadAllText(output, Encoding.ASCII);
+        TestAssert.Contains("1.5 w", pdf);
+        TestAssert.Contains("0.753 0 0 RG", pdf);
+        TestAssert.Contains("72 396 144 72 re S", pdf);
+    }
+
     public static void PptxSyntheticArrowAndConnectorShapesRender()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

@@ -4343,7 +4343,10 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha))
+        double? styleLineWidth = TryReadStyleLineWidth(shape, theme, out double inheritedLineWidth)
+            ? inheritedLineWidth
+            : null;
+        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
@@ -4371,6 +4374,24 @@ internal sealed class PptxSceneBuilder
         color = default;
         lineWidth = 0d;
         alpha = 1d;
+        return false;
+    }
+
+    private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
+    {
+        XElement? lineRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "lnRef");
+        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
+        if (lineIndex > 0 &&
+            theme.TryGetLineStyle(lineIndex, out XElement lineStyle) &&
+            lineStyle.Attribute("w") is { } widthAttribute)
+        {
+            lineWidth = OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture));
+            return true;
+        }
+
+        lineWidth = 0d;
         return false;
     }
 
@@ -4412,12 +4433,18 @@ internal sealed class PptxSceneBuilder
         return true;
     }
 
-    private static bool TryReadLineWithAlpha(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    private static bool TryReadLineWithAlpha(
+        XElement shapeProperties,
+        PptxTheme theme,
+        out RgbColor color,
+        out double lineWidth,
+        out double alpha,
+        double? fallbackLineWidth = null)
     {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
-            : 1d;
+            : fallbackLineWidth ?? 1d;
         return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
     }
 

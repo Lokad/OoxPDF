@@ -180,12 +180,18 @@ internal sealed partial class PptxRenderer
         return TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out _);
     }
 
-    private static bool TryReadLineWithAlpha(XElement shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    private static bool TryReadLineWithAlpha(
+        XElement shapeProperties,
+        PptxTheme theme,
+        out RgbColor color,
+        out double lineWidth,
+        out double alpha,
+        double? fallbackLineWidth = null)
     {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
-            : 1d;
+            : fallbackLineWidth ?? 1d;
         return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
     }
 }

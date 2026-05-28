@@ -2982,7 +2982,10 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        if (explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha))
+        double? styleLineWidth = TryReadStyleLineWidth(shape, theme, out double inheritedLineWidth)
+            ? inheritedLineWidth
+            : null;
+        if (explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
@@ -3003,6 +3006,24 @@ internal sealed partial class PptxRenderer
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
         return TryReadSolidColorWithAlpha(lineStyle, theme, lineRef, out color, out alpha);
+    }
+
+    private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
+    {
+        XElement? lineRef = shape
+            .Element(PresentationNamespace + "style")
+            ?.Element(DrawingNamespace + "lnRef");
+        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
+        if (lineIndex > 0 &&
+            theme.TryGetLineStyle(lineIndex, out XElement lineStyle) &&
+            lineStyle.Attribute("w") is { } widthAttribute)
+        {
+            lineWidth = OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture));
+            return true;
+        }
+
+        lineWidth = 0d;
+        return false;
     }
 
     private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)

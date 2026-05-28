@@ -5979,6 +5979,14 @@ paths, and ExecPlan references together.
     now map legacy byte bullets into the font private-use range before glyph lookup. Public synthetic unit
     `PptxSyntheticTextBoxMapsSymbolFontBulletCharacters` locks the rule, and private page 56 now renders
     the right-side square bullets.
+  - [x] Fix the first generic slide-56 outline gap without a slide-specific rule: color-only shape
+    `<a:ln>` elements now inherit a missing width from `p:style/a:lnRef` theme line styles instead of
+    falling back to `1 pt`. Public synthetic unit `PptxSyntheticShapeExplicitLineColorInheritsStyleLineWidth`
+    locks the OOXML cascade. Private-safe PDF inspection of page 56 in run `20260528-133004` shows the
+    seven colored outline strokes now match Office at `1.50 pt`; page 56 improved from MAE `5.105756` to
+    `4.841984`, changed16 `0.071019` to `0.061900`, SSIM `0.741392` to `0.748935`, and foreground histogram
+    correlation `0.976023` to `0.998505`. Deck-wide MAE improved on 36 pages, was neutral on 44, and had
+    four tiny `~0.01` MAE regressions to watch.
   - [ ] Continue slide-56 text-list parity: bold list emphasis and red arrow callouts still differ from the
     Office PDF, so isolate those as public typography and line/arrow fixtures rather than treating the slide
     as resolved.
