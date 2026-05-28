@@ -62,6 +62,14 @@ function OfficeGridRemainder([double] $value) {
     return RoundAway ($scaled - $floor)
 }
 
+function NullableGridRemainder($value) {
+    if ($null -eq $value -or [string]$value -eq "") {
+        return $null
+    }
+
+    return OfficeGridRemainder ([double]$value)
+}
+
 function HasValue($value) {
     return $null -ne $value -and [string]$value -ne ""
 }
@@ -95,6 +103,54 @@ function OptionalGridRemainder($object, [string] $propertyName) {
     }
 
     return OfficeGridRemainder ([double]$value)
+}
+
+function CandidatePageHeight($candidate) {
+    if ($null -eq $candidate) {
+        return $null
+    }
+
+    $clipY = OptionalValue $candidate "FrameClipY"
+    $clipHeight = OptionalValue $candidate "FrameClipHeight"
+    if ($null -eq $clipY -or $null -eq $clipHeight) {
+        return $null
+    }
+
+    return [double]$clipY + [double]$clipHeight
+}
+
+function PageTopBaseline($pageHeight, $baselineY) {
+    if ($null -eq $pageHeight -or $null -eq $baselineY) {
+        return $null
+    }
+
+    return [Math]::Round([double]$pageHeight - [double]$baselineY, 6)
+}
+
+function RefBaselineFromPageTop($reference, $candidate) {
+    if ($null -eq $reference) {
+        return $null
+    }
+
+    return PageTopBaseline (CandidatePageHeight $candidate) (RefY $reference)
+}
+
+function CandidateBaselineFromPageTop($candidate) {
+    if ($null -eq $candidate) {
+        return $null
+    }
+
+    return PageTopBaseline (CandidatePageHeight $candidate) ([double]$candidate.BaselineY)
+}
+
+function RefBaselineFromCandidateShapeTop($reference, $candidate) {
+    $pageTopBaseline = RefBaselineFromPageTop $reference $candidate
+    $shapeTop = OptionalValue $candidate "FrameShapeTopY"
+    if ($null -eq $pageTopBaseline -or $null -eq $shapeTop) {
+        return $null
+    }
+
+    return [Math]::Round([double]$pageTopBaseline - [double]$shapeTop, 6)
 }
 
 function Group-Count($items, [scriptblock] $keySelector) {
@@ -170,6 +226,9 @@ function Group-BranchExtents($items) {
             $groupItems = @($groups[$key].ToArray())
             $refBaseline = @($groupItems | ForEach-Object { OptionalDouble $_ "RefBaselineY" } | Where-Object { $null -ne $_ })
             $candBaseline = @($groupItems | ForEach-Object { OptionalDouble $_ "CandBaselineY" } | Where-Object { $null -ne $_ })
+            $refBaselineFromPageTop = @($groupItems | ForEach-Object { OptionalDouble $_ "RefBaselineFromPageTop" } | Where-Object { $null -ne $_ })
+            $candBaselineFromPageTop = @($groupItems | ForEach-Object { OptionalDouble $_ "CandBaselineFromPageTop" } | Where-Object { $null -ne $_ })
+            $refBaselineFromShapeTop = @($groupItems | ForEach-Object { OptionalDouble $_ "RefBaselineFromCandidateShapeTop" } | Where-Object { $null -ne $_ })
             $frameTop = @($groupItems | ForEach-Object { OptionalDouble $_ "CandFrameShapeTopY" } | Where-Object { $null -ne $_ })
             $lineTop = @($groupItems | ForEach-Object { OptionalDouble $_ "CandLineTopY" } | Where-Object { $null -ne $_ })
             [pscustomobject]@{
@@ -179,6 +238,12 @@ function Group-BranchExtents($items) {
                 MaxRefBaselineY = if ($refBaseline.Count -eq 0) { $null } else { [Math]::Round(($refBaseline | Measure-Object -Maximum).Maximum, 6) }
                 MinCandidateBaselineY = if ($candBaseline.Count -eq 0) { $null } else { [Math]::Round(($candBaseline | Measure-Object -Minimum).Minimum, 6) }
                 MaxCandidateBaselineY = if ($candBaseline.Count -eq 0) { $null } else { [Math]::Round(($candBaseline | Measure-Object -Maximum).Maximum, 6) }
+                MinRefBaselineFromPageTop = if ($refBaselineFromPageTop.Count -eq 0) { $null } else { [Math]::Round(($refBaselineFromPageTop | Measure-Object -Minimum).Minimum, 6) }
+                MaxRefBaselineFromPageTop = if ($refBaselineFromPageTop.Count -eq 0) { $null } else { [Math]::Round(($refBaselineFromPageTop | Measure-Object -Maximum).Maximum, 6) }
+                MinCandidateBaselineFromPageTop = if ($candBaselineFromPageTop.Count -eq 0) { $null } else { [Math]::Round(($candBaselineFromPageTop | Measure-Object -Minimum).Minimum, 6) }
+                MaxCandidateBaselineFromPageTop = if ($candBaselineFromPageTop.Count -eq 0) { $null } else { [Math]::Round(($candBaselineFromPageTop | Measure-Object -Maximum).Maximum, 6) }
+                MinRefBaselineFromCandidateShapeTop = if ($refBaselineFromShapeTop.Count -eq 0) { $null } else { [Math]::Round(($refBaselineFromShapeTop | Measure-Object -Minimum).Minimum, 6) }
+                MaxRefBaselineFromCandidateShapeTop = if ($refBaselineFromShapeTop.Count -eq 0) { $null } else { [Math]::Round(($refBaselineFromShapeTop | Measure-Object -Maximum).Maximum, 6) }
                 MinCandidateFrameTopY = if ($frameTop.Count -eq 0) { $null } else { [Math]::Round(($frameTop | Measure-Object -Minimum).Minimum, 6) }
                 MaxCandidateFrameTopY = if ($frameTop.Count -eq 0) { $null } else { [Math]::Round(($frameTop | Measure-Object -Maximum).Maximum, 6) }
                 MinCandidateLineTopY = if ($lineTop.Count -eq 0) { $null } else { [Math]::Round(($lineTop | Measure-Object -Minimum).Minimum, 6) }
@@ -287,8 +352,13 @@ foreach ($pair in $pairs) {
             RefBaselineY = if ($null -eq $reference) { $null } else { [Math]::Round((RefY $reference), 6) }
             CandBaselineY = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.BaselineY, 6) }
             DeltaBaselineY = $null
+            RefBaselineFromPageTop = RefBaselineFromPageTop $reference $candidate
+            CandBaselineFromPageTop = CandidateBaselineFromPageTop $candidate
+            RefBaselineFromCandidateShapeTop = RefBaselineFromCandidateShapeTop $reference $candidate
             RefBaselineY600Remainder = if ($null -eq $reference) { $null } else { OfficeGridRemainder (RefY $reference) }
             CandBaselineY600Remainder = if ($null -eq $candidate) { $null } else { OfficeGridRemainder ([double]$candidate.BaselineY) }
+            RefBaselineFromPageTop600Remainder = NullableGridRemainder (RefBaselineFromPageTop $reference $candidate)
+            CandBaselineFromPageTop600Remainder = NullableGridRemainder (CandidateBaselineFromPageTop $candidate)
             RefFontSize = if ($null -eq $reference) { $null } else { [Math]::Round([double]$reference.FontSize, 6) }
             CandPdfFontSize = if ($null -eq $candidate) { $null } else { [Math]::Round([double]$candidate.PdfFontSize, 6) }
             DeltaFontSize = $null
@@ -366,8 +436,13 @@ foreach ($pair in $pairs) {
         RefBaselineY = [Math]::Round($refY, 6)
         CandBaselineY = [Math]::Round($candY, 6)
         DeltaBaselineY = $deltaY
+        RefBaselineFromPageTop = RefBaselineFromPageTop $reference $candidate
+        CandBaselineFromPageTop = CandidateBaselineFromPageTop $candidate
+        RefBaselineFromCandidateShapeTop = RefBaselineFromCandidateShapeTop $reference $candidate
         RefBaselineY600Remainder = OfficeGridRemainder $refY
         CandBaselineY600Remainder = OfficeGridRemainder $candY
+        RefBaselineFromPageTop600Remainder = NullableGridRemainder (RefBaselineFromPageTop $reference $candidate)
+        CandBaselineFromPageTop600Remainder = NullableGridRemainder (CandidateBaselineFromPageTop $candidate)
         RefFontSize = [Math]::Round($refFontSize, 6)
         CandPdfFontSize = [Math]::Round($candFontSize, 6)
         DeltaFontSize = $deltaFontSize
@@ -435,6 +510,9 @@ if (HasValue $OutputSummaryJson) {
         BySpanIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandSpanIndex) + "|" + (BranchKey $row) }
         ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineY600Remainder) + "|" + (BranchKey $row) }
+        ByRefBaselineFromPageTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineFromPageTop600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateBaselineFromPageTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineFromPageTop600Remainder) + "|" + (BranchKey $row) }
+        ByRefBaselineFromCandidateShapeTopAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineFromCandidateShapeTop) + "|" + (BranchKey $row) }
         ByCandidateFrameXAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeX) + "|" + (BranchKey $row) }
         ByCandidateFrameTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeTopY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateFrameWidthAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeWidth) + "|" + (BranchKey $row) }

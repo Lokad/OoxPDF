@@ -1197,6 +1197,15 @@ High-priority actions:
     are identical across both branches, while only one secondary row has a nonzero first adjustment. This narrows the
     long-term rule toward Office's absolute page/text-matrix quantization and away from width, single-line layout,
     paragraph/span identity, glyph cardinality, or first-glyph kerning as sufficient explanations.
+  - [x] 2026-05-28: Add top-origin baseline diagnostics to the public-safe text-emission comparer before attempting
+    the secondary `/Tf` branch. `tools/ComparePptxTextEmission.ps1` now derives Office and candidate baselines from
+    the page top using the candidate slide clip height, carries their 600-DPI grid remainders, and reports Office
+    baseline-from-candidate-shape-top extents. Re-running `font-size-quantization-y-scan-21pt-fine` shows the
+    secondary branch is a concrete page-top band (`159.02..177.02 pt`) while identical first-line frame geometry and
+    local baseline-from-shape-top remain unchanged. The same summary also keeps the warning visible: five main-grid
+    rows share the same top-origin baseline remainder as the secondary rows, and `wrap13b` spreads secondary rows
+    across several page-top remainders and line indexes. This is still evidence for an Office page/text-matrix
+    quantization condition, not enough to justify a renderer rule or a Y-band lookup.
   - [x] 2026-05-28: Carry the actual emitted baseline into the PPTX PDF text-emission context. The internal
     `PptxPdfTextEmissionContext` already carried layout font size, frame geometry, insets, wrap/autofit mode,
     line identity, line top, line advance, and line max font size; it now also carries bottom-origin `BaselineY`,
@@ -5242,11 +5251,17 @@ document-specific business content into public notes.
   while a trailing empty paragraph sits between the normal paragraph advance and the same font box. The
   current midpoint is an evidence-preserving approximation only; collect more public probes across fonts,
   `endParaRPr`, explicit `lnSpc`, and empty-paragraph counts before promoting a final rule.
-- [ ] Text layout: isolate emphasized trailing-run segmentation and glyph-advance differences with a public
+- [x] Text layout: isolate emphasized trailing-run segmentation and glyph-advance differences with a public
   synthetic Office fixture. Private evidence shows the affected frame is now vertically aligned, but a final
   same-line segment still differs in PDF text-operation length and horizontal start. Do not solve this with a
   private string or a hand-listed punctuation/run exception; derive the rule from public text matrices,
-  decoded operations, and glyph-span widths.
+  decoded operations, and glyph-span widths. Closed on 2026-05-28 by the public leading-space style-boundary probe:
+  Office coalesces same-style `Alpha` + leading-space `beta`, but when the second run starts with a regular space
+  after a PDF-emission style change, Office advances by the space and emits the following text without that leading
+  space. `PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance` locks the generic flow-model rule and the public
+  text-operation comparison matched all decoded operations and positions within tolerance. The highlight-only caveat
+  remains preserved in the later revision log because public highlight fixtures proved that boundary has different
+  layout semantics.
 - [ ] Text frames: overflow behavior beyond hard clipping, autofit, shrink-to-fit, multi-column text, text
   rotation, and text inside arbitrary shapes.
 - [ ] Fonts: select bold/italic faces instead of drawing approximations; support fallback fonts, embedded
