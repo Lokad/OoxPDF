@@ -103,8 +103,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "effectLst").Any(effectList => effectList.Elements().Any(IsUnsupportedEffect)) ||
-            slideXml.Descendants(DrawingNamespace + "effectDag").Any())
+        if (HasUnsupportedEffect(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_EFFECT", "effect");
         }
@@ -216,10 +215,52 @@ internal sealed partial class PptxRenderer
             : 100000;
     }
 
-    private static bool IsUnsupportedEffect(XElement effect)
+    private static bool HasUnsupportedEffect(PptxSceneSlide sceneSlide)
     {
-        return effect.Name != DrawingNamespace + "outerShdw" &&
-            effect.Name != DrawingNamespace + "glow";
+        return HasUnsupportedEffect(sceneSlide.SlideNodes);
+    }
+
+    private static bool HasUnsupportedEffect(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is not null && HasUnsupportedEffect(node.Shape.Effects)) ||
+                (node.Chart is not null && HasUnsupportedEffect(node.Chart)) ||
+                HasUnsupportedEffect(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneShapeEffectFamily effects)
+    {
+        return effects.HasEffectDag ||
+            effects.UnsupportedEffectNames?.Count > 0;
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChart chart)
+    {
+        return HasUnsupportedEffect(chart.ChartAreaStyle) ||
+            HasUnsupportedEffect(chart.PlotAreaStyle) ||
+            HasUnsupportedEffect(chart.Title.ShapeStyle) ||
+            HasUnsupportedEffect(chart.Legend.ShapeStyle) ||
+            chart.StylePart.Entries.Any(entry => HasUnsupportedEffect(entry.ShapeStyle)) ||
+            chart.Plots.Any(plot => HasUnsupportedEffect(plot.DataLabels));
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChartDataLabels labels)
+    {
+        return HasUnsupportedEffect(labels.ShapeStyle) ||
+            labels.Overrides.Any(label => HasUnsupportedEffect(label.ShapeStyle));
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChartShapeStyle style)
+    {
+        return style.Effects.HasEffectDag ||
+            style.Effects.UnsupportedEffectNames?.Count > 0;
     }
 
     private static bool IsUnsupportedCustomGeometry(XElement customGeometry)

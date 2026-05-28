@@ -13213,6 +13213,28 @@ including the slow rich scene-builder fixture passed with `18` tests, `0` failur
 non-slow `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; full non-slow console runner
 passed with `389` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX unsupported-effect diagnostics now consume scene-owned shape and chart effect
+provenance. `EmitUnsupportedFeatureDiagnostics` no longer walks raw slide XML `a:effectLst`/`a:effectDag`;
+it traverses slide scene nodes and their `PptxSceneShape.Effects` plus chart-owned
+`PptxSceneChartShapeStyle.Effects` records for chart area, plot area, title, legend, chart-style entries, and
+data labels. A new regression keeps slide XML free of effect elements while placing `a:effectDag` in the
+related chart part, proving the diagnostic follows scene chart state rather than slide-XML descendants.
+
+This is still diagnostic-only. Supported `glow` and `outerShdw` remain non-diagnostic, unsupported direct
+effect names and `effectDag` stay warning-covered, and the traversal intentionally starts from slide nodes so
+inherited master/layout template effects are not newly reported as slide XML diagnostics. Remaining effect
+work is semantic/PDF-level: implement Office-like effect rendering or explicit ladders for `reflection`,
+`softEdge`, `blur`, `fillOverlay`, and other DrawingML effects instead of hard-coded special cases. A gap was
+kept visible while making this change: series and point `spPr` effects are still not preserved as typed chart
+scene state, so they must be lifted before unsupported-effect diagnostics can honestly cover all chart-owned
+effect sources.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxUnsupportedEffectDiagnosticsUseSceneChartEffects` and `PptxUnsupportedFeaturesEmitDiagnostics` passed;
+focused non-slow `pptx-charts` passed with `129` tests, `0` failures, and `0` skips; focused non-slow
+`pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; full non-slow console runner passed with
+`390` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved explicit PPTX shape `a:noFill` provenance in the scene model.
 `PptxSceneShape` now carries `NoFill` separately from `Fill.HasFill`, and `PptxSceneNodeSnapshot` plus the
 private-safe layout diagnostic expose `ShapeNoFill`. This closes a structural ambiguity where explicit
