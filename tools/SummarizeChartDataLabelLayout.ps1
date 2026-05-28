@@ -181,6 +181,45 @@ function Relative-Center($item, $box, [string] $axis) {
     return Round (((CenterY $item) - (CenterY $box)) / $height)
 }
 
+function Com-Observed-Relative-Center($layout, $chartShape, [string] $axis) {
+    if ($null -eq $layout -or $null -eq $chartShape) {
+        return $null
+    }
+
+    if ($null -eq $layout.ComObservedLeft -or $null -eq $layout.ComObservedTop -or
+        $null -eq $layout.ComObservedWidth -or $null -eq $layout.ComObservedHeight) {
+        return $null
+    }
+
+    if ($axis -eq "x") {
+        $width = [double]$chartShape.Width
+        if ($width -le 0d) {
+            return $null
+        }
+
+        $labelCenter = [double]$layout.ComObservedLeft + [double]$layout.ComObservedWidth / 2d
+        $chartCenter = [double]$chartShape.Left + [double]$chartShape.Width / 2d
+        return Round (($labelCenter - $chartCenter) / $width)
+    }
+
+    $height = [double]$chartShape.Height
+    if ($height -le 0d) {
+        return $null
+    }
+
+    $labelCenter = [double]$layout.ComObservedTop + [double]$layout.ComObservedHeight / 2d
+    $chartCenter = [double]$chartShape.Top + [double]$chartShape.Height / 2d
+    return Round (($labelCenter - $chartCenter) / $height)
+}
+
+function Delta-Or-Null($left, $right) {
+    if ($null -eq $left -or $null -eq $right) {
+        return $null
+    }
+
+    return Round ([double]$left - [double]$right)
+}
+
 function Format-Bounds($item) {
     if ($null -eq $item) {
         return ""
@@ -519,7 +558,7 @@ function Match-Nearest($referenceItems, $candidateItems, [string] $kind) {
     return ,$rows.ToArray()
 }
 
-function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters, $candidateClusters, $referencePlotBox, $candidatePlotBox) {
+function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters, $candidateClusters, $referencePlotBox, $candidatePlotBox, $chartShape) {
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($layout in $manualLayouts) {
         $quadrant = Manual-Quadrant $layout
@@ -538,6 +577,12 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
         else {
             @($candidateClusters | Where-Object { (Hash-SetKey ([string]$_.TextHash).Split("+")) -eq $expectedHashSetKey } | Select-Object -First 1)[0]
         }
+        $comRelativeX = Com-Observed-Relative-Center $layout $chartShape "x"
+        $comRelativeY = Com-Observed-Relative-Center $layout $chartShape "y"
+        $referenceHashRelativeX = Relative-Center $referenceHashCluster $referencePlotBox "x"
+        $referenceHashRelativeY = Relative-Center $referenceHashCluster $referencePlotBox "y"
+        $candidateHashRelativeX = Relative-Center $candidateHashCluster $candidatePlotBox "x"
+        $candidateHashRelativeY = Relative-Center $candidateHashCluster $candidatePlotBox "y"
         $rows.Add([pscustomobject]@{
             Index = [string]$layout.Index
             ManualQuadrant = $quadrant
@@ -549,6 +594,8 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
             ComObservedTop = $layout.ComObservedTop
             ComObservedWidth = $layout.ComObservedWidth
             ComObservedHeight = $layout.ComObservedHeight
+            ComObservedChartRelativeX = $comRelativeX
+            ComObservedChartRelativeY = $comRelativeY
             ExpectedTextHashSetKey = $expectedHashSetKey
             ReferenceClusterBounds = Format-Bounds $referenceCluster
             ReferenceClusterRelativeX = Relative-Center $referenceCluster $referencePlotBox "x"
@@ -557,11 +604,15 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
             CandidateClusterRelativeX = Relative-Center $candidateCluster $candidatePlotBox "x"
             CandidateClusterRelativeY = Relative-Center $candidateCluster $candidatePlotBox "y"
             ReferenceHashClusterBounds = Format-Bounds $referenceHashCluster
-            ReferenceHashClusterRelativeX = Relative-Center $referenceHashCluster $referencePlotBox "x"
-            ReferenceHashClusterRelativeY = Relative-Center $referenceHashCluster $referencePlotBox "y"
+            ReferenceHashClusterRelativeX = $referenceHashRelativeX
+            ReferenceHashClusterRelativeY = $referenceHashRelativeY
+            ComToReferenceHashRelativeDeltaX = Delta-Or-Null $comRelativeX $referenceHashRelativeX
+            ComToReferenceHashRelativeDeltaY = Delta-Or-Null $comRelativeY $referenceHashRelativeY
             CandidateHashClusterBounds = Format-Bounds $candidateHashCluster
-            CandidateHashClusterRelativeX = Relative-Center $candidateHashCluster $candidatePlotBox "x"
-            CandidateHashClusterRelativeY = Relative-Center $candidateHashCluster $candidatePlotBox "y"
+            CandidateHashClusterRelativeX = $candidateHashRelativeX
+            CandidateHashClusterRelativeY = $candidateHashRelativeY
+            ComToCandidateHashRelativeDeltaX = Delta-Or-Null $comRelativeX $candidateHashRelativeX
+            ComToCandidateHashRelativeDeltaY = Delta-Or-Null $comRelativeY $candidateHashRelativeY
         })
     }
 
@@ -686,7 +737,7 @@ $candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCand
 $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
 $labelClusterMatches = Match-Nearest $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
-$manualLayoutCoordinateEvidence = Build-ManualLayoutCoordinateEvidence $chartManualLayouts $referenceLabelClusters $candidateLabelClusters $referencePolarPlotBox $candidatePolarPlotBox
+$manualLayoutCoordinateEvidence = Build-ManualLayoutCoordinateEvidence $chartManualLayouts $referenceLabelClusters $candidateLabelClusters $referencePolarPlotBox $candidatePolarPlotBox $(if ($null -eq $comMetadata) { $null } else { $comMetadata.ChartShape })
 $leaderLineClusterEvidence = Build-LeaderLineClusterEvidence $referenceLeaderLines $candidateLeaderLines $referenceLabelClusters $candidateLabelClusters $chartManualLayouts
 
 $summary = [pscustomobject]@{
@@ -723,7 +774,15 @@ if ($chartManualLayouts.Count -gt 0) {
 if ($manualLayoutCoordinateEvidence.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label manual-layout coordinate evidence:"
-    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ComRequestedLeft, ComRequestedTop, ComObservedLeft, ComObservedTop, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY, ReferenceHashClusterRelativeX, ReferenceHashClusterRelativeY, CandidateHashClusterRelativeX, CandidateHashClusterRelativeY
+    $manualLayoutCoordinateEvidence | Format-Table -AutoSize `
+        Index, `
+        ManualQuadrant, `
+        @{ Label = "ComRelX"; Expression = { $_.ComObservedChartRelativeX } }, `
+        @{ Label = "ComRelY"; Expression = { $_.ComObservedChartRelativeY } }, `
+        @{ Label = "RefHashRelX"; Expression = { $_.ReferenceHashClusterRelativeX } }, `
+        @{ Label = "RefHashRelY"; Expression = { $_.ReferenceHashClusterRelativeY } }, `
+        @{ Label = "ComRefDeltaX"; Expression = { $_.ComToReferenceHashRelativeDeltaX } }, `
+        @{ Label = "ComRefDeltaY"; Expression = { $_.ComToReferenceHashRelativeDeltaY } }
 }
 
 if ($labelMatches.Count -gt 0) {

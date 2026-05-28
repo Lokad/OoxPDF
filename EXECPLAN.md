@@ -2843,6 +2843,13 @@ High-priority actions:
     explicit `-ComMetadataJson` as the override. A temporary ignored sidecar verified the default path reports
     `ChartComMetadataDataLabelCount=4`, so future Office regeneration does not need an extra manual argument
     to keep COM/PDF/XML evidence together.
+    2026-05-28 update: the summary tool now normalizes COM-observed label centers against the COM chart-shape
+    frame and reports deltas to the hash-matched Office and candidate PDF clusters. On public run
+    `20260528-155031`, the public-safe summary still reports text clusters `4/4`, max cluster bounds delta
+    `262.481pt`, and leader-line counts `1/4`; the COM-relative centers do not collapse into a simple direct
+    rule against the Office PDF clusters, with X only partly aligned and Y sign/basis disagreements across the
+    four labels. Keep the next renderer change blocked on a multi-document Office-derived coordinate model,
+    not on a four-label frame-relative shortcut.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
