@@ -2593,6 +2593,10 @@ High-priority actions:
     `0.6778`; Y factors and at least one lower-left X value do not line up as directly. This is enough to
     reject a single symmetric x/y scaling shortcut and points the next investigation at Office's conversion
     from COM label positions into `c:manualLayout`, including label-box size and quadrant-specific anchoring.
+    2026-05-28 update: `tools/SummarizeChartDataLabelLayout.ps1` can now read the source chart XML directly
+    from a PPTX via `-Pptx`/`-ChartPart`, eliminating the manual unzip step from this public probe workflow.
+    The direct-PPTX run over `20260528-152722` reproduced the four manual-layout records and the same
+    cluster/leader-line deltas as the pre-extracted `chart1.xml` path.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report

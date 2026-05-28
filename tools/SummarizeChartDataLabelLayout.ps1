@@ -15,6 +15,10 @@ param(
 
     [string] $ChartXml,
 
+    [string] $Pptx,
+
+    [string] $ChartPart = "ppt/charts/chart1.xml",
+
     [string] $OutputJson
 )
 
@@ -211,12 +215,49 @@ function Manual-Layout-Val($manualLayout, [string] $name) {
     return Child-Val $manualLayout $name
 }
 
-function Read-ChartLabelManualLayouts([string] $path) {
-    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
+function Read-ChartXmlDocument([string] $path, [string] $pptx, [string] $chartPart) {
+    if (-not [string]::IsNullOrWhiteSpace($path) -and (Test-Path -LiteralPath $path)) {
+        return [xml](Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path)
+    }
+
+    if ([string]::IsNullOrWhiteSpace($pptx) -or -not (Test-Path -LiteralPath $pptx)) {
+        return $null
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $pptx).Path)
+    try {
+        $entryName = $chartPart.TrimStart("/", "\")
+        $entry = $zip.GetEntry($entryName)
+        if ($null -eq $entry) {
+            return $null
+        }
+
+        $stream = $entry.Open()
+        try {
+            $reader = [System.IO.StreamReader]::new($stream)
+            try {
+                return [xml]$reader.ReadToEnd()
+            }
+            finally {
+                $reader.Dispose()
+            }
+        }
+        finally {
+            $stream.Dispose()
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+}
+
+function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $chartPart) {
+    $xml = Read-ChartXmlDocument $path $pptx $chartPart
+    if ($null -eq $xml) {
         return ,@()
     }
 
-    [xml] $xml = Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path
     $labels = $xml.SelectNodes("//*[local-name()='dLbl']")
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($label in $labels) {
@@ -367,7 +408,7 @@ $referenceLabelClusters = Group-TextClusters $referenceLabels
 $candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
-$chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml
+$chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml $Pptx $ChartPart
 $referencePolarPlotBox = Select-PrimaryKind $referenceGraphics "PolarPlotBoxCandidate"
 $candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCandidate"
 
