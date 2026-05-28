@@ -1651,10 +1651,12 @@ High-priority actions:
   first-line PPTX baselines now use the resolved font's ascender metrics when available, falling back to the
   previous heuristic only when font resolution fails. The justified text probe improved from MAE ~`4.63` to
   `4.210743`, with the first-line baseline delta reduced from about `0.71 pt` to about `0.32 pt`.
-- [ ] Align `ooxpdf` line-height handling with that strategy: keep percent line spacing as a multiplier,
+- [x] Align `ooxpdf` line-height handling with that strategy: keep percent line spacing as a multiplier,
   keep point line spacing as absolute line box height, model manual-break line boxes explicitly, and compare
   line top, baseline, and highlight rectangle geometry against Office PDF text operations before changing
-  broader deck rendering.
+  broader deck rendering. Closed by the subsequent percent-spacing, first-paragraph spacing, manual-break
+  `spcPts`, and decoration-geometry inspection slices below; the remaining work is no longer the basic line-height
+  strategy, but the narrower justified-word parity and residual generic baseline/emission-profile branches.
 - [x] 2026-05-27: Carry text-decoration geometry through public-safe text-emission diagnostics:
   `PptxInspect` now writes highlight, underline, and strike rectangles for glyph runs, and
   `ComparePptxTextEmission.ps1` carries those optional fields into joined Office/candidate text-emission JSON.
@@ -1675,9 +1677,12 @@ High-priority actions:
 - [x] Port the first `pptx-renderer` manual-break line-spacing lock:
   a synthetic layout inspection test now proves `spcPts` line spacing stays as an absolute line-box advance
   across `<a:br/>`, matching the renderer pattern that uses explicit line wrappers for absolute spacing.
-- [ ] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
+- [x] Continue the same metric-driven track without font-family exceptions: inspect Office vs candidate line
   boxes for `pptx-ladder-04-typography-justify-port` and decide whether PowerPoint is using adjusted
-  ascender, internal leading, or another generic font metric for top-to-baseline placement.
+  ascender, internal leading, or another generic font metric for top-to-baseline placement. Closed by the later
+  generic baseline metric refinement: the renderer now keeps small/body text on resolved-font ascender metrics and
+  applies the display-size lower bound without family-name exceptions. Justified paragraph parity remains open as a
+  word-position/TJ-array problem, not as a Calibri/Aptos-specific baseline rule.
 - [x] Refine the generic baseline metric rule without font-family exceptions:
   small/body text keeps the resolved font ascender ratio, while display-size text uses a `0.974` lower
   bound before applying larger font ascenders. This restores the locked Arial all-caps baseline
@@ -5432,7 +5437,8 @@ paths, and ExecPlan references together.
     final default; it removes anonymous family literals from renderer/emission paths so the next step can replace
     the policy with an OOXML/theme/platform fallback ladder in one place. Validation: `dotnet build
     Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-typography` passed
-    (`95 passed, 0 failed, 2 skipped`).
+    (`95 passed, 0 failed, 2 skipped`). Private acceptance run `20260528-145532` compared all 84 pages with zero
+    dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 - [x] Add `pptx-ladder-04-cambria-math-dense-wrap-probe` for the private slide-11 class of issues:
   dense Cambria Math paragraphs, mixed bold spans, an empty paragraph, and a narrow public text frame. OOXPDF
   now keeps the short final heading word on the first line through a width-relative final-word wrap rule
