@@ -18202,6 +18202,57 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", ids);
     }
 
+    public static void PptxUnsupportedSmartArtDiagnosticsUseSceneGraphicFrameState()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <a:graphic>
+                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/diagram"/>
+                      </a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[0];
+        TestAssert.True(sceneSlide.SlideNodes.Any(node => node.IsSmartArtGraphicFrame), "Expected SmartArt classification to be owned by the scene node.");
+
+        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
+        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.IsSmartArtGraphicFrame), "Expected SmartArt classification to be visible in scene inspection.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutSmartArt = XDocument.Parse("""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutSmartArt, "/ppt/slides/slide1.xml", 1, sink]);
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id));
+        TestAssert.Contains("PPTX_UNSUPPORTED_SMARTART", ids);
+        TestAssert.DoesNotContain("PPTX_UNSUPPORTED_GRAPHIC_FRAME", ids);
+    }
+
     public static void PptxUnsupportedDynamicDiagnosticsUseSceneSlideState()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

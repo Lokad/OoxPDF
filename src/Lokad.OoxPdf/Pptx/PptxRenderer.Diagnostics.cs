@@ -63,8 +63,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
 
-        if (HasSmartArtGraphicFrame(sceneSlide.SlideNodes) ||
-            HasGraphicDataUri(slideXml, "drawingml/2006/diagram"))
+        if (HasSmartArtGraphicFrame(sceneSlide.SlideNodes))
         {
             Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
         }
@@ -574,14 +573,6 @@ internal sealed partial class PptxRenderer
     {
         return patternFill.Parent?.Name != PresentationNamespace + "spPr" &&
             IsUnsupportedPatternFill(patternFill);
-    }
-
-    private static bool HasGraphicDataUri(XDocument slideXml, string marker)
-    {
-        return slideXml
-            .Descendants(DrawingNamespace + "graphicData")
-            .Select(element => (string?)element.Attribute("uri"))
-            .Any(uri => uri?.Contains(marker, StringComparison.OrdinalIgnoreCase) == true);
     }
 
     private static bool IsUnsupportedGraphicFrame(XElement graphicFrame)

@@ -4351,6 +4351,11 @@ High-priority actions:
   bar/line `ChartLayout` now carries a separate outer plot-area box and inner data-plot box, but both still
   resolve to the same rectangle until axis-label/title reservation rules are derived structurally.
 - [ ] Keep SmartArt as a separate diagnostics-first feature until a real SmartArt renderer exists.
+  - [x] Route `PPTX_UNSUPPORTED_SMARTART` through scene-owned `IsSmartArtGraphicFrame` only. The
+    diagnostic emitter no longer keeps a separate raw `a:graphicData` diagram URI scan for SmartArt, and
+    `PptxUnsupportedSmartArtDiagnosticsUseSceneGraphicFrameState` proves the diagnostic survives when the
+    fallback XML passed to diagnostics has no SmartArt markup. This keeps SmartArt diagnostics-first without
+    growing renderer-side URI heuristics; the real renderer remains open.
 - [ ] Port `pptx-renderer` error isolation: one unsupported or malformed node should emit a diagnostic with
   slide/node context instead of aborting the whole render pass when recovery is possible.
 - [ ] Port `pptx-renderer` generated public visual-suite organization: normalized case names, grouped
