@@ -3535,6 +3535,15 @@ High-priority actions:
   stage, and glyph fallback remains downstream in font mapping rather than a theme-font stage.
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
+  2026-05-28 progress: solid color parsing is now centralized in `PptxColorResolver` and shared by the
+  direct PDF renderer and typed scene builder instead of maintaining copied OOXML color logic in both paths.
+  The shared resolver covers current `srgbClr`, `schemeClr`/`phClr`, `sysClr`, `prstClr`, `scrgbClr`,
+  `hslClr`, alpha, and lum/tint/shade transforms, with renderer image/effect helpers delegating back to the
+  same byte/alpha routines. Keep this item open: color-map overrides, source-bearing diagnostics, fallback
+  provenance, and full format-scheme ordering are still not represented as model-visible resolver stages.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with zero warnings;
+  focused non-slow `pptx-model` passed (`13 passed, 0 failed, 1 skipped`), `pptx-typography` passed
+  (`96 passed, 0 failed, 2 skipped`), and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
 - [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
