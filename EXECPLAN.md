@@ -3112,6 +3112,12 @@ High-priority actions:
     should beat a different-index type match. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
     passed with zero warnings; focused `pptx-model` passed (`13 passed, 0 failed, 0 skipped`); focused non-slow
     `pptx-typography` passed (`92 passed, 0 failed, 2 skipped`).
+  - [x] 2026-05-28 Centralize placeholder matching for scene and renderer text paths:
+    `PptxPlaceholderMatcher` is now the single owner of inherited placeholder selection used by both
+    `PptxSceneBuilder` text-style resolution and `PptxRenderer.TextLayout`/text-model inspection. This keeps
+    future Office-aligned matching changes from diverging between the typed scene and renderer fallback paths.
+    Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with zero warnings, and
+    focused `pptx-model` passed (`13 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` text cascade layers as explicit records:
   `defaultTextStyle`, master text styles, master placeholder, layout placeholder, shape list style,
   paragraph properties, default run properties, and run properties.
