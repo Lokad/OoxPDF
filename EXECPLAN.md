@@ -12503,6 +12503,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `0` failures, and `0` skips; full non-slow console runner passed with `342` tests, `0` failures, and `7`
 slow skips.
 
+Revision note, 2026-05-28: Kept chart data-label boolean flag provenance at the renderer option boundary.
+`ChartDataLabelOptions` now carries a `FlagOptions` sidecar keyed by OOXML flag name (`showVal`,
+`showPercent`, `showCatName`, `showSerName`, `showLeaderLines`, `showLegendKey`, and `showBubbleSize`).
+Each sidecar value preserves the effective boolean, raw token, and element presence for both scene-backed
+and XML-only option resolution.
+
+The existing rendering booleans remain unchanged, so label text, legend-key rendering, and leader-line
+decisions still follow the same effective values. The structural gain is that future Office-PDF-backed label
+work can distinguish shorthand, explicit false, and missing flags from `ChartDataLabelOptions` itself instead
+of reopening chart XML or guessing from the final rendered label.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regression
+`PptxChartDataLabelOptionsPreserveRawBooleanState` passed; focused non-slow `pptx-charts` passed with
+`102` tests, `0` failures, and `0` skips; full non-slow console runner passed with `343` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current

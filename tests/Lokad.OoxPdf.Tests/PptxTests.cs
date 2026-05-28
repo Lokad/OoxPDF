@@ -12446,6 +12446,59 @@ internal static class PptxTests
         }
     }
 
+    public static void PptxChartDataLabelOptionsPreserveRawBooleanState()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:dLbls>
+                  <c:showVal/>
+                  <c:showPercent val="0"/>
+                </c:dLbls>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart>
+                <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/></c:dLbls>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlDataLabelOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected data-label option resolver.");
+        object sceneOptions = readOptions.Invoke(null, [chart, plot, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected scene-backed label options.");
+
+        object sceneShowValue = ChartDataLabelFlagOption(sceneOptions, "showVal");
+        TestAssert.True(ChartBooleanOptionValue(sceneShowValue), "Expected scene-backed shorthand showVal to resolve true.");
+        TestAssert.True(ChartBooleanOptionIsDefined(sceneShowValue), "Expected scene-backed shorthand showVal presence to remain explicit.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(sceneShowValue));
+        object sceneShowPercent = ChartDataLabelFlagOption(sceneOptions, "showPercent");
+        TestAssert.True(!ChartBooleanOptionValue(sceneShowPercent), "Expected scene-backed showPercent=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(sceneShowPercent), "Expected scene-backed showPercent=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(sceneShowPercent));
+        object sceneShowLegendKey = ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
+        TestAssert.True(!ChartBooleanOptionValue(sceneShowLegendKey), "Expected missing scene showLegendKey to use the renderer default false, not fallback XML.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
+
+        object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
+        object xmlShowValue = ChartDataLabelFlagOption(xmlOptions, "showVal");
+        TestAssert.True(!ChartBooleanOptionValue(xmlShowValue), "Expected XML showVal=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(xmlShowValue), "Expected XML showVal=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(xmlShowValue));
+        object xmlShowLegendKey = ChartDataLabelFlagOption(xmlOptions, "showLegendKey");
+        TestAssert.True(ChartBooleanOptionValue(xmlShowLegendKey), "Expected XML showLegendKey=1 to resolve true.");
+        TestAssert.True(ChartBooleanOptionIsDefined(xmlShowLegendKey), "Expected XML showLegendKey=1 presence to remain explicit.");
+        TestAssert.Equal("1", ChartBooleanOptionRawValue(xmlShowLegendKey));
+    }
+
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
@@ -14911,6 +14964,24 @@ internal static class PptxTests
     {
         return (bool)(option.GetType().GetProperty("IsDefined")?.GetValue(option)
             ?? throw new InvalidOperationException("Expected chart boolean option defined state."));
+    }
+
+    private static object ChartDataLabelFlagOption(object options, string flagName)
+    {
+        object flags = options.GetType().GetProperty("FlagOptions")?.GetValue(options)
+            ?? throw new InvalidOperationException("Expected chart data-label flag options.");
+        foreach (object entry in (System.Collections.IEnumerable)flags)
+        {
+            string key = (string)(entry.GetType().GetProperty("Key")?.GetValue(entry)
+                ?? throw new InvalidOperationException("Expected chart data-label flag key."));
+            if (key == flagName)
+            {
+                return entry.GetType().GetProperty("Value")?.GetValue(entry)
+                    ?? throw new InvalidOperationException("Expected chart data-label flag value.");
+            }
+        }
+
+        throw new InvalidOperationException($"Expected chart data-label flag '{flagName}'.");
     }
 
     private static string ChartMarkerStyleSymbol(object marker)
