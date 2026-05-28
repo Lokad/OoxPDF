@@ -2790,6 +2790,16 @@ High-priority actions:
     with empty diagnostics, focused non-slow `pptx-charts` passed (`118 passed, 0 failed, 0 skipped`), the
     full non-slow console runner passed (`372 passed, 0 failed, 7 skipped`), and the nearby secondary-axis
     overlay visual probe passed at `20260528-160531`.
+  - [x] 2026-05-28 Consume chart-style axis text roles for default axis titles:
+    scene-backed default axis-title rendering now merges the typed chart-style `categoryAxis` or `valueAxis`
+    text role between chart-level defaults and direct title `txPr`, matching the existing tick-label cascade
+    instead of leaving title inheritance on a separate raw-XML path. The focused chart-style-only synthetic
+    line chart now includes default category/value axis titles and locks their `/CAT` font-size emission for
+    both role defaults. This closes the inherited-default part of the first default-title renderer, but not
+    plot-box reservation, top/right permutations, secondary-axis role evidence, or the raw-XML fallback's lack
+    of a chart-style part. Validation: focused non-slow `pptx-charts` passed (`119 passed, 0 failed,
+    0 skipped`), the full non-slow console runner passed (`373 passed, 0 failed, 7 skipped`), and the
+    default-axis-title visual probes passed at `20260528-161334` and `20260528-161347`.
   - [ ] Replace the initial default-axis-title placement approximation with structural Office layout:
     current horizontal and rotated title positions use named Office-observed ratios over the existing chart
     frame/plot-box reserves. The next slices should add public probes for top and right axis titles,

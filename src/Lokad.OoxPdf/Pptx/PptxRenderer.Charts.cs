@@ -4419,6 +4419,7 @@ internal sealed partial class PptxRenderer
                     axis.PositionKind,
                     ToChartShapeStyle(axis.Title.ShapeStyle),
                     chartTextStyle,
+                    ReadChartStyleRoleTextStyle(sceneChart.StylePart, GetChartAxisStyleRole(axis.AxisKind)),
                     ToChartTextStyleOverride(axis.Title.TextStyle)));
             }
 
@@ -4446,6 +4447,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
                 ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme),
+                ChartTextStyleOverride.Empty,
                 ReadChartTextStyleFromTxPr(title, theme)));
         }
 
@@ -4510,6 +4512,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxisPosition positionKind,
         ChartShapeStyle shapeStyle,
         ChartTextStyleOverride chartTextStyle,
+        ChartTextStyleOverride chartStyleRoleTextStyle,
         ChartTextStyleOverride titleTextStyle)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -4519,6 +4522,7 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         style = MergeChartTextStyle(style, chartTextStyle);
+        style = MergeChartTextStyle(style, chartStyleRoleTextStyle);
         style = MergeChartTextStyle(style, titleTextStyle);
         string trimmed = text.Trim();
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
@@ -4547,6 +4551,16 @@ internal sealed partial class PptxRenderer
             PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right =>
                 axisKind is PptxSceneChartAxisKind.Value or PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date,
             _ => false
+        };
+    }
+
+    private static string GetChartAxisStyleRole(PptxSceneChartAxisKind axisKind)
+    {
+        return axisKind switch
+        {
+            PptxSceneChartAxisKind.Value => "valueAxis",
+            PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date or PptxSceneChartAxisKind.Series => "categoryAxis",
+            _ => string.Empty
         };
     }
 

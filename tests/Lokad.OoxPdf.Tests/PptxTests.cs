@@ -11840,10 +11840,11 @@ internal static class PptxTests
                         <c:axId val="10"/>
                         <c:axId val="20"/>
                       </c:lineChart>
-                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx>
+                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Category Axis</a:t></a:r></a:p></c:rich></c:tx></c:title><c:tickLblPos val="nextTo"/><c:crossAx val="20"/></c:catAx>
                       <c:valAx>
                         <c:axId val="20"/>
                         <c:axPos val="l"/>
+                        <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Value Axis</a:t></a:r></a:p></c:rich></c:tx></c:title>
                         <c:scaling><c:min val="0"/><c:max val="10"/></c:scaling>
                         <c:majorUnit val="5"/>
                         <c:tickLblPos val="nextTo"/>
@@ -11882,6 +11883,8 @@ internal static class PptxTests
         TestAssert.Contains("0 0.333 0.667 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CCA[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive category tick labels when c:catAx has no direct txPr.");
         TestAssert.True(Regex.IsMatch(pdf, @"/CVA[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive value tick labels when c:valAx has no direct txPr.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive default category axis-title rendering.");
+        TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive default value axis-title rendering.");
     }
 
     public static void PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox()
