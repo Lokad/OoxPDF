@@ -466,9 +466,13 @@ internal sealed partial class PptxRenderer
         string Text,
         ResolvedRunTextStyle Style);
 
-    private sealed record PptxRunStyleCascade(IReadOnlyList<PptxRunStyleLayer> Layers)
+    private sealed record PptxRunStyleCascade(
+        IReadOnlyList<PptxRunStyleLayer> Layers,
+        XElement? ResolvedDefaultProperties)
     {
         public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
+
+        public XElement? DirectProperties => Layers.FirstOrDefault(layer => layer.Kind == PptxRunStyleLayerKind.RunProperties)?.Source;
     }
 
     private enum PptxRunStyleLayerKind

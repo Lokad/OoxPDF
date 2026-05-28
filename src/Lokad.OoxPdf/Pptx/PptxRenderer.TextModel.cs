@@ -806,7 +806,7 @@ internal sealed partial class PptxRenderer
                     breakProperties,
                     breakCascade,
                     "\n",
-                    ResolveRunTextStyle(breakProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
+                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
                 continue;
             }
 
@@ -823,7 +823,7 @@ internal sealed partial class PptxRenderer
                 runProperties,
                 textRunCascade,
                 ReadTextElementText(child, slideNumber),
-                ResolveRunTextStyle(runProperties, paragraphStyle.DefaultRunProperties, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
+                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
         }
 
         return runs;
@@ -848,7 +848,7 @@ internal sealed partial class PptxRenderer
                 $"{layer.Name}.defRPr",
                 RunDefaultLayerKind(layer.Kind),
                 layer.Source?.Element(DrawingNamespace + "defRPr"))));
-        return new PptxRunStyleCascade(layers);
+        return new PptxRunStyleCascade(layers, paragraphDefaultRunProperties);
     }
 
     private static PptxRunStyleLayerKind RunDefaultLayerKind(PptxParagraphStyleLayerKind paragraphLayerKind)

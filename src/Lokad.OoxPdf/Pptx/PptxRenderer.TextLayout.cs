@@ -1966,6 +1966,22 @@ internal sealed partial class PptxRenderer
     }
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(
+        PptxRunStyleCascade cascade,
+        RgbColor? shapeFontColor,
+        PptxTheme theme,
+        double fontScale,
+        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    {
+        return ResolveRunTextStyle(
+            cascade.DirectProperties,
+            cascade.ResolvedDefaultProperties,
+            shapeFontColor,
+            theme,
+            fontScale,
+            tableStyleTextStyle);
+    }
+
+    private static ResolvedRunTextStyle ResolveRunTextStyle(
         XElement? runProperties,
         XElement? defaultRunProperties,
         RgbColor? shapeFontColor,
