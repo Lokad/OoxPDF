@@ -13212,6 +13212,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
 `17` tests, `0` failures, and `1` slow skip.
 
+Revision note, 2026-05-28: Retired the remaining scene-backed shape style XML repair path for fills and
+effects. `PptxRenderer.Shapes` now treats the typed `PptxSceneShape` solid fill, pattern fill, gradient fill,
+glow, and outer shadow fields as authoritative instead of re-reading `p:spPr` when those fields are empty.
+The obsolete renderer-local readers for shape solid fill, pattern fill, glow, and outer shadow were removed.
+
+This intentionally leaves source XML in `PptxRenderer.Shapes` for areas that still do not have a complete
+typed contract, especially custom-geometry compatibility and picture-fill image emission. The closed gap is
+style ownership: normal scene-backed shape rendering no longer patches missing style state from raw XML after
+scene construction. Future shape slices should either add typed scene fields or expose unsupported source
+state explicitly; they should not revive renderer-local fill/effect heuristics.
+
+Validation so far: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`17` tests, `0` failures, and `1` slow skip. Full non-slow validation passed with `389` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved explicit PPTX shape line `a:ln/a:noFill` provenance beside the
 effective line style. `PptxSceneShape.LineNoFill` and `PptxSceneNodeSnapshot.ShapeLineNoFill` now distinguish
 an intentional hidden stroke from an absent or unresolved stroke. The private-safe layout diagnostic reports

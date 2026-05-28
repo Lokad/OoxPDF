@@ -137,11 +137,11 @@ internal sealed partial class PptxRenderer
         RgbColor fill;
         double fillAlpha;
         bool hasFill;
-        if (fillOverride is { HasFill: true } resolvedFill)
+        if (fillOverride is { } resolvedFill)
         {
             fill = resolvedFill.Color;
             fillAlpha = resolvedFill.Alpha;
-            hasFill = true;
+            hasFill = resolvedFill.HasFill;
         }
         else if (noFillOverride)
         {
@@ -151,20 +151,14 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            hasFill = TryReadShapeFill(shape, shapeProperties, theme, out fill, out fillAlpha);
+            fill = default;
+            fillAlpha = 1d;
+            hasFill = false;
         }
         GradientFill? gradientFill = gradientFillOverride;
-        bool hasPatternFill;
+        bool hasPatternFill = patternFillOverride is not null;
         ShapePatternFill patternFill;
-        if (patternFillOverride is { } resolvedPatternFill)
-        {
-            patternFill = resolvedPatternFill;
-            hasPatternFill = true;
-        }
-        else
-        {
-            hasPatternFill = TryReadShapePatternFill(shapeProperties, theme, out patternFill);
-        }
+        patternFill = patternFillOverride ?? default;
         RgbColor stroke;
         double lineWidth;
         double strokeAlpha;
@@ -224,29 +218,13 @@ internal sealed partial class PptxRenderer
             ApplyShapeTransform(graphics, x, y, width, height, bounds);
         }
 
-        bool hasGlow;
+        bool hasGlow = glowOverride is not null;
         Glow glow;
-        if (glowOverride is { } resolvedGlow)
-        {
-            glow = resolvedGlow;
-            hasGlow = true;
-        }
-        else
-        {
-            hasGlow = TryReadGlow(shapeProperties, theme, out glow);
-        }
+        glow = glowOverride ?? default;
 
-        bool hasOuterShadow;
+        bool hasOuterShadow = outerShadowOverride is not null;
         OuterShadow outerShadow;
-        if (outerShadowOverride is { } resolvedOuterShadow)
-        {
-            outerShadow = resolvedOuterShadow;
-            hasOuterShadow = true;
-        }
-        else
-        {
-            hasOuterShadow = TryReadOuterShadow(shapeProperties, theme, out outerShadow);
-        }
+        outerShadow = outerShadowOverride ?? default;
 
         if (hasGlow &&
             preset is not ("line" or "straightConnector1" or "curvedConnector2" or "curvedConnector3") &&
@@ -663,65 +641,6 @@ internal sealed partial class PptxRenderer
         {
             graphics.RestoreState();
         }
-    }
-
-    private static bool TryReadGlow(XElement shapeProperties, PptxTheme theme, out Glow glow)
-    {
-        XElement? glowElement = shapeProperties
-            .Element(DrawingNamespace + "effectLst")
-            ?.Element(DrawingNamespace + "glow");
-        if (glowElement is null)
-        {
-            glow = default;
-            return false;
-        }
-
-        XElement? colorElement = glowElement.Elements().FirstOrDefault(element =>
-            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
-        if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
-        {
-            double radius = OoxUnits.EmuToPoints(ParseOptionalLongAttribute(glowElement, "rad", 0));
-            glow = new Glow(
-                color,
-                ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement))),
-                radius);
-            return radius > PptxTextMetricRules.TextStateTolerance;
-        }
-
-        glow = default;
-        return false;
-    }
-
-    private static bool TryReadOuterShadow(XElement shapeProperties, PptxTheme theme, out OuterShadow shadow)
-    {
-        XElement? outerShadow = shapeProperties
-            .Element(DrawingNamespace + "effectLst")
-            ?.Element(DrawingNamespace + "outerShdw");
-        if (outerShadow is null)
-        {
-            shadow = default;
-            return false;
-        }
-
-        XElement? colorElement = outerShadow.Elements().FirstOrDefault(element =>
-            element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
-        if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
-        {
-            double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
-            double distance = OoxUnits.EmuToPoints(ParseOptionalLongAttribute(outerShadow, "dist", 0));
-            double direction = ParseOptionalLongAttribute(outerShadow, "dir", 0) / 60000d * Math.PI / 180d;
-            shadow = new OuterShadow(
-                color,
-                alpha,
-                distance * Math.Cos(direction),
-                -distance * Math.Sin(direction));
-            return true;
-        }
-
-        shadow = default;
-        return false;
     }
 
     private static void DrawGlow(
@@ -2903,50 +2822,6 @@ internal sealed partial class PptxRenderer
         double e = centerX - a * centerX - c * centerY;
         double f = centerY - b * centerX - d * centerY;
         graphics.Transform(a, b, c, d, e, f);
-    }
-
-    private static bool TryReadShapeFill(XElement shape, XElement shapeProperties, PptxTheme theme, out RgbColor color, out double alpha)
-    {
-        if (shapeProperties.Element(DrawingNamespace + "noFill") is not null)
-        {
-            color = default;
-            alpha = 1d;
-            return false;
-        }
-
-        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out color, out alpha))
-        {
-            return true;
-        }
-
-        PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
-        if (fillReference.Style is not null &&
-            TryReadSolidColorWithAlpha(fillReference.Style, theme, fillReference.Reference, out color, out alpha))
-        {
-            return true;
-        }
-
-        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, out color, out alpha);
-    }
-
-    private static bool TryReadShapePatternFill(XElement shapeProperties, PptxTheme theme, out ShapePatternFill fill)
-    {
-        XElement? patternFill = shapeProperties.Element(DrawingNamespace + "pattFill");
-        string? preset = (string?)patternFill?.Attribute("prst");
-        if (patternFill is null || !IsSupportedDiagonalPatternFill(preset))
-        {
-            fill = default;
-            return false;
-        }
-
-        RgbColor foreground = TryReadSolidColor(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor)
-            ? foregroundColor
-            : new RgbColor(0, 0, 0);
-        RgbColor background = TryReadSolidColor(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor)
-            ? backgroundColor
-            : new RgbColor(255, 255, 255);
-        fill = new ShapePatternFill(preset!, foreground, background, 1d);
-        return true;
     }
 
     private static void StrokeShapePatternFill(PdfGraphicsBuilder graphics, string preset, double x, double y, double width, double height, ShapePatternFill fill)
