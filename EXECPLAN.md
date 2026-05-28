@@ -2855,6 +2855,13 @@ High-priority actions:
     existing chart-style cascade and assert that the common text renderer emits filled underline and strike
     rectangles in the inherited role text color. This is a structural renderer guard, not a new chart-specific
     decoration path.
+  - [x] Lock inherited chart-style text alpha at the PDF renderer boundary:
+    the public chart-style title regression now carries `a:alpha` on the role `cs:defRPr` solid fill and
+    asserts the emitted PDF alpha graphics state through the same shared chart-text `TextRun` route. This
+    closes the stale RGB-only bottleneck for inherited chart-style title text without claiming Office visual
+    parity for every transparent chart label role; legends, axes, data labels, and rich-text override
+    precedence still need role-specific Office-PDF probes before their transparent glyph-path structure is
+    treated as proven.
   - [x] Preserve chart `txPr/a:bodyPr @rot` metadata on text-bearing scene records:
     `PptxSceneChartTitle`, `PptxSceneChartLegend`, `PptxSceneChartDataLabels`, and per-label
     `PptxSceneChartDataLabelOverride` now carry `PptxSceneChartTextBodyProperties` with both parsed degrees
