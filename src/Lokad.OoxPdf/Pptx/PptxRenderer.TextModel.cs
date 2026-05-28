@@ -16,8 +16,8 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return context.InheritedXml
-            .SelectMany(xml => BuildTextFrameModels(context, xml, includePlaceholders: false, placeholderSources: []))
+        return context.InheritedSources
+            .SelectMany(source => BuildTextFrameModels(context, source.Xml, includePlaceholders: false, placeholderSources: []))
             .Concat(BuildTextFrameModels(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
             .Select(ToSnapshot)
             .ToArray();

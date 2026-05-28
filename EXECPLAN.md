@@ -386,6 +386,19 @@ High-priority actions:
   Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
   `pptx-model` passed (`13 passed, 0 failed, 1 skipped`); focused non-slow `pptx-charts` passed
   (`119 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-28: Give `PptxRenderContext` typed master/layout/slide XML sources:
+  the context now carries `PptxRenderSource` records with source kind, part name, XML, relationship map, and
+  color map for slide, layout, and master sources instead of exposing inherited XML only as anonymous
+  `XDocument` instances. The existing `SlideXml` and `InheritedXml` properties remain as compatibility views so
+  current text model/layout behavior stays unchanged, while inspection paths that iterate inherited sources now
+  preserve source identity for the next cascade and diagnostics slices. This does not close the raw-XML text
+  debt: paragraph/run cascade logic still consumes `XElement` source evidence, but future work can now attach
+  source-aware assertions and diagnostics without reopening package parts or guessing whether a node came from
+  master or layout. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+  non-slow `pptx-model` passed (`25 passed, 0 failed, 1 skipped`); focused non-slow `pptx-core` passed
+  (`12 passed, 0 failed, 0 skipped`); focused non-slow `pptx-typography` passed
+  (`99 passed, 0 failed, 2 skipped`); full non-slow console runner passed
+  (`409 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-28: Make chart axis text-style absence scene-authoritative when the scene axis is missing:
   `ReadSceneOrXmlChartTextStyle` no longer merges raw XML `c:txPr` text properties in a scene-backed path just
   because the caller has no `PptxSceneChartAxis`. The scene branch now uses chart-wide scene text style, optional

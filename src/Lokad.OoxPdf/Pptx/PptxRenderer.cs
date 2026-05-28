@@ -59,8 +59,8 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<PptxPositionedTextSpan> shapeTextSpans = ReadSceneShapeTextSpans(context);
             IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = ReadSceneTableTextSpans(context);
             RenderedFonts renderedFonts = CreateRenderedFonts(shapeTextSpans.Concat(tableTextSpans).Select(span => span.Run).ToArray(), fontResolver);
-            RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
-            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SceneSlide.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide.MasterNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.MasterPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
+            RenderOrderedSceneNodes(context.SceneSlide.LayoutNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.LayoutPartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: false);
             RenderOrderedSceneNodes(context.SceneSlide.SlideNodes, context, graphics, renderedFonts.Fonts, orderedImages, orderedChartFonts, context.SlidePartName, ref imageIndex, GroupTransform.Identity, renderPlaceholders: true);
 
             pages.Add(new PdfPage(context.Document.SlideWidthPoints, context.Document.SlideHeightPoints, graphics.ToString(), renderedFonts.Resources.Concat(orderedChartFonts).ToArray(), orderedImages, graphics.ExtGStates.ToArray(), graphics.Shadings.ToArray()));
@@ -103,18 +103,44 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        return new PptxRenderContext(document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), fontResolver, imageCache, diagnosticSink);
+        PptxRenderSource slideSource = new(
+            PptxRenderSourceKind.Slide,
+            sceneSlide.PartName,
+            slideXml,
+            sceneSlide.SlideRelationships,
+            sceneSlide.SlideColorMap);
+        return new PptxRenderContext(document, theme, slide, sceneSlide, slideSource, BuildInheritedSources(sceneSlide), fontResolver, imageCache, diagnosticSink);
     }
 
-    private static IReadOnlyList<XDocument> BuildInheritedXmlSources(PptxSceneSlide sceneSlide)
+    private static IReadOnlyList<PptxRenderSource> BuildInheritedSources(PptxSceneSlide sceneSlide)
     {
         return (sceneSlide.MasterXml, sceneSlide.LayoutXml) switch
         {
-            ({ } master, { } layout) => [master, layout],
-            ({ } master, null) => [master],
-            (null, { } layout) => [layout],
+            ({ } master, { } layout) => [BuildMasterSource(sceneSlide, master), BuildLayoutSource(sceneSlide, layout)],
+            ({ } master, null) => [BuildMasterSource(sceneSlide, master)],
+            (null, { } layout) => [BuildLayoutSource(sceneSlide, layout)],
             _ => []
         };
+    }
+
+    private static PptxRenderSource BuildMasterSource(PptxSceneSlide sceneSlide, XDocument xml)
+    {
+        return new PptxRenderSource(
+            PptxRenderSourceKind.Master,
+            sceneSlide.MasterPartName,
+            xml,
+            sceneSlide.MasterRelationships,
+            sceneSlide.MasterColorMap);
+    }
+
+    private static PptxRenderSource BuildLayoutSource(PptxSceneSlide sceneSlide, XDocument xml)
+    {
+        return new PptxRenderSource(
+            PptxRenderSourceKind.Layout,
+            sceneSlide.LayoutPartName,
+            xml,
+            sceneSlide.LayoutRelationships,
+            sceneSlide.LayoutColorMap);
     }
 
     private static ShapeBounds? ReadBounds(XElement shapeProperties)

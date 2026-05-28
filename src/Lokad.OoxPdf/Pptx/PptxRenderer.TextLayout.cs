@@ -30,8 +30,8 @@ internal sealed partial class PptxRenderer
             return [];
         }
 
-        return context.InheritedXml
-            .SelectMany(xml => ReadTextSpans(context, xml, includePlaceholders: false, placeholderSources: []))
+        return context.InheritedSources
+            .SelectMany(source => ReadTextSpans(context, source.Xml, includePlaceholders: false, placeholderSources: []))
             .Concat(ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
             .Concat(ReadSceneTableTextSpans(context))
             .ToArray();
@@ -45,7 +45,7 @@ internal sealed partial class PptxRenderer
             return new PptxTextLayoutSnapshot([]);
         }
 
-        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedXml, context);
+        PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedSources, context);
         PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
     }
@@ -58,32 +58,32 @@ internal sealed partial class PptxRenderer
             return new PptxTextFlowSnapshot([]);
         }
 
-        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedXml, context);
+        PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedSources, context);
         PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModelForSources(
-        IReadOnlyList<XDocument> sources,
+        IReadOnlyList<PptxRenderSource> sources,
         PptxRenderContext context)
     {
         var frames = new List<PptxTextFrameLayout>();
-        foreach (XDocument source in sources)
+        foreach (PptxRenderSource source in sources)
         {
-            frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+            frames.AddRange(BuildTextLayoutModel(context, source.Xml, includePlaceholders: false, placeholderSources: []).Frames);
         }
 
         return new PptxTextLayoutModel(frames);
     }
 
     private static PptxTextFlowModel BuildTextFlowModelForSources(
-        IReadOnlyList<XDocument> sources,
+        IReadOnlyList<PptxRenderSource> sources,
         PptxRenderContext context)
     {
         var frames = new List<PptxTextFlowFrame>();
-        foreach (XDocument source in sources)
+        foreach (PptxRenderSource source in sources)
         {
-            frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
+            frames.AddRange(BuildTextFlowModel(context, source.Xml, includePlaceholders: false, placeholderSources: []).Frames);
         }
 
         return new PptxTextFlowModel(frames);
