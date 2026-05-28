@@ -3662,6 +3662,11 @@ High-priority actions:
   default-map behavior. Keep this item open: table/chart/image recolor and direct renderer paths still need the
   effective map, and inherited placeholder style maps still require source-aware style ownership. Validation:
   focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: direct scene table parsing now passes the current source `PptxColorMap` into explicit
+  cell fills and explicit cell border colors, with default-map overloads preserved for existing helper callers.
+  Keep this item open: built-in table style colors, chart colors, image recolor, direct renderer paths, and
+  inherited placeholder style maps still need source-aware color-map ownership. Validation: focused non-slow
+  `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

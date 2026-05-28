@@ -2010,7 +2010,7 @@ internal sealed class PptxSceneBuilder
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, theme, colorMap),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, package, relationships) : null,
-                kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
+                kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
                 kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships) : [],
@@ -3807,7 +3807,7 @@ internal sealed class PptxSceneBuilder
         return OoxBoolean.ParseOptionalAttribute(element, attributeName);
     }
 
-    private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme)
+    private static PptxSceneTable ReadTable(XElement frame, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? table = ReadTableElement(frame);
         IReadOnlyList<double> columnWidths = ReadTableColumnWidths(table);
@@ -3816,7 +3816,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneTable(
             columnWidths,
             rowHeights,
-            ReadTableRows(table, theme, style, rowHeights.Count, columnWidths.Count),
+            ReadTableRows(table, theme, colorMap, style, rowHeights.Count, columnWidths.Count),
             style,
             table);
     }
@@ -3848,6 +3848,11 @@ internal sealed class PptxSceneBuilder
 
     internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowCount, int columnCount)
     {
+        return ReadTableRows(table, theme, PptxColorMap.Default, tableStyle, rowCount, columnCount);
+    }
+
+    internal static IReadOnlyList<PptxSceneTableRow> ReadTableRows(XElement? table, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowCount, int columnCount)
+    {
         if (table is null)
         {
             return [];
@@ -3861,7 +3866,7 @@ internal sealed class PptxSceneBuilder
             int columnIndex = 0;
             foreach (XElement cell in row.Elements(DrawingNamespace + "tc"))
             {
-                PptxSceneTableCell sceneCell = ReadTableCell(cell, theme, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
+                PptxSceneTableCell sceneCell = ReadTableCell(cell, theme, colorMap, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
                 cells.Add(sceneCell);
                 columnIndex += sceneCell.IsMergedContinuation ? 1 : sceneCell.ColumnSpan;
             }
@@ -3919,6 +3924,11 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
     {
+        return ReadTableCell(cell, theme, PptxColorMap.Default, tableStyle, rowIndex, columnIndex, rowCount, columnCount);
+    }
+
+    internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
+    {
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
@@ -3926,8 +3936,8 @@ internal sealed class PptxSceneBuilder
             ReadTableCellTextInsets(cell),
             ReadTableCellVerticalAnchor(cell),
             ReadTableCellVerticalAnchorValue(cell),
-            ReadTableCellFill(cell, theme),
-            ReadTableCellBorders(cell, theme),
+            ReadTableCellFill(cell, theme, colorMap),
+            ReadTableCellBorders(cell, theme, colorMap),
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             cell.Element(DrawingNamespace + "txBody"));
@@ -4009,23 +4019,33 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme)
     {
+        return ReadTableCellFill(cell, theme, PptxColorMap.Default);
+    }
+
+    internal static PptxSceneFillStyle ReadTableCellFill(XElement cell, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
-        return TryReadSolidColorWithAlpha(cellProperties, theme, out RgbColor color, out double alpha)
+        return TryReadSolidColorWithAlpha(cellProperties, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneFillStyle(true, color, alpha)
             : default;
     }
 
     internal static PptxSceneTableCellBorders ReadTableCellBorders(XElement cell, PptxTheme theme)
     {
-        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
-        return new PptxSceneTableCellBorders(
-            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnL"), theme),
-            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnR"), theme),
-            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnT"), theme),
-            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnB"), theme));
+        return ReadTableCellBorders(cell, theme, PptxColorMap.Default);
     }
 
-    private static PptxSceneTableCellBorder ReadTableCellBorder(XElement? line, PptxTheme theme)
+    internal static PptxSceneTableCellBorders ReadTableCellBorders(XElement cell, PptxTheme theme, PptxColorMap colorMap)
+    {
+        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+        return new PptxSceneTableCellBorders(
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnL"), theme, colorMap),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnR"), theme, colorMap),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnT"), theme, colorMap),
+            ReadTableCellBorder(cellProperties?.Element(DrawingNamespace + "lnB"), theme, colorMap));
+    }
+
+    private static PptxSceneTableCellBorder ReadTableCellBorder(XElement? line, PptxTheme theme, PptxColorMap colorMap)
     {
         if (line is null)
         {
@@ -4033,7 +4053,7 @@ internal sealed class PptxSceneBuilder
         }
 
         if (line.Element(DrawingNamespace + "noFill") is not null ||
-            !TryReadSolidColorWithAlpha(line, theme, out RgbColor color, out double alpha))
+            !TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
         {
             return new PptxSceneTableCellBorder(IsSpecified: true, default);
         }
