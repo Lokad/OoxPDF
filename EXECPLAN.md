@@ -3556,6 +3556,13 @@ High-priority actions:
   1 skipped`) and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
   text direction, vertical text, multi-column text, and unsupported diagnostics where rendering is absent.
+  2026-05-28 audit: shape text already has model-owned source-tagged `bodyPr` handling for insets, anchors,
+  wrap, vertical overflow, columns, autofit children/scales, compatible line spacing, and text-body rotation,
+  with later regression notes covering the direct/inherited/default cascade and layout consumption. Keep this
+  item open, but narrow it: unsupported PPTX text diagnostics still scan raw slide XML instead of resolved
+  text-frame/body-property model state, and table-cell text still has direct `bodyPr`/`tcPr` readers without
+  the same source-tagged model/provenance surface as shape text. Those two gaps are the long-term structural
+  work here, not another pass over already-closed scalar body-property inheritance.
 - [x] Port `pptx-renderer` line-height behavior into the PPTX text model/layout:
   `spcPct`, `spcPts`, paragraph before/after spacing, `normAutofit @lnSpcReduction`, manual-break line
   wrappers, compatible line spacing, and trailing/empty `endParaRPr` line-height effects are covered by focused
