@@ -571,6 +571,8 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartBarDirection.Bar, slide.SlideNodes[4].Chart?.Plots[0].BarDirectionKind);
         TestAssert.Equal(PptxSceneChartRadarStyle.Unknown, slide.SlideNodes[4].Chart?.Plots[0].RadarStyleKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].VaryColors == false, "Expected chart plot varyColors in the scene model.");
+        TestAssert.Equal("false", slide.SlideNodes[4].Chart?.Plots[0].VaryColorsValue ?? string.Empty);
+        TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Plots[0].MarkersEnabledValue ?? string.Empty);
         TestAssert.Equal(175d, slide.SlideNodes[4].Chart?.Plots[0].GapWidth ?? 0d);
         TestAssert.Equal(25d, slide.SlideNodes[4].Chart?.Plots[0].Overlap ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.ShowValue == true, "Expected chart data-label value flag in the scene model.");
@@ -680,6 +682,7 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(34, 68, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Line.Color ?? default);
         TestAssert.Equal(18d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Explosion ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
+        TestAssert.Equal("1", slide.SlideNodes[4].Chart?.Plots[0].Series[0].SmoothValue ?? string.Empty);
         TestAssert.Equal("bubbleChart", slide.SlideNodes[4].Chart?.Plots[1].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartPlotKind.Bubble, slide.SlideNodes[4].Chart?.Plots[1].PlotKind);
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[1].PlotAreaIndex ?? -1);
@@ -697,14 +700,17 @@ internal static class PptxTests
         TestAssert.Equal(3.5d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].YValues[0] ?? 0d);
         TestAssert.Equal(16d, slide.SlideNodes[4].Chart?.Plots[1].Series[0].BubbleSizes[1] ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].VaryColors is null, "Expected missing varyColors metadata to remain distinct from the effective default.");
+        TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Plots[1].VaryColorsValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[1].Series[0].Marker.IsDefined == false, "Expected a missing marker element to remain distinct from the effective marker default.");
         TestAssert.Equal("lineChart", slide.SlideNodes[4].Chart?.Plots[2].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartPlotKind.Line, slide.SlideNodes[4].Chart?.Plots[2].PlotKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].MarkersEnabled is null, "Expected missing chart-level line marker metadata to remain observable.");
+        TestAssert.Equal(string.Empty, slide.SlideNodes[4].Chart?.Plots[2].MarkersEnabledValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.IsDefined == false, "Expected missing line-chart marker metadata to remain distinct from explicit default markers.");
         TestAssert.Equal("none", slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.Symbol ?? string.Empty);
         TestAssert.Equal(PptxSceneChartMarkerSymbol.None, slide.SlideNodes[4].Chart?.Plots[2].Series[0].Marker.SymbolKind);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[2].Series[0].Smooth == false, "Expected explicit smooth disable to remain distinct from a missing smooth element.");
+        TestAssert.Equal("0", slide.SlideNodes[4].Chart?.Plots[2].Series[0].SmoothValue ?? string.Empty);
         TestAssert.Equal("valAx", slide.SlideNodes[4].Chart?.Axes[1].Kind ?? string.Empty);
         TestAssert.Equal(PptxSceneChartAxisKind.Value, slide.SlideNodes[4].Chart?.Axes[1].AxisKind);
         TestAssert.Equal(PptxSceneChartAxisKind.Category, slide.SlideNodes[4].Chart?.Axes[0].AxisKind);
@@ -12392,6 +12398,7 @@ internal static class PptxTests
 
         PptxSceneChartPlot plot = chart?.Plots[0] ?? throw new InvalidOperationException("Expected line-chart plot.");
         TestAssert.True(plot.MarkersEnabled == true, "Expected chart-level marker enablement to survive in the scene model.");
+        TestAssert.Equal("1", plot.MarkersEnabledValue);
         TestAssert.True(plot.Series[0].Marker.IsDefined == false, "Expected an automatically enabled marker to remain distinct from series marker XML.");
         TestAssert.Equal("diamond", plot.Series[0].Marker.Symbol);
         TestAssert.Equal(7d, plot.Series[0].Marker.Size);

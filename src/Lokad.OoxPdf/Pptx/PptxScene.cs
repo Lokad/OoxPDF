@@ -663,7 +663,9 @@ internal sealed record PptxSceneChartPlot(
     PptxSceneChartRadarStyle RadarStyleKind,
     string RadarStyle,
     bool? MarkersEnabled,
+    string MarkersEnabledValue,
     bool? VaryColors,
+    string VaryColorsValue,
     double? GapWidth,
     string GapWidthValue,
     double? Overlap,
@@ -898,6 +900,7 @@ internal sealed record PptxSceneChartSeries(
     double? Explosion,
     string ExplosionValue,
     bool? Smooth,
+    string SmoothValue,
     PptxSceneChartDataLabels DataLabels);
 
 internal readonly record struct PptxSceneChartNumberPoint(
@@ -2110,7 +2113,8 @@ internal sealed class PptxSceneBuilder
             string barDirection = ReadChartElementValue(plot, "barDir");
             string scatterStyle = ReadChartElementValue(plot, "scatterStyle");
             string radarStyle = ReadChartElementValue(plot, "radarStyle");
-            bool? markersEnabled = ReadChartPlotMarkersEnabled(plot);
+            (bool? markersEnabled, string markersEnabledValue) = ReadChartPlotMarkersEnabled(plot);
+            (bool? varyColors, string varyColorsValue) = ReadChartPlotVaryColors(plot);
             PptxSceneChartPlotKind plotKind = ParseChartPlotKind(kind);
             (double? gapWidth, string gapWidthValue) = ReadChartElementDoubleWithValue(plot, "gapWidth");
             (double? overlap, string overlapValue) = ReadChartElementDoubleWithValue(plot, "overlap");
@@ -2138,7 +2142,9 @@ internal sealed class PptxSceneBuilder
                 ParseChartRadarStyle(radarStyle),
                 radarStyle,
                 markersEnabled,
-                ReadChartPlotVaryColors(plot),
+                markersEnabledValue,
+                varyColors,
+                varyColorsValue,
                 gapWidth,
                 gapWidthValue,
                 overlap,
@@ -2361,20 +2367,20 @@ internal sealed class PptxSceneBuilder
             : (null, value);
     }
 
-    private static bool? ReadChartPlotVaryColors(XElement plot)
+    private static (bool? Value, string RawValue) ReadChartPlotVaryColors(XElement plot)
     {
         XElement? varyColors = plot.Element(ChartNamespace + "varyColors");
         return varyColors is null
-            ? null
-            : IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true);
+            ? (null, string.Empty)
+            : (IsOoxmlBooleanElementEnabled(varyColors, defaultValue: true), (string?)varyColors.Attribute("val") ?? string.Empty);
     }
 
-    private static bool? ReadChartPlotMarkersEnabled(XElement plot)
+    private static (bool? Value, string RawValue) ReadChartPlotMarkersEnabled(XElement plot)
     {
         XElement? marker = plot.Element(ChartNamespace + "marker");
         return marker is null
-            ? null
-            : IsOoxmlBooleanElementEnabled(marker);
+            ? (null, string.Empty)
+            : (IsOoxmlBooleanElementEnabled(marker), (string?)marker.Attribute("val") ?? string.Empty);
     }
 
     private static IReadOnlyList<PptxSceneChartSeries> ReadChartSeries(XElement plot, PptxTheme theme, PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled)
@@ -2391,6 +2397,7 @@ internal sealed class PptxSceneBuilder
             (int? xValuePointCount, string xValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "xVal");
             (int? yValuePointCount, string yValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "yVal");
             (int? bubbleSizePointCount, string bubbleSizePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "bubbleSize");
+            (bool? smooth, string smoothValue) = ReadChartSeriesSmooth(seriesElement);
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
@@ -2430,7 +2437,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartPointStyles(seriesElement, theme),
                 explosion,
                 explosionValue,
-                ReadChartSeriesSmooth(seriesElement),
+                smooth,
+                smoothValue,
                 ReadChartDataLabels(seriesElement, theme)));
         }
 
@@ -2578,10 +2586,12 @@ internal sealed class PptxSceneBuilder
                 : default;
     }
 
-    private static bool? ReadChartSeriesSmooth(XElement series)
+    private static (bool? Value, string RawValue) ReadChartSeriesSmooth(XElement series)
     {
         XElement? smooth = series.Element(ChartNamespace + "smooth");
-        return smooth is null ? null : IsOoxmlBooleanElementEnabled(smooth);
+        return smooth is null
+            ? (null, string.Empty)
+            : (IsOoxmlBooleanElementEnabled(smooth), (string?)smooth.Attribute("val") ?? string.Empty);
     }
 
     private static string? ReadChartSeriesName(XElement series)
