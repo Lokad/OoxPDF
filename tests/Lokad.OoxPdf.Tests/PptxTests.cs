@@ -13583,13 +13583,14 @@ internal static class PptxTests
     {
         PptxSceneChart chart = BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
                 <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
                 <c:dLbls>
+                  <c:txPr><a:bodyPr rot="3600000"/><a:lstStyle/><a:p/></c:txPr>
                   <c:showVal/>
                   <c:showPercent val="0"/>
-                  <c:dLbl><c:idx val="0"/><c:showVal val="0"/><c:showLegendKey/></c:dLbl>
+                  <c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="-1200000"/><a:lstStyle/><a:p/></c:txPr><c:showVal val="0"/><c:showLegendKey/></c:dLbl>
                 </c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
@@ -13599,9 +13600,9 @@ internal static class PptxTests
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement mismatchedXmlFallback = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
-                <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLbl><c:idx val="0"/><c:showVal/><c:showLegendKey val="0"/></c:dLbl></c:dLbls>
+                <c:dLbls><c:txPr><a:bodyPr rot="600000"/><a:lstStyle/><a:p/></c:txPr><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="2400000"/><a:lstStyle/><a:p/></c:txPr><c:showVal/><c:showLegendKey val="0"/></c:dLbl></c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
@@ -13624,6 +13625,9 @@ internal static class PptxTests
         object sceneShowLegendKey = ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
         TestAssert.True(!ChartBooleanOptionValue(sceneShowLegendKey), "Expected missing scene showLegendKey to use the renderer default false, not fallback XML.");
         TestAssert.True(!ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
+        object sceneBody = ChartDataLabelTextBodyProperties(sceneOptions);
+        TestAssert.Equal(60d, ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
+        TestAssert.Equal("3600000", ChartTextBodyRotationValue(sceneBody));
         object sceneOverride = ChartDataLabelOverride(sceneOptions, 0);
         object sceneOverrideShowValue = ChartDataLabelFlagOption(sceneOverride, "showVal");
         TestAssert.True(!ChartBooleanOptionValue(sceneOverrideShowValue), "Expected scene-backed override showVal=0 to resolve false.");
@@ -13632,6 +13636,9 @@ internal static class PptxTests
         object sceneOverrideShowLegendKey = ChartDataLabelFlagOption(sceneOverride, "showLegendKey");
         TestAssert.True(ChartBooleanOptionValue(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey presence to remain explicit.");
+        object sceneOverrideBody = ChartDataLabelTextBodyProperties(sceneOverride);
+        TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(sceneOverrideBody) ?? 0d);
+        TestAssert.Equal("-1200000", ChartTextBodyRotationValue(sceneOverrideBody));
         object resolvedSceneOptions = resolveOptions.Invoke(null, [sceneOptions, 0]) ?? throw new InvalidOperationException("Expected resolved scene-backed label options.");
         object resolvedSceneShowValue = ChartDataLabelFlagOption(resolvedSceneOptions, "showVal");
         TestAssert.True(!ChartBooleanOptionValue(resolvedSceneShowValue), "Expected resolved scene-backed override showVal=0 to replace base shorthand showVal.");
@@ -13640,6 +13647,9 @@ internal static class PptxTests
         object resolvedSceneShowPercent = ChartDataLabelFlagOption(resolvedSceneOptions, "showPercent");
         TestAssert.True(!ChartBooleanOptionValue(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to inherit base showPercent=0.");
         TestAssert.True(ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to retain base explicit state.");
+        object resolvedSceneBody = ChartDataLabelTextBodyProperties(resolvedSceneOptions);
+        TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(resolvedSceneBody) ?? 0d);
+        TestAssert.Equal("-1200000", ChartTextBodyRotationValue(resolvedSceneBody));
 
         object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
         object xmlShowValue = ChartDataLabelFlagOption(xmlOptions, "showVal");
@@ -13650,6 +13660,9 @@ internal static class PptxTests
         TestAssert.True(ChartBooleanOptionValue(xmlShowLegendKey), "Expected XML showLegendKey=1 to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlShowLegendKey), "Expected XML showLegendKey=1 presence to remain explicit.");
         TestAssert.Equal("1", ChartBooleanOptionRawValue(xmlShowLegendKey));
+        object xmlBody = ChartDataLabelTextBodyProperties(xmlOptions);
+        TestAssert.Equal(10d, ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
+        TestAssert.Equal("600000", ChartTextBodyRotationValue(xmlBody));
         object xmlOverride = ChartDataLabelOverride(xmlOptions, 0);
         object xmlOverrideShowValue = ChartDataLabelFlagOption(xmlOverride, "showVal");
         TestAssert.True(ChartBooleanOptionValue(xmlOverrideShowValue), "Expected XML override shorthand showVal to resolve true.");
@@ -13658,11 +13671,17 @@ internal static class PptxTests
         TestAssert.True(!ChartBooleanOptionValue(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 to resolve false.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 presence to remain explicit.");
         TestAssert.Equal("0", ChartBooleanOptionRawValue(xmlOverrideShowLegendKey));
+        object xmlOverrideBody = ChartDataLabelTextBodyProperties(xmlOverride);
+        TestAssert.Equal(40d, ChartTextBodyRotationDegrees(xmlOverrideBody) ?? 0d);
+        TestAssert.Equal("2400000", ChartTextBodyRotationValue(xmlOverrideBody));
         object resolvedXmlOptions = resolveOptions.Invoke(null, [xmlOptions, 0]) ?? throw new InvalidOperationException("Expected resolved XML-backed label options.");
         object resolvedXmlShowLegendKey = ChartDataLabelFlagOption(resolvedXmlOptions, "showLegendKey");
         TestAssert.True(!ChartBooleanOptionValue(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 to replace base showLegendKey=1.");
         TestAssert.True(ChartBooleanOptionIsDefined(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 presence to remain explicit.");
         TestAssert.Equal("0", ChartBooleanOptionRawValue(resolvedXmlShowLegendKey));
+        object resolvedXmlBody = ChartDataLabelTextBodyProperties(resolvedXmlOptions);
+        TestAssert.Equal(40d, ChartTextBodyRotationDegrees(resolvedXmlBody) ?? 0d);
+        TestAssert.Equal("2400000", ChartTextBodyRotationValue(resolvedXmlBody));
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
@@ -16851,6 +16870,22 @@ internal static class PptxTests
         }
 
         throw new InvalidOperationException($"Expected chart data-label override '{index}'.");
+    }
+
+    private static object ChartDataLabelTextBodyProperties(object options)
+    {
+        return options.GetType().GetProperty("TextBodyProperties")?.GetValue(options)
+            ?? throw new InvalidOperationException("Expected chart data-label text body properties.");
+    }
+
+    private static double? ChartTextBodyRotationDegrees(object properties)
+    {
+        return (double?)properties.GetType().GetProperty("RotationDegrees")?.GetValue(properties);
+    }
+
+    private static string ChartTextBodyRotationValue(object properties)
+    {
+        return (string?)properties.GetType().GetProperty("RotationValue")?.GetValue(properties) ?? string.Empty;
     }
 
     private static string ChartMarkerStyleSymbol(object marker)

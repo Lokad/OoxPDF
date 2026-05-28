@@ -13004,6 +13004,21 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Chart data-label text-body rotation now survives the renderer option boundary.
+`ChartDataLabelOptions` and `ChartDataLabelOverride` carry the scene-owned or XML fallback
+`txPr/a:bodyPr @rot` metadata as `PptxSceneChartTextBodyProperties`, and per-label override resolution
+inherits the base text-body properties only when the override has no rotation of its own. This is structural
+only: rendering still needs Office-PDF evidence before chart label rotation is consumed for placement or text
+emission.
+
+The regression extends the existing data-label provenance test to cover scene-backed chart-wide labels,
+scene-backed per-label overrides, XML-only fallback labels, XML-only per-label overrides, and resolved
+per-label options. Each path keeps both parsed degrees and the raw OOXML rotation token, so future chart
+label rotation work can consume typed state instead of reopening chart XML or adding narrow fallback logic.
+
+Validation: focused non-slow `pptx-charts` passed with `124` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `382` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: PPTX text flow now models Office's leading-space behavior at style-changing run
 boundaries. A public synthetic probe with three paragraphs showed that Office coalesces same-style split
 runs whether the regular space is at the end of the first run or the start of the second, but when the second

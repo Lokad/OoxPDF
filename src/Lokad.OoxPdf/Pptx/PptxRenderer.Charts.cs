@@ -6115,6 +6115,7 @@ internal sealed partial class PptxRenderer
             NumberFormatInfo = dataLabel.NumberFormatInfo.IsDefined ? dataLabel.NumberFormatInfo : options.NumberFormatInfo,
             Layout = dataLabel.Layout.HasLayout ? dataLabel.Layout : options.Layout,
             TextStyle = textStyle,
+            TextBodyProperties = IsChartTextBodyPropertiesEmpty(dataLabel.TextBodyProperties) ? options.TextBodyProperties : dataLabel.TextBodyProperties,
             ShapeStyle = dataLabel.ShapeStyle.IsEmpty ? options.ShapeStyle : dataLabel.ShapeStyle,
             FlagOptions = ResolveChartDataLabelFlagOptions(options.FlagOptions, dataLabel.FlagOptions),
             Overrides = EmptyChartDataLabelOverrides
@@ -6126,6 +6127,11 @@ internal sealed partial class PptxRenderer
         return seriesIndex < seriesOptions.Count && seriesOptions[seriesIndex].IsDefined
             ? seriesOptions[seriesIndex]
             : plotOptions;
+    }
+
+    private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)
+    {
+        return properties.RotationDegrees is null && string.IsNullOrEmpty(properties.RotationValue);
     }
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
@@ -6369,6 +6375,22 @@ internal sealed partial class PptxRenderer
         return new ChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
     }
 
+    private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
+    {
+        string rotation = (string?)parent?
+            .Element(ChartNamespace + "txPr")?
+            .Element(DrawingNamespace + "bodyPr")?
+            .Attribute("rot") ?? string.Empty;
+        return new PptxSceneChartTextBodyProperties(ParseChartOoxmlAngle(rotation), rotation);
+    }
+
+    private static double? ParseChartOoxmlAngle(string value)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long rawAngle)
+            ? rawAngle / 60000d
+            : null;
+    }
+
     private static bool? ReadChartUnderline(XElement runProperties)
     {
         string? value = (string?)runProperties.Attribute("u");
@@ -6433,6 +6455,7 @@ internal sealed partial class PptxRenderer
                 ReadChartNumberFormat(labels),
                 ReadManualLayout(labels),
                 ReadChartTextStyleFromTxPr(labels, theme),
+                ReadChartTextBodyProperties(labels),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
                 ReadChartDataLabelFlagOptions(labels),
                 ReadChartDataLabelOverrides(labels, theme),
@@ -6461,6 +6484,7 @@ internal sealed partial class PptxRenderer
                 ToChartNumberFormat(plot.DataLabels.NumberFormatInfo),
                 plot.DataLabels.Layout,
                 ToChartDataLabelTextStyleOverride(sceneChart, plot.DataLabels),
+                plot.DataLabels.TextBodyProperties,
                 ToChartShapeStyle(plot.DataLabels.ShapeStyle),
                 ToChartDataLabelFlagOptions(plot.DataLabels),
                 ToChartDataLabelOverrides(plot.DataLabels.Overrides),
@@ -6502,6 +6526,7 @@ internal sealed partial class PptxRenderer
             ToChartNumberFormat(labels.NumberFormatInfo),
             labels.Layout,
             ToChartDataLabelTextStyleOverride(sceneChart, labels),
+            labels.TextBodyProperties,
             ToChartShapeStyle(labels.ShapeStyle),
             ToChartDataLabelFlagOptions(labels),
             ToChartDataLabelOverrides(labels.Overrides),
@@ -6548,6 +6573,7 @@ internal sealed partial class PptxRenderer
                 ReadChartNumberFormat(label),
                 ReadManualLayout(label),
                 ReadChartTextStyleFromTxPr(label, theme),
+                ReadChartTextBodyProperties(label),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme),
                 ReadChartDataLabelFlagOptions(label));
         }
@@ -6583,6 +6609,7 @@ internal sealed partial class PptxRenderer
                 ToChartNumberFormat(dataLabel.NumberFormatInfo),
                 dataLabel.Layout,
                 ToChartTextStyleOverride(dataLabel.TextStyle),
+                dataLabel.TextBodyProperties,
                 ToChartShapeStyle(dataLabel.ShapeStyle),
                 ToChartDataLabelOverrideFlagOptions(dataLabel));
         }
@@ -10847,9 +10874,9 @@ internal sealed partial class PptxRenderer
         "showBubbleSize"
     ];
 
-    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
+    private readonly record struct ChartDataLabelOptions(bool ShowValue, bool ShowPercent, bool ShowCategoryName, bool ShowSeriesName, bool ShowLeaderLines, bool ShowLegendKey, bool ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions, IReadOnlyDictionary<int, ChartDataLabelOverride> Overrides, bool IsDefined)
     {
-        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, ShapeStyle: ChartShapeStyle.Empty, FlagOptions: EmptyChartDataLabelFlagOptions, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
+        public static ChartDataLabelOptions None { get; } = new(ShowValue: false, ShowPercent: false, ShowCategoryName: false, ShowSeriesName: false, ShowLeaderLines: false, ShowLegendKey: false, ShowBubbleSize: false, LeaderLines: ChartDataLabelLeaderLines.Empty, CustomText: string.Empty, CustomTextRuns: [], PositionKind: PptxSceneChartDataLabelPosition.Unknown, Position: string.Empty, Separator: string.Empty, NumberFormat: string.Empty, NumberFormatInfo: default, Layout: default, TextStyle: ChartTextStyleOverride.Empty, TextBodyProperties: default, ShapeStyle: ChartShapeStyle.Empty, FlagOptions: EmptyChartDataLabelFlagOptions, Overrides: EmptyChartDataLabelOverrides, IsDefined: false);
 
         public bool HasVisibleText => ShowValue || ShowPercent || ShowCategoryName || ShowSeriesName || ShowBubbleSize ||
             !string.IsNullOrWhiteSpace(CustomText) ||
@@ -10868,7 +10895,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartTextRunLayout(string Text, ChartTextStyle Style, double Width);
 
-    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions);
+    private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle, IReadOnlyDictionary<string, ChartBooleanOption> FlagOptions);
 
     private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
