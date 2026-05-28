@@ -594,8 +594,15 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedTransparency(PptxSceneSlide sceneSlide, XDocument slideXml)
     {
-        return HasUnsupportedShapeTransparency(sceneSlide.SlideNodes) ||
+        return HasUnsupportedSceneShapeTransparency(sceneSlide) ||
             slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha);
+    }
+
+    private static bool HasUnsupportedSceneShapeTransparency(PptxSceneSlide sceneSlide)
+    {
+        return HasUnsupportedShapeTransparency(sceneSlide.MasterNodes) ||
+            HasUnsupportedShapeTransparency(sceneSlide.LayoutNodes) ||
+            HasUnsupportedShapeTransparency(sceneSlide.SlideNodes);
     }
 
     private static bool HasUnsupportedShapeTransparency(IReadOnlyList<PptxSceneNode> nodes)

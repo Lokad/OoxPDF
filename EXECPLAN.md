@@ -14821,6 +14821,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState` passed; focused non-slow `pptx-model` passed with
 `23` tests, `0` failures, and `1` skip; focused `PptxUnsupportedFeaturesEmitDiagnostics` passed.
 
+Revision note, 2026-05-28: Extended the scene-owned unsupported-transparency diagnostic traversal across
+the full rendered inheritance stack. The previous ownership slice correctly modeled unsupported `a:alpha`
+on `PptxSceneShape`, but diagnostics only searched `sceneSlide.SlideNodes`; inherited layout/master shapes
+could therefore be rendered from scene nodes while their unsupported transparency was invisible unless a
+separate raw XML scan happened to cover the same owner. `PptxRenderer.Diagnostics` now checks master,
+layout, and slide shape nodes before the intentionally narrow non-shape XML fallback.
+
+The regression uses a layout-owned shape with unsupported reflection alpha, then invokes diagnostics with a
+slide XML document that contains no alpha at all. That locks the behavior to inherited scene state rather
+than to incidental slide XML. This is a small but important structural correction: diagnostics now follow the
+same scene inheritance layers that rendering consumes, without adding owner-name exceptions or broadening the
+raw fallback.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `26` tests, `0` failures, and `1` skip; full non-slow console runner passed with
+`413` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: PPTX SmartArt and unknown graphic-frame diagnostics now consult scene-owned node
 classification before falling back to raw slide XML. `PptxSceneNodeKind.UnknownGraphicFrame` and
 `PptxSceneNode.IsSmartArtGraphicFrame` already captured the distinction needed by ordered rendering, but the
