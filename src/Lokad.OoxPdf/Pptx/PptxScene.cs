@@ -998,6 +998,7 @@ internal sealed record PptxSceneChartAxis(
     string Orientation,
     bool IsReversed,
     bool? IsDeleted,
+    string IsDeletedValue,
     bool HasScaling,
     double? Minimum,
     string MinimumValue,
@@ -1028,6 +1029,7 @@ internal sealed record PptxSceneChartAxis(
     int? TickMarkSkip,
     string TickMarkSkipValue,
     bool? NoMultiLevelLabels,
+    string NoMultiLevelLabelsValue,
     string? NumberFormat,
     PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartTitle Title);
@@ -2847,6 +2849,8 @@ internal sealed class PptxSceneBuilder
             (int? labelOffset, string labelOffsetValue) = ReadChartElementIntWithValue(axis, "lblOffset");
             (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
             (int? tickMarkSkip, string tickMarkSkipValue) = ReadChartElementIntWithValue(axis, "tickMarkSkip");
+            (bool? isDeleted, string isDeletedValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "delete");
+            (bool? noMultiLevelLabels, string noMultiLevelLabelsValue) = ReadOptionalOoxmlBooleanElementWithValue(axis, "noMultiLvlLbl");
             axes.Add(new PptxSceneChartAxis(
                 id,
                 ParseChartAxisKind(axis.Name.LocalName),
@@ -2863,7 +2867,8 @@ internal sealed class PptxSceneBuilder
                 orientationKind,
                 orientation,
                 orientationKind == PptxSceneChartAxisOrientation.MaximumMinimum,
-                ReadOptionalOoxmlBooleanElement(axis, "delete"),
+                isDeleted,
+                isDeletedValue,
                 axis.Element(ChartNamespace + "scaling") is not null,
                 minimum,
                 minimumValue,
@@ -2893,7 +2898,8 @@ internal sealed class PptxSceneBuilder
                 tickLabelSkipValue,
                 tickMarkSkip,
                 tickMarkSkipValue,
-                ReadOptionalOoxmlBooleanElement(axis, "noMultiLvlLbl"),
+                noMultiLevelLabels,
+                noMultiLevelLabelsValue,
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),
                 ReadChartTitleElement(axis.Element(ChartNamespace + "title"), theme)));

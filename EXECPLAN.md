@@ -12091,6 +12091,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `330` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML boolean tokens for chart axis visibility and multi-level-label
+flags. `PptxSceneChartAxis` now carries `IsDeletedValue` beside `IsDeleted` and
+`NoMultiLevelLabelsValue` beside `NoMultiLevelLabels`; the main resolved-node fixture asserts missing category
+axis delete, explicit value-axis `delete val="0"`, explicit category-axis `noMultiLvlLbl val="1"`, and missing
+value-axis `noMultiLvlLbl` as distinct model states.
+
+This closes the current broad chart boolean-token preservation pass for the fields already represented as
+parsed booleans in the scene model. Remaining structural cleanup should shift from token retention to reducing
+renderer-local XML fallbacks and deriving Office-equivalent layout rules from typed scene state and PDF-level
+evidence, with any newly touched OOXML booleans preserving raw tokens from the start.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `89` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `330` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw OOXML boolean tokens for chart plot and series flags. `PptxSceneChartPlot`
 now carries `MarkersEnabledValue` and `VaryColorsValue` beside the parsed plot-level `marker` and `varyColors`
 booleans, and `PptxSceneChartSeries` carries `SmoothValue` beside the parsed `smooth` boolean. Existing chart
