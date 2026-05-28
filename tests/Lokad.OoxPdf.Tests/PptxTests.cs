@@ -11692,6 +11692,7 @@ internal static class PptxTests
         TestAssert.Equal(2, lineSeries.Categories.Count);
         TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
         TestAssert.Equal(6, lineSeries.CategoryPointCount ?? 0);
+        TestAssert.Equal("6", lineSeries.CategoryPointCountValue);
         TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
         TestAssert.Equal("0", lineSeries.CategoryPoints[0].IndexValue);
         TestAssert.Equal("Alpha", lineSeries.CategoryPoints[0].Text);
@@ -11708,6 +11709,7 @@ internal static class PptxTests
         TestAssert.Equal(2, lineSeries.Values.Count);
         TestAssert.Equal(5, lineSeries.ValuePoints.Count);
         TestAssert.Equal(6, lineSeries.ValuePointCount ?? 0);
+        TestAssert.Equal("6", lineSeries.ValuePointCountValue);
         TestAssert.Equal("0.00", lineSeries.ValueFormatCode ?? string.Empty);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
         TestAssert.Equal("0", lineSeries.ValuePoints[0].IndexValue);
@@ -11730,14 +11732,17 @@ internal static class PptxTests
 
         PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
         TestAssert.Equal(8, scatterSeries.XValuePointCount ?? 0);
+        TestAssert.Equal("8", scatterSeries.XValuePointCountValue);
         TestAssert.Equal("General", scatterSeries.XValueFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.XValuePoints[0].Index);
         TestAssert.Equal(9d, scatterSeries.XValuePoints[0].Value ?? 0d);
         TestAssert.Equal(8, scatterSeries.YValuePointCount ?? 0);
+        TestAssert.Equal("8", scatterSeries.YValuePointCountValue);
         TestAssert.Equal("0.0%", scatterSeries.YValueFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.YValuePoints[0].Index);
         TestAssert.True(scatterSeries.YValuePoints[0].Value is null, "Expected blank y-value point to remain explicit.");
         TestAssert.Equal(8, scatterSeries.BubbleSizePointCount ?? 0);
+        TestAssert.Equal("8", scatterSeries.BubbleSizePointCountValue);
         TestAssert.Equal("0", scatterSeries.BubbleSizeFormatCode ?? string.Empty);
         TestAssert.Equal(7, scatterSeries.BubbleSizePoints[0].Index);
         TestAssert.Equal(16d, scatterSeries.BubbleSizePoints[0].Value ?? 0d);
@@ -11771,6 +11776,7 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
         TestAssert.True(series.DataSources.Categories.HasCachedPoints, "Expected multi-level category cache point presence to survive scene parsing.");
         TestAssert.Equal(3, series.CategoryPointCount ?? 0);
+        TestAssert.Equal("3", series.CategoryPointCountValue);
         TestAssert.Equal(5, series.CategoryPoints.Count);
         TestAssert.Equal(2, series.CategoryLevels.Count);
         TestAssert.Equal(2, series.CategoryLevels[0].Count);

@@ -12057,6 +12057,20 @@ evidence rather than constants.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML `ptCount` tokens for chart series caches. The typed series
+model now carries `ValuePointCountValue`, `CategoryPointCountValue`, `XValuePointCountValue`,
+`YValuePointCountValue`, and `BubbleSizePointCountValue` beside the parsed nullable counts. Series parsing
+uses a shared `ReadChartSeriesPointCountWithValue` helper for numeric, string, multi-level string, scatter,
+and bubble-size caches, and tests now assert representative raw count tokens across those cache families.
+
+Rendering still consumes the parsed nullable count and keeps the existing fallback/inference behavior. The
+long-term point-count policy remains to align sparse vector length with Office evidence when `ptCount` is
+missing, malformed, smaller than the highest point index, or inconsistent with workbook sidecars. This slice
+removes the first blocker for that policy by keeping the source count token visible in the scene model.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Preserved raw OOXML index tokens for chart points and label overrides that
 already enter the scene with a parsed key. `PptxSceneChartNumberPoint`, `PptxSceneChartStringPoint`,
 `PptxSceneChartPointStyle`, and `PptxSceneChartDataLabelOverride` now carry `IndexValue` beside the resolved

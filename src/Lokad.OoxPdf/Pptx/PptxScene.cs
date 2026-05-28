@@ -841,22 +841,27 @@ internal sealed record PptxSceneChartSeries(
     IReadOnlyList<double> Values,
     IReadOnlyList<PptxSceneChartNumberPoint> ValuePoints,
     int? ValuePointCount,
+    string ValuePointCountValue,
     string? ValueFormatCode,
     IReadOnlyList<string> Categories,
     IReadOnlyList<PptxSceneChartStringPoint> CategoryPoints,
     int? CategoryPointCount,
+    string CategoryPointCountValue,
     IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> CategoryLevels,
     IReadOnlyList<double> XValues,
     IReadOnlyList<PptxSceneChartNumberPoint> XValuePoints,
     int? XValuePointCount,
+    string XValuePointCountValue,
     string? XValueFormatCode,
     IReadOnlyList<double> YValues,
     IReadOnlyList<PptxSceneChartNumberPoint> YValuePoints,
     int? YValuePointCount,
+    string YValuePointCountValue,
     string? YValueFormatCode,
     IReadOnlyList<double> BubbleSizes,
     IReadOnlyList<PptxSceneChartNumberPoint> BubbleSizePoints,
     int? BubbleSizePointCount,
+    string BubbleSizePointCountValue,
     string? BubbleSizeFormatCode,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
@@ -2298,6 +2303,11 @@ internal sealed class PptxSceneBuilder
             (int? index, string indexValue) = ReadChartElementIntWithValue(seriesElement, "idx");
             (int? order, string orderValue) = ReadChartElementIntWithValue(seriesElement, "order");
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(seriesElement, "explosion");
+            (int? valuePointCount, string valuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "val");
+            (int? categoryPointCount, string categoryPointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "cat");
+            (int? xValuePointCount, string xValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "xVal");
+            (int? yValuePointCount, string yValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "yVal");
+            (int? bubbleSizePointCount, string bubbleSizePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "bubbleSize");
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
@@ -2307,23 +2317,28 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesDataSources(seriesElement),
                 ReadChartSeriesValues(seriesElement),
                 ReadChartSeriesNumberPoints(seriesElement, "val"),
-                ReadChartSeriesPointCount(seriesElement, "val"),
+                valuePointCount,
+                valuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "val"),
                 ReadChartSeriesCategories(seriesElement),
                 ReadChartSeriesStringPoints(seriesElement, "cat"),
-                ReadChartSeriesPointCount(seriesElement, "cat"),
+                categoryPointCount,
+                categoryPointCountValue,
                 ReadChartSeriesStringLevels(seriesElement, "cat"),
                 ReadChartSeriesNumbers(seriesElement, "xVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "xVal"),
-                ReadChartSeriesPointCount(seriesElement, "xVal"),
+                xValuePointCount,
+                xValuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "xVal"),
                 ReadChartSeriesNumbers(seriesElement, "yVal"),
                 ReadChartSeriesNumberPoints(seriesElement, "yVal"),
-                ReadChartSeriesPointCount(seriesElement, "yVal"),
+                yValuePointCount,
+                yValuePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "yVal"),
                 ReadChartSeriesNumbers(seriesElement, "bubbleSize"),
                 ReadChartSeriesNumberPoints(seriesElement, "bubbleSize"),
-                ReadChartSeriesPointCount(seriesElement, "bubbleSize"),
+                bubbleSizePointCount,
+                bubbleSizePointCountValue,
                 ReadChartSeriesNumberFormatCode(seriesElement, "bubbleSize"),
                 ReadChartSeriesFill(seriesElement, theme),
                 ReadChartSeriesPatternFill(seriesElement, theme),
@@ -2612,6 +2627,12 @@ internal sealed class PptxSceneBuilder
 
     private static int? ReadChartSeriesPointCount(XElement series, string elementName)
     {
+        (int? parsed, _) = ReadChartSeriesPointCountWithValue(series, elementName);
+        return parsed;
+    }
+
+    private static (int? Value, string RawValue) ReadChartSeriesPointCountWithValue(XElement series, string elementName)
+    {
         XElement? cache = series
             .Elements(ChartNamespace + elementName)
             .Descendants()
@@ -2621,12 +2642,12 @@ internal sealed class PptxSceneBuilder
                  child.Name.LocalName == "strLit" ||
                  child.Name.LocalName == "strCache" ||
                  child.Name.LocalName == "multiLvlStrCache"));
-        string? value = (string?)cache?
+        string value = (string?)cache?
             .Element(ChartNamespace + "ptCount")
-            ?.Attribute("val");
+            ?.Attribute("val") ?? string.Empty;
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static string? ReadChartSeriesNumberFormatCode(XElement series, string elementName)
