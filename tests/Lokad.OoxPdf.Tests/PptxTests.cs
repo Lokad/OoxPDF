@@ -12383,6 +12383,44 @@ internal static class PptxTests
         TestAssert.True(xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) is not null, "Expected XML-only category-axis lookup to keep reading XML.");
     }
 
+    public static void PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(0, chart.Axes.Count);
+
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:valAx><c:axId val="20"/><c:scaling><c:min val="-100"/><c:max val="100"/></c:scaling></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        Type axisSourceType = typeof(PptxRenderer).GetNestedType(
+            "ChartAxisSource",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart axis-source type.");
+        object emptyAxisSource = Activator.CreateInstance(axisSourceType, [null, null]) ?? throw new InvalidOperationException("Expected empty axis source.");
+        System.Reflection.MethodInfo resolveValueAxis = typeof(PptxRenderer).GetMethod(
+            "ResolveXmlValueAxisForSource",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected value-axis fallback resolver.");
+
+        object? sceneAxis = resolveValueAxis.Invoke(null, [chart, emptyAxisSource, mismatchedChartXml]);
+        object? xmlOnlyAxis = resolveValueAxis.Invoke(null, [null, emptyAxisSource, mismatchedChartXml]);
+
+        TestAssert.True(sceneAxis is null, "Expected scene-backed missing value axis not to be repaired from fallback XML for scale/layout estimation.");
+        TestAssert.True(xmlOnlyAxis is XElement, "Expected XML-only value-axis scale lookup to keep reading XML.");
+    }
+
     public static void PptxChartUnknownDataLabelPositionResolvesThroughExplicitDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

@@ -376,6 +376,17 @@ High-priority actions:
   Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
   `pptx-charts` passed (`116 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`360 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Make value-axis XML scale fallback scene-aware:
+  `ResolveXmlValueAxisForSource` now receives the chart scene and only searches the first raw XML `c:valAx`
+  when no `PptxSceneChart` exists. Scene-backed missing-axis paths therefore stay missing for axis scale,
+  side/style, and right-legend plot-box estimation instead of quietly borrowing an unrelated value axis from raw
+  chart XML. The scatter/right-legend estimator was also adjusted so an empty scene-owned value-axis set does
+  not synthesize an XML axis source. XML-only rendering still uses the first XML value axis as its compatibility
+  fallback. The regression locks this boundary with a scene chart that has no axes and a deliberately mismatched
+  XML value-axis scale; scene-backed resolution returns no XML axis, while XML-only resolution still returns the
+  value axis. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+  non-slow `pptx-charts` passed (`117 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`361 passed, 0 failed, 7 skipped`).
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains
