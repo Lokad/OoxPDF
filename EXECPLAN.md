@@ -12110,6 +12110,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `334` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated radar-chart renderer option resolution behind
+`ChartRadarPlotOptions`. Radar layout now consumes a typed radar-style option record instead of calling the
+style bridge inline from `ResolveRadarLayout`. The XML-only fallback behavior remains intact, but supported
+scene radar charts now follow the same named option-boundary pattern as bar, line, area, and scatter.
+
+The new mismatch guard passes a scene radar chart with unknown `radarStyle` beside fallback XML that requests
+`filled`; the resolved option must use the scene-owned Office default `standard`. This is behavior-neutral
+today, but it removes another renderer-local XML decision point before any future Office-backed radar sparse
+geometry or filled-radar gap work.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `94` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `335` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing

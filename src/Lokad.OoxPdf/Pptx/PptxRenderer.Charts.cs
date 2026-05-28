@@ -467,6 +467,13 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlSmoothSeries(plot, chartElement));
     }
 
+    private readonly record struct ChartRadarPlotOptions(PptxSceneChartRadarStyle RadarStyle);
+
+    private static ChartRadarPlotOptions ReadSceneOrXmlChartRadarOptions(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        return new ChartRadarPlotOptions(ReadSceneOrXmlChartRadarStyle(plot, chartElement));
+    }
+
     private static double ReadSceneOrXmlChartGapWidth(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
@@ -1363,7 +1370,8 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents valueExtents = ReadSceneOrXmlChartValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetRadarChartValueExtents(radarSeries));
                 ChartAxisUnits axisUnits = ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis);
                 ChartPlotBox plotBox = GetPolarChartPlotBox(document, bounds, chartXml, sceneChart);
-                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, ReadSceneOrXmlChartRadarStyle(radarPlot, radarChart), radarSeries);
+                ChartRadarPlotOptions radarOptions = ReadSceneOrXmlChartRadarOptions(radarPlot, radarChart);
+                ChartRadarLayout radarLayout = ResolveRadarLayout(plotBox, radarOptions.RadarStyle, radarSeries);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
