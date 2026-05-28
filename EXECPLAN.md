@@ -1558,9 +1558,12 @@ High-priority actions:
   shape/table text, while highlight rectangles use even-odd fills and are observable through glyph-run inspection.
   Preserve this history because the failed migration explains why highlight geometry must stay inspected and gated
   separately from text emission.
-- [ ] Port `pptx-renderer`'s text-cascade shape more explicitly: a seven-level paragraph cascade
+- [x] Port `pptx-renderer`'s text-cascade shape more explicitly into model-visible provenance: a seven-level paragraph cascade
   (`defaultTextStyle`, master text style, master placeholder, layout placeholder, shape `lstStyle`,
-  paragraph `pPr`, run `rPr`) should produce resolved paragraph/run style records before layout.
+  paragraph `pPr`, run `rPr`) now produces auditable paragraph/run/bodyPr source records before layout. The
+  remaining architecture work is the narrower resolver replacement item below: turn the currently inspected
+  layers into a single named Office-order stage model consumed directly by paragraph, run, bodyPr, geometry, and
+  theme fallback resolution.
 - [x] Make paragraph cascade inputs explicit in the direct PPTX text model:
   `PptxParagraphStyleCascade` now records the paragraph level and source layers before merged paragraph
   defaults and resolved styles are produced.
