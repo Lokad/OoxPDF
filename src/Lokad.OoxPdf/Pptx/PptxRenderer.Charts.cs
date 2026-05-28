@@ -5937,8 +5937,7 @@ internal sealed partial class PptxRenderer
         var overrides = new Dictionary<int, ChartDataLabelOverride>();
         foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
         {
-            if (!int.TryParse(label.Element(ChartNamespace + "idx")?.Attribute("val")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
-                index < 0)
+            if (!TryReadChartNonNegativeIndex(label, out int index))
             {
                 continue;
             }
@@ -6756,8 +6755,7 @@ internal sealed partial class PptxRenderer
 
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
-                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            if (!TryReadChartNonNegativeIndex(point, out int index))
             {
                 continue;
             }
@@ -6824,8 +6822,7 @@ internal sealed partial class PptxRenderer
 
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
-                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            if (!TryReadChartNonNegativeIndex(point, out int index))
             {
                 continue;
             }
@@ -6870,8 +6867,7 @@ internal sealed partial class PptxRenderer
 
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
-                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            if (!TryReadChartNonNegativeIndex(point, out int index))
             {
                 continue;
             }
@@ -6884,6 +6880,16 @@ internal sealed partial class PptxRenderer
         }
 
         return explosions;
+    }
+
+    private static bool TryReadChartNonNegativeIndex(XElement element, out int index)
+    {
+        return int.TryParse(
+                element.Element(ChartNamespace + "idx")?.Attribute("val")?.Value,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out index) &&
+            index >= 0;
     }
 
     private static double ReadDoughnutHoleSize(XElement doughnutChart)

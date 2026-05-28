@@ -2248,9 +2248,7 @@ internal sealed class PptxSceneBuilder
         var overrides = new List<PptxSceneChartDataLabelOverride>();
         foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
         {
-            string indexValue = (string?)label.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
-            if (!int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
-                index < 0)
+            if (!TryReadChartNonNegativeIndex(label, out int index, out string indexValue))
             {
                 continue;
             }
@@ -2529,8 +2527,7 @@ internal sealed class PptxSceneBuilder
         var styles = new List<PptxSceneChartPointStyle>();
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            string indexValue = (string?)point.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
-            if (!int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            if (!TryReadChartNonNegativeIndex(point, out int index, out string indexValue))
             {
                 continue;
             }
@@ -2548,6 +2545,13 @@ internal sealed class PptxSceneBuilder
         }
 
         return styles;
+    }
+
+    private static bool TryReadChartNonNegativeIndex(XElement element, out int index, out string indexValue)
+    {
+        indexValue = (string?)element.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
+        return int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out index) &&
+            index >= 0;
     }
 
     private static PptxSceneFillStyle ReadChartPointFill(XElement? shapeProperties, PptxTheme theme)

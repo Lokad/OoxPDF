@@ -12415,13 +12415,30 @@ behavior.
 
 This is another small scene-model ownership step: production rendering can continue using parsed integer
 identity where it exists, while future diagnostics and Office-aligned ordering work can still see the source
-token. Remaining long-term gaps are point-index surfaces that still require a parsed integer before entering
-the scene (`c:dPt/@idx`, `c:dLbl/@idx`, and cached point `@idx` values). Those are riskier because malformed
+token. Cached point `@idx` values now keep an explicit parsed-versus-ordinal-fallback state in the scene
+and render vectors. The remaining long-term gaps are keyed override surfaces that still require a parsed
+integer before entering the scene (`c:dPt/@idx` and `c:dLbl/@idx`). Those are riskier because malformed
 indices currently decide whether a keyed override exists at all; they should be handled with an explicit
 typed key/diagnostic policy rather than by silently inventing an index.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
+
+Revision note, 2026-05-28: Unified chart keyed-point index parsing on the existing non-negative policy.
+Scene-owned `c:dPt` point styles now use the same parsed non-negative key rule as `c:dLbl` overrides, and
+the XML-only point fill, stroke, and explosion fallback readers share the same helper instead of accepting
+negative parsed integers. This is intentionally not a fallback invention: malformed, missing, and negative
+keyed overrides still do not enter rendering, but the accepted key domain is now explicit and consistent.
+
+The still-open long-term item is diagnostic preservation for rejected keyed overrides. If Office evidence
+ever shows that malformed keyed `dPt` or `dLbl` elements affect output, the scene needs a typed rejected-key
+sidecar rather than another renderer-local XML scan or an invented ordinal.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regressions
+`PptxScenePreservesChartExplosionNumericOptionTokens` and
+`PptxChartPointExplosionReaderRejectsNegativeIndices` passed; focused non-slow `pptx-charts` passed with
+`98` tests, `0` failures, and `0` skips; full non-slow console runner passed with `339` tests, `0`
+failures, and `7` slow skips.
 
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,

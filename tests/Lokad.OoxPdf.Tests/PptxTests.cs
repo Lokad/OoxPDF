@@ -11607,6 +11607,7 @@ internal static class PptxTests
                   <c:idx val="futureSeriesIndex"/>
                   <c:order val="3"/>
                   <c:explosion val="futureSeriesExplosion"/>
+                  <c:dPt><c:idx val="-1"/><c:explosion val="80"/></c:dPt>
                   <c:dPt><c:idx val="0"/><c:explosion val="35"/></c:dPt>
                   <c:dPt><c:idx val="1"/><c:explosion val="futurePointExplosion"/></c:dPt>
                   <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:val>
@@ -11622,6 +11623,7 @@ internal static class PptxTests
         TestAssert.Equal("3", series.OrderValue);
         TestAssert.Equal(null, series.Explosion);
         TestAssert.Equal("futureSeriesExplosion", series.ExplosionValue);
+        TestAssert.Equal(2, series.PointStyles.Count);
         TestAssert.Equal(35d, series.PointStyles[0].Explosion ?? double.NaN);
         TestAssert.Equal("0", series.PointStyles[0].IndexValue);
         TestAssert.Equal("35", series.PointStyles[0].ExplosionValue);
@@ -14587,6 +14589,33 @@ internal static class PptxTests
         TestAssert.Equal(0.25d, explosions[0]);
         TestAssert.Equal(0.25d, explosions[1]);
         TestAssert.Equal(0.25d, explosions[2]);
+    }
+
+    public static void PptxChartPointExplosionReaderRejectsNegativeIndices()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart>
+                <c:ser>
+                  <c:dPt><c:idx val="-1"/><c:explosion val="80"/></c:dPt>
+                  <c:dPt><c:idx val="0"/><c:explosion val="25"/></c:dPt>
+                </c:ser>
+              </c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement chartElement = XDocument.Parse(chartXml).Descendants(chartNamespace + "doughnutChart").Single();
+        System.Reflection.MethodInfo readExplosions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartPointExplosions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected point-explosion helper.");
+
+        var explosions = (IReadOnlyDictionary<int, double>)(readExplosions.Invoke(null, [null, chartElement, null])
+            ?? throw new InvalidOperationException("Expected point explosions."));
+
+        TestAssert.Equal(1, explosions.Count);
+        TestAssert.True(!explosions.ContainsKey(-1), "Expected negative keyed point explosions to be rejected.");
+        TestAssert.Equal(0.25d, explosions[0]);
     }
 
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
