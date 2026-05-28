@@ -14504,6 +14504,25 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState` passed; focused non-slow `pptx-model` passed with
 `23` tests, `0` failures, and `1` skip; focused `PptxUnsupportedFeaturesEmitDiagnostics` passed.
 
+Revision note, 2026-05-28: PPTX SmartArt and unknown graphic-frame diagnostics now consult scene-owned node
+classification before falling back to raw slide XML. `PptxSceneNodeKind.UnknownGraphicFrame` and
+`PptxSceneNode.IsSmartArtGraphicFrame` already captured the distinction needed by ordered rendering, but the
+unsupported-feature diagnostics still rescanned `p:graphicFrame` XML. Private-safe scene inspection now also
+exposes `IsUnsupportedGraphicFrame`, and the diagnostic emitter traverses scene nodes for SmartArt and
+unsupported generic graphic frames first.
+
+The raw XML fallback intentionally remains for compatibility and as source evidence while older or synthetic
+call paths still pass slide XML into diagnostics. The direction is now clearer: adding support for another
+graphic-frame payload should update scene classification and rendering dispatch first, with diagnostics
+following typed node state instead of growing URI/string checks in the renderer. Remaining graphic-frame
+ownership gaps include richer payload identity for non-chart/non-table frames and the eventual replacement of
+SmartArt fallback drawing heuristics with Office-PDF structural evidence.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the diagnostic-focused
+runner invocation covering unknown graphic frames, unsupported-feature diagnostics, and scene-owned
+transparency completed successfully; full non-slow console runner passed with `398` tests, `0` failures, and
+`7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

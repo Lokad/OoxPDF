@@ -9198,6 +9198,31 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[0];
+        PptxSceneNode unknownGraphicFrame = sceneSlide.SlideNodes[1];
+        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[1];
+        TestAssert.Equal(PptxSceneNodeKind.UnknownGraphicFrame, unknownGraphicFrame.Kind);
+        TestAssert.True(snapshot.IsUnsupportedGraphicFrame, "Expected private-safe scene inspection to expose unsupported graphic-frame state.");
+
+        var sceneDiagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutGraphicFrame = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sceneSink = sceneDiagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGraphicFrame, "/ppt/slides/slide1.xml", 1, sceneSink]);
+        TestAssert.Contains("PPTX_UNSUPPORTED_GRAPHIC_FRAME", string.Join("|", sceneDiagnostics.Select(d => d.Id)));
+
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         int textIndex = pdf.IndexOf(" TJ", StringComparison.Ordinal);
         int coverIndex = pdf.IndexOf("72 396 288 72 re f", StringComparison.Ordinal);

@@ -58,12 +58,14 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }
 
-        if (HasGraphicDataUri(slideXml, "drawingml/2006/diagram"))
+        if (HasSmartArtGraphicFrame(sceneSlide.SlideNodes) ||
+            HasGraphicDataUri(slideXml, "drawingml/2006/diagram"))
         {
             Emit("PPTX_UNSUPPORTED_SMARTART", "SmartArt");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "graphicFrame").Any(IsUnsupportedGraphicFrame))
+        if (HasUnsupportedGraphicFrame(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(PresentationNamespace + "graphicFrame").Any(IsUnsupportedGraphicFrame))
         {
             Emit("PPTX_UNSUPPORTED_GRAPHIC_FRAME", "graphic frame");
         }
@@ -486,6 +488,33 @@ internal sealed partial class PptxRenderer
         string uri = (string?)graphicData.Attribute("uri") ?? string.Empty;
         return !uri.Contains("chart", StringComparison.OrdinalIgnoreCase) &&
             !graphicData.Descendants(DrawingNamespace + "tbl").Any();
+    }
+
+    private static bool HasSmartArtGraphicFrame(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.IsSmartArtGraphicFrame || HasSmartArtGraphicFrame(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasUnsupportedGraphicFrame(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Kind == PptxSceneNodeKind.UnknownGraphicFrame && !node.IsSmartArtGraphicFrame) ||
+                HasUnsupportedGraphicFrame(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool HasUnsupportedTransparency(PptxSceneSlide sceneSlide, XDocument slideXml)

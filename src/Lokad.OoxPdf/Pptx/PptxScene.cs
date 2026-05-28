@@ -33,6 +33,7 @@ internal sealed record PptxSceneNodeSnapshot(
     string Kind,
     bool IsPlaceholder,
     bool IsSmartArtGraphicFrame,
+    bool IsUnsupportedGraphicFrame,
     bool HasHyperlinkClick,
     string? HyperlinkClickId,
     string? HyperlinkClickAction,

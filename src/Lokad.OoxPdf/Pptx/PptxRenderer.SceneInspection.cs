@@ -79,6 +79,7 @@ internal sealed partial class PptxRenderer
             node.Kind.ToString(),
             node.IsPlaceholder,
             node.IsSmartArtGraphicFrame,
+            node.Kind == PptxSceneNodeKind.UnknownGraphicFrame && !node.IsSmartArtGraphicFrame,
             node.HyperlinkClick.IsDefined,
             node.HyperlinkClick.RelationshipId,
             node.HyperlinkClick.Action,
