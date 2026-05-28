@@ -384,6 +384,11 @@ internal sealed partial class PptxRenderer
     private static bool HasUnsupportedTextOrientation(XElement bodyProperties)
     {
         string? orientation = (string?)bodyProperties.Attribute("vert");
+        return HasUnsupportedTextOrientation(orientation);
+    }
+
+    private static bool HasUnsupportedTextOrientation(string? orientation)
+    {
         return !string.IsNullOrEmpty(orientation) &&
             !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) &&
             !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
@@ -406,6 +411,7 @@ internal sealed partial class PptxRenderer
         {
             if ((node.TextBody?.HasUnsupportedTextOrientation == true) ||
                 HasUnsupportedTableTextOrientation(node.Table) ||
+                HasUnsupportedChartTextOrientation(node.Chart) ||
                 HasUnsupportedSceneTextOrientation(node.Children))
             {
                 return true;
@@ -420,6 +426,20 @@ internal sealed partial class PptxRenderer
         return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedTextOrientation)) == true;
     }
 
+    private static bool HasUnsupportedChartTextOrientation(PptxSceneChart? chart)
+    {
+        return chart is not null &&
+            (HasUnsupportedTextOrientation(chart.Title.TextBodyProperties.OrientationValue) ||
+                HasUnsupportedTextOrientation(chart.Legend.TextBodyProperties.OrientationValue) ||
+                chart.Axes.Any(axis => HasUnsupportedTextOrientation(axis.Title.TextBodyProperties.OrientationValue)) ||
+                chart.Plots.Any(plot =>
+                    HasUnsupportedTextOrientation(plot.DataLabels.TextBodyProperties.OrientationValue) ||
+                    plot.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)) ||
+                    plot.Series.Any(series =>
+                        HasUnsupportedTextOrientation(series.DataLabels.TextBodyProperties.OrientationValue) ||
+                        series.DataLabels.Overrides.Any(label => HasUnsupportedTextOrientation(label.TextBodyProperties.OrientationValue)))));
+    }
+
     private static bool IsUnsupportedNonShapeTextOrientation(XElement bodyProperties)
     {
         return !IsSceneTextBodyProperties(bodyProperties) &&
@@ -429,6 +449,11 @@ internal sealed partial class PptxRenderer
     private static bool HasUnsupportedTextVerticalOverflow(XElement bodyProperties)
     {
         string? overflow = (string?)bodyProperties.Attribute("vertOverflow");
+        return HasUnsupportedTextVerticalOverflow(overflow);
+    }
+
+    private static bool HasUnsupportedTextVerticalOverflow(string? overflow)
+    {
         return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
     }
 
@@ -444,6 +469,7 @@ internal sealed partial class PptxRenderer
         {
             if ((node.TextBody?.HasUnsupportedVerticalOverflow == true) ||
                 HasUnsupportedTableTextVerticalOverflow(node.Table) ||
+                HasUnsupportedChartTextVerticalOverflow(node.Chart) ||
                 HasUnsupportedSceneTextVerticalOverflow(node.Children))
             {
                 return true;
@@ -456,6 +482,20 @@ internal sealed partial class PptxRenderer
     private static bool HasUnsupportedTableTextVerticalOverflow(PptxSceneTable? table)
     {
         return table?.Rows.Any(row => row.Cells.Any(cell => cell.HasUnsupportedVerticalOverflow)) == true;
+    }
+
+    private static bool HasUnsupportedChartTextVerticalOverflow(PptxSceneChart? chart)
+    {
+        return chart is not null &&
+            (HasUnsupportedTextVerticalOverflow(chart.Title.TextBodyProperties.VerticalOverflowValue) ||
+                HasUnsupportedTextVerticalOverflow(chart.Legend.TextBodyProperties.VerticalOverflowValue) ||
+                chart.Axes.Any(axis => HasUnsupportedTextVerticalOverflow(axis.Title.TextBodyProperties.VerticalOverflowValue)) ||
+                chart.Plots.Any(plot =>
+                    HasUnsupportedTextVerticalOverflow(plot.DataLabels.TextBodyProperties.VerticalOverflowValue) ||
+                    plot.DataLabels.Overrides.Any(label => HasUnsupportedTextVerticalOverflow(label.TextBodyProperties.VerticalOverflowValue)) ||
+                    plot.Series.Any(series =>
+                        HasUnsupportedTextVerticalOverflow(series.DataLabels.TextBodyProperties.VerticalOverflowValue) ||
+                        series.DataLabels.Overrides.Any(label => HasUnsupportedTextVerticalOverflow(label.TextBodyProperties.VerticalOverflowValue)))));
     }
 
     private static bool IsUnsupportedNonShapeTextVerticalOverflow(XElement bodyProperties)

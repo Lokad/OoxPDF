@@ -977,7 +977,9 @@ internal sealed record PptxSceneChartDataLabelOverride(
 
 internal readonly record struct PptxSceneChartTextBodyProperties(
     double? RotationDegrees,
-    string RotationValue);
+    string RotationValue,
+    string OrientationValue,
+    string VerticalOverflowValue);
 
 internal readonly record struct PptxSceneChartNumberFormat(
     bool IsDefined,
@@ -3472,11 +3474,15 @@ internal sealed class PptxSceneBuilder
 
     private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
     {
-        string rotation = (string?)parent?
+        XElement? bodyProperties = parent?
             .Element(ChartNamespace + "txPr")?
-            .Element(DrawingNamespace + "bodyPr")?
-            .Attribute("rot") ?? string.Empty;
-        return new PptxSceneChartTextBodyProperties(ParseOptionalOoxmlAngle(rotation), rotation);
+            .Element(DrawingNamespace + "bodyPr");
+        string rotation = (string?)bodyProperties?.Attribute("rot") ?? string.Empty;
+        return new PptxSceneChartTextBodyProperties(
+            ParseOptionalOoxmlAngle(rotation),
+            rotation,
+            (string?)bodyProperties?.Attribute("vert") ?? string.Empty,
+            (string?)bodyProperties?.Attribute("vertOverflow") ?? string.Empty);
     }
 
     private static double? ParseOptionalOoxmlAngle(string value)

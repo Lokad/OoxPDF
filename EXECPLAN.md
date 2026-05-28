@@ -15405,3 +15405,17 @@ invalid, future, or inherited boolean tokens without falling back to XML. Valida
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
 non-slow `pptx-typography` passed with `99` tests, `0` failures, and `2` slow skips; focused non-slow
 `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip.
+
+Follow-up, 2026-05-28: chart text-body properties now preserve `vert` and `vertOverflow` tokens beside rotation,
+and unsupported text diagnostics consume those chart scene fields before the XML compatibility fallback.
+`PptxSceneChartTextBodyProperties` carries `OrientationValue` and `VerticalOverflowValue`; diagnostics traverse
+chart titles, legends, axis titles, plot data labels, series data labels, and per-label overrides. A regression
+strips slide XML body properties before invoking diagnostics to prove unsupported chart text orientation and
+ellipsis overflow are reported from scene-owned chart text-body provenance.
+
+This is not the shared chart text-frame model yet. It narrows the diagnostic gap by making chart text bodyPr
+state observable and consumable in the same direction as shape/table text, while leaving layout convergence and
+Office-backed chart text cascade as follow-up work. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
+--nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-model` passed with `25`
+tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `138` tests, `0` failures,
+and `0` skips.

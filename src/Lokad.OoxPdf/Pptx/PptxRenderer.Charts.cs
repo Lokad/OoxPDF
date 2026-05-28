@@ -6274,7 +6274,10 @@ internal sealed partial class PptxRenderer
 
     private static bool IsChartTextBodyPropertiesEmpty(PptxSceneChartTextBodyProperties properties)
     {
-        return properties.RotationDegrees is null && string.IsNullOrEmpty(properties.RotationValue);
+        return properties.RotationDegrees is null &&
+            string.IsNullOrEmpty(properties.RotationValue) &&
+            string.IsNullOrEmpty(properties.OrientationValue) &&
+            string.IsNullOrEmpty(properties.VerticalOverflowValue);
     }
 
     private static TextRun CreateChartLabelRun(string text, double x, double y, double width, double height, ChartPlotBox plotBox, ChartTextStyle style, TextAlignment alignment)
@@ -6577,11 +6580,15 @@ internal sealed partial class PptxRenderer
 
     private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
     {
-        string rotation = (string?)parent?
+        XElement? bodyProperties = parent?
             .Element(ChartNamespace + "txPr")?
-            .Element(DrawingNamespace + "bodyPr")?
-            .Attribute("rot") ?? string.Empty;
-        return new PptxSceneChartTextBodyProperties(ParseChartOoxmlAngle(rotation), rotation);
+            .Element(DrawingNamespace + "bodyPr");
+        string rotation = (string?)bodyProperties?.Attribute("rot") ?? string.Empty;
+        return new PptxSceneChartTextBodyProperties(
+            ParseChartOoxmlAngle(rotation),
+            rotation,
+            (string?)bodyProperties?.Attribute("vert") ?? string.Empty,
+            (string?)bodyProperties?.Attribute("vertOverflow") ?? string.Empty);
     }
 
     private static double? ParseChartOoxmlAngle(string value)

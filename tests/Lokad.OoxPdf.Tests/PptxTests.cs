@@ -18433,6 +18433,46 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported shape text overflow should be diagnostic-covered from scene-owned text-body provenance.");
     }
 
+    public static void PptxUnsupportedTextDiagnosticsUseSceneChartTextBodyProperties()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:title>
+                  <c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Title</a:t></a:r></a:p></c:rich></c:tx>
+                  <c:txPr><a:bodyPr vert="futureVert" vertOverflow="ellipsis"/></c:txPr>
+                </c:title>
+                <c:plotArea><c:lineChart>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart></c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        TestAssert.Equal("futureVert", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.OrientationValue ?? string.Empty);
+        TestAssert.Equal("ellipsis", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.VerticalOverflowValue ?? string.Empty);
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutBodyProperties = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutBodyProperties, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Unsupported chart text orientation should be diagnostic-covered from scene-owned text-body provenance.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported chart text overflow should be diagnostic-covered from scene-owned text-body provenance.");
+    }
+
     public static void PptxUnsupportedTableTextDiagnosticsUseSceneCellBodyProperties()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
