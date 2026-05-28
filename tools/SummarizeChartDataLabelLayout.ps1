@@ -558,6 +558,60 @@ function Match-Nearest($referenceItems, $candidateItems, [string] $kind) {
     return ,$rows.ToArray()
 }
 
+function Match-ByTextHash($referenceItems, $candidateItems, [string] $kind) {
+    $rows = New-Object System.Collections.Generic.List[object]
+    $used = New-Object System.Collections.Generic.HashSet[int]
+
+    for ($refIndex = 0; $refIndex -lt $referenceItems.Count; $refIndex++) {
+        $reference = $referenceItems[$refIndex]
+        $referenceHash = if ($reference.PSObject.Properties.Name -contains "TextHash") { Hash-SetKey ([string]$reference.TextHash).Split("+") } else { "" }
+        $bestIndex = -1
+        $bestScore = [double]::PositiveInfinity
+
+        if (-not [string]::IsNullOrWhiteSpace($referenceHash)) {
+            for ($candidateIndex = 0; $candidateIndex -lt $candidateItems.Count; $candidateIndex++) {
+                if ($used.Contains($candidateIndex)) {
+                    continue
+                }
+
+                $candidate = $candidateItems[$candidateIndex]
+                $candidateHash = if ($candidate.PSObject.Properties.Name -contains "TextHash") { Hash-SetKey ([string]$candidate.TextHash).Split("+") } else { "" }
+                if ($candidateHash -ne $referenceHash) {
+                    continue
+                }
+
+                $score = [Math]::Abs((CenterX $reference) - (CenterX $candidate)) +
+                    [Math]::Abs((CenterY $reference) - (CenterY $candidate))
+                if ($score -lt $bestScore) {
+                    $bestScore = $score
+                    $bestIndex = $candidateIndex
+                }
+            }
+        }
+
+        $candidateItem = $null
+        if ($bestIndex -ge 0) {
+            [void]$used.Add($bestIndex)
+            $candidateItem = $candidateItems[$bestIndex]
+        }
+
+        $rows.Add([pscustomobject]@{
+            Kind = $kind
+            ReferenceIndex = $refIndex
+            CandidateIndex = if ($bestIndex -ge 0) { $bestIndex } else { $null }
+            BoundsDelta = if ($null -ne $candidateItem) { Round (BoundsDelta $reference $candidateItem) } else { $null }
+            CenterDeltaX = if ($null -ne $candidateItem) { Round ((CenterX $candidateItem) - (CenterX $reference)) } else { $null }
+            CenterDeltaY = if ($null -ne $candidateItem) { Round ((CenterY $candidateItem) - (CenterY $reference)) } else { $null }
+            ReferenceBounds = Format-Bounds $reference
+            CandidateBounds = Format-Bounds $candidateItem
+            ReferenceTextHash = $referenceHash
+            CandidateTextHash = if ($null -ne $candidateItem -and $candidateItem.PSObject.Properties.Name -contains "TextHash") { Hash-SetKey ([string]$candidateItem.TextHash).Split("+") } else { "" }
+        })
+    }
+
+    return ,$rows.ToArray()
+}
+
 function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters, $candidateClusters, $referencePlotBox, $candidatePlotBox, $chartShape) {
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($layout in $manualLayouts) {
@@ -736,6 +790,8 @@ $candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCand
 
 $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
 $labelClusterMatches = Match-Nearest $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
+$labelHashMatches = Match-ByTextHash $referenceLabels $candidateLabels "DataLabelText"
+$labelClusterHashMatches = Match-ByTextHash $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
 $manualLayoutCoordinateEvidence = Build-ManualLayoutCoordinateEvidence $chartManualLayouts $referenceLabelClusters $candidateLabelClusters $referencePolarPlotBox $candidatePolarPlotBox $(if ($null -eq $comMetadata) { $null } else { $comMetadata.ChartShape })
 $leaderLineClusterEvidence = Build-LeaderLineClusterEvidence $referenceLeaderLines $candidateLeaderLines $referenceLabelClusters $candidateLabelClusters $chartManualLayouts
@@ -744,9 +800,13 @@ $summary = [pscustomobject]@{
     DataLabelTextReferenceCount = $referenceLabels.Count
     DataLabelTextCandidateCount = $candidateLabels.Count
     DataLabelTextMaxNearestBoundsDelta = if ($labelMatches.Count -eq 0) { $null } else { ($labelMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
+    DataLabelTextHashMatchCount = @($labelHashMatches | Where-Object { $null -ne $_.CandidateIndex }).Count
+    DataLabelTextMaxHashBoundsDelta = if ($labelHashMatches.Count -eq 0) { $null } else { ($labelHashMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     DataLabelTextClusterReferenceCount = $referenceLabelClusters.Count
     DataLabelTextClusterCandidateCount = $candidateLabelClusters.Count
     DataLabelTextClusterMaxNearestBoundsDelta = if ($labelClusterMatches.Count -eq 0) { $null } else { ($labelClusterMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
+    DataLabelTextClusterHashMatchCount = @($labelClusterHashMatches | Where-Object { $null -ne $_.CandidateIndex }).Count
+    DataLabelTextClusterMaxHashBoundsDelta = if ($labelClusterHashMatches.Count -eq 0) { $null } else { ($labelClusterHashMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     DataLabelLeaderLineReferenceCount = $referenceLeaderLines.Count
     DataLabelLeaderLineCandidateCount = $candidateLeaderLines.Count
     DataLabelLeaderLineMaxNearestBoundsDelta = if ($leaderLineMatches.Count -eq 0) { $null } else { ($leaderLineMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
@@ -759,11 +819,13 @@ $summary = [pscustomobject]@{
     DataLabelTextCandidateClusters = $candidateLabelClusters
     DataLabelTextMatches = $labelMatches
     DataLabelTextClusterMatches = $labelClusterMatches
+    DataLabelTextHashMatches = $labelHashMatches
+    DataLabelTextClusterHashMatches = $labelClusterHashMatches
     DataLabelLeaderLineMatches = $leaderLineMatches
     DataLabelLeaderLineClusterEvidence = $leaderLineClusterEvidence
 }
 
-$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount, ChartComMetadataDataLabelCount
+$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextHashMatchCount, DataLabelTextMaxHashBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelTextClusterHashMatchCount, DataLabelTextClusterMaxHashBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount, ChartComMetadataDataLabelCount
 
 if ($chartManualLayouts.Count -gt 0) {
     Write-Host ""
@@ -795,6 +857,12 @@ if ($labelClusterMatches.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label text-cluster nearest matches:"
     $labelClusterMatches | Format-Table -AutoSize Kind, ReferenceIndex, CandidateIndex, BoundsDelta, CenterDeltaX, CenterDeltaY, ReferenceBounds, CandidateBounds
+}
+
+if ($labelClusterHashMatches.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Data-label text-cluster hash matches:"
+    $labelClusterHashMatches | Format-Table -AutoSize Kind, ReferenceIndex, CandidateIndex, BoundsDelta, CenterDeltaX, CenterDeltaY, ReferenceTextHash, ReferenceBounds, CandidateBounds
 }
 
 if ($leaderLineMatches.Count -gt 0) {

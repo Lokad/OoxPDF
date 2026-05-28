@@ -2902,6 +2902,11 @@ High-priority actions:
     This extends the negative evidence: Office may emit no visible connectors for a custom-layout pie even
     when `HasLeaderLines` is true, so the eventual rule must combine final label boxes, clipping, and
     Office-visible connector routing rather than trimming candidate leader lines by a fixed count.
+    2026-05-29 update: `tools/SummarizeChartDataLabelLayout.ps1` now reports content-hash matched text and
+    label-cluster deltas beside nearest-neighbor deltas. This matters for the multi-probe model: the offset
+    run's nearest cluster delta is `453.645pt`, but its hash-matched cluster delta is `214.585pt`, proving
+    nearest geometry alone can pair the wrong labels once multiple custom labels are off by large distances.
+    The original probe remains hash-stable at `4/4` clusters with max hash delta `262.481pt`.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
