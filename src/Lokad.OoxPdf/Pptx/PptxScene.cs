@@ -5715,44 +5715,7 @@ internal sealed class PptxSceneBuilder
 
     private static XElement? MergeParagraphProperties(params XElement?[] sources)
     {
-        XElement? merged = null;
-        foreach (XElement source in sources.Reverse().Where(source => source is not null).Cast<XElement>())
-        {
-            merged ??= new XElement(source.Name);
-            foreach (XAttribute attribute in source.Attributes())
-            {
-                merged.SetAttributeValue(attribute.Name, attribute.Value);
-            }
-
-            foreach (XElement child in source.Elements())
-            {
-                XElement? existing = merged.Element(child.Name);
-                if (existing is null)
-                {
-                    merged.Add(new XElement(child));
-                }
-                else
-                {
-                    MergeElementInto(existing, child);
-                }
-            }
-        }
-
-        return merged;
-    }
-
-    private static void MergeElementInto(XElement target, XElement source)
-    {
-        foreach (XAttribute attribute in source.Attributes())
-        {
-            target.SetAttributeValue(attribute.Name, attribute.Value);
-        }
-
-        foreach (XElement child in source.Elements())
-        {
-            target.Elements(child.Name).Remove();
-            target.Add(new XElement(child));
-        }
+        return PptxParagraphPropertyMerger.MergeSceneDefaultProperties(sources);
     }
 
     private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)

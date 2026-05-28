@@ -1740,6 +1740,16 @@ High-priority actions:
   resolver boundary. Keep this item open: scene inspection still has its own `ResolveDefaultParagraphProperties`
   merge chain, run defaults are not yet re-merged from all named run layers, and theme font/color fallback remains
   distributed across resolver helpers.
+  2026-05-28 progress: the duplicated paragraph-property merge primitives are now centralized in
+  `PptxParagraphPropertyMerger`, with separate named renderer and scene strategies because source inspection found
+  they are not semantically identical. The renderer keeps its existing Office-order default paragraph merge that
+  overlays `a:defRPr`, while scene inspection keeps its recursive child merge. This is not a rendering change and
+  it intentionally extends the open item: the long-term resolver must decide, with public evidence, whether the
+  scene snapshot should adopt the renderer's paragraph merge semantics or the renderer should consume a richer
+  scene-owned merge. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+  non-slow `pptx-typography` passed (`99 passed, 0 failed, 2 skipped`); focused non-slow `pptx-model` passed
+  (`25 passed, 0 failed, 1 skipped`); full non-slow console runner passed
+  (`409 passed, 0 failed, 7 skipped`).
 - [x] Port the listed `pptx-renderer` text edge-case tests as .NET unit/visual coverage:
   the named behaviors are now represented by focused OOXPDF tests or public visual probes: hyperlink color and
   shape `fontRef` color precedence, table text/style overrides, no-fill/outline text, `kern` thresholds, tabs,

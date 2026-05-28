@@ -1871,67 +1871,7 @@ internal sealed partial class PptxRenderer
 
     private static XElement? MergeParagraphProperties(params XElement?[] sources)
     {
-        XElement? merged = null;
-        foreach (XElement? source in sources.Reverse())
-        {
-            if (source is null)
-            {
-                continue;
-            }
-
-            merged = merged is null
-                ? new XElement(source)
-                : OverlayParagraphProperties(source, merged);
-        }
-
-        return merged;
-    }
-
-    private static XElement OverlayParagraphProperties(XElement primary, XElement fallback)
-    {
-        XElement merged = new(primary);
-        foreach (XAttribute attribute in fallback.Attributes())
-        {
-            if (merged.Attribute(attribute.Name) is null)
-            {
-                merged.Add(new XAttribute(attribute));
-            }
-        }
-
-        MergeChildElement(merged, fallback, DrawingNamespace + "defRPr");
-        return merged;
-    }
-
-    private static void MergeChildElement(XElement primaryParent, XElement fallbackParent, XName childName)
-    {
-        XElement? primary = primaryParent.Element(childName);
-        XElement? fallback = fallbackParent.Element(childName);
-        if (fallback is null)
-        {
-            return;
-        }
-
-        if (primary is null)
-        {
-            primaryParent.Add(new XElement(fallback));
-            return;
-        }
-
-        foreach (XAttribute attribute in fallback.Attributes())
-        {
-            if (primary.Attribute(attribute.Name) is null)
-            {
-                primary.Add(new XAttribute(attribute));
-            }
-        }
-
-        foreach (XElement child in fallback.Elements())
-        {
-            if (primary.Element(child.Name) is null)
-            {
-                primary.Add(new XElement(child));
-            }
-        }
+        return PptxParagraphPropertyMerger.MergeRendererDefaultProperties(DrawingNamespace + "defRPr", sources);
     }
 
     private static ResolvedParagraphTextStyle ResolveParagraphTextStyle(
