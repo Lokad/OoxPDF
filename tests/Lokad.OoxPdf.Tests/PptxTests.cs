@@ -4913,6 +4913,13 @@ internal static class PptxTests
         TestAssert.Equal("MajorEastAsian", frame.Paragraphs[0].Runs[0].TypefaceSource);
         TestAssert.Equal("Tahoma", frame.Paragraphs[0].Runs[2].Typeface);
         TestAssert.Equal("MinorComplexScript", frame.Paragraphs[0].Runs[2].TypefaceSource);
+
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneTextParagraph sceneParagraph = scene.Slides[0].SlideNodes[0].TextBody!.Paragraphs[0];
+        TestAssert.Equal("Microsoft YaHei", sceneParagraph.Runs[0].ResolvedStyle.Typeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.MajorEastAsian, sceneParagraph.Runs[0].ResolvedStyle.TypefaceSource);
+        TestAssert.Equal("Tahoma", sceneParagraph.Runs[2].ResolvedStyle.Typeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.MinorComplexScript, sceneParagraph.Runs[2].ResolvedStyle.TypefaceSource);
     }
 
     public static void PptxSyntheticTextBoxUsesDistinctFontResourcesForStyles()

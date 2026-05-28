@@ -3710,6 +3710,13 @@ High-priority actions:
   font diagnostics, and glyph fallback staging. Validation: focused non-slow `pptx-typography` passed
   (`98` passed, `0` failed, `2` slow skips); full non-slow console runner passed
   (`402` passed, `0` failed, `7` slow skips).
+  2026-05-28 progress: shape text in the scene model now preserves source-bearing typeface resolution too.
+  `PptxSceneParagraphStyle` and `PptxSceneRunStyle` carry `PptxThemeTypefaceSource` beside the resolved
+  typeface, and the theme EA/CS fixture now checks the scene run style in addition to the renderer text-model
+  snapshot. Keep this item open for chart renderer consumption, chart run cascades, symbol font diagnostics,
+  and glyph fallback staging. Validation: focused non-slow `pptx-model` passed (`25` passed, `0` failed,
+  `1` skipped); focused non-slow `pptx-typography` passed (`98` passed, `0` failed, `2` slow skips); full
+  non-slow console runner passed (`402` passed, `0` failed, `7` slow skips).
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
   2026-05-28 progress: solid color parsing is now centralized in `PptxColorResolver` and shared by the
@@ -14907,6 +14914,21 @@ source-bearing run-style model.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
 passed with `402` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Shape text scene styles now preserve typeface source provenance. Both
+`PptxSceneParagraphStyle` and `PptxSceneRunStyle` carry the `PptxThemeTypefaceSource` that produced the
+resolved typeface, and run style inherits the paragraph style source when no run/default-run typeface token is
+present. The existing theme EA/CS test now verifies that the scene model and renderer text-model snapshot agree
+on `MajorEastAsian` and `MinorComplexScript` resolution.
+
+This keeps the typed scene aligned with the renderer text model before more consumers move onto scene-owned
+text. It still does not close the whole theme-font plan item: chart text renderer consumption, chart run
+cascade unification, symbol-font diagnostics, and downstream glyph fallback remain open.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `402`
+tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;

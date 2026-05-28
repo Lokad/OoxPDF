@@ -1577,6 +1577,7 @@ internal sealed record PptxSceneParagraphStyle(
     RgbColor Color,
     double Alpha,
     string? Typeface,
+    PptxThemeTypefaceSource TypefaceSource,
     bool Bold,
     bool Italic,
     double CharacterSpacing);
@@ -1586,6 +1587,7 @@ internal sealed record PptxSceneRunStyle(
     RgbColor Color,
     double Alpha,
     string? Typeface,
+    PptxThemeTypefaceSource TypefaceSource,
     bool Bold,
     bool Italic,
     bool Underline,
@@ -5771,14 +5773,15 @@ internal sealed class PptxSceneBuilder
             alpha = 1d;
         }
 
-        string? typeface = theme.ResolveTypeface((string?)defaultRunProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface"));
+        PptxThemeTypefaceResolution typeface = theme.ResolveTypefaceWithSource((string?)defaultRunProperties?.Element(DrawingNamespace + "latin")?.Attribute("typeface"));
         return new PptxSceneParagraphStyle(
             level,
             (string?)(paragraphProperties?.Attribute("algn") ?? defaultParagraphProperties?.Attribute("algn")) ?? "l",
             fontSize,
             color,
             alpha,
-            typeface,
+            typeface.Typeface,
+            typeface.Source,
             ParseOptionalBoolAttribute(defaultRunProperties, "b"),
             ParseOptionalBoolAttribute(defaultRunProperties, "i"),
             ReadCharacterSpacing(defaultRunProperties, null));
@@ -5800,8 +5803,11 @@ internal sealed class PptxSceneBuilder
             alpha = defaultAlpha;
         }
 
-        string? typeface = theme.ResolveTypeface((string?)(runProperties?.Element(DrawingNamespace + "latin") ??
-            defaultRunProperties?.Element(DrawingNamespace + "latin"))?.Attribute("typeface")) ?? paragraphStyle.Typeface;
+        string? requestedTypeface = (string?)(runProperties?.Element(DrawingNamespace + "latin") ??
+            defaultRunProperties?.Element(DrawingNamespace + "latin"))?.Attribute("typeface");
+        PptxThemeTypefaceResolution? typeface = string.IsNullOrWhiteSpace(requestedTypeface)
+            ? null
+            : theme.ResolveTypefaceWithSource(requestedTypeface);
         bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
             (runProperties?.Attribute("b") is null && paragraphStyle.Bold);
         bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
@@ -5816,7 +5822,8 @@ internal sealed class PptxSceneBuilder
             fontSize,
             color,
             alpha,
-            typeface,
+            typeface?.Typeface ?? paragraphStyle.Typeface,
+            typeface?.Source ?? paragraphStyle.TypefaceSource,
             bold,
             italic,
             underline,
