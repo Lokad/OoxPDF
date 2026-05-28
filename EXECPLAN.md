@@ -2486,7 +2486,10 @@ High-priority actions:
     `DataLabelLeaderLineCandidate` counts reference/candidate `1/4`. Do not gate leader-line cardinality
     until label-box coordinate ownership is fixed. Validation: focused non-slow `pptx-charts` passed
     (`117 passed, 0 failed, 0 skipped`); visual probe run `20260528-115632` passed with the open leader-line
-    count mismatch intentionally ungated.
+    count mismatch intentionally ungated. Private run `artifacts/private-visual/lokad-value-based/20260528-115850`
+    stayed stable at 84/84 compared pages, zero dimension mismatches, deck MAE `7.536827`, changed16
+    `0.101039`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`; page 17 remained dimension-matched at MAE
+    `2.785230`, changed16 `0.044118`, changed32 `0.034128`, and SSIM `0.923374`.
   - [ ] Resolve the polar data-label manual-layout coordinate basis before changing leader-line visibility:
     Office positions the same four custom pie labels near the chart sides while OOXPDF still derives some
     boxes outside the frame. Investigate whether data-label `x`/`y` factors are relative to chart frame,
