@@ -2493,6 +2493,70 @@ internal static class PptxTests
         TestAssert.Equal(9.96d, glyphRun.PdfFontSize);
     }
 
+    public static void PptxSyntheticTextBoxAppliesOfficePdfFontSizeGridAcrossSizes()
+    {
+        string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
+        if (!File.Exists(arial))
+        {
+            return;
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:sp>
+                        <p:spPr>
+                          <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="5486400"/></a:xfrm>
+                          <a:prstGeom prst="rect"/>
+                        </p:spPr>
+                        <p:txBody>
+                          <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0" wrap="none"><a:noAutofit/></a:bodyPr>
+                          <a:lstStyle/>
+                          <a:p><a:r><a:rPr sz="700"><a:latin typeface="Arial"/></a:rPr><a:t>Size7</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="800"><a:latin typeface="Arial"/></a:rPr><a:t>Size8</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="900"><a:latin typeface="Arial"/></a:rPr><a:t>Size9</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="1000"><a:latin typeface="Arial"/></a:rPr><a:t>Size10</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="1300"><a:latin typeface="Arial"/></a:rPr><a:t>Size13</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="1400"><a:latin typeface="Arial"/></a:rPr><a:t>Size14</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="1600"><a:latin typeface="Arial"/></a:rPr><a:t>Size16</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="1900"><a:latin typeface="Arial"/></a:rPr><a:t>Size19</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="2000"><a:latin typeface="Arial"/></a:rPr><a:t>Size20</a:t></a:r></a:p>
+                          <a:p><a:r><a:rPr sz="3000"><a:latin typeface="Arial"/></a:rPr><a:t>Size30</a:t></a:r></a:p>
+                        </p:txBody>
+                      </p:sp>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        Dictionary<double, double> grid = PptxRenderer.InspectTextGlyphRuns(document, package, 0)
+            .ToDictionary(run => run.LayoutFontSize, run => run.PdfFontSize);
+
+        TestAssert.Equal(6.96d, grid[7d]);
+        TestAssert.Equal(8.04d, grid[8d]);
+        TestAssert.Equal(9d, grid[9d]);
+        TestAssert.Equal(9.96d, grid[10d]);
+        TestAssert.Equal(12.96d, grid[13d]);
+        TestAssert.Equal(14.04d, grid[14d]);
+        TestAssert.Equal(15.96d, grid[16d]);
+        TestAssert.Equal(18.96d, grid[19d]);
+        TestAssert.Equal(20.04d, grid[20d]);
+        TestAssert.Equal(30d, grid[30d]);
+    }
+
     public static void PptxSyntheticTextBoxHonorsNoFillText()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");

@@ -1014,6 +1014,11 @@ High-priority actions:
   per-size lookups. The dominant 600-DPI emission grid is now implemented, but the remaining secondary
   `+0.024 pt` anomalies in public probes and the private `9.024` / `12.984` sizes still need a structural
   explanation before adding another rule.
+  - [x] 2026-05-28: Lock the dominant Office `/Tf` grid as broad emission behavior, not a private-slide fix.
+    `PptxSyntheticTextBoxAppliesOfficePdfFontSizeGridAcrossSizes` now covers the public first-order mapping across
+    `7`, `8`, `9`, `10`, `13`, `14`, `16`, `19`, `20`, and `30` pt via glyph-run PDF font-size snapshots. This
+    deliberately does not implement the secondary `+0.024 pt` branch; it protects the structural 600-DPI rule while
+    the remaining baseline/page-coordinate condition is still being investigated.
 - [ ] Explain the secondary Office `/Tf +0.024 pt` branch with public-safe probes before changing emission again:
   a new ignored probe under `artifacts/probes/font-size-quantization-cambria` rewrote the no-autofit quantization
   deck to use Cambria Math, then rendered it through Office. The result still mapped `9 pt -> 9` and `13 pt -> 12.96`,
