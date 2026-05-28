@@ -107,6 +107,7 @@ internal sealed partial class PptxRenderer
                         .Select(glyph => new PptxTextGlyphRunAtomSnapshot(
                             glyph.CodePoint,
                             glyph.Typeface,
+                            glyph.TypefaceResolutionSource.ToString(),
                             glyphRun.ResourceName,
                             glyph.GlyphId,
                             glyph.Advance,
@@ -917,7 +918,7 @@ internal sealed partial class PptxRenderer
         double pdfFontSize = PptxPdfTextEmissionProfile.FontSize(CreatePdfTextEmissionContext(span));
         string? positioningArray = EncodeGlyphPositioningArray(span.GlyphSpan, pdfFontSize, forcePositioningArray: true);
         IReadOnlyList<TextGlyphAtom> glyphs = span.GlyphSpan.Glyphs
-            .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
+            .Select(glyph => new TextGlyphAtom(glyph.CodePoint, glyph.Typeface, glyph.TypefaceResolutionSource, glyph.GlyphId, glyph.Advance, glyph.AdjustmentBefore))
             .ToArray();
         return new TextGlyphRun(run, resourceName, embedded, glyphHex, positioningArray, glyphs, x, baselineY, lineWidth, pdfFontSize, syntheticBold, syntheticItalic);
     }
@@ -1075,7 +1076,7 @@ internal sealed partial class PptxRenderer
             }
 
             double advance = embedded.Font.GetAdvanceWidth(glyph) * run.FontSize / embedded.Font.UnitsPerEm;
-            atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, glyph, advance, adjustmentBefore));
+            atoms.Add(new TextGlyphAtom(rune.Value, run.FontFamily, PptxGlyphTypefaceResolutionSource.Primary, glyph, advance, adjustmentBefore));
             previousGlyph = glyph;
         }
 

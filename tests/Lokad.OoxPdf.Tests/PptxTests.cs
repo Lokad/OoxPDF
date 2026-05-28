@@ -4855,6 +4855,18 @@ internal static class PptxTests
             "Expected a missing Arial glyph to emit through a separate fallback PDF font resource.");
         PptxTextGlyphRunAtomSnapshot fallbackGlyph = glyphRuns.SelectMany(run => run.Glyphs).Single(glyph => glyph.CodePoint == 0x4E2D);
         TestAssert.True(!string.Equals("Arial", fallbackGlyph.Typeface, StringComparison.OrdinalIgnoreCase), "Expected the CJK glyph to carry its fallback typeface.");
+        TestAssert.Equal("Fallback", fallbackGlyph.TypefaceResolutionSource);
+        TestAssert.True(
+            glyphRuns.SelectMany(run => run.Glyphs).Where(glyph => glyph.CodePoint != 0x4E2D).All(glyph => glyph.TypefaceResolutionSource == "Primary"),
+            "Expected glyph inspection to distinguish requested-font glyphs from fallback-font glyphs.");
+
+        PptxTextGlyphLayoutSnapshot fallbackLayoutGlyph = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames.SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .SelectMany(line => line.Spans)
+            .SelectMany(span => span.GlyphSpan.Glyphs)
+            .Single(glyph => glyph.CodePoint == 0x4E2D);
+        TestAssert.Equal("Fallback", fallbackLayoutGlyph.TypefaceResolutionSource);
     }
 
     public static void PptxSyntheticTextBoxResolvesThemeEaAndCsFonts()

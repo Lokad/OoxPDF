@@ -251,6 +251,7 @@ internal sealed partial class PptxRenderer
     private sealed record TextGlyphAtom(
         int CodePoint,
         string? Typeface,
+        PptxGlyphTypefaceResolutionSource TypefaceResolutionSource,
         ushort GlyphId,
         double Advance,
         double AdjustmentBefore);
@@ -656,6 +657,7 @@ internal sealed partial class PptxRenderer
     private sealed record PptxTextGlyphLayout(
         int CodePoint,
         string? Typeface,
+        PptxGlyphTypefaceResolutionSource TypefaceResolutionSource,
         ushort GlyphId,
         double Advance,
         double AdjustmentBefore);
@@ -838,7 +840,7 @@ internal sealed partial class PptxRenderer
             OpenTypeFont? primaryFont = LoadFont(primaryResolution);
             if (primaryResolution is not null && primaryFont is not null && primaryFont.MapCodePoint(codePoint) != 0)
             {
-                cached = new ResolvedGlyphFont(requestedFamily, primaryFont);
+                cached = new ResolvedGlyphFont(requestedFamily, requestedFamily, PptxGlyphTypefaceResolutionSource.Primary, primaryFont);
                 glyphFonts[key] = cached;
                 return cached;
             }
@@ -862,7 +864,7 @@ internal sealed partial class PptxRenderer
                 OpenTypeFont? font = LoadFont(resolution);
                 if (font is not null && font.MapCodePoint(codePoint) != 0)
                 {
-                    cached = new ResolvedGlyphFont(resolution.FamilyName, font);
+                    cached = new ResolvedGlyphFont(requestedFamily, resolution.FamilyName, PptxGlyphTypefaceResolutionSource.Fallback, font);
                     glyphFonts[key] = cached;
                     return cached;
                 }
@@ -952,7 +954,17 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private sealed record ResolvedGlyphFont(string Typeface, OpenTypeFont Font);
+    private sealed record ResolvedGlyphFont(
+        string RequestedTypeface,
+        string Typeface,
+        PptxGlyphTypefaceResolutionSource Source,
+        OpenTypeFont Font);
+
+    private enum PptxGlyphTypefaceResolutionSource
+    {
+        Primary,
+        Fallback
+    }
 
     private enum TextAlignment
     {

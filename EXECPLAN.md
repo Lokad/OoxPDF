@@ -14955,6 +14955,24 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `132` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `403` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX glyph typeface fallback is now structurally observable before PDF emission.
+`ResolvedGlyphFont`, `PptxTextGlyphLayout`, layout snapshots, glyph-run atoms, and `TextGlyphAtom` now carry
+whether a glyph came from the requested primary typeface or from a downstream fallback typeface. The existing
+public missing-Arial-CJK fixture now asserts both paths: Latin glyphs remain `Primary`, while the CJK glyph
+is emitted through a separate fallback PDF font resource and reports `Fallback` in both text-layout and
+glyph-run inspection.
+
+This intentionally does not change fallback selection. The current resolver still scans discovered Windows
+fonts by style/weight/family order once the requested font lacks a glyph. That policy is now easier to audit,
+but it is not yet an Office-script-aware fallback ladder and it does not yet emit diagnostics for unsupported
+symbol/script font policy. The next long-term step is to replace this silent discovery approximation with
+public Office-PDF-backed script/font fallback rules, then decide which unresolved or substituted cases deserve
+diagnostics.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `403` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

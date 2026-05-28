@@ -407,6 +407,7 @@ internal sealed record PptxTextGlyphSpanLayoutSnapshot(
 internal sealed record PptxTextGlyphLayoutSnapshot(
     int CodePoint,
     string? Typeface,
+    string TypefaceResolutionSource,
     ushort GlyphId,
     double Advance,
     double AdjustmentBefore);
@@ -475,6 +476,7 @@ internal sealed record PptxTextGlyphRunSnapshot(
 internal sealed record PptxTextGlyphRunAtomSnapshot(
     int CodePoint,
     string? Typeface,
+    string TypefaceResolutionSource,
     string ResourceName,
     ushort GlyphId,
     double Advance,
