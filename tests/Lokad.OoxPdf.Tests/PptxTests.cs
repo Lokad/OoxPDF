@@ -12170,6 +12170,55 @@ internal static class PptxTests
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("Overlap")?.GetValue(options) ?? double.NaN));
     }
 
+    public static void PptxChartLineOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:dispBlanksAs val="futureBlankPolicy"/>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:grouping val="bogus"/>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  </c:lineChart>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.Equal(PptxSceneChartGrouping.Unknown, plot.GroupingKind);
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Unknown, chart.Options.DisplayBlanksAsKind);
+        TestAssert.True(plot.Series[0].Smooth is null, "Expected missing smooth metadata to remain distinct from the effective renderer default.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart>
+                <c:dispBlanksAs val="span"/>
+                <c:plotArea><c:lineChart>
+                  <c:grouping val="stacked"/>
+                  <c:ser><c:smooth val="1"/></c:ser>
+                </c:lineChart></c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """);
+        XElement mismatchedXmlFallback = mismatchedChartXml.Descendants(c + "lineChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLineOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart line-option resolver.");
+        object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved line options.");
+        Type optionsType = options.GetType();
+        bool[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<bool>().ToArray();
+
+        TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
+        TestAssert.True((bool)(optionsType.GetProperty("Stacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to use the supplied scene default, not fallback XML stacked.");
+        TestAssert.True((bool)(optionsType.GetProperty("PercentStacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to stay non-percent-stacked.");
+        TestAssert.True(smoothSeries.Length == 1 && !smoothSeries[0], "Expected missing scene smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

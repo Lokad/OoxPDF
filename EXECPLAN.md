@@ -12060,6 +12060,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `331` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated line-chart renderer option resolution behind `ChartLinePlotOptions`.
+Native line rendering and combo line overlays now resolve grouping, stacked/percent-stacked booleans,
+per-series smooth flags, and chart-wide `dispBlanksAs` at one scene/XML boundary before computing extents,
+legend order, path smoothing, and blank-point handling. The XML-only compatibility path remains available,
+but the supported scene path no longer reopens separate scalar bridges for these options at each render call.
+
+The new guard mirrors the bar-options mismatch test: a scene chart with unknown grouping, missing smooth flags,
+and unknown chart-wide blank policy is resolved beside fallback XML that says `stacked`, `smooth=1`, and
+`dispBlanksAs=span`. The renderer contract must keep the scene-owned defaults (`standard`, not stacked,
+smooth=false, `displayBlanksAs=gap`) instead of borrowing fallback XML values. This keeps renderer cleanup
+moving toward typed Office-state alignment without changing line-chart layout metrics.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `91` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `332` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing
