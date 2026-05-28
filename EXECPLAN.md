@@ -12095,6 +12095,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `88` tests, `0` failures, and `2` slow skips.
 
+Revision note, 2026-05-28: PPTX text-body `rot` now resolves through the inherited placeholder body-property
+cascade and carries source provenance. `PptxTextBodyProperties` records `RotationDegreesSource`, the
+text-frame model snapshot exposes both the parsed degrees and the source tag, and private-safe frame-model
+JSON includes the same fields. The placeholder body-property regression now proves that inherited
+layout/master text-body rotation survives into the active text transform path instead of falling back to the
+shape transform or local-only `a:bodyPr` lookup.
+
+This closes the direct-only scalar bodyPr inheritance pass for orientation, vertical anchor, anchor center,
+wrapping, overflow, insets, columns, autofit mode/scales, compatible line spacing, and text-body rotation.
+Remaining bodyPr-related work is now more precise: move vertical-anchor height estimation onto the same
+`PptxTextBodyProperties` model, preserve invalid/future numeric raw tokens where useful, and keep replacing
+raw-XML render-site lookups with model-owned state when new text-body features are touched.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `88` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

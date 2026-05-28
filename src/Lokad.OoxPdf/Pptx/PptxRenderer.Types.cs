@@ -390,6 +390,7 @@ internal sealed partial class PptxRenderer
         bool CompatibleLineSpacing,
         PptxTextBodyPropertySource CompatibleLineSpacingSource,
         double? RotationDegrees,
+        PptxTextBodyPropertySource RotationDegreesSource,
         double? ExplicitWrapWidth);
 
     private enum PptxTextBodyPropertySource

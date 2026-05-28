@@ -38,6 +38,8 @@ internal sealed partial class PptxRenderer
             frame.BodyProperties.LineSpacingScaleSource.ToString(),
             frame.BodyProperties.CompatibleLineSpacing,
             frame.BodyProperties.CompatibleLineSpacingSource.ToString(),
+            frame.BodyProperties.RotationDegrees,
+            frame.BodyProperties.RotationDegreesSource.ToString(),
             frame.InheritedPlaceholderCount,
             frame.InheritedTextBody is not null,
             frame.UsesInheritedShapeBounds,
@@ -487,6 +489,7 @@ internal sealed partial class PptxRenderer
         (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
         (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
         (string? compatibleLineSpacing, PptxTextBodyPropertySource compatibleLineSpacingSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "compatLnSpc", inherit: true);
+        (string? rotation, PptxTextBodyPropertySource rotationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "rot", inherit: true);
         return new PptxTextBodyProperties(
             insets,
             insetSources,
@@ -518,7 +521,8 @@ internal sealed partial class PptxRenderer
             lineSpacingScaleSource,
             compatibleLineSpacing is not null && OoxBoolean.IsTrue(compatibleLineSpacing),
             compatibleLineSpacingSource,
-            ReadTextBodyRotationDegrees(textBody),
+            ParseTextBodyRotationDegrees(rotation),
+            rotationSource,
             ExplicitWrapWidth: null);
     }
 

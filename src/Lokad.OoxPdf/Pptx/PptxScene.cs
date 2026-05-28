@@ -114,6 +114,8 @@ internal sealed record PptxTextFrameModelSnapshot(
     string LineSpacingScaleSource,
     bool CompatibleLineSpacing,
     string CompatibleLineSpacingSource,
+    double? RotationDegrees,
+    string RotationDegreesSource,
     int InheritedPlaceholderCount,
     bool HasInheritedTextBody,
     bool UsesInheritedShapeBounds,

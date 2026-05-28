@@ -2350,14 +2350,11 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static double? ReadTextBodyRotationDegrees(XElement textBody)
+    private static double? ParseTextBodyRotationDegrees(string? rotation)
     {
-        XAttribute? rotation = textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Attribute("rot");
         return rotation is null
             ? null
-            : long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d;
+            : long.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
     }
 
     private static (
