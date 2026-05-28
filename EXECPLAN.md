@@ -12473,6 +12473,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `100` tests, `0` failures, and `0` skips; full non-slow console runner passed with `341` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Kept chart marker definition and size-token provenance in the renderer marker
+style record. `ChartMarkerStyle` now carries whether a series marker element was explicitly defined and the
+raw `c:marker/c:size @val` token beside the normalized symbol, size, fill, and stroke. Both the scene-backed
+path and XML-only compatibility path preserve the distinction between Office's auto line markers and explicit
+series marker XML.
+
+This does not change marker geometry or drawing. It narrows the future marker-alignment problem by keeping
+the renderer option boundary honest: Office-PDF probes can now tell an automatic marker from an explicit
+`symbol`/`size` marker without re-reading raw chart XML or inferring intent from the chosen marker shape.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regression
+`PptxChartMarkerStylesPreserveDefinitionState` passed; focused non-slow `pptx-charts` passed with `101`
+tests, `0` failures, and `0` skips; full non-slow console runner passed with `342` tests, `0` failures,
+and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current

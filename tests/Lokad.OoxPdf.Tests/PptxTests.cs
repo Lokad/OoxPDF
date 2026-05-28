@@ -12844,6 +12844,64 @@ internal static class PptxTests
         TestAssert.Equal(9d, plot.Series[3].Marker.Size);
     }
 
+    public static void PptxChartMarkerStylesPreserveDefinitionState()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:marker val="1"/>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:ser><c:marker><c:symbol val="plus"/><c:size val="9"/></c:marker><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:marker val="0"/>
+                <c:ser><c:marker><c:symbol val="none"/><c:size val="4"/></c:marker></c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "lineChart").Single();
+        System.Reflection.MethodInfo readStyles = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlMarkerStyles",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected marker-style resolver.");
+        object[] sceneStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene marker styles.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, sceneStyles.Length);
+        TestAssert.Equal("diamond", ChartMarkerStyleSymbol(sceneStyles[0]));
+        TestAssert.True(!ChartMarkerStyleIsDefined(sceneStyles[0]), "Expected auto line marker to remain distinct from explicit series marker XML.");
+        TestAssert.Equal(string.Empty, ChartMarkerStyleSizeValue(sceneStyles[0]) ?? string.Empty);
+        TestAssert.Equal(7d, ChartMarkerStyleSize(sceneStyles[0]));
+        TestAssert.Equal("plus", ChartMarkerStyleSymbol(sceneStyles[1]));
+        TestAssert.True(ChartMarkerStyleIsDefined(sceneStyles[1]), "Expected explicit series marker XML to remain explicit at the renderer option boundary.");
+        TestAssert.Equal("9", ChartMarkerStyleSizeValue(sceneStyles[1]) ?? string.Empty);
+
+        XElement xmlOnly = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:marker val="1"/>
+                <c:ser/>
+                <c:ser><c:marker><c:symbol val="square"/><c:size val="8"/></c:marker></c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "lineChart").Single();
+        object[] xmlStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [null, xmlOnly, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML marker styles.")).Cast<object>().ToArray();
+        TestAssert.Equal(2, xmlStyles.Length);
+        TestAssert.Equal("diamond", ChartMarkerStyleSymbol(xmlStyles[0]));
+        TestAssert.True(!ChartMarkerStyleIsDefined(xmlStyles[0]), "Expected XML-only auto marker to remain distinct from explicit series marker XML.");
+        TestAssert.Equal("square", ChartMarkerStyleSymbol(xmlStyles[1]));
+        TestAssert.True(ChartMarkerStyleIsDefined(xmlStyles[1]), "Expected XML-only explicit marker to preserve definition state.");
+        TestAssert.Equal("8", ChartMarkerStyleSizeValue(xmlStyles[1]) ?? string.Empty);
+    }
+
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
@@ -14849,6 +14907,29 @@ internal static class PptxTests
     {
         return (bool)(option.GetType().GetProperty("IsDefined")?.GetValue(option)
             ?? throw new InvalidOperationException("Expected chart boolean option defined state."));
+    }
+
+    private static string ChartMarkerStyleSymbol(object marker)
+    {
+        return (string)(marker.GetType().GetProperty("Symbol")?.GetValue(marker)
+            ?? throw new InvalidOperationException("Expected chart marker symbol."));
+    }
+
+    private static string? ChartMarkerStyleSizeValue(object marker)
+    {
+        return (string?)marker.GetType().GetProperty("SizeValue")?.GetValue(marker);
+    }
+
+    private static double ChartMarkerStyleSize(object marker)
+    {
+        return (double)(marker.GetType().GetProperty("Size")?.GetValue(marker)
+            ?? throw new InvalidOperationException("Expected chart marker size."));
+    }
+
+    private static bool ChartMarkerStyleIsDefined(object marker)
+    {
+        return (bool)(marker.GetType().GetProperty("IsDefined")?.GetValue(marker)
+            ?? throw new InvalidOperationException("Expected chart marker defined state."));
     }
 
     private static string ReadPdfDecodedAscii(string path)

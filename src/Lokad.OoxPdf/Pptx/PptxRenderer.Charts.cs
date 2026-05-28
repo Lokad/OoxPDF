@@ -775,9 +775,11 @@ internal sealed partial class PptxRenderer
                 .Select(series => new ChartMarkerStyle(
                     series.Marker.SymbolKind,
                     series.Marker.Symbol,
+                    series.Marker.SizeValue,
                     series.Marker.Size,
                     series.Marker.Fill.HasFill ? new ChartSeriesFill(series.Marker.Fill.Color, series.Marker.Fill.Alpha) : null,
-                    ToChartSeriesStroke(series.Marker.Line, ChartMarkerInheritedStrokeWidth)))
+                    ToChartSeriesStroke(series.Marker.Line, ChartMarkerInheritedStrokeWidth),
+                    series.Marker.IsDefined))
                 .ToArray();
         }
 
@@ -6957,7 +6959,7 @@ internal sealed partial class PptxRenderer
                             ? strokeWidth
                             : ChartMarkerInheritedStrokeWidth)
                     : null;
-            styles.Add(new ChartMarkerStyle(PptxSceneBuilder.ParseChartMarkerSymbol(symbol), symbol, size, fill, stroke));
+            styles.Add(new ChartMarkerStyle(PptxSceneBuilder.ParseChartMarkerSymbol(symbol), symbol, (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val"), size, fill, stroke, marker is not null));
         }
 
         return styles;
@@ -10084,8 +10086,8 @@ internal sealed partial class PptxRenderer
         public bool IsEmpty => Fill is null && GradientFill is null && Stroke is null && !Glow.HasGlow && !OuterShadow.HasShadow;
     }
 
-    private readonly record struct ChartMarkerStyle(PptxSceneChartMarkerSymbol SymbolKind, string Symbol, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke)
+    private readonly record struct ChartMarkerStyle(PptxSceneChartMarkerSymbol SymbolKind, string Symbol, string? SizeValue, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, bool IsDefined)
     {
-        public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", 4d, null, null);
+        public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", null, 4d, null, null, false);
     }
 }
