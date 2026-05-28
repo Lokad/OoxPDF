@@ -8688,7 +8688,7 @@ internal sealed partial class PptxRenderer
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
-        bool hasLineChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).Count != 0;
+        bool hasLineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is not null;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
             ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
             : hasTitle && hasRightLegend && hasLineChart
@@ -8706,16 +8706,16 @@ internal sealed partial class PptxRenderer
 
     private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
     {
-        XElement? plotElement = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).FirstOrDefault();
+        XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
         if (plotElement is null)
         {
-            plotElement = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Area).FirstOrDefault();
+            plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Area);
             plotKind = PptxSceneChartPlotKind.Area;
         }
         if (plotElement is null)
         {
-            plotElement = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Scatter).FirstOrDefault();
+            plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Scatter);
             plotKind = PptxSceneChartPlotKind.Scatter;
         }
 
