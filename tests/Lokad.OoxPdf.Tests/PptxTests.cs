@@ -11716,7 +11716,7 @@ internal static class PptxTests
                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                           id="77">
                   <cs:title>
-                    <cs:defRPr sz="1400" b="1">
+                    <cs:defRPr sz="1400" b="1" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="C86432"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
@@ -11731,6 +11731,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.784 0.392 0.196 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 14\.04 Tf"), "Expected chart-style title role font size to drive title rendering when c:title has no direct txPr.");
+        int decorationRectangleCount = Regex.Matches(pdf, @"0\.784 0\.392 0\.196 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style title role underline and strike to emit filled decoration rectangles through the common text renderer.");
     }
 
     public static void PptxSyntheticChartLegendManualBoxDrivesPlacement()
@@ -12009,13 +12011,13 @@ internal static class PptxTests
                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                           id="80">
                   <cs:categoryAxis>
-                    <cs:defRPr sz="1300">
+                    <cs:defRPr sz="1300" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="AA5500"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
                   </cs:categoryAxis>
                   <cs:valueAxis>
-                    <cs:defRPr sz="1400">
+                    <cs:defRPr sz="1400" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="0055AA"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
@@ -12034,6 +12036,10 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"/CVA[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive value tick labels when c:valAx has no direct txPr.");
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 12\.96 Tf"), "Expected chart-style categoryAxis role font size to drive default category axis-title rendering.");
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive default value axis-title rendering.");
+        int categoryDecorationRectangleCount = Regex.Matches(pdf, @"0\.667 0\.333 0 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        int valueDecorationRectangleCount = Regex.Matches(pdf, @"0 0\.333 0\.667 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        TestAssert.True(categoryDecorationRectangleCount >= 2, "Expected chart-style categoryAxis role underline and strike to emit filled decoration rectangles.");
+        TestAssert.True(valueDecorationRectangleCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration rectangles.");
     }
 
     public static void PptxSyntheticChartStyleAxisDefaultsDriveManualAxisTitleRendering()
@@ -12107,7 +12113,7 @@ internal static class PptxTests
                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                           id="81">
                   <cs:valueAxis>
-                    <cs:defRPr sz="1400">
+                    <cs:defRPr sz="1400" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="0055AA"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
@@ -12122,6 +12128,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0.333 0.667 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CAT[0-9]+ 14\.04 Tf"), "Expected chart-style valueAxis role font size to drive manual-layout value axis-title rendering.");
+        int decorationRectangleCount = Regex.Matches(pdf, @"0 0\.333 0\.667 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style valueAxis role underline and strike to emit filled decoration rectangles for manual-layout axis titles.");
     }
 
     public static void PptxSyntheticChartManualLayoutMissingPositionUsesDefaultPlotBox()
