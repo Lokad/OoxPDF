@@ -2992,62 +2992,54 @@ internal sealed partial class PptxRenderer
     }
 
     private static double EstimateTextHeight(
-        XElement textBody,
-        XElement? defaultParagraphProperties,
-        PptxTheme theme,
+        IReadOnlyList<PptxTextParagraphModel> paragraphs,
         double textWidth,
-        PptxTextBodyProperties bodyProperties,
-        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+        PptxTextBodyProperties bodyProperties)
     {
         double height = 0d;
         var advanceEstimator = new TextAdvanceEstimator();
-        double fontScale = bodyProperties.FontScale;
-        double lineSpacingScale = bodyProperties.LineSpacingScale;
-        bool compatibleLineSpacing = bodyProperties.CompatibleLineSpacing;
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
+        bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
         bool hasEstimatedParagraph = false;
-        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p"))
+        foreach (PptxTextParagraphModel paragraph in paragraphs)
         {
-            XElement? paragraphProperties = paragraph.Element(DrawingNamespace + "pPr");
-            XElement? defaultRunProperties = paragraphProperties?.Element(DrawingNamespace + "defRPr") ??
-                defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
-            LineSpacing lineSpacing = ApplyCompatibleLineSpacing(
-                ReadLineSpacing(paragraphProperties, defaultParagraphProperties),
-                compatibleLineSpacing).ScaleExplicit(lineSpacingScale);
-            if (!ParagraphHasVisibleContent(paragraph))
+            ResolvedParagraphTextStyle paragraphStyle = paragraph.Style;
+            LineSpacing lineSpacing = paragraphStyle.LineSpacing;
+            if (!ParagraphHasVisibleContent(paragraph.Source))
             {
-                if (ParagraphHasLayoutContent(paragraph))
+                if (ParagraphHasLayoutContent(paragraph.Source))
                 {
-                    XElement? endRunProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
-                    double emptyFontSize = ReadFontSize(endRunProperties, defaultRunProperties) * fontScale;
+                    double emptyFontSize = ReadEndParagraphFontSize(paragraph, paragraphStyle.FontSize, bodyProperties.FontScale);
                     if (hasEstimatedParagraph)
                     {
-                        height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", emptyFontSize);
+                        height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     }
 
                     height += ReadEstimatedAnchorLineAdvance(lineSpacing, emptyFontSize, null, bold: false, italic: false, advanceEstimator);
-                    height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", emptyFontSize);
+                    height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
                     hasEstimatedParagraph = true;
                 }
 
                 continue;
             }
 
-            double paragraphFontSize = ReadFirstParagraphFontSize(paragraph, defaultRunProperties) * fontScale;
+            double paragraphFontSize = paragraphStyle.FontSize;
             if (hasEstimatedParagraph)
             {
-                height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcBef", paragraphFontSize);
+                height += paragraphStyle.SpacingBefore;
             }
 
+            PptxTextFlowParagraph flowParagraph = BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord);
             double maxFontSize = 0d;
             string? lineTypeface = null;
             bool lineBold = false;
             bool lineItalic = false;
             double lineWidth = 0d;
             bool hasLineContent = false;
-            foreach (XElement child in paragraph.Elements())
+            foreach (PptxTextFlowRun flowRun in flowParagraph.Runs)
             {
-                if (child.Name == DrawingNamespace + "br")
+                ResolvedRunTextStyle runStyle = flowRun.Style;
+                if (flowRun.Source.Kind == PptxTextRunKind.Break)
                 {
                     height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
                     maxFontSize = 0d;
@@ -3059,42 +3051,37 @@ internal sealed partial class PptxRenderer
                     continue;
                 }
 
-                if (!IsTextRunElement(child))
+                foreach (PptxTextFlowSegment segment in flowRun.Segments)
                 {
-                    continue;
-                }
-
-                XElement? runProperties = child.Element(DrawingNamespace + "rPr");
-                double fontSize = ReadFontSize(runProperties, defaultRunProperties) * fontScale;
-                string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
-                bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
-                    (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
-                    (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
-                bool italic = ParseOptionalBoolAttribute(runProperties, "i") ||
-                    ParseOptionalBoolAttribute(defaultRunProperties, "i");
-                foreach (string token in SplitTextWrapTokens(ReadTextElementText(child, slideNumber: 0)))
-                {
-                    if (token.Length == 0)
+                    if (segment.Kind == PptxTextFlowSegmentKind.Break)
                     {
                         continue;
                     }
 
-                    double advance = advanceEstimator.Measure(token, fontSize, typeface, bold, italic, characterSpacing: 0d);
+                    double fontSize = runStyle.FontSize * segment.FontScale;
+                    double advance = advanceEstimator.Measure(
+                        segment.AdvanceText,
+                        fontSize,
+                        runStyle.Typeface,
+                        runStyle.Bold,
+                        runStyle.Italic,
+                        runStyle.CharacterSpacing,
+                        runStyle.KerningEnabled);
                     if (allowWrapping &&
-                        !string.IsNullOrWhiteSpace(token) &&
+                        !string.IsNullOrWhiteSpace(segment.AdvanceText) &&
                         lineWidth > PptxTextMetricRules.TextStateTolerance &&
                         lineWidth + advance > textWidth)
                     {
                         height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
                         maxFontSize = fontSize;
-                        lineTypeface = typeface;
-                        lineBold = bold;
-                        lineItalic = italic;
+                        lineTypeface = runStyle.Typeface;
+                        lineBold = runStyle.Bold;
+                        lineItalic = runStyle.Italic;
                         lineWidth = 0d;
                         hasLineContent = false;
                     }
 
-                    if (string.IsNullOrWhiteSpace(token) && lineWidth <= PptxTextMetricRules.TextStateTolerance)
+                    if (string.IsNullOrWhiteSpace(segment.AdvanceText) && lineWidth <= PptxTextMetricRules.TextStateTolerance)
                     {
                         continue;
                     }
@@ -3102,12 +3089,13 @@ internal sealed partial class PptxRenderer
                     if (fontSize >= maxFontSize)
                     {
                         maxFontSize = fontSize;
-                        lineTypeface = typeface;
-                        lineBold = bold;
-                        lineItalic = italic;
+                        lineTypeface = runStyle.Typeface;
+                        lineBold = runStyle.Bold;
+                        lineItalic = runStyle.Italic;
                     }
+
                     lineWidth += advance;
-                    hasLineContent = true;
+                    hasLineContent |= segment.Draw && segment.Text.Length > 0;
                 }
             }
 
@@ -3116,38 +3104,11 @@ internal sealed partial class PptxRenderer
                 height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
             }
 
-            height += ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", paragraphFontSize);
+            height += paragraphStyle.SpacingAfter;
             hasEstimatedParagraph = true;
         }
 
         return height;
-    }
-
-    private static IEnumerable<string> SplitTextWrapTokens(string text)
-    {
-        int start = 0;
-        bool? whitespace = null;
-        for (int i = 0; i < text.Length; i++)
-        {
-            bool currentWhitespace = char.IsWhiteSpace(text[i]);
-            if (whitespace is null)
-            {
-                whitespace = currentWhitespace;
-                continue;
-            }
-
-            if (currentWhitespace != whitespace.Value)
-            {
-                yield return text[start..i];
-                start = i;
-                whitespace = currentWhitespace;
-            }
-        }
-
-        if (start < text.Length)
-        {
-            yield return text[start..];
-        }
     }
 
     private static double ReadEstimatedAnchorLineAdvance(

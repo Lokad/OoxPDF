@@ -256,14 +256,6 @@ internal sealed partial class PptxRenderer
             ? fontColor
             : null;
         bool useOfficeBaselineFloor = TextFrameUsesOfficeBaselineFloor(shape, bodyProperties);
-        XElement? defaultParagraphProperties = MergeParagraphProperties(
-            BuildParagraphStyleCascade(shape, textBody, inheritedPlaceholders, placeholderSources, "lvl1pPr").Sources.ToArray());
-        double verticalOffset = bodyProperties.VerticalAnchor switch
-        {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties)),
-            _ => 0d
-        };
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
             shape,
             textBody,
@@ -275,6 +267,12 @@ internal sealed partial class PptxRenderer
             lineSpacingScale,
             compatibleLineSpacing,
             shapeFontColor);
+        double verticalOffset = bodyProperties.VerticalAnchor switch
+        {
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)),
+            _ => 0d
+        };
 
         return new PptxTextFrameModel(
             shape,
@@ -400,14 +398,6 @@ internal sealed partial class PptxRenderer
                 document.SlideHeightPoints);
         }
 
-        XElement? defaultParagraphProperties = MergeParagraphProperties(
-            BuildParagraphStyleCascade(textBody, textBody, inheritedPlaceholders: [], placeholderSources, "lvl1pPr").Sources.ToArray());
-        double verticalOffset = bodyProperties.VerticalAnchor switch
-        {
-            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties, tableFrame.TextStyle)) / 2d),
-            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(textBody, defaultParagraphProperties, theme, textWrapWidth, bodyProperties, tableFrame.TextStyle)),
-            _ => 0d
-        };
         IReadOnlyList<PptxTextParagraphModel> paragraphs = BuildParagraphModels(
             textBody,
             textBody,
@@ -420,6 +410,12 @@ internal sealed partial class PptxRenderer
             compatibleLineSpacing,
             shapeFontColor: null,
             tableFrame.TextStyle);
+        double verticalOffset = bodyProperties.VerticalAnchor switch
+        {
+            TextVerticalAnchor.Middle => Math.Max(0d, (textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)) / 2d),
+            TextVerticalAnchor.Bottom => Math.Max(0d, textHeight - EstimateTextHeight(paragraphs, textWrapWidth, bodyProperties)),
+            _ => 0d
+        };
 
         return new PptxTextFrameModel(
             textBody,

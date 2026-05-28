@@ -12939,11 +12939,9 @@ locks inherited `normAutofit` and inherited compatible line spacing beside direc
 
 This removes another direct-XML heuristic from the active layout path while preserving the existing Office-fit
 semantics: `normAutofit @fontScale` and `@lnSpcReduction` are honored when stored, `spAutoFit` still uses the
-current bounded fitting rules, and `noAutofit` still drives the existing wrap-token behavior. A separate
-vertical-anchor estimator gap remains: `EstimateTextHeight` still recomputes from local text-body XML and does
-not apply direct or inherited model-level `normAutofit` scale, line-spacing reduction, or inherited wrap/
-compatible-line-spacing state. That estimator should be moved onto `PptxTextBodyProperties` before any further
-vertical-anchor tuning.
+current bounded fitting rules, and `noAutofit` still drives the existing wrap-token behavior. The follow-up
+vertical-anchor estimator gap noted here has since been closed: `EstimateTextHeight` now consumes resolved
+paragraph/run models rather than re-reading local text-body XML.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
@@ -12958,13 +12956,31 @@ shape transform or local-only `a:bodyPr` lookup.
 
 This closes the direct-only scalar bodyPr inheritance pass for orientation, vertical anchor, anchor center,
 wrapping, overflow, insets, columns, autofit mode/scales, compatible line spacing, and text-body rotation.
-Remaining bodyPr-related work is now more precise: move vertical-anchor height estimation onto the same
-`PptxTextBodyProperties` model, preserve invalid/future numeric raw tokens where useful, and keep replacing
-raw-XML render-site lookups with model-owned state when new text-body features are touched.
+Remaining bodyPr-related work is now more precise: preserve invalid/future numeric raw tokens where useful,
+and keep replacing raw-XML render-site lookups with model-owned state when new text-body features are
+touched. Vertical-anchor height estimation has since moved onto the resolved text model.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `88` tests, `0` failures, and `2` slow skips.
+
+Revision note, 2026-05-28: PPTX vertical-anchor height estimation now consumes the resolved text model instead
+of re-reading paragraph/run XML in a separate local estimator. Shape text and typed table-cell text build
+`PptxTextParagraphModel` records before computing center/bottom offsets, and `EstimateTextHeight` now reads
+resolved paragraph line spacing, spacing-before/after, run font size, bold/italic/typeface, kerning,
+character spacing, flow segmentation, wrap mode, and `PptxTextBodyProperties` autofit/wrap state from that
+model. The XML-only token splitter was removed.
+
+This closes the estimator gap left after the inherited body-property pass and extends the model-first text
+track: vertical anchoring now uses the same resolved font scale, `normAutofit` line-spacing reduction,
+compatible-line-spacing decision, inherited wrap mode, table-style bold, and run character spacing that the
+actual text layout path uses. `PptxSyntheticTextBoxVerticalAnchorUsesResolvedCharacterSpacing` locks one
+previous blind spot where centered wrapping must account for resolved `rPr @spc`, not just raw text width.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxSyntheticTextBoxVerticalAnchorUsesResolvedCharacterSpacing` passed; focused non-slow `pptx-typography`
+passed with `91` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `347`
+tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
