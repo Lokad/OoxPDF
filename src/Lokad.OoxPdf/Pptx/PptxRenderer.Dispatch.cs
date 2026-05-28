@@ -160,8 +160,8 @@ internal sealed partial class PptxRenderer
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)
     {
-        string effectivePartName = sourcePartName ?? context.Slide.PartName;
-        if (context.DiagnosticSink is null || effectivePartName == context.Slide.PartName || node.IsSmartArtGraphicFrame)
+        string effectivePartName = sourcePartName ?? context.SlidePartName;
+        if (context.DiagnosticSink is null || effectivePartName == context.SlidePartName || node.IsSmartArtGraphicFrame)
         {
             return;
         }

@@ -138,7 +138,7 @@ internal sealed partial class PptxRenderer
                 "PPTX_UNSUPPORTED_TABLE_STYLE",
                 OoxPdfSeverity.Warning,
                 "Table style is not in the supported built-in style subset and was rendered without Office table-style cascade formatting.",
-                context.Slide.PartName,
+                context.SlidePartName,
                 context.SlideNumber,
                 null,
                 "table style",

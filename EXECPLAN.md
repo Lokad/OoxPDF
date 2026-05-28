@@ -3722,6 +3722,11 @@ High-priority actions:
   slide/layout/master/theme ownership, and raw XML retention on typed nodes.
 - [ ] Port `pptx-renderer` render-context ownership: one context object should expose slide identity,
   inheritance, relationships, media caches, theme/color resolvers, diagnostics, and group-fill state.
+  2026-05-28 update: `PptxRenderContext` now exposes slide/master/layout part names, relationship maps, and
+  color maps directly from the scene slide, and render/diagnostic call sites that need slide identity consume
+  `context.SlidePartName` instead of reaching back through the raw `PptxSlide`. This does not finish the context
+  split, but it makes the intended ownership explicit for future specialized renderers and reduces ad hoc
+  document/scene reach-through.
 - [ ] Port `pptx-renderer` specialized renderer split: background, shape, text, table, image, group, chart,
   and fallback renderers should consume the same context instead of ad hoc XML/document parameters.
 - [ ] Port `pptx-renderer` slide inheritance behavior: render master/layout non-placeholder template content
