@@ -990,7 +990,7 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts)
     {
-        IReadOnlyList<XElement> barCharts = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Bar);
+        IReadOnlyList<XElement> barCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
@@ -1106,7 +1106,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 int lineChartIndex = 0;
-                foreach (XElement comboLineChart in ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line))
+                foreach (XElement comboLineChart in ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Line))
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
                     IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook);
@@ -1238,7 +1238,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? lineChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Line).FirstOrDefault();
+        XElement? lineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         if (lineChart is not null)
         {
             PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
@@ -1287,7 +1287,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? areaChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Area).FirstOrDefault();
+        XElement? areaChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Area);
         if (areaChart is not null)
         {
             PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
@@ -1342,7 +1342,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? scatterChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Scatter).FirstOrDefault();
+        XElement? scatterChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Scatter);
         if (scatterChart is not null)
         {
             PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter);
@@ -1379,7 +1379,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? bubbleChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Bubble).FirstOrDefault();
+        XElement? bubbleChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Bubble);
         if (bubbleChart is not null)
         {
             PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble);
@@ -1419,7 +1419,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? radarChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Radar).FirstOrDefault();
+        XElement? radarChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Radar);
         if (radarChart is not null)
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
@@ -1452,7 +1452,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? pieChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Pie).FirstOrDefault();
+        XElement? pieChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Pie);
         if (pieChart is not null)
         {
             PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie);
@@ -1479,7 +1479,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        XElement? doughnutChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Doughnut).FirstOrDefault();
+        XElement? doughnutChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Doughnut);
         if (doughnutChart is not null)
         {
             PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut);
