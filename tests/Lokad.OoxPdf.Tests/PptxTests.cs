@@ -497,6 +497,7 @@ internal static class PptxTests
         TestAssert.Equal("cycle", slideSnapshot.SlideNodes[4].ChartColorStyleMethod);
         TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartColorStyleId);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleColorCount);
+        TestAssert.Equal(0, slideSnapshot.SlideNodes[4].ChartColorStyleVariationCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleResolvedDeclarationCount);
         TestAssert.Equal("srgbClr", slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationKinds[0]);
@@ -6344,6 +6345,7 @@ internal static class PptxTests
                 node.HasChartColorStyle,
                 node.ChartColorStyleMethod,
                 node.ChartColorStyleColorCount,
+                node.ChartColorStyleVariationCount,
                 node.ChartColorStyleDeclarationCount,
                 node.ChartColorStyleResolvedDeclarationCount,
                 node.ChartColorStyleDeclarationKinds,
@@ -15001,6 +15003,9 @@ internal static class PptxTests
                                meth="cycle" id="77">
                   <a:srgbClr val="FF00CC"/>
                   <a:schemeClr val="accent1"/>
+                  <cs:variation>
+                    <a:srgbClr val="112233"/>
+                  </cs:variation>
                 </cs:colorStyle>
                 """)
         });
@@ -15008,19 +15013,27 @@ internal static class PptxTests
             ?? throw new InvalidOperationException("Expected chart scene.");
         PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
 
-        TestAssert.Equal(2, chart.ColorStyle.Declarations.Count);
+        TestAssert.Equal(1, chart.ColorStyle.VariationCount);
+        TestAssert.Equal(3, chart.ColorStyle.Declarations.Count);
         TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[0].Kind);
         TestAssert.Equal("FF00CC", chart.ColorStyle.Declarations[0].Value);
+        TestAssert.Equal(null, chart.ColorStyle.Declarations[0].VariationIndex);
         TestAssert.Equal(new RgbColor(255, 0, 204), chart.ColorStyle.Declarations[0].Color ?? default);
         TestAssert.Equal("schemeClr", chart.ColorStyle.Declarations[1].Kind);
         TestAssert.Equal("accent1", chart.ColorStyle.Declarations[1].Value);
+        TestAssert.Equal(null, chart.ColorStyle.Declarations[1].VariationIndex);
+        TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[2].Kind);
+        TestAssert.Equal("112233", chart.ColorStyle.Declarations[2].Value);
+        TestAssert.Equal(0, chart.ColorStyle.Declarations[2].VariationIndex ?? -1);
         TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
         TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
         TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
-        TestAssert.Equal(2, snapshot.ChartColorStyleDeclarationCount);
-        TestAssert.Equal(1, snapshot.ChartColorStyleResolvedDeclarationCount);
+        TestAssert.Equal(1, snapshot.ChartColorStyleVariationCount);
+        TestAssert.Equal(3, snapshot.ChartColorStyleDeclarationCount);
+        TestAssert.Equal(2, snapshot.ChartColorStyleResolvedDeclarationCount);
         TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[0]);
         TestAssert.Equal("schemeClr", snapshot.ChartColorStyleDeclarationKinds[1]);
+        TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[2]);
     }
 
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()

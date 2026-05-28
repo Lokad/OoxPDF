@@ -12595,6 +12595,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `0` failures, and `0` skips; full non-slow console runner passed with `346` tests, `0` failures, and `7`
 slow skips.
 
+Revision note, 2026-05-28: Preserved chart color-style variation grouping in the scene model.
+`PptxSceneChartColorStyle` now records `VariationCount`, and each typed color declaration carries an optional
+variation index. Root palette declarations and declarations nested under `colorsN.xml` variation branches are
+therefore distinguishable without consulting raw XML. The existing renderer palette remains based on the root
+resolved colors only; variation branches are not yet applied to output.
+
+This removes another structural blind spot before attempting Office-like automatic chart colors. The remaining
+work is the actual cascade: deciding, from Office-PDF evidence, which variation branch applies to a given
+style id, chart role, series/point index, marker, label, legend entry, and axis surface.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted
+`PptxScenePreservesChartColorStyleDeclarations` passed; targeted slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed with `105` tests,
+`0` failures, and `0` skips; full non-slow console runner passed with `346` tests, `0` failures, and `7`
+slow skips.
+
 Revision note, 2026-05-28: Exposed rejected keyed chart overrides through private-safe scene inspection.
 `PptxSceneNodeSnapshot` now reports aggregate rejected `c:dPt` and `c:dLbl` index-token counts and raw
 index tokens for chart nodes, fed from the scene-owned sidecars instead of a second XML scan. This turns

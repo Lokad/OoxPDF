@@ -66,6 +66,7 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartColorStyleMethod,
     string ChartColorStyleId,
     int ChartColorStyleColorCount,
+    int ChartColorStyleVariationCount,
     int ChartColorStyleDeclarationCount,
     int ChartColorStyleResolvedDeclarationCount,
     IReadOnlyList<string> ChartColorStyleDeclarationKinds,
@@ -647,12 +648,14 @@ internal readonly record struct PptxSceneChartColorStyle(
     string Method,
     string Id,
     IReadOnlyList<RgbColor> Colors,
+    int VariationCount,
     IReadOnlyList<PptxSceneChartColorDeclaration> Declarations,
     XDocument? ColorStyleXml);
 
 internal readonly record struct PptxSceneChartColorDeclaration(
     string Kind,
     string Value,
+    int? VariationIndex,
     bool IsResolved,
     RgbColor? Color,
     double Alpha);
@@ -2072,7 +2075,7 @@ internal sealed class PptxSceneBuilder
             ? default
             : ReadChartExternalData(package, chartPart.Name, chartXml);
         PptxSceneChartColorStyle colorStyle = chartPart is null
-            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], [], null)
+            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], null)
             : ReadChartColorStyle(package, chartPart.Name, theme);
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
@@ -3326,13 +3329,13 @@ internal sealed class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (colorRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], [], null);
+            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], null);
         }
 
         OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
         if (colorPart is null)
         {
-            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], [], null);
+            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], 0, [], null);
         }
 
         XDocument document = LoadXml(colorPart);
@@ -3353,6 +3356,7 @@ internal sealed class PptxSceneBuilder
             (string?)document.Root?.Attribute("meth") ?? string.Empty,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
             colors,
+            CountChartColorStyleVariations(document),
             declarations,
             document);
     }
@@ -3365,19 +3369,46 @@ internal sealed class PptxSceneBuilder
         }
 
         var declarations = new List<PptxSceneChartColorDeclaration>();
-        foreach (XElement colorElement in document.Root.Descendants().Where(IsDrawingColorElement))
+        foreach (XElement colorElement in document.Root.Elements().Where(IsDrawingColorElement))
         {
-            var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-            bool isResolved = TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out double alpha);
-            declarations.Add(new PptxSceneChartColorDeclaration(
-                colorElement.Name.LocalName,
-                (string?)colorElement.Attribute("val") ?? string.Empty,
-                isResolved,
-                isResolved ? color : null,
-                isResolved ? alpha : 1d));
+            declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, variationIndex: null));
+        }
+
+        int variationIndex = 0;
+        foreach (XElement variation in document.Root.Elements().Where(IsChartColorStyleVariationElement))
+        {
+            foreach (XElement colorElement in variation.Descendants().Where(IsDrawingColorElement))
+            {
+                declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, variationIndex));
+            }
+
+            variationIndex++;
         }
 
         return declarations;
+    }
+
+    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, int? variationIndex)
+    {
+        var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
+        bool isResolved = TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out double alpha);
+        return new PptxSceneChartColorDeclaration(
+            colorElement.Name.LocalName,
+            (string?)colorElement.Attribute("val") ?? string.Empty,
+            variationIndex,
+            isResolved,
+            isResolved ? color : null,
+            isResolved ? alpha : 1d);
+    }
+
+    private static int CountChartColorStyleVariations(XDocument document)
+    {
+        return document.Root?.Elements().Count(IsChartColorStyleVariationElement) ?? 0;
+    }
+
+    private static bool IsChartColorStyleVariationElement(XElement element)
+    {
+        return element.Name.LocalName == "variation";
     }
 
     private static bool IsDrawingColorElement(XElement element)
