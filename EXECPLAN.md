@@ -189,6 +189,10 @@ Initial survey findings:
 
 High-priority actions:
 
+- [x] 2026-05-28 full public validation after chart scene-source and placeholder-cascade slices:
+  the dependency-free console runner passed with `363 passed, 0 failed, 0 skipped`. `dotnet test
+  Lokad.OoxPdf.slnx` only restored projects because this repo does not use SDK test adapters; keep using the
+  console runner for future full-suite gates.
 - [x] Survey `pptx-renderer` feature by feature against `ooxpdf`: model objects, inheritance cascade,
   text layout, group transforms, shape geometry, fills/strokes, images, tables, charts, SmartArt, and oracle
   tooling.
