@@ -5911,7 +5911,7 @@ paths, and ExecPlan references together.
       behind the foreground shape. Public synthetic unit `PptxSyntheticGlowRendersExpandedShape` locks the
       rendering and diagnostic behavior. The private deck now has no unsupported effect or transparency
       diagnostics.
-  - [ ] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
+  - [x] Add public synthetic image-recolor rungs for `a:lum` and `a:duotone`; do not remove diagnostics until
     recolored raster output is actually generated, and make the image cache key include recolor parameters.
     - [x] Add PNG/BMP raster recolor support for `a:lum` brightness/contrast and `a:duotone`, with image-cache
       keys including recolor parameters. Public synthetic units
@@ -5927,6 +5927,11 @@ paths, and ExecPlan references together.
       depending on the private deck. Keep the architectural item open: the long-term fix must be a
       dependency-free JPEG pixel path or a principled PDF color-transform/mask strategy that matches Office
       output, not a private-slide special case.
+    - [x] Add the remaining unsupported JPEG recolor path to the public visual suite:
+      `pptx-ladder-07-jpeg-duotone-recolor-diagnostic` derives from the valid public JPEG image deck, adds
+      `a:duotone` plus `a:alphaModFix`, and uses `expected.requiredDiagnostics` to require
+      `PPTX_UNSUPPORTED_IMAGE_RECOLOR` while allowing no unrelated diagnostics. This closes the public-rung
+      request for picture recolor coverage without pretending the long-term JPEG recolor strategy is solved.
 - [ ] Architecture initiative: whenever a fix touches shared PPTX behavior, improve class composition and
   first-class intermediate models rather than piling more ad hoc logic into rendering code.
 - [ ] Implementation-gap initiative: when an incomplete OOXML enum, preset, transform, or layout rule is
