@@ -5958,6 +5958,11 @@ paths, and ExecPlan references together.
     now preserves declared font size instead of shrinking stacked text against a narrow rotated width. Latest
     public run `20260524-203630`: MAE `0.791842`, changed16 `0.005630`; remaining differences are still
     dominated by Office's exact stacked-glyph positioning.
+  - [x] 2026-05-28: Remove obsolete unsupported-orientation allowances from the public vertical-text gates.
+    `pptx-ladder-04-vertical-text-270` and `pptx-ladder-04-vertical-text-port` now require empty diagnostics
+    and use tighter current raster bounds after runs `20260528-122030` measured MAE `0.247519`, changed16
+    `0.002192`, and MAE `0.802394`, changed16 `0.005700` respectively. This does not close vertical text:
+    stacked-letter ordering, column X positions, and exact baseline placement remain open below.
   - [x] Use effective PDF text matrices for vertical text investigation. In
     `pptx-ladder-04-vertical-text-port`, the second vertical frame is position-close after CTM composition
     (candidate effective Y `480.00` vs Office `479.98`, most X deltas under `0.1 pt`), while the stacked
