@@ -2318,6 +2318,16 @@ High-priority actions:
     blank leading line series followed by a styled visible series. Validation: focused non-slow `pptx-charts`
     passed (`52 passed, 0 failed, 0 skipped`); sparse/blank visual probe run `20260527-121215` passed with
     MAE `2.080923`, changed16 `0.024170`, SSIM `0.662304`, and histogram `0.997863`.
+  - [x] 2026-05-28 use workbook-backed indexed vectors when chart caches are absent:
+    numeric and category indexed vectors now keep chart-side cache points authoritative when present, but use
+    embedded-workbook range points as the dense renderable projection when no cache points exist. The fallback
+    honors `c:plotVisOnly` by default, so hidden workbook rows/columns remain filtered unless Office explicitly
+    disables visible-only plotting. Pie/doughnut slice construction, polar legends, category labels, scatter
+    pairing, and raw XML compatibility vectors now flow through the same dense vector boundary instead of
+    adding another cache-hydration heuristic. A regression chart with formula-only doughnut values verifies
+    native rendering when `plotVisOnly=false`, and vector tests lock the hidden-column default. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
+    `pptx-charts` passed (`117 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-27: Make compressed chart values and category labels scene-authoritative for typed plots.
   `ReadSceneOrXmlChartSeries`, `ReadSceneOrXmlScatterSeries`, category-label vector construction, and chart
   series-name construction now use `PptxSceneChartPlot.Series` plus workbook-backed scene data-source

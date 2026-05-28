@@ -114,7 +114,7 @@ internal sealed partial class PptxRenderer
 
         if (HasSupportedSceneChartWithoutRenderableCachedValues(sceneChart))
         {
-            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_MISSING_CACHED_DATA", OoxPdfSeverity.Warning, "Supported chart references formula-only data without cached numeric values; embedded workbook values are preserved as sidecar provenance but are not used for active rendering.", chartPartName, context.SlideNumber, "Ignored");
+            EmitChartDiagnostic(context.DiagnosticSink, "PPTX_CHART_MISSING_CACHED_DATA", OoxPdfSeverity.Warning, "Supported chart references formula-only data without cached numeric values, and no visible embedded-workbook values were available for active rendering.", chartPartName, context.SlideNumber, "Ignored");
             return;
         }
 
@@ -461,6 +461,17 @@ internal sealed partial class PptxRenderer
             : value;
     }
 
+    private static bool ReadSceneOrXmlChartPlotVisibleOnly(PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        if (sceneChart is not null)
+        {
+            return sceneChart.Options.PlotVisibleOnly ?? true;
+        }
+
+        XElement? chart = chartXml.Root?.Element(ChartNamespace + "chart");
+        return IsOoxmlBooleanElementEnabled(chart?.Element(ChartNamespace + "plotVisOnly"), defaultValue: true);
+    }
+
     private static double ReadSceneDoughnutHoleSize(PptxSceneChartPlot? plot, XElement doughnutChart)
     {
         if (plot is not null)
@@ -607,7 +618,7 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadSceneOrXmlChartSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         if (plot is not null)
         {
@@ -618,26 +629,27 @@ internal sealed partial class PptxRenderer
                     series.ValuePointCount,
                     series.ValueFormatCode,
                     series.DataSources.Values,
-                    workbook))
+                    workbook,
+                    plotVisibleOnly))
                 .ToArray();
         }
 
-        return ReadChartSeriesVectors(chartElement, workbook);
+        return ReadChartSeriesVectors(chartElement, workbook, plotVisibleOnly);
     }
 
-    private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ScatterSeries> ReadSceneOrXmlScatterSeries(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
-        return ReadSceneOrXmlScatterSeriesVectors(plot, chartElement, readBubbleSize, workbook)
+        return ReadSceneOrXmlScatterSeriesVectors(plot, chartElement, readBubbleSize, workbook, plotVisibleOnly)
             .Select(BuildScatterSeries)
             .Where(series => series.Points.Count != 0)
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneOrXmlScatterSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartIndexedScatterSeries> ReadSceneOrXmlScatterSeriesVectors(PptxSceneChartPlot? plot, XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         if (plot is null)
         {
-            return ReadScatterSeriesVectors(chartElement, readBubbleSize, workbook);
+            return ReadScatterSeriesVectors(chartElement, readBubbleSize, workbook, plotVisibleOnly);
         }
 
         return plot.Series
@@ -648,26 +660,29 @@ internal sealed partial class PptxRenderer
                     item.XValuePointCount,
                     item.XValueFormatCode,
                     item.DataSources.XValues,
-                    workbook),
+                    workbook,
+                    plotVisibleOnly),
                 BuildChartIndexedNumberVector(
                     item.YValues,
                     item.YValuePoints,
                     item.YValuePointCount,
                     item.YValueFormatCode,
                     item.DataSources.YValues,
-                    workbook),
+                    workbook,
+                    plotVisibleOnly),
                 BuildChartIndexedNumberVector(
                     item.BubbleSizes,
                     item.BubbleSizePoints,
                     item.BubbleSizePointCount,
                     item.BubbleSizeFormatCode,
                     item.DataSources.BubbleSizes,
-                    workbook),
+                    workbook,
+                    plotVisibleOnly),
                 readBubbleSize))
             .ToArray();
     }
 
-    private static ChartIndexedTextVector ReadSceneOrXmlCategoryLabelVector(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null)
+    private static ChartIndexedTextVector ReadSceneOrXmlCategoryLabelVector(PptxSceneChartPlot? plot, XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         if (plot is not null)
         {
@@ -678,11 +693,12 @@ internal sealed partial class PptxRenderer
                     series.CategoryPointCount,
                     series.CategoryLevels,
                     series.DataSources.Categories,
-                    workbook))
-                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null);
+                    workbook,
+                    plotVisibleOnly))
+                .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null || vector.DensePoints().Count != 0);
         }
 
-        return ReadChartCategoryLabelVector(chartElement, workbook);
+        return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly);
     }
 
     private static ScatterSeries BuildScatterSeries(ChartIndexedScatterSeries series)
@@ -733,6 +749,18 @@ internal sealed partial class PptxRenderer
         PptxSceneChartDataSource source,
         ChartWorkbookData? workbook)
     {
+        return BuildChartIndexedNumberVector(compactValues, scenePoints, pointCount, formatCode, source, workbook, plotVisibleOnly: true);
+    }
+
+    private static ChartIndexedNumberVector BuildChartIndexedNumberVector(
+        IReadOnlyList<double> compactValues,
+        IReadOnlyList<PptxSceneChartNumberPoint> scenePoints,
+        int? pointCount,
+        string? formatCode,
+        PptxSceneChartDataSource source,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
+    {
         IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
         IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Count != 0
             ? scenePoints
@@ -747,7 +775,7 @@ internal sealed partial class PptxRenderer
             : compactValues
                 .Select((value, index) => new ChartIndexedNumberPoint(index, ChartPointIndexSource.OrdinalFallback, value, value.ToString(CultureInfo.InvariantCulture), true, default))
                 .ToArray();
-        return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints);
+        return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
     }
 
     private static ChartIndexedTextVector BuildChartIndexedTextVector(
@@ -757,6 +785,18 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> categoryLevels,
         PptxSceneChartDataSource source,
         ChartWorkbookData? workbook)
+    {
+        return BuildChartIndexedTextVector(compactValues, scenePoints, pointCount, categoryLevels, source, workbook, plotVisibleOnly: true);
+    }
+
+    private static ChartIndexedTextVector BuildChartIndexedTextVector(
+        IReadOnlyList<string> compactValues,
+        IReadOnlyList<PptxSceneChartStringPoint> scenePoints,
+        int? pointCount,
+        IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> categoryLevels,
+        PptxSceneChartDataSource source,
+        ChartWorkbookData? workbook,
+        bool plotVisibleOnly)
     {
         IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
         IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Count != 0
@@ -779,7 +819,7 @@ internal sealed partial class PptxRenderer
                 point.HasText,
                 default)).ToArray())
             .ToArray();
-        return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints);
+        return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints, plotVisibleOnly);
     }
 
     private static IReadOnlyList<ChartIndexedNumberPoint> ReadWorkbookNumberPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
@@ -994,14 +1034,16 @@ internal sealed partial class PptxRenderer
             series.ValuePointCount,
             series.ValueFormatCode,
             series.DataSources.Values,
-            workbook);
+            workbook,
+            plotVisibleOnly: true);
         ChartIndexedTextVector categories = BuildChartIndexedTextVector(
             series.Categories,
             series.CategoryPoints,
             series.CategoryPointCount,
             series.CategoryLevels,
             series.DataSources.Categories,
-            workbook);
+            workbook,
+            plotVisibleOnly: true);
         return Math.Max(values.PointCount ?? 0, categories.PointCount ?? 0);
     }
 
@@ -1036,12 +1078,13 @@ internal sealed partial class PptxRenderer
 
     private static bool TryRenderChart(PdfGraphicsBuilder graphics, PptxDocument document, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, List<PdfFontResource> fonts)
     {
+        bool plotVisibleOnly = ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, chartXml);
         IReadOnlyList<XElement> barCharts = ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         XElement? barChart = barCharts.FirstOrDefault();
         if (barChart is not null)
         {
             PptxSceneChartPlot? barPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar);
-            IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> barSeriesVectors = ReadSceneOrXmlChartSeriesVectors(barPlot, barChart, workbook, plotVisibleOnly);
             int barSeriesCount = CountRenderableSeries(barSeriesVectors);
             if (barSeriesCount != 0)
             {
@@ -1075,7 +1118,7 @@ internal sealed partial class PptxRenderer
                 foreach (XElement extraBarChart in barCharts.Skip(1))
                 {
                     PptxSceneChartPlot? extraBarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bar, barChartIndex);
-                    IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSceneOrXmlChartSeriesVectors(extraBarPlot, extraBarChart, workbook);
+                    IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSceneOrXmlChartSeriesVectors(extraBarPlot, extraBarChart, workbook, plotVisibleOnly);
                     int extraSeriesCount = CountRenderableSeries(extraSeriesVectors);
                     if (extraSeriesCount == 0)
                     {
@@ -1145,7 +1188,7 @@ internal sealed partial class PptxRenderer
                         extraBarOptions.VaryColors.Value,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
-                        ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
+                        ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook, plotVisibleOnly),
                         ReadSceneOrXmlChartSeriesNameRecords(extraBarPlot, extraBarChart, workbook)));
                     seriesOffset += extraSeriesCount;
                     barChartIndex++;
@@ -1155,7 +1198,7 @@ internal sealed partial class PptxRenderer
                 foreach (XElement comboLineChart in ReadSceneOrXmlChartPlotElements(sceneChart, chartXml, PptxSceneChartPlotKind.Line))
                 {
                     PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line, lineChartIndex);
-                    IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook);
+                    IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, comboLineChart, workbook, plotVisibleOnly);
                     if (CountRenderableSeries(lineSeriesVectors) == 0)
                     {
                         lineChartIndex++;
@@ -1214,7 +1257,7 @@ internal sealed partial class PptxRenderer
                         lineMarkerStyles,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, comboLineChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, comboLineChart, theme),
-                        ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook),
+                        ReadSceneOrXmlCategoryLabelVector(linePlot, comboLineChart, workbook, plotVisibleOnly),
                         ReadSceneOrXmlChartSeriesNameRecords(linePlot, comboLineChart, workbook)));
                     lineChartIndex++;
                 }
@@ -1225,7 +1268,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -1278,7 +1321,7 @@ internal sealed partial class PptxRenderer
                     barOptions.VaryColors.Value,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme),
-                    ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
+                    ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly),
                     ReadSceneOrXmlChartSeriesNameRecords(barPlot, barChart, workbook)));
                 return true;
             }
@@ -1288,7 +1331,7 @@ internal sealed partial class PptxRenderer
         if (lineChart is not null)
         {
             PptxSceneChartPlot? linePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Line);
-            IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, lineChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> lineSeriesVectors = ReadSceneOrXmlChartSeriesVectors(linePlot, lineChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(lineSeriesVectors) != 0)
             {
                 ChartLinePlotOptions lineOptions = ReadSceneOrXmlChartLineOptions(sceneChart, linePlot, chartXml, lineChart, PptxSceneChartGrouping.Standard);
@@ -1307,7 +1350,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxisForScale)));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook, plotVisibleOnly), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxisForScale)));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1327,7 +1370,7 @@ internal sealed partial class PptxRenderer
                     markerStyles,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, linePlot, lineChart, theme),
-                    ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook),
+                    ReadSceneOrXmlCategoryLabelVector(linePlot, lineChart, workbook, plotVisibleOnly),
                     ReadSceneOrXmlChartSeriesNameRecords(linePlot, lineChart, workbook)));
                 return true;
             }
@@ -1337,7 +1380,7 @@ internal sealed partial class PptxRenderer
         if (areaChart is not null)
         {
             PptxSceneChartPlot? areaPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Area);
-            IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSceneOrXmlChartSeriesVectors(areaPlot, areaChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> areaSeriesVectors = ReadSceneOrXmlChartSeriesVectors(areaPlot, areaChart, workbook, plotVisibleOnly);
             if (CountRenderableSeries(areaSeriesVectors) != 0)
             {
                 ChartAreaPlotOptions areaOptions = ReadSceneOrXmlChartAreaOptions(sceneChart, areaPlot, chartXml, areaChart, PptxSceneChartGrouping.Standard);
@@ -1375,7 +1418,7 @@ internal sealed partial class PptxRenderer
                     areaOptions.DisplayBlanksAs);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis)));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(areaPlot, areaChart, workbook, plotVisibleOnly), horizontalBars: false, verticalAxisY: null, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueAxis.SceneAxis, valueAxis.XmlAxis)));
                 }
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1392,7 +1435,7 @@ internal sealed partial class PptxRenderer
         if (scatterChart is not null)
         {
             PptxSceneChartPlot? scatterPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Scatter);
-            IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook);
+            IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (scatterSeries.Count != 0)
             {
                 ChartScatterPlotOptions scatterOptions = ReadSceneOrXmlChartScatterOptions(scatterPlot, scatterChart);
@@ -1429,7 +1472,7 @@ internal sealed partial class PptxRenderer
         if (bubbleChart is not null)
         {
             PptxSceneChartPlot? bubblePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Bubble);
-            IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true, workbook: workbook);
+            IReadOnlyList<ScatterSeries> bubbleSeries = ReadSceneOrXmlScatterSeries(bubblePlot, bubbleChart, readBubbleSize: true, workbook: workbook, plotVisibleOnly: plotVisibleOnly);
             if (bubbleSeries.Count != 0)
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
@@ -1469,7 +1512,7 @@ internal sealed partial class PptxRenderer
         if (radarChart is not null)
         {
             PptxSceneChartPlot? radarPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Radar);
-            IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSceneOrXmlChartSeriesVectors(radarPlot, radarChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> radarSeriesVectors = ReadSceneOrXmlChartSeriesVectors(radarPlot, radarChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartRadarSeries> radarSeries = BuildRadarSeries(radarSeriesVectors);
             if (radarSeries.Count != 0)
             {
@@ -1486,7 +1529,7 @@ internal sealed partial class PptxRenderer
                 RenderRadarChart(graphics, radarLayout, radarSeries, seriesFills, seriesStrokes, valueExtents, axisUnits);
                 if (IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(radarPlot, radarChart, workbook)));
+                    fonts.AddRange(RenderRadarCategoryLabels(theme, graphics, radarLayout, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(radarPlot, radarChart, workbook, plotVisibleOnly)));
                 }
 
                 if (IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
@@ -1502,11 +1545,11 @@ internal sealed partial class PptxRenderer
         if (pieChart is not null)
         {
             PptxSceneChartPlot? piePlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Pie);
-            IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSceneOrXmlChartSeriesVectors(piePlot, pieChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> pieSeriesVectors = ReadSceneOrXmlChartSeriesVectors(piePlot, pieChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> pieSlices = pieSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(pieSeriesVectors[0]);
             if (pieSlices.Count != 0)
             {
-                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook);
+                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(piePlot, pieChart, workbook, plotVisibleOnly);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(piePlot, pieChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, piePlot, pieChart, theme),
@@ -1520,7 +1563,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend);
                 RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, labelOptions, categoryLabels, seriesNames));
-                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1529,11 +1572,11 @@ internal sealed partial class PptxRenderer
         if (doughnutChart is not null)
         {
             PptxSceneChartPlot? doughnutPlot = ReadSceneChartPlot(sceneChart, PptxSceneChartPlotKind.Doughnut);
-            IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSceneOrXmlChartSeriesVectors(doughnutPlot, doughnutChart, workbook);
+            IReadOnlyList<ChartIndexedNumberVector> doughnutSeriesVectors = ReadSceneOrXmlChartSeriesVectors(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
             IReadOnlyList<ChartIndexedPieSlice> doughnutSlices = doughnutSeriesVectors.Count == 0 ? [] : BuildChartIndexedPieSlices(doughnutSeriesVectors[0]);
             if (doughnutSlices.Count != 0)
             {
-                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook);
+                ChartIndexedTextVector categoryLabels = ReadSceneOrXmlCategoryLabelVector(doughnutPlot, doughnutChart, workbook, plotVisibleOnly);
                 IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(doughnutPlot, doughnutChart, workbook);
                 ChartDataLabelOptions labelOptions = ResolveChartDataLabelOptionsForSeries(
                     ReadSceneOrXmlDataLabelOptions(sceneChart, doughnutPlot, doughnutChart, theme),
@@ -1548,7 +1591,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, polarPoints.PointExplosions, legend);
                 RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle);
                 fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, labelOptions, categoryLabels, seriesNames));
-                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
+                fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook, plotVisibleOnly), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
         }
@@ -1556,13 +1599,13 @@ internal sealed partial class PptxRenderer
         return false;
     }
 
-    private static IReadOnlyList<ChartIndexedNumberVector> ReadChartSeriesVectors(XElement chartElement, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartIndexedNumberVector> ReadChartSeriesVectors(XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         var series = new List<ChartIndexedNumberVector>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            ChartIndexedNumberVector values = ReadChartNumberVector(element.Element(ChartNamespace + "val"), workbook);
-            if (values.Points.Count > 0 || values.PointCount is not null)
+            ChartIndexedNumberVector values = ReadChartNumberVector(element.Element(ChartNamespace + "val"), workbook, plotVisibleOnly);
+            if (values.Points.Count > 0 || values.PointCount is not null || values.DensePoints().Count != 0)
             {
                 series.Add(values);
             }
@@ -1571,7 +1614,12 @@ internal sealed partial class PptxRenderer
         return series;
     }
 
-    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook = null)
+    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook)
+    {
+        return ReadChartNumberVector(container, workbook, plotVisibleOnly: true);
+    }
+
+    private static ChartIndexedNumberVector ReadChartNumberVector(XElement? container, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         if (container is null)
         {
@@ -1582,9 +1630,17 @@ internal sealed partial class PptxRenderer
             .Descendants(ChartNamespace + "numCache")
             .Concat(container.Descendants(ChartNamespace + "numLit"))
             .FirstOrDefault();
+        PptxSceneChartDataSource source = ReadChartDataSource(container, "numRef");
         if (cache is null)
         {
-            return default;
+            return new ChartIndexedNumberVector(
+                [],
+                null,
+                source.Formula,
+                null,
+                source,
+                ReadWorkbookNumberPoints(workbook, source),
+                plotVisibleOnly);
         }
 
         ChartIndexedNumberPoint[] points = cache
@@ -1607,14 +1663,14 @@ internal sealed partial class PptxRenderer
                     default);
             })
             .ToArray();
-        PptxSceneChartDataSource source = ReadChartDataSource(container, "numRef");
         return new ChartIndexedNumberVector(
             points,
             ReadChartPointCount(cache) ?? InferPointCount(points),
             source.Formula,
             (string?)cache.Element(ChartNamespace + "formatCode"),
             source,
-            ReadWorkbookNumberPoints(workbook, source));
+            ReadWorkbookNumberPoints(workbook, source),
+            plotVisibleOnly);
     }
 
     private static int? ReadChartPointCount(XElement cache)
@@ -4490,7 +4546,12 @@ internal sealed partial class PptxRenderer
             .FirstOrDefault();
     }
 
-    private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook = null)
+    private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook)
+    {
+        return ReadChartCategoryLabelVector(chartElement, workbook, plotVisibleOnly: true);
+    }
+
+    private static ChartIndexedTextVector ReadChartCategoryLabelVector(XElement chartElement, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         XElement? categories = chartElement
             .Element(ChartNamespace + "ser")
@@ -4507,9 +4568,17 @@ internal sealed partial class PptxRenderer
             .Concat(categories.Descendants(ChartNamespace + "numLit"))
             .Concat(categories.Descendants(ChartNamespace + "multiLvlStrCache"))
             .FirstOrDefault();
+        PptxSceneChartDataSource source = ReadChartDataSource(categories, "strRef", "numRef", "multiLvlStrRef");
         if (cache is null)
         {
-            return default;
+            return new ChartIndexedTextVector(
+                [],
+                null,
+                [],
+                source.Formula,
+                source,
+                ReadWorkbookTextPoints(workbook, source),
+                plotVisibleOnly);
         }
 
         IEnumerable<XElement> pointElements = cache.Name.LocalName == "multiLvlStrCache"
@@ -4523,14 +4592,14 @@ internal sealed partial class PptxRenderer
                 .Where(level => level.Length != 0)
                 .ToArray()
             : [];
-        PptxSceneChartDataSource source = ReadChartDataSource(categories, "strRef", "numRef", "multiLvlStrRef");
         return new ChartIndexedTextVector(
             points,
             ReadChartPointCount(cache) ?? InferPointCount(points),
             levels,
             source.Formula,
             source,
-            ReadWorkbookTextPoints(workbook, source));
+            ReadWorkbookTextPoints(workbook, source),
+            plotVisibleOnly);
     }
 
     private static ChartIndexedTextPoint[] ReadChartIndexedTextPoints(IEnumerable<XElement> sourcePoints)
@@ -4576,10 +4645,13 @@ internal sealed partial class PptxRenderer
         return entries;
     }
 
-    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartLegendEntry> BuildCategoryFillLegendEntries(PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, PptxSceneChartPlot? plot, XElement chartElement, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
-        ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook);
-        IReadOnlyList<ChartIndexedTextPoint> points = labels.Points ?? [];
+        ChartIndexedTextVector labels = ReadSceneOrXmlCategoryLabelVector(plot, chartElement, workbook, plotVisibleOnly);
+        IReadOnlyList<ChartIndexedTextPoint> points = labels.DensePoints()
+            .Where(point => point is not null)
+            .Select(point => point!.Value)
+            .ToArray();
         var entries = new List<ChartLegendEntry>(points.Count);
         foreach (ChartIndexedTextPoint point in points.OrderBy(point => point.Index))
         {
@@ -7517,17 +7589,17 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
-    private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null)
+    private static IReadOnlyList<ChartIndexedScatterSeries> ReadScatterSeriesVectors(XElement chartElement, bool readBubbleSize, ChartWorkbookData? workbook = null, bool plotVisibleOnly = true)
     {
         var series = new List<ChartIndexedScatterSeries>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            ChartIndexedNumberVector xValues = ReadChartNumberVector(element.Element(ChartNamespace + "xVal"), workbook);
-            ChartIndexedNumberVector yValues = ReadChartNumberVector(element.Element(ChartNamespace + "yVal"), workbook);
+            ChartIndexedNumberVector xValues = ReadChartNumberVector(element.Element(ChartNamespace + "xVal"), workbook, plotVisibleOnly);
+            ChartIndexedNumberVector yValues = ReadChartNumberVector(element.Element(ChartNamespace + "yVal"), workbook, plotVisibleOnly);
             ChartIndexedNumberVector bubbleSizes = readBubbleSize
-                ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"), workbook)
+                ? ReadChartNumberVector(element.Element(ChartNamespace + "bubbleSize"), workbook, plotVisibleOnly)
                 : default;
-            if (xValues.Points.Count == 0 && yValues.Points.Count == 0)
+            if (xValues.DensePoints().Count == 0 && yValues.DensePoints().Count == 0)
             {
                 continue;
             }
@@ -9797,10 +9869,12 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<ChartIndexedPieSlice> BuildChartIndexedPieSlices(ChartIndexedNumberVector values)
     {
-        IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints = (values.WorkbookPoints ?? [])
+        IReadOnlyDictionary<int, ChartIndexedNumberPoint> workbookPoints = values.WorkbookPointsForPlotVisibility(values.PlotVisibleOnly)
             .GroupBy(point => point.Index)
             .ToDictionary(group => group.Key, group => group.First());
-        return (values.Points ?? [])
+        return values.DensePoints()
+            .Where(point => point is not null)
+            .Select(point => point!.Value)
             .Where(point => point.Value is > 0d)
             .OrderBy(point => point.Index)
             .Select(point => new ChartIndexedPieSlice(
@@ -9967,11 +10041,17 @@ internal sealed partial class PptxRenderer
         string? Formula,
         string? FormatCode,
         PptxSceneChartDataSource Source,
-        IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints)
+        IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints,
+        bool PlotVisibleOnly)
     {
         public IReadOnlyList<ChartIndexedNumberPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedNumberPoint> points = Points ?? [];
+            if (points.Count == 0)
+            {
+                points = WorkbookPointsForPlotVisibility(PlotVisibleOnly);
+            }
+
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
             {
@@ -10026,11 +10106,17 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> Levels,
         string? Formula,
         PptxSceneChartDataSource Source,
-        IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints)
+        IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints,
+        bool PlotVisibleOnly)
     {
         public IReadOnlyList<ChartIndexedTextPoint?> DensePoints()
         {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
+            if (points.Count == 0)
+            {
+                points = WorkbookPointsForPlotVisibility(PlotVisibleOnly);
+            }
+
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
             {
