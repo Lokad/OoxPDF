@@ -4156,11 +4156,18 @@ High-priority actions:
   uses that Windows font box for visible lines; a synthetic Arial regression locks the rule in the public
   test suite. A trailing empty paragraph still has a small residual, so the current empty-paragraph midpoint
   rule is documented as temporary evidence rather than a final Office formula.
-- [ ] 2026-05-28: Continue the slide-17 typography path at the glyph-advance/segmentation layer. The private
+- [x] 2026-05-28: Continue the slide-17 typography path at the glyph-advance/segmentation layer. The private
   affected middle-anchored frame is now vertically close to Office, but the rightmost text segment still shows
   a PDF text-operation length and X-position difference. Treat that as a generic glyph grouping/advance issue:
   build a public Office-authored synthetic fixture that isolates emphasized trailing runs and line-end
-  segmentation before changing the renderer again.
+  segmentation before changing the renderer again. Closed structurally by
+  `pptx-ladder-04-typography-trailing-emphasis-probe.pptx`, generated through PowerPoint COM and locked by
+  `PptxTextOfficeTrailingEmphasisRunOwnsLineEndGlyphOperation`: the bold trailing visible run remains a
+  distinct glyph/text operation at the end of line 0, the hidden wrap separator stays as line-ending advance,
+  and the following word starts line 1. No renderer change was made because the public probe showed the
+  current model already preserves this Office-like boundary; any remaining private slide-17 text drift should
+  now be investigated as broader font metrics, run advance, or Office PDF grid rounding rather than a missing
+  trailing-emphasis segmentation rule.
 - [x] 2026-05-27: Retired the renderer-local PPTX background XML fallback. `RenderBackground` now consumes the
   scene-owned `PptxSceneBackground` record for master, layout, and slide backgrounds, preserving default white
   slide fallback while keeping unsupported background forms as scene/model debt rather than renderer-side XML
@@ -5496,7 +5503,10 @@ document-specific business content into public notes.
   space. `PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance` locks the generic flow-model rule and the public
   text-operation comparison matched all decoded operations and positions within tolerance. The highlight-only caveat
   remains preserved in the later revision log because public highlight fixtures proved that boundary has different
-  layout semantics.
+  layout semantics. A later 2026-05-28 COM-authored probe, `pptx-ladder-04-typography-trailing-emphasis-probe.pptx`,
+  separately locks the narrower trailing emphasized line-end case: the emphasized visible run remains its own
+  glyph operation, the hidden wrap separator owns only the line-ending advance, and the next word begins on the
+  following line.
 - [ ] Text frames: overflow behavior beyond hard clipping, autofit, shrink-to-fit, multi-column text, text
   rotation, and text inside arbitrary shapes.
 - [ ] Fonts: select bold/italic faces instead of drawing approximations; support fallback fonts, embedded

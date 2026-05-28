@@ -75,6 +75,36 @@ try {
         $text.Close()
     }
 
+    $trailingEmphasis = $powerPoint.Presentations.Add($false)
+    try {
+        $slide = $trailingEmphasis.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $box = $slide.Shapes.AddTextbox(1, 72, 72, 345, 110)
+        $box.TextFrame.MarginLeft = 0
+        $box.TextFrame.MarginRight = 0
+        $box.TextFrame.MarginTop = 0
+        $box.TextFrame.MarginBottom = 0
+        $box.TextFrame.WordWrap = -1
+        $box.TextFrame.AutoSize = 0
+
+        $textRange = $box.TextFrame.TextRange
+        $textRange.Text = "Quality decisions depend on careful operational planning and reliable daily execution."
+        $textRange.Font.Name = "Cambria Math"
+        $textRange.Font.Size = 14
+        $textRange.Font.Color.RGB = Rgb 30 30 30
+
+        $emphasisStart = $textRange.Text.IndexOf("planning") + 1
+        $emphasis = $textRange.Characters($emphasisStart, "planning".Length)
+        $emphasis.Font.Bold = $true
+        $emphasis.Font.Color.RGB = Rgb 30 30 30
+
+        $trailingEmphasis.SaveAs((Join-Path $cases "pptx-ladder-04-typography-trailing-emphasis-probe.pptx"), 24)
+    }
+    finally {
+        $trailingEmphasis.Close()
+    }
+
     $corporate = $powerPoint.Presentations.Add($false)
     try {
         $master = $corporate.SlideMaster

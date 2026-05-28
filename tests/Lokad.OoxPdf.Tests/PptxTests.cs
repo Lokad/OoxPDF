@@ -5975,6 +5975,46 @@ internal static class PptxTests
         TestAssert.Equal("reliable daily execution.", renderedLines[1]);
     }
 
+    public static void PptxTextOfficeTrailingEmphasisRunOwnsLineEndGlyphOperation()
+    {
+        string input = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "Cases",
+            "pptx-ladder-04-typography-trailing-emphasis-probe.pptx"));
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextLineLayoutSnapshot[] lines = PptxRenderer.InspectTextLayout(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Lines)
+            .ToArray();
+
+        TestAssert.Equal(2, lines.Length);
+        TestAssert.Equal("Quality decisions depend on careful operational planning", string.Concat(lines[0].Spans.Select(span => span.Text)));
+        TestAssert.Equal("and reliable daily execution.", string.Concat(lines[1].Spans.Select(span => span.Text)));
+        TestAssert.Equal("planning", lines[0].Spans[^1].Text);
+        double trailingSeparatorAdvance = lines[0].EndX - (lines[0].Spans[^1].X + lines[0].Spans[^1].Width);
+        TestAssert.True(
+            trailingSeparatorAdvance > 0d && trailingSeparatorAdvance < 4d,
+            "Expected the emphasized trailing visible run to be followed only by the hidden line-ending separator advance.");
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        TestAssert.Equal(3, glyphRuns.Length);
+        TestAssert.Equal("Quality decisions depend on careful operational ", glyphRuns[0].Text);
+        TestAssert.Equal("planning", glyphRuns[1].Text);
+        TestAssert.Equal("and reliable daily execution.", glyphRuns[2].Text);
+        TestAssert.Equal(0, glyphRuns[1].LineIndex);
+        TestAssert.Equal(1, glyphRuns[2].LineIndex);
+        TestAssert.True(
+            Math.Abs(glyphRuns[1].X - (glyphRuns[0].X + glyphRuns[0].Width)) < 0.01d,
+            "Expected the emphasized glyph operation to start at the preceding run advance while remaining a separate text operation.");
+    }
+
     public static void PptxSyntheticTextBoxHonorsNormAutofitFontScale()
     {
         string arial = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts", "arial.ttf");
