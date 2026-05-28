@@ -2291,6 +2291,14 @@ High-priority actions:
     closes only the provenance boundary used by source-linked formatting. Validation:
     `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
     `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 preserve workbook sidecars for raw XML series-name fallback:
+    raw numeric/category vectors already carried workbook sidecars in no-scene mode, but raw series-name
+    records dropped them when a workbook was available. The XML-only fallback now carries
+    `ReadWorkbookTextPoints` on `ChartSeriesNameRecord` while keeping cached names authoritative for active
+    rendered and legend text. This aligns scene and no-scene provenance without letting workbook-only series
+    names silently become chart text. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+    passed, focused non-slow `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`), and full non-slow
+    console runner passed (`406 passed, 0 failed, 7 skipped`).
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to

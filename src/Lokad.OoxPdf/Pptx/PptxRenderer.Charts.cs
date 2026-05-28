@@ -5109,10 +5109,10 @@ internal sealed partial class PptxRenderer
                 .ToArray();
         }
 
-        return ReadChartSeriesNameRecords(chartElement);
+        return ReadChartSeriesNameRecords(chartElement, workbook);
     }
 
-    private static IReadOnlyList<ChartSeriesNameRecord> ReadChartSeriesNameRecords(XElement chartElement)
+    private static IReadOnlyList<ChartSeriesNameRecord> ReadChartSeriesNameRecords(XElement chartElement, ChartWorkbookData? workbook = null)
     {
         return chartElement
             .Elements(ChartNamespace + "ser")
@@ -5120,7 +5120,8 @@ internal sealed partial class PptxRenderer
             {
                 string cacheName = ReadChartSeriesName(series)?.Trim() ?? string.Empty;
                 string activeName = string.IsNullOrWhiteSpace(cacheName) ? $"Series {index + 1}" : cacheName;
-                return new ChartSeriesNameRecord(activeName, cacheName, ReadChartSeriesNameDataSource(series), []);
+                PptxSceneChartDataSource source = ReadChartSeriesNameDataSource(series);
+                return new ChartSeriesNameRecord(activeName, cacheName, source, ReadWorkbookTextPoints(workbook, source));
             })
             .ToArray();
     }

@@ -16775,11 +16775,14 @@ internal static class PptxTests
         string activeSeriesName = (string?)getActiveSeriesName.Invoke(null, [typedRecords, 0]) ?? string.Empty;
         TestAssert.Equal("Cached Name", activeSeriesName);
 
-        object[] rawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, chartElement, null])) ?? throw new InvalidOperationException("Expected raw fallback series-name records.")).Cast<object>().ToArray();
+        object[] rawRecords = (((System.Collections.IEnumerable?)readNameRecords.Invoke(null, [null, chartElement, workbook])) ?? throw new InvalidOperationException("Expected raw fallback series-name records.")).Cast<object>().ToArray();
         TestAssert.True(rawRecords.Length == 1, "Expected raw XML fallback to preserve one series-name record.");
         TestAssert.Equal("Cached Name", (string?)rawRecords[0].GetType().GetProperty("ActiveName")?.GetValue(rawRecords[0]) ?? string.Empty);
         object rawSource = rawRecords[0].GetType().GetProperty("Source")?.GetValue(rawRecords[0]) ?? throw new InvalidOperationException("Expected raw series-name source metadata.");
         TestAssert.Equal("Sheet1!$B$1", (string?)rawSource.GetType().GetProperty("Formula")?.GetValue(rawSource) ?? string.Empty);
+        object[] rawWorkbookPoints = (((System.Collections.IEnumerable?)rawRecords[0].GetType().GetProperty("WorkbookPoints")?.GetValue(rawRecords[0])) ?? throw new InvalidOperationException("Expected raw series-name workbook sidecar points.")).Cast<object>().ToArray();
+        TestAssert.True(rawWorkbookPoints.Length == 1, "Expected raw XML series-name fallback to preserve workbook sidecar points.");
+        TestAssert.Equal("Workbook Name", (string?)rawWorkbookPoints[0].GetType().GetProperty("Text")?.GetValue(rawWorkbookPoints[0]) ?? string.Empty);
         TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
         TestAssert.Equal("strRef", (string?)rawSource.GetType().GetProperty("ReferenceKind")?.GetValue(rawSource) ?? string.Empty);
         TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
