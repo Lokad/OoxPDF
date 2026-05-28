@@ -15081,6 +15081,32 @@ internal static class PptxTests
         TestAssert.True((bool)(xmlStyle.GetType().GetProperty("Bold")?.GetValue(xmlStyle) ?? false), "Expected XML-only compatibility to keep reading axis text properties.");
     }
 
+    public static void PptxChartTextStyleCarriesTypefaceSourceThroughRendererStyle()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:txPr><a:p><a:pPr><a:defRPr sz="1100"><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        PptxSceneChart chart = BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
+        XDocument document = XDocument.Parse(chartXml);
+        System.Reflection.MethodInfo readStyle = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartTextStyle",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart text-style resolver.");
+
+        object style = readStyle.Invoke(null, [PptxTheme.Empty, chart, null, document, document.Root, 10d, null]) ?? throw new InvalidOperationException("Expected chart text style.");
+
+        TestAssert.Equal("Arial", (string?)style.GetType().GetProperty("FontFamily")?.GetValue(style) ?? string.Empty);
+        TestAssert.Equal("Arial", (string?)style.GetType().GetProperty("RequestedTypeface")?.GetValue(style) ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.Direct, (PptxThemeTypefaceSource?)style.GetType().GetProperty("TypefaceSource")?.GetValue(style) ?? default);
+    }
+
     public static void PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

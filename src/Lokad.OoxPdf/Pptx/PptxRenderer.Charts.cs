@@ -6097,7 +6097,18 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        ChartTextStyle style = new(ResolveChartThemeFontFamily(theme), PptxChartMetricRules.DataLabelFallbackFontSize, fallbackColor, Alpha: 1d, Bold: false, Italic: false, Underline: false, Strike: false);
+        PptxThemeTypefaceResolution typeface = ResolveChartThemeTypeface(theme);
+        ChartTextStyle style = new(
+            typeface.Typeface,
+            PptxChartMetricRules.DataLabelFallbackFontSize,
+            fallbackColor,
+            Alpha: 1d,
+            Bold: false,
+            Italic: false,
+            Underline: false,
+            Strike: false,
+            typeface.RequestedTypeface,
+            typeface.Typeface is null ? null : typeface.Source);
         return MergeChartTextStyle(style, options.TextStyle);
     }
 
@@ -6116,7 +6127,9 @@ internal sealed partial class PptxRenderer
             dataLabel.TextStyle.Bold ?? options.TextStyle.Bold,
             dataLabel.TextStyle.Italic ?? options.TextStyle.Italic,
             dataLabel.TextStyle.Underline ?? options.TextStyle.Underline,
-            dataLabel.TextStyle.Strike ?? options.TextStyle.Strike);
+            dataLabel.TextStyle.Strike ?? options.TextStyle.Strike,
+            dataLabel.TextStyle.FontFamily is null ? options.TextStyle.RequestedTypeface : dataLabel.TextStyle.RequestedTypeface,
+            dataLabel.TextStyle.FontFamily is null ? options.TextStyle.TypefaceSource : dataLabel.TextStyle.TypefaceSource);
         return options with
         {
             ShowValue = dataLabel.ShowValue ?? options.ShowValue,
@@ -6335,12 +6348,33 @@ internal sealed partial class PptxRenderer
         RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
-        return new ChartTextStyle(ResolveChartThemeFontFamily(theme), fallbackFontSize, fallbackColor, Alpha: 1d, Bold: false, Italic: false, Underline: false, Strike: false);
+        PptxThemeTypefaceResolution typeface = ResolveChartThemeTypeface(theme);
+        return new ChartTextStyle(
+            typeface.Typeface,
+            fallbackFontSize,
+            fallbackColor,
+            Alpha: 1d,
+            Bold: false,
+            Italic: false,
+            Underline: false,
+            Strike: false,
+            typeface.RequestedTypeface,
+            typeface.Typeface is null ? null : typeface.Source);
     }
 
     private static ChartTextStyleOverride ToChartTextStyleOverride(PptxSceneChartTextStyleOverride style)
     {
-        return new ChartTextStyleOverride(style.FontFamily, style.FontSize, style.Color, style.Alpha, style.Bold, style.Italic, style.Underline, style.Strike);
+        return new ChartTextStyleOverride(
+            style.FontFamily,
+            style.FontSize,
+            style.Color,
+            style.Alpha,
+            style.Bold,
+            style.Italic,
+            style.Underline,
+            style.Strike,
+            style.RequestedTypeface,
+            style.TypefaceSource);
     }
 
     private static ChartTextStyleOverride ReadChartStyleRoleTextStyle(PptxSceneChartStyle stylePart, string role)
@@ -6349,10 +6383,16 @@ internal sealed partial class PptxRenderer
         return ToChartTextStyleOverride(entry.TextStyle);
     }
 
-    private static string? ResolveChartThemeFontFamily(PptxTheme theme)
+    private static PptxThemeTypefaceResolution ResolveChartThemeTypeface(PptxTheme theme)
     {
-        return theme.ResolveTypeface("+mn-lt") ??
-            theme.ResolveTypeface("+mj-lt");
+        PptxThemeTypefaceResolution minorLatin = theme.ResolveTypefaceWithSource("+mn-lt");
+        if (minorLatin.Typeface is not null)
+        {
+            return minorLatin;
+        }
+
+        PptxThemeTypefaceResolution majorLatin = theme.ResolveTypefaceWithSource("+mj-lt");
+        return majorLatin.Typeface is null ? default : majorLatin;
     }
 
     private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme)
@@ -6370,9 +6410,12 @@ internal sealed partial class PptxRenderer
         string? typeface = (string?)defRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
             (string?)defRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
             (string?)defRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
+        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
+            ? default
+            : theme.ResolveTypefaceWithSource(typeface);
         string? fontFamily = string.IsNullOrWhiteSpace(typeface)
             ? null
-            : theme.ResolveTypeface(typeface);
+            : typefaceResolution.Typeface;
 
         double? fontSize = null;
         if (defRunProperties.Attribute("sz") is { } sizeAttribute &&
@@ -6393,7 +6436,17 @@ internal sealed partial class PptxRenderer
             : null;
         bool? underline = ReadChartUnderline(defRunProperties);
         bool? strike = ReadChartStrike(defRunProperties);
-        return new ChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
+        return new ChartTextStyleOverride(
+            fontFamily,
+            fontSize,
+            color,
+            color is null ? null : alpha,
+            bold,
+            italic,
+            underline,
+            strike,
+            typefaceResolution.RequestedTypeface,
+            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source);
     }
 
     private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
@@ -6434,7 +6487,9 @@ internal sealed partial class PptxRenderer
             next.Bold ?? style.Bold,
             next.Italic ?? style.Italic,
             next.Underline ?? style.Underline,
-            next.Strike ?? style.Strike);
+            next.Strike ?? style.Strike,
+            next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
+            next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource);
     }
 
     private static ChartTextStyleOverride MergeChartTextStyleOverride(ChartTextStyleOverride style, ChartTextStyleOverride next)
@@ -6447,7 +6502,9 @@ internal sealed partial class PptxRenderer
             next.Bold ?? style.Bold,
             next.Italic ?? style.Italic,
             next.Underline ?? style.Underline,
-            next.Strike ?? style.Strike);
+            next.Strike ?? style.Strike,
+            next.FontFamily is null ? style.RequestedTypeface : next.RequestedTypeface,
+            next.FontFamily is null ? style.TypefaceSource : next.TypefaceSource);
     }
 
     private static ChartDataLabelOptions ReadChartDataLabelOptions(XElement chartElement, PptxTheme theme)
@@ -10876,11 +10933,31 @@ internal sealed partial class PptxRenderer
         public static ChartAxisUnits Empty { get; } = new(null, null);
     }
 
-    private readonly record struct ChartTextStyle(string? FontFamily, double FontSize, RgbColor Color, double Alpha, bool Bold, bool Italic, bool Underline, bool Strike);
+    private readonly record struct ChartTextStyle(
+        string? FontFamily,
+        double FontSize,
+        RgbColor Color,
+        double Alpha,
+        bool Bold,
+        bool Italic,
+        bool Underline,
+        bool Strike,
+        string? RequestedTypeface,
+        PptxThemeTypefaceSource? TypefaceSource);
 
-    private readonly record struct ChartTextStyleOverride(string? FontFamily, double? FontSize, RgbColor? Color, double? Alpha, bool? Bold, bool? Italic, bool? Underline, bool? Strike)
+    private readonly record struct ChartTextStyleOverride(
+        string? FontFamily,
+        double? FontSize,
+        RgbColor? Color,
+        double? Alpha,
+        bool? Bold,
+        bool? Italic,
+        bool? Underline,
+        bool? Strike,
+        string? RequestedTypeface,
+        PptxThemeTypefaceSource? TypefaceSource)
     {
-        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null, null, null, null);
+        public static ChartTextStyleOverride Empty { get; } = new(null, null, null, null, null, null, null, null, null, null);
     }
 
     private static IReadOnlyDictionary<int, ChartDataLabelOverride> EmptyChartDataLabelOverrides { get; } = new Dictionary<int, ChartDataLabelOverride>();

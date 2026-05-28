@@ -3717,6 +3717,14 @@ High-priority actions:
   and glyph fallback staging. Validation: focused non-slow `pptx-model` passed (`25` passed, `0` failed,
   `1` skipped); focused non-slow `pptx-typography` passed (`98` passed, `0` failed, `2` slow skips); full
   non-slow console runner passed (`402` passed, `0` failed, `7` slow skips).
+  2026-05-28 progress: chart renderer text styles now preserve typeface provenance after consuming scene
+  chart text styles. The renderer-local `ChartTextStyle` and `ChartTextStyleOverride` records carry the
+  requested OOXML typeface token and nullable `PptxThemeTypefaceSource` beside the flattened font family, and
+  chart text merges preserve that source when later overrides do not supply a font. Keep this item open for a
+  shared chart run cascade object, symbol font diagnostics, and downstream glyph fallback staging. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
+  passed (`132` passed, `0` failed, `0` skipped); full non-slow console runner passed (`403` passed,
+  `0` failed, `7` slow skips).
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
   2026-05-28 progress: solid color parsing is now centralized in `PptxColorResolver` and shared by the
@@ -14929,6 +14937,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `402`
 tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Chart renderer text style merging now preserves theme-font provenance instead of
+flattening scene chart text to a bare font family. The private renderer `ChartTextStyle` and
+`ChartTextStyleOverride` records carry the requested OOXML typeface token plus nullable
+`PptxThemeTypefaceSource`, default chart text resolves `+mn-lt`/`+mj-lt` through the source-bearing resolver,
+and data-label/title/legend/axis merges retain the previous provenance when an override does not supply a new
+font. A focused chart test now verifies that scene-backed chart text reaches the renderer style with
+`FontFamily`, `RequestedTypeface`, and `TypefaceSource` intact.
+
+This is still an intermediate boundary, not the final chart text architecture. Chart text retains
+renderer-local style records and run-property readers; the remaining long-term step is a shared chart run
+cascade compatible with the common text model, followed by explicit symbol-font diagnostics and glyph fallback
+policy.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `132` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `403` tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
