@@ -966,9 +966,13 @@ internal static class PptxTests
         TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
         TestAssert.True(textFrame.Paragraphs[0].ResolvedCascadeSourceCount >= 2, "Expected text model to expose inherited cascade inputs before style resolution.");
         TestAssert.Contains("shape.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
+        TestAssert.Contains("layout.placeholder.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
+        TestAssert.Contains("master.placeholder.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Contains("inherited.txStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Contains("defaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Contains("ShapeListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
+        TestAssert.Contains("LayoutPlaceholderListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
+        TestAssert.Contains("MasterPlaceholderListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.Contains("InheritedTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.Contains("DefaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.True(textFrame.Paragraphs[0].ResolvedStyleSourceCount >= textFrame.Paragraphs[0].ResolvedCascadeSourceCount + 1, "Expected resolved paragraph style provenance to include direct paragraph properties after inherited defaults.");

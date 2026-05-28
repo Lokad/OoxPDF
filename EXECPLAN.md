@@ -1402,6 +1402,14 @@ High-priority actions:
   `InheritedPlaceholderListStyle`, `InheritedTextStyle`, `DefaultTextStyle`) alongside the descriptive layer names,
   and `InspectTextFrameModels` exposes `CascadeLayerKinds`. This keeps current behavior unchanged while giving the
   future seven-level resolver a non-stringly inspection surface for structural parity checks.
+- [x] Split inherited placeholder cascade diagnostics by master/layout provenance:
+  the direct text model now names inherited placeholder list-style layers as `master.placeholder.lstStyle` and
+  `layout.placeholder.lstStyle` when both inherited sources are present, with matching `MasterPlaceholderListStyle`
+  and `LayoutPlaceholderListStyle` kinds. This preserves the existing layout-over-master priority while removing an
+  anonymous `placeholder[index]` inspection gap that made the seven-level cascade hard to audit. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` and
+  `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
+  passed (`92 passed, 0 failed, 2 skipped`).
 - [x] Add named run-style cascade diagnostics before layout:
   `PptxTextRunModel` now carries a `PptxRunStyleCascade` with explicit `run.rPr`/`break.rPr` and
   `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable

@@ -672,8 +672,8 @@ internal sealed partial class PptxRenderer
         };
         layers.AddRange(inheritedPlaceholders
             .Select((placeholder, index) => new PptxParagraphStyleLayer(
-                $"placeholder[{index}].lstStyle",
-                PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle,
+                InheritedPlaceholderLayerName(index, placeholderSources.Count),
+                InheritedPlaceholderLayerKind(index, placeholderSources.Count),
                 placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
             .Reverse());
         layers.Add(new PptxParagraphStyleLayer(
@@ -685,6 +685,26 @@ internal sealed partial class PptxRenderer
             PptxParagraphStyleLayerKind.DefaultTextStyle,
             FindDefaultTextStyle(placeholderSources, levelName)));
         return new PptxParagraphStyleCascade(levelName, layers);
+    }
+
+    private static string InheritedPlaceholderLayerName(int sourceIndex, int sourceCount)
+    {
+        return (sourceCount, sourceIndex) switch
+        {
+            (2, 0) => "master.placeholder.lstStyle",
+            (2, _) => "layout.placeholder.lstStyle",
+            _ => $"inherited.placeholder[{sourceIndex}].lstStyle"
+        };
+    }
+
+    private static PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(int sourceIndex, int sourceCount)
+    {
+        return (sourceCount, sourceIndex) switch
+        {
+            (2, 0) => PptxParagraphStyleLayerKind.MasterPlaceholderListStyle,
+            (2, _) => PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle,
+            _ => PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle
+        };
     }
 
     private static PptxParagraphStyleCascade BuildResolvedParagraphStyleCascade(

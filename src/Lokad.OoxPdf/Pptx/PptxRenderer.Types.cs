@@ -441,6 +441,8 @@ internal sealed partial class PptxRenderer
     {
         ShapeListStyle,
         InheritedPlaceholderListStyle,
+        MasterPlaceholderListStyle,
+        LayoutPlaceholderListStyle,
         InheritedTextStyle,
         DefaultTextStyle,
         ParagraphProperties
