@@ -2588,6 +2588,14 @@ High-priority actions:
     `PptxSceneBuilder.ReadChartTextRuns` instead of flattening rich title text before emission. This keeps the
     legacy fallback no richer than the typed scene path while reducing parser duplication. Validation: focused
     `pptx-charts` tests passed `40/40`.
+  - [x] 2026-05-28 Make chart-title polar placement detection scene-authoritative:
+    `RenderChartTitle` now decides whether to use the polar title baseline from scene-owned plot kinds when a
+    `PptxSceneChart` is available, and falls back to raw chart XML only for XML-only compatibility paths. The
+    regression pairs a scene-owned pie chart with deliberately mismatched fallback line-chart XML, proving the
+    scene-backed title path stays polar while the XML-only path keeps the previous fallback behavior. This does
+    not close chart-title layout generally; it removes one more raw-XML steering point before Office-PDF-backed
+    title placement work. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed,
+    and focused non-slow `pptx-charts` passed (`110 passed, 0 failed, 0 skipped`).
   - [x] 2026-05-28 Preserve and emit chart text underline/strike style:
     `PptxSceneChartTextStyleOverride` and the renderer's `ChartTextStyleOverride` now carry underline and
     strike state from chart `txPr`, chart-style role text defaults, direct title/legend/axis/data-label
