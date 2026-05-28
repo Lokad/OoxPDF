@@ -11414,12 +11414,22 @@ missing-cache cases separately from genuinely unsupported chart kinds, instead o
 catch-all warning.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
-`pptx-charts` passed (`51 passed, 0 failed, 0 skipped`); sparse/blank visual probe passed at run
-`20260527-114937` with unchanged MAE `2.424721016589506`, changed16 `0.028974247685185184`, SSIM
-`0.6863076919549375`, and diagnostic `PPTX_CHART_MISSING_CACHED_DATA` for `/ppt/charts/chart2.xml`.
+  `pptx-charts` passed (`51 passed, 0 failed, 0 skipped`); sparse/blank visual probe passed at run
+  `20260527-114937` with unchanged MAE `2.424721016589506`, changed16 `0.028974247685185184`, SSIM
+  `0.6863076919549375`, and diagnostic `PPTX_CHART_MISSING_CACHED_DATA` for `/ppt/charts/chart2.xml`.
 
-Revision note, 2026-05-27: Made vertical chart legend clip width content-aware. The sparse/blank probe exposed
-a structural PDF issue after the candidate-only chart was removed: right-side legend text was emitted but
+  Revision note, 2026-05-28: Rechecked the older public Ladder 11 chart ports that still allowed static
+  fallback or unsupported-chart diagnostics. The regular port cases now render natively with empty diagnostics in
+  the current worktree, so their manifests require `diagnosticsMustBeEmpty: true` instead of carrying obsolete
+  allowances: clustered/stacked bar, clustered/stacked column, line 3-series, line markers, scatter clusters,
+  smooth scatter, data-label legend keys, composite chart, and composite two charts. Representative rerun
+  artifacts are `20260528-122134..20260528-122318` under `artifacts/visual`. This does not close chart layout
+  parity; it only tightens the diagnostic contract so future regressions cannot silently fall back to static
+  chart output. The sparse/blank points probe stays on its older diagnostic allowance until its current
+  structural gate mismatch is resolved separately.
+
+  Revision note, 2026-05-27: Made vertical chart legend clip width content-aware. The sparse/blank probe exposed
+  a structural PDF issue after the candidate-only chart was removed: right-side legend text was emitted but
 clipped to short fragments because vertical legend width came from a plot-box ratio even when the renderer had
 the series-name text widths. `RenderChartLegend` now sizes every non-horizontal legend from marker width,
 text gap, and estimated legend text width, while preserving the old plot-box-ratio width as a floor for

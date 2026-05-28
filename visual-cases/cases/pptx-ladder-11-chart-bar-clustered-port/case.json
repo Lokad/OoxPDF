@@ -8,7 +8,7 @@
     "minAgentRating": 1,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": false,
+    "diagnosticsMustBeEmpty": true,
     "maxMeanAbsoluteError": 15.9,
     "maxChangedPixelRatioAtThreshold16": 0.186,
     "maxChartGraphicsStructureBoundsDelta": 1.0,
@@ -21,8 +21,5 @@
       "ValueAxisTickLabel": 0.25,
       "ChartTitleText": 1.0
     }
-  },
-  "allowedUnsupportedFeatures": [
-    "PPTX_CHART_STATIC_FALLBACK"
-  ]
+  }
 }
