@@ -12041,6 +12041,25 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated bar-chart renderer option resolution behind `ChartBarPlotOptions`.
+The bar renderer path now resolves grouping, bar direction, `varyColors`, `gapWidth`, and `overlap` once at
+the scene/XML boundary and then passes the typed option record through primary bars, secondary/combo bars,
+data-label placement, and secondary-axis extent fallback. XML-only charts still use the existing compatibility
+readers, but charts with a `PptxSceneChartPlot` no longer scatter independent `ReadSceneOrXml*` scalar reads
+across the bar rendering branch.
+
+This is a structural cleanup, not an Office layout change. It is a step toward removing renderer-local XML
+heuristics because the active bar path now has a single typed contract that can later be fed by scene-only
+state or Office-PDF-derived layout evidence. The new regression intentionally passes mismatched fallback XML
+beside a scene plot with unknown/missing option values; the resolved options must use scene-owned defaults
+(`clustered`, `column`, `varyColors=true`, `gapWidth=150`, `overlap=0`) rather than borrowing the fallback
+XML values.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `90` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `331` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing

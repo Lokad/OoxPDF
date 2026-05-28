@@ -12120,6 +12120,56 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)barDirection);
     }
 
+    public static void PptxChartBarOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:barDir val="bogus"/>
+                  <c:grouping val="bogus"/>
+                  <c:gapWidth val="futureGap"/>
+                  <c:overlap val="futureOverlap"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.Equal(PptxSceneChartGrouping.Unknown, plot.GroupingKind);
+        TestAssert.Equal(PptxSceneChartBarDirection.Unknown, plot.BarDirectionKind);
+        TestAssert.True(plot.VaryColors is null, "Expected missing varyColors metadata to remain distinct from the effective renderer default.");
+        TestAssert.Equal(string.Empty, plot.VaryColorsValue);
+        TestAssert.Equal(null, plot.GapWidth);
+        TestAssert.Equal(null, plot.Overlap);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart>
+                <c:barDir val="bar"/>
+                <c:grouping val="stacked"/>
+                <c:varyColors val="0"/>
+                <c:gapWidth val="300"/>
+                <c:overlap val="75"/>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartBarOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart bar-option resolver.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxSceneChartGrouping.Clustered]) ?? throw new InvalidOperationException("Expected resolved bar options.");
+        Type optionsType = options.GetType();
+
+        TestAssert.Equal(PptxSceneChartGrouping.Clustered, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
+        TestAssert.Equal(PptxSceneChartBarDirection.Column, (PptxSceneChartBarDirection)(optionsType.GetProperty("BarDirection")?.GetValue(options) ?? default(PptxSceneChartBarDirection)));
+        TestAssert.True((bool)(optionsType.GetProperty("VaryColors")?.GetValue(options) ?? false), "Expected missing effective scene varyColors to use the scene default, not the XML fallback.");
+        TestAssert.Equal(150d, (double)(optionsType.GetProperty("GapWidth")?.GetValue(options) ?? double.NaN));
+        TestAssert.Equal(0d, (double)(optionsType.GetProperty("Overlap")?.GetValue(options) ?? double.NaN));
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

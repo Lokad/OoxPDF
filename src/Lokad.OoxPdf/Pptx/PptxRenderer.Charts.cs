@@ -402,6 +402,23 @@ internal sealed partial class PptxRenderer
             : ReadChartVaryColors(chartElement);
     }
 
+    private readonly record struct ChartBarPlotOptions(
+        PptxSceneChartGrouping Grouping,
+        PptxSceneChartBarDirection BarDirection,
+        bool VaryColors,
+        double GapWidth,
+        double Overlap);
+
+    private static ChartBarPlotOptions ReadSceneOrXmlChartBarOptions(PptxSceneChartPlot? plot, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
+    {
+        return new ChartBarPlotOptions(
+            ReadSceneOrXmlChartGrouping(plot, chartElement, defaultGrouping),
+            ReadSceneOrXmlChartBarDirection(plot, chartElement),
+            ReadSceneOrXmlChartVaryColors(plot, chartElement),
+            ReadSceneOrXmlChartGapWidth(plot, chartElement),
+            ReadSceneOrXmlChartOverlap(plot, chartElement));
+    }
+
     private static double ReadSceneOrXmlChartGapWidth(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
@@ -857,9 +874,8 @@ internal sealed partial class PptxRenderer
             int barSeriesCount = CountRenderableSeries(barSeriesVectors);
             if (barSeriesCount != 0)
             {
-                PptxSceneChartBarDirection barDirection = ReadSceneOrXmlChartBarDirection(barPlot, barChart);
-                bool horizontalBars = barDirection == PptxSceneChartBarDirection.Bar;
-                PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(barPlot, barChart, PptxSceneChartGrouping.Clustered);
+                ChartBarPlotOptions barOptions = ReadSceneOrXmlChartBarOptions(barPlot, barChart, PptxSceneChartGrouping.Clustered);
+                bool horizontalBars = barOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(barPlot, barChart, theme);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, barPlot, chartXml, theme, barChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
@@ -867,11 +883,10 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxis = valueAxisSource.XmlAxis;
                 PptxSceneChartAxis? valueSceneAxis = valueAxisSource.SceneAxis;
                 ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueSceneAxis, valueAxis, theme);
-                bool percentStacked = IsPercentStackedChartGrouping(grouping);
-                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeriesVectors, grouping), percentStacked);
+                bool percentStacked = IsPercentStackedChartGrouping(barOptions.Grouping);
+                ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueSceneAxis, valueAxis, GetBarChartValueExtents(barSeriesVectors, barOptions.Grouping), percentStacked);
                 ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueSceneAxis, valueAxis), percentStacked);
                 bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueSceneAxis, valueAxis);
-                bool varyColors = ReadSceneOrXmlChartVaryColors(barPlot, barChart);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(barPlot, barChart, theme, ChartFilledSeriesInheritedStrokeWidth);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> pointFills = ReadSceneOrXmlSeriesPointFills(barPlot, barChart, theme);
                 IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesStroke>> pointStrokes = ReadSceneOrXmlSeriesPointStrokes(barPlot, barChart, theme);
@@ -881,7 +896,7 @@ internal sealed partial class PptxRenderer
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 double? valueAxisCrossingValue = ReadSceneOrXmlValueAxisCrossingValue(valueSceneAxis, valueAxis, valueExtents);
                 bool valueAxisLabelsVisible = IsSceneOrXmlChartAxisLabelVisible(valueSceneAxis, valueAxis);
-                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, varyColors, ReadSceneOrXmlChartGapWidth(barPlot, barChart), ReadSceneOrXmlChartOverlap(barPlot, barChart));
+                RenderBarChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions.Grouping, seriesFills, pointFills, pointStrokes, ReadSceneOrXmlMajorGridlines(valueSceneAxis, valueAxis), ReadSceneOrXmlMinorGridlines(valueSceneAxis, valueAxis), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, valueAxisCrossingValue, valueAxisReversed, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barOptions.VaryColors, barOptions.GapWidth, barOptions.Overlap);
                 XElement? secondaryValueAxis = null;
                 PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
@@ -899,14 +914,13 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    PptxSceneChartGrouping extraGrouping = ReadSceneOrXmlChartGrouping(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
-                    PptxSceneChartBarDirection extraBarDirection = ReadSceneOrXmlChartBarDirection(extraBarPlot, extraBarChart);
-                    bool extraHorizontalBars = extraBarDirection == PptxSceneChartBarDirection.Bar;
+                    ChartBarPlotOptions extraBarOptions = ReadSceneOrXmlChartBarOptions(extraBarPlot, extraBarChart, PptxSceneChartGrouping.Clustered);
+                    bool extraHorizontalBars = extraBarOptions.BarDirection == PptxSceneChartBarDirection.Bar;
                     ChartAxisSource extraValueAxisSource = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, extraBarPlot, chartXml, extraBarChart).FirstOrDefault();
                     XElement? extraValueAxis = extraValueAxisSource.XmlAxis;
                     PptxSceneChartAxis? extraValueSceneAxis = extraValueAxisSource.SceneAxis;
-                    bool extraPercentStacked = IsPercentStackedChartGrouping(extraGrouping);
-                    ChartValueExtents extraValueExtents = ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeriesVectors, extraGrouping), extraPercentStacked);
+                    bool extraPercentStacked = IsPercentStackedChartGrouping(extraBarOptions.Grouping);
+                    ChartValueExtents extraValueExtents = ReadPercentStackedAwareValueAxisExtents(extraValueSceneAxis, extraValueAxis, GetBarChartValueExtents(extraSeriesVectors, extraBarOptions.Grouping), extraPercentStacked);
                     ChartAxisUnits extraAxisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(extraValueSceneAxis, extraValueAxis), extraPercentStacked);
                     IReadOnlyList<ChartSeriesFill?> extraSeriesFills = ReadSceneOrXmlSeriesFills(extraBarPlot, extraBarChart, theme);
                     IReadOnlyList<ChartSeriesStroke?> extraSeriesStrokes = ReadSceneOrXmlSeriesStrokes(extraBarPlot, extraBarChart, theme, ChartFilledSeriesInheritedStrokeWidth);
@@ -929,7 +943,7 @@ internal sealed partial class PptxRenderer
                         plotBox,
                         extraSeriesVectors,
                         extraHorizontalBars,
-                        extraGrouping,
+                        extraBarOptions.Grouping,
                         extraSeriesFills,
                         extraPointFills,
                         extraPointStrokes,
@@ -944,9 +958,9 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
-                        ReadSceneOrXmlChartVaryColors(extraBarPlot, extraBarChart),
-                        ReadSceneOrXmlChartGapWidth(extraBarPlot, extraBarChart),
-                        ReadSceneOrXmlChartOverlap(extraBarPlot, extraBarChart));
+                        extraBarOptions.VaryColors,
+                        extraBarOptions.GapWidth,
+                        extraBarOptions.Overlap);
                     fonts.AddRange(RenderBarDataLabels(
                         theme,
                         graphics,
@@ -958,7 +972,7 @@ internal sealed partial class PptxRenderer
                         ReadSceneOrXmlValueAxisReversed(extraValueSceneAxis, extraValueAxis),
                         extraSeriesFills,
                         extraPointFills,
-                        ReadSceneOrXmlChartVaryColors(extraBarPlot, extraBarChart),
+                        extraBarOptions.VaryColors,
                         ReadSceneOrXmlDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, extraBarPlot, extraBarChart, theme),
                         ReadSceneOrXmlCategoryLabelVector(extraBarPlot, extraBarChart, workbook),
@@ -1074,7 +1088,7 @@ internal sealed partial class PptxRenderer
                         }
                         else
                         {
-                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeriesVectors, grouping)));
+                            fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetBarChartValueExtents(barSeriesVectors, barOptions.Grouping)));
                         }
                     }
                 }
@@ -1094,7 +1108,7 @@ internal sealed partial class PptxRenderer
                     valueAxisReversed,
                     seriesFills,
                     pointFills,
-                    varyColors,
+                    barOptions.VaryColors,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, barPlot, barChart, theme),
                     ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook),
