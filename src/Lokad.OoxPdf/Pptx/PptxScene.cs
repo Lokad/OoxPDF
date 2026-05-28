@@ -1912,9 +1912,9 @@ internal sealed class PptxSceneBuilder
                 ReadBackground(masterXml, theme, masterColorMap),
                 ReadBackground(layoutXml, theme, layoutColorMap),
                 ReadBackground(slideXml, theme, slideColorMap),
-                masterXml is null ? [] : ReadNodes(masterXml, [], theme, package, masterRelationships),
-                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, package, layoutRelationships),
-                ReadNodes(slideXml, slideSources, theme, package, slideRelationships)));
+                masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships),
+                layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships),
+                ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships)));
         }
 
         return new PptxScene(document, theme, slides);
@@ -1957,13 +1957,14 @@ internal sealed class PptxSceneBuilder
         XDocument xml,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
+        PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         var nodes = new List<PptxSceneNode>();
         foreach (XElement shapeTree in xml.Descendants(PresentationNamespace + "spTree"))
         {
-            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, package, relationships));
+            nodes.AddRange(ReadChildNodes(shapeTree, placeholderSources, theme, colorMap, package, relationships));
         }
 
         return nodes;
@@ -1984,6 +1985,7 @@ internal sealed class PptxSceneBuilder
         XElement container,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
+        PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
@@ -2006,12 +2008,12 @@ internal sealed class PptxSceneBuilder
                 ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, package, relationships) : null,
-                ReadTextBody(child, placeholderSources, theme),
+                ReadTextBody(child, placeholderSources, theme, colorMap),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
-                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, package, relationships) : [],
+                kind == PptxSceneNodeKind.Group ? ReadChildNodes(child, placeholderSources, theme, colorMap, package, relationships) : [],
                 child));
         }
 
@@ -4934,7 +4936,7 @@ internal sealed class PptxSceneBuilder
             : 0d;
     }
 
-    private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme)
+    private static PptxSceneTextBody? ReadTextBody(XElement element, IReadOnlyList<XDocument> placeholderSources, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? textBody = element.Element(PresentationNamespace + "txBody");
         if (textBody is null)
@@ -4950,7 +4952,7 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneTextBody(
             textBody.Element(DrawingNamespace + "bodyPr"),
             textBody.Element(DrawingNamespace + "lstStyle"),
-            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, placeholderSources, theme)).ToArray());
+            textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, placeholderSources, theme, colorMap)).ToArray());
     }
 
     private static PptxSceneTextParagraph ReadParagraph(
@@ -4959,7 +4961,8 @@ internal sealed class PptxSceneBuilder
         XElement textBody,
         IReadOnlyList<XElement> inheritedTextBodies,
         IReadOnlyList<XDocument> placeholderSources,
-        PptxTheme theme)
+        PptxTheme theme,
+        PptxColorMap colorMap)
     {
         XElement? properties = paragraph.Element(DrawingNamespace + "pPr");
         int level = properties?.Attribute("lvl") is { } levelAttribute
@@ -4973,16 +4976,16 @@ internal sealed class PptxSceneBuilder
             placeholderSources);
         XElement? defaultRunProperties = properties?.Element(DrawingNamespace + "defRPr") ??
             defaultParagraphProperties?.Element(DrawingNamespace + "defRPr");
-        PptxSceneParagraphStyle resolvedStyle = ResolveParagraphStyle(level, properties, defaultParagraphProperties, defaultRunProperties, shape, theme);
+        PptxSceneParagraphStyle resolvedStyle = ResolveParagraphStyle(level, properties, defaultParagraphProperties, defaultRunProperties, shape, theme, colorMap);
         return new PptxSceneTextParagraph(
             properties,
             paragraph.Element(DrawingNamespace + "endParaRPr"),
             level,
             resolvedStyle,
-            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
+            paragraph.Elements().Select(run => ReadRun(run, defaultRunProperties, resolvedStyle, theme, colorMap)).Where(run => run is not null).Cast<PptxSceneTextRun>().ToArray());
     }
 
-    private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme)
+    private static PptxSceneTextRun? ReadRun(XElement element, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)
     {
         if (element.Name == DrawingNamespace + "r")
         {
@@ -4991,14 +4994,14 @@ internal sealed class PptxSceneBuilder
                 PptxSceneTextRunKind.Text,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
                 runProperties,
-                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme),
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap),
                 element);
         }
 
         if (element.Name == DrawingNamespace + "br")
         {
             XElement? runProperties = element.Element(DrawingNamespace + "rPr");
-            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme), element);
+            return new PptxSceneTextRun(PptxSceneTextRunKind.Break, "\n", runProperties, ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap), element);
         }
 
         if (element.Name == DrawingNamespace + "fld")
@@ -5008,7 +5011,7 @@ internal sealed class PptxSceneBuilder
                 PptxSceneTextRunKind.Field,
                 (string?)element.Element(DrawingNamespace + "t") ?? string.Empty,
                 runProperties,
-                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme),
+                ResolveRunStyle(runProperties, defaultRunProperties, paragraphStyle, theme, colorMap),
                 element);
         }
 
@@ -5096,15 +5099,16 @@ internal sealed class PptxSceneBuilder
         XElement? defaultParagraphProperties,
         XElement? defaultRunProperties,
         XElement shape,
-        PptxTheme theme)
+        PptxTheme theme,
+        PptxColorMap colorMap)
     {
         double fontSize = ReadFontSize(defaultRunProperties, null);
-        RgbColor color = TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double alpha)
+        RgbColor color = TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double alpha)
             ? defaultColor
-            : TryReadShapeFontColor(shape, theme, out RgbColor shapeColor)
+            : TryReadShapeFontColor(shape, theme, colorMap, out RgbColor shapeColor)
                 ? shapeColor
                 : new RgbColor(0, 0, 0);
-        if (!TryReadSolidColorWithAlpha(defaultRunProperties, theme, out _, out alpha))
+        if (!TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out _, out alpha))
         {
             alpha = 1d;
         }
@@ -5122,17 +5126,17 @@ internal sealed class PptxSceneBuilder
             ReadCharacterSpacing(defaultRunProperties, null));
     }
 
-    private static PptxSceneRunStyle ResolveRunStyle(XElement? runProperties, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme)
+    private static PptxSceneRunStyle ResolveRunStyle(XElement? runProperties, XElement? defaultRunProperties, PptxSceneParagraphStyle paragraphStyle, PptxTheme theme, PptxColorMap colorMap)
     {
         double fontSize = ReadFontSize(runProperties, defaultRunProperties);
         double alpha = paragraphStyle.Alpha;
         RgbColor color = paragraphStyle.Color;
-        if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+        if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             alpha = runAlpha;
         }
-        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
+        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
             alpha = defaultAlpha;
@@ -5246,12 +5250,12 @@ internal sealed class PptxSceneBuilder
         return RgbColor.TryParse(hex, out color);
     }
 
-    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, out RgbColor color)
+    private static bool TryReadShapeFontColor(XElement shape, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
     {
         XElement? fontRef = shape
             .Element(PresentationNamespace + "style")
             ?.Element(DrawingNamespace + "fontRef");
-        return TryReadSolidColorWithAlpha(fontRef, theme, out color, out _);
+        return TryReadSolidColorWithAlpha(fontRef, theme, colorMap, out color, out _);
     }
 
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)

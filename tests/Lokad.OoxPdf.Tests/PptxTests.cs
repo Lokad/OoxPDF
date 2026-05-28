@@ -7469,6 +7469,63 @@ internal static class PptxTests
         TestAssert.Equal("accent2", slide.SlideColorMap["accent2"]);
     }
 
+    public static void PptxThemeColorMapResolvesSceneTextRunColors()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/theme/theme1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="ColorMapText">
+                  <a:themeElements>
+                    <a:clrScheme name="ColorMapText">
+                      <a:dk1><a:srgbClr val="000000"/></a:dk1>
+                      <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
+                      <a:accent5><a:srgbClr val="112233"/></a:accent5>
+                    </a:clrScheme>
+                    <a:fontScheme name="ColorMapText"><a:majorFont/><a:minorFont/></a:fontScheme>
+                  </a:themeElements>
+                </a:theme>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr>
+                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:rPr><a:t>Mapped</a:t></a:r></a:p></p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                  <p:clrMapOvr><a:overrideClrMapping bg1="accent5"/></p:clrMapOvr>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneRunStyle style = scene.Slides[0].SlideNodes[0].TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
+
+        TestAssert.Equal(new RgbColor(17, 34, 51), style.Color);
+    }
+
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

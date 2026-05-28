@@ -3649,6 +3649,13 @@ High-priority actions:
   and format-scheme color consumers still need to receive the effective map systematically instead of falling
   back to the default aliases. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
   passed; focused non-slow `pptx-model` passed (`16` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: direct scene text-body parsing now passes the current source `PptxColorMap` into
+  paragraph default-run colors, run colors, and shape `fontRef` fallback, so slide/layout/master text owned by
+  the current source resolves `schemeClr` aliases through that source's effective color map. Keep this item
+  open and extend it with a specific source-provenance gap: inherited placeholder text-style APIs still return
+  bare `XElement`/`XDocument` values, so default properties copied from layout/master placeholders do not yet
+  carry their owning color map. Validation: focused non-slow `pptx-model` passed (`17` passed, `0` failed,
+  `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
