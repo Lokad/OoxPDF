@@ -3327,6 +3327,12 @@ High-priority actions:
       from the recorded `0.013784` MAE to `0.028289`. The long-term fix should come from shared text-frame
       metrics for table cells and structural table draw-order alignment, not from widening gates or adding
       fixture-specific offsets.
+      - [x] 2026-05-28 PDF text-operation inspection narrowed the public drift: `basic-table` text positions are
+        within about `0.07pt` horizontally and `0.04pt` vertically, but Office emits small nonzero `Tc`
+        character-spacing operators for most table-cell runs despite no OOXML `spc` in the fixture, while OOXPDF
+        emits `Tc=0`. `vertical-align` has only three text operations; the middle and bottom baselines differ by
+        about `+0.27pt` and `-0.73pt`. Treat these as structural PDF-emission/text-metric alignment targets,
+        not as grounds for inferred fixture-specific spacing constants.
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.
