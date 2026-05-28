@@ -13644,6 +13644,38 @@ internal static class PptxTests
         TestAssert.Equal("0.4", layout.HeightValue);
     }
 
+    public static void PptxSceneAbsentChartManualLayoutHasUnknownDefaults()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+
+        PptxSceneChart? chart = BuildSingleChartScene(chartXml);
+        PptxSceneChartManualLayout layout = chart?.PlotAreaLayout ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.True(!layout.HasLayout, "Expected absent plot-area manual layout to remain absent.");
+        TestAssert.Equal(PptxSceneChartManualLayoutTarget.Unknown, layout.LayoutTargetKind);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.XModeKind);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.YModeKind);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.WidthModeKind);
+        TestAssert.Equal(PptxSceneChartManualLayoutMode.Unknown, layout.HeightModeKind);
+
+        PptxSceneNodeSnapshot snapshot = BuildSingleChartSceneSnapshot(chartXml);
+        TestAssert.True(!snapshot.HasChartPlotAreaManualLayout, "Expected scene inspection to keep absent plot-area manual layout distinct from a default inner target.");
+        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutTarget);
+        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutTargetKind);
+        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutXMode);
+        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutXModeKind);
+        TestAssert.Equal(string.Empty, snapshot.ChartPlotAreaLayoutWidthMode);
+        TestAssert.Equal("Unknown", snapshot.ChartPlotAreaLayoutWidthModeKind);
+    }
+
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

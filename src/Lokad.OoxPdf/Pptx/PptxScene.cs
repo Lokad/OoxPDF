@@ -1077,16 +1077,16 @@ internal readonly record struct PptxSceneChartManualLayout(
 
 internal enum PptxSceneChartManualLayoutTarget
 {
+    Unknown,
     Inner,
-    Outer,
-    Unknown
+    Outer
 }
 
 internal enum PptxSceneChartManualLayoutMode
 {
+    Unknown,
     Edge,
-    Factor,
-    Unknown
+    Factor
 }
 
 internal sealed record PptxSceneChartSeries(

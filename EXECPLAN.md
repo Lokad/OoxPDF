@@ -3358,6 +3358,16 @@ High-priority actions:
     semantics, overlay interactions, and non-bar/line family plot boxes remain open. Validation: focused
     unknown-target test passed; focused non-slow `pptx-charts` passed with `63` tests, `0` failures, and `0`
     skips.
+  - [x] 2026-05-29: Make absent chart manual-layout state explicit instead of relying on enum default
+    ordering. `PptxSceneChartManualLayoutTarget` and `PptxSceneChartManualLayoutMode` now default to
+    `Unknown`, and the horizontal-bar manual-target probe requires `HasLayout` before treating a scene chart as
+    an explicit `inner`/`outer` target. This prevents a missing plot-area layout from appearing as an implicit
+    Office `inner` target in scene inspection or future source-boundary checks. Keep the parent item open:
+    Office-equivalent `layoutTarget`, edge semantics, and inner/outer plot-area reservations still need a shared
+    chart layout model. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
+    focused `PptxSceneAbsentChartManualLayoutHasUnknownDefaults` passed; focused non-slow `pptx-charts` passed
+    (`141 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`415 passed, 0 failed, 7 skipped`).
   - [x] 2026-05-28: Expose plot-area manual-layout records through scene inspection. The renderer already
     preserved typed plot-area layout target/mode/value metadata, but `PptxSceneSnapshot` exposed only legend
     manual layout, leaving structural tools unable to audit plot-area layout ownership without reaching into the

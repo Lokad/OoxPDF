@@ -8653,7 +8653,8 @@ internal sealed partial class PptxRenderer
     {
         if (sceneChart is not null)
         {
-            return sceneChart.PlotAreaLayout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
+            return sceneChart.PlotAreaLayout.HasLayout &&
+                sceneChart.PlotAreaLayout.LayoutTargetKind != PptxSceneChartManualLayoutTarget.Unknown;
         }
 
         string layoutTarget = (string?)chartXml
