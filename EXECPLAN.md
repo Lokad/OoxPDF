@@ -12057,6 +12057,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `85` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `326` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw PPTX chart explosion tokens for both series-level and point-level
+slice offsets. `PptxSceneChartSeries` now carries `ExplosionValue` beside the nullable parsed explosion, and
+`PptxSceneChartPointStyle` does the same for each `c:dPt/c:explosion`. The regression covers a malformed
+series explosion token, a normal numeric point token, and a malformed point token in one pie-chart scene.
+
+This keeps the current rendering behavior intact: parsed numeric explosions still drive the existing
+pie/doughnut offset fractions, and malformed values still do not invent offsets. The long-term value is that
+Office schema drift, producer bugs, or future numeric encodings remain visible in the scene model instead of
+being collapsed to absence, which is necessary before replacing the remaining point-style `ReadSceneOrXml*`
+bridges with purely scene-owned chart semantics.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `86` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `327` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: The PPTX vertical-anchor text-height estimator now consumes resolved
 `PptxTextBodyProperties` instead of re-reading only the local `a:bodyPr`. `EstimateTextHeight` applies the
 model-owned `normAutofit @fontScale`, `@lnSpcReduction` line-spacing scale, inherited `compatLnSpc`, and

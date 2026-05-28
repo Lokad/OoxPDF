@@ -11547,6 +11547,31 @@ internal static class PptxTests
         TestAssert.Equal("450", doughnutPlot.FirstSliceAngleValue);
     }
 
+    public static void PptxScenePreservesChartExplosionNumericOptionTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:pieChart>
+                <c:ser>
+                  <c:explosion val="futureSeriesExplosion"/>
+                  <c:dPt><c:idx val="0"/><c:explosion val="35"/></c:dPt>
+                  <c:dPt><c:idx val="1"/><c:explosion val="futurePointExplosion"/></c:dPt>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="1"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:pieChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected pie series.");
+        TestAssert.Equal(null, series.Explosion);
+        TestAssert.Equal("futureSeriesExplosion", series.ExplosionValue);
+        TestAssert.Equal(35d, series.PointStyles[0].Explosion ?? double.NaN);
+        TestAssert.Equal("35", series.PointStyles[0].ExplosionValue);
+        TestAssert.Equal(null, series.PointStyles[1].Explosion);
+        TestAssert.Equal("futurePointExplosion", series.PointStyles[1].ExplosionValue);
+    }
+
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

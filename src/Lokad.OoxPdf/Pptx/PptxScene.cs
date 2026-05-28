@@ -857,6 +857,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
     double? Explosion,
+    string ExplosionValue,
     bool? Smooth,
     PptxSceneChartDataLabels DataLabels);
 
@@ -932,7 +933,8 @@ internal sealed record PptxSceneChartPointStyle(
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
-    double? Explosion);
+    double? Explosion,
+    string ExplosionValue);
 
 internal sealed record PptxSceneChartAxis(
     string Id,
@@ -2267,6 +2269,7 @@ internal sealed class PptxSceneBuilder
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
         {
             int seriesIndex = series.Count;
+            (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(seriesElement, "explosion");
             series.Add(new PptxSceneChartSeries(
                 ReadChartElementInt(seriesElement, "idx"),
                 ReadChartElementInt(seriesElement, "order"),
@@ -2297,7 +2300,8 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesLine(seriesElement, theme),
                 ReadChartMarker(seriesElement, theme, plotKind, chartMarkersEnabled, seriesIndex),
                 ReadChartPointStyles(seriesElement, theme),
-                ReadChartElementDouble(seriesElement, "explosion"),
+                explosion,
+                explosionValue,
                 ReadChartSeriesSmooth(seriesElement),
                 ReadChartDataLabels(seriesElement, theme)));
         }
@@ -2392,12 +2396,14 @@ internal sealed class PptxSceneBuilder
             }
 
             XElement? shapeProperties = point.Element(ChartNamespace + "spPr");
+            (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(point, "explosion");
             styles.Add(new PptxSceneChartPointStyle(
                 index,
                 ReadChartPointFill(shapeProperties, theme),
                 ReadChartPointPatternFill(shapeProperties, theme),
                 ReadChartLine(shapeProperties, theme),
-                ReadChartPointExplosion(point)));
+                explosion,
+                explosionValue));
         }
 
         return styles;
@@ -2413,14 +2419,6 @@ internal sealed class PptxSceneBuilder
     private static PptxScenePatternFill ReadChartPointPatternFill(XElement? shapeProperties, PptxTheme theme)
     {
         return ReadChartPatternFill(shapeProperties, theme);
-    }
-
-    private static double? ReadChartPointExplosion(XElement point)
-    {
-        return point.Element(ChartNamespace + "explosion")?.Attribute("val") is { } explosionAttribute &&
-            double.TryParse(explosionAttribute.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double explosion)
-                ? explosion
-                : null;
     }
 
     private static PptxSceneLineStyle ReadChartLine(XElement? shapeProperties, PptxTheme theme)
