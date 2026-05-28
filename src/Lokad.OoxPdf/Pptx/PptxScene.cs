@@ -826,6 +826,7 @@ internal sealed record PptxSceneChartDataLabels(
     PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartTextBodyProperties TextBodyProperties,
     PptxSceneChartShapeStyle ShapeStyle,
     IReadOnlyList<string> RejectedOverrideIndexValues,
     IReadOnlyList<PptxSceneChartDataLabelOverride> Overrides,
@@ -858,7 +859,12 @@ internal sealed record PptxSceneChartDataLabelOverride(
     PptxSceneChartNumberFormat NumberFormatInfo,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartTextStyleOverride TextStyle,
+    PptxSceneChartTextBodyProperties TextBodyProperties,
     PptxSceneChartShapeStyle ShapeStyle);
+
+internal readonly record struct PptxSceneChartTextBodyProperties(
+    double? RotationDegrees,
+    string RotationValue);
 
 internal readonly record struct PptxSceneChartNumberFormat(
     bool IsDefined,
@@ -1196,6 +1202,7 @@ internal sealed record PptxSceneChartTitle(
     string OverlayValue,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
+    PptxSceneChartTextBodyProperties TextBodyProperties,
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal sealed record PptxSceneChartLegend(
@@ -1208,6 +1215,7 @@ internal sealed record PptxSceneChartLegend(
     string IsDeletedValue,
     PptxSceneChartManualLayout Layout,
     PptxSceneChartShapeStyle ShapeStyle,
+    PptxSceneChartTextBodyProperties TextBodyProperties,
     PptxSceneChartTextStyleOverride TextStyle);
 
 internal enum PptxSceneChartLegendPosition
@@ -2294,6 +2302,7 @@ internal sealed class PptxSceneBuilder
                 NumberFormatInfo: default,
                 Layout: default,
                 TextStyle: new PptxSceneChartTextStyleOverride(null, null, null, null, null, null, null, null),
+                TextBodyProperties: default,
                 ShapeStyle: new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
                 RejectedOverrideIndexValues: [],
                 Overrides: [],
@@ -2331,6 +2340,7 @@ internal sealed class PptxSceneBuilder
                 numberFormat,
                 ReadChartManualLayout(labels),
                 ReadChartTextStyleOverride(labels, theme),
+                ReadChartTextBodyProperties(labels),
                 ReadChartShapeStyle(labels.Element(ChartNamespace + "spPr"), theme),
                 ReadRejectedChartNonNegativeIndexValues(labels, "dLbl"),
                 ReadChartDataLabelOverrides(labels, theme),
@@ -2390,6 +2400,7 @@ internal sealed class PptxSceneBuilder
                 numberFormat,
                 ReadChartManualLayout(label),
                 ReadChartTextStyleOverride(label, theme),
+                ReadChartTextBodyProperties(label),
                 ReadChartShapeStyle(label.Element(ChartNamespace + "spPr"), theme)));
         }
 
@@ -3139,6 +3150,22 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
     }
 
+    private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
+    {
+        string rotation = (string?)parent?
+            .Element(ChartNamespace + "txPr")?
+            .Element(DrawingNamespace + "bodyPr")?
+            .Attribute("rot") ?? string.Empty;
+        return new PptxSceneChartTextBodyProperties(ParseOptionalOoxmlAngle(rotation), rotation);
+    }
+
+    private static double? ParseOptionalOoxmlAngle(string value)
+    {
+        return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long rawAngle)
+            ? rawAngle / 60000d
+            : null;
+    }
+
     private static PptxSceneChartTextStyleOverride ReadChartTextRunStyle(XElement? runProperties, PptxTheme theme)
     {
         if (runProperties is null)
@@ -3337,6 +3364,7 @@ internal sealed class PptxSceneBuilder
                     OverlayValue: string.Empty,
                     default,
                     new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
+                    default,
                     default);
         }
 
@@ -3354,6 +3382,7 @@ internal sealed class PptxSceneBuilder
             overlayValue,
             ReadChartManualLayout(title),
             ReadChartShapeStyle(title?.Element(ChartNamespace + "spPr"), theme),
+            ReadChartTextBodyProperties(title),
             ReadChartTextStyleOverride(title, theme));
     }
 
@@ -3383,6 +3412,7 @@ internal sealed class PptxSceneBuilder
             OverlayValue: string.Empty,
             default,
             new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
+            default,
             default);
     }
 
@@ -3403,6 +3433,7 @@ internal sealed class PptxSceneBuilder
                 IsDeletedValue: string.Empty,
                 default,
                 new PptxSceneChartShapeStyle(false, default, default, default, default, default, default, default, default),
+                default,
                 default);
         }
 
@@ -3419,6 +3450,7 @@ internal sealed class PptxSceneBuilder
             isDeletedValue,
             ReadChartManualLayout(legend),
             ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme),
+            ReadChartTextBodyProperties(legend),
             ReadChartTextStyleOverride(legend, theme));
     }
 

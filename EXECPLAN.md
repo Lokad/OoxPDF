@@ -2849,6 +2849,12 @@ High-priority actions:
     lack font family, size, color, bold, or italic attributes. This closes a scene-model information-loss gap;
     applying those inherited decorations across every chart text surface remains part of the broader chart text
     cascade work.
+  - [x] Preserve chart `txPr/a:bodyPr @rot` metadata on text-bearing scene records:
+    `PptxSceneChartTitle`, `PptxSceneChartLegend`, `PptxSceneChartDataLabels`, and per-label
+    `PptxSceneChartDataLabelOverride` now carry `PptxSceneChartTextBodyProperties` with both parsed degrees
+    and the raw OOXML rotation token. The broad chart scene fixture covers chart titles, axis titles, legends,
+    plot-level data labels, and per-label overrides. This is a structural ownership step only; consuming those
+    rotations in native chart rendering still needs Office-backed placement evidence.
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
