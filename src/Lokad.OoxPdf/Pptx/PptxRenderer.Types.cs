@@ -456,7 +456,10 @@ internal sealed partial class PptxRenderer
         string? AutoNumberStartAtValue,
         int? AutoNumberStartAt,
         string? FontTypeface,
-        string? FontCharset);
+        string? FontCharset,
+        RgbColor? Color,
+        PptxParagraphBulletSizeKind SizeKind,
+        string? SizeValue);
 
     private enum PptxParagraphBulletKind
     {
@@ -464,6 +467,13 @@ internal sealed partial class PptxRenderer
         Character,
         AutoNumber,
         Blip
+    }
+
+    private enum PptxParagraphBulletSizeKind
+    {
+        Text,
+        Percent,
+        Points
     }
 
     private sealed record PptxParagraphStyleCascade(

@@ -126,6 +126,9 @@ internal sealed partial class PptxRenderer
             paragraph.Bullet.AutoNumberStartAtValue,
             paragraph.Bullet.FontTypeface,
             paragraph.Bullet.FontCharset,
+            FormatColor(paragraph.Bullet.Color),
+            paragraph.Bullet.SizeKind.ToString(),
+            paragraph.Bullet.SizeValue,
             paragraph.Style.SpacingBefore,
             paragraph.Style.SpacingAfter,
             paragraph.Style.LineSpacing.Value,
@@ -704,7 +707,7 @@ internal sealed partial class PptxRenderer
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties());
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             paragraphs.Add(new PptxTextParagraphModel(
@@ -727,23 +730,41 @@ internal sealed partial class PptxRenderer
         return paragraphs;
     }
 
-    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties)
+    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme)
     {
         if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
         {
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, null, null);
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, null, null, null, PptxParagraphBulletSizeKind.Text, null);
         }
 
         XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
+        XElement? bulletColor = FindBulletProperty(paragraphProperties, "buClr");
+        XElement? bulletSizePercent = FindBulletProperty(paragraphProperties, "buSzPct");
+        XElement? bulletSizePoints = FindBulletProperty(paragraphProperties, "buSzPts");
         string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
         string? fontCharset = (string?)bulletFont?.Attribute("charset");
+        RgbColor? color = bulletColor is not null && TryReadSolidColor(bulletColor, theme, out RgbColor resolvedColor)
+            ? resolvedColor
+            : null;
+        PptxParagraphBulletSizeKind sizeKind = PptxParagraphBulletSizeKind.Text;
+        string? sizeValue = null;
+        if ((string?)bulletSizePercent?.Attribute("val") is { } percentValue)
+        {
+            sizeKind = PptxParagraphBulletSizeKind.Percent;
+            sizeValue = percentValue;
+        }
+        else if ((string?)bulletSizePoints?.Attribute("val") is { } pointValue)
+        {
+            sizeKind = PptxParagraphBulletSizeKind.Points;
+            sizeValue = pointValue;
+        }
 
         if ((string?)paragraphProperties.Element(DrawingNamespace + "buChar")?.Attribute("char") is { } character)
         {
             string resolvedCharacter = IsSymbolBulletFont(bulletFont)
                 ? MapSymbolBulletText(character)
                 : character;
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset);
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Character, character, resolvedCharacter, null, null, null, fontTypeface, fontCharset, color, sizeKind, sizeValue);
         }
 
         if (paragraphProperties.Element(DrawingNamespace + "buAutoNum") is { } autoNumber)
@@ -760,15 +781,25 @@ internal sealed partial class PptxRenderer
                 startAtValue,
                 startAt,
                 fontTypeface,
-                fontCharset);
+                fontCharset,
+                color,
+                sizeKind,
+                sizeValue);
         }
 
         if (paragraphProperties.Element(DrawingNamespace + "buBlip") is not null)
         {
-            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset);
+            return new PptxParagraphBulletModel(PptxParagraphBulletKind.Blip, null, null, null, null, null, fontTypeface, fontCharset, color, sizeKind, sizeValue);
         }
 
-        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset);
+        return new PptxParagraphBulletModel(PptxParagraphBulletKind.None, null, null, null, null, null, fontTypeface, fontCharset, color, sizeKind, sizeValue);
+    }
+
+    private static string? FormatColor(RgbColor? color)
+    {
+        return color is { } value
+            ? string.Create(CultureInfo.InvariantCulture, $"{value.Red:X2}{value.Green:X2}{value.Blue:X2}")
+            : null;
     }
 
     private static ResolvedEndParagraphTextStyle ResolveEndParagraphTextStyle(XElement? endRunProperties, XElement? defaultRunProperties, double fontScale)

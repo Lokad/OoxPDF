@@ -4712,6 +4712,20 @@ internal static class PptxTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxTextParagraphModelSnapshot paragraph = PptxRenderer.InspectTextFrameModels(document, package, 0)
+                .Single()
+                .Paragraphs
+                .Single();
+
+            TestAssert.Equal("FF0000", paragraph.BulletColor);
+            TestAssert.Equal("Points", paragraph.BulletSizeKind);
+            TestAssert.Equal("3000", paragraph.BulletSizeValue);
+        }
+
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);

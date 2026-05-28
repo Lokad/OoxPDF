@@ -818,7 +818,6 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            XElement? bulletProperties = paragraph.ResolvedStyleCascade.ResolveDefaultProperties();
             string? bulletText = ReadBulletText(paragraph.Bullet, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
             double effectiveTextWidth = columnWrapWidth;
@@ -877,7 +876,7 @@ internal sealed partial class PptxRenderer
 
                 if (bulletPending)
                 {
-                    BulletStyle bulletStyle = ReadBulletStyle(bulletProperties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
+                    BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
@@ -2900,26 +2899,20 @@ internal sealed partial class PptxRenderer
         return upper ? result : result.ToLowerInvariant();
     }
 
-    private static BulletStyle ReadBulletStyle(XElement? paragraphProperties, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
+    private static BulletStyle ReadBulletStyle(PptxParagraphBulletModel bullet, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
     {
-        XElement? bulletFont = FindBulletProperty(paragraphProperties, "buFont");
-        XElement? bulletColor = FindBulletProperty(paragraphProperties, "buClr");
-        XElement? bulletSizePercent = FindBulletProperty(paragraphProperties, "buSzPct");
-        XElement? bulletSizePoints = FindBulletProperty(paragraphProperties, "buSzPts");
-
-        string? typeface = theme.ResolveTypeface((string?)bulletFont?.Attribute("typeface"));
-        RgbColor color = bulletColor is not null &&
-            TryReadSolidColor(bulletColor, theme, out RgbColor explicitColor)
-                ? explicitColor
-                : textColor;
+        string? typeface = theme.ResolveTypeface(bullet.FontTypeface);
+        RgbColor color = bullet.Color ?? textColor;
         double fontSize = textFontSize;
-        if (bulletSizePercent?.Attribute("val") is { } sizePercent)
+        if (bullet.SizeKind == PptxParagraphBulletSizeKind.Percent &&
+            int.TryParse(bullet.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizePercent))
         {
-            fontSize = textFontSize * Math.Max(0.1d, int.Parse(sizePercent.Value, CultureInfo.InvariantCulture) / 100000d);
+            fontSize = textFontSize * Math.Max(0.1d, sizePercent / 100000d);
         }
-        else if (bulletSizePoints?.Attribute("val") is { } sizePoints)
+        else if (bullet.SizeKind == PptxParagraphBulletSizeKind.Points &&
+            int.TryParse(bullet.SizeValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizePoints))
         {
-            fontSize = Math.Max(0.1d, int.Parse(sizePoints.Value, CultureInfo.InvariantCulture) / 100d);
+            fontSize = Math.Max(0.1d, sizePoints / 100d);
         }
 
         return new BulletStyle(fontSize, color, typeface ?? textTypeface);
