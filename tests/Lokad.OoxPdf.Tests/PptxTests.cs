@@ -3384,6 +3384,7 @@ internal static class PptxTests
         TestAssert.Equal("12000", frame.LineSpacingReductionValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.LineSpacingScaleSource);
         TestAssert.Equal(true, frame.CompatibleLineSpacing);
+        TestAssert.Equal("1", frame.CompatibleLineSpacingValue);
         TestAssert.Equal("DirectBodyPr", frame.CompatibleLineSpacingSource);
         TestAssert.Equal(90d, frame.RotationDegrees ?? double.NaN);
         TestAssert.Equal("5400000", frame.RotationValue ?? string.Empty);
@@ -3586,6 +3587,7 @@ internal static class PptxTests
         TestAssert.Equal("12000", frame.LineSpacingReductionValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.LineSpacingScaleSource);
         TestAssert.Equal(true, frame.CompatibleLineSpacing);
+        TestAssert.Equal("1", frame.CompatibleLineSpacingValue);
         TestAssert.Equal("InheritedBodyPr", frame.CompatibleLineSpacingSource);
         TestAssert.Equal(90d, frame.RotationDegrees ?? double.NaN);
         TestAssert.Equal("5400000", frame.RotationValue ?? string.Empty);
@@ -7402,6 +7404,7 @@ internal static class PptxTests
                     models[frameIndex].LineSpacingReductionValue,
                     models[frameIndex].LineSpacingScaleSource,
                     models[frameIndex].CompatibleLineSpacing,
+                    models[frameIndex].CompatibleLineSpacingValue,
                     models[frameIndex].CompatibleLineSpacingSource,
                     models[frameIndex].RotationDegrees,
                     models[frameIndex].RotationValue,

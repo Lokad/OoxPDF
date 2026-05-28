@@ -230,6 +230,7 @@ internal sealed record PptxTextFrameModelSnapshot(
     string? LineSpacingReductionValue,
     string LineSpacingScaleSource,
     bool CompatibleLineSpacing,
+    string? CompatibleLineSpacingValue,
     string CompatibleLineSpacingSource,
     double? RotationDegrees,
     string? RotationValue,

@@ -407,6 +407,7 @@ internal sealed partial class PptxRenderer
         string? LineSpacingReductionValue,
         PptxTextBodyPropertySource LineSpacingScaleSource,
         bool CompatibleLineSpacing,
+        string? CompatibleLineSpacingValue,
         PptxTextBodyPropertySource CompatibleLineSpacingSource,
         double? RotationDegrees,
         string? RotationValue,

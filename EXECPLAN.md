@@ -15394,3 +15394,14 @@ referenced effects, but unsupported referenced effects no longer disappear betwe
 diagnostics. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings
 and `0` errors; focused non-slow `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused
 non-slow `pptx-charts` passed with `137` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: text-body `compatLnSpc` now preserves its raw token beside the parsed boolean and source.
+`PptxTextBodyProperties` and `PptxTextFrameModelSnapshot` expose `CompatibleLineSpacingValue`, and the direct
+and inherited body-property regressions now assert the raw `"1"` token.
+
+This is a small bodyPr provenance cleanup. It does not change line-spacing behavior, but it removes a remaining
+case where the model kept the effective decision and source while dropping the raw OOXML value needed to audit
+invalid, future, or inherited boolean tokens without falling back to XML. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
+non-slow `pptx-typography` passed with `99` tests, `0` failures, and `2` slow skips; focused non-slow
+`pptx-model` passed with `25` tests, `0` failures, and `1` slow skip.
