@@ -15023,6 +15023,15 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `133` tests, `0` failures, and `0` skips; full non-slow console runner passed with
 `406` tests, `0` failures, and `7` slow skips.
 
+Follow-up, 2026-05-28: chart text measurement now has an explicit `ChartTextMeasurer` boundary around
+`TextAdvanceEstimator`. Legend packing, default axis-title sizing, value-axis label reserves, line/scatter
+data-label box sizing, polar/rich data-label run layout, and radar category-label frames reuse that boundary
+where they already carry resolver context. This does not yet move chart text into the shared text-frame model,
+but it gives the remaining plot-reservation work a named service to consume instead of reintroducing
+surface-local width helpers. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed; focused non-slow `pptx-charts` passed with `133` tests, `0` failures, and `0` skips; full non-slow
+console runner passed with `406` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
