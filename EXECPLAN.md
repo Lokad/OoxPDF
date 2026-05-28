@@ -15463,3 +15463,18 @@ This is behavior-neutral for the current tests, but it removes another source-bo
 is present. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings
 and `0` errors after rerunning outside the parallel test process; focused non-slow `pptx-charts` passed with
 `138` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: scene-backed primary value/category axis sources now attach XML evidence only from the
+scene-owned chart source. `ReadSceneOrXmlChartValueAxesForPlot` and
+`ReadSceneOrXmlChartCategoryAxisForPlot` first resolve typed scene axes; when a scene chart is present, matching
+axis XML is read from `sceneChart.ChartXml` and `scenePlot.Source`, while the caller-provided fallback
+`chartXml`/`chartElement` remains limited to XML-only rendering. A regression uses identical axis ids with
+conflicting `majorUnit` and `tickLblPos` tokens to prove that scene axes do not borrow mismatched fallback XML.
+
+This keeps raw XML as temporary source evidence, but moves that evidence behind the scene ownership boundary
+instead of treating any caller XML as authoritative. It is another small step toward eliminating renderer-local
+heuristics and fallback reads before the broader typed chart axis/layout model is complete. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; the
+focused non-slow `pptx-charts` group passed with `139` tests, `0` failures, and `0` skips. A concurrent first
+test invocation hit a transient Defender file lock while the solution build was writing obj outputs, then the
+same chart group passed with `--no-build`.

@@ -262,9 +262,6 @@ internal sealed partial class PptxRenderer
         XDocument chartXml,
         XElement? chartElement)
     {
-        XElement[] xmlAxes = chartElement is null
-            ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
-            : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
         IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Value);
         if (sceneAxes.Count == 0)
         {
@@ -273,11 +270,19 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
-            return xmlAxes
+            XElement[] fallbackXmlAxes = chartElement is null
+                ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
+                : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
+            return fallbackXmlAxes
                 .Select(axis => new ChartAxisSource(null, axis))
                 .ToArray();
         }
 
+        XElement[] xmlAxes = sceneChart is not null
+            ? ReadSceneChartValueAxisElements(sceneChart, scenePlot)
+            : chartElement is null
+                ? chartXml.Descendants(ChartNamespace + "valAx").ToArray()
+                : ReadChartValueAxesForChart(chartXml, chartElement).ToArray();
         var sources = new List<ChartAxisSource>(sceneAxes.Count);
         foreach (PptxSceneChartAxis sceneAxis in sceneAxes)
         {
@@ -294,9 +299,6 @@ internal sealed partial class PptxRenderer
         XDocument chartXml,
         XElement? chartElement)
     {
-        XElement[] xmlAxes = chartElement is null
-            ? ReadChartCategoryAxes(chartXml).ToArray()
-            : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
         IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartCategoryAxes(sceneChart, scenePlot);
         if (sceneAxes.Count == 0)
         {
@@ -305,13 +307,45 @@ internal sealed partial class PptxRenderer
                 return new ChartAxisSource(null, null);
             }
 
-            XElement? xmlAxis = xmlAxes.FirstOrDefault();
+            XElement[] fallbackXmlAxes = chartElement is null
+                ? ReadChartCategoryAxes(chartXml).ToArray()
+                : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
+            XElement? xmlAxis = fallbackXmlAxes.FirstOrDefault();
             return new ChartAxisSource(null, xmlAxis);
         }
 
+        XElement[] xmlAxes = sceneChart is not null
+            ? ReadSceneChartCategoryAxisElements(sceneChart, scenePlot)
+            : chartElement is null
+                ? ReadChartCategoryAxes(chartXml).ToArray()
+                : ReadChartCategoryAxesForChart(chartXml, chartElement).ToArray();
         PptxSceneChartAxis sceneAxis = sceneAxes[0];
         XElement? matchedXmlAxis = xmlAxes.FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis.Id, StringComparison.Ordinal));
         return new ChartAxisSource(sceneAxis, matchedXmlAxis);
+    }
+
+    private static XElement[] ReadSceneChartValueAxisElements(PptxSceneChart sceneChart, PptxSceneChartPlot? scenePlot)
+    {
+        if (sceneChart.ChartXml is null)
+        {
+            return [];
+        }
+
+        return scenePlot is null
+            ? sceneChart.ChartXml.Descendants(ChartNamespace + "valAx").ToArray()
+            : ReadChartValueAxesForChart(sceneChart.ChartXml, scenePlot.Source).ToArray();
+    }
+
+    private static XElement[] ReadSceneChartCategoryAxisElements(PptxSceneChart sceneChart, PptxSceneChartPlot? scenePlot)
+    {
+        if (sceneChart.ChartXml is null)
+        {
+            return [];
+        }
+
+        return scenePlot is null
+            ? ReadChartCategoryAxes(sceneChart.ChartXml).ToArray()
+            : ReadChartCategoryAxesForChart(sceneChart.ChartXml, scenePlot.Source).ToArray();
     }
 
     private static ChartAxisSource ReadSceneOrXmlSecondaryRightValueAxis(PptxSceneChart? sceneChart, XDocument chartXml)

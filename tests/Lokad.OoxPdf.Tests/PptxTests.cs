@@ -14346,6 +14346,58 @@ internal static class PptxTests
         TestAssert.True(xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) is not null, "Expected XML-only category-axis lookup to keep reading XML.");
     }
 
+    public static void PptxChartSceneAxesUseSceneOwnedXmlEvidence()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:tickLblPos val="low"/></c:catAx>
+                <c:valAx><c:axId val="20"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.Equal(2, chart.Axes.Count);
+
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart><c:axId val="10"/><c:axId val="20"/></c:lineChart>
+                <c:catAx><c:axId val="10"/><c:tickLblPos val="high"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:majorUnit val="99"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedPlot = mismatchedChartXml.Descendants(chartNamespace + "lineChart").First();
+        System.Reflection.MethodInfo readValueAxes = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartValueAxesForPlot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer value-axis bridge.");
+        System.Reflection.MethodInfo readCategoryAxis = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartCategoryAxisForPlot",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer category-axis bridge.");
+
+        object sceneValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene value-axis collection."))).Cast<object>().Single();
+        object xmlOnlyValueAxis = ((System.Collections.IEnumerable)(readValueAxes.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only value-axis collection."))).Cast<object>().Single();
+        object sceneCategoryAxis = readCategoryAxis.Invoke(null, [chart, chart.Plots[0], mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected scene category-axis source.");
+        object xmlOnlyCategoryAxis = readCategoryAxis.Invoke(null, [null, null, mismatchedChartXml, mismatchedPlot]) ?? throw new InvalidOperationException("Expected XML-only category-axis source.");
+
+        XElement sceneValueXmlAxis = (XElement?)sceneValueAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneValueAxis) ?? throw new InvalidOperationException("Expected scene value-axis XML evidence.");
+        XElement xmlOnlyValueXmlAxis = (XElement?)xmlOnlyValueAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyValueAxis) ?? throw new InvalidOperationException("Expected XML-only value-axis XML evidence.");
+        XElement sceneCategoryXmlAxis = (XElement?)sceneCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(sceneCategoryAxis) ?? throw new InvalidOperationException("Expected scene category-axis XML evidence.");
+        XElement xmlOnlyCategoryXmlAxis = (XElement?)xmlOnlyCategoryAxis.GetType().GetProperty("XmlAxis")?.GetValue(xmlOnlyCategoryAxis) ?? throw new InvalidOperationException("Expected XML-only category-axis XML evidence.");
+
+        TestAssert.True(sceneValueXmlAxis.Element(chartNamespace + "majorUnit") is null, "Expected scene value axis to keep scene-owned XML evidence.");
+        TestAssert.Equal("99", xmlOnlyValueXmlAxis.Element(chartNamespace + "majorUnit")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("low", sceneCategoryXmlAxis.Element(chartNamespace + "tickLblPos")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.Equal("high", xmlOnlyCategoryXmlAxis.Element(chartNamespace + "tickLblPos")?.Attribute("val")?.Value ?? string.Empty);
+    }
+
     public static void PptxChartValueAxisScaleFallbackUsesSceneAuthoritativeAbsence()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
