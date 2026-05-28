@@ -3680,6 +3680,13 @@ High-priority actions:
     `PptxSyntheticGroupedTableUsesGroupTransformInFallbackPath` locks that fallback behavior.
 - [ ] Port `pptx-renderer` shape geometry coverage: preset geometries, custom geometry, rotations, flips,
   group transforms, connectors, arrows, dash/cap/join, and picture-fill clipping.
+  2026-05-28 audit: most source-bearing geometry inputs are already scene-owned: preset names and adjustment
+  guides, custom geometry guides/paths/commands, group transforms, line dash/compound/cap/join tokens, and
+  connector head/tail tokens are exposed through `PptxSceneShape` and locked by model/render tests. Keep this
+  item open but narrower. The long-term work is now to make unsupported/partial geometry diagnostics consume
+  the scene model instead of broad raw slide XML scans, to replace remaining Office-fit constants for connector
+  end geometry with public Office-PDF evidence, and to expand preset/custom path rendering only through shared
+  geometry records rather than per-preset narrow logic.
 - [ ] Port `pptx-renderer` image behavior: relationship resolution, crop/fill/stretch, alpha/soft masks,
   SVG or unsupported-image diagnostics, media caching, and reuse across slides.
 - [ ] Port `pptx-renderer` chart behavior as a first-class native renderer: parse a typed chart model for
