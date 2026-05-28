@@ -2596,6 +2596,14 @@ High-priority actions:
     not close chart-title layout generally; it removes one more raw-XML steering point before Office-PDF-backed
     title placement work. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed,
     and focused non-slow `pptx-charts` passed (`110 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 Retain source plot XML on `PptxSceneChartPlot` for scene-backed plot selection:
+    each typed chart plot now carries its source plot element, preserving the raw OOXML subtree as evidence
+    while individual children continue moving into typed fields. The chart-title bar-baseline resolver uses
+    this scene-owned source element instead of asking the fallback chart XML for the first `barChart`; the XML
+    lookup remains only for no-scene compatibility. A regression pairs a scene-owned horizontal bar chart with
+    mismatched fallback line-chart XML and verifies scene-backed selection still returns the bar plot while
+    XML-only selection reports no bar plot. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+    minimal` passed, and focused non-slow `pptx-charts` passed (`111 passed, 0 failed, 0 skipped`).
   - [x] 2026-05-28 Preserve and emit chart text underline/strike style:
     `PptxSceneChartTextStyleOverride` and the renderer's `ChartTextStyleOverride` now carry underline and
     strike state from chart `txPr`, chart-style role text defaults, direct title/legend/axis/data-label

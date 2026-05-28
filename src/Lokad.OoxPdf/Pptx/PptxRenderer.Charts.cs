@@ -184,6 +184,16 @@ internal sealed partial class PptxRenderer
         return elementName is null ? [] : ReadChartPlotElements(chartXml, elementName);
     }
 
+    private static XElement? ReadSceneOrXmlFirstChartPlotElement(PptxSceneChart? sceneChart, XDocument chartXml, PptxSceneChartPlotKind kind)
+    {
+        if (sceneChart is not null)
+        {
+            return ReadSceneChartPlot(sceneChart, kind)?.Source;
+        }
+
+        return ReadChartPlotElements(chartXml, kind).FirstOrDefault();
+    }
+
     private static IReadOnlyList<PptxSceneChartPlot> ReadSceneChartPlots(PptxSceneChart? chart, PptxSceneChartPlotKind kind)
     {
         return chart?.Plots
@@ -4293,7 +4303,7 @@ internal sealed partial class PptxRenderer
 
     private static double ResolveChartTitleBaselineY(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, double fallbackBaselineY, double fontSize)
     {
-        XElement? barChart = ReadChartPlotElements(chartXml, PptxSceneChartPlotKind.Bar).FirstOrDefault();
+        XElement? barChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Bar);
         if (barChart is null)
         {
             return fallbackBaselineY;

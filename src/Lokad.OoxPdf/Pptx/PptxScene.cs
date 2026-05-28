@@ -718,7 +718,8 @@ internal sealed record PptxSceneChartPlot(
     string HoleSizeValue,
     double? FirstSliceAngle,
     string FirstSliceAngleValue,
-    PptxSceneChartDataLabels DataLabels);
+    PptxSceneChartDataLabels DataLabels,
+    XElement Source);
 
 internal enum PptxSceneChartGrouping
 {
@@ -2207,7 +2208,8 @@ internal sealed class PptxSceneBuilder
                 holeSizeValue,
                 firstSliceAngle,
                 firstSliceAngleValue,
-                ReadChartDataLabels(plot, theme)));
+                ReadChartDataLabels(plot, theme),
+                plot));
         }
 
         return plots;

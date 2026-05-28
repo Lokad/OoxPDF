@@ -13319,6 +13319,38 @@ internal static class PptxTests
         TestAssert.True(!(bool)xmlBacked, "Expected XML-only title placement to keep the existing XML fallback behavior.");
     }
 
+    public static void PptxChartPlotElementSelectionUsesSceneSource()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:barDir val="bar"/>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:barChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        XDocument mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart><c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser></c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readPlotElement = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlFirstChartPlotElement",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected plot element resolver.");
+        object sceneBacked = readPlotElement.Invoke(null, [chart, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]) ?? throw new InvalidOperationException("Expected scene-backed bar plot.");
+        object? xmlBacked = readPlotElement.Invoke(null, [null, mismatchedXmlFallback, PptxSceneChartPlotKind.Bar]);
+
+        TestAssert.Equal("barChart", ((XElement)sceneBacked).Name.LocalName);
+        TestAssert.True(xmlBacked is null, "Expected XML-only fallback to report the missing bar plot instead of using scene data.");
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""
