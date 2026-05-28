@@ -453,6 +453,20 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartDisplayBlanksAs(sceneChart, chartXml));
     }
 
+    private readonly record struct ChartScatterPlotOptions(
+        PptxSceneChartScatterStyle ScatterStyle,
+        bool ConnectLines,
+        IReadOnlyList<bool> SmoothSeries);
+
+    private static ChartScatterPlotOptions ReadSceneOrXmlChartScatterOptions(PptxSceneChartPlot? plot, XElement chartElement)
+    {
+        PptxSceneChartScatterStyle scatterStyle = ReadSceneOrXmlChartScatterStyle(plot, chartElement);
+        return new ChartScatterPlotOptions(
+            scatterStyle,
+            ResolveChartScatterLineConnection(scatterStyle),
+            ReadSceneOrXmlSmoothSeries(plot, chartElement));
+    }
+
     private static double ReadSceneOrXmlChartGapWidth(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
@@ -1263,12 +1277,10 @@ internal sealed partial class PptxRenderer
             IReadOnlyList<ScatterSeries> scatterSeries = ReadSceneOrXmlScatterSeries(scatterPlot, scatterChart, readBubbleSize: false, workbook: workbook);
             if (scatterSeries.Count != 0)
             {
-                PptxSceneChartScatterStyle scatterStyle = ReadSceneOrXmlChartScatterStyle(scatterPlot, scatterChart);
-                bool connectLines = ResolveChartScatterLineConnection(scatterStyle);
+                ChartScatterPlotOptions scatterOptions = ReadSceneOrXmlChartScatterOptions(scatterPlot, scatterChart);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
-                IReadOnlyList<bool> smoothSeries = ReadSceneOrXmlSmoothSeries(scatterPlot, scatterChart);
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, scatterPlot, chartXml, scatterChart);
@@ -1277,7 +1289,7 @@ internal sealed partial class PptxRenderer
                 ChartValueExtents xExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(xValueAxis.SceneAxis, xValueAxis.XmlAxis, GetScatterXValueExtents(scatterSeries));
                 ChartValueExtents yExtents = ReadSceneOrXmlBubbleChartValueAxisExtents(yValueAxis.SceneAxis, yValueAxis.XmlAxis, GetScatterYValueExtents(scatterSeries));
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
-                RenderScatterChart(graphics, plotBox, scatterSeries, connectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, smoothSeries, xExtents, yExtents);
+                RenderScatterChart(graphics, plotBox, scatterSeries, scatterOptions.ConnectLines, bubble: false, seriesFills, seriesStrokes, markerStyles, scatterOptions.SmoothSeries, xExtents, yExtents);
                 fonts.AddRange(RenderScatterDataLabels(
                     theme,
                     graphics,

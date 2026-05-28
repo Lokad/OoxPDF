@@ -12094,6 +12094,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `333` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated scatter-chart renderer option resolution behind
+`ChartScatterPlotOptions`. Native scatter rendering now resolves `scatterStyle`, the derived connect-lines
+policy, and per-series smooth flags at one scene/XML boundary before emitting connected paths or markers.
+The XML-only fallback remains available, but supported scene charts no longer spread the scatter-style and
+smooth-series bridges across the render branch.
+
+The new mismatch guard uses a scene scatter chart with unknown `scatterStyle` and missing smooth metadata
+beside fallback XML that requests `lineMarker` and `smooth=1`. The resolved options must keep the
+scene-owned no-line and non-smooth defaults rather than importing fallback XML. This protects the structural
+alignment rule that renderer decisions should come from typed scene state once the scene exists.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `93` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `334` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing

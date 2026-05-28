@@ -12262,6 +12262,45 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
     }
 
+    public static void PptxChartScatterOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:scatterChart>
+                  <c:scatterStyle val="bogus"/>
+                  <c:ser><c:xVal><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:xVal><c:yVal><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:yVal></c:ser>
+                </c:scatterChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, plot.ScatterStyleKind);
+        TestAssert.True(plot.Series[0].Smooth is null, "Expected missing scatter smooth metadata to remain distinct from the effective renderer default.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:scatterChart>
+                <c:scatterStyle val="lineMarker"/>
+                <c:ser><c:smooth val="1"/></c:ser>
+              </c:scatterChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "scatterChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartScatterOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
+        Type optionsType = options.GetType();
+        bool[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<bool>().ToArray();
+
+        TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)(optionsType.GetProperty("ScatterStyle")?.GetValue(options) ?? default(PptxSceneChartScatterStyle)));
+        TestAssert.True((bool)(optionsType.GetProperty("ConnectLines")?.GetValue(options) ?? true) == false, "Expected unknown scene scatterStyle to keep the no-line default, not fallback XML lineMarker.");
+        TestAssert.True(smoothSeries.Length == 1 && !smoothSeries[0], "Expected missing scene scatter smooth flag to use the scene default, not fallback XML smooth=1.");
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
