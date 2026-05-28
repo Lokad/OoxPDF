@@ -56,6 +56,14 @@ function Convert-EmuToPoint($Value) {
     return [Math]::Round([double]$Value / 12700d, 6)
 }
 
+function Convert-EmuToPointOrDefault($Value, [long] $DefaultEmu) {
+    if ($null -eq $Value -or [string]$Value -eq "") {
+        return Convert-EmuToPoint $DefaultEmu
+    }
+
+    return Convert-EmuToPoint $Value
+}
+
 function Get-OptionalAttribute($Node, [string] $Name) {
     if ($null -eq $Node) {
         return $null
@@ -74,8 +82,61 @@ function Get-OfficeGridFontSize([double] $FontSize) {
     return [Math]::Round($deviceUnits * 72d / 600d, 6)
 }
 
+function Get-OfficeGridRemainder([double] $Value) {
+    $gridStep = 72d / 600d
+    $scaled = $Value / $gridStep
+    $floor = [Math]::Floor($scaled)
+    return [Math]::Round($scaled - $floor, 6)
+}
+
+function Get-NullableOfficeGridRemainder($Value) {
+    if ($null -eq $Value -or [string]$Value -eq "") {
+        return $null
+    }
+
+    return Get-OfficeGridRemainder ([double]$Value)
+}
+
+function Add-NullablePoint($Left, $Right) {
+    if ($null -eq $Left -or $null -eq $Right) {
+        return $null
+    }
+
+    return [Math]::Round([double]$Left + [double]$Right, 6)
+}
+
+function Subtract-NullablePoint($Left, $Right) {
+    if ($null -eq $Left -or $null -eq $Right) {
+        return $null
+    }
+
+    return [Math]::Round([double]$Left - [double]$Right, 6)
+}
+
 function Select-One($Node, [System.Xml.XmlNamespaceManager] $NamespaceManager, [string] $XPath) {
     return $Node.SelectSingleNode($XPath, $NamespaceManager)
+}
+
+function Get-SlideSize([string] $PptxPath) {
+    $zip = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $PptxPath).Path)
+    try {
+        $presentationXml = Read-ZipXml $zip "ppt/presentation.xml"
+        $namespaceManager = [System.Xml.XmlNamespaceManager]::new($presentationXml.NameTable)
+        $namespaceManager.AddNamespace("p", "http://schemas.openxmlformats.org/presentationml/2006/main")
+
+        $slideSize = Select-One $presentationXml $namespaceManager "/p:presentation/p:sldSz"
+        if ($null -eq $slideSize) {
+            return [pscustomobject]@{ Width = $null; Height = $null }
+        }
+
+        return [pscustomobject]@{
+            Width = Convert-EmuToPoint (Get-OptionalAttribute $slideSize "cx")
+            Height = Convert-EmuToPoint (Get-OptionalAttribute $slideSize "cy")
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
 }
 
 function Get-SlideTextBoxes([string] $PptxPath, [int] $SlideNumber) {
@@ -115,6 +176,11 @@ function Get-SlideTextBoxes([string] $PptxPath, [int] $SlideNumber) {
                 ""
             }
 
+            $leftInset = Get-OptionalAttribute $bodyPr "lIns"
+            $rightInset = Get-OptionalAttribute $bodyPr "rIns"
+            $topInset = Get-OptionalAttribute $bodyPr "tIns"
+            $bottomInset = Get-OptionalAttribute $bodyPr "bIns"
+
             $rows.Add([pscustomobject]@{
                 ShapeIndex = $shapeIndex
                 Text = $text
@@ -126,10 +192,14 @@ function Get-SlideTextBoxes([string] $PptxPath, [int] $SlideNumber) {
                 Height = Convert-EmuToPoint (Get-OptionalAttribute $ext "cy")
                 Wrap = Get-OptionalAttribute $bodyPr "wrap"
                 Autofit = $autofit
-                LeftInset = Convert-EmuToPoint (Get-OptionalAttribute $bodyPr "lIns")
-                RightInset = Convert-EmuToPoint (Get-OptionalAttribute $bodyPr "rIns")
-                TopInset = Convert-EmuToPoint (Get-OptionalAttribute $bodyPr "tIns")
-                BottomInset = Convert-EmuToPoint (Get-OptionalAttribute $bodyPr "bIns")
+                LeftInset = Convert-EmuToPoint $leftInset
+                RightInset = Convert-EmuToPoint $rightInset
+                TopInset = Convert-EmuToPoint $topInset
+                BottomInset = Convert-EmuToPoint $bottomInset
+                EffectiveLeftInset = Convert-EmuToPointOrDefault $leftInset 91440
+                EffectiveRightInset = Convert-EmuToPointOrDefault $rightInset 91440
+                EffectiveTopInset = Convert-EmuToPointOrDefault $topInset 45720
+                EffectiveBottomInset = Convert-EmuToPointOrDefault $bottomInset 45720
             })
             $shapeIndex++
         }
@@ -141,6 +211,7 @@ function Get-SlideTextBoxes([string] $PptxPath, [int] $SlideNumber) {
     }
 }
 
+$slideSize = Get-SlideSize $InputPptx
 $textBoxes = Get-SlideTextBoxes $InputPptx $Slide
 $referenceOps = Read-JsonArray $ReferenceTextOperations |
     Where-Object { $null -ne $_.DecodedText -and [string]$_.DecodedText -ne "" }
@@ -153,6 +224,12 @@ for ($i = 0; $i -lt $count; $i++) {
     $sourceFontSize = $textBox.SourceFontSize
     $firstGridFontSize = if ($null -eq $sourceFontSize) { $null } else { Get-OfficeGridFontSize $sourceFontSize }
     $officeFontSize = [Math]::Round([double]$operation.FontSize, 6)
+    $refBaselineY = if ($null -eq $operation.EffectiveY) { [Math]::Round([double]$operation.Y, 6) } else { [Math]::Round([double]$operation.EffectiveY, 6) }
+    $refBaselineFromPageTop = Subtract-NullablePoint $slideSize.Height $refBaselineY
+    $shapeBottomY = Add-NullablePoint $textBox.Y $textBox.Height
+    $textTopY = Add-NullablePoint $textBox.Y $textBox.EffectiveTopInset
+    $textBottomInsetHeight = Subtract-NullablePoint $textBox.Height $textBox.EffectiveBottomInset
+    $textBottomY = Add-NullablePoint $textBox.Y $textBottomInsetHeight
 
     $rows.Add([pscustomobject]@{
         Index = $i
@@ -167,16 +244,31 @@ for ($i = 0; $i -lt $count; $i++) {
         SecondaryDelta = if ($null -eq $firstGridFontSize) { $null } else { [Math]::Round($officeFontSize - $firstGridFontSize, 6) }
         X = $textBox.X
         Y = $textBox.Y
+        ShapeTopY600Remainder = Get-NullableOfficeGridRemainder $textBox.Y
         Width = $textBox.Width
         Height = $textBox.Height
+        ShapeBottomY = $shapeBottomY
+        ShapeBottomY600Remainder = Get-NullableOfficeGridRemainder $shapeBottomY
         Wrap = $textBox.Wrap
         Autofit = $textBox.Autofit
         LeftInset = $textBox.LeftInset
         RightInset = $textBox.RightInset
         TopInset = $textBox.TopInset
         BottomInset = $textBox.BottomInset
+        EffectiveLeftInset = $textBox.EffectiveLeftInset
+        EffectiveRightInset = $textBox.EffectiveRightInset
+        EffectiveTopInset = $textBox.EffectiveTopInset
+        EffectiveBottomInset = $textBox.EffectiveBottomInset
+        TextTopY = $textTopY
+        TextTopY600Remainder = Get-NullableOfficeGridRemainder $textTopY
+        TextBottomY = $textBottomY
+        TextBottomY600Remainder = Get-NullableOfficeGridRemainder $textBottomY
         RefX = if ($null -eq $operation.EffectiveX) { [Math]::Round([double]$operation.X, 6) } else { [Math]::Round([double]$operation.EffectiveX, 6) }
-        RefBaselineY = if ($null -eq $operation.EffectiveY) { [Math]::Round([double]$operation.Y, 6) } else { [Math]::Round([double]$operation.EffectiveY, 6) }
+        RefBaselineY = $refBaselineY
+        RefBaselineY600Remainder = Get-OfficeGridRemainder $refBaselineY
+        SlideHeight = $slideSize.Height
+        RefBaselineFromPageTop = $refBaselineFromPageTop
+        RefBaselineFromPageTop600Remainder = Get-NullableOfficeGridRemainder $refBaselineFromPageTop
         RefObjectNumber = $operation.ObjectNumber
     })
 }

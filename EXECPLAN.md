@@ -1243,6 +1243,16 @@ High-priority actions:
     rows share the same top-origin baseline remainder as the secondary rows, and `wrap13b` spreads secondary rows
     across several page-top remainders and line indexes. This is still evidence for an Office page/text-matrix
     quantization condition, not enough to justify a renderer rule or a Y-band lookup.
+  - [x] 2026-05-28: Extend `tools/SummarizePptxFontEmissionProbe.ps1` so standalone public-safe font probes retain
+    page-space grid evidence instead of forcing every investigation through ad hoc comparer runs. The summarizer now
+    reads slide size from `ppt/presentation.xml`, preserves both raw and effective OOXML body insets, reports shape
+    top/bottom and text top/bottom positions on the 600-DPI Office export grid, and adds Office baseline-from-page-top
+    plus baseline-grid remainders. Re-running the fine 21 pt Y-scan summary confirms the useful local facts are now
+    visible in the one-to-one probe table: source Y `120/123/126 pt` maps to effective text top `123.6/126.6/129.6 pt`
+    and Office baseline-from-page-top `144.02/147.02/150.02 pt` with remainder `0.166667`. This is instrumentation,
+    not a renderer change; the open rule remains page/text-matrix quantization, because broader current diagnostics
+    for `dense`, `dense-defaultinset`, `wide`, `wrap13b`, and `y-scan-21pt-fine` still show the secondary branch
+    crossing several baseline remainders and font sizes.
   - [x] 2026-05-28: Carry the actual emitted baseline into the PPTX PDF text-emission context. The internal
     `PptxPdfTextEmissionContext` already carried layout font size, frame geometry, insets, wrap/autofit mode,
     line identity, line top, line advance, and line max font size; it now also carries bottom-origin `BaselineY`,
