@@ -12056,6 +12056,24 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `88` tests, `0` failures, and `0` skips; full non-slow console runner passed with `329` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML boolean tokens for chart title and legend ownership fields.
+`PptxSceneChartTitle` now carries `IsAutoDeletedValue` and `OverlayValue` beside the parsed booleans;
+`PptxSceneChartLegend` carries `OverlayValue` and `IsDeletedValue`, and scene inspection exposes the legend
+raw values next to the existing parsed overlay/delete fields. The scene-builder fixture now asserts missing
+title auto-delete and legend delete tokens as empty strings, and a focused chart fixture locks mixed lexical
+forms (`false`, `true`, `0`, `1`) for title auto-delete/title overlay/legend overlay/legend delete.
+
+This keeps the chart model moving toward source-faithful Office alignment without changing layout behavior.
+It also makes another renderer-local XML fallback unnecessary for future title/legend work: missing, numeric,
+and textual boolean forms can now be reasoned about from the typed scene. Remaining boolean-token gaps are
+mostly deeper in plot, series, data-label, and axis records; those should be handled in small fixture-backed
+slices rather than through broad record churn.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; the first parallel `pptx-charts`
+attempt hit a transient test DLL write lock, then the serial rerun passed with `89` tests, `0` failures, and
+`0` skips; full non-slow console runner passed with `330` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw `c:numFmt/@sourceLinked` token through the chart scene model
 and renderer number-format bridge. `PptxSceneChartNumberFormat` and the renderer-local `ChartNumberFormat`
 now carry `SourceLinkedValue` beside the existing parsed `SourceLinked` boolean, so plot data labels,
