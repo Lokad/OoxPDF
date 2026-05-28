@@ -627,6 +627,7 @@ internal static class PptxTests
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleColorCount);
         TestAssert.Equal(0, slideSnapshot.SlideNodes[4].ChartColorStyleVariationCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleRootDeclarationCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleResolvedDeclarationCount);
         TestAssert.Equal("srgbClr", slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationKinds[0]);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
@@ -7313,6 +7314,7 @@ internal static class PptxTests
                 node.ChartColorStyleColorCount,
                 node.ChartColorStyleVariationCount,
                 node.ChartColorStyleDeclarationCount,
+                node.ChartColorStyleRootDeclarationCount,
                 node.ChartColorStyleResolvedDeclarationCount,
                 node.ChartColorStyleDeclarationKinds,
                 node.HasChartStylePart,
@@ -17837,6 +17839,7 @@ internal static class PptxTests
 
         TestAssert.Equal(1, chart.ColorStyle.VariationCount);
         TestAssert.Equal(3, chart.ColorStyle.Declarations.Count);
+        TestAssert.Equal(2, chart.ColorStyle.RootDeclarations.Count);
         TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[0].Kind);
         TestAssert.Equal("FF00CC", chart.ColorStyle.Declarations[0].Value);
         TestAssert.Equal(null, chart.ColorStyle.Declarations[0].VariationIndex);
@@ -17844,6 +17847,8 @@ internal static class PptxTests
         TestAssert.Equal("schemeClr", chart.ColorStyle.Declarations[1].Kind);
         TestAssert.Equal("accent1", chart.ColorStyle.Declarations[1].Value);
         TestAssert.Equal(null, chart.ColorStyle.Declarations[1].VariationIndex);
+        TestAssert.Equal("srgbClr", chart.ColorStyle.RootDeclarations[0].Kind);
+        TestAssert.Equal("schemeClr", chart.ColorStyle.RootDeclarations[1].Kind);
         TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[2].Kind);
         TestAssert.Equal("112233", chart.ColorStyle.Declarations[2].Value);
         TestAssert.Equal(0, chart.ColorStyle.Declarations[2].VariationIndex ?? -1);
@@ -17857,6 +17862,7 @@ internal static class PptxTests
         TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
         TestAssert.Equal(1, snapshot.ChartColorStyleVariationCount);
         TestAssert.Equal(3, snapshot.ChartColorStyleDeclarationCount);
+        TestAssert.Equal(2, snapshot.ChartColorStyleRootDeclarationCount);
         TestAssert.Equal(2, snapshot.ChartColorStyleResolvedDeclarationCount);
         TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[0]);
         TestAssert.Equal("schemeClr", snapshot.ChartColorStyleDeclarationKinds[1]);

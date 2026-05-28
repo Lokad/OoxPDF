@@ -181,6 +181,7 @@ internal sealed partial class PptxRenderer
             node.Chart?.ColorStyle.Colors.Count ?? 0,
             node.Chart?.ColorStyle.VariationCount ?? 0,
             chartColorDeclarations.Count,
+            node.Chart?.ColorStyle.RootDeclarations.Count ?? 0,
             chartColorDeclarations.Count(declaration => declaration.IsResolved),
             chartColorDeclarationKinds,
             node.Chart?.StylePart.IsDefined ?? false,

@@ -15326,3 +15326,15 @@ style references instead of guessing whether a missing nullable index meant abse
 unsupported future token. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and
 `0` skips.
+
+Follow-up, 2026-05-28: chart color-style root declarations are now explicit scene state. `PptxSceneChartColorStyle`
+keeps `RootDeclarations` alongside the existing flat `Declarations` list and typed `Variations`, and private-safe
+scene inspection reports the root declaration count. The color-style preservation regression now verifies that
+root declarations can be inspected without filtering by `VariationIndex == null`.
+
+This is intentionally another provenance slice, not a rendering change. The broader Office chart-style/color-style
+cascade still needs evidence before `colorsN.xml` drives paint decisions, but future palette work now has a
+separate root group and variation groups instead of having to infer those structural boundaries from a flattened
+declaration list. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip;
+focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
