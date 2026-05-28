@@ -406,6 +406,15 @@ High-priority actions:
   branches; scene-backed title and legend style resolve only from chart scene text style, chart-style role
   defaults, and the typed scene title/legend overrides. This is behavior-neutral and records a small but useful
   source-boundary cleanup for future chart bridge audits.
+- [x] 2026-05-28: Add scene-vs-XML isolation coverage for chart series and point styles:
+  `ReadSceneOrXmlSeriesFills` and `ReadSceneOrXmlSeriesStrokes` were already scene-authoritative, but the chart
+  bridge audit found that the public tests mainly covered scene parsing and rendered output, not a direct
+  mismatched XML fallback at the renderer option boundary. A new regression pairs a scene bar series with
+  deliberately different fallback XML and asserts that scene-backed fill/stroke color and width come only from
+  the typed scene series, while XML-only compatibility still reads the fallback chart XML. A second regression
+  does the same for `ReadSceneOrXmlSeriesPointFills` and `ReadSceneOrXmlSeriesPointStrokes`, using mismatched
+  `c:dPt` indices so point-level overrides cannot silently borrow fallback XML. This preserves the long-term
+  invariant before more chart-style/default work is attempted.
 - [x] 2026-05-28: Make value-axis XML scale fallback scene-aware:
   `ResolveXmlValueAxisForSource` now receives the chart scene and only searches the first raw XML `c:valAx`
   when no `PptxSceneChart` exists. Scene-backed missing-axis paths therefore stay missing for axis scale,

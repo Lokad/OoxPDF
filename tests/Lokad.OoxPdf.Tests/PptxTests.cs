@@ -14182,6 +14182,123 @@ internal static class PptxTests
         TestAssert.Equal("99", xmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
     }
 
+    public static void PptxChartSeriesStylesUseSceneSource()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser>
+                  <c:spPr>
+                    <a:solidFill><a:srgbClr val="112233"/></a:solidFill>
+                    <a:ln w="25400"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln>
+                  </c:spPr>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser>
+                  <c:spPr>
+                    <a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill>
+                    <a:ln w="12700"><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill></a:ln>
+                  </c:spPr>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        System.Reflection.MethodInfo readFills = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSeriesFills",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series fill resolver.");
+        System.Reflection.MethodInfo readStrokes = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSeriesStrokes",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series stroke resolver.");
+
+        object sceneFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene fills.")).Cast<object>().Single();
+        object sceneStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null])) ?? throw new InvalidOperationException("Expected scene strokes.")).Cast<object>().Single();
+        object xmlFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML fills.")).Cast<object>().Single();
+        object xmlStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, null])) ?? throw new InvalidOperationException("Expected XML strokes.")).Cast<object>().Single();
+
+        TestAssert.Equal(new RgbColor(17, 34, 51), ChartSeriesFillColor(sceneFill));
+        TestAssert.Equal(new RgbColor(68, 85, 102), ChartSeriesStrokeColor(sceneStroke));
+        TestAssert.Equal(2d, ChartSeriesStrokeWidth(sceneStroke));
+        TestAssert.Equal(new RgbColor(171, 205, 239), ChartSeriesFillColor(xmlFill));
+        TestAssert.Equal(new RgbColor(254, 220, 186), ChartSeriesStrokeColor(xmlStroke));
+        TestAssert.Equal(1d, ChartSeriesStrokeWidth(xmlStroke));
+    }
+
+    public static void PptxChartSeriesPointStylesUseSceneSource()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser>
+                  <c:dPt>
+                    <c:idx val="1"/>
+                    <c:spPr>
+                      <a:solidFill><a:srgbClr val="123456"/></a:solidFill>
+                      <a:ln w="38100"><a:solidFill><a:srgbClr val="654321"/></a:solidFill></a:ln>
+                    </c:spPr>
+                  </c:dPt>
+                  <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser>
+                  <c:dPt>
+                    <c:idx val="0"/>
+                    <c:spPr>
+                      <a:solidFill><a:srgbClr val="A0B0C0"/></a:solidFill>
+                      <a:ln w="12700"><a:solidFill><a:srgbClr val="0C0B0A"/></a:solidFill></a:ln>
+                    </c:spPr>
+                  </c:dPt>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "barChart").Single();
+        System.Reflection.MethodInfo readPointFills = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSeriesPointFills",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series point fill resolver.");
+        System.Reflection.MethodInfo readPointStrokes = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSeriesPointStrokes",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series point stroke resolver.");
+
+        object scenePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene point fills.")).Cast<object>().Single();
+        object scenePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene point strokes.")).Cast<object>().Single();
+        object xmlPointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML point fills.")).Cast<object>().Single();
+        object xmlPointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML point strokes.")).Cast<object>().Single();
+
+        object sceneFill = ChartDictionaryValue(scenePointFills, 1);
+        object sceneStroke = ChartDictionaryValue(scenePointStrokes, 1);
+        object xmlFill = ChartDictionaryValue(xmlPointFills, 0);
+        object xmlStroke = ChartDictionaryValue(xmlPointStrokes, 0);
+
+        TestAssert.Equal(new RgbColor(18, 52, 86), ChartSeriesFillColor(sceneFill));
+        TestAssert.Equal(new RgbColor(101, 67, 33), ChartSeriesStrokeColor(sceneStroke));
+        TestAssert.Equal(3d, ChartSeriesStrokeWidth(sceneStroke));
+        TestAssert.Equal(new RgbColor(160, 176, 192), ChartSeriesFillColor(xmlFill));
+        TestAssert.Equal(new RgbColor(12, 11, 10), ChartSeriesStrokeColor(xmlStroke));
+        TestAssert.Equal(1d, ChartSeriesStrokeWidth(xmlStroke));
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""
@@ -16490,6 +16607,40 @@ internal static class PptxTests
     {
         return (bool)(marker.GetType().GetProperty("IsDefined")?.GetValue(marker)
             ?? throw new InvalidOperationException("Expected chart marker defined state."));
+    }
+
+    private static RgbColor ChartSeriesFillColor(object fill)
+    {
+        return (RgbColor)(fill.GetType().GetProperty("Color")?.GetValue(fill)
+            ?? throw new InvalidOperationException("Expected chart series fill color."));
+    }
+
+    private static RgbColor ChartSeriesStrokeColor(object stroke)
+    {
+        return (RgbColor)(stroke.GetType().GetProperty("Color")?.GetValue(stroke)
+            ?? throw new InvalidOperationException("Expected chart series stroke color."));
+    }
+
+    private static double ChartSeriesStrokeWidth(object stroke)
+    {
+        return (double)(stroke.GetType().GetProperty("Width")?.GetValue(stroke)
+            ?? throw new InvalidOperationException("Expected chart series stroke width."));
+    }
+
+    private static object ChartDictionaryValue(object dictionary, int key)
+    {
+        foreach (object entry in (System.Collections.IEnumerable)dictionary)
+        {
+            int candidateKey = (int)(entry.GetType().GetProperty("Key")?.GetValue(entry)
+                ?? throw new InvalidOperationException("Expected chart dictionary key."));
+            if (candidateKey == key)
+            {
+                return entry.GetType().GetProperty("Value")?.GetValue(entry)
+                    ?? throw new InvalidOperationException("Expected chart dictionary value.");
+            }
+        }
+
+        throw new InvalidOperationException($"Expected chart dictionary key '{key}'.");
     }
 
     private static string ReadPdfDecodedAscii(string path)
