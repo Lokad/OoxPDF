@@ -7526,7 +7526,11 @@ internal static class PptxTests
                         <a:tr h="914400"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:lnL><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:lnL></a:tcPr></a:tc></a:tr>
                       </a:tbl>
                     </a:graphicData></a:graphic>
-                  </p:graphicFrame></p:spTree></p:cSld>
+                  </p:graphicFrame>
+                  <p:pic>
+                    <p:blipFill><a:blip><a:duotone><a:schemeClr val="bg1"/><a:schemeClr val="tx1"/></a:duotone></a:blip></p:blipFill>
+                    <p:spPr><a:xfrm><a:off x="1828800" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr>
+                  </p:pic></p:spTree></p:cSld>
                   <p:clrMapOvr><a:overrideClrMapping bg1="accent5" tx1="accent6"/></p:clrMapOvr>
                 </p:sld>
                 """
@@ -7545,6 +7549,9 @@ internal static class PptxTests
         PptxSceneTableCell cell = scene.Slides[0].SlideNodes[1].Table!.Rows[0].Cells[0];
         TestAssert.Equal(new RgbColor(17, 34, 51), cell.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), cell.Borders.Left.Line.Color);
+        PptxSceneImageRecolor recolor = scene.Slides[0].SlideNodes[2].Picture!.Recolor;
+        TestAssert.Equal(new RgbColor(17, 34, 51), recolor.Dark);
+        TestAssert.Equal(new RgbColor(68, 85, 102), recolor.Light);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()

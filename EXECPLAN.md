@@ -3667,6 +3667,11 @@ High-priority actions:
   Keep this item open: built-in table style colors, chart colors, image recolor, direct renderer paths, and
   inherited placeholder style maps still need source-aware color-map ownership. Validation: focused non-slow
   `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: scene picture parsing now passes the current source `PptxColorMap` into duotone image
+  recolor color resolution, while keeping default-map helper overloads for current direct renderer callers. Keep
+  this item open: chart colors, direct renderer paths, built-in table style color aliases, and inherited
+  placeholder style maps still need source-aware color-map ownership. Validation: focused non-slow `pptx-model`
+  passed (`17` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

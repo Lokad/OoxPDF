@@ -2009,7 +2009,7 @@ internal sealed class PptxSceneBuilder
                 ReadBounds(child),
                 kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, theme, colorMap),
-                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, package, relationships) : null,
+                kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, colorMap, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme, colorMap) : null,
                 kind == PptxSceneNodeKind.Chart ? ReadChart(child, package, theme, relationships) : null,
                 kind == PptxSceneNodeKind.Group ? ReadGroupTransform(child) : PptxSceneGroupTransform.Identity,
@@ -2157,6 +2157,7 @@ internal sealed class PptxSceneBuilder
     private static PptxScenePicture ReadPicture(
         XElement picture,
         PptxTheme theme,
+        PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
@@ -2170,7 +2171,7 @@ internal sealed class PptxSceneBuilder
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
             ReadPictureAlphaValue(picture),
-            ReadImageRecolor(picture, theme),
+            ReadImageRecolor(picture, theme, colorMap),
             ReadPictureTile(picture));
     }
 
@@ -4895,6 +4896,11 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)
     {
+        return ReadImageRecolor(picture, theme, PptxColorMap.Default);
+    }
+
+    internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? blip = picture
             .Element(PresentationNamespace + "blipFill")
             ?.Element(DrawingNamespace + "blip");
@@ -4938,8 +4944,8 @@ internal sealed class PptxSceneBuilder
         {
             XElement[] colors = duotone.Elements().Take(2).ToArray();
             if (colors.Length == 2 &&
-                TryReadImageRecolorColor(colors[0], theme, out RgbColor dark) &&
-                TryReadImageRecolorColor(colors[1], theme, out RgbColor light))
+                TryReadImageRecolorColor(colors[0], theme, colorMap, out RgbColor dark) &&
+                TryReadImageRecolorColor(colors[1], theme, colorMap, out RgbColor light))
             {
                 return PptxSceneImageRecolor.Duotone(dark, light, duotone.Name.LocalName);
             }
