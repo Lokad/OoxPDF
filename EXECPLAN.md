@@ -2562,6 +2562,17 @@ High-priority actions:
     modes and mixed negative/positive `x`/`y` values, while the PDF structural deltas remain
     `DataLabelText` `8/4`, max text bounds delta `492.681pt`, and leader-line counts `1/4`. This is
     preserved as correlation tooling for the next layout-rule change, not a renderer approximation.
+    2026-05-28 update: split generated polar data-label components into separate PDF text runs when Office's
+    separator is whitespace-only. This keeps comma/default separators as emitted glyphs for existing
+    compatibility, but aligns the public Office probe where category and percent are separate PDF text
+    structures separated by positioned whitespace. Public leader-line probe run `20260528-151601` improved
+    `DataLabelText` counts from reference/candidate `8/4` to `8/8` and reduced max nearest text bounds delta
+    from `492.681pt` to `262.481pt`; leader-line counts remain intentionally open at `1/4` until the manual
+    label-box coordinate basis is solved. Validation: focused non-slow `pptx-charts` passed
+    (`117 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`370 passed, 0 failed, 7 skipped`); private run `20260528-151650` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
