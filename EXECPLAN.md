@@ -3624,6 +3624,16 @@ High-priority actions:
   text run model snapshots expose `TypefaceSource`. Keep this item open: bullet and chart text paths still
   mostly consume plain resolved typeface strings, symbol/bullet font policy is not represented as a diagnostic
   stage, and glyph fallback remains downstream in font mapping rather than a theme-font stage.
+  2026-05-28 progress: scene-owned chart text style overrides now preserve the requested OOXML typeface token
+  and nullable `PptxThemeTypefaceSource` alongside the existing flattened font family. This covers chart-level
+  `txPr`, data-label/title/legend/axis `txPr`, rich chart text runs, and chart-style-part `fontRef`/`defRPr`
+  text roles without changing PDF rendering. Keep this item open: renderer chart text still consumes only the
+  flattened font family, chart text has surface-local run-property readers instead of a shared cascade object,
+  bullet font selection is still not represented as an explicit source-bearing theme-font stage, and glyph
+  fallback remains downstream in font mapping. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo
+  -v minimal` passed; focused non-slow `pptx-charts` passed (`128` passed, `0` failed, `0` skipped); focused
+  non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped); full console runner passed (`396`
+  passed, `0` failed, `0` skipped).
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
   2026-05-28 progress: solid color parsing is now centralized in `PptxColorResolver` and shared by the
@@ -3695,6 +3705,10 @@ High-priority actions:
   built-in table style aliases, and inherited placeholder style maps. Validation: `dotnet build
   Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed (`17` passed,
   `0` failed, `1` skipped); focused non-slow `pptx-charts` passed (`128` passed, `0` failed, `0` skipped).
+  2026-05-28 audit: chart-style-part text colors still have a source-map gap: `cs:defRPr/a:solidFill` and
+  `cs:fontRef` colors are parsed through default-map color helpers while the chart-style part itself is owned
+  by a slide/layout/master source map. Keep this item open until chart-style entries carry the same effective
+  `PptxColorMap` provenance as chart-space/title/legend/axis/data-label direct formatting.
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
@@ -3743,9 +3757,12 @@ High-priority actions:
   including raw underline/strike/caps tokens, highlight, character spacing, baseline shifts, small caps,
   per-run typefaces, and source-bearing theme typeface resolution in the direct text-model path. Keep this
   item open for the long-term architecture: chart text style parsing still has local run-property readers and
-  plain typeface resolution, and the scene run-style path still does not expose the same source-bearing
-  theme-font diagnostics as direct text snapshots. The next durable slice should centralize chart/scene run
-  style resolution into the cascade/theme-source machinery instead of adding more per-consumer XML reads.
+  only partially source-bearing typeface resolution, and the scene run-style path still does not expose the
+  same diagnostics surface as direct text snapshots. 2026-05-28 progress: chart text style overrides now keep
+  raw requested typeface tokens and `PptxThemeTypefaceSource` for direct `txPr`/rich runs and chart-style-part
+  `fontRef` roles; rendering still consumes the flattened font family. Keep this item open: chart run-style
+  parsing should move behind a shared cascade/theme-source resolver, and chart/table text should converge on
+  the same run-style diagnostic surface as shape text instead of adding more per-consumer XML reads.
 - [ ] Port `pptx-renderer` whitespace behavior: regular spaces, repeated spaces, non-breaking spaces,
   tabs, soft hyphens, explicit line breaks, fields, and end-paragraph runs must remain observable.
   2026-05-28 audit: regular wrapping, manual line breaks, fields, default tab stops, explicit tab stops,

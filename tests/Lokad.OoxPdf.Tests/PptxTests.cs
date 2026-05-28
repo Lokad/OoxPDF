@@ -566,6 +566,8 @@ internal static class PptxTests
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
         TestAssert.Equal("major", titleStyle.FontReferenceIndex);
         TestAssert.Equal("Arial", titleStyle.TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal("+mj-lt", titleStyle.TextStyle.RequestedTypeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.MajorLatin, titleStyle.TextStyle.TypefaceSource ?? default);
         TestAssert.Equal(14d, titleStyle.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(51, 102, 153), titleStyle.TextStyle.Color ?? default);
         TestAssert.Equal(0.5d, titleStyle.TextStyle.Alpha ?? 0d);
@@ -573,6 +575,8 @@ internal static class PptxTests
         TestAssert.True(titleStyle.TextStyle.Italic == false, "Expected chart style-part title italic default in the scene model.");
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StyleId ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.TextStyle.RequestedTypeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.TextStyle.TypefaceSource ?? default);
         TestAssert.Equal(11d, slide.SlideNodes[4].Chart?.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(16, 17, 18), slide.SlideNodes[4].Chart?.TextStyle.Color ?? default);
         TestAssert.Equal(0.8d, slide.SlideNodes[4].Chart?.TextStyle.Alpha ?? 0d);
@@ -656,6 +660,8 @@ internal static class PptxTests
         TestAssert.Equal("; ", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Separator ?? string.Empty);
         TestAssert.Equal("#,##0.0", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.NumberFormat ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.RequestedTypeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.TypefaceSource ?? default);
         TestAssert.Equal(10d, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(10, 11, 12), slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Color ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.TextStyle.Bold == true, "Expected plot-level data-label bold style in the scene model.");
@@ -691,6 +697,8 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[0].TextStyle.Bold == true, "Expected first custom label rich-text run bold style in the scene model.");
         TestAssert.Equal("Q", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].Text ?? string.Empty);
         TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.FontFamily ?? string.Empty);
+        TestAssert.Equal("Arial", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.RequestedTypeface ?? string.Empty);
+        TestAssert.Equal(PptxThemeTypefaceSource.Direct, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.TypefaceSource ?? default);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].CustomTextRuns[1].TextStyle.Italic == true, "Expected second custom label rich-text run italic style in the scene model.");
         TestAssert.Equal("ctr", slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].Position ?? string.Empty);
         TestAssert.Equal(PptxSceneChartDataLabelPosition.Center, slide.SlideNodes[4].Chart?.Plots[0].DataLabels.Overrides[0].PositionKind);

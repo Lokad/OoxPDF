@@ -924,13 +924,29 @@ internal readonly record struct PptxSceneChartEffectFamily(
 
 internal readonly record struct PptxSceneChartTextStyleOverride(
     string? FontFamily,
+    string? RequestedTypeface,
+    PptxThemeTypefaceSource? TypefaceSource,
     double? FontSize,
     RgbColor? Color,
     double? Alpha,
     bool? Bold,
     bool? Italic,
     bool? Underline,
-    bool? Strike);
+    bool? Strike)
+{
+    public PptxSceneChartTextStyleOverride(
+        string? fontFamily,
+        double? fontSize,
+        RgbColor? color,
+        double? alpha,
+        bool? bold,
+        bool? italic,
+        bool? underline,
+        bool? strike)
+        : this(fontFamily, null, null, fontSize, color, alpha, bold, italic, underline, strike)
+    {
+    }
+}
 
 internal readonly record struct PptxSceneChartManualLayout(
     bool HasLayout,
@@ -3278,9 +3294,10 @@ internal sealed class PptxSceneBuilder
         string? typeface = (string?)defaultRunProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
             (string?)defaultRunProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
             (string?)defaultRunProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
-        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
-            ? null
-            : theme.ResolveTypeface(typeface);
+        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
+            ? default
+            : theme.ResolveTypefaceWithSource(typeface);
+        string? fontFamily = typefaceResolution.Typeface;
         double? fontSize = defaultRunProperties.Attribute("sz") is { } sizeAttribute &&
             int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
             sizeHundredths > 0
@@ -3293,7 +3310,17 @@ internal sealed class PptxSceneBuilder
         bool? italic = ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
         bool? underline = ReadChartUnderline(defaultRunProperties);
         bool? strike = ReadChartStrike(defaultRunProperties);
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
+        return new PptxSceneChartTextStyleOverride(
+            fontFamily,
+            typefaceResolution.RequestedTypeface,
+            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
+            fontSize,
+            color,
+            color is null ? null : alpha,
+            bold,
+            italic,
+            underline,
+            strike);
     }
 
     private static PptxSceneChartTextBodyProperties ReadChartTextBodyProperties(XElement? parent)
@@ -3327,9 +3354,10 @@ internal sealed class PptxSceneBuilder
         string? typeface = (string?)runProperties.Element(DrawingNamespace + "latin")?.Attribute("typeface") ??
             (string?)runProperties.Element(DrawingNamespace + "ea")?.Attribute("typeface") ??
             (string?)runProperties.Element(DrawingNamespace + "cs")?.Attribute("typeface");
-        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
-            ? null
-            : theme.ResolveTypeface(typeface);
+        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
+            ? default
+            : theme.ResolveTypefaceWithSource(typeface);
+        string? fontFamily = typefaceResolution.Typeface;
         double? fontSize = runProperties.Attribute("sz") is { } sizeAttribute &&
             int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
             sizeHundredths > 0
@@ -3342,7 +3370,17 @@ internal sealed class PptxSceneBuilder
         bool? italic = ReadOptionalOoxmlBooleanAttribute(runProperties, "i");
         bool? underline = ReadChartUnderline(runProperties);
         bool? strike = ReadChartStrike(runProperties);
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
+        return new PptxSceneChartTextStyleOverride(
+            fontFamily,
+            typefaceResolution.RequestedTypeface,
+            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
+            fontSize,
+            color,
+            color is null ? null : alpha,
+            bold,
+            italic,
+            underline,
+            strike);
     }
 
     private static bool? ReadChartUnderline(XElement runProperties)
@@ -3858,6 +3896,8 @@ internal sealed class PptxSceneBuilder
     private static bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)
     {
         return textStyle.FontFamily is not null ||
+            textStyle.RequestedTypeface is not null ||
+            textStyle.TypefaceSource is not null ||
             textStyle.FontSize is not null ||
             textStyle.Color is not null ||
             textStyle.Alpha is not null ||
@@ -3888,9 +3928,10 @@ internal sealed class PptxSceneBuilder
             };
         }
 
-        string? fontFamily = string.IsNullOrWhiteSpace(typeface)
-            ? null
-            : theme.ResolveTypeface(typeface);
+        PptxThemeTypefaceResolution typefaceResolution = string.IsNullOrWhiteSpace(typeface)
+            ? default
+            : theme.ResolveTypefaceWithSource(typeface);
+        string? fontFamily = typefaceResolution.Typeface;
         double? fontSize = defaultRunProperties?.Attribute("sz") is { } sizeAttribute &&
             int.TryParse(sizeAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int sizeHundredths) &&
             sizeHundredths > 0
@@ -3904,7 +3945,17 @@ internal sealed class PptxSceneBuilder
         bool? italic = defaultRunProperties is null ? null : ReadOptionalOoxmlBooleanAttribute(defaultRunProperties, "i");
         bool? underline = defaultRunProperties is null ? null : ReadChartUnderline(defaultRunProperties);
         bool? strike = defaultRunProperties is null ? null : ReadChartStrike(defaultRunProperties);
-        return new PptxSceneChartTextStyleOverride(fontFamily, fontSize, color, color is null ? null : alpha, bold, italic, underline, strike);
+        return new PptxSceneChartTextStyleOverride(
+            fontFamily,
+            typefaceResolution.RequestedTypeface,
+            typefaceResolution.RequestedTypeface is null ? null : typefaceResolution.Source,
+            fontSize,
+            color,
+            color is null ? null : alpha,
+            bold,
+            italic,
+            underline,
+            strike);
     }
 
     private static bool IsOoxmlBooleanElementEnabled(XElement? element)
