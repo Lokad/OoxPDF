@@ -2796,6 +2796,13 @@ High-priority actions:
     horizontal-bar category/value permutations, scatter/bubble explicit titles, overlay/reserve interaction,
     rich rotated multi-run titles, and chart-style-inherited title defaults, then feed those observations back
     into plot-box reservation rather than widening the title-position tolerance.
+    - [x] 2026-05-28 Add horizontal-bar default-axis-title public evidence:
+      `tools/NewChartProbeFixtures.ps1 -AxisTitlesOnly` now also generates
+      `pptx-ladder-11-chart-bar-default-axis-titles-probe`, covering the horizontal bar permutation where the
+      category title is in the side lane and the value title is in the bottom/top value-axis lane. The visual
+      manifest gates `AxisTitleText` text hashes plus chart plot/gridline structures with deliberately loose
+      placement tolerances while plot-box reservation remains approximate. Validation: visual run
+      `20260528-161057` passed with empty diagnostics.
   - [x] 2026-05-28 Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise
     supported chart branches: successful native chart rendering now emits
     `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION` when a default axis title cannot be rendered because the
