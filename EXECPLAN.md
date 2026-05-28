@@ -12060,6 +12060,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `331` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Extended `ChartBarPlotOptions` through the bar chart layout boundary. Main bar
+rendering, auto-title baseline anchoring, manual-layout title re-anchoring, inside-crossing detection, and
+stacked-value-axis label reserve now consume the same resolved bar option record instead of re-reading
+`barDir` or `grouping` through separate `ReadSceneOrXml*` calls inside layout helpers.
+
+This is still behavior-neutral and deliberately narrower than the open Office-PDF plot negotiation work. The
+value is that bar geometry decisions now have one option contract before the hard layout questions begin:
+horizontal-vs-column orientation and stacked/percent-stacked status are no longer independently recoverable
+from fallback XML in title/layout code after the render branch has already resolved scene-owned defaults.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `96` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `337` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Consolidated line-chart renderer option resolution behind `ChartLinePlotOptions`.
 Native line rendering and combo line overlays now resolve grouping, stacked/percent-stacked booleans,
 per-series smooth flags, and chart-wide `dispBlanksAs` at one scene/XML boundary before computing extents,
