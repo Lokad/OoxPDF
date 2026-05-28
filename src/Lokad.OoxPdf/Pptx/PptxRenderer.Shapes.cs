@@ -2905,18 +2905,14 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        XElement? fillRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "fillRef");
-        int fillIndex = ParseOptionalIntAttribute(fillRef, "idx", 0);
-        if (fillIndex > 0 &&
-            theme.TryGetFillStyle(fillIndex, out XElement fillStyle) &&
-            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha))
+        PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
+        if (fillReference.Style is not null &&
+            TryReadSolidColorWithAlpha(fillReference.Style, theme, fillReference.Reference, out color, out alpha))
         {
             return true;
         }
 
-        return fillIndex > 0 && TryReadSolidColorWithAlpha(fillRef, theme, out color, out alpha);
+        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, out color, out alpha);
     }
 
     private static bool TryReadShapePatternFill(XElement shapeProperties, PptxTheme theme, out ShapePatternFill fill)
@@ -2998,11 +2994,8 @@ internal sealed partial class PptxRenderer
             return true;
         }
 
-        XElement? lineRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "lnRef");
-        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
-        if (lineIndex <= 0 || !theme.TryGetLineStyle(lineIndex, out XElement lineStyle))
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        if (lineReference.Style is null)
         {
             color = default;
             lineWidth = 0d;
@@ -3010,21 +3003,16 @@ internal sealed partial class PptxRenderer
             return false;
         }
 
-        lineWidth = lineStyle.Attribute("w") is { } widthAttribute
+        lineWidth = lineReference.Style.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : 1d;
-        return TryReadSolidColorWithAlpha(lineStyle, theme, lineRef, out color, out alpha);
+        return TryReadSolidColorWithAlpha(lineReference.Style, theme, lineReference.Reference, out color, out alpha);
     }
 
     private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
     {
-        XElement? lineRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "lnRef");
-        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
-        if (lineIndex > 0 &&
-            theme.TryGetLineStyle(lineIndex, out XElement lineStyle) &&
-            lineStyle.Attribute("w") is { } widthAttribute)
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        if (lineReference.Style?.Attribute("w") is { } widthAttribute)
         {
             lineWidth = OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture));
             return true;

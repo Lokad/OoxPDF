@@ -3546,6 +3546,14 @@ High-priority actions:
   (`96 passed, 0 failed, 2 skipped`), and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
+  2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
+  typed `PptxFormatSchemeReference` shared by the direct renderer and typed scene builder. This preserves the
+  current fill/line drawing behavior while eliminating another duplicated style-reference lookup path. Keep
+  this item open: the resolved format-scheme stages are still not fully model-visible, chart-style format
+  references remain separately parsed, and default shape style/fallback ordering still needs Office-aligned
+  provenance instead of renderer-local decisions. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off
+  --nologo -v minimal` passed with zero warnings; focused non-slow `pptx-model` passed (`13 passed, 0 failed,
+  1 skipped`) and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` text body handling: insets, anchors, vertical overflow, fit modes, wrapping,
   text direction, vertical text, multi-column text, and unsupported diagnostics where rendering is absent.
 - [x] Port `pptx-renderer` line-height behavior into the PPTX text model/layout:

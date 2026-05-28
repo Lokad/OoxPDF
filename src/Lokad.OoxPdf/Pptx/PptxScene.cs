@@ -4326,18 +4326,14 @@ internal sealed class PptxSceneBuilder
             return true;
         }
 
-        XElement? fillRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "fillRef");
-        int fillIndex = ParseOptionalIntAttribute(fillRef, "idx", 0);
-        if (fillIndex > 0 &&
-            theme.TryGetFillStyle(fillIndex, out XElement fillStyle) &&
-            TryReadSolidColorWithAlpha(fillStyle, theme, fillRef, out color, out alpha))
+        PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
+        if (fillReference.Style is not null &&
+            TryReadSolidColorWithAlpha(fillReference.Style, theme, fillReference.Reference, out color, out alpha))
         {
             return true;
         }
 
-        return fillIndex > 0 && TryReadSolidColorWithAlpha(fillRef, theme, out color, out alpha);
+        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, out color, out alpha);
     }
 
     private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
@@ -4359,11 +4355,8 @@ internal sealed class PptxSceneBuilder
             return true;
         }
 
-        XElement? lineRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "lnRef");
-        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
-        if (lineIndex <= 0 || !theme.TryGetLineStyle(lineIndex, out XElement lineStyle))
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        if (lineReference.Style is null)
         {
             color = default;
             lineWidth = 0d;
@@ -4371,7 +4364,7 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        if (TryReadThemeLineReference(lineRef, theme, out PptxSceneLineStyle line))
+        if (TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle line))
         {
             color = line.Color;
             lineWidth = line.Width;
@@ -4387,13 +4380,8 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadStyleLineWidth(XElement shape, PptxTheme theme, out double lineWidth)
     {
-        XElement? lineRef = shape
-            .Element(PresentationNamespace + "style")
-            ?.Element(DrawingNamespace + "lnRef");
-        int lineIndex = ParseOptionalIntAttribute(lineRef, "idx", 0);
-        if (lineIndex > 0 &&
-            theme.TryGetLineStyle(lineIndex, out XElement lineStyle) &&
-            lineStyle.Attribute("w") is { } widthAttribute)
+        PptxFormatSchemeReference lineReference = PptxFormatSchemeResolver.ResolveLineReference(shape, theme);
+        if (lineReference.Style?.Attribute("w") is { } widthAttribute)
         {
             lineWidth = OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture));
             return true;
@@ -4405,11 +4393,28 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadThemeLineReference(XElement? lineReference, PptxTheme theme, out PptxSceneLineStyle line)
     {
-        int lineIndex = ParseOptionalIntAttribute(lineReference, "idx", 0);
-        if (lineIndex <= 0 ||
-            !theme.TryGetLineStyle(lineIndex, out XElement lineStyle) ||
+        return TryReadThemeLineReference(
+            new PptxFormatSchemeReference(
+                lineReference,
+                PptxFormatSchemeResolver.ReadIndex(lineReference),
+                null),
+            theme,
+            out line);
+    }
+
+    private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, out PptxSceneLineStyle line)
+    {
+        XElement? lineStyle = lineReference.Style;
+        if (lineStyle is null &&
+            lineReference.Index > 0 &&
+            theme.TryGetLineStyle(lineReference.Index, out XElement resolvedLineStyle))
+        {
+            lineStyle = resolvedLineStyle;
+        }
+
+        if (lineStyle is null ||
             lineStyle.Element(DrawingNamespace + "noFill") is not null ||
-            !TryReadSolidColorWithAlpha(lineStyle, theme, lineReference, out RgbColor color, out double alpha))
+            !TryReadSolidColorWithAlpha(lineStyle, theme, lineReference.Reference, out RgbColor color, out double alpha))
         {
             line = default;
             return false;
