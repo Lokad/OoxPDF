@@ -14487,6 +14487,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `9` tests, `0` failures, and `0` skips; full non-slow console runner passed with `397` tests, `0` failures,
 and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX unsupported-transparency diagnostics now consume scene-owned shape alpha
+provenance before consulting slide XML. `PptxSceneShape.HasUnsupportedTransparency` records unsupported
+`a:alpha` ownership while preserving the existing supported-alpha exclusions for shape fills, background
+fills, shape lines, text fills, table cell fills/borders, uniform supported gradients, glow, and outer shadow.
+Private-safe scene inspection exposes the new `ShapeHasUnsupportedTransparency` flag, and the diagnostic path
+now traverses shape scene nodes before falling back to raw XML only for non-shape alpha owners.
+
+This is a careful diagnostic ownership slice, not a full transparency renderer. Supported alpha rendering is
+unchanged, and non-shape alpha coverage still uses XML because group properties, media-specific owners,
+chart-part style fragments, and other non-shape alpha surfaces do not yet all have a typed scene provenance
+field. The next long-term cleanup is to lift those owner-specific alpha surfaces into their scene owners
+instead of expanding the fallback scan or adding owner-name exceptions in the renderer.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState` passed; focused non-slow `pptx-model` passed with
+`23` tests, `0` failures, and `1` skip; focused `PptxUnsupportedFeaturesEmitDiagnostics` passed.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

@@ -48,6 +48,7 @@ internal sealed record PptxSceneNodeSnapshot(
     bool ShapeHasUnsupportedGradient,
     bool ShapeHasPatternSource,
     bool ShapeHasUnsupportedPattern,
+    bool ShapeHasUnsupportedTransparency,
     bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
@@ -510,6 +511,7 @@ internal sealed record PptxSceneShape(
     PptxSceneGradientFill GradientFill,
     PptxScenePatternFill PatternFill,
     PptxSceneShapePictureFill PictureFill,
+    bool HasUnsupportedTransparency,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow,
     PptxSceneShapeEffectFamily Effects,
@@ -4488,12 +4490,97 @@ internal sealed class PptxSceneBuilder
             ReadShapeGradientFill(shapeProperties, theme, colorMap),
             ReadShapePatternFill(shapeProperties, theme, colorMap),
             ReadShapePictureFill(shapeProperties, package, relationships),
+            HasUnsupportedAlpha(shapeProperties),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             ReadShapeEffects(shapeProperties),
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    internal static bool HasUnsupportedAlpha(XElement? container)
+    {
+        return container?.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha) == true;
+    }
+
+    internal static bool IsUnsupportedAlpha(XElement alpha)
+    {
+        if (alpha.Attribute("val") is not { } value ||
+            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
+            parsed >= 100000)
+        {
+            return false;
+        }
+
+        XElement? color = alpha.Parent;
+        XElement? fill = color?.Parent;
+        XElement? owner = fill?.Parent;
+        XElement? lineOwner = owner?.Parent;
+        XElement? gradientStopList = fill?.Parent;
+        XElement? gradientFill = gradientStopList?.Parent;
+        XElement? gradientOwner = gradientFill?.Parent;
+        bool supportedUniformGradientFill = fill?.Name == DrawingNamespace + "gs" &&
+            gradientStopList?.Name == DrawingNamespace + "gsLst" &&
+            gradientFill?.Name == DrawingNamespace + "gradFill" &&
+            gradientOwner?.Name is { } ownerName &&
+            (ownerName == PresentationNamespace + "spPr" || ownerName == PresentationNamespace + "bgPr") &&
+            IsSupportedAlphaGradientFill(gradientFill);
+        bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == PresentationNamespace + "spPr";
+        bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == PresentationNamespace + "bgPr";
+        bool supportedShapeLine = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "ln" &&
+            lineOwner?.Name == PresentationNamespace + "spPr";
+        bool supportedTextFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "rPr";
+        bool supportedTableCellFill = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner?.Name == DrawingNamespace + "tcPr";
+        bool supportedTableBorder = fill?.Name == DrawingNamespace + "solidFill" &&
+            owner is not null &&
+            owner.Name.Namespace == DrawingNamespace &&
+            owner.Name.LocalName is "lnL" or "lnR" or "lnT" or "lnB" &&
+            lineOwner?.Name == DrawingNamespace + "tcPr";
+        bool supportedOuterShadow = fill?.Name == DrawingNamespace + "outerShdw" &&
+            owner?.Name == DrawingNamespace + "effectLst";
+        bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
+            owner?.Name == DrawingNamespace + "effectLst";
+        return !supportedUniformGradientFill && !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
+    }
+
+    private static bool IsSupportedAlphaGradientFill(XElement gradientFill)
+    {
+        if (gradientFill.Element(DrawingNamespace + "gsLst") is not { } gradientStopList ||
+            gradientFill.Element(DrawingNamespace + "lin") is not { })
+        {
+            return false;
+        }
+
+        XElement[] stops = gradientStopList
+            .Elements(DrawingNamespace + "gs")
+            .ToArray();
+        return stops.Length >= 2 &&
+            stops.All(stop => stop.Elements().FirstOrDefault(IsDrawingColorElement) is not null) &&
+            HasSupportedGradientStopAlpha(stops);
+    }
+
+    private static bool HasSupportedGradientStopAlpha(IReadOnlyList<XElement> stops)
+    {
+        int first = ReadGradientStopAlpha(stops[0]);
+        return stops.All(stop => Math.Abs(ReadGradientStopAlpha(stop) - first) <= 100);
+    }
+
+    private static int ReadGradientStopAlpha(XElement stop)
+    {
+        XElement? alpha = stop
+            .Elements()
+            .FirstOrDefault(IsDrawingColorElement)
+            ?.Element(DrawingNamespace + "alpha");
+        return alpha?.Attribute("val") is { } value &&
+            int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
+            ? Math.Clamp(parsed, 0, 100000)
+            : 100000;
     }
 
     private static PptxSceneShapeEffectFamily ReadShapeEffects(XElement? shapeProperties)

@@ -94,6 +94,7 @@ internal sealed partial class PptxRenderer
             node.Shape?.GradientFill.HasUnsupportedGradient ?? false,
             node.Shape?.PatternFill.HasPatternSource ?? false,
             node.Shape?.PatternFill.HasUnsupportedPattern ?? false,
+            node.Shape?.HasUnsupportedTransparency ?? false,
             node.Shape?.NoFill ?? false,
             node.Shape?.FillReference.Index ?? 0,
             node.Shape?.FillReference.Style is not null,

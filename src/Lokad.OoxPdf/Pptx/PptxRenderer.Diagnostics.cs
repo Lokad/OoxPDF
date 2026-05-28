@@ -98,7 +98,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_IMAGE_TILE", "tiled image fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedAlpha))
+        if (HasUnsupportedTransparency(sceneSlide, slideXml))
         {
             Emit("PPTX_UNSUPPORTED_TRANSPARENCY", "transparency");
         }
@@ -488,48 +488,35 @@ internal sealed partial class PptxRenderer
             !graphicData.Descendants(DrawingNamespace + "tbl").Any();
     }
 
-    private static bool IsUnsupportedAlpha(XElement alpha)
+    private static bool HasUnsupportedTransparency(PptxSceneSlide sceneSlide, XDocument slideXml)
     {
-        if (alpha.Attribute("val") is not { } value ||
-            !int.TryParse(value.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) ||
-            parsed >= 100000)
+        return HasUnsupportedShapeTransparency(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(DrawingNamespace + "alpha").Any(IsUnsupportedNonShapeAlpha);
+    }
+
+    private static bool HasUnsupportedShapeTransparency(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
         {
-            return false;
+            if ((node.Shape is { HasUnsupportedTransparency: true }) ||
+                HasUnsupportedShapeTransparency(node.Children))
+            {
+                return true;
+            }
         }
 
-        XElement? color = alpha.Parent;
-        XElement? fill = color?.Parent;
-        XElement? owner = fill?.Parent;
-        XElement? lineOwner = owner?.Parent;
-        XElement? gradientStopList = fill?.Parent;
-        XElement? gradientFill = gradientStopList?.Parent;
-        XElement? gradientOwner = gradientFill?.Parent;
-        bool supportedUniformGradientFill = fill?.Name == DrawingNamespace + "gs" &&
-            gradientStopList?.Name == DrawingNamespace + "gsLst" &&
-            gradientFill?.Name == DrawingNamespace + "gradFill" &&
-            gradientOwner?.Name is { } ownerName &&
-            (ownerName == PresentationNamespace + "spPr" || ownerName == PresentationNamespace + "bgPr") &&
-            !IsUnsupportedGradientFill(gradientFill);
-        bool supportedShapeFill = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner?.Name == PresentationNamespace + "spPr";
-        bool supportedBackgroundFill = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner?.Name == PresentationNamespace + "bgPr";
-        bool supportedShapeLine = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner?.Name == DrawingNamespace + "ln" &&
-            lineOwner?.Name == PresentationNamespace + "spPr";
-        bool supportedTextFill = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner?.Name == DrawingNamespace + "rPr";
-        bool supportedTableCellFill = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner?.Name == DrawingNamespace + "tcPr";
-        bool supportedTableBorder = fill?.Name == DrawingNamespace + "solidFill" &&
-            owner is not null &&
-            owner.Name.Namespace == DrawingNamespace &&
-            owner.Name.LocalName is "lnL" or "lnR" or "lnT" or "lnB" &&
-            lineOwner?.Name == DrawingNamespace + "tcPr";
-        bool supportedOuterShadow = fill?.Name == DrawingNamespace + "outerShdw" &&
-            owner?.Name == DrawingNamespace + "effectLst";
-        bool supportedGlow = fill?.Name == DrawingNamespace + "glow" &&
-            owner?.Name == DrawingNamespace + "effectLst";
-        return !supportedUniformGradientFill && !supportedShapeFill && !supportedBackgroundFill && !supportedShapeLine && !supportedTextFill && !supportedTableCellFill && !supportedTableBorder && !supportedOuterShadow && !supportedGlow;
+        return false;
+    }
+
+    private static bool IsUnsupportedNonShapeAlpha(XElement alpha)
+    {
+        return !IsShapeAlpha(alpha) && PptxSceneBuilder.IsUnsupportedAlpha(alpha);
+    }
+
+    private static bool IsShapeAlpha(XElement alpha)
+    {
+        return alpha.Ancestors().Any(ancestor =>
+            ancestor.Name == PresentationNamespace + "sp" ||
+            ancestor.Name == PresentationNamespace + "cxnSp");
     }
 }

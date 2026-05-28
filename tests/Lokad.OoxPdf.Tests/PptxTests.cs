@@ -17454,6 +17454,58 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
     }
 
+    public static void PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr>
+                        <a:effectLst>
+                          <a:reflection><a:srgbClr val="123456"><a:alpha val="50000"/></a:srgbClr></a:reflection>
+                        </a:effectLst>
+                      </p:spPr>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[0];
+        PptxSceneNode sceneNode = sceneSlide.SlideNodes[0];
+        TestAssert.True(sceneNode.Shape?.HasUnsupportedTransparency == true, "Expected unsupported alpha provenance to be owned by the scene shape.");
+
+        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+        TestAssert.True(snapshot.ShapeHasUnsupportedTransparency, "Expected private-safe scene inspection to expose unsupported transparency state.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutAlpha = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree><p:sp><p:spPr/></p:sp></p:spTree></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutAlpha, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSPARENCY", string.Join("|", diagnostics.Select(d => d.Id)));
+    }
+
     public static void PptxUnsupportedEffectDiagnosticsUseSceneChartEffects()
     {
         string contentTypes = BasicContentTypes().Replace(
