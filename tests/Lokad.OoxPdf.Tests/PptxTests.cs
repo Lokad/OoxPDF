@@ -11573,8 +11573,10 @@ internal static class PptxTests
         TestAssert.Equal(null, series.Explosion);
         TestAssert.Equal("futureSeriesExplosion", series.ExplosionValue);
         TestAssert.Equal(35d, series.PointStyles[0].Explosion ?? double.NaN);
+        TestAssert.Equal("0", series.PointStyles[0].IndexValue);
         TestAssert.Equal("35", series.PointStyles[0].ExplosionValue);
         TestAssert.Equal(null, series.PointStyles[1].Explosion);
+        TestAssert.Equal("1", series.PointStyles[1].IndexValue);
         TestAssert.Equal("futurePointExplosion", series.PointStyles[1].ExplosionValue);
     }
 
@@ -11691,9 +11693,11 @@ internal static class PptxTests
         TestAssert.Equal(4, lineSeries.CategoryPoints.Count);
         TestAssert.Equal(6, lineSeries.CategoryPointCount ?? 0);
         TestAssert.Equal(0, lineSeries.CategoryPoints[0].Index);
+        TestAssert.Equal("0", lineSeries.CategoryPoints[0].IndexValue);
         TestAssert.Equal("Alpha", lineSeries.CategoryPoints[0].Text);
         TestAssert.True(lineSeries.CategoryPoints[0].HasText, "Expected category cache point text presence to be explicit.");
         TestAssert.Equal(2, lineSeries.CategoryPoints[1].Index);
+        TestAssert.Equal("2", lineSeries.CategoryPoints[1].IndexValue);
         TestAssert.Equal(string.Empty, lineSeries.CategoryPoints[1].Text);
         TestAssert.True(lineSeries.CategoryPoints[1].HasText, "Expected blank category cache point to preserve its value element.");
         TestAssert.Equal(4, lineSeries.CategoryPoints[2].Index);
@@ -11706,8 +11710,10 @@ internal static class PptxTests
         TestAssert.Equal(6, lineSeries.ValuePointCount ?? 0);
         TestAssert.Equal("0.00", lineSeries.ValueFormatCode ?? string.Empty);
         TestAssert.Equal(0, lineSeries.ValuePoints[0].Index);
+        TestAssert.Equal("0", lineSeries.ValuePoints[0].IndexValue);
         TestAssert.Equal(1.25d, lineSeries.ValuePoints[0].Value ?? 0d);
         TestAssert.Equal(2, lineSeries.ValuePoints[1].Index);
+        TestAssert.Equal("2", lineSeries.ValuePoints[1].IndexValue);
         TestAssert.True(lineSeries.ValuePoints[1].HasValueElement, "Expected blank numeric value element presence to remain explicit.");
         TestAssert.True(lineSeries.ValuePoints[1].Value is null, "Expected blank numeric point value to remain explicit.");
         TestAssert.Equal(string.Empty, lineSeries.ValuePoints[1].Text);
@@ -11842,6 +11848,7 @@ internal static class PptxTests
 
         PptxSceneChartDataLabelOverride label = labels.Overrides[0];
         TestAssert.Equal(1, label.Index);
+        TestAssert.Equal("1", label.IndexValue);
         TestAssert.Equal("0%", label.NumberFormat);
         TestAssert.True(label.NumberFormatInfo.IsDefined, "Expected per-label number format metadata to be explicit.");
         TestAssert.Equal("0%", label.NumberFormatInfo.FormatCode);
@@ -13256,7 +13263,7 @@ internal static class PptxTests
         TestAssert.True((double?)radarWorkbookPoints[0].GetType().GetProperty("Value")?.GetValue(radarWorkbookPoints[0]) == 8.2d, "Expected radar series source to preserve workbook sidecar values.");
         object sparseRadarVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 44d, "44", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse indexed chart vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 44d, "44", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse indexed chart vector.");
         Array sparseRadarVectors = Array.CreateInstance(vector.GetType(), 1);
         sparseRadarVectors.SetValue(sparseRadarVector, 0);
         object[] sparseRadarSeries = (((System.Collections.IEnumerable?)buildRadarSeries.Invoke(null, [sparseRadarVectors])) ?? throw new InvalidOperationException("Expected sparse radar series.")).Cast<object>().ToArray();
@@ -13282,13 +13289,13 @@ internal static class PptxTests
         TestAssert.True((double?)scatterXWorkbookPoint.GetType().GetProperty("Value")?.GetValue(scatterXWorkbookPoint) == 8.2d, "Expected scatter workbook sidecar point to preserve the workbook source value.");
         object sparseScatterXVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 12d, "12", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 12d, "12", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter X vector.");
         object sparseScatterYVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 34d, "34", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 34d, "34", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter Y vector.");
         object sparseScatterSizeVector = buildVector.Invoke(
             null,
-            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, 5d, "5", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
+            [Array.Empty<double>(), new[] { new PptxSceneChartNumberPoint(2, "2", 5d, "5", true) }, 3, "General", source, null]) ?? throw new InvalidOperationException("Expected sparse scatter bubble-size vector.");
         object sparseScatterSeriesRecord = Activator.CreateInstance(scatterSeriesType, [sparseScatterXVector, sparseScatterYVector, sparseScatterSizeVector, true]) ?? throw new InvalidOperationException("Expected sparse indexed scatter-series instance.");
         object sparseRenderedScatter = buildScatterSeries.Invoke(null, [sparseScatterSeriesRecord]) ?? throw new InvalidOperationException("Expected sparse rendered scatter-series.");
         object[] sparseScatterPoints = (((System.Collections.IEnumerable?)sparseRenderedScatter.GetType().GetProperty("Points")?.GetValue(sparseRenderedScatter)) ?? throw new InvalidOperationException("Expected sparse rendered scatter points.")).Cast<object>().ToArray();

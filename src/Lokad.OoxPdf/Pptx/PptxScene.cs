@@ -732,6 +732,7 @@ internal sealed record PptxSceneChartDataLabels(
 
 internal sealed record PptxSceneChartDataLabelOverride(
     int Index,
+    string IndexValue,
     bool? ShowValue,
     bool? ShowPercent,
     bool? ShowCategoryName,
@@ -869,12 +870,14 @@ internal sealed record PptxSceneChartSeries(
 
 internal readonly record struct PptxSceneChartNumberPoint(
     int Index,
+    string IndexValue,
     double? Value,
     string Text,
     bool HasValueElement);
 
 internal readonly record struct PptxSceneChartStringPoint(
     int Index,
+    string IndexValue,
     string Text,
     bool HasText);
 
@@ -936,6 +939,7 @@ internal enum PptxSceneChartMarkerSymbol
 
 internal sealed record PptxSceneChartPointStyle(
     int Index,
+    string IndexValue,
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
@@ -2169,7 +2173,8 @@ internal sealed class PptxSceneBuilder
         var overrides = new List<PptxSceneChartDataLabelOverride>();
         foreach (XElement label in labels.Elements(ChartNamespace + "dLbl"))
         {
-            if (!int.TryParse(label.Element(ChartNamespace + "idx")?.Attribute("val")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
+            string indexValue = (string?)label.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
+            if (!int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index) ||
                 index < 0)
             {
                 continue;
@@ -2178,6 +2183,7 @@ internal sealed class PptxSceneBuilder
             PptxSceneChartNumberFormat numberFormat = ReadChartNumberFormat(label);
             overrides.Add(new PptxSceneChartDataLabelOverride(
                 index,
+                indexValue,
                 ReadOptionalOoxmlBooleanElement(label, "showVal"),
                 ReadOptionalOoxmlBooleanElement(label, "showPercent"),
                 ReadOptionalOoxmlBooleanElement(label, "showCatName"),
@@ -2413,8 +2419,8 @@ internal sealed class PptxSceneBuilder
         var styles = new List<PptxSceneChartPointStyle>();
         foreach (XElement point in series.Elements(ChartNamespace + "dPt"))
         {
-            if (point.Element(ChartNamespace + "idx")?.Attribute("val") is not { } indexAttribute ||
-                !int.TryParse(indexAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
+            string indexValue = (string?)point.Element(ChartNamespace + "idx")?.Attribute("val") ?? string.Empty;
+            if (!int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
             {
                 continue;
             }
@@ -2423,6 +2429,7 @@ internal sealed class PptxSceneBuilder
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(point, "explosion");
             styles.Add(new PptxSceneChartPointStyle(
                 index,
+                indexValue,
                 ReadChartPointFill(shapeProperties, theme),
                 ReadChartPointPatternFill(shapeProperties, theme),
                 ReadChartLine(shapeProperties, theme),
@@ -2587,7 +2594,8 @@ internal sealed class PptxSceneBuilder
             .Elements(ChartNamespace + elementName)
             .Descendants(ChartNamespace + "pt"))
         {
-            int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
+            string indexValue = (string?)point.Attribute("idx") ?? string.Empty;
+            int index = int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
                 ? parsedIndex
                 : ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
@@ -2595,7 +2603,7 @@ internal sealed class PptxSceneBuilder
             double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                 ? parsed
                 : null;
-            points.Add(new PptxSceneChartNumberPoint(index, value, text, valueElement is not null));
+            points.Add(new PptxSceneChartNumberPoint(index, indexValue, value, text, valueElement is not null));
             ordinal++;
         }
 
@@ -2678,11 +2686,12 @@ internal sealed class PptxSceneBuilder
         int ordinal = 0;
         foreach (XElement point in sourcePoints)
         {
-            int index = int.TryParse((string?)point.Attribute("idx"), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
+            string indexValue = (string?)point.Attribute("idx") ?? string.Empty;
+            int index = int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedIndex)
                 ? parsedIndex
                 : ordinal;
             XElement? valueElement = point.Element(ChartNamespace + "v");
-            points.Add(new PptxSceneChartStringPoint(index, valueElement?.Value ?? string.Empty, valueElement is not null));
+            points.Add(new PptxSceneChartStringPoint(index, indexValue, valueElement?.Value ?? string.Empty, valueElement is not null));
             ordinal++;
         }
 

@@ -12057,6 +12057,22 @@ evidence rather than constants.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML index tokens for chart points and label overrides that
+already enter the scene with a parsed key. `PptxSceneChartNumberPoint`, `PptxSceneChartStringPoint`,
+`PptxSceneChartPointStyle`, and `PptxSceneChartDataLabelOverride` now carry `IndexValue` beside the resolved
+integer index. Numeric cache points, string cache points, `c:dPt/@idx`, and `c:dLbl/@idx` all retain the
+source token in the scene model, and the chart tests assert representative category, value, point-style, and
+data-label tokens.
+
+This preserves source evidence without changing current rendering semantics: malformed cache point indices
+still fall back to ordinal indices, and malformed keyed overrides are still skipped according to the existing
+policy. The long-term work is now sharper: introduce an explicit typed key/diagnostic policy for malformed
+or duplicate chart point indices instead of letting parser fallback behavior implicitly decide whether point
+styles, data labels, and sparse cache points participate in rendering.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Preserved raw OOXML tokens for chart series identity. `PptxSceneChartSeries`
 now carries `IndexValue` and `OrderValue` beside the parsed nullable `Index` and `Order`, and series parsing
 uses the same raw-token integer reader introduced for axis integer options. The existing chart numeric-token
