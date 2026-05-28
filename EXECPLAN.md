@@ -340,6 +340,19 @@ High-priority actions:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
   passed (`113 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`357 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Make secondary value-axis style selection scene-first:
+  `ReadSceneOrXmlChartAxesStyle` no longer discovers the secondary value axis by reading raw fallback chart
+  XML and then mapping that XML id back into the scene. It now uses `ReadSceneOrXmlSecondaryValueAxisForChart`,
+  which treats a scene chart's typed value axes as authoritative, chooses the non-primary scene value axis for
+  secondary styling, and reads only the scene chart's own XML as companion evidence. XML-only rendering still
+  uses the legacy `ReadSecondaryValueAxisForChart` path. The regression intentionally pairs a scene with left
+  axis `20` and right axis `30` against fallback XML whose secondary axis is `99`; scene-backed styling stays on
+  axis `30`, while XML-only styling still selects `99`. This closes the companion style path left open by the
+  secondary-label work and prevents fallback XML from silently redirecting secondary axis stroke/side selection
+  when the typed chart scene already exists. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
+  passed (`114 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`358 passed, 0 failed, 7 skipped`).
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains
