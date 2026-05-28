@@ -5164,7 +5164,7 @@ internal sealed partial class PptxRenderer
 
         string position = (string?)legend.Element(ChartNamespace + "legendPos")?.Attribute("val") ?? "r";
         bool overlay = IsOoxmlBooleanElementEnabled(legend.Element(ChartNamespace + "overlay"));
-        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme));
+        return new ChartLegendLayout(ResolveChartLegendPosition(PptxSceneBuilder.ParseChartLegendPosition(position)), position, overlay, Visible: true, ReadManualLayout(legend), ReadChartTextBodyProperties(legend), ReadChartShapeStyle(legend.Element(ChartNamespace + "spPr"), theme));
     }
 
     private static ChartLegendLayout ReadSceneOrXmlChartLegendLayout(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
@@ -5180,7 +5180,7 @@ internal sealed partial class PptxRenderer
         }
 
         return sceneChart.Legend.IsDeleted != true
-            ? new ChartLegendLayout(ResolveChartLegendPosition(sceneChart.Legend.PositionKind), sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
+            ? new ChartLegendLayout(ResolveChartLegendPosition(sceneChart.Legend.PositionKind), sceneChart.Legend.Position, sceneChart.Legend.Overlay == true, Visible: true, sceneChart.Legend.Layout, sceneChart.Legend.TextBodyProperties, ToChartShapeStyle(sceneChart.Legend.ShapeStyle))
             : ChartLegendLayout.Hidden;
     }
 
@@ -10909,9 +10909,9 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartBooleanOption(bool Value, string RawValue, bool IsDefined);
 
-    private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, ChartShapeStyle ShapeStyle)
+    private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, PptxSceneChartTextBodyProperties TextBodyProperties, ChartShapeStyle ShapeStyle)
     {
-        public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default, ChartShapeStyle.Empty);
+        public static ChartLegendLayout Hidden { get; } = new(PptxSceneChartLegendPosition.Right, "r", Overlay: false, Visible: false, default, default, ChartShapeStyle.Empty);
     }
 
     private readonly record struct ChartShapeStyle(ChartSeriesFill? Fill, GradientFill? GradientFill, ChartSeriesStroke? Stroke, PptxSceneGlow Glow, PptxSceneOuterShadow OuterShadow)

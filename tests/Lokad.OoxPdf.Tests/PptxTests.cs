@@ -13095,6 +13095,44 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartLegendPosition.Bottom, (PptxSceneChartLegendPosition)(xmlOnlyLayout.GetType().GetProperty("PositionKind")?.GetValue(xmlOnlyLayout) ?? default(PptxSceneChartLegendPosition)));
     }
 
+    public static void PptxChartLegendLayoutPreservesTextBodyPropertiesAtRendererBoundary()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea>
+              <c:legend><c:legendPos val="r"/><c:txPr><a:bodyPr rot="-5400000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea/>
+                <c:legend><c:legendPos val="b"/><c:txPr><a:bodyPr rot="1200000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readLegendLayout = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLegendLayout",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer legend-layout bridge.");
+
+        object sceneLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart legend layout.");
+        object xmlOnlyLayout = readLegendLayout.Invoke(null, [PptxTheme.Empty, null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart legend layout.");
+        object sceneBody = ChartTextBodyProperties(sceneLayout);
+        object xmlBody = ChartTextBodyProperties(xmlOnlyLayout);
+
+        TestAssert.Equal(-90d, ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
+        TestAssert.Equal("-5400000", ChartTextBodyRotationValue(sceneBody));
+        TestAssert.Equal(20d, ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
+        TestAssert.Equal("1200000", ChartTextBodyRotationValue(xmlBody));
+    }
+
     public static void PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
@@ -16874,8 +16912,13 @@ internal static class PptxTests
 
     private static object ChartDataLabelTextBodyProperties(object options)
     {
+        return ChartTextBodyProperties(options);
+    }
+
+    private static object ChartTextBodyProperties(object options)
+    {
         return options.GetType().GetProperty("TextBodyProperties")?.GetValue(options)
-            ?? throw new InvalidOperationException("Expected chart data-label text body properties.");
+            ?? throw new InvalidOperationException("Expected chart text body properties.");
     }
 
     private static double? ChartTextBodyRotationDegrees(object properties)

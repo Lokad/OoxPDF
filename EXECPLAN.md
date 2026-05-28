@@ -2855,6 +2855,13 @@ High-priority actions:
     and the raw OOXML rotation token. The broad chart scene fixture covers chart titles, axis titles, legends,
     plot-level data labels, and per-label overrides. This is a structural ownership step only; consuming those
     rotations in native chart rendering still needs Office-backed placement evidence.
+  - [x] Carry preserved legend `txPr/a:bodyPr @rot` through the renderer layout bridge:
+    `ChartLegendLayout` now keeps `PptxSceneChartTextBodyProperties` from the scene-backed legend and from
+    XML-only compatibility reads. The regression pairs a scene legend at `-5400000` with fallback XML at
+    `1200000` and proves that scene-backed rendering carries the scene rotation while XML-only rendering
+    still reads the XML fallback. Legend text is not rotated yet; this closes the renderer-boundary
+    information-loss gap so later Office-backed legend text-frame work does not need to re-scan `c:legend`
+    at the drawing site. Validation: focused non-slow `pptx-charts` passed (`125 passed, 0 failed, 0 skipped`).
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
