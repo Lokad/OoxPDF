@@ -1417,6 +1417,13 @@ High-priority actions:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` and
   `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
   passed (`92 passed, 0 failed, 2 skipped`).
+- [x] 2026-05-28 Make inherited placeholder cascade provenance source-typed:
+  paragraph cascade diagnostics now classify inherited placeholder `lstStyle` layers from the actual source
+  document root (`sldMaster` or `sldLayout`) instead of inferring master/layout from the ordinal of matched
+  placeholders. The slow scene-builder fixture now includes an explicit master body placeholder as well as a
+  layout body placeholder, so it locks both provenance layers rather than relying on a stale expectation.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with zero warnings, and
+  focused `pptx-model` passed (`12 passed, 0 failed, 0 skipped`).
 - [x] Add named run-style cascade diagnostics before layout:
   `PptxTextRunModel` now carries a `PptxRunStyleCascade` with explicit `run.rPr`/`break.rPr` and
   `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable

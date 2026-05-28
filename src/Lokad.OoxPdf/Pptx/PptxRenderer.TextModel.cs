@@ -672,8 +672,8 @@ internal sealed partial class PptxRenderer
         };
         layers.AddRange(inheritedPlaceholders
             .Select((placeholder, index) => new PptxParagraphStyleLayer(
-                InheritedPlaceholderLayerName(index, placeholderSources.Count),
-                InheritedPlaceholderLayerKind(index, placeholderSources.Count),
+                InheritedPlaceholderLayerName(placeholder, index, placeholderSources.Count),
+                InheritedPlaceholderLayerKind(placeholder, index, placeholderSources.Count),
                 placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
             .Reverse());
         layers.Add(new PptxParagraphStyleLayer(
@@ -687,8 +687,19 @@ internal sealed partial class PptxRenderer
         return new PptxParagraphStyleCascade(levelName, layers);
     }
 
-    private static string InheritedPlaceholderLayerName(int sourceIndex, int sourceCount)
+    private static string InheritedPlaceholderLayerName(XElement placeholder, int sourceIndex, int sourceCount)
     {
+        string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
+        if (sourceRootName == "sldMaster")
+        {
+            return "master.placeholder.lstStyle";
+        }
+
+        if (sourceRootName == "sldLayout")
+        {
+            return "layout.placeholder.lstStyle";
+        }
+
         return (sourceCount, sourceIndex) switch
         {
             (2, 0) => "master.placeholder.lstStyle",
@@ -697,8 +708,19 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(int sourceIndex, int sourceCount)
+    private static PptxParagraphStyleLayerKind InheritedPlaceholderLayerKind(XElement placeholder, int sourceIndex, int sourceCount)
     {
+        string? sourceRootName = placeholder.Document?.Root?.Name.LocalName;
+        if (sourceRootName == "sldMaster")
+        {
+            return PptxParagraphStyleLayerKind.MasterPlaceholderListStyle;
+        }
+
+        if (sourceRootName == "sldLayout")
+        {
+            return PptxParagraphStyleLayerKind.LayoutPlaceholderListStyle;
+        }
+
         return (sourceCount, sourceIndex) switch
         {
             (2, 0) => PptxParagraphStyleLayerKind.MasterPlaceholderListStyle,

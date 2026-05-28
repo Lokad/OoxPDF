@@ -262,7 +262,7 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree>
-                    <p:sp><p:nvSpPr><p:cNvPr id="1" name="MasterBox"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr></p:sp>
+                    <p:sp><p:nvSpPr><p:cNvPr id="1" name="MasterBox"/><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:lstStyle><a:lvl2pPr/></a:lstStyle><a:p/></p:txBody></p:sp>
                   </p:spTree></p:cSld>
                   <p:defaultTextStyle><a:lvl2pPr><a:defRPr strike="sng"/></a:lvl2pPr></p:defaultTextStyle>
                   <p:txStyles>
