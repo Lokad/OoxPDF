@@ -3579,6 +3579,12 @@ High-priority actions:
   style resolution into the cascade/theme-source machinery instead of adding more per-consumer XML reads.
 - [ ] Port `pptx-renderer` whitespace behavior: regular spaces, repeated spaces, non-breaking spaces,
   tabs, soft hyphens, explicit line breaks, fields, and end-paragraph runs must remain observable.
+  2026-05-28 audit: regular wrapping, manual line breaks, fields, default tab stops, explicit tab stops,
+  no-break spaces, narrow no-break spaces, hidden advances, leading spaces at style boundaries, and
+  end-paragraph run sizing are already covered by shape-text model/layout tests. Keep this item open but
+  narrower: soft-hyphen behavior still needs an explicit Office-backed fixture, and chart/table text should
+  keep using the same observable whitespace segmentation instead of gaining surface-local parsers as those
+  paths are converged onto shared text-frame layout.
 - [ ] Port `pptx-renderer` bullet and numbering behavior: bullet suppression for metadata placeholders,
   `buChar`, `buAutoNum`, `buFont`, `buClr`, `buSz`, hanging indents, and inherited bullet defaults.
 - [ ] Port `pptx-renderer` table text behavior: cell text style inheritance, table style overrides,
