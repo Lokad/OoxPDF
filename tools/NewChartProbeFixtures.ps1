@@ -2,7 +2,8 @@ param(
     [switch] $DoughnutOnly,
     [switch] $SparseOnly,
     [switch] $DataLabelsOnly,
-    [switch] $AxisTitlesOnly
+    [switch] $AxisTitlesOnly,
+    [string] $MetadataRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,12 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $cases = Join-Path $repoRoot "tests/Lokad.OoxPdf.Tests/Cases"
 New-Item -ItemType Directory -Force -Path $cases | Out-Null
+if ([string]::IsNullOrWhiteSpace($MetadataRoot)) {
+    $MetadataRoot = Join-Path $repoRoot "artifacts/office-probe-metadata"
+}
+else {
+    $MetadataRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($MetadataRoot)
+}
 
 function Rgb($r, $g, $b) {
     return $r + ($g * 256) + ($b * 65536)
@@ -47,6 +54,48 @@ function Close-ChartWorkbook($workbook) {
         [GC]::Collect()
         [GC]::WaitForPendingFinalizers()
     }
+}
+
+function Read-ComMember($object, [string] $name) {
+    if ($null -eq $object) {
+        return $null
+    }
+
+    try {
+        return $object.$name
+    }
+    catch {
+        return $null
+    }
+}
+
+function Round-ComNumber($value) {
+    if ($null -eq $value) {
+        return $null
+    }
+
+    try {
+        return [Math]::Round([double]$value, 6)
+    }
+    catch {
+        return $null
+    }
+}
+
+function New-OfficeProbeMetadataPath([string] $metadataRoot, [string] $fileName) {
+    $directory = Join-Path $metadataRoot ([System.IO.Path]::GetFileNameWithoutExtension($fileName))
+    New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    return Join-Path $directory "com-metadata.json"
+}
+
+function Write-OfficeProbeMetadata([string] $metadataRoot, [string] $fileName, $metadata) {
+    if ([string]::IsNullOrWhiteSpace($metadataRoot)) {
+        return
+    }
+
+    $metadataPath = New-OfficeProbeMetadataPath $metadataRoot $fileName
+    $metadata | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $metadataPath -Encoding UTF8
+    Write-Host "Office probe metadata: $metadataPath"
 }
 
 function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPosition, [bool]$HasLegend = $true, [bool]$IncludeInLayout = $true, [int]$Explosion = 0) {
@@ -130,11 +179,13 @@ function New-DoughnutLegendProbe($PowerPoint, $Cases, $FileName, [int]$LegendPos
     return $output
 }
 
-function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
-    $output = Join-Path $Cases "pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx"
+function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases, [string] $MetadataRoot) {
+    $fileName = "pptx-ladder-11-chart-pie-data-label-leader-lines-probe.pptx"
+    $output = Join-Path $Cases $fileName
     $presentation = $null
     $workbook = $null
     $worksheet = $null
+    $labelMetadata = @()
 
     try {
         $presentation = $PowerPoint.Presentations.Add($true)
@@ -219,10 +270,27 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
                 }
                 $pointLabel.Left = $manualLabelPositions[$i - 1].Left
                 $pointLabel.Top = $manualLabelPositions[$i - 1].Top
+                $labelMetadata += [pscustomobject]@{
+                    Index = $i - 1
+                    RequestedLeft = $manualLabelPositions[$i - 1].Left
+                    RequestedTop = $manualLabelPositions[$i - 1].Top
+                    AppliedPosition = Read-ComMember $pointLabel "Position"
+                    ObservedLeft = Round-ComNumber (Read-ComMember $pointLabel "Left")
+                    ObservedTop = Round-ComNumber (Read-ComMember $pointLabel "Top")
+                    ObservedWidth = Round-ComNumber (Read-ComMember $pointLabel "Width")
+                    ObservedHeight = Round-ComNumber (Read-ComMember $pointLabel "Height")
+                    Text = Read-ComMember $pointLabel "Text"
+                }
             }
             catch {
                 # If Office refuses manual label coordinates, keep the automatic
                 # outside-end placement and let the PDF probe expose that fact.
+                $labelMetadata += [pscustomobject]@{
+                    Index = $i - 1
+                    RequestedLeft = $manualLabelPositions[$i - 1].Left
+                    RequestedTop = $manualLabelPositions[$i - 1].Top
+                    Error = $_.Exception.Message
+                }
             }
             finally {
                 if ($pointLabel -ne $null) { Release-ComObject $pointLabel }
@@ -243,6 +311,18 @@ function New-PieDataLabelLeaderLineProbe($PowerPoint, $Cases) {
         }
 
         [void]($presentation.SaveAs($output, 24))
+        $metadata = [pscustomobject]@{
+            Fixture = $fileName
+            ChartShape = [pscustomobject]@{
+                Left = Round-ComNumber (Read-ComMember $chartShape "Left")
+                Top = Round-ComNumber (Read-ComMember $chartShape "Top")
+                Width = Round-ComNumber (Read-ComMember $chartShape "Width")
+                Height = Round-ComNumber (Read-ComMember $chartShape "Height")
+            }
+            HasLeaderLines = Read-ComMember $series "HasLeaderLines"
+            DataLabels = $labelMetadata
+        }
+        Write-OfficeProbeMetadata $MetadataRoot $fileName $metadata
         Release-ComObject $labels
         $labels = $null
         Release-ComObject $series
@@ -840,7 +920,8 @@ try {
     elseif ($DataLabelsOnly) {
         $output = New-PieDataLabelLeaderLineProbe `
             -PowerPoint $powerPoint `
-            -Cases $cases
+            -Cases $cases `
+            -MetadataRoot $MetadataRoot
         $output = New-CartesianLegendKeyDataLabelProbe `
             -PowerPoint $powerPoint `
             -Cases $cases

@@ -2698,6 +2698,12 @@ High-priority actions:
     `(-0.439, -0.699)`. The earlier quadrant-only evidence remains useful for side placement, but it is not
     strong enough to bind a `c:dLbl idx` to its displayed label content; future renderer changes should use
     the hash-matched rows before changing missing-mode semantics or leader-line cardinality.
+    2026-05-28 update: extended `tools/NewChartProbeFixtures.ps1` so regenerating the public pie data-label
+    leader-line probe also writes ignored COM metadata under `artifacts/office-probe-metadata/`. The sidecar
+    records the chart shape bounds plus each label's requested `DataLabel.Left`/`Top`, observed
+    `Left`/`Top`/`Width`/`Height`, applied position, and text. This fills the current evidence gap between the
+    generator's requested COM coordinates, the saved `c:manualLayout` factors, and Office's PDF label boxes
+    without changing renderer placement from an underdetermined four-point sample.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
