@@ -1228,14 +1228,12 @@ internal sealed partial class PptxRenderer
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, linePlot, chartXml, lineChart).FirstOrDefault();
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(valueAxis, chartXml);
-                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueAxis.SceneAxis, valueAxisForScale, theme);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked);
-                ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxisForScale), lineOptions.PercentStacked);
-                bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueAxis.SceneAxis, valueAxisForScale);
+                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxisForScale, theme, valueExtents, lineOptions.PercentStacked);
                 ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
-                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked, seriesStrokes, markerStyles, lineOptions.SmoothSeries, ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxisForScale), ReadSceneOrXmlMinorGridlines(valueAxis.SceneAxis, valueAxisForScale), gridlineStyle, axesStyle, plotAreaStyle, valueExtents, axisUnits, ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxisForScale, valueExtents), valueAxisReversed, lineOptions.DisplayBlanksAs);
+                RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked, seriesStrokes, markerStyles, lineOptions.SmoothSeries, valueAxisOptions.MajorGridlines, valueAxisOptions.MinorGridlines, valueAxisOptions.GridlineStyle, axesStyle, plotAreaStyle, valueExtents, valueAxisOptions.Units, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, lineOptions.DisplayBlanksAs);
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, linePlot, chartXml, lineChart);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
@@ -1244,7 +1242,7 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)));
                 }
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
@@ -1254,7 +1252,7 @@ internal sealed partial class PptxRenderer
                     plotBox,
                     lineSeriesVectors,
                     valueExtents,
-                    valueAxisReversed,
+                    valueAxisOptions.Reversed,
                     seriesStrokes,
                     markerStyles,
                     ReadSceneOrXmlDataLabelOptions(sceneChart, linePlot, lineChart, theme),
@@ -7091,6 +7089,22 @@ internal sealed partial class PptxRenderer
             ReadSceneOrXmlChartGridlineStroke(sceneAxis, sceneAxis?.MinorGridlineLine ?? default, sceneAxis?.MinorGridlineStyleLine ?? default, xmlAxis?.Element(ChartNamespace + "minorGridlines"), theme));
     }
 
+    private static ChartValueAxisRenderOptions ReadSceneOrXmlChartValueAxisRenderOptions(
+        PptxSceneChartAxis? sceneAxis,
+        XElement? xmlAxis,
+        PptxTheme theme,
+        ChartValueExtents extents,
+        bool percentStacked)
+    {
+        return new ChartValueAxisRenderOptions(
+            ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(sceneAxis, xmlAxis), percentStacked),
+            ReadSceneOrXmlValueAxisReversed(sceneAxis, xmlAxis),
+            ReadSceneOrXmlValueAxisCrossingValue(sceneAxis, xmlAxis, extents),
+            ReadSceneOrXmlMajorGridlines(sceneAxis, xmlAxis),
+            ReadSceneOrXmlMinorGridlines(sceneAxis, xmlAxis),
+            ReadSceneOrXmlChartGridlineStyle(sceneAxis, xmlAxis, theme));
+    }
+
     private static ChartSeriesStroke? ReadSceneOrXmlChartGridlineStroke(PptxSceneChartAxis? sceneAxis, PptxSceneLineStyle sceneLine, PptxSceneLineStyle sceneStyleLine, XElement? gridlines, PptxTheme theme)
     {
         if (sceneAxis is not null)
@@ -10056,6 +10070,8 @@ internal sealed partial class PptxRenderer
     {
         public static ChartGridlineStyle Empty { get; } = new(null, null);
     }
+
+    private readonly record struct ChartValueAxisRenderOptions(ChartAxisUnits Units, bool Reversed, double? CrossingValue, bool MajorGridlines, bool MinorGridlines, ChartGridlineStyle GridlineStyle);
 
     private readonly record struct ChartLayout(ChartFrameBox Frame, ChartLayoutBox PlotAreaBox, ChartPlotBox PlotBox, bool ManualPlotLayoutApplied, string? Title, ChartLegendLayout Legend);
 

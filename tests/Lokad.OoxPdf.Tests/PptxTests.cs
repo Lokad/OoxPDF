@@ -12871,6 +12871,52 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartAxisTickMark.None, (PptxSceneChartAxisTickMark)tickMark);
     }
 
+    public static void PptxChartValueAxisRenderOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:scaling><c:min val="-5"/><c:max val="5"/><c:orientation val="bogus"/></c:scaling><c:axPos val="l"/><c:crossAx val="10"/><c:crosses val="bogus"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.AxisKind == PptxSceneChartAxisKind.Value);
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:valAx>
+                <c:scaling><c:orientation val="maxMin"/></c:scaling>
+                <c:crosses val="max"/>
+                <c:majorUnit val="0.25"/>
+                <c:majorGridlines><c:spPr><a:ln><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>
+              </c:valAx></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "valAx").Single();
+        Type extentsType = typeof(PptxRenderer).GetNestedType(
+            "ChartValueExtents",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart value extents type.");
+        object extents = Activator.CreateInstance(extentsType, [-5d, 5d]) ?? throw new InvalidOperationException("Expected chart value extents.");
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartValueAxisRenderOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart value-axis option resolver.");
+        object options = readOptions.Invoke(null, [valueAxis, mismatchedXmlFallback, PptxTheme.Empty, extents, true]) ?? throw new InvalidOperationException("Expected value-axis render options.");
+        Type optionsType = options.GetType();
+
+        object units = optionsType.GetProperty("Units")?.GetValue(options) ?? throw new InvalidOperationException("Expected axis units.");
+        TestAssert.Equal(0.1d, (double)(units.GetType().GetProperty("MajorUnit")?.GetValue(units) ?? double.NaN));
+        TestAssert.True((bool)(optionsType.GetProperty("Reversed")?.GetValue(options) ?? true) == false, "Expected unknown scene orientation to use the default minMax, not fallback XML maxMin.");
+        TestAssert.Equal(0d, (double)(optionsType.GetProperty("CrossingValue")?.GetValue(options) ?? double.NaN));
+        TestAssert.True((bool)(optionsType.GetProperty("MajorGridlines")?.GetValue(options) ?? true) == false, "Expected missing scene gridlines to stay missing, not import fallback XML gridlines.");
+    }
+
     public static void PptxChartUnknownDisplayBlanksAsUsesSceneAuthoritativeDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

@@ -12061,6 +12061,24 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Started consolidating value-axis render decisions behind a typed option boundary.
+The ordinary line-chart branch now resolves value-axis units, reversed orientation, crossing value, major/minor
+gridline visibility, and gridline stroke style through `ChartValueAxisRenderOptions` instead of collecting
+those scene/XML bridge reads inline at the render call. The first guard deliberately feeds a scene-owned value
+axis with unknown orientation/crossing and no gridlines beside contradictory fallback XML; the resolved options
+must keep the scene defaults and percent-stacked unit default rather than borrowing XML `maxMin`, `crosses=max`,
+or fallback gridlines.
+
+This is behavior-neutral and intentionally partial. Bar, area, bubble/scatter, radar, and layout estimation
+still assemble related value-axis state locally, and those should be moved through the same option boundary in
+small follow-up slices. The long-term target is that Office-PDF axis work replaces one typed axis contract
+rather than tuning scattered calls for units, tick visibility, crossing, orientation, and gridline style.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted
+`PptxChartValueAxisRenderOptionsUseSceneAuthoritativeDefaults` was run through the console runner and passed
+as part of a full run with `351` tests, `0` failures, and `0` skips; focused non-slow `pptx-charts` passed
+with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Made PPTX chart cache-point index fallback observable in the scene model.
 `PptxSceneChartNumberPoint` and `PptxSceneChartStringPoint` now carry `HasParsedIndex` beside the resolved
 integer index and raw `idx` token. Valid sparse cache points remain marked parsed, while missing or malformed
