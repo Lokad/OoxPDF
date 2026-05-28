@@ -14626,6 +14626,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
 console runner passed with `400` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX table-cell inset provenance now survives the renderer-to-text-model adapter.
+`PptxTableCellTextFrame` carries the resolved inset values plus per-edge source labels from
+`PptxSceneTableCell`: `a:tcPr` margins map to `TableCellProperties`, cell `a:txBody/a:bodyPr` margins map to
+`DirectBodyPr`, and absent margins remain `DefaultValue`. `BuildTextFrameModel` now installs those sources and
+raw values into `PptxTextBodyProperties` instead of flattening every table-cell inset to `TableCellStyle`.
+
+This is a provenance fix, not a new Office geometry rule. The scene already resolved the cell inset ladder;
+the gap was that the shared text-frame model lost that evidence at the table adapter boundary. The remaining
+long-term table-text work is still to replace raw paragraph/run XML consumption with a fully resolved cell
+text model, but body-property ownership no longer becomes less precise just because the text came from a table
+cell.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused `Table`
+invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
+console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

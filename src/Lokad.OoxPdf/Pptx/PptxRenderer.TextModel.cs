@@ -366,11 +366,8 @@ internal sealed partial class PptxRenderer
         PptxTextBodyProperties bodyProperties = baseBodyProperties with
         {
             Insets = tableFrame.Insets,
-            InsetSources = new TextInsetSources(
-                PptxTextBodyPropertySource.TableCellStyle,
-                PptxTextBodyPropertySource.TableCellStyle,
-                PptxTextBodyPropertySource.TableCellStyle,
-                PptxTextBodyPropertySource.TableCellStyle),
+            InsetSources = tableFrame.InsetSources,
+            InsetValues = tableFrame.InsetValues,
             VerticalAnchor = tableFrame.VerticalAnchor,
             VerticalAnchorValue = tableFrame.VerticalAnchorValue,
             VerticalAnchorSource = tableFrame.VerticalAnchorSource,

@@ -357,6 +357,8 @@ internal sealed partial class PptxRenderer
         double Width,
         double Height,
         TextInsets Insets,
+        TextInsetSources InsetSources,
+        TextInsetValues InsetValues,
         TextVerticalAnchor VerticalAnchor,
         string? VerticalAnchorValue,
         PptxTextBodyPropertySource VerticalAnchorSource,

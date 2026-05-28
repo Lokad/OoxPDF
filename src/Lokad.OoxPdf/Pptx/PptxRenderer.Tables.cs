@@ -445,6 +445,12 @@ internal sealed partial class PptxRenderer
             width,
             height,
             insets,
+            ToTextInsetSources(sceneCell.TextInsetSources),
+            new TextInsetValues(
+                sceneCell.TextInsetValues.Left,
+                sceneCell.TextInsetValues.Right,
+                sceneCell.TextInsetValues.Top,
+                sceneCell.TextInsetValues.Bottom),
             ToTextVerticalAnchor(sceneCell.VerticalAnchor),
             ReadTableCellVerticalAnchorValue(sceneCell),
             ToTextBodyPropertySource(sceneCell.VerticalAnchorSource),
@@ -455,6 +461,25 @@ internal sealed partial class PptxRenderer
     private static TextInsets ToTextInsets(PptxSceneTextInsets insets)
     {
         return new TextInsets(insets.Left, insets.Right, insets.Top, insets.Bottom);
+    }
+
+    private static TextInsetSources ToTextInsetSources(PptxSceneTableCellTextInsetSources sources)
+    {
+        return new TextInsetSources(
+            ToTextBodyPropertySource(sources.Left),
+            ToTextBodyPropertySource(sources.Right),
+            ToTextBodyPropertySource(sources.Top),
+            ToTextBodyPropertySource(sources.Bottom));
+    }
+
+    private static PptxTextBodyPropertySource ToTextBodyPropertySource(PptxSceneTableCellTextInsetSource source)
+    {
+        return source switch
+        {
+            PptxSceneTableCellTextInsetSource.CellProperties => PptxTextBodyPropertySource.TableCellProperties,
+            PptxSceneTableCellTextInsetSource.BodyProperties => PptxTextBodyPropertySource.DirectBodyPr,
+            _ => PptxTextBodyPropertySource.DefaultValue
+        };
     }
 
     private static TextVerticalAnchor ToTextVerticalAnchor(PptxSceneTableCellVerticalAnchor anchor)
