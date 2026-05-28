@@ -12519,6 +12519,20 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `102` tests, `0` failures, and `0` skips; full non-slow console runner passed with `343` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Extended chart data-label flag provenance to per-label overrides. The renderer
+`ChartDataLabelOverride` record now carries the same `FlagOptions` sidecar as plot/series
+`ChartDataLabelOptions`, preserving raw and explicit-state evidence for `c:dLbl` flag overrides as well as
+the inherited effective nullable booleans.
+
+This closes the immediate data-label flag boundary gap introduced by the previous slice: future label
+placement/content work can inspect plot, series, and per-point override flags without falling back to chart
+XML or losing the distinction between omitted flags, shorthand true, and explicit false.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regression
+`PptxChartDataLabelOptionsPreserveRawBooleanState` passed; focused non-slow `pptx-charts` passed with
+`102` tests, `0` failures, and `0` skips; full non-slow console runner passed with `343` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current

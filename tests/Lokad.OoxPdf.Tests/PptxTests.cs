@@ -12456,6 +12456,7 @@ internal static class PptxTests
                 <c:dLbls>
                   <c:showVal/>
                   <c:showPercent val="0"/>
+                  <c:dLbl><c:idx val="0"/><c:showVal val="0"/><c:showLegendKey/></c:dLbl>
                 </c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
@@ -12467,7 +12468,7 @@ internal static class PptxTests
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:barChart>
-                <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/></c:dLbls>
+                <c:dLbls><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLbl><c:idx val="0"/><c:showVal/><c:showLegendKey val="0"/></c:dLbl></c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
@@ -12487,6 +12488,14 @@ internal static class PptxTests
         object sceneShowLegendKey = ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
         TestAssert.True(!ChartBooleanOptionValue(sceneShowLegendKey), "Expected missing scene showLegendKey to use the renderer default false, not fallback XML.");
         TestAssert.True(!ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
+        object sceneOverride = ChartDataLabelOverride(sceneOptions, 0);
+        object sceneOverrideShowValue = ChartDataLabelFlagOption(sceneOverride, "showVal");
+        TestAssert.True(!ChartBooleanOptionValue(sceneOverrideShowValue), "Expected scene-backed override showVal=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(sceneOverrideShowValue), "Expected scene-backed override showVal=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(sceneOverrideShowValue));
+        object sceneOverrideShowLegendKey = ChartDataLabelFlagOption(sceneOverride, "showLegendKey");
+        TestAssert.True(ChartBooleanOptionValue(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey to resolve true.");
+        TestAssert.True(ChartBooleanOptionIsDefined(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey presence to remain explicit.");
 
         object xmlOptions = readOptions.Invoke(null, [null, null, mismatchedXmlFallback, PptxTheme.Empty]) ?? throw new InvalidOperationException("Expected XML-backed label options.");
         object xmlShowValue = ChartDataLabelFlagOption(xmlOptions, "showVal");
@@ -12497,6 +12506,14 @@ internal static class PptxTests
         TestAssert.True(ChartBooleanOptionValue(xmlShowLegendKey), "Expected XML showLegendKey=1 to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlShowLegendKey), "Expected XML showLegendKey=1 presence to remain explicit.");
         TestAssert.Equal("1", ChartBooleanOptionRawValue(xmlShowLegendKey));
+        object xmlOverride = ChartDataLabelOverride(xmlOptions, 0);
+        object xmlOverrideShowValue = ChartDataLabelFlagOption(xmlOverride, "showVal");
+        TestAssert.True(ChartBooleanOptionValue(xmlOverrideShowValue), "Expected XML override shorthand showVal to resolve true.");
+        TestAssert.True(ChartBooleanOptionIsDefined(xmlOverrideShowValue), "Expected XML override shorthand showVal presence to remain explicit.");
+        object xmlOverrideShowLegendKey = ChartDataLabelFlagOption(xmlOverride, "showLegendKey");
+        TestAssert.True(!ChartBooleanOptionValue(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(xmlOverrideShowLegendKey));
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
@@ -14982,6 +14999,24 @@ internal static class PptxTests
         }
 
         throw new InvalidOperationException($"Expected chart data-label flag '{flagName}'.");
+    }
+
+    private static object ChartDataLabelOverride(object options, int index)
+    {
+        object overrides = options.GetType().GetProperty("Overrides")?.GetValue(options)
+            ?? throw new InvalidOperationException("Expected chart data-label overrides.");
+        foreach (object entry in (System.Collections.IEnumerable)overrides)
+        {
+            int key = (int)(entry.GetType().GetProperty("Key")?.GetValue(entry)
+                ?? throw new InvalidOperationException("Expected chart data-label override key."));
+            if (key == index)
+            {
+                return entry.GetType().GetProperty("Value")?.GetValue(entry)
+                    ?? throw new InvalidOperationException("Expected chart data-label override value.");
+            }
+        }
+
+        throw new InvalidOperationException($"Expected chart data-label override '{index}'.");
     }
 
     private static string ChartMarkerStyleSymbol(object marker)
