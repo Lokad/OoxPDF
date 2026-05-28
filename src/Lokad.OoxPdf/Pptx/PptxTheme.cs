@@ -258,12 +258,17 @@ internal sealed class PptxColorMap
 
     public static PptxColorMap FromElement(XElement? colorMapElement)
     {
+        return FromElement(colorMapElement, Default);
+    }
+
+    public static PptxColorMap FromElement(XElement? colorMapElement, PptxColorMap inheritedMap)
+    {
         if (colorMapElement is null)
         {
-            return Default;
+            return inheritedMap;
         }
 
-        var mappings = new Dictionary<string, string>(StringComparer.Ordinal);
+        var mappings = new Dictionary<string, string>(inheritedMap.Mappings, StringComparer.Ordinal);
         foreach (string slot in SchemeSlots)
         {
             string? mappedColor = (string?)colorMapElement.Attribute(slot);
@@ -274,7 +279,7 @@ internal sealed class PptxColorMap
         }
 
         return mappings.Count == 0
-            ? Default
+            ? inheritedMap
             : new PptxColorMap(mappings);
     }
 }

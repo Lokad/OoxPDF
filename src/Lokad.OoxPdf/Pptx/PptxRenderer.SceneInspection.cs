@@ -26,9 +26,23 @@ internal sealed partial class PptxRenderer
             slide.MasterBackground.HasFill,
             slide.LayoutBackground.HasFill,
             slide.SlideBackground.HasFill,
+            ToSnapshot(slide.MasterColorMap),
+            ToSnapshot(slide.LayoutColorMap),
+            ToSnapshot(slide.SlideColorMap),
             slide.MasterNodes.Select(ToSnapshot).ToArray(),
             slide.LayoutNodes.Select(ToSnapshot).ToArray(),
             slide.SlideNodes.Select(ToSnapshot).ToArray());
+    }
+
+    private static IReadOnlyDictionary<string, string> ToSnapshot(PptxColorMap colorMap)
+    {
+        var snapshot = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> mapping in colorMap.Mappings)
+        {
+            snapshot[mapping.Key] = mapping.Value;
+        }
+
+        return snapshot;
     }
 
     private static PptxSceneNodeSnapshot ToSnapshot(PptxSceneNode node)

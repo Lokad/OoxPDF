@@ -22,6 +22,9 @@ internal sealed record PptxSceneSlideSnapshot(
     bool HasMasterBackground,
     bool HasLayoutBackground,
     bool HasSlideBackground,
+    IReadOnlyDictionary<string, string> MasterColorMap,
+    IReadOnlyDictionary<string, string> LayoutColorMap,
+    IReadOnlyDictionary<string, string> SlideColorMap,
     IReadOnlyList<PptxSceneNodeSnapshot> MasterNodes,
     IReadOnlyList<PptxSceneNodeSnapshot> LayoutNodes,
     IReadOnlyList<PptxSceneNodeSnapshot> SlideNodes);
@@ -439,6 +442,9 @@ internal sealed record PptxSceneSlide(
     IReadOnlyDictionary<string, OoxRelationship> MasterRelationships,
     IReadOnlyDictionary<string, OoxRelationship> LayoutRelationships,
     IReadOnlyDictionary<string, OoxRelationship> SlideRelationships,
+    PptxColorMap MasterColorMap,
+    PptxColorMap LayoutColorMap,
+    PptxColorMap SlideColorMap,
     PptxSceneBackground MasterBackground,
     PptxSceneBackground LayoutBackground,
     PptxSceneBackground SlideBackground,
@@ -1851,7 +1857,26 @@ internal sealed class PptxSceneBuilder
             OoxPart? slidePart = package.GetPart(slide.PartName);
             if (slidePart is null)
             {
-                slides.Add(new PptxSceneSlide(slide.Index, slide.PartName, null, null, null, null, new XDocument(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), new Dictionary<string, OoxRelationship>(), default, default, default, [], [], []));
+                slides.Add(new PptxSceneSlide(
+                    slide.Index,
+                    slide.PartName,
+                    null,
+                    null,
+                    null,
+                    null,
+                    new XDocument(),
+                    new Dictionary<string, OoxRelationship>(),
+                    new Dictionary<string, OoxRelationship>(),
+                    new Dictionary<string, OoxRelationship>(),
+                    PptxColorMap.Default,
+                    PptxColorMap.Default,
+                    PptxColorMap.Default,
+                    default,
+                    default,
+                    default,
+                    [],
+                    [],
+                    []));
                 continue;
             }
 
@@ -1867,6 +1892,9 @@ internal sealed class PptxSceneBuilder
             IReadOnlyList<XDocument> slideSources = masterXml is null
                 ? layoutXml is null ? [] : [layoutXml]
                 : layoutXml is null ? [masterXml] : [masterXml, layoutXml];
+            PptxColorMap masterColorMap = ReadMasterColorMap(masterXml);
+            PptxColorMap layoutColorMap = ReadColorMapOverride(layoutXml, masterColorMap);
+            PptxColorMap slideColorMap = ReadColorMapOverride(slideXml, layoutColorMap);
             slides.Add(new PptxSceneSlide(
                 slide.Index,
                 slide.PartName,
@@ -1878,9 +1906,12 @@ internal sealed class PptxSceneBuilder
                 masterRelationships,
                 layoutRelationships,
                 slideRelationships,
-                ReadBackground(masterXml, theme),
-                ReadBackground(layoutXml, theme),
-                ReadBackground(slideXml, theme),
+                masterColorMap,
+                layoutColorMap,
+                slideColorMap,
+                ReadBackground(masterXml, theme, masterColorMap),
+                ReadBackground(layoutXml, theme, layoutColorMap),
+                ReadBackground(slideXml, theme, slideColorMap),
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme, package, masterRelationships),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, package, layoutRelationships),
                 ReadNodes(slideXml, slideSources, theme, package, slideRelationships)));
@@ -1893,6 +1924,19 @@ internal sealed class PptxSceneBuilder
     {
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream);
+    }
+
+    private static PptxColorMap ReadMasterColorMap(XDocument? xml)
+    {
+        return PptxColorMap.FromElement(xml?.Root?.Element(PresentationNamespace + "clrMap"));
+    }
+
+    private static PptxColorMap ReadColorMapOverride(XDocument? xml, PptxColorMap inheritedColorMap)
+    {
+        XElement? overrideColorMap = xml?.Root?
+            .Element(PresentationNamespace + "clrMapOvr")?
+            .Element(DrawingNamespace + "overrideClrMapping");
+        return PptxColorMap.FromElement(overrideColorMap, inheritedColorMap);
     }
 
     private static OoxPart? GetRelatedPart(OoxPackage package, string sourcePartName, string relationshipType)
@@ -1925,13 +1969,13 @@ internal sealed class PptxSceneBuilder
         return nodes;
     }
 
-    private static PptxSceneBackground ReadBackground(XDocument? xml, PptxTheme theme)
+    private static PptxSceneBackground ReadBackground(XDocument? xml, PptxTheme theme, PptxColorMap colorMap)
     {
         XElement? background = xml?.Root?
             .Element(PresentationNamespace + "cSld")?
             .Element(PresentationNamespace + "bg")?
             .Element(PresentationNamespace + "bgPr");
-        return TryReadSolidColorWithAlpha(background, theme, out RgbColor color, out double alpha)
+        return TryReadSolidColorWithAlpha(background, theme, colorMap, out RgbColor color, out double alpha)
             ? new PptxSceneBackground(true, color, alpha)
             : default;
     }
@@ -5213,6 +5257,11 @@ internal sealed class PptxSceneBuilder
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
     {
         return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, out color, out alpha);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
+    {
+        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out alpha);
     }
 
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)

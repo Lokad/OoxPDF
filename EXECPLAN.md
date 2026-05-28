@@ -3642,6 +3642,13 @@ High-priority actions:
   master/layout/slide `clrMap` and `clrMapOvr` provenance into every color-consuming path. Validation:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model`
   passed (`15` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: scene slides now preserve master/layout/slide color-map provenance as typed
+  `PptxColorMap` values, layout/slide `clrMapOvr` uses inherited slot mappings instead of sparse standalone
+  maps, scene inspection exposes deterministic private-safe map snapshots, and background colors use the
+  map for their own source level. Keep this item open: shape, text, table, chart, image recolor, placeholder,
+  and format-scheme color consumers still need to receive the effective map systematically instead of falling
+  back to the default aliases. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed; focused non-slow `pptx-model` passed (`16` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

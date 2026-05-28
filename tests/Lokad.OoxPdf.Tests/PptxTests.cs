@@ -7400,6 +7400,75 @@ internal static class PptxTests
         TestAssert.Equal("dk2", map.ResolveSchemeColor("dk2"));
     }
 
+    public static void PptxThemeColorMapPreservesSceneOverrideProvenance()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+                  <Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>
+                  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
+                  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdLayout" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdMaster" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slideMasters/slideMaster1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldMaster xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree/></p:cSld>
+                  <p:clrMap bg1="accent1" tx1="accent2" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/>
+                </p:sldMaster>
+                """,
+            ["ppt/slideLayouts/slideLayout1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sldLayout xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree/></p:cSld>
+                  <p:clrMapOvr><a:overrideClrMapping bg1="accent3" tx1="accent4"/></p:clrMapOvr>
+                </p:sldLayout>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree/></p:cSld>
+                  <p:clrMapOvr><a:overrideClrMapping bg1="accent5" tx1="accent6"/></p:clrMapOvr>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
+        PptxSceneSlideSnapshot slide = snapshot.Slides[0];
+
+        TestAssert.Equal("accent1", slide.MasterColorMap["bg1"]);
+        TestAssert.Equal("accent2", slide.MasterColorMap["tx1"]);
+        TestAssert.Equal("accent3", slide.LayoutColorMap["bg1"]);
+        TestAssert.Equal("accent4", slide.LayoutColorMap["tx1"]);
+        TestAssert.Equal("accent2", slide.LayoutColorMap["accent2"]);
+        TestAssert.Equal("accent5", slide.SlideColorMap["bg1"]);
+        TestAssert.Equal("accent6", slide.SlideColorMap["tx1"]);
+        TestAssert.Equal("accent2", slide.SlideColorMap["accent2"]);
+    }
+
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
