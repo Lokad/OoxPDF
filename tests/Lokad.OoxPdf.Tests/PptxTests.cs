@@ -12647,6 +12647,20 @@ internal static class PptxTests
             modifiers: null) ?? throw new InvalidOperationException("Expected typed data-label formatter.");
         string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty]) ?? string.Empty;
         TestAssert.Equal("1,234.50", typedFormatted);
+
+        object sourceLinkedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "0", true, "1"]) ?? throw new InvalidOperationException("Expected source-linked number format.");
+        System.Reflection.MethodInfo resolveSourceLinkedFormat = typeof(PptxRenderer).GetMethod(
+            "ResolveSourceLinkedChartNumberFormatCode",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [numberFormatType, typeof(string), typeof(bool?), typeof(bool)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected source-linked format resolver.");
+        string linkedFormat = (string?)resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "#,##0.0", true, false]) ?? string.Empty;
+        TestAssert.Equal("#,##0.0", linkedFormat);
+        object? ignoredUnlinkedFormat = resolveSourceLinkedFormat.Invoke(null, [typedNumberFormat, "#,##0.0", true, false]);
+        TestAssert.True(ignoredUnlinkedFormat is null, "Expected workbook number format to be ignored when the chart format is not source-linked.");
+        object? ignoredDateFormat = resolveSourceLinkedFormat.Invoke(null, [sourceLinkedNumberFormat, "m/d/yy", true, true]);
+        TestAssert.True(ignoredDateFormat is null, "Expected workbook date-like formats to stay out of numeric chart label formatting until date serial rendering is explicit.");
     }
 
     public static void PptxScenePreservesChartTitleAndLegendBooleanTokens()

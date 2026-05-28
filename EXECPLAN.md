@@ -2086,6 +2086,18 @@ High-priority actions:
   provenance-preserving records at their current renderer boundaries. Remaining open work is narrower:
   chart text/layout decisions still need to carry the same typed data records all the way to
   Office-PDF-backed placement, formatting, and source/cache freshness decisions.
+  - [x] 2026-05-28 consume workbook-side number-format provenance for source-linked chart data labels:
+    an audit of the indexed-vector follow-through found that chart data labels already carried point/workbook
+    provenance, but value text still formatted only from `c:numFmt` or the legacy chart cache format. The
+    renderer now lets bar/column, line, pie/doughnut, scatter, and bubble data-label value text consult the
+    source-linked workbook point when `sourceLinked=true`, using only renderable custom numeric formats and
+    explicitly leaving date-like workbook formats unchanged until date-serial chart labels have a real model.
+    This is a structural source/cache alignment step rather than a visual heuristic. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
+    `pptx-charts` passed (`117 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`370 passed, 0 failed, 7 skipped`); private run `20260528-150243` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
