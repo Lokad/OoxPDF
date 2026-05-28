@@ -3517,9 +3517,15 @@ High-priority actions:
     future Office-aligned matching changes from diverging between the typed scene and renderer fallback paths.
     Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with zero warnings, and
     focused `pptx-model` passed (`13 passed, 0 failed, 0 skipped`).
-- [ ] Port `pptx-renderer` text cascade layers as explicit records:
-  `defaultTextStyle`, master text styles, master placeholder, layout placeholder, shape list style,
-  paragraph properties, default run properties, and run properties.
+- [x] Port `pptx-renderer` text cascade layers as explicit records:
+  `PptxParagraphStyleCascade`/`PptxParagraphStyleLayer` now expose `defaultTextStyle`, inherited master
+  text styles, master/layout placeholders, shape list style, and direct paragraph properties as named records.
+  `PptxRunStyleCascade`/`PptxRunStyleLayer` expose run properties plus paragraph/default run-property layers,
+  and `PptxTextBodyProperties` carries source records for bodyPr-derived text-frame properties. The
+  remaining work is not missing cascade observability; it is the full Office-order resolver item above, which
+  must replace the current flattened default XML handoff and distributed theme/color/font fallbacks. Validation:
+  focused `pptx-model` passed (`13 passed, 0 failed, 1 skipped`) and focused non-slow `pptx-typography`
+  passed (`96 passed, 0 failed, 2 skipped`) after the cascade-boundary slices.
 - [ ] Port `pptx-renderer` theme font resolution: major/minor Latin, East Asian, complex script, and symbol
   font fallback must be explicit diagnostics-bearing stages before glyph mapping.
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
