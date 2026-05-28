@@ -13431,6 +13431,53 @@ internal static class PptxTests
         TestAssert.Equal(0, xmlPlots.Count);
     }
 
+    public static void PptxChartSecondaryRightValueAxisSelectionUsesSceneSource()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:barChart>
+                <c:barChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>30</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="30"/>
+                </c:barChart>
+                <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+                <c:valAx><c:axId val="30"/><c:axPos val="r"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        XDocument mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:valAx><c:axId val="20"/><c:axPos val="r"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readSecondaryAxis = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlSecondaryRightValueAxis",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected secondary value-axis resolver.");
+        object sceneBacked = readSecondaryAxis.Invoke(null, [chart, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected scene-backed secondary value axis.");
+        object xmlBacked = readSecondaryAxis.Invoke(null, [null, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected XML-backed secondary value axis.");
+
+        PptxSceneChartAxis? sceneAxis = (PptxSceneChartAxis?)sceneBacked.GetType().GetProperty("SceneAxis")?.GetValue(sceneBacked);
+        XElement? sceneXmlAxis = (XElement?)sceneBacked.GetType().GetProperty("XmlAxis")?.GetValue(sceneBacked);
+        PptxSceneChartAxis? xmlSceneAxis = (PptxSceneChartAxis?)xmlBacked.GetType().GetProperty("SceneAxis")?.GetValue(xmlBacked);
+        XElement? xmlAxis = (XElement?)xmlBacked.GetType().GetProperty("XmlAxis")?.GetValue(xmlBacked);
+
+        XNamespace chartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        TestAssert.Equal("30", sceneAxis?.Id ?? string.Empty);
+        TestAssert.Equal("30", sceneXmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
+        TestAssert.True(xmlSceneAxis is null, "Expected XML-only secondary axis selection to remain XML-backed.");
+        TestAssert.Equal("20", xmlAxis?.Element(chartNamespace + "axId")?.Attribute("val")?.Value ?? string.Empty);
+    }
+
     public static void PptxSceneLineChartMarkerDefaultsUsePlotMarkerState()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

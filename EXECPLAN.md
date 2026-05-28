@@ -329,6 +329,17 @@ High-priority actions:
   (`259 passed, 0 failed, 7 skipped`); private run `20260527-015642` remained behavior-neutral with 84/84
   compared pages, zero dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, and only
   `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+- [x] 2026-05-28: Make secondary right value-axis label rendering scene-first:
+  `RenderSecondaryChartValueAxisLabels` now resolves its right-side value axis through a `ChartAxisSource`
+  bridge that prefers the typed `PptxSceneChart.Axes` entry and uses chart XML only as companion source
+  evidence or as the no-scene fallback. A regression pairs a scene chart with a deliberately mismatched XML
+  fallback and verifies that the secondary axis remains the scene-owned right value axis even if fallback XML
+  points its right axis at the scene's left-axis id, while XML-only rendering keeps the legacy fallback. This
+  is a small but useful ownership step because secondary-axis label scaling and styling no longer start from a
+  renderer-local XML search when a scene chart exists. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
+  passed (`113 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`357 passed, 0 failed, 7 skipped`).
 - [x] Retire renderer-local background XML fallback:
   slide, layout, and master background painting now consumes `PptxSceneBackground` only. The renderer no longer
   reparses raw background XML after the scene has been built, so missing or unsupported background data remains

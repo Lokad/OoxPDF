@@ -322,6 +322,26 @@ internal sealed partial class PptxRenderer
         return new ChartAxisSource(sceneAxis, matchedXmlAxis);
     }
 
+    private static ChartAxisSource ReadSceneOrXmlSecondaryRightValueAxis(PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        XElement? xmlAxis = ReadSecondaryRightValueAxis(chartXml);
+        if (sceneChart is null)
+        {
+            return new ChartAxisSource(null, xmlAxis);
+        }
+
+        PptxSceneChartAxis? sceneAxis = sceneChart.Axes.FirstOrDefault(axis =>
+            axis.AxisKind == PptxSceneChartAxisKind.Value &&
+            axis.IsDeleted != true &&
+            axis.PositionKind == PptxSceneChartAxisPosition.Right);
+        XElement? sceneXmlAxis = sceneChart.ChartXml?
+            .Descendants(ChartNamespace + "valAx")
+            .FirstOrDefault(axis => string.Equals(ReadChartAxisId(axis), sceneAxis?.Id, StringComparison.Ordinal));
+        return sceneAxis is null
+            ? new ChartAxisSource(null, null)
+            : new ChartAxisSource(sceneAxis, sceneXmlAxis);
+    }
+
     private static XElement? ResolveXmlValueAxisForSource(ChartAxisSource source, XDocument chartXml)
     {
         if (source.XmlAxis is not null)
@@ -6510,8 +6530,9 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PdfFontResource> RenderSecondaryChartValueAxisLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, ChartValueExtents fallback)
     {
-        XElement? rightValueAxis = ReadSecondaryRightValueAxis(chartXml);
-        PptxSceneChartAxis? rightSceneAxis = ReadSceneSecondaryRightValueAxis(sceneChart, rightValueAxis);
+        ChartAxisSource rightValueAxisSource = ReadSceneOrXmlSecondaryRightValueAxis(sceneChart, chartXml);
+        XElement? rightValueAxis = rightValueAxisSource.XmlAxis;
+        PptxSceneChartAxis? rightSceneAxis = rightValueAxisSource.SceneAxis;
         if (rightValueAxis is null && rightSceneAxis is null)
         {
             return Array.Empty<PdfFontResource>();
