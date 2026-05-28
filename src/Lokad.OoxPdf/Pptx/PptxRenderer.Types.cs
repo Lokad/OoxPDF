@@ -767,7 +767,7 @@ internal sealed partial class PptxRenderer
 
         public ResolvedGlyphFont? ResolveGlyphFont(string? familyName, bool bold, bool italic, int codePoint)
         {
-            string requestedFamily = string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName;
+            string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
             string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture) + "\u001f" + codePoint.ToString(CultureInfo.InvariantCulture);
             if (glyphFonts.TryGetValue(key, out ResolvedGlyphFont? cached))
             {
@@ -814,12 +814,12 @@ internal sealed partial class PptxRenderer
 
         public OpenTypeFont? ResolveOpenTypeFont(string? familyName, bool bold = false, bool italic = false)
         {
-            return ResolveFont(string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName, bold, italic);
+            return ResolveFont(PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName), bold, italic);
         }
 
         public bool RequestedTypefaceHasMathTable(string? familyName, bool bold = false, bool italic = false)
         {
-            string requestedFamily = string.IsNullOrWhiteSpace(familyName) ? "Arial" : familyName;
+            string requestedFamily = PptxFontFallbackRules.ResolveDefaultLatinTypeface(familyName);
             string key = requestedFamily + "\u001f" + bold.ToString(CultureInfo.InvariantCulture) + "\u001f" + italic.ToString(CultureInfo.InvariantCulture);
             if (requestedMathTables.TryGetValue(key, out bool cached))
             {

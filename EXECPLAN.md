@@ -5426,6 +5426,13 @@ paths, and ExecPlan references together.
 - [ ] Remove remaining PPTX text-flow approximations that pick specific families as default behavior.
   Defaults must come from OOXML theme resolution, font metadata, or a documented generic fallback stack,
   not font-by-font aliases.
+  - [x] 2026-05-28: Centralize the remaining implicit `Arial` fallback behind `PptxFontFallbackRules` and route
+    PPTX text measurement, glyph fallback, requested math-table checks, font-use discovery, and glyph-run splitting
+    through that named policy. This is behavior-neutral and deliberately does not pretend that `Arial` is Office's
+    final default; it removes anonymous family literals from renderer/emission paths so the next step can replace
+    the policy with an OOXML/theme/platform fallback ladder in one place. Validation: `dotnet build
+    Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-typography` passed
+    (`95 passed, 0 failed, 2 skipped`).
 - [x] Add `pptx-ladder-04-cambria-math-dense-wrap-probe` for the private slide-11 class of issues:
   dense Cambria Math paragraphs, mixed bold spans, an empty paragraph, and a narrow public text frame. OOXPDF
   now keeps the short final heading word on the first line through a width-relative final-word wrap rule

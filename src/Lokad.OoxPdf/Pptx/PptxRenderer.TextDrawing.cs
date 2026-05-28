@@ -152,7 +152,7 @@ internal sealed partial class PptxRenderer
         foreach (PptxPositionedTextSpan span in textSpans)
         {
             foreach (IGrouping<string, PptxTextGlyphLayout> group in span.GlyphSpan.Glyphs.GroupBy(
-                         glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? (span.Run.FontFamily ?? "Arial") : glyph.Typeface!,
+                        glyph => string.IsNullOrWhiteSpace(glyph.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : glyph.Typeface!,
                          StringComparer.OrdinalIgnoreCase))
             {
                 uses.Add(new TextFontUse(group.Key, span.GlyphSpan.Bold, span.GlyphSpan.Italic, group.Select(glyph => glyph.CodePoint).ToArray()));
@@ -161,7 +161,7 @@ internal sealed partial class PptxRenderer
 
         foreach (TextRun run in CoalesceUnderlineRuns(CoalesceAdjacentTextRuns(legacyTextRuns, compareHighlight: false)))
         {
-            string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
+            string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
             uses.Add(new TextFontUse(familyName, run.Bold, run.Italic, run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()));
         }
 
@@ -179,7 +179,7 @@ internal sealed partial class PptxRenderer
         textRuns = CoalesceUnderlineRuns(textRuns);
         return CreateRenderedFonts(textRuns
             .Select(run => new TextFontUse(
-                string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!,
+                PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily),
                 run.Bold,
                 run.Italic,
                 run.Text.EnumerateRunes().Select(rune => rune.Value).ToArray()))
@@ -715,11 +715,11 @@ internal sealed partial class PptxRenderer
         while (index < span.GlyphSpan.Glyphs.Count)
         {
             PptxTextGlyphLayout first = span.GlyphSpan.Glyphs[index];
-            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? (span.Run.FontFamily ?? "Arial") : first.Typeface!;
+            string typeface = string.IsNullOrWhiteSpace(first.Typeface) ? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily) : first.Typeface!;
             int start = index;
             index++;
             while (index < span.GlyphSpan.Glyphs.Count &&
-                string.Equals(span.GlyphSpan.Glyphs[index].Typeface ?? span.Run.FontFamily ?? "Arial", typeface, StringComparison.OrdinalIgnoreCase))
+                string.Equals(span.GlyphSpan.Glyphs[index].Typeface ?? PptxFontFallbackRules.ResolveDefaultLatinTypeface(span.Run.FontFamily), typeface, StringComparison.OrdinalIgnoreCase))
             {
                 index++;
             }
@@ -767,7 +767,7 @@ internal sealed partial class PptxRenderer
 
     private static string FontKey(TextRun run)
     {
-        string familyName = string.IsNullOrWhiteSpace(run.FontFamily) ? "Arial" : run.FontFamily!;
+        string familyName = PptxFontFallbackRules.ResolveDefaultLatinTypeface(run.FontFamily);
         return FontKey(familyName, run.Bold, run.Italic);
     }
 
