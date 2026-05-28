@@ -15338,3 +15338,13 @@ separate root group and variation groups instead of having to infer those struct
 declaration list. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
 warnings and `0` errors; focused non-slow `pptx-model` passed with `25` tests, `0` failures, and `1` slow skip;
 focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: chart style entries now keep source identity beyond the local role name.
+`PptxSceneChartStyleEntry` records the root-child `SourceIndex` and namespace URI for each preserved style role,
+and private-safe scene inspection exposes the source-index sequence. The chart-style preservation regression now
+checks that skipped empty root children do not erase the original source positions.
+
+This does not change duplicate-role precedence or renderer selection. It preserves enough structure to investigate
+Office behavior later without conflating duplicate local-name entries or namespace-distinct elements into one
+anonymous role string. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0`
+warnings and `0` errors; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.

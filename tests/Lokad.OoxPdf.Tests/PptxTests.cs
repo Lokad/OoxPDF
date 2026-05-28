@@ -641,6 +641,9 @@ internal static class PptxTests
         TestAssert.Equal("gridlineMajor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[0]);
         TestAssert.Equal("gridlineMinor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[1]);
         TestAssert.Equal("title", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[2]);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[0]);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[1]);
+        TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[2]);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleShapeStyleCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleShapeFillCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
@@ -648,6 +651,8 @@ internal static class PptxTests
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFontReferenceCount);
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
+        TestAssert.Equal(1, majorGridlineStyle.SourceIndex);
+        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", majorGridlineStyle.NamespaceUri);
         TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
         TestAssert.Equal("1", majorGridlineStyle.LineReferenceIndexValue);
         TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
@@ -7320,6 +7325,7 @@ internal static class PptxTests
                 node.HasChartStylePart,
                 node.ChartStyleEntryCount,
                 node.ChartStyleEntryRoles,
+                node.ChartStyleEntrySourceIndexes,
                 node.ChartStyleShapeStyleCount,
                 node.ChartStyleShapeFillCount,
                 node.ChartStyleFillReferenceCount,

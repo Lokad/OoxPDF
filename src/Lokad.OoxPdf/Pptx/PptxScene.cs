@@ -136,6 +136,7 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartStylePartId,
     int ChartStyleEntryCount,
     IReadOnlyList<string> ChartStyleEntryRoles,
+    IReadOnlyList<int> ChartStyleEntrySourceIndexes,
     int ChartStyleShapeStyleCount,
     int ChartStyleShapeFillCount,
     int ChartStyleFillReferenceCount,
@@ -817,6 +818,8 @@ internal sealed record PptxSceneChartStyle(
 
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
+    int SourceIndex,
+    string NamespaceUri,
     int? LineReferenceIndex,
     string LineReferenceIndexValue,
     int? FillReferenceIndex,
@@ -4002,6 +4005,7 @@ internal sealed class PptxSceneBuilder
         }
 
         var entries = new List<PptxSceneChartStyleEntry>();
+        int sourceIndex = 0;
         foreach (XElement roleElement in document.Root.Elements())
         {
             XElement? lineReference = roleElement
@@ -4059,11 +4063,14 @@ internal sealed class PptxSceneBuilder
                 !shapeLine.HasLine &&
                 !HasChartTextStyleOverride(textStyle))
             {
+                sourceIndex++;
                 continue;
             }
 
             entries.Add(new PptxSceneChartStyleEntry(
                 roleElement.Name.LocalName,
+                sourceIndex,
+                roleElement.Name.NamespaceName,
                 lineReferenceIndex,
                 lineReferenceIndexRaw,
                 fillReferenceIndex,
@@ -4075,6 +4082,7 @@ internal sealed class PptxSceneBuilder
                 shapeStyle,
                 shapeLine,
                 textStyle));
+            sourceIndex++;
         }
 
         return entries;
