@@ -447,6 +447,8 @@ internal sealed partial class PptxRenderer
             height,
             insets,
             ToTextVerticalAnchor(sceneCell.VerticalAnchor),
+            ReadTableCellVerticalAnchorValue(sceneCell),
+            ToTextBodyPropertySource(sceneCell.VerticalAnchorSource),
             tableStyleTextStyle);
         spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
@@ -463,6 +465,30 @@ internal sealed partial class PptxRenderer
             PptxSceneTableCellVerticalAnchor.Middle => TextVerticalAnchor.Middle,
             PptxSceneTableCellVerticalAnchor.Bottom => TextVerticalAnchor.Bottom,
             _ => TextVerticalAnchor.Top
+        };
+    }
+
+    private static string ReadTableCellVerticalAnchorValue(PptxSceneTableCell cell)
+    {
+        if (cell.VerticalAnchorValue is { } value)
+        {
+            return value;
+        }
+
+        return cell.VerticalAnchor switch
+        {
+            PptxSceneTableCellVerticalAnchor.Middle => "ctr",
+            PptxSceneTableCellVerticalAnchor.Bottom => "b",
+            _ => "t"
+        };
+    }
+
+    private static PptxTextBodyPropertySource ToTextBodyPropertySource(PptxSceneTableCellVerticalAnchorSource source)
+    {
+        return source switch
+        {
+            PptxSceneTableCellVerticalAnchorSource.CellProperties => PptxTextBodyPropertySource.TableCellProperties,
+            _ => PptxTextBodyPropertySource.TableCellStyle
         };
     }
 

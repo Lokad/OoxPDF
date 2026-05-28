@@ -3000,7 +3000,7 @@ internal sealed partial class PptxRenderer
         var advanceEstimator = new TextAdvanceEstimator();
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
-        bool useWindowsFontBoxForDefaultLineSpacing = bodyProperties.VerticalAnchorSource != PptxTextBodyPropertySource.TableCellStyle;
+        bool useWindowsFontBoxForDefaultLineSpacing = !IsTableCellVerticalAnchorSource(bodyProperties.VerticalAnchorSource);
         bool hasEstimatedParagraph = false;
         foreach (PptxTextParagraphModel paragraph in paragraphs)
         {
@@ -3116,6 +3116,11 @@ internal sealed partial class PptxRenderer
         }
 
         return height;
+    }
+
+    private static bool IsTableCellVerticalAnchorSource(PptxTextBodyPropertySource source)
+    {
+        return source is PptxTextBodyPropertySource.TableCellProperties or PptxTextBodyPropertySource.TableCellStyle;
     }
 
     private static double ReadEstimatedAnchorLineAdvance(

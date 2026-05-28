@@ -368,13 +368,8 @@ internal sealed partial class PptxRenderer
                 PptxTextBodyPropertySource.TableCellStyle,
                 PptxTextBodyPropertySource.TableCellStyle),
             VerticalAnchor = tableFrame.VerticalAnchor,
-            VerticalAnchorValue = tableFrame.VerticalAnchor switch
-            {
-                TextVerticalAnchor.Middle => "ctr",
-                TextVerticalAnchor.Bottom => "b",
-                _ => "t"
-            },
-            VerticalAnchorSource = PptxTextBodyPropertySource.TableCellStyle,
+            VerticalAnchorValue = tableFrame.VerticalAnchorValue,
+            VerticalAnchorSource = tableFrame.VerticalAnchorSource,
             VerticalOverflow = PptxTextVerticalOverflow.Clip,
             VerticalOverflowValue = "clip",
             VerticalOverflowSource = PptxTextBodyPropertySource.TableCellStyle,

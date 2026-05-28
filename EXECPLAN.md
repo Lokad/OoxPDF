@@ -493,6 +493,15 @@ High-priority actions:
   `PptxSyntheticTableStyleBoldContributesToCenteredTextHeight` locks the observed behavior: inherited
   table-style bold wraps and centers as bold, while explicit `b="0"` stays on the direct-run path. Validation:
   focused test passed; focused non-slow `pptx-tables` passed (`8 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-28: Preserve PPTX table-cell vertical-anchor provenance through the scene and table-text
+  adapter: `PptxSceneTableCell` now distinguishes default anchors from explicit `a:tcPr @anchor` tokens,
+  and `PptxTableCellTextFrame` carries the raw anchor value plus a table-cell property source into the
+  shared text model instead of synthesizing every anchor as style-only state. Rendering still treats both
+  table-cell sources as the table-cell text path for line-height estimation, so this is structural alignment
+  rather than a new placement heuristic. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed; focused non-slow `pptx-tables` passed (`9 passed, 0 failed, 0 skipped`); focused non-slow
+  `pptx-model` passed (`17 passed, 0 failed, 1 skipped`); full console runner passed (`396 passed, 0 failed,
+  0 skipped`).
 - [x] 2026-05-27: Carry line-chart marker styles into stroke legend keys:
   line and combo-line legends now keep the already-parsed per-series `ChartMarkerStyle` in `ChartLegendEntry`
   and emit a composite key as a short stroke with the marker centered on it, matching the same PDF structure

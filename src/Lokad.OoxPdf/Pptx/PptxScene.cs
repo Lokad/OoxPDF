@@ -1331,6 +1331,7 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneTextInsetValues TextInsetValues,
     PptxSceneTableCellVerticalAnchor VerticalAnchor,
     string? VerticalAnchorValue,
+    PptxSceneTableCellVerticalAnchorSource VerticalAnchorSource,
     PptxSceneFillStyle Fill,
     PptxSceneTableCellBorders Borders,
     PptxSceneFillStyle StyleFill,
@@ -1372,6 +1373,12 @@ internal enum PptxSceneTableCellVerticalAnchor
     Top,
     Middle,
     Bottom
+}
+
+internal enum PptxSceneTableCellVerticalAnchorSource
+{
+    Default,
+    CellProperties
 }
 
 internal readonly record struct PptxSceneGroupTransform(
@@ -4105,6 +4112,7 @@ internal sealed class PptxSceneBuilder
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
     {
         (PptxSceneTextInsets textInsets, PptxSceneTableCellTextInsetSources textInsetSources, PptxSceneTextInsetValues textInsetValues) = ReadTableCellTextInsetInfo(cell);
+        (PptxSceneTableCellVerticalAnchor verticalAnchor, string? verticalAnchorValue, PptxSceneTableCellVerticalAnchorSource verticalAnchorSource) = ReadTableCellVerticalAnchorInfo(cell);
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
@@ -4112,8 +4120,9 @@ internal sealed class PptxSceneBuilder
             textInsets,
             textInsetSources,
             textInsetValues,
-            ReadTableCellVerticalAnchor(cell),
-            ReadTableCellVerticalAnchorValue(cell),
+            verticalAnchor,
+            verticalAnchorValue,
+            verticalAnchorSource,
             ReadTableCellFill(cell, theme, colorMap),
             ReadTableCellBorders(cell, theme, colorMap),
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
@@ -4215,7 +4224,22 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneTableCellVerticalAnchor ReadTableCellVerticalAnchor(XElement cell)
     {
+        return ReadTableCellVerticalAnchorInfo(cell).Anchor;
+    }
+
+    private static (PptxSceneTableCellVerticalAnchor Anchor, string? Value, PptxSceneTableCellVerticalAnchorSource Source) ReadTableCellVerticalAnchorInfo(XElement cell)
+    {
         string? anchor = ReadTableCellVerticalAnchorValue(cell);
+        return (
+            ParseTableCellVerticalAnchor(anchor),
+            anchor,
+            anchor is null
+                ? PptxSceneTableCellVerticalAnchorSource.Default
+                : PptxSceneTableCellVerticalAnchorSource.CellProperties);
+    }
+
+    private static PptxSceneTableCellVerticalAnchor ParseTableCellVerticalAnchor(string? anchor)
+    {
         return anchor switch
         {
             "ctr" => PptxSceneTableCellVerticalAnchor.Middle,

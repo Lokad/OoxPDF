@@ -358,6 +358,8 @@ internal sealed partial class PptxRenderer
         double Height,
         TextInsets Insets,
         TextVerticalAnchor VerticalAnchor,
+        string? VerticalAnchorValue,
+        PptxTextBodyPropertySource VerticalAnchorSource,
         PptxSceneTableCellTextStyle TextStyle);
 
     private readonly record struct PptxTextBodyProperties(
@@ -405,6 +407,7 @@ internal sealed partial class PptxRenderer
     {
         DirectBodyPr,
         InheritedBodyPr,
+        TableCellProperties,
         TableCellStyle,
         DefaultValue
     }
