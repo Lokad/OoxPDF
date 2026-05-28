@@ -2755,21 +2755,23 @@ High-priority actions:
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
     their text, rich-text runs, `txPr`, fill, and stroke.
   - [ ] Derive and render default-placement axis titles:
-    default category/value axis-title placement is still open. This is distinct from tick-label styling and
-    should be solved with Office-PDF-backed placement evidence for horizontal and rotated axis-title boxes,
-    overlay/reserve interaction, and chart-style inherited defaults, not with frame-relative text nudges.
+    the first default-placement category/value axis-title renderer is in place for supported Cartesian native
+    chart branches, but the item stays open until plot-box reservation, top/right permutations, overlay
+    behavior, and chart-style inherited defaults are structurally proven against Office PDFs. This remains
+    distinct from tick-label styling and should continue with Office-PDF-backed placement evidence, not
+    frame-relative text nudges.
     - [x] 2026-05-28 Add public Office-backed default axis-title evidence:
       `pptx-ladder-11-chart-default-axis-titles-probe` now exercises a cached clustered-column chart with
-      default category and value axis titles. The visual case requires
-      `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`, allows that diagnostic, and keeps raster/graphics gates loose
-      enough to pass while preserving Office's reference placement for future tightening. Validation run
-      `20260528-154703` passed at MAE `6.577098`, changed16 `0.065429`, with two expected axis-title layout
-      diagnostics and dimension-matched output.
+      default category and value axis titles. It originally required and allowed
+      `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` while preserving Office's reference placement for future
+      tightening. Validation run `20260528-154703` passed at MAE `6.577098`, changed16 `0.065429`, with two
+      expected axis-title layout diagnostics and dimension-matched output.
     - [x] 2026-05-28 Split chart text classification for axis titles before tightening this probe:
       `ClassifyPdfChartText.ps1` now emits `AxisTitleText` for axis-lane title text using PDF geometry and text
-      transforms rather than literal title strings. On the public default-axis-title probe, the Office reference
-      has two `AxisTitleText` structures and the current candidate has none, while tick labels remain separately
-      classified. This does not render the titles yet; it gives future renderer work a structural PDF target.
+      transforms rather than literal title strings. At this point in the sequence, the Office reference had two
+      `AxisTitleText` structures and the candidate had none, while tick labels remained separately classified.
+      This classifier slice did not render the titles yet; it gave the following renderer work a structural PDF
+      target.
       Validation: default-axis-title probe run `20260528-155017` passed; secondary-axis overlay, doughnut-left
       legend, and pie data-label leader-line visual cases all passed after the classifier split.
   - [x] 2026-05-28 Make default-placement axis-title omission diagnostic-covered:
@@ -2778,6 +2780,27 @@ High-priority actions:
     `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` when it encounters a chart axis title without a manual layout,
     and the focused synthetic test verifies that the title is not silently emitted through the manual-title
     `/CAT` path. Validation: full console runner passed (`369 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 Render default-placement axis titles in supported Cartesian chart branches:
+    bar/combo, line, area, scatter, and bubble rendering now consume default axis-title records inside the
+    branch that owns the resolved `ChartLayout`, using scene-owned axis kind/position, title rich-text runs,
+    title shape style, chart-level text style, and title `txPr` before the raw-XML fallback. The public
+    default-axis-title probe no longer requires `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`; it gates
+    `AxisTitleText` structures with text hashes and keeps a loose `30 pt` position tolerance while plot-box
+    reservation is still approximate. Validation: visual runs `20260528-155851` and `20260528-160519` passed
+    with empty diagnostics, focused non-slow `pptx-charts` passed (`118 passed, 0 failed, 0 skipped`), the
+    full non-slow console runner passed (`372 passed, 0 failed, 7 skipped`), and the nearby secondary-axis
+    overlay visual probe passed at `20260528-160531`.
+  - [ ] Replace the initial default-axis-title placement approximation with structural Office layout:
+    current horizontal and rotated title positions use named Office-observed ratios over the existing chart
+    frame/plot-box reserves. The next slices should add public probes for top and right axis titles,
+    horizontal-bar category/value permutations, scatter/bubble explicit titles, overlay/reserve interaction,
+    rich rotated multi-run titles, and chart-style-inherited title defaults, then feed those observations back
+    into plot-box reservation rather than widening the title-position tolerance.
+  - [ ] Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise supported
+    chart branches: the first rendering slice suppresses the old blanket unsupported-layout warning once a
+    branch succeeds, but a malformed or incomplete axis title can still be skipped if the axis kind/position is
+    unknown. Add a public synthetic probe and targeted diagnostic for that case instead of reintroducing the
+    broad "default titles are never rendered" warning.
   - [x] 2026-05-27: Preserve chart-style role text defaults structurally. `PptxSceneChartStyleEntry.TextStyle`
     now decodes role-local `fontRef` and `defRPr` into the existing chart text-style override shape:
     major/minor theme font family, font size, font color/alpha, bold, and italic. This does not yet apply
@@ -6495,12 +6518,14 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   available to rendering or inspection as axis-owned scene data.
   Evidence: `PptxSceneChartAxis` preserved tick label style and number format but had no title record; the
   scene-builder fixture now locks category-axis and value-axis titles through `PptxSceneChartAxis.Title`.
-- Observation: Default-placement axis titles are now present in a public cached Office probe, and the PDF text
-  classifier can identify them separately from tick labels. Evidence: the 2026-05-28 default-axis-title probe
-  originally exposed horizontal category-title text as `CategoryAxisTickLabel` and rotated value-title text as
-  `ValueAxisTickLabel`; `ClassifyPdfChartText.ps1` now emits `AxisTitleText` for those axis-lane structures
-  without relying on literal title strings. The probe still intentionally gates raster/graphics plus the required
-  `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` diagnostic until default axis-title rendering exists.
+- Observation: Default-placement axis titles now have both public Office evidence and initial supported
+  Cartesian rendering, but plot-reservation fidelity is still not solved. Evidence: the 2026-05-28
+  default-axis-title probe originally exposed horizontal category-title text as `CategoryAxisTickLabel` and
+  rotated value-title text as `ValueAxisTickLabel`; `ClassifyPdfChartText.ps1` now emits `AxisTitleText` for
+  those axis-lane structures without relying on literal title strings, and the renderer emits matching
+  `AxisTitleText` hashes for the supported clustered-column case without the unsupported-layout diagnostic.
+  The remaining gap is not whether to draw the titles, but how Office reserves plot and axis-title lanes across
+  top/right axes, horizontal bars, overlay modes, rich rotated runs, and inherited chart-style title defaults.
 - Observation: Chart legends already had typed position, overlay, visibility, and text style, but not the
   sibling layout and shape properties Office can use to place and frame a legend.
   Evidence: `PptxSceneChartLegend` now preserves `c:layout/c:manualLayout` and `c:spPr` fill/stroke data, and
@@ -6690,6 +6715,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   at `84.88`; the public visual gate drops from MAE `13.6832895688657` to `3.3798655719521604`.
 
 ## Decision Log
+
+- Decision: Render default-placement chart axis titles from inside the native chart branches that own the
+  resolved `ChartLayout`, rather than from the older frame-only post-render axis-title pass.
+  Rationale: Office placement is tied to the plot box and the surrounding axis/title reserves. Keeping default
+  title emission next to branch-specific plot-box calculation gives future Office-PDF-backed reservation rules
+  a structural home, while the post-render path remains appropriate for manual-layout titles and diagnostics
+  on unsupported chart paths.
 
 - Decision: Use resolved OS/2 Windows ascender plus descender as the Office-aligned visible-line height for
   middle-anchor estimation under default line spacing.
@@ -9807,11 +9839,11 @@ XML-only title fallback still passed an empty rich-run list into `RenderChartTit
 text even though the shared scene parser could read it. The renderer now uses a single scene-or-XML helper for
 title runs, and the fallback path reuses `PptxSceneBuilder.ReadChartTextRuns`.
 
-This is intentionally not chart-title layout closure. Default-placement axis titles are still preserved but
-not rendered, leader-line geometry and exact data-label boxes are still open, and chart-style inherited
-defaults still need a structural owner. The useful long-term effect is narrower: another legacy XML read now
-routes through the typed scene parser, reducing duplicate heuristics while keeping the remaining layout debt
-explicit.
+This was intentionally not chart-title layout closure. The later default-axis-title slice added initial
+supported Cartesian rendering, but leader-line geometry, exact data-label boxes, plot-reserved axis-title
+lanes, and chart-style inherited defaults remain open. The useful long-term effect is narrower: another
+legacy XML read now routes through the typed scene parser, reducing duplicate heuristics while keeping the
+remaining layout debt explicit.
 
 Validation: focused `pptx-charts` tests passed (`40 passed, 0 failed, 0 skipped`).
 

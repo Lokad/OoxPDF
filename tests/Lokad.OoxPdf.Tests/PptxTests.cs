@@ -11339,7 +11339,7 @@ internal static class PptxTests
         TestAssert.True(!Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 442\.[0-9]+ Tm"), "Expected chart title rendering not to fall back to the full-frame title box.");
     }
 
-    public static void PptxSyntheticDefaultAxisTitleEmitsDiagnosticUntilLayoutModelExists()
+    public static void PptxSyntheticChartDefaultAxisTitleRendersWithoutUnsupportedDiagnostic()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
@@ -11376,7 +11376,7 @@ internal static class PptxTests
                       <c:lineChart>
                         <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val></c:ser>
                       </c:lineChart>
-                      <c:valAx><c:axId val="2"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default Axis</a:t></a:r></a:p></c:rich></c:tx></c:title></c:valAx>
+                      <c:valAx><c:axId val="2"/><c:axPos val="l"/><c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Default Axis</a:t></a:r></a:p></c:rich></c:tx></c:title></c:valAx>
                     </c:plotArea>
                   </c:chart>
                 </c:chartSpace>
@@ -11388,12 +11388,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(diagnostics.Any(d =>
-            d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT" &&
-            d.PartName == "/ppt/charts/chart1.xml" &&
-            d.Fallback == "Ignored"),
-            "Default-placement chart axis titles should stay diagnostic-covered until the Office layout model exists.");
-        TestAssert.DoesNotContain("/CAT", pdf);
+        TestAssert.True(!diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT"),
+            "Supported native chart branches should render default-placement axis titles instead of reporting the old unsupported-layout diagnostic.");
+        TestAssert.Contains("/CAT", pdf);
     }
 
     public static void PptxSyntheticTransparentChartTitleUsesGlyphOutlinePaths()

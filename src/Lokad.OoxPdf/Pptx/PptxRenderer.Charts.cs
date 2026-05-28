@@ -96,7 +96,7 @@ internal sealed partial class PptxRenderer
 
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts))
         {
-            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber));
+            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
             fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
             return;
         }
@@ -106,7 +106,7 @@ internal sealed partial class PptxRenderer
             HydrateChartReferenceCaches(chartWorkbook, resolvedChartXml);
             if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts))
             {
-                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber));
+                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
                 fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart));
                 return;
             }
@@ -1307,6 +1307,7 @@ internal sealed partial class PptxRenderer
                 {
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, secondaryValueAxis, secondaryValueSceneAxis, secondaryValueExtents, secondaryAxisUnits, secondaryAxisReversed, horizontalBars: false, rightSide: ResolveSceneOrXmlValueAxisRightSide(secondaryValueSceneAxis, secondaryValueAxis, axesStyle.SecondaryValueAxisRightSide)));
                 }
+                fonts.AddRange(RenderDefaultChartAxisTitles(theme, graphics, chartLayout, chartXml, sceneChart));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, legendEntries, chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderBarDataLabels(
                     theme,
@@ -1359,6 +1360,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, defaultNumberFormat: lineOptions.PercentStacked ? "0%" : null));
                     fonts.AddRange(RenderSecondaryChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked)));
                 }
+                fonts.AddRange(RenderDefaultChartAxisTitles(theme, graphics, chartLayout, chartXml, sceneChart));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, linePlot, lineChart, seriesStrokes, markerStyles, reverseOrder: lineOptions.Stacked, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 fonts.AddRange(RenderLineDataLabels(
                     theme,
@@ -1427,6 +1429,7 @@ internal sealed partial class PptxRenderer
                     fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, defaultNumberFormat: areaOptions.PercentStacked ? "0%" : null));
                 }
 
+                fonts.AddRange(RenderDefaultChartAxisTitles(theme, graphics, chartLayout, chartXml, sceneChart));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -1464,6 +1467,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme),
                     ReadSceneOrXmlSeriesDataLabelOptions(sceneChart, scatterPlot, scatterChart, theme),
                     ReadSceneOrXmlChartSeriesNameRecords(scatterPlot, scatterChart, workbook)));
+                fonts.AddRange(RenderDefaultChartAxisTitles(theme, graphics, chartLayout, chartXml, sceneChart));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildStrokeLegendEntries(theme, chartPalette, scatterPlot, scatterChart, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -1504,6 +1508,7 @@ internal sealed partial class PptxRenderer
                     ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook)));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, xValueAxis.XmlAxis, xValueAxis.SceneAxis, xExtents, xAxisOptions.Units, valueAxisReversed: false, horizontalBars: true));
                 fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, yValueAxis.XmlAxis, yValueAxis.SceneAxis, yExtents, yAxisOptions.Units, valueAxisReversed: false, horizontalBars: false));
+                fonts.AddRange(RenderDefaultChartAxisTitles(theme, graphics, chartLayout, chartXml, sceneChart));
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, bubblePlot, bubbleChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -4308,7 +4313,8 @@ internal sealed partial class PptxRenderer
         PptxSceneChart? sceneChart,
         Action<OoxPdfDiagnostic>? diagnosticSink,
         string? chartPartName,
-        int slideIndex)
+        int slideIndex,
+        bool emitDefaultLayoutDiagnostics = true)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         var fonts = new List<PdfFontResource>();
@@ -4318,7 +4324,11 @@ internal sealed partial class PptxRenderer
             {
                 if (!string.IsNullOrWhiteSpace(axis.Title.Text) && !axis.Title.Layout.HasLayout)
                 {
-                    EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                    if (emitDefaultLayoutDiagnostics)
+                    {
+                        EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                    }
+
                     continue;
                 }
 
@@ -4354,7 +4364,11 @@ internal sealed partial class PptxRenderer
             PptxSceneChartManualLayout layout = ReadManualLayout(title);
             if (!layout.HasLayout)
             {
-                EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                if (emitDefaultLayoutDiagnostics)
+                {
+                    EmitChartDiagnostic(diagnosticSink, "PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT", OoxPdfSeverity.Warning, "Default-placement chart axis titles are not rendered until the Office axis-title layout model is implemented.", chartPartName, slideIndex, "Ignored");
+                }
+
                 continue;
             }
 
@@ -4371,6 +4385,208 @@ internal sealed partial class PptxRenderer
         }
 
         return fonts;
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderDefaultChartAxisTitles(
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ChartLayout layout,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart)
+    {
+        var fonts = new List<PdfFontResource>();
+        if (sceneChart is not null)
+        {
+            ChartTextStyleOverride chartTextStyle = ToChartTextStyleOverride(sceneChart.TextStyle);
+            foreach (PptxSceneChartAxis axis in sceneChart.Axes)
+            {
+                if (axis.IsDeleted == true ||
+                    string.IsNullOrWhiteSpace(axis.Title.Text) ||
+                    axis.Title.Layout.HasLayout)
+                {
+                    continue;
+                }
+
+                fonts.AddRange(RenderDefaultChartAxisTitle(
+                    theme,
+                    graphics,
+                    layout,
+                    axis.Title.Text,
+                    ToChartTextRuns(axis.Title.TextRuns),
+                    axis.AxisKind,
+                    axis.PositionKind,
+                    ToChartShapeStyle(axis.Title.ShapeStyle),
+                    chartTextStyle,
+                    ToChartTextStyleOverride(axis.Title.TextStyle)));
+            }
+
+            return fonts;
+        }
+
+        foreach (XElement axis in ReadChartAxisElements(chartXml))
+        {
+            XElement? title = axis.Element(ChartNamespace + "title");
+            string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
+            if (title is null ||
+                string.IsNullOrWhiteSpace(text) ||
+                ReadManualLayout(title).HasLayout)
+            {
+                continue;
+            }
+
+            fonts.AddRange(RenderDefaultChartAxisTitle(
+                theme,
+                graphics,
+                layout,
+                text,
+                ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme)),
+                PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
+                PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
+                ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
+                ReadChartTextStyleFromTxPr(chartXml.Root, theme),
+                ReadChartTextStyleFromTxPr(title, theme)));
+        }
+
+        return fonts;
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderDefaultChartAxisTitle(
+        PptxTheme theme,
+        PdfGraphicsBuilder graphics,
+        ChartLayout layout,
+        string? text,
+        IReadOnlyList<ChartTextRunOverride> textRuns,
+        PptxSceneChartAxisKind axisKind,
+        PptxSceneChartAxisPosition positionKind,
+        ChartShapeStyle shapeStyle,
+        ChartTextStyleOverride chartTextStyle,
+        ChartTextStyleOverride titleTextStyle)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
+        style = MergeChartTextStyle(style, chartTextStyle);
+        style = MergeChartTextStyle(style, titleTextStyle);
+        string trimmed = text.Trim();
+        double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;
+        double textWidth = Math.Max(style.FontSize, EstimateChartTextWidth(trimmed, style.FontSize));
+        return positionKind switch
+        {
+            PptxSceneChartAxisPosition.Bottom or PptxSceneChartAxisPosition.Top
+                when axisKind is PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date or PptxSceneChartAxisKind.Series or PptxSceneChartAxisKind.Value =>
+                RenderDefaultHorizontalChartAxisTitle(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind),
+            PptxSceneChartAxisPosition.Left or PptxSceneChartAxisPosition.Right
+                when axisKind is PptxSceneChartAxisKind.Value or PptxSceneChartAxisKind.Category or PptxSceneChartAxisKind.Date =>
+                RenderDefaultVerticalChartAxisTitle(graphics, layout, trimmed, textRuns, style, shapeStyle, titleHeight, textWidth, positionKind),
+            _ => []
+        };
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderDefaultHorizontalChartAxisTitle(
+        PdfGraphicsBuilder graphics,
+        ChartLayout layout,
+        string text,
+        IReadOnlyList<ChartTextRunOverride> textRuns,
+        ChartTextStyle style,
+        ChartShapeStyle shapeStyle,
+        double titleHeight,
+        double textWidth,
+        PptxSceneChartAxisPosition positionKind)
+    {
+        ChartFrameBox frame = layout.Frame;
+        ChartPlotBox plotBox = layout.PlotBox;
+        double titleX = plotBox.X + plotBox.Width / 2d - textWidth / 2d;
+        double baselineY;
+        double boxY;
+        if (positionKind == PptxSceneChartAxisPosition.Top)
+        {
+            double topReserve = Math.Max(0d, frame.Y + frame.Height - plotBox.Y - plotBox.Height);
+            baselineY = plotBox.Y + plotBox.Height + topReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
+            boxY = Math.Max(plotBox.Y + plotBox.Height, baselineY - titleHeight);
+        }
+        else
+        {
+            double bottomReserve = Math.Max(0d, plotBox.Y - frame.Y);
+            baselineY = frame.Y + bottomReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
+            boxY = Math.Max(frame.Y, baselineY - titleHeight);
+        }
+
+        double boxX = Math.Max(frame.X, titleX - style.FontSize * 0.5d);
+        double boxWidth = Math.Min(frame.X + frame.Width - boxX, textWidth + style.FontSize);
+        RenderChartShapeStyle(graphics, boxX, boxY, boxWidth, titleHeight, shapeStyle);
+        var runs = new List<TextRun>();
+        AddChartRichTextRuns(
+            runs,
+            textRuns,
+            text,
+            titleX,
+            baselineY,
+            textWidth,
+            titleHeight,
+            frame.X,
+            frame.Y,
+            frame.Width,
+            frame.Height,
+            style,
+            TextAlignment.Center);
+        return RenderTextRuns(runs, graphics, "CAT");
+    }
+
+    private static IReadOnlyList<PdfFontResource> RenderDefaultVerticalChartAxisTitle(
+        PdfGraphicsBuilder graphics,
+        ChartLayout layout,
+        string text,
+        IReadOnlyList<ChartTextRunOverride> textRuns,
+        ChartTextStyle style,
+        ChartShapeStyle shapeStyle,
+        double titleHeight,
+        double textWidth,
+        PptxSceneChartAxisPosition positionKind)
+    {
+        ChartFrameBox frame = layout.Frame;
+        ChartPlotBox plotBox = layout.PlotBox;
+        bool rightSide = positionKind == PptxSceneChartAxisPosition.Right;
+        double sideReserve = rightSide
+            ? Math.Max(0d, frame.X + frame.Width - plotBox.X - plotBox.Width)
+            : Math.Max(0d, plotBox.X - frame.X);
+        double baselineX = rightSide
+            ? plotBox.X + plotBox.Width + sideReserve * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio
+            : frame.X + sideReserve * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio;
+        double baselineY = plotBox.Y + plotBox.Height / 2d - textWidth / 2d;
+        double boxX = Math.Max(frame.X, Math.Min(frame.X + frame.Width - titleHeight, baselineX - titleHeight * 0.5d));
+        double boxY = Math.Max(frame.Y, Math.Min(frame.Y + frame.Height - textWidth, baselineY));
+        RenderChartShapeStyle(graphics, boxX, boxY, titleHeight, textWidth, shapeStyle);
+        var runs = new List<TextRun>();
+        AddChartRichTextRuns(
+            runs,
+            textRuns,
+            text,
+            baselineX,
+            baselineY,
+            textWidth,
+            titleHeight,
+            frame.X,
+            frame.Y,
+            frame.Width,
+            frame.Height,
+            style,
+            TextAlignment.Left);
+        double rotation = rightSide ? 90d : -90d;
+        for (int i = 0; i < runs.Count; i++)
+        {
+            TextRun run = runs[i];
+            runs[i] = run with
+            {
+                RotationDegrees = rotation,
+                RotationCenterX = run.X,
+                RotationCenterY = run.Y
+            };
+        }
+
+        return RenderTextRuns(runs, graphics, "CAT");
     }
 
     private static IReadOnlyList<PdfFontResource> RenderManualChartAxisTitle(

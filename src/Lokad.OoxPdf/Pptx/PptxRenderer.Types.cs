@@ -1163,6 +1163,8 @@ internal sealed partial class PptxRenderer
         public const double AutoBarTitleAbovePlotBaselineOffsetFactor = 1.08d;
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
+        public const double DefaultAxisTitleBandBaselineRatio = 0.23d;
+        public const double DefaultAxisTitleSideBaselineRatio = 0.25d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;
