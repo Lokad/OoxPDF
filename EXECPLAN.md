@@ -3635,6 +3635,13 @@ High-priority actions:
   Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with zero warnings;
   focused non-slow `pptx-model` passed (`13 passed, 0 failed, 1 skipped`), `pptx-typography` passed
   (`96 passed, 0 failed, 2 skipped`), and `pptx-charts` passed (`121 passed, 0 failed, 0 skipped`).
+  2026-05-28 progress: introduced a typed `PptxColorMap` owner for the default Office scheme aliases
+  (`bg1->lt1`, `tx1->dk1`, `bg2->lt2`, `tx2->dk2`, accent and hyperlink slots) plus parsed `clrMap`
+  attributes, and added color-resolver overloads that can resolve `schemeClr` through an explicit map while
+  preserving current default behavior. Keep this item open: the scene/render context still needs to carry
+  master/layout/slide `clrMap` and `clrMapOvr` provenance into every color-consuming path. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model`
+  passed (`15` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

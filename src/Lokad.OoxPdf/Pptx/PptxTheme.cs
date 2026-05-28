@@ -136,8 +136,14 @@ internal sealed class PptxTheme
 
     public bool TryResolveColor(string schemeColor, out RgbColor color)
     {
-        return Colors.TryGetValue(schemeColor, out color) ||
-            Colors.TryGetValue(ResolveSchemeAlias(schemeColor), out color);
+        return TryResolveColor(schemeColor, PptxColorMap.Default, out color);
+    }
+
+    public bool TryResolveColor(string schemeColor, PptxColorMap colorMap, out RgbColor color)
+    {
+        string mappedColor = colorMap.ResolveSchemeColor(schemeColor);
+        return Colors.TryGetValue(mappedColor, out color) ||
+            (!string.Equals(mappedColor, schemeColor, StringComparison.Ordinal) && Colors.TryGetValue(schemeColor, out color));
     }
 
     public string? ResolveTypeface(string? typeface)
@@ -200,16 +206,76 @@ internal sealed class PptxTheme
         return RgbColor.TryParse(hex, out color);
     }
 
-    private static string ResolveSchemeAlias(string schemeColor)
+}
+
+internal sealed class PptxColorMap
+{
+    private static readonly string[] SchemeSlots =
+    [
+        "bg1",
+        "tx1",
+        "bg2",
+        "tx2",
+        "accent1",
+        "accent2",
+        "accent3",
+        "accent4",
+        "accent5",
+        "accent6",
+        "hlink",
+        "folHlink"
+    ];
+
+    private PptxColorMap(IReadOnlyDictionary<string, string> mappings)
     {
-        return schemeColor switch
+        Mappings = mappings;
+    }
+
+    public IReadOnlyDictionary<string, string> Mappings { get; }
+
+    public static PptxColorMap Default { get; } = new(new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["bg1"] = "lt1",
+        ["tx1"] = "dk1",
+        ["bg2"] = "lt2",
+        ["tx2"] = "dk2",
+        ["accent1"] = "accent1",
+        ["accent2"] = "accent2",
+        ["accent3"] = "accent3",
+        ["accent4"] = "accent4",
+        ["accent5"] = "accent5",
+        ["accent6"] = "accent6",
+        ["hlink"] = "hlink",
+        ["folHlink"] = "folHlink"
+    });
+
+    public string ResolveSchemeColor(string schemeColor)
+    {
+        return Mappings.TryGetValue(schemeColor, out string? mappedColor) && !string.IsNullOrWhiteSpace(mappedColor)
+            ? mappedColor
+            : schemeColor;
+    }
+
+    public static PptxColorMap FromElement(XElement? colorMapElement)
+    {
+        if (colorMapElement is null)
         {
-            "bg1" => "lt1",
-            "tx1" => "dk1",
-            "bg2" => "lt2",
-            "tx2" => "dk2",
-            _ => schemeColor
-        };
+            return Default;
+        }
+
+        var mappings = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (string slot in SchemeSlots)
+        {
+            string? mappedColor = (string?)colorMapElement.Attribute(slot);
+            if (!string.IsNullOrWhiteSpace(mappedColor))
+            {
+                mappings[slot] = mappedColor;
+            }
+        }
+
+        return mappings.Count == 0
+            ? Default
+            : new PptxColorMap(mappings);
     }
 }
 

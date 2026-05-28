@@ -7378,6 +7378,28 @@ internal static class PptxTests
         TestAssert.Contains("0.067 g", pdf);
     }
 
+    public static void PptxThemeColorMapOwnsSchemeAliases()
+    {
+        PptxColorMap defaultMap = PptxColorMap.Default;
+        TestAssert.Equal("lt1", defaultMap.ResolveSchemeColor("bg1"));
+        TestAssert.Equal("dk1", defaultMap.ResolveSchemeColor("tx1"));
+        TestAssert.Equal("accent1", defaultMap.ResolveSchemeColor("accent1"));
+
+        XElement customMap = XElement.Parse("""
+            <p:clrMap xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                      bg1="accent2"
+                      tx1="accent3"
+                      accent1="hlink"/>
+            """);
+        PptxColorMap map = PptxColorMap.FromElement(customMap);
+
+        TestAssert.Equal("accent2", map.ResolveSchemeColor("bg1"));
+        TestAssert.Equal("accent3", map.ResolveSchemeColor("tx1"));
+        TestAssert.Equal("hlink", map.ResolveSchemeColor("accent1"));
+        TestAssert.Equal("accent2", map.ResolveSchemeColor("accent2"));
+        TestAssert.Equal("dk2", map.ResolveSchemeColor("dk2"));
+    }
+
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

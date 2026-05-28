@@ -13,14 +13,40 @@ internal static class PptxColorResolver
         return TryReadSolidColorWithAlpha(element, theme, out color, out _);
     }
 
+    public static bool TryReadSolidColor(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
+    {
+        return TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out _);
+    }
+
     public static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
     {
-        return TryReadSolidColorWithAlpha(element, theme, placeholderColorContainer: null, out color, out alpha);
+        return TryReadSolidColorWithAlpha(element, theme, PptxColorMap.Default, placeholderColorContainer: null, out color, out alpha);
     }
 
     public static bool TryReadSolidColorWithAlpha(
         XElement? element,
         PptxTheme theme,
+        PptxColorMap colorMap,
+        out RgbColor color,
+        out double alpha)
+    {
+        return TryReadSolidColorWithAlpha(element, theme, colorMap, placeholderColorContainer: null, out color, out alpha);
+    }
+
+    public static bool TryReadSolidColorWithAlpha(
+        XElement? element,
+        PptxTheme theme,
+        XElement? placeholderColorContainer,
+        out RgbColor color,
+        out double alpha)
+    {
+        return TryReadSolidColorWithAlpha(element, theme, PptxColorMap.Default, placeholderColorContainer, out color, out alpha);
+    }
+
+    public static bool TryReadSolidColorWithAlpha(
+        XElement? element,
+        PptxTheme theme,
+        PptxColorMap colorMap,
         XElement? placeholderColorContainer,
         out RgbColor color,
         out double alpha)
@@ -42,14 +68,14 @@ internal static class PptxColorResolver
         string? schemeColor = (string?)schemeColorElement?.Attribute("val");
         if (schemeColor == "phClr" &&
             placeholderColorContainer is not null &&
-            TryReadSolidColorWithAlpha(placeholderColorContainer, theme, placeholderColorContainer: null, out color, out double placeholderAlpha))
+            TryReadSolidColorWithAlpha(placeholderColorContainer, theme, colorMap, placeholderColorContainer: null, out color, out double placeholderAlpha))
         {
             color = ApplyColorTransforms(schemeColorElement, color);
             alpha *= placeholderAlpha;
             return true;
         }
 
-        if (schemeColor is not null && theme.TryResolveColor(schemeColor, out color))
+        if (schemeColor is not null && theme.TryResolveColor(schemeColor, colorMap, out color))
         {
             color = ApplyColorTransforms(schemeColorElement, color);
             return true;
