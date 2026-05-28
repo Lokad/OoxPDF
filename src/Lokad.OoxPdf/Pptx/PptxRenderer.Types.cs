@@ -439,6 +439,7 @@ internal sealed partial class PptxRenderer
         ResolvedEndParagraphTextStyle EndParagraphStyle,
         double EmptySpacingBefore,
         double EmptySpacingAfter,
+        bool HasLayoutContent,
         bool HasVisibleContent,
         bool HasManualLineBreak,
         double FirstLineFallbackFontSize,

@@ -952,6 +952,13 @@ High-priority actions:
   existing end-paragraph vertical-anchor fixture now asserts the model-visible `72 pt` spacing before layout.
   Validation: focused non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full non-slow
   console runner passed (`402 passed, 0 failed, 7 skipped`).
+- [x] Move PPTX empty-paragraph layout-content classification into the text model:
+  `PptxTextParagraphModel` now carries `HasLayoutContent` for paragraphs that have no drawable runs but still
+  own `a:pPr` or `a:endParaRPr`. Empty-paragraph line layout and vertical-anchor height estimation consume
+  this boolean instead of asking raw paragraph XML whether an empty paragraph should occupy vertical space.
+  The end-paragraph fixture now asserts the model flag for `endParaRPr`-only paragraphs. Validation: focused
+  non-slow `pptx-typography` passed (`98 passed, 0 failed, 2 skipped`); full non-slow console runner passed
+  (`402 passed, 0 failed, 7 skipped`).
 - [x] Extend the OOXML enum ladder to PPTX run-style tokens:
   `ResolvedRunTextStyle`, `PptxSceneRunStyle`, and `PptxTextRunModelSnapshot` now preserve raw DrawingML
   underline, strike, and capitalization values next to the existing booleans/rendering behavior. The synthetic
@@ -7023,6 +7030,10 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   estimation still called `ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, ...)` using
   the end-paragraph font size. The model now resolves those empty spacing values once, alongside the
   end-paragraph style they depend on.
+- Observation: The final empty-paragraph layout XML probe was a boolean, not a numeric formula.
+  Evidence: After empty spacing moved into the model, layout still called a helper that checked
+  `paragraph.Properties is not null || paragraph.EndParagraphProperties is not null` to decide whether an empty
+  paragraph participates in height. `HasLayoutContent` now records that decision during model construction.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7322,6 +7333,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   end-paragraph font size. Computing it during text-model construction keeps vertical anchoring and line layout
   on the same typed facts and removes another layout-stage XML read without changing the Office-like spacing
   formula.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Treat empty-paragraph layout participation as paragraph model state.
+  Rationale: Whether an empty paragraph contributes vertical space follows from authored paragraph/end-run
+  structure. Layout should consume that already-classified fact, not inspect XML presence, so future Office
+  empty-paragraph work can refine the model record without adding more layout-side source probes.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14852,6 +14868,20 @@ This closes the spacing back edge that remained after end-paragraph style owners
 remaining paragraph model work is now mostly provenance depth and full cascade naming: visible paragraph
 spacing already has resolved numeric fields, but its source tokens and some default-run/style-layer facts are
 not yet as inspectable as body properties, bullets, tabs, and empty spacing.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `402` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Empty PPTX paragraph layout participation is now model-owned. The text paragraph
+model records `HasLayoutContent` when a paragraph has no visible runs but has `a:pPr` or `a:endParaRPr`; empty
+paragraph line layout and vertical-anchor height estimation now consume that boolean instead of checking raw
+paragraph XML presence.
+
+This is a small cleanup, but it matters for the long-term boundary: empty paragraph rendering now depends on
+typed model fields for visibility, manual breaks, end-paragraph style, empty spacing, and layout
+participation. Remaining text-layout XML reads are now concentrated in text-model construction and run/source
+parsing rather than in layout's geometry decisions.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner

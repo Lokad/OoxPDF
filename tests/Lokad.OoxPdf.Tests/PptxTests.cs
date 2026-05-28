@@ -3858,6 +3858,7 @@ internal static class PptxTests
         PptxTextFrameModelSnapshot[] models = PptxRenderer.InspectTextFrameModels(document, package, 0).ToArray();
         TestAssert.Equal(2, models.Length);
         TestAssert.True(models.All(model => model.Paragraphs[1].HasEndParagraphProperties), "Expected text model inspection to expose the empty endParaRPr owners.");
+        TestAssert.True(models.All(model => model.Paragraphs[1].HasLayoutContent), "Expected endParaRPr-only paragraphs to be marked as layout content by the text model.");
         TestAssert.True(models.All(model => Math.Abs(model.Paragraphs[1].EndParagraphFontSize - 72d) < 0.001d), "Expected resolved end-paragraph font size to be owned by the text model before layout.");
         TestAssert.True(models.All(model => Math.Abs(model.Paragraphs[1].EmptySpacingBefore - 72d) < 0.001d), "Expected empty-paragraph spacing before to be resolved by the text model before layout.");
         TestAssert.True(models.All(model => Math.Abs(model.Paragraphs[1].EmptySpacingAfter) < 0.001d), "Expected absent empty-paragraph spacing after to be resolved by the text model before layout.");

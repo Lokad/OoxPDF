@@ -257,6 +257,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     bool EndParagraphItalic,
     double EmptySpacingBefore,
     double EmptySpacingAfter,
+    bool HasLayoutContent,
     bool HasVisibleContent,
     bool HasManualLineBreak,
     double FirstLineFallbackFontSize,

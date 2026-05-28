@@ -805,7 +805,7 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = flowParagraph.Style;
             if (!paragraph.HasVisibleContent)
             {
-                if (ParagraphHasLayoutContent(paragraph))
+                if (paragraph.HasLayoutContent)
                 {
                     double emptyFontSize = paragraph.EndParagraphStyle.FontSize;
                     cursorLineTop -= (hasPlacedParagraph ? paragraph.EmptySpacingBefore : 0d) + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + paragraph.EmptySpacingAfter;
@@ -1926,11 +1926,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool ParagraphHasLayoutContent(PptxTextParagraphModel paragraph)
-    {
-        return paragraph.Properties is not null || paragraph.EndParagraphProperties is not null;
-    }
-
     private static ResolvedParagraphTextStyle ResolveParagraphTextStyle(
         XElement paragraph,
         XElement? paragraphProperties,
@@ -2975,7 +2970,7 @@ internal sealed partial class PptxRenderer
             LineSpacing lineSpacing = paragraphStyle.LineSpacing;
             if (!paragraph.HasVisibleContent)
             {
-                if (ParagraphHasLayoutContent(paragraph))
+                if (paragraph.HasLayoutContent)
                 {
                     double emptyFontSize = paragraph.EndParagraphProperties is null
                         ? paragraphStyle.FontSize
