@@ -4332,6 +4332,7 @@ internal sealed partial class PptxRenderer
                     ToChartShapeStyle(axis.Title.ShapeStyle),
                     axis.Title.TextBodyProperties,
                     ToChartTextStyleOverride(sceneChart.TextStyle),
+                    ReadChartStyleRoleTextStyle(sceneChart.StylePart, GetChartAxisStyleRole(axis.AxisKind)),
                     ToChartTextStyleOverride(axis.Title.TextStyle)));
             }
 
@@ -4373,6 +4374,7 @@ internal sealed partial class PptxRenderer
                 ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
                 ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme),
+                ChartTextStyleOverride.Empty,
                 ReadChartTextStyleFromTxPr(title, theme)));
         }
 
@@ -4675,6 +4677,7 @@ internal sealed partial class PptxRenderer
         ChartShapeStyle shapeStyle,
         PptxSceneChartTextBodyProperties textBodyProperties,
         ChartTextStyleOverride chartTextStyle,
+        ChartTextStyleOverride chartStyleRoleTextStyle,
         ChartTextStyleOverride titleTextStyle)
     {
         if (string.IsNullOrWhiteSpace(text) ||
@@ -4685,6 +4688,7 @@ internal sealed partial class PptxRenderer
 
         ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         style = MergeChartTextStyle(style, chartTextStyle);
+        style = MergeChartTextStyle(style, chartStyleRoleTextStyle);
         style = MergeChartTextStyle(style, titleTextStyle);
         RenderChartShapeStyle(graphics, titleBox.X, titleBox.Y, titleBox.Width, titleBox.Height, shapeStyle);
         double titleHeight = style.FontSize * PptxChartMetricRules.TitleHeightFactor;

@@ -2879,6 +2879,12 @@ High-priority actions:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
     their text, rich-text runs, `txPr`, fill, and stroke.
+  - [x] Consume chart-style axis role text defaults for scene-owned manual axis titles:
+    manual axis-title rendering now merges the chart-level text style, the preserved `cs:categoryAxis` /
+    `cs:valueAxis` role defaults, and the direct axis-title `txPr` in the same source order as the default
+    axis-title path. The XML-only compatibility path deliberately keeps using only raw chart/title `txPr`
+    because the style part is owned by the scene package model. A public synthetic chart with a manual
+    value-axis title and no direct title `txPr` locks the `cs:valueAxis` font size/color in emitted PDF text.
   - [ ] Derive and render default-placement axis titles:
     the first default-placement category/value axis-title renderer is in place for supported Cartesian native
     chart branches, but the item stays open until plot-box reservation, top/right permutations, overlay
