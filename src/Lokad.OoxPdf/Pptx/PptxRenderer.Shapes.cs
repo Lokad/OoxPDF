@@ -478,19 +478,12 @@ internal sealed partial class PptxRenderer
 
         if (gradientFill is not null)
         {
-            bool clippedToShape = preset != "rect";
-            if (clippedToShape)
-            {
-                graphics.SaveState();
-                ClipToPresetShape(graphics, preset, x, y, width, height);
-            }
+            graphics.SaveState();
+            ClipToPresetShape(graphics, preset, x, y, width, height);
 
             DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
 
-            if (clippedToShape)
-            {
-                graphics.RestoreState();
-            }
+            graphics.RestoreState();
         }
         else if (hasPictureFill && pictureFillName is not null && pictureFillImage is not null)
         {

@@ -5545,12 +5545,17 @@ paths, and ExecPlan references together.
   `0.109499` with no pixels changed above threshold 16.
 - [x] Ladder 12 gate `pptx-ladder-12-text-alpha` locks run text transparency at MAE `0.006230`, changed16
   `0.000170`.
-- [x] Ladder 12 gate `pptx-ladder-12-shadow-diagnostic` locks explicit shadow/effect diagnostics while
-  allowing the expected omitted-shadow visual delta at MAE `0.408920`, changed16 `0.006530`.
-- [x] Ladder 12 gates `pptx-ladder-12-gradient-diagnostic`, `pptx-ladder-12-pattern-diagnostic`, and
-  `pptx-ladder-12-picture-fill-diagnostic` lock explicit advanced-fill diagnostics while allowing expected
-  omitted-fill visual deltas; the picture-fill fixture now covers an unsupported Office-authored heart fill at
-  MAE `3.368542`, changed16 `0.038278`.
+- [x] Ladder 12 gate `pptx-ladder-12-shadow-diagnostic` originally locked explicit shadow/effect diagnostics
+  and an omitted-shadow visual delta. Direct outer-shadow/glow support has since made this a supported-rendering
+  gate despite the stable historical case ID: the manifest now requires empty diagnostics and tighter raster
+  bounds after run `20260528-121626` measured MAE `0.073343` and changed16 `0.002518`.
+- [x] Ladder 12 gate `pptx-ladder-12-gradient-diagnostic` originally locked an unsupported advanced-fill
+  diagnostic. Linear gradient support has since made the Office-authored two-stop linear fill a
+  supported-rendering gate despite the stable historical case ID: the renderer now clips PDF axial shading to
+  the shape path before painting, and run `20260528-121603` measured MAE `2.730972`, changed16 `0.091389`, and
+  empty diagnostics. The remaining advanced-fill diagnostic gates are `pptx-ladder-12-pattern-diagnostic` and
+  `pptx-ladder-12-picture-fill-diagnostic`; the picture-fill fixture covers an unsupported Office-authored
+  heart fill at MAE `3.368542`, changed16 `0.038278`.
 - [ ] Ladder 12 remaining work is visual rendering for each effect/fill family.
 - [ ] For every ladder rung, keep public synthetic fixture content artificial and minimal. Do not derive
   fixture text, images, layout, or styling from private documents.

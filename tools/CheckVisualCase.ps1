@@ -669,7 +669,7 @@ if ($manifest.expected.diagnosticsMustBeEmpty -eq $true -and $diagnosticItems.Co
     throw "Expected no diagnostics, but found: $ids."
 }
 
-$allowedUnsupportedFeatures = @($manifest.allowedUnsupportedFeatures)
+$allowedUnsupportedFeatures = @($manifest.allowedUnsupportedFeatures | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
 if ($allowedUnsupportedFeatures.Count -ne 0 -and $diagnosticItems.Count -ne 0) {
     $unexpectedDiagnostics = @($diagnosticItems | Where-Object {
         $allowedUnsupportedFeatures -notcontains $_.Id -and
@@ -681,7 +681,7 @@ if ($allowedUnsupportedFeatures.Count -ne 0 -and $diagnosticItems.Count -ne 0) {
     }
 }
 
-$requiredDiagnostics = @($manifest.expected.requiredDiagnostics)
+$requiredDiagnostics = @($manifest.expected.requiredDiagnostics | Where-Object { $_ -is [string] -and $_.Length -ne 0 })
 if ($requiredDiagnostics.Count -ne 0) {
     $missingDiagnostics = @($requiredDiagnostics | Where-Object {
         $required = $_

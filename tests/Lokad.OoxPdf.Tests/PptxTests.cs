@@ -1824,6 +1824,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/ShadingType 2", pdf);
         TestAssert.Contains("/ca 0.5", pdf);
+        TestAssert.Contains("72 396 144 72 re W n", pdf);
         TestAssert.Contains("/Sh1 sh", pdf);
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Supported linear gradient should not emit an unsupported-gradient diagnostic.");
         TestAssert.True(diagnostics.All(d => d.Id != "PPTX_UNSUPPORTED_TRANSPARENCY"), "Uniform gradient alpha should not emit an unsupported-transparency diagnostic.");

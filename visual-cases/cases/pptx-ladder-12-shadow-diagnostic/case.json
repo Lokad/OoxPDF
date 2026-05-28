@@ -8,9 +8,8 @@
     "minAgentRating": 2,
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
-    "diagnosticsMustBeEmpty": false,
-    "maxMeanAbsoluteError": 0.41,
-    "maxChangedPixelRatioAtThreshold16": 0.0066
-  },
-  "allowedUnsupportedFeatures": ["PPTX_UNSUPPORTED_EFFECT", "PPTX_UNSUPPORTED_TRANSPARENCY"]
+    "diagnosticsMustBeEmpty": true,
+    "maxMeanAbsoluteError": 0.09,
+    "maxChangedPixelRatioAtThreshold16": 0.003
+  }
 }
