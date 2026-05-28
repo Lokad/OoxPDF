@@ -2098,6 +2098,19 @@ High-priority actions:
     (`370 passed, 0 failed, 7 skipped`); private run `20260528-150243` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] 2026-05-28 use indexed vector cache `formatCode` as the next chart data-label fallback:
+    the same formatter audit found that `ChartIndexedNumberVector.FormatCode` and scatter/bubble channel
+    format codes were preserved but ordinary label text did not consult them once no explicit data-label
+    `c:numFmt` was present. Bar/column, line, pie/doughnut, scatter Y-value labels, and bubble-size labels now
+    thread the source vector's cache format into value formatting after source-linked workbook and explicit
+    data-label formats. This keeps the format priority structural and evidence-friendly: explicit label
+    formats still win, `General` still falls through, and date/locale/sectioned format semantics remain an
+    explicit future Office-PDF-backed item rather than being approximated here. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
+    passed (`117 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`370 passed, 0 failed, 7 skipped`); private run `20260528-150717` stayed at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to

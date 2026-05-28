@@ -735,6 +735,7 @@ internal sealed partial class PptxRenderer
                 series.XValues.WorkbookPointForIndex(xPoint.Value.Index),
                 series.YValues.WorkbookPointForIndex(yPoint.Value.Index),
                 bubbleSizePoint is { } point ? series.BubbleSizes.WorkbookPointForIndex(point.Index) : null,
+                series.YValues.FormatCode,
                 series.BubbleSizes.FormatCode));
         }
 
@@ -1562,7 +1563,7 @@ internal sealed partial class PptxRenderer
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Pie, plotBox, polarPoints.PointExplosions, legend);
                 RenderPieChart(graphics, theme, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, polarPoints.FirstSliceAngle);
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, labelOptions, categoryLabels, seriesNames));
+            fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, pieSlices, polarPoints.PointFills, polarPoints.PointExplosions, 0d, pieSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, piePlot, pieChart, polarPoints.PointFills, workbook, plotVisibleOnly), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -1590,7 +1591,7 @@ internal sealed partial class PptxRenderer
                 ChartPolarPointOptions polarPoints = doughnutOptions.PolarPoints;
                 ChartPolarLayout polarLayout = ResolvePieOrDoughnutLayout(ChartPolarKind.Doughnut, plotBox, polarPoints.PointExplosions, legend);
                 RenderDoughnutChart(graphics, theme, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointStrokes, polarPoints.PointExplosions, doughnutOptions.HoleSize, polarPoints.FirstSliceAngle);
-                fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, labelOptions, categoryLabels, seriesNames));
+            fonts.AddRange(RenderPieDataLabels(theme, graphics, chartPalette, polarLayout, doughnutSlices, polarPoints.PointFills, polarPoints.PointExplosions, doughnutOptions.HoleSize, doughnutSeriesVectors[0].FormatCode, labelOptions, categoryLabels, seriesNames));
                 fonts.AddRange(RenderChartLegend(graphics, frame, plotBox, BuildCategoryFillLegendEntries(theme, chartPalette, doughnutPlot, doughnutChart, polarPoints.PointFills, workbook, plotVisibleOnly), legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
                 return true;
             }
@@ -5119,7 +5120,7 @@ internal sealed partial class PptxRenderer
         return OoxBoolean.ParseElement(element, defaultValue);
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+    private static IReadOnlyList<PdfFontResource> RenderPieDataLabels(PptxTheme theme, PdfGraphicsBuilder graphics, IReadOnlyList<RgbColor>? chartPalette, ChartPolarLayout layout, IReadOnlyList<ChartIndexedPieSlice> slices, IReadOnlyDictionary<int, ChartSeriesFill> pointFills, IReadOnlyDictionary<int, double> pointExplosions, double holeSize, string? valueFormatCode, ChartDataLabelOptions labelOptions, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!labelOptions.HasVisibleContent || slices.Count == 0)
         {
@@ -5154,7 +5155,7 @@ internal sealed partial class PptxRenderer
             double explosion = pointExplosions.TryGetValue(slice.Index, out double offset) ? Math.Clamp(offset, 0d, 1d) * geometry.Radius * PptxChartMetricRules.PieExplosionLabelRadiusRatio : 0d;
             double labelX = geometry.CenterX + Math.Cos(mid) * (labelRadius + explosion) - labelWidth / 2d;
             double labelY = geometry.CenterY + Math.Sin(mid) * (labelRadius + explosion) - labelHeight / 2d;
-            string label = FormatPieDataLabel(slice.Value, total, slice.Index, slice.WorkbookPoint, effectiveOptions, categoryLabels, seriesNames);
+            string label = FormatPieDataLabel(slice.Value, total, slice.Index, slice.WorkbookPoint, valueFormatCode, effectiveOptions, categoryLabels, seriesNames);
             if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
             {
                 ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, labelX, labelY, labelWidth, labelHeight);
@@ -5290,7 +5291,7 @@ internal sealed partial class PptxRenderer
                     double x = ResolveHorizontalBarDataLabelX(effectiveOptions.PositionKind, barBase, barEnd, labelWidth);
                     double y = categoryY + seriesIndex * barSlot + barSlot * PptxChartMetricRules.HorizontalBarDataLabelSlotCenterRatio - labelHeight / 2d;
                     ChartIndexedNumberPoint point = points[category]!.Value;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), effectiveOptions, categoryLabels, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
                         ChartLayoutBox labelBox = ResolveDataLabelBox(plotBox, effectiveOptions, x, y, labelWidth, labelHeight);
@@ -5342,7 +5343,7 @@ internal sealed partial class PptxRenderer
                     double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                     double y = ResolveVerticalBarDataLabelY(effectiveOptions.PositionKind, barBase, barEnd, labelHeight);
                     ChartIndexedNumberPoint point = points[category]!.Value;
-                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), effectiveOptions, categoryLabels, seriesNames);
+                    string label = FormatCartesianDataLabel(value, seriesIndex, category, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                     if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                     {
                         double legendKeyWidth = effectiveOptions.ShowLegendKey
@@ -5427,7 +5428,7 @@ internal sealed partial class PptxRenderer
                 double fontSize = style.FontSize;
                 double labelHeight = fontSize * PptxChartMetricRules.CartesianDataLabelHeightFactor;
                 ChartIndexedNumberPoint point = points[i]!.Value;
-                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, series[seriesIndex].WorkbookPointForIndex(point.Index), effectiveOptions, categoryLabels, seriesNames);
+                string label = FormatCartesianDataLabel(value, seriesIndex, i, point, series[seriesIndex].WorkbookPointForIndex(point.Index), series[seriesIndex].FormatCode, effectiveOptions, categoryLabels, seriesNames);
                 if (!string.IsNullOrEmpty(label) || effectiveOptions.ShowLegendKey)
                 {
                     double legendKeyWidth = effectiveOptions.ShowLegendKey
@@ -5692,7 +5693,7 @@ internal sealed partial class PptxRenderer
 
         if (options.ShowValue)
         {
-            parts.Add(FormatChartDataLabelValue(point.Y, options, point.YWorkbookPoint ?? point.YPoint));
+            parts.Add(FormatChartDataLabelValue(point.Y, options, point.YWorkbookPoint ?? point.YPoint, point.YFormatCode));
         }
 
         if (options.ShowBubbleSize && ResolveBubbleSizeValue(point) is { } bubbleSize)
@@ -5713,7 +5714,7 @@ internal sealed partial class PptxRenderer
     {
         if (options.NumberFormatInfo.IsDefined || !string.IsNullOrWhiteSpace(options.NumberFormat))
         {
-            return FormatChartDataLabelValue(value, options, point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint);
+            return FormatChartDataLabelValue(value, options, point.BubbleSizeWorkbookPoint ?? point.BubbleSizePoint, point.BubbleSizeFormatCode);
         }
 
         string formatCode = point.BubbleSizeFormatCode ?? string.Empty;
@@ -6352,7 +6353,7 @@ internal sealed partial class PptxRenderer
         return (fraction * 100d).ToString("0.#", CultureInfo.InvariantCulture) + "%";
     }
 
-    private static string FormatPieDataLabel(double value, double total, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, ChartDataLabelOptions options, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
+    private static string FormatPieDataLabel(double value, double total, int categoryIndex, ChartIndexedNumberPoint? workbookPoint, string? valueFormatCode, ChartDataLabelOptions options, ChartIndexedTextVector categoryLabels, IReadOnlyList<ChartSeriesNameRecord> seriesNames)
     {
         if (!string.IsNullOrWhiteSpace(options.CustomText))
         {
@@ -6374,7 +6375,7 @@ internal sealed partial class PptxRenderer
 
         if (options.ShowValue)
         {
-            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint));
+            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint, valueFormatCode));
         }
 
         if (options.ShowPercent)
@@ -6391,6 +6392,7 @@ internal sealed partial class PptxRenderer
         int categoryIndex,
         ChartIndexedNumberPoint point,
         ChartIndexedNumberPoint? workbookPoint,
+        string? valueFormatCode,
         ChartDataLabelOptions options,
         ChartIndexedTextVector categoryLabels,
         IReadOnlyList<ChartSeriesNameRecord> seriesNames)
@@ -6415,7 +6417,7 @@ internal sealed partial class PptxRenderer
 
         if (options.ShowValue)
         {
-            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint ?? point));
+            parts.Add(FormatChartDataLabelValue(value, options, workbookPoint ?? point, valueFormatCode));
         }
 
         return string.Join(GetChartDataLabelSeparator(options), parts);
@@ -6443,15 +6445,25 @@ internal sealed partial class PptxRenderer
 
     private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint)
     {
+        return FormatChartDataLabelValue(value, options, sourcePoint, sourceFormatCode: null);
+    }
+
+    private static string FormatChartDataLabelValue(double value, ChartDataLabelOptions options, ChartIndexedNumberPoint? sourcePoint, string? sourceFormatCode)
+    {
         if (ResolveSourceLinkedChartNumberFormatCode(options.NumberFormatInfo, sourcePoint) is { } sourceFormat)
         {
             return FormatChartNumber(value, sourceFormat);
         }
 
-        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat);
+        return FormatChartDataLabelValue(value, options.NumberFormatInfo, options.NumberFormat, sourceFormatCode);
     }
 
     private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat)
+    {
+        return FormatChartDataLabelValue(value, numberFormat, legacyNumberFormat, sourceFormatCode: null);
+    }
+
+    private static string FormatChartDataLabelValue(double value, ChartNumberFormat numberFormat, string legacyNumberFormat, string? sourceFormatCode)
     {
         if (IsRenderableChartNumberFormat(numberFormat))
         {
@@ -6461,6 +6473,8 @@ internal sealed partial class PptxRenderer
         return !string.IsNullOrWhiteSpace(legacyNumberFormat) &&
             !string.Equals(legacyNumberFormat, "General", StringComparison.OrdinalIgnoreCase)
             ? FormatChartNumber(value, legacyNumberFormat)
+            : IsRenderableChartFormatCode(sourceFormatCode)
+                ? FormatChartNumber(value, sourceFormatCode!)
             : FormatChartAxisLabel(value);
     }
 
@@ -10100,6 +10114,7 @@ internal sealed partial class PptxRenderer
         ChartIndexedNumberPoint? XWorkbookPoint,
         ChartIndexedNumberPoint? YWorkbookPoint,
         ChartIndexedNumberPoint? BubbleSizeWorkbookPoint,
+        string? YFormatCode,
         string? BubbleSizeFormatCode);
 
     private readonly record struct ChartIndexedScatterSeries(

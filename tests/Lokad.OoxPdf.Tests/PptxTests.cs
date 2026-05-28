@@ -12647,6 +12647,17 @@ internal static class PptxTests
             modifiers: null) ?? throw new InvalidOperationException("Expected typed data-label formatter.");
         string typedFormatted = (string?)formatDataLabelValue.Invoke(null, [1234.5d, typedNumberFormat, string.Empty]) ?? string.Empty;
         TestAssert.Equal("1,234.50", typedFormatted);
+        System.Reflection.MethodInfo formatDataLabelValueWithSourceFormat = typeof(PptxRenderer).GetMethod(
+            "FormatChartDataLabelValue",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            types: [typeof(double), numberFormatType, typeof(string), typeof(string)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected source-format data-label formatter.");
+        object emptyNumberFormat = Activator.CreateInstance(numberFormatType, [false, string.Empty, null, string.Empty]) ?? throw new InvalidOperationException("Expected empty number format.");
+        string sourceFormatted = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, emptyNumberFormat, string.Empty, "#,##0.0"]) ?? string.Empty;
+        TestAssert.Equal("1,234.5", sourceFormatted);
+        string explicitFormatWins = (string?)formatDataLabelValueWithSourceFormat.Invoke(null, [1234.5d, typedNumberFormat, string.Empty, "0"]) ?? string.Empty;
+        TestAssert.Equal("1,234.50", explicitFormatWins);
 
         object sourceLinkedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "0", true, "1"]) ?? throw new InvalidOperationException("Expected source-linked number format.");
         System.Reflection.MethodInfo resolveSourceLinkedFormat = typeof(PptxRenderer).GetMethod(
