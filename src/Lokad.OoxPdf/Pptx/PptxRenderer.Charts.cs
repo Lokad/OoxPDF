@@ -423,7 +423,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartGrouping Grouping,
         bool Stacked,
         bool PercentStacked,
-        IReadOnlyList<bool> SmoothSeries,
+        IReadOnlyList<ChartBooleanOption> SmoothSeries,
         PptxSceneChartDisplayBlanksAs DisplayBlanksAs);
 
     private static ChartLinePlotOptions ReadSceneOrXmlChartLineOptions(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement chartElement, PptxSceneChartGrouping defaultGrouping)
@@ -456,7 +456,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartScatterPlotOptions(
         PptxSceneChartScatterStyle ScatterStyle,
         bool ConnectLines,
-        IReadOnlyList<bool> SmoothSeries);
+        IReadOnlyList<ChartBooleanOption> SmoothSeries);
 
     private static ChartScatterPlotOptions ReadSceneOrXmlChartScatterOptions(PptxSceneChartPlot? plot, XElement chartElement)
     {
@@ -784,11 +784,11 @@ internal sealed partial class PptxRenderer
         return ReadChartMarkerStyles(chartElement, theme, PptxSceneBuilder.ParseChartPlotKind(chartElement.Name.LocalName));
     }
 
-    private static IReadOnlyList<bool> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
+    private static IReadOnlyList<ChartBooleanOption> ReadSceneOrXmlSmoothSeries(PptxSceneChartPlot? plot, XElement chartElement)
     {
         return plot is not null
-            ? plot.Series.Select(series => series.Smooth ?? false).ToArray()
-            : ReadChartSeriesSmooth(chartElement);
+            ? plot.Series.Select(series => new ChartBooleanOption(series.Smooth ?? false, series.SmoothValue, series.Smooth is not null)).ToArray()
+            : ReadChartSeriesSmoothOptions(chartElement);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<int, ChartSeriesFill>> ReadSceneOrXmlSeriesPointFills(PptxSceneChartPlot? plot, XElement chartElement, PptxTheme theme)
@@ -6969,13 +6969,16 @@ internal sealed partial class PptxRenderer
         return symbols[seriesIndex % symbols.Length];
     }
 
-    private static IReadOnlyList<bool> ReadChartSeriesSmooth(XElement chartElement)
+    private static IReadOnlyList<ChartBooleanOption> ReadChartSeriesSmoothOptions(XElement chartElement)
     {
-        var smooth = new List<bool>();
+        var smooth = new List<ChartBooleanOption>();
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
-            string? value = (string?)element.Element(ChartNamespace + "smooth")?.Attribute("val");
-            smooth.Add(value is "1" or "true");
+            XElement? smoothElement = element.Element(ChartNamespace + "smooth");
+            smooth.Add(new ChartBooleanOption(
+                IsOoxmlBooleanElementEnabled(smoothElement),
+                (string?)smoothElement?.Attribute("val") ?? string.Empty,
+                smoothElement is not null));
         }
 
         return smooth;
@@ -8342,7 +8345,7 @@ internal sealed partial class PptxRenderer
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
 
-    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
+    private static void RenderLineChart(PdfGraphicsBuilder graphics, PptxTheme theme, IReadOnlyList<RgbColor>? chartPalette, ChartLayoutBox plotAreaBox, ChartPlotBox plotBox, IReadOnlyList<ChartIndexedNumberVector> series, bool stacked, bool percentStacked, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, bool majorGridlines, bool minorGridlines, ChartGridlineStyle gridlineStyle, ChartAxesStyle axesStyle, ChartShapeStyle plotAreaStyle, ChartValueExtents valueExtents, ChartAxisUnits axisUnits, double? valueAxisCrossingValue, bool valueAxisReversed, PptxSceneChartDisplayBlanksAs displayBlanksAs)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -8742,9 +8745,9 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(minValue, maxValue);
     }
 
-    private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<bool> smoothSeries)
+    private static bool IsSmoothSeries(int seriesIndex, IReadOnlyList<ChartBooleanOption> smoothSeries)
     {
-        return seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex];
+        return seriesIndex < smoothSeries.Count && smoothSeries[seriesIndex].Value;
     }
 
     private static void StrokeStraightChartPath(PdfGraphicsBuilder graphics, IReadOnlyList<(double X, double Y)> points)
@@ -9258,7 +9261,7 @@ internal sealed partial class PptxRenderer
         return new ChartValueExtents(minY, maxY);
     }
 
-    private static void RenderScatterChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<bool> smoothSeries, ChartValueExtents? xValueExtents = null, ChartValueExtents? yValueExtents = null)
+    private static void RenderScatterChart(PdfGraphicsBuilder graphics, ChartPlotBox plotBox, IReadOnlyList<ScatterSeries> series, bool connectLines, bool bubble, IReadOnlyList<ChartSeriesFill?> seriesFills, IReadOnlyList<ChartSeriesStroke?> seriesStrokes, IReadOnlyList<ChartMarkerStyle> markerStyles, IReadOnlyList<ChartBooleanOption> smoothSeries, ChartValueExtents? xValueExtents = null, ChartValueExtents? yValueExtents = null)
     {
         double plotX = plotBox.X;
         double plotY = plotBox.Y;
@@ -10062,6 +10065,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints);
 
     private readonly record struct ChartLegendEntry(string Name, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, ChartMarkerStyle? Marker, ChartSeriesNameRecord? SeriesName);
+
+    private readonly record struct ChartBooleanOption(bool Value, string RawValue, bool IsDefined);
 
     private readonly record struct ChartLegendLayout(PptxSceneChartLegendPosition PositionKind, string Position, bool Overlay, bool Visible, PptxSceneChartManualLayout Layout, ChartShapeStyle ShapeStyle)
     {

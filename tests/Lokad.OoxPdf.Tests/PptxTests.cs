@@ -12265,12 +12265,13 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart line-option resolver.");
         object options = readOptions.Invoke(null, [chart, plot, mismatchedChartXml, mismatchedXmlFallback, PptxSceneChartGrouping.Standard]) ?? throw new InvalidOperationException("Expected resolved line options.");
         Type optionsType = options.GetType();
-        bool[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<bool>().ToArray();
+        object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
         TestAssert.Equal(PptxSceneChartGrouping.Standard, (PptxSceneChartGrouping)(optionsType.GetProperty("Grouping")?.GetValue(options) ?? default(PptxSceneChartGrouping)));
         TestAssert.True((bool)(optionsType.GetProperty("Stacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to use the supplied scene default, not fallback XML stacked.");
         TestAssert.True((bool)(optionsType.GetProperty("PercentStacked")?.GetValue(options) ?? true) == false, "Expected unknown scene grouping to stay non-percent-stacked.");
-        TestAssert.True(smoothSeries.Length == 1 && !smoothSeries[0], "Expected missing scene smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.True(smoothSeries.Length == 1 && !ChartBooleanOptionValue(smoothSeries[0]), "Expected missing scene smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected missing scene smooth state to remain distinguishable from an explicit false token.");
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
     }
 
@@ -12349,11 +12350,45 @@ internal static class PptxTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
         object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
         Type optionsType = options.GetType();
-        bool[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<bool>().ToArray();
+        object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
 
         TestAssert.Equal(PptxSceneChartScatterStyle.Unknown, (PptxSceneChartScatterStyle)(optionsType.GetProperty("ScatterStyle")?.GetValue(options) ?? default(PptxSceneChartScatterStyle)));
         TestAssert.True((bool)(optionsType.GetProperty("ConnectLines")?.GetValue(options) ?? true) == false, "Expected unknown scene scatterStyle to keep the no-line default, not fallback XML lineMarker.");
-        TestAssert.True(smoothSeries.Length == 1 && !smoothSeries[0], "Expected missing scene scatter smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.True(smoothSeries.Length == 1 && !ChartBooleanOptionValue(smoothSeries[0]), "Expected missing scene scatter smooth flag to use the scene default, not fallback XML smooth=1.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected missing scene scatter smooth state to remain distinguishable from an explicit false token.");
+    }
+
+    public static void PptxChartSmoothOptionsPreserveRawBooleanState()
+    {
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement chartElement = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:scatterChart>
+                <c:scatterStyle val="lineMarker"/>
+                <c:ser><c:smooth/></c:ser>
+                <c:ser><c:smooth val="0"/></c:ser>
+                <c:ser/>
+              </c:scatterChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "scatterChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartScatterOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart scatter-option resolver.");
+        object options = readOptions.Invoke(null, [null, chartElement]) ?? throw new InvalidOperationException("Expected resolved scatter options.");
+        Type optionsType = options.GetType();
+        object[] smoothSeries = (((System.Collections.IEnumerable?)optionsType.GetProperty("SmoothSeries")?.GetValue(options)) ?? throw new InvalidOperationException("Expected smooth series options.")).Cast<object>().ToArray();
+
+        TestAssert.Equal(3, smoothSeries.Length);
+        TestAssert.True(ChartBooleanOptionValue(smoothSeries[0]), "Expected shorthand smooth element to resolve through the shared OOXML boolean parser.");
+        TestAssert.True(ChartBooleanOptionIsDefined(smoothSeries[0]), "Expected shorthand smooth element presence to remain explicit.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(smoothSeries[0]));
+        TestAssert.True(!ChartBooleanOptionValue(smoothSeries[1]), "Expected explicit smooth=0 to resolve false.");
+        TestAssert.True(ChartBooleanOptionIsDefined(smoothSeries[1]), "Expected explicit smooth=0 presence to remain explicit.");
+        TestAssert.Equal("0", ChartBooleanOptionRawValue(smoothSeries[1]));
+        TestAssert.True(!ChartBooleanOptionValue(smoothSeries[2]), "Expected missing smooth element to use the renderer default false.");
+        TestAssert.True(!ChartBooleanOptionIsDefined(smoothSeries[2]), "Expected missing smooth element to remain distinct from explicit false.");
+        TestAssert.Equal(string.Empty, ChartBooleanOptionRawValue(smoothSeries[2]));
     }
 
     public static void PptxChartRadarOptionsUseSceneAuthoritativeDefaults()
@@ -14745,6 +14780,24 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
         PptxScene scene = new PptxSceneBuilder().Build(document, package);
         return scene.Slides[0].SlideNodes[0].Chart;
+    }
+
+    private static bool ChartBooleanOptionValue(object option)
+    {
+        return (bool)(option.GetType().GetProperty("Value")?.GetValue(option)
+            ?? throw new InvalidOperationException("Expected chart boolean option value."));
+    }
+
+    private static string ChartBooleanOptionRawValue(object option)
+    {
+        return (string)(option.GetType().GetProperty("RawValue")?.GetValue(option)
+            ?? throw new InvalidOperationException("Expected chart boolean option raw value."));
+    }
+
+    private static bool ChartBooleanOptionIsDefined(object option)
+    {
+        return (bool)(option.GetType().GetProperty("IsDefined")?.GetValue(option)
+            ?? throw new InvalidOperationException("Expected chart boolean option defined state."));
     }
 
     private static string ReadPdfDecodedAscii(string path)

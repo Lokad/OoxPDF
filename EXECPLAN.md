@@ -12440,6 +12440,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `98` tests, `0` failures, and `0` skips; full non-slow console runner passed with `339` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Kept chart series `smooth` decisions as typed boolean options at the renderer
+boundary. `ChartLinePlotOptions` and `ChartScatterPlotOptions` now carry `ChartBooleanOption` records for
+per-series smooth state instead of bare booleans, preserving the effective value, raw token, and whether the
+element was present. The XML-only compatibility parser now uses the same OOXML boolean element semantics as
+the scene parser, so shorthand `<c:smooth/>`, explicit `val="0"`, and omission remain distinguishable.
+
+This does not change the PDF path selection: line/scatter rendering still reads only the effective smooth
+boolean. The structural gain is that future Office-PDF comparison can reason from the render option record
+instead of re-opening chart XML or guessing whether `false` came from absence, explicit false, or a parser
+gap.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted regressions
+`PptxChartLineOptionsUseSceneAuthoritativeDefaults`, `PptxChartScatterOptionsUseSceneAuthoritativeDefaults`,
+and `PptxChartSmoothOptionsPreserveRawBooleanState` passed; focused non-slow `pptx-charts` passed with
+`99` tests, `0` failures, and `0` skips; full non-slow console runner passed with `340` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current
