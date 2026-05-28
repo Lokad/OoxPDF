@@ -11922,7 +11922,7 @@ internal static class PptxTests
                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                           id="79">
                   <cs:dataLabel>
-                    <cs:defRPr sz="1400">
+                    <cs:defRPr sz="1400" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="33AA66"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
@@ -11937,6 +11937,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.2 0.667 0.4 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 14\.04 Tf"), "Expected chart-style dataLabel role font size to drive data-label rendering when c:dLbls has no direct txPr.");
+        int decorationRectangleCount = Regex.Matches(pdf, @"0\.2 0\.667 0\.4 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style dataLabel role underline and strike to emit filled decoration rectangles through the common text renderer.");
     }
 
     public static void PptxSyntheticChartStyleAxisDefaultsDriveTickLabelRendering()

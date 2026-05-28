@@ -2849,10 +2849,10 @@ High-priority actions:
     lack font family, size, color, bold, or italic attributes. This closes a scene-model information-loss gap;
     applying those inherited decorations across every chart text surface remains part of the broader chart text
     cascade work.
-  - [x] Lock chart-style legend text decorations at the PDF renderer boundary:
-    the public synthetic chart-style legend test now carries `cs:legend/cs:defRPr @u="sng"` and
-    `@strike="sngStrike"` through the existing chart-style role cascade and asserts that the common text
-    renderer emits filled underline and strike rectangles in the inherited legend text color. This is a
+  - [x] Lock chart-style legend and data-label text decorations at the PDF renderer boundary:
+    the public synthetic chart-style legend and data-label tests now carry role-level `cs:defRPr @u="sng"`
+    and `@strike="sngStrike"` through the existing chart-style cascade and assert that the common text
+    renderer emits filled underline and strike rectangles in the inherited role text color. This is a
     structural renderer guard, not a new chart-specific decoration path.
   - [x] Preserve chart `txPr/a:bodyPr @rot` metadata on text-bearing scene records:
     `PptxSceneChartTitle`, `PptxSceneChartLegend`, `PptxSceneChartDataLabels`, and per-label
