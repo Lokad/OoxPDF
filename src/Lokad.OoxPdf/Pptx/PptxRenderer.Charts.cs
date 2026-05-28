@@ -7877,14 +7877,11 @@ internal sealed partial class PptxRenderer
     {
         var styles = new List<ChartMarkerStyle>();
         bool chartMarkerEnabled = IsOoxmlBooleanElementEnabled(chartElement.Element(ChartNamespace + "marker"));
-        bool lineChart = plotKind == PptxSceneChartPlotKind.Line;
         foreach (XElement element in chartElement.Elements(ChartNamespace + "ser"))
         {
             XElement? marker = element.Element(ChartNamespace + "marker");
             string symbol = (string?)marker?.Element(ChartNamespace + "symbol")?.Attribute("val") ??
-                (lineChart
-                    ? chartMarkerEnabled ? AutoLineChartMarkerSymbol(styles.Count) : "none"
-                    : "circle");
+                PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, chartMarkerEnabled, styles.Count);
             double size = PptxChartMarkerMetricRules.ResolveSize(
                 (string?)marker?.Element(ChartNamespace + "size")?.Attribute("val"),
                 plotKind,
@@ -7908,12 +7905,6 @@ internal sealed partial class PptxRenderer
         }
 
         return styles;
-    }
-
-    private static string AutoLineChartMarkerSymbol(int seriesIndex)
-    {
-        ReadOnlySpan<string> symbols = ["diamond", "square", "triangle", "x", "star", "circle"];
-        return symbols[seriesIndex % symbols.Length];
     }
 
     private static IReadOnlyList<ChartBooleanOption> ReadChartSeriesSmoothOptions(XElement chartElement)
@@ -11227,6 +11218,6 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartMarkerStyle(PptxSceneChartMarkerSymbol SymbolKind, string Symbol, string? SizeValue, double Size, ChartSeriesFill? Fill, ChartSeriesStroke? Stroke, bool IsDefined)
     {
-        public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", null, 4d, null, null, false);
+        public static ChartMarkerStyle Default { get; } = new(PptxSceneChartMarkerSymbol.Circle, "circle", null, PptxChartMarkerMetricRules.DefaultChartMarkerSize, null, null, false);
     }
 }

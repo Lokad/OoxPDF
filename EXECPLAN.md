@@ -15373,3 +15373,13 @@ Office-backed cascade remains open until precedence between style references, ro
 XML, color-style variations, and per-series/point overrides is validated against Office PDFs. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused
 non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: chart marker default symbol selection is now centralized with marker size rules. The
+scene builder and XML-only renderer fallback both call `PptxChartMarkerMetricRules.ResolveDefaultSymbol`, and
+the renderer-local default marker uses `DefaultChartMarkerSize` instead of repeating `4d`.
+
+This does not make marker defaults Office-perfect. It removes duplicated local policy first, so future
+Office-PDF-backed changes to the marker symbol cycle or default sizes do not have to be synchronized across
+scene and fallback renderer paths. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+passed with `0` warnings and `0` errors; focused non-slow `pptx-charts` passed with `136` tests, `0` failures,
+and `0` skips.

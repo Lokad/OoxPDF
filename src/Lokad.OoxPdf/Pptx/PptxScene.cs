@@ -2951,18 +2951,7 @@ internal sealed class PptxSceneBuilder
 
     private static string ReadDefaultChartMarkerSymbol(PptxSceneChartPlotKind plotKind, bool chartMarkersEnabled, int seriesIndex)
     {
-        if (plotKind == PptxSceneChartPlotKind.Line)
-        {
-            return chartMarkersEnabled ? AutoLineChartMarkerSymbol(seriesIndex) : "none";
-        }
-
-        return "circle";
-    }
-
-    private static string AutoLineChartMarkerSymbol(int seriesIndex)
-    {
-        ReadOnlySpan<string> symbols = ["diamond", "square", "triangle", "x", "star", "circle"];
-        return symbols[seriesIndex % symbols.Length];
+        return PptxChartMarkerMetricRules.ResolveDefaultSymbol(plotKind, chartMarkersEnabled, seriesIndex);
     }
 
     private static IReadOnlyList<PptxSceneChartPointStyle> ReadChartPointStyles(XElement series, PptxTheme theme)
