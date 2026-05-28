@@ -2106,6 +2106,13 @@ High-priority actions:
     helpers were removed so indexed point records are the renderer boundary for these chart families.
     Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow
     `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 carry indexed category label records through axis/radar label layout:
+    `ChartIndexedTextVector` now exposes a dense `ChartIndexedTextPoint?` view, and Cartesian category-axis
+    labels plus radar category labels consume that point view instead of flattening to primitive strings at the
+    renderer boundary. The visible text output is unchanged, but source indices, explicit text presence, and
+    workbook sidecar reachability now survive through label slotting and layout decisions. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and focused non-slow `pptx-charts`
+    passed (`109 passed, 0 failed, 0 skipped`).
   - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:
     polar slice construction now builds `ChartIndexedPieSlice` records from `ChartIndexedNumberVector`, so
     point fills, strokes, explosions, palette fallback, and visible data-label overrides resolve by OOXML

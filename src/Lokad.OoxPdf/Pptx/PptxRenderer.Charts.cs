@@ -6247,7 +6247,7 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null, bool categoryLabelsOnTickMarks = false)
     {
-        IReadOnlyList<string?> labels = labelVector.DenseValues();
+        IReadOnlyList<ChartIndexedTextPoint?> labels = labelVector.DensePoints();
         if (labels.Count == 0)
         {
             return [];
@@ -6266,7 +6266,7 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string? label = labels[i];
+            string? label = labels[i]?.Text;
             if (string.IsNullOrWhiteSpace(label))
             {
                 continue;
@@ -9607,7 +9607,7 @@ internal sealed partial class PptxRenderer
         XElement? categoryAxis,
         ChartIndexedTextVector labelVector)
     {
-        IReadOnlyList<string?> labels = labelVector.DenseValues();
+        IReadOnlyList<ChartIndexedTextPoint?> labels = labelVector.DensePoints();
         if (labels.Count == 0)
         {
             return [];
@@ -9619,7 +9619,7 @@ internal sealed partial class PptxRenderer
         var runs = new List<TextRun>(labels.Count);
         for (int i = 0; i < labels.Count; i++)
         {
-            string? label = labels[i];
+            string? label = labels[i]?.Text;
             if (string.IsNullOrWhiteSpace(label))
             {
                 continue;
@@ -9974,6 +9974,13 @@ internal sealed partial class PptxRenderer
     {
         public IReadOnlyList<string?> DenseValues()
         {
+            return DensePoints()
+                .Select(point => point?.Text)
+                .ToArray();
+        }
+
+        public IReadOnlyList<ChartIndexedTextPoint?> DensePoints()
+        {
             IReadOnlyList<ChartIndexedTextPoint> points = Points ?? [];
             int pointCount = Math.Max(PointCount ?? 0, InferPointCount(points) ?? 0);
             if (pointCount <= 0)
@@ -9981,12 +9988,12 @@ internal sealed partial class PptxRenderer
                 return [];
             }
 
-            var values = new string?[pointCount];
+            var values = new ChartIndexedTextPoint?[pointCount];
             foreach (ChartIndexedTextPoint point in points)
             {
                 if (point.Index >= 0 && point.Index < pointCount && point.HasText)
                 {
-                    values[point.Index] = point.Text;
+                    values[point.Index] = point;
                 }
             }
 
