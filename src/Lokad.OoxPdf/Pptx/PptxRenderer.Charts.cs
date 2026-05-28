@@ -8554,7 +8554,7 @@ internal sealed partial class PptxRenderer
         bool hasChartTitle,
         bool hasLegend)
     {
-        if (horizontalBars || hasChartTitle || hasLegend)
+        if (hasChartTitle || hasLegend)
         {
             return plotBox;
         }
@@ -8563,6 +8563,23 @@ internal sealed partial class PptxRenderer
         if (!reserveSides.HasHorizontalTitle || !reserveSides.HasVerticalTitle)
         {
             return plotBox;
+        }
+
+        if (horizontalBars)
+        {
+            double horizontalLeftReserve = frame.Width * (reserveSides.Left
+                ? PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotSideReserveRatio
+                : PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotOppositeSideReserveRatio);
+            double horizontalRightReserve = frame.Width * (reserveSides.Right
+                ? PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotSideReserveRatio
+                : PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotOppositeSideReserveRatio);
+            double horizontalBottomReserve = frame.Height * PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotBandReserveRatio;
+            double horizontalTopReserve = frame.Height * PptxChartMetricRules.DefaultAxisTitleHorizontalBarPlotBandReserveRatio;
+            double horizontalX = frame.X + horizontalLeftReserve;
+            double horizontalY = frame.Y + horizontalTopReserve;
+            double horizontalWidth = Math.Max(1d, frame.Width - horizontalLeftReserve - horizontalRightReserve);
+            double horizontalHeight = Math.Max(1d, frame.Height - horizontalTopReserve - horizontalBottomReserve);
+            return new ChartPlotBox(horizontalX, horizontalY, horizontalWidth, horizontalHeight);
         }
 
         double leftReserve = frame.Width * (reserveSides.Left

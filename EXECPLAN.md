@@ -2835,6 +2835,19 @@ High-priority actions:
       filled-region/text-operation structural gap, not a plot-reservation gap. Validation: default, horizontal
       bar, and top/right default-axis-title visual probes passed at `20260528-163611` /
       `20260528-163638`; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
+    - [x] 2026-05-28 Extend the same Office-PDF-backed reserve model to the horizontal-bar default-axis-title
+      permutation: the no-title/no-legend horizontal bar path no longer bypasses default-axis-title plot
+      reservation. It now uses side-aware reserves from the parsed category/value title positions, with a
+      horizontal-bar-specific left/right side reserve and a symmetric value-axis title band. This reduced the
+      horizontal-bar probe's `AxisPairPlotBoxCandidate`, `HorizontalLine`, `VerticalLine`, and
+      `VerticalGridlineGroupCandidate` bounds deltas from roughly `33 pt` to at most `0.69 pt`, and the
+      dominant plot-area clip delta to `0.24 pt`. The manifest now gates those graphics structures at `1 pt`,
+      adds `CategoryAxisTickLabel` text hashes/positions next to `AxisTitleText`, and tightens raster ceilings
+      to MAE `2.0` / changed16 `0.02`. Remaining horizontal-bar debt is not hidden: value-axis title emission
+      is still decomposed differently from Office, and the raw `FilledRegion`/`ClipBox` buckets remain
+      unsuitable as stable gates until the PDF operator structure is normalized. Validation: build,
+      `pptx-charts --skip-slow`, and the default, horizontal-bar, and top/right default-axis-title visual
+      probes passed at `20260528-164006` / `20260528-164025`.
   - [x] 2026-05-28 Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise
     supported chart branches: successful native chart rendering now emits
     `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION` when a default axis title cannot be rendered because the

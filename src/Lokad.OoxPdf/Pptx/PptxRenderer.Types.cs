@@ -1173,6 +1173,9 @@ internal sealed partial class PptxRenderer
         public const double DefaultAxisTitlePlotOppositeSideReserveRatio = 0.020d;
         public const double DefaultAxisTitlePlotBandReserveRatio = 0.126d;
         public const double DefaultAxisTitlePlotOppositeBandReserveRatio = 0.030d;
+        public const double DefaultAxisTitleHorizontalBarPlotSideReserveRatio = 0.114d;
+        public const double DefaultAxisTitleHorizontalBarPlotOppositeSideReserveRatio = 0.028d;
+        public const double DefaultAxisTitleHorizontalBarPlotBandReserveRatio = 0.126d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;
