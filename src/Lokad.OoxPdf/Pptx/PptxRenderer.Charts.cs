@@ -4330,6 +4330,7 @@ internal sealed partial class PptxRenderer
                     ToChartTextRuns(axis.Title.TextRuns),
                     axis.Title.Layout,
                     ToChartShapeStyle(axis.Title.ShapeStyle),
+                    axis.Title.TextBodyProperties,
                     ToChartTextStyleOverride(sceneChart.TextStyle),
                     ToChartTextStyleOverride(axis.Title.TextStyle)));
             }
@@ -4370,6 +4371,7 @@ internal sealed partial class PptxRenderer
                 ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme)),
                 layout,
                 ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
+                ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme),
                 ReadChartTextStyleFromTxPr(title, theme)));
         }
@@ -4406,6 +4408,7 @@ internal sealed partial class PptxRenderer
                     axis.AxisKind,
                     axis.PositionKind,
                     ToChartShapeStyle(axis.Title.ShapeStyle),
+                    axis.Title.TextBodyProperties,
                     chartTextStyle,
                     ReadChartStyleRoleTextStyle(sceneChart.StylePart, GetChartAxisStyleRole(axis.AxisKind)),
                     ToChartTextStyleOverride(axis.Title.TextStyle)));
@@ -4434,6 +4437,7 @@ internal sealed partial class PptxRenderer
                 PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName),
                 PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val")),
                 ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
+                ReadChartTextBodyProperties(title),
                 ReadChartTextStyleFromTxPr(chartXml.Root, theme),
                 ChartTextStyleOverride.Empty,
                 ReadChartTextStyleFromTxPr(title, theme)));
@@ -4499,6 +4503,7 @@ internal sealed partial class PptxRenderer
         PptxSceneChartAxisKind axisKind,
         PptxSceneChartAxisPosition positionKind,
         ChartShapeStyle shapeStyle,
+        PptxSceneChartTextBodyProperties textBodyProperties,
         ChartTextStyleOverride chartTextStyle,
         ChartTextStyleOverride chartStyleRoleTextStyle,
         ChartTextStyleOverride titleTextStyle)
@@ -4668,6 +4673,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartTextRunOverride> textRuns,
         PptxSceneChartManualLayout layout,
         ChartShapeStyle shapeStyle,
+        PptxSceneChartTextBodyProperties textBodyProperties,
         ChartTextStyleOverride chartTextStyle,
         ChartTextStyleOverride titleTextStyle)
     {

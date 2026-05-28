@@ -2868,6 +2868,13 @@ High-priority actions:
     scene title at `5400000` against mismatched XML at `-1200000`, keeping the source boundary explicit.
     Title text is still rendered with the existing unrotated placement until Office-PDF evidence defines the
     title text-frame transform and reserve model.
+  - [x] Carry preserved axis-title `txPr/a:bodyPr @rot` through supported axis-title render calls:
+    manual and default axis-title rendering now receives `PptxSceneChartTextBodyProperties` from the typed
+    scene axis title, with XML-only compatibility still reading the raw title node. The value is intentionally
+    not consumed for transforms yet; default left/right axis titles already apply an Office-inspired rotation
+    path, and replacing that with `bodyPr` semantics needs Office-PDF evidence for title text-frame placement,
+    reserve boxes, and shape-vs-text rotation precedence. Validation: focused non-slow `pptx-charts` passed
+    (`126 passed, 0 failed, 0 skipped`).
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
