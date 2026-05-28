@@ -326,7 +326,9 @@ internal sealed partial class PptxRenderer
             HasUnsupportedEffect(chart.PlotAreaStyle) ||
             HasUnsupportedEffect(chart.Title.ShapeStyle) ||
             HasUnsupportedEffect(chart.Legend.ShapeStyle) ||
-            chart.StylePart.Entries.Any(entry => HasUnsupportedEffect(entry.ShapeStyle)) ||
+            chart.StylePart.Entries.Any(entry =>
+                HasUnsupportedEffect(entry.ShapeStyle) ||
+                HasUnsupportedEffect(entry.EffectReferenceEffects)) ||
             chart.Plots.Any(HasUnsupportedEffect);
     }
 

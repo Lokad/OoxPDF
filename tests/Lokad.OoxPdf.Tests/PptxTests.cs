@@ -18236,6 +18236,73 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart effects should be diagnostic-covered from scene-owned chart effect provenance.");
     }
 
+    public static void PptxUnsupportedEffectDiagnosticsUseSceneChartStyleEffectReferences()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml, new Dictionary<string, byte[]>
+        {
+            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+                  <Relationship Id="rIdTheme" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdStyle" Type="http://schemas.microsoft.com/office/2011/relationships/chartStyle" Target="style1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/style1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:style xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle" id="1">
+                  <cs:plotArea><cs:effectRef idx="1"/></cs:plotArea>
+                </cs:style>
+                """),
+            ["ppt/theme/theme1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Test">
+                  <a:themeElements>
+                    <a:clrScheme name="Test"/>
+                    <a:fontScheme name="Test"/>
+                    <a:fmtScheme name="Test">
+                      <a:fillStyleLst/>
+                      <a:lnStyleLst/>
+                      <a:effectStyleLst>
+                        <a:effectStyle><a:effectLst><a:blur rad="6350"/></a:effectLst></a:effectStyle>
+                      </a:effectStyleLst>
+                      <a:bgFillStyleLst/>
+                    </a:fmtScheme>
+                  </a:themeElements>
+                </a:theme>
+                """)
+        });
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutEffects = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutEffects, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart style effect references should be diagnostic-covered from scene-owned effect-reference provenance.");
+    }
+
     public static void PptxUnsupportedGradientDiagnosticsUseSceneShapeGradient()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
