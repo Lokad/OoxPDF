@@ -14578,6 +14578,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `EndParagraph` invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `400` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX paragraph visible-content and manual-line-break state now live on the text
+paragraph model. `PptxTextParagraphModel` records whether model construction found any direct text/field/break
+runs and whether any of those runs is a manual break; inspection exposes `HasVisibleContent` and
+`HasManualLineBreak`; and layout/vertical-anchor height estimation consume those fields instead of rescanning
+paragraph children for `a:r`, `a:fld`, or `a:br`.
+
+This removes another layout-time raw XML probe while preserving behavior. The deliberately untouched gap is
+the first-line font-size fallback for paragraphs whose first child is `a:br`: that path still has a specific
+Office-like default-font branch and should be lifted into a typed "first baseline source" model with its own
+public fixture before changing the rule. The broader direction remains to make the text model own paragraph
+structure decisions and leave the layout stage to consume typed flow records.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused `LineBreak`
+invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
+console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

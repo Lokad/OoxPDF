@@ -251,6 +251,8 @@ internal sealed record PptxTextFrameModelSnapshot(
 internal sealed record PptxTextParagraphModelSnapshot(
     int Level,
     bool HasEndParagraphProperties,
+    bool HasVisibleContent,
+    bool HasManualLineBreak,
     string CascadeLevelName,
     int ResolvedCascadeSourceCount,
     IReadOnlyList<string> CascadeLayerNames,

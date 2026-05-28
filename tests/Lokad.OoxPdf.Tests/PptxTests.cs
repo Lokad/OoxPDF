@@ -3706,6 +3706,10 @@ internal static class PptxTests
         OoxPackage package = OoxPackage.Open(stream);
         PptxDocument document = new PptxReader().Read(package);
 
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.True(frame.Paragraphs[0].HasVisibleContent, "Expected the text model to preserve paragraph-visible-content state.");
+        TestAssert.True(frame.Paragraphs[0].HasManualLineBreak, "Expected the text model to preserve manual line-break state.");
+
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextLineLayoutSnapshot[] lines = layout.Frames
             .SelectMany(frame => frame.Paragraphs)

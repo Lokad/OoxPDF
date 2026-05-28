@@ -802,7 +802,7 @@ internal sealed partial class PptxRenderer
             PptxTextParagraphModel paragraph = flowParagraph.Model;
             var lineLayouts = new List<PptxTextLineLayout>();
             ResolvedParagraphTextStyle paragraphStyle = flowParagraph.Style;
-            if (!ParagraphHasVisibleContent(paragraph.Source))
+            if (!paragraph.HasVisibleContent)
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {
@@ -1927,14 +1927,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool ParagraphHasVisibleContent(XElement paragraph)
-    {
-        return paragraph.Elements().Any(child =>
-            child.Name == DrawingNamespace + "r" ||
-            child.Name == DrawingNamespace + "fld" ||
-            child.Name == DrawingNamespace + "br");
-    }
-
     private static bool ParagraphHasLayoutContent(PptxTextParagraphModel paragraph)
     {
         return paragraph.Properties is not null || paragraph.EndParagraphProperties is not null;
@@ -2618,14 +2610,9 @@ internal sealed partial class PptxRenderer
     {
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
         double fontSize = firstRun?.Style.NominalFontSize ?? ReadFirstParagraphFontSize(paragraph.Source, paragraph.Style.DefaultRunProperties);
-        return ParagraphHasManualLineBreak(paragraph.Source)
+        return paragraph.HasManualLineBreak
             ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor)
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor);
-    }
-
-    private static bool ParagraphHasManualLineBreak(XElement paragraph)
-    {
-        return paragraph.Elements(DrawingNamespace + "br").Any();
     }
 
     private static double ReadEndParagraphFontSize(PptxTextParagraphModel paragraph, double fallbackFontSize, double fontScale)
@@ -3005,7 +2992,7 @@ internal sealed partial class PptxRenderer
         {
             ResolvedParagraphTextStyle paragraphStyle = paragraph.Style;
             LineSpacing lineSpacing = paragraphStyle.LineSpacing;
-            if (!ParagraphHasVisibleContent(paragraph.Source))
+            if (!paragraph.HasVisibleContent)
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {

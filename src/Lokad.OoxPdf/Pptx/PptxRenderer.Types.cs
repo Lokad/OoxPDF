@@ -428,6 +428,8 @@ internal sealed partial class PptxRenderer
         XElement Source,
         XElement? Properties,
         XElement? EndParagraphProperties,
+        bool HasVisibleContent,
+        bool HasManualLineBreak,
         XElement? DefaultProperties,
         int Level,
         PptxParagraphStyleCascade Cascade,

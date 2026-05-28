@@ -88,6 +88,8 @@ internal sealed partial class PptxRenderer
         return new PptxTextParagraphModelSnapshot(
             paragraph.Level,
             paragraph.EndParagraphProperties is not null,
+            paragraph.HasVisibleContent,
+            paragraph.HasManualLineBreak,
             paragraph.Cascade.LevelName,
             paragraph.Cascade.Sources.Count(source => source is not null),
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
@@ -683,6 +685,8 @@ internal sealed partial class PptxRenderer
                 paragraph,
                 paragraphProperties,
                 paragraph.Element(DrawingNamespace + "endParaRPr"),
+                runs.Count > 0,
+                runs.Any(run => run.Kind == PptxTextRunKind.Break),
                 defaultParagraphProperties,
                 paragraphLevel,
                 cascade,
