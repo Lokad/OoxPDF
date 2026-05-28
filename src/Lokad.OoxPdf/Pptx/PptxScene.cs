@@ -82,6 +82,8 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartStylePartId,
     int ChartStyleEntryCount,
     IReadOnlyList<string> ChartStyleEntryRoles,
+    int ChartStyleShapeStyleCount,
+    int ChartStyleShapeFillCount,
     int ChartStyleFillReferenceCount,
     int ChartStyleEffectReferenceCount,
     int ChartStyleFontReferenceCount,
@@ -684,6 +686,7 @@ internal readonly record struct PptxSceneChartStyleEntry(
     int? EffectReferenceIndex,
     string FontReferenceIndex,
     PptxSceneLineStyle Line,
+    PptxSceneChartShapeStyle ShapeStyle,
     PptxSceneLineStyle ShapeLine,
     PptxSceneChartTextStyleOverride TextStyle);
 
@@ -3499,11 +3502,17 @@ internal sealed class PptxSceneBuilder
                     .Elements()
                     .FirstOrDefault(element => element.Name.LocalName == "spPr"),
                 theme);
+            PptxSceneChartShapeStyle shapeStyle = ReadChartShapeStyle(
+                roleElement
+                    .Elements()
+                    .FirstOrDefault(element => element.Name.LocalName == "spPr"),
+                theme);
             PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme);
             if (lineReference is null &&
                 fillReference is null &&
                 effectReference is null &&
                 string.IsNullOrWhiteSpace(fontReferenceIndex) &&
+                !HasChartShapeStyle(shapeStyle) &&
                 !shapeLine.HasLine &&
                 !HasChartTextStyleOverride(textStyle))
             {
@@ -3517,11 +3526,23 @@ internal sealed class PptxSceneBuilder
                 effectReferenceIndex,
                 fontReferenceIndex,
                 line,
+                shapeStyle,
                 shapeLine,
                 textStyle));
         }
 
         return entries;
+    }
+
+    private static bool HasChartShapeStyle(PptxSceneChartShapeStyle style)
+    {
+        return style.NoFill ||
+            style.Fill.HasFill ||
+            style.GradientFill?.HasGradient == true ||
+            style.PatternFill.HasPattern ||
+            style.Line.HasLine ||
+            style.Glow.HasGlow ||
+            style.OuterShadow.HasShadow;
     }
 
     private static bool HasChartTextStyleOverride(PptxSceneChartTextStyleOverride textStyle)

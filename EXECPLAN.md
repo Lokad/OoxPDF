@@ -12079,6 +12079,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `105` tests, `0` failures, and `0` skips; full non-slow console runner passed with `346` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved chart-style role-local shape properties as structured scene state.
+`PptxSceneChartStyleEntry` now carries a full `PptxSceneChartShapeStyle` for each role `spPr` in addition to
+the older direct `ShapeLine` convenience field and style reference indices. Scene snapshots expose counts for
+roles with local shape properties and local fills, and the large scene fixture now proves that a chart-style
+role-local fill is retained beside line, fillRef/effectRef/fontRef, and text defaults.
+
+This closes another source-preservation gap without asserting cascade semantics. The renderer still consumes
+the existing supported style surfaces; future work should decide, from Office-PDF evidence, how role-local
+fills, effects, line refs, fill refs, color-style roots/variations, and explicit chart XML overrides combine
+for series, markers, gridlines, data labels, legend, title, and axes.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed with `105` tests,
+`0` failures, and `0` skips; full non-slow console runner passed with `346` tests, `0` failures, and
+`7` slow skips.
+
 Revision note, 2026-05-28: Started consolidating value-axis render decisions behind a typed option boundary.
 The ordinary line-chart branch now resolves value-axis units, reversed orientation, crossing value, major/minor
 gridline visibility, and gridline stroke style through `ChartValueAxisRenderOptions` instead of collecting

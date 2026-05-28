@@ -118,6 +118,10 @@ internal sealed partial class PptxRenderer
             node.Chart?.StylePart.Id ?? string.Empty,
             chartStyleEntryRoles.Count,
             chartStyleEntryRoles,
+            chartStyleEntries.Count(entry => HasChartShapeStyle(entry.ShapeStyle)),
+            chartStyleEntries.Count(entry => entry.ShapeStyle?.Fill.HasFill == true ||
+                entry.ShapeStyle?.PatternFill.HasPattern == true ||
+                entry.ShapeStyle?.GradientFill?.HasGradient == true),
             chartStyleEntries.Count(entry => entry.FillReferenceIndex is not null),
             chartStyleEntries.Count(entry => entry.EffectReferenceIndex is not null),
             chartStyleEntries.Count(entry => !string.IsNullOrWhiteSpace(entry.FontReferenceIndex)),
@@ -154,6 +158,18 @@ internal sealed partial class PptxRenderer
             legendLayout?.Height,
             node.Kind == PptxSceneNodeKind.Group,
             node.Children.Select(ToSnapshot).ToArray());
+    }
+
+    private static bool HasChartShapeStyle(PptxSceneChartShapeStyle? style)
+    {
+        return style is not null &&
+            (style.NoFill ||
+                style.Fill.HasFill ||
+                style.GradientFill?.HasGradient == true ||
+                style.PatternFill.HasPattern ||
+                style.Line.HasLine ||
+                style.Glow.HasGlow ||
+                style.OuterShadow.HasShadow);
     }
 
     private static IReadOnlyList<string> ReadRejectedPointStyleIndexValues(PptxSceneChart? chart)
