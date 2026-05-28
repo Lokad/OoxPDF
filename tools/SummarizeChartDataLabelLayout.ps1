@@ -45,6 +45,12 @@ function Round([double] $value) {
     return [Math]::Round($value, 6)
 }
 
+function Stable-TextHash([string] $text) {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($text)
+    $hash = [System.Security.Cryptography.SHA256]::HashData($bytes)
+    return [Convert]::ToHexString($hash).Substring(0, 16)
+}
+
 function CenterX($item) {
     return ([double]$item.MinX + [double]$item.MaxX) / 2d
 }
@@ -207,6 +213,82 @@ function Child-Val($node, [string] $name) {
     return [string]$child.Attributes["val"].Value
 }
 
+function Child-Text($node, [string] $name) {
+    $child = $node.SelectSingleNode("*[local-name()='$name']")
+    if ($null -eq $child) {
+        return ""
+    }
+
+    return [string]$child.InnerText
+}
+
+function Optional-Boolean($node, $fallbackNode, [string] $name, [bool] $defaultValue) {
+    $value = Child-Val $node $name
+    if ([string]::IsNullOrWhiteSpace($value) -and $null -ne $fallbackNode) {
+        $value = Child-Val $fallbackNode $name
+    }
+
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $defaultValue
+    }
+
+    return -not ($value -eq "0" -or $value -eq "false")
+}
+
+function Read-IndexedTextCache($seriesNode, [string] $containerName) {
+    $map = @{}
+    $points = $seriesNode.SelectNodes("*[local-name()='$containerName']//*[local-name()='pt']")
+    foreach ($point in $points) {
+        $idx = Child-Val $point "idx"
+        if ([string]::IsNullOrWhiteSpace($idx) -and $point.Attributes["idx"] -ne $null) {
+            $idx = [string]$point.Attributes["idx"].Value
+        }
+
+        if ([string]::IsNullOrWhiteSpace($idx)) {
+            continue
+        }
+
+        $map[$idx] = Child-Text $point "v"
+    }
+
+    return $map
+}
+
+function Format-ChartPercent([double] $value, [double] $total) {
+    if ($total -eq 0d) {
+        return ""
+    }
+
+    return ("{0:P0}" -f ($value / $total))
+}
+
+function Read-ExpectedLabelParts($seriesNode, $labelsNode, $labelNode, [string] $index, $categoryMap, $valueMap, [double] $total) {
+    $parts = New-Object System.Collections.Generic.List[string]
+    if (Optional-Boolean $labelNode $labelsNode "showCatName" $false) {
+        $category = if ($categoryMap.ContainsKey($index)) { [string]$categoryMap[$index] } else { "" }
+        if (-not [string]::IsNullOrEmpty($category)) {
+            $parts.Add($category)
+        }
+    }
+
+    $valueText = if ($valueMap.ContainsKey($index)) { [string]$valueMap[$index] } else { "" }
+    $numericValue = 0d
+    $hasNumericValue = [double]::TryParse($valueText, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$numericValue)
+    if (Optional-Boolean $labelNode $labelsNode "showVal" $false -and -not [string]::IsNullOrEmpty($valueText)) {
+        $parts.Add($valueText)
+    }
+
+    if (Optional-Boolean $labelNode $labelsNode "showPercent" $false -and $hasNumericValue) {
+        $parts.Add((Format-ChartPercent $numericValue $total))
+    }
+
+    return ,$parts.ToArray()
+}
+
+function Hash-SetKey($hashes) {
+    return (@($hashes | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Sort-Object) -join "+")
+}
+
 function Manual-Layout-Val($manualLayout, [string] $name) {
     if ($null -eq $manualLayout) {
         return ""
@@ -258,7 +340,23 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
         return ,@()
     }
 
-    $labels = $xml.SelectNodes("//*[local-name()='dLbl']")
+    $series = $xml.SelectSingleNode("//*[local-name()='pieChart']/*[local-name()='ser']")
+    if ($null -eq $series) {
+        $series = $xml.SelectSingleNode("//*[local-name()='ser']")
+    }
+
+    $categoryMap = if ($null -eq $series) { @{} } else { Read-IndexedTextCache $series "cat" }
+    $valueMap = if ($null -eq $series) { @{} } else { Read-IndexedTextCache $series "val" }
+    $total = 0d
+    foreach ($value in $valueMap.Values) {
+        $parsed = 0d
+        if ([double]::TryParse([string]$value, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+            $total += $parsed
+        }
+    }
+
+    $labelsNode = if ($null -eq $series) { $null } else { $series.SelectSingleNode("*[local-name()='dLbls']") }
+    $labels = if ($null -eq $labelsNode) { $xml.SelectNodes("//*[local-name()='dLbl']") } else { $labelsNode.SelectNodes("*[local-name()='dLbl']") }
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($label in $labels) {
         $manualLayout = $label.SelectSingleNode("*[local-name()='layout']/*[local-name()='manualLayout']")
@@ -266,8 +364,11 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
             continue
         }
 
+        $index = Child-Val $label "idx"
+        $expectedParts = Read-ExpectedLabelParts $series $labelsNode $label $index $categoryMap $valueMap $total
+        $expectedHashes = @($expectedParts | ForEach-Object { Stable-TextHash $_ })
         $rows.Add([pscustomobject]@{
-            Index = Child-Val $label "idx"
+            Index = $index
             Position = Child-Val $label "dLblPos"
             X = Manual-Layout-Val $manualLayout "x"
             Y = Manual-Layout-Val $manualLayout "y"
@@ -282,6 +383,8 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
             ShowPercent = Child-Val $label "showPercent"
             ShowValue = Child-Val $label "showVal"
             ShowLegendKey = Child-Val $label "showLegendKey"
+            ExpectedPartCount = $expectedParts.Count
+            ExpectedTextHashSetKey = Hash-SetKey $expectedHashes
         })
     }
 
@@ -340,17 +443,37 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
         $quadrant = Manual-Quadrant $layout
         $referenceCluster = @($referenceClusters | Where-Object { (Quadrant $_ $referencePlotBox) -eq $quadrant } | Sort-Object -Property MinY, MinX | Select-Object -First 1)[0]
         $candidateCluster = @($candidateClusters | Where-Object { (Quadrant $_ $candidatePlotBox) -eq $quadrant } | Sort-Object -Property MinY, MinX | Select-Object -First 1)[0]
+        $expectedHashSetKey = [string]$layout.ExpectedTextHashSetKey
+        $referenceHashCluster = if ([string]::IsNullOrWhiteSpace($expectedHashSetKey)) {
+            $null
+        }
+        else {
+            @($referenceClusters | Where-Object { (Hash-SetKey ([string]$_.TextHash).Split("+")) -eq $expectedHashSetKey } | Select-Object -First 1)[0]
+        }
+        $candidateHashCluster = if ([string]::IsNullOrWhiteSpace($expectedHashSetKey)) {
+            $null
+        }
+        else {
+            @($candidateClusters | Where-Object { (Hash-SetKey ([string]$_.TextHash).Split("+")) -eq $expectedHashSetKey } | Select-Object -First 1)[0]
+        }
         $rows.Add([pscustomobject]@{
             Index = [string]$layout.Index
             ManualQuadrant = $quadrant
             ManualX = [string]$layout.X
             ManualY = [string]$layout.Y
+            ExpectedTextHashSetKey = $expectedHashSetKey
             ReferenceClusterBounds = Format-Bounds $referenceCluster
             ReferenceClusterRelativeX = Relative-Center $referenceCluster $referencePlotBox "x"
             ReferenceClusterRelativeY = Relative-Center $referenceCluster $referencePlotBox "y"
             CandidateClusterBounds = Format-Bounds $candidateCluster
             CandidateClusterRelativeX = Relative-Center $candidateCluster $candidatePlotBox "x"
             CandidateClusterRelativeY = Relative-Center $candidateCluster $candidatePlotBox "y"
+            ReferenceHashClusterBounds = Format-Bounds $referenceHashCluster
+            ReferenceHashClusterRelativeX = Relative-Center $referenceHashCluster $referencePlotBox "x"
+            ReferenceHashClusterRelativeY = Relative-Center $referenceHashCluster $referencePlotBox "y"
+            CandidateHashClusterBounds = Format-Bounds $candidateHashCluster
+            CandidateHashClusterRelativeX = Relative-Center $candidateHashCluster $candidatePlotBox "x"
+            CandidateHashClusterRelativeY = Relative-Center $candidateHashCluster $candidatePlotBox "y"
         })
     }
 
@@ -448,7 +571,7 @@ if ($chartManualLayouts.Count -gt 0) {
 if ($manualLayoutCoordinateEvidence.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label manual-layout coordinate evidence:"
-    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY
+    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY, ReferenceHashClusterRelativeX, ReferenceHashClusterRelativeY, CandidateHashClusterRelativeX, CandidateHashClusterRelativeY
 }
 
 if ($labelMatches.Count -gt 0) {

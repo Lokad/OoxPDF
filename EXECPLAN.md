@@ -2690,6 +2690,14 @@ High-priority actions:
     from a PPTX via `-Pptx`/`-ChartPart`, eliminating the manual unzip step from this public probe workflow.
     The direct-PPTX run over `20260528-152722` reproduced the four manual-layout records and the same
     cluster/leader-line deltas as the pre-extracted `chart1.xml` path.
+    2026-05-28 update: extended the summary tool again to compute source-side expected label component hashes
+    from the chart XML and correlate Office/candidate clusters by content hash set, not just by polar quadrant.
+    This preserves a stronger invariant for the coordinate-basis work: on run `20260528-152722`, hash-matched
+    clusters show index `0` (`Alpha`/`48%`) at Office relative center roughly `(-0.708, 0.470)` and candidate
+    `(-0.967, 0.371)`, while index `2` (`Gamma`/`17%`) sits at Office `(-0.798, -0.528)` and candidate
+    `(-0.439, -0.699)`. The earlier quadrant-only evidence remains useful for side placement, but it is not
+    strong enough to bind a `c:dLbl idx` to its displayed label content; future renderer changes should use
+    the hash-matched rows before changing missing-mode semantics or leader-line cardinality.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
