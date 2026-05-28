@@ -251,6 +251,10 @@ internal sealed record PptxTextFrameModelSnapshot(
 internal sealed record PptxTextParagraphModelSnapshot(
     int Level,
     bool HasEndParagraphProperties,
+    double EndParagraphFontSize,
+    string? EndParagraphTypeface,
+    bool EndParagraphBold,
+    bool EndParagraphItalic,
     bool HasVisibleContent,
     bool HasManualLineBreak,
     double FirstLineFallbackFontSize,

@@ -281,6 +281,12 @@ internal sealed partial class PptxRenderer
         ParagraphIndent Indent,
         IReadOnlyList<double> TabStops);
 
+    private readonly record struct ResolvedEndParagraphTextStyle(
+        double FontSize,
+        string? Typeface,
+        bool Bold,
+        bool Italic);
+
     private readonly record struct ResolvedRunTextStyle(
         double NominalFontSize,
         double FontSize,
@@ -430,6 +436,7 @@ internal sealed partial class PptxRenderer
         XElement Source,
         XElement? Properties,
         XElement? EndParagraphProperties,
+        ResolvedEndParagraphTextStyle EndParagraphStyle,
         bool HasVisibleContent,
         bool HasManualLineBreak,
         double FirstLineFallbackFontSize,

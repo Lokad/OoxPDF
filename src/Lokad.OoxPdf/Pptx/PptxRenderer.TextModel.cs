@@ -102,6 +102,10 @@ internal sealed partial class PptxRenderer
         return new PptxTextParagraphModelSnapshot(
             paragraph.Level,
             paragraph.EndParagraphProperties is not null,
+            paragraph.EndParagraphStyle.FontSize,
+            paragraph.EndParagraphStyle.Typeface,
+            paragraph.EndParagraphStyle.Bold,
+            paragraph.EndParagraphStyle.Italic,
             paragraph.HasVisibleContent,
             paragraph.HasManualLineBreak,
             paragraph.FirstLineFallbackFontSize,
@@ -693,10 +697,12 @@ internal sealed partial class PptxRenderer
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
             IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
+            XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             paragraphs.Add(new PptxTextParagraphModel(
                 paragraph,
                 paragraphProperties,
-                paragraph.Element(DrawingNamespace + "endParaRPr"),
+                endParagraphProperties,
+                ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale),
                 runs.Count > 0,
                 runs.Any(run => run.Kind == PptxTextRunKind.Break),
                 paragraphStyle.FontSize,
@@ -709,6 +715,17 @@ internal sealed partial class PptxRenderer
         }
 
         return paragraphs;
+    }
+
+    private static ResolvedEndParagraphTextStyle ResolveEndParagraphTextStyle(XElement? endRunProperties, XElement? defaultRunProperties, double fontScale)
+    {
+        double fontSize = ReadFontSize(endRunProperties, defaultRunProperties) * fontScale;
+        string? typeface = ReadTypeface(endRunProperties) ?? ReadTypeface(defaultRunProperties);
+        bool bold = ParseOptionalBoolAttribute(endRunProperties, "b") ||
+            (endRunProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
+        bool italic = ParseOptionalBoolAttribute(endRunProperties, "i") ||
+            (endRunProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(defaultRunProperties, "i"));
+        return new ResolvedEndParagraphTextStyle(fontSize, typeface, bold, italic);
     }
 
     private static PptxParagraphStyleCascade BuildParagraphStyleCascade(

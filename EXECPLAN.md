@@ -516,6 +516,15 @@ High-priority actions:
   minimal` passed; focused non-slow `pptx-tables` passed (`10 passed, 0 failed, 0 skipped`); the focused
   single-test invocation also completed with the current runner's broad selection (`408 passed, 0 failed,
   0 skipped`).
+- [x] 2026-05-28: Move resolved PPTX end-paragraph text style out of layout-time XML reads:
+  `PptxTextParagraphModel` now carries `ResolvedEndParagraphTextStyle` with the end-paragraph font size,
+  typeface, bold, and italic values resolved from `a:endParaRPr` plus paragraph default run properties during
+  model construction. Empty-paragraph layout and vertical-anchor height estimation now consume that typed
+  style instead of reparsing `EndParagraphProperties` for font metrics. The existing
+  `PptxSyntheticVerticalAnchorUsesEndParagraphFontSizeForEmptySpacing` fixture now also asserts that model
+  inspection exposes the resolved `72 pt` end-paragraph font size before layout runs. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-typography`
+  passed (`97 passed, 0 failed, 2 skipped`).
 - [x] 2026-05-27: Carry line-chart marker styles into stroke legend keys:
   line and combo-line legends now keep the already-parsed per-series `ChartMarkerStyle` in `ChartLegendEntry`
   and emit a composite key as a short stroke with the marker centered on it, matching the same PDF structure
@@ -6958,6 +6967,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   inset sources, but `PptxTextFrameModelSnapshot` had no table-cell inspection path and the table adapter
   still mapped an absent anchor to `TableCellStyle`. The new table text-frame inspection test exposes that
   boundary and locks absent anchors as `DefaultValue`.
+- Observation: The earlier end-paragraph ownership slice still left layout parsing resolved font metrics from
+  `EndParagraphProperties`.
+  Evidence: `PptxTextParagraphModel` exposed the raw `a:endParaRPr` owner, but both empty-paragraph layout and
+  vertical-anchor height estimation called `ReadFontSize`, `ReadTypeface`, and boolean parsers against that
+  XML. The model now exposes the resolved end-paragraph style, and the end-paragraph vertical-anchor fixture
+  asserts the resolved `72 pt` font size before layout runs.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7225,6 +7240,13 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Rationale: Existing text-frame model tests use shape-only counts and placeholder behavior. A separate
   `InspectTableTextFrameModels` method makes the table adapter boundary testable without changing the meaning
   of shape text snapshots, and it gives future table-text migration a stable place to prove source ownership.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Keep raw `EndParagraphProperties` as source evidence but make layout consume a resolved
+  end-paragraph style record.
+  Rationale: Raw OOXML remains useful for diagnostics and for future unsupported-token ladders, but layout
+  should not rediscover font metrics from XML once the text model has enough context to resolve them. Carrying
+  the resolved end-paragraph font size/typeface/bold/italic state keeps the model/layout boundary explicit
+  without changing empty-paragraph rendering.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14684,6 +14706,21 @@ cell text model records so table text no longer depends on renderer-local raw XM
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-tables` passed with `10` tests, `0` failures, and `0` skips; the focused single-test invocation also
 completed successfully with the runner's current broad selection, `408` tests, `0` failures, and `0` skips.
+
+Revision note, 2026-05-28: PPTX end-paragraph text style is now resolved by the text model before layout.
+`PptxTextParagraphModel` carries a `ResolvedEndParagraphTextStyle` record containing the effective font size,
+typeface, bold, and italic values for `a:endParaRPr` after paragraph default run properties and frame font
+scale have been applied. Empty-paragraph layout and vertical-anchor height estimation consume that record
+instead of calling font/style parsers against `EndParagraphProperties` at layout time.
+
+This preserves raw `EndParagraphProperties` as source evidence while removing a layout-stage XML dependency
+that survived the earlier end-paragraph ownership slice. The remaining paragraph model work is now narrower:
+tab-stop and bullet sources, first-baseline source provenance, and some paragraph spacing/default-run ladders
+still need the same treatment before the text layout stage can be considered a pure consumer of typed flow
+records.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `97` tests, `0` failures, and `2` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;

@@ -807,8 +807,7 @@ internal sealed partial class PptxRenderer
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {
-                    XElement? endRunProperties = paragraph.EndParagraphProperties;
-                    double emptyFontSize = ReadFontSize(endRunProperties, paragraphStyle.DefaultRunProperties) * frame.FontScale;
+                    double emptyFontSize = paragraph.EndParagraphStyle.FontSize;
                     double emptySpacingBefore = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     double emptySpacingAfter = ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
                     cursorLineTop -= (hasPlacedParagraph ? emptySpacingBefore : 0d) + ReadParagraphAdvance(paragraphStyle.LineSpacing, emptyFontSize) + emptySpacingAfter;
@@ -1042,7 +1041,9 @@ internal sealed partial class PptxRenderer
             double paragraphLineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
             if (afterManualLineBreak && line.Spans.Count == 0)
             {
-                paragraphLineFontSize = ReadEndParagraphFontSize(paragraph, paragraphLineFontSize, frame.FontScale);
+                paragraphLineFontSize = paragraph.EndParagraphProperties is null
+                    ? paragraphLineFontSize
+                    : paragraph.EndParagraphStyle.FontSize;
             }
 
             if (double.IsNaN(cursorY))
@@ -2616,14 +2617,6 @@ internal sealed partial class PptxRenderer
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor);
     }
 
-    private static double ReadEndParagraphFontSize(PptxTextParagraphModel paragraph, double fallbackFontSize, double fontScale)
-    {
-        XElement? endRunProperties = paragraph.EndParagraphProperties;
-        return endRunProperties is null
-            ? fallbackFontSize
-            : ReadFontSize(endRunProperties, paragraph.Style.DefaultRunProperties) * fontScale;
-    }
-
     private static double ReadManualBreakLineAdvance(LineSpacing lineSpacing, double fontSize)
     {
         return lineSpacing.IsExplicit ? ReadLineAdvance(lineSpacing, fontSize) : fontSize * PptxTextMetricRules.OfficeManualBreakDefaultLineHeightFallback;
@@ -2997,18 +2990,17 @@ internal sealed partial class PptxRenderer
             {
                 if (ParagraphHasLayoutContent(paragraph))
                 {
-                    XElement? endRunProperties = paragraph.EndParagraphProperties;
-                    double emptyFontSize = ReadEndParagraphFontSize(paragraph, paragraphStyle.FontSize, bodyProperties.FontScale);
+                    double emptyFontSize = paragraph.EndParagraphProperties is null
+                        ? paragraphStyle.FontSize
+                        : paragraph.EndParagraphStyle.FontSize;
                     if (hasEstimatedParagraph)
                     {
                         height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     }
 
-                    string? emptyTypeface = ReadTypeface(endRunProperties) ?? ReadTypeface(paragraphStyle.DefaultRunProperties);
-                    bool emptyBold = ParseOptionalBoolAttribute(endRunProperties, "b") ||
-                        (endRunProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(paragraphStyle.DefaultRunProperties, "b"));
-                    bool emptyItalic = ParseOptionalBoolAttribute(endRunProperties, "i") ||
-                        (endRunProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(paragraphStyle.DefaultRunProperties, "i"));
+                    string? emptyTypeface = paragraph.EndParagraphStyle.Typeface;
+                    bool emptyBold = paragraph.EndParagraphStyle.Bold;
+                    bool emptyItalic = paragraph.EndParagraphStyle.Italic;
                     height += ReadEstimatedAnchorEmptyLineAdvance(lineSpacing, emptyFontSize, emptyTypeface, emptyBold, emptyItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
                     height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
                     hasEstimatedParagraph = true;
