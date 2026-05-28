@@ -19,6 +19,8 @@ param(
 
     [string] $ChartPart = "ppt/charts/chart1.xml",
 
+    [string] $ComMetadataJson,
+
     [string] $OutputJson
 )
 
@@ -39,6 +41,14 @@ function Read-JsonArray($path) {
     }
 
     return ,@($items)
+}
+
+function Read-JsonObject($path) {
+    if ([string]::IsNullOrWhiteSpace($path) -or -not (Test-Path -LiteralPath $path)) {
+        return $null
+    }
+
+    return Get-Content -Raw -LiteralPath (Resolve-Path -LiteralPath $path).Path | ConvertFrom-Json
 }
 
 function Round([double] $value) {
@@ -358,7 +368,23 @@ function Read-ChartXmlDocument([string] $path, [string] $pptx, [string] $chartPa
     }
 }
 
-function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $chartPart) {
+function Read-ComDataLabelMetadataByIndex($metadata) {
+    $byIndex = @{}
+    if ($null -eq $metadata -or $null -eq $metadata.DataLabels) {
+        return $byIndex
+    }
+
+    foreach ($label in @($metadata.DataLabels)) {
+        $key = [string]$label.Index
+        if (-not [string]::IsNullOrWhiteSpace($key)) {
+            $byIndex[$key] = $label
+        }
+    }
+
+    return $byIndex
+}
+
+function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $chartPart, $comMetadata) {
     $xml = Read-ChartXmlDocument $path $pptx $chartPart
     if ($null -eq $xml) {
         return ,@()
@@ -381,6 +407,7 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
 
     $labelsNode = if ($null -eq $series) { $null } else { $series.SelectSingleNode("*[local-name()='dLbls']") }
     $labels = if ($null -eq $labelsNode) { $xml.SelectNodes("//*[local-name()='dLbl']") } else { $labelsNode.SelectNodes("*[local-name()='dLbl']") }
+    $comLabelsByIndex = Read-ComDataLabelMetadataByIndex $comMetadata
     $rows = New-Object System.Collections.Generic.List[object]
     foreach ($label in $labels) {
         $manualLayout = $label.SelectSingleNode("*[local-name()='layout']/*[local-name()='manualLayout']")
@@ -391,6 +418,7 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
         $index = Child-Val $label "idx"
         $expectedParts = Read-ExpectedLabelParts $series $labelsNode $label $index $categoryMap $valueMap $total
         $expectedHashes = @($expectedParts | ForEach-Object { Stable-TextHash $_ })
+        $comLabel = if ($comLabelsByIndex.ContainsKey([string]$index)) { $comLabelsByIndex[[string]$index] } else { $null }
         $rows.Add([pscustomobject]@{
             Index = $index
             Position = Child-Val $label "dLblPos"
@@ -409,6 +437,13 @@ function Read-ChartLabelManualLayouts([string] $path, [string] $pptx, [string] $
             ShowLegendKey = Child-Val $label "showLegendKey"
             ExpectedPartCount = $expectedParts.Count
             ExpectedTextHashSetKey = Hash-SetKey $expectedHashes
+            ComRequestedLeft = if ($null -eq $comLabel) { $null } else { $comLabel.RequestedLeft }
+            ComRequestedTop = if ($null -eq $comLabel) { $null } else { $comLabel.RequestedTop }
+            ComObservedLeft = if ($null -eq $comLabel) { $null } else { $comLabel.ObservedLeft }
+            ComObservedTop = if ($null -eq $comLabel) { $null } else { $comLabel.ObservedTop }
+            ComObservedWidth = if ($null -eq $comLabel) { $null } else { $comLabel.ObservedWidth }
+            ComObservedHeight = if ($null -eq $comLabel) { $null } else { $comLabel.ObservedHeight }
+            ComAppliedPosition = if ($null -eq $comLabel) { $null } else { $comLabel.AppliedPosition }
         })
     }
 
@@ -485,6 +520,12 @@ function Build-ManualLayoutCoordinateEvidence($manualLayouts, $referenceClusters
             ManualQuadrant = $quadrant
             ManualX = [string]$layout.X
             ManualY = [string]$layout.Y
+            ComRequestedLeft = $layout.ComRequestedLeft
+            ComRequestedTop = $layout.ComRequestedTop
+            ComObservedLeft = $layout.ComObservedLeft
+            ComObservedTop = $layout.ComObservedTop
+            ComObservedWidth = $layout.ComObservedWidth
+            ComObservedHeight = $layout.ComObservedHeight
             ExpectedTextHashSetKey = $expectedHashSetKey
             ReferenceClusterBounds = Format-Bounds $referenceCluster
             ReferenceClusterRelativeX = Relative-Center $referenceCluster $referencePlotBox "x"
@@ -613,7 +654,8 @@ $referenceLabelClusters = Group-TextClusters $referenceLabels
 $candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
-$chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml $Pptx $ChartPart
+$comMetadata = Read-JsonObject $ComMetadataJson
+$chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml $Pptx $ChartPart $comMetadata
 $referencePolarPlotBox = Select-PrimaryKind $referenceGraphics "PolarPlotBoxCandidate"
 $candidatePolarPlotBox = Select-PrimaryKind $candidateGraphics "PolarPlotBoxCandidate"
 
@@ -634,6 +676,8 @@ $summary = [pscustomobject]@{
     DataLabelLeaderLineCandidateCount = $candidateLeaderLines.Count
     DataLabelLeaderLineMaxNearestBoundsDelta = if ($leaderLineMatches.Count -eq 0) { $null } else { ($leaderLineMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     ChartManualLayoutCount = $chartManualLayouts.Count
+    ChartComMetadataDataLabelCount = if ($null -eq $comMetadata -or $null -eq $comMetadata.DataLabels) { 0 } else { @($comMetadata.DataLabels).Count }
+    ChartComMetadataShape = if ($null -eq $comMetadata) { $null } else { $comMetadata.ChartShape }
     ChartManualLayouts = $chartManualLayouts
     DataLabelManualLayoutCoordinateEvidence = $manualLayoutCoordinateEvidence
     DataLabelTextReferenceClusters = $referenceLabelClusters
@@ -644,18 +688,18 @@ $summary = [pscustomobject]@{
     DataLabelLeaderLineClusterEvidence = $leaderLineClusterEvidence
 }
 
-$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount
+$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount, ChartComMetadataDataLabelCount
 
 if ($chartManualLayouts.Count -gt 0) {
     Write-Host ""
     Write-Host "Chart data-label manual layouts:"
-    $chartManualLayouts | Format-Table -AutoSize Index, Position, X, Y, Width, Height, XMode, YMode, WidthMode, HeightMode, ShowCategoryName, ShowPercent, ShowLeaderLines
+    $chartManualLayouts | Format-Table -AutoSize Index, Position, X, Y, Width, Height, XMode, YMode, WidthMode, HeightMode, ComRequestedLeft, ComRequestedTop, ComObservedLeft, ComObservedTop, ComObservedWidth, ComObservedHeight, ShowCategoryName, ShowPercent, ShowLeaderLines
 }
 
 if ($manualLayoutCoordinateEvidence.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label manual-layout coordinate evidence:"
-    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY, ReferenceHashClusterRelativeX, ReferenceHashClusterRelativeY, CandidateHashClusterRelativeX, CandidateHashClusterRelativeY
+    $manualLayoutCoordinateEvidence | Format-Table -AutoSize Index, ManualQuadrant, ManualX, ManualY, ComRequestedLeft, ComRequestedTop, ComObservedLeft, ComObservedTop, ReferenceClusterRelativeX, ReferenceClusterRelativeY, CandidateClusterRelativeX, CandidateClusterRelativeY, ReferenceHashClusterRelativeX, ReferenceHashClusterRelativeY, CandidateHashClusterRelativeX, CandidateHashClusterRelativeY
 }
 
 if ($labelMatches.Count -gt 0) {

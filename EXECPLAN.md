@@ -2704,6 +2704,12 @@ High-priority actions:
     `Left`/`Top`/`Width`/`Height`, applied position, and text. This fills the current evidence gap between the
     generator's requested COM coordinates, the saved `c:manualLayout` factors, and Office's PDF label boxes
     without changing renderer placement from an underdetermined four-point sample.
+    2026-05-28 update: `tools/SummarizeChartDataLabelLayout.ps1` now accepts that sidecar through
+    `-ComMetadataJson` and joins COM requested/observed label rectangles onto `ChartManualLayouts` and
+    `DataLabelManualLayoutCoordinateEvidence`. A temporary public-safe sidecar over run `20260528-152722`
+    verified the join path with four COM label records while preserving the existing PDF structural deltas
+    (`DataLabelText` `8/8`, cluster max delta `262.481pt`, leader-line counts `1/4`). The next real Office
+    regeneration can now compare COM coordinates, saved XML factors, and Office PDF boxes in one summary.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
