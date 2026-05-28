@@ -459,6 +459,8 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneNodeKind.Chart, slide.SlideNodes[4].Kind);
         TestAssert.Equal("rIdChart", slide.SlideNodes[4].Chart?.RelationshipId ?? string.Empty);
         TestAssert.Equal("/ppt/charts/chart1.xml", slide.SlideNodes[4].Chart?.TargetPartName ?? string.Empty);
+        TestAssert.Equal("rIdChart", slideSnapshot.SlideNodes[4].ChartRelationshipId);
+        TestAssert.Equal("/ppt/charts/chart1.xml", slideSnapshot.SlideNodes[4].ChartTargetPartName);
         TestAssert.True(slide.SlideNodes[4].Chart?.ChartXml is not null, "Expected chart part XML ownership in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.IsDefined == true, "Expected chart external-data ownership in the scene model.");
         TestAssert.Equal("rId3", slide.SlideNodes[4].Chart?.ExternalData.RelationshipId ?? string.Empty);

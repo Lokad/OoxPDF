@@ -366,6 +366,17 @@ High-priority actions:
   downstream PDF text-structure comparisons. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
   minimal` passed; focused non-slow `pptx-charts` passed (`115 passed, 0 failed, 0 skipped`); full non-slow
   console runner passed (`359 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Retire the last chart-frame relationship-map repair in render dispatch:
+  `RenderOrderedSceneNodes` no longer carries per-part relationship maps only so chart rendering can recover a
+  missing target part name. A scene-backed chart must now bring `RelationshipId`, `TargetPartName`, and
+  `ChartXml` through `PptxSceneChart`; otherwise the renderer reports the existing chart model gap instead of
+  silently repairing an incomplete scene from slide/layout/master relationships. Scene inspection now exposes the
+  chart relationship id and target part name next to the existing external-workbook provenance, so the package
+  ownership boundary is observable without leaking chart XML. This is behavior-neutral for complete scenes and
+  keeps the long-term direction clear: chart resource ownership belongs to the scene builder, while chart
+  semantics belong to typed chart records and Office-PDF-backed layout rules. Validation:
+  `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
+  (`119 passed, 0 failed, 0 skipped`); full console runner passed (`380 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-28: Make chart axis text-style absence scene-authoritative when the scene axis is missing:
   `ReadSceneOrXmlChartTextStyle` no longer merges raw XML `c:txPr` text properties in a scene-backed path just
   because the caller has no `PptxSceneChartAxis`. The scene branch now uses chart-wide scene text style, optional

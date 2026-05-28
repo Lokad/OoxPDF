@@ -28,13 +28,12 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         PptxSceneNode node,
-        GroupTransform transform,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        GroupTransform transform)
     {
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        RenderChartFrame(context, graphics, fonts, bounds, node.Chart, relationships);
+        RenderChartFrame(context, graphics, fonts, bounds, node.Chart);
     }
 
     private static void RenderChartFrame(
@@ -42,20 +41,17 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
-        PptxSceneChart? chart,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        PptxSceneChart? chart)
     {
         RenderChartFrame(
             context,
             graphics,
             fonts,
             bounds,
-            chart?.RelationshipId,
             chart?.TargetPartName,
             chart?.ChartXml,
             chart?.PaletteColors,
-            chart,
-            relationships);
+            chart);
     }
 
     private static void RenderChartFrame(
@@ -63,20 +59,12 @@ internal sealed partial class PptxRenderer
         PdfGraphicsBuilder graphics,
         List<PdfFontResource> fonts,
         ShapeBounds? bounds,
-        string? relationshipId,
         string? targetPartName,
         XDocument? chartXml,
         IReadOnlyList<RgbColor>? chartPalette,
-        PptxSceneChart? sceneChart,
-        IReadOnlyDictionary<string, OoxRelationship> relationships)
+        PptxSceneChart? sceneChart)
     {
         string? chartPartName = targetPartName;
-        if (chartPartName is null &&
-            relationshipId is not null &&
-            relationships.TryGetValue(relationshipId, out OoxRelationship? relationship))
-        {
-            chartPartName = relationship.ResolvedTarget;
-        }
 
         if (bounds is null || chartPartName is null)
         {

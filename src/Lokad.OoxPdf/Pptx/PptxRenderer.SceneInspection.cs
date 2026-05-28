@@ -106,6 +106,8 @@ internal sealed partial class PptxRenderer
             tableCells.Count(cell => cell.StyleText.Color is not null),
             tableCells.Count(cell => cell.StyleText.Bold),
             node.Chart is not null,
+            node.Chart?.RelationshipId ?? string.Empty,
+            node.Chart?.TargetPartName ?? string.Empty,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
             chartSeries.Count,

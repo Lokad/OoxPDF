@@ -72,6 +72,8 @@ internal sealed record PptxSceneNodeSnapshot(
     int TableStyleTextColorCellCount,
     int TableStyleTextBoldCellCount,
     bool HasChart,
+    string ChartRelationshipId,
+    string ChartTargetPartName,
     int ChartPlotCount,
     int ChartAxisCount,
     int ChartSeriesCount,

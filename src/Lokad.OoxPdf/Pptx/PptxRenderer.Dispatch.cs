@@ -13,7 +13,6 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, RenderedFont> fonts,
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
-        IReadOnlyDictionary<string, OoxRelationship> relationships,
         string? sourcePartName,
         ref int imageIndex,
         GroupTransform transform,
@@ -84,7 +83,7 @@ internal sealed partial class PptxRenderer
                     break;
                 case PptxSceneNodeKind.Chart:
                     BeginSlideNodeClip(context, graphics);
-                    RenderChartFrame(context, graphics, chartFonts, node, transform, relationships);
+                    RenderChartFrame(context, graphics, chartFonts, node, transform);
                     EndSlideNodeClip(graphics);
                     break;
                 case PptxSceneNodeKind.UnknownGraphicFrame:
@@ -98,7 +97,6 @@ internal sealed partial class PptxRenderer
                         fonts,
                         images,
                         chartFonts,
-                        relationships,
                         sourcePartName,
                         ref imageIndex,
                         transform.Combine(ToGroupTransform(node.GroupTransform)),
