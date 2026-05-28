@@ -657,16 +657,6 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static bool HasUnsupportedPictureFill(XElement shapeProperties)
-    {
-        if (shapeProperties.Element(DrawingNamespace + "blipFill") is null)
-        {
-            return false;
-        }
-
-        return !CanRenderPictureFillPreset(ReadPreset(shapeProperties));
-    }
-
     private static bool TryReadGlow(XElement shapeProperties, PptxTheme theme, out Glow glow)
     {
         XElement? glowElement = shapeProperties

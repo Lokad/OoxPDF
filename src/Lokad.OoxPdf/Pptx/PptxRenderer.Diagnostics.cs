@@ -88,7 +88,7 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_TEXT_OVERFLOW", "text vertical overflow");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "spPr").Any(HasUnsupportedPictureFill))
+        if (HasUnsupportedPictureFill(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_PICTURE_FILL", "picture fill");
         }
@@ -135,6 +135,28 @@ internal sealed partial class PptxRenderer
             if (node.Picture?.Tile.HasTile == true ||
                 node.Shape?.PictureFill.Tile.HasTile == true ||
                 HasTiledImageFill(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasUnsupportedPictureFill(PptxSceneSlide sceneSlide)
+    {
+        return HasUnsupportedPictureFill(sceneSlide.SlideNodes) ||
+            HasUnsupportedPictureFill(sceneSlide.LayoutNodes) ||
+            HasUnsupportedPictureFill(sceneSlide.MasterNodes);
+    }
+
+    private static bool HasUnsupportedPictureFill(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is { PictureFill.HasPicture: true } shape &&
+                    !CanRenderPictureFillPreset(shape.Preset)) ||
+                HasUnsupportedPictureFill(node.Children))
             {
                 return true;
             }

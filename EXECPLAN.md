@@ -3693,9 +3693,15 @@ High-priority actions:
     `PptxSceneShapePictureFill` now preserve both normalized alpha and the raw `alphaModFix@amt` token, and
     the renderer applies shape picture-fill alpha from scene data instead of losing DrawingML-only alpha on
     `a:blipFill`. Validated with `pptx-images --skip-slow` and `pptx-model --skip-slow` on 2026-05-28.
-  - [ ] Remaining image work should stay structural: keep unsupported tile/picture-fill diagnostics moving
-    toward scene-owned feature records, and broaden image evidence with Office-authored fixtures for tiled
-    fills, SVG limits, recolor/alpha interactions, and cross-slide media cache reuse before retiring this item.
+  - [x] Move unsupported shape picture-fill diagnostics to scene data: `PPTX_UNSUPPORTED_PICTURE_FILL` now
+    detects scene shapes whose `PptxSceneShapePictureFill` is present but whose scene preset cannot be clipped
+    by the native picture-fill renderer, instead of re-scanning slide `spPr` XML. The scene reader also
+    preserves malformed or partial `a:blipFill` presence even when no relationship id is available, so
+    diagnostics do not depend on a valid media relationship. Validated with `pptx-images --skip-slow`,
+    `pptx-shapes --skip-slow`, and full `--skip-slow` on 2026-05-28.
+  - [ ] Remaining image work should stay structural: broaden image evidence with Office-authored fixtures for
+    tiled fills, SVG limits, recolor/alpha interactions, and cross-slide media cache reuse before retiring this
+    item.
 - [ ] Port `pptx-renderer` chart behavior as a first-class native renderer: parse a typed chart model for
   series, axes, legends, labels, styles, and layouts; emit diagnostics only for unsupported chart features.
   - [x] Add the first chart scene record: `PptxSceneChart` now carries the chart relationship id, and ordered

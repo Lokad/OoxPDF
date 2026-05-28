@@ -4201,16 +4201,15 @@ internal sealed class PptxSceneBuilder
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
-        XElement? blip = shapeProperties
-            ?.Element(DrawingNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
+        XElement? blipFill = shapeProperties?.Element(DrawingNamespace + "blipFill");
+        XElement? blip = blipFill?.Element(DrawingNamespace + "blip");
         string? relationshipId = (string?)blip?.Attribute(RelationshipsNamespace + "embed");
         string? targetPartName = ResolveRelationshipTarget(relationshipId, relationships);
-        return relationshipId is null
+        return blipFill is null
             ? default
             : new PptxSceneShapePictureFill(
                 true,
-                relationshipId,
+                relationshipId ?? string.Empty,
                 targetPartName,
                 ReadImageResource(package, targetPartName),
                 ReadPictureCrop(shapeProperties!),
