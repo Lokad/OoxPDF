@@ -665,10 +665,16 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
         IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Count != 0
             ? scenePoints
-                .Select(point => new ChartIndexedNumberPoint(point.Index, point.HasParsedIndex, point.Value, point.Text, point.HasValueElement, default))
+                .Select(point => new ChartIndexedNumberPoint(
+                    point.Index,
+                    point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                    point.Value,
+                    point.Text,
+                    point.HasValueElement,
+                    default))
                 .ToArray()
             : compactValues
-                .Select((value, index) => new ChartIndexedNumberPoint(index, false, value, value.ToString(CultureInfo.InvariantCulture), true, default))
+                .Select((value, index) => new ChartIndexedNumberPoint(index, ChartPointIndexSource.OrdinalFallback, value, value.ToString(CultureInfo.InvariantCulture), true, default))
                 .ToArray();
         return new ChartIndexedNumberVector(points, pointCount ?? InferPointCount(points), source.Formula, formatCode, source, workbookPoints);
     }
@@ -684,13 +690,23 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
         IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Count != 0
             ? scenePoints
-                .Select(point => new ChartIndexedTextPoint(point.Index, point.HasParsedIndex, point.Text, point.HasText, default))
+                .Select(point => new ChartIndexedTextPoint(
+                    point.Index,
+                    point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                    point.Text,
+                    point.HasText,
+                    default))
                 .ToArray()
             : compactValues
-                .Select((value, index) => new ChartIndexedTextPoint(index, false, value, true, default))
+                .Select((value, index) => new ChartIndexedTextPoint(index, ChartPointIndexSource.OrdinalFallback, value, true, default))
                 .ToArray();
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = categoryLevels
-            .Select(level => level.Select(point => new ChartIndexedTextPoint(point.Index, point.HasParsedIndex, point.Text, point.HasText, default)).ToArray())
+            .Select(level => level.Select(point => new ChartIndexedTextPoint(
+                point.Index,
+                point.HasParsedIndex ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                point.Text,
+                point.HasText,
+                default)).ToArray())
             .ToArray();
         return new ChartIndexedTextVector(points, pointCount ?? InferPointCount(points), levels, source.Formula, source, workbookPoints);
     }
@@ -701,7 +717,7 @@ internal sealed partial class PptxRenderer
             .ReadRangeCells(source.Formula)
             .Select(cell => new ChartIndexedNumberPoint(
                 cell.Index,
-                true,
+                ChartPointIndexSource.WorkbookRange,
                 double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ? value : null,
                 cell.Text,
                 cell.HasValue,
@@ -713,7 +729,7 @@ internal sealed partial class PptxRenderer
     {
         return workbook?
             .ReadRangeCells(source.Formula)
-            .Select(cell => new ChartIndexedTextPoint(cell.Index, true, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
+            .Select(cell => new ChartIndexedTextPoint(cell.Index, ChartPointIndexSource.WorkbookRange, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
             .ToArray() ?? [];
     }
 
@@ -1515,7 +1531,13 @@ internal sealed partial class PptxRenderer
                 double? value = double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
                     ? parsed
                     : null;
-                return new ChartIndexedNumberPoint(parsedIndex ?? fallbackIndex, parsedIndex is not null, value, text, hasValue, default);
+                return new ChartIndexedNumberPoint(
+                    parsedIndex ?? fallbackIndex,
+                    parsedIndex is not null ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                    value,
+                    text,
+                    hasValue,
+                    default);
             })
             .ToArray();
         PptxSceneChartDataSource source = ReadChartDataSource(container, "numRef");
@@ -4432,7 +4454,12 @@ internal sealed partial class PptxRenderer
                 XElement? valueElement = point.Element(ChartNamespace + "v");
                 string text = valueElement?.Value.Trim() ?? string.Empty;
                 int? parsedIndex = ReadChartCachePointIndex(point);
-                return new ChartIndexedTextPoint(parsedIndex ?? fallbackIndex, parsedIndex is not null, text, valueElement is not null, default);
+                return new ChartIndexedTextPoint(
+                    parsedIndex ?? fallbackIndex,
+                    parsedIndex is not null ? ChartPointIndexSource.OoxmlIndex : ChartPointIndexSource.OrdinalFallback,
+                    text,
+                    valueElement is not null,
+                    default);
             })
             .ToArray();
     }
@@ -9806,7 +9833,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartIndexedNumberPoint(
         int Index,
-        bool HasParsedIndex,
+        ChartPointIndexSource IndexSource,
         double? Value,
         string Text,
         bool HasValue,
@@ -9878,10 +9905,17 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartIndexedTextPoint(
         int Index,
-        bool HasParsedIndex,
+        ChartPointIndexSource IndexSource,
         string Text,
         bool HasText,
         ChartWorkbookRangeCell WorkbookCell);
+
+    private enum ChartPointIndexSource
+    {
+        OrdinalFallback,
+        OoxmlIndex,
+        WorkbookRange
+    }
 
     private readonly record struct ChartSeriesFill(RgbColor Color, double Alpha, string? PatternPreset = null, RgbColor? BackgroundColor = null);
 

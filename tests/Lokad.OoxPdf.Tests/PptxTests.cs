@@ -13208,11 +13208,12 @@ internal static class PptxTests
         object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
         TestAssert.True(cacheNumberPoints.Length == 2, "Expected raw vector rendering points to stay bound to the chart cache.");
         TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 2, "Expected raw numeric cache point index to survive.");
-        TestAssert.True((bool?)cacheNumberPoints[0].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheNumberPoints[0]) == true, "Expected raw numeric cache point to mark parsed indices.");
+        TestAssert.Equal("OoxmlIndex", cacheNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal(100d, (double?)cacheNumberPoints[0].GetType().GetProperty("Value")?.GetValue(cacheNumberPoints[0]) ?? 0d);
         TestAssert.True((int?)cacheNumberPoints[1].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[1]) == 1, "Expected malformed raw numeric cache point index to keep the ordinal fallback.");
-        TestAssert.True((bool?)cacheNumberPoints[1].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheNumberPoints[1]) == false, "Expected malformed raw numeric cache point to mark fallback indices.");
+        TestAssert.Equal("OrdinalFallback", cacheNumberPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheNumberPoints[1])?.ToString() ?? string.Empty);
         TestAssert.True(workbookNumberPoints.Length == 3, "Expected raw numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
+        TestAssert.Equal("WorkbookRange", workbookNumberPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookNumberPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal("1.4", (string?)workbookNumberPoints[2].GetType().GetProperty("Text")?.GetValue(workbookNumberPoints[2]) ?? string.Empty);
 
         XElement chart = XElement.Parse("""
@@ -13236,10 +13237,11 @@ internal static class PptxTests
         object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
         TestAssert.True(cacheTextPoints.Length == 2, "Expected raw category rendering points to stay bound to the chart cache.");
         TestAssert.Equal("Cached", (string?)cacheTextPoints[0].GetType().GetProperty("Text")?.GetValue(cacheTextPoints[0]) ?? string.Empty);
-        TestAssert.True((bool?)cacheTextPoints[0].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheTextPoints[0]) == true, "Expected raw text cache point to mark parsed indices.");
+        TestAssert.Equal("OoxmlIndex", cacheTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[0])?.ToString() ?? string.Empty);
         TestAssert.True((int?)cacheTextPoints[1].GetType().GetProperty("Index")?.GetValue(cacheTextPoints[1]) == 1, "Expected malformed raw text cache point index to keep the ordinal fallback.");
-        TestAssert.True((bool?)cacheTextPoints[1].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheTextPoints[1]) == false, "Expected malformed raw text cache point to mark fallback indices.");
+        TestAssert.Equal("OrdinalFallback", cacheTextPoints[1].GetType().GetProperty("IndexSource")?.GetValue(cacheTextPoints[1])?.ToString() ?? string.Empty);
         TestAssert.True(workbookTextPoints.Length == 3, "Expected raw category vector to keep workbook sidecar text points.");
+        TestAssert.Equal("WorkbookRange", workbookTextPoints[0].GetType().GetProperty("IndexSource")?.GetValue(workbookTextPoints[0])?.ToString() ?? string.Empty);
         TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
 

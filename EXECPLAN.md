@@ -12055,6 +12055,19 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `97` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `338` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Refined render-vector point-index provenance from a boolean into a source-kind
+enum. `ChartIndexedNumberPoint` and `ChartIndexedTextPoint` now distinguish `OoxmlIndex`,
+`OrdinalFallback`, and `WorkbookRange`, so workbook sidecar points are not mislabeled as parsed OOXML
+indices. The raw-vector regression asserts all three states in one chart fixture.
+
+This keeps the previous behavior but removes a misleading abstraction before it spreads: Office-aligned
+point-key policy will need to treat cache `idx` tokens, fallback cache order, and workbook range order as
+different evidence, not just "parsed" versus "not parsed."
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `97` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `338` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Threaded chart point-index provenance through the renderer's private indexed
 vectors. `ChartIndexedNumberPoint` and `ChartIndexedTextPoint` now retain `HasParsedIndex` for scene-backed
 points, XML-only cache reads, compact fallback vectors, and workbook sidecar points. Raw-vector tests now
