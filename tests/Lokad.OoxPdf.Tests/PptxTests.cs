@@ -102,6 +102,66 @@ internal static class PptxTests
         TestAssert.True(resolver.ResolveCalls > 0, "PPTX conversion should use the supplied font resolver for text layout and embedding.");
     }
 
+    public static void PptxChartTextConversionUsesCustomFontResolver()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld>
+                    <p:spTree>
+                      <p:graphicFrame>
+                        <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:nvPr/></p:nvGraphicFramePr>
+                        <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="3657600"/></p:xfrm>
+                        <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="rIdChart"/></a:graphicData></a:graphic>
+                      </p:graphicFrame>
+                    </p:spTree>
+                  </p:cSld>
+                </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <c:chart>
+                    <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Chart resolver probe</a:t></a:r></a:p></c:rich></c:tx></c:title>
+                    <c:plotArea>
+                      <c:barChart>
+                        <c:barDir val="col"/>
+                        <c:grouping val="clustered"/>
+                        <c:ser>
+                          <c:idx val="0"/><c:order val="0"/>
+                          <c:tx><c:strLit><c:pt idx="0"><c:v>Series</c:v></c:pt></c:strLit></c:tx>
+                          <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                          <c:val><c:numLit><c:pt idx="0"><c:v>4</c:v></c:pt></c:numLit></c:val>
+                        </c:ser>
+                        <c:axId val="10"/><c:axId val="20"/>
+                      </c:barChart>
+                      <c:catAx><c:axId val="10"/><c:axPos val="b"/><c:crossAx val="20"/><c:tickLblPos val="none"/></c:catAx>
+                      <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:scaling><c:min val="0"/><c:max val="5"/></c:scaling><c:crossAx val="10"/><c:majorUnit val="5"/><c:tickLblPos val="none"/></c:valAx>
+                    </c:plotArea>
+                  </c:chart>
+                </c:chartSpace>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var resolver = new CountingFontResolver();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { FontResolver = resolver });
+
+        TestAssert.True(resolver.ResolveCalls > 0, "PPTX chart text conversion should use the supplied font resolver.");
+    }
+
     public static void PptxSceneBuilderBuildsResolvedNodeLists()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

@@ -119,14 +119,18 @@ internal sealed partial class PptxRenderer
         return glyphRuns;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderTextRuns(IReadOnlyList<TextRun> textRuns, PdfGraphicsBuilder graphics, string resourcePrefix = "F")
+    private static IReadOnlyList<PdfFontResource> RenderTextRuns(
+        IReadOnlyList<TextRun> textRuns,
+        PdfGraphicsBuilder graphics,
+        string resourcePrefix = "F",
+        PresentationFontResolver? fontResolver = null)
     {
         if (textRuns.Count == 0)
         {
             return [];
         }
 
-        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, new PresentationFontResolver(), resourcePrefix);
+        RenderedFonts renderedFonts = CreateRenderedFonts(textRuns, fontResolver ?? new PresentationFontResolver(), resourcePrefix);
         DrawTextRunsWithFonts(textRuns, graphics, renderedFonts.Fonts);
         return renderedFonts.Resources;
     }

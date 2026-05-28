@@ -14991,6 +14991,22 @@ passed with `5` tests, `0` failures, and `0` skips; focused non-slow `pptx-typog
 tests, `0` failures, and `2` slow skips; focused non-slow `docx-text` passed with `6` tests, `0` failures,
 and `0` skips; full non-slow console runner passed with `405` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: the chart-text resolver gap from the previous slice is now closed for native
+chart text emission. `PptxRenderContext.FontResolver` is passed into the native chart renderer, and chart
+titles, manual/default axis titles, legends, category/value/radar labels, and data labels all emit their PDF
+fonts through the same `PresentationFontResolver` boundary as shape and table text. A chart-only public PPTX
+regression now asserts that a supplied `OoxPdfOptions.FontResolver` is called by chart text conversion.
+
+This still does not make chart text a full consumer of the common text-frame layout model. It only removes the
+hidden default Windows resolver from chart text PDF emission. The remaining long-term work is still the common
+chart text-frame cascade/layout path, Office-backed font fallback policy, and diagnostics for unsupported
+script/symbol font selection.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `133` tests, `0` failures, and `0` skips; focused non-slow `pptx-typography`
+passed with `99` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `406`
+tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
