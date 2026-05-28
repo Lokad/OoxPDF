@@ -10,6 +10,7 @@ internal sealed partial class PptxRenderer
 {
     private sealed record TableFrameLayout(
         IReadOnlyList<PptxPositionedTextSpan> TextSpans,
+        IReadOnlyList<PptxTableCellTextFrame> TextFrames,
         IReadOnlyList<TableCellFill> CellFills,
         TableDefaultGrid? DefaultGrid,
         IReadOnlyList<TableBorderLine> ExplicitBorders);
@@ -38,6 +39,16 @@ internal sealed partial class PptxRenderer
         return textSpans;
     }
 
+    private static IReadOnlyList<PptxTableCellTextFrame> ReadSceneTableTextFrames(PptxRenderContext context)
+    {
+        var textFrames = new List<PptxTableCellTextFrame>();
+        AddSceneTableTextFrames(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity);
+        AddSceneTableTextFrames(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity);
+        AddSceneTableTextFrames(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity);
+
+        return textFrames;
+    }
+
     private static void AddSceneTableTextSpans(
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
@@ -55,6 +66,31 @@ internal sealed partial class PptxRenderer
             if (node.Kind == PptxSceneNodeKind.Group)
             {
                 AddSceneTableTextSpans(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)));
+            }
+        }
+    }
+
+    private static void AddSceneTableTextFrames(
+        IReadOnlyList<PptxSceneNode> nodes,
+        PptxRenderContext context,
+        List<PptxTableCellTextFrame> textFrames,
+        GroupTransform transform)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.Kind == PptxSceneNodeKind.Table)
+            {
+                ShapeBounds? bounds = node.Bounds is { } rawBounds
+                    ? transform.Apply(ToShapeBounds(rawBounds))
+                    : null;
+                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false)?.TextFrames ?? [];
+                textFrames.AddRange(tableTextFrames);
+                continue;
+            }
+
+            if (node.Kind == PptxSceneNodeKind.Group)
+            {
+                AddSceneTableTextFrames(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)));
             }
         }
     }
@@ -85,6 +121,7 @@ internal sealed partial class PptxRenderer
     private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
+        var textFrames = new List<PptxTableCellTextFrame>();
         var cellFills = new List<TableCellFill>();
         if (bounds is null || sceneTable is null)
         {
@@ -199,7 +236,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
-                AddTableCellTextSpans(context, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, sceneCell.StyleText);
+                AddTableCellTextSpans(context, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, sceneCell.StyleText);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -221,10 +258,10 @@ internal sealed partial class PptxRenderer
                 rows.Count,
                 skippedVerticalGridSegments,
                 skippedHorizontalGridSegments);
-            return new TableFrameLayout(textSpans, cellFills, defaultGrid, []);
+            return new TableFrameLayout(textSpans, textFrames, cellFills, defaultGrid, []);
         }
 
-        return new TableFrameLayout(textSpans, cellFills, DefaultGrid: null, explicitBorders);
+        return new TableFrameLayout(textSpans, textFrames, cellFills, DefaultGrid: null, explicitBorders);
     }
 
     private static void RenderTableFrameLayout(PdfGraphicsBuilder graphics, TableFrameLayout layout)
@@ -429,16 +466,37 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static void AddTableCellTextSpans(PptxRenderContext context, PptxSceneTableCell sceneCell, double x, double y, double width, double height, List<PptxPositionedTextSpan> spans, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    private static void AddTableCellTextSpans(
+        PptxRenderContext context,
+        PptxSceneTableCell sceneCell,
+        double x,
+        double y,
+        double width,
+        double height,
+        List<PptxPositionedTextSpan> spans,
+        List<PptxTableCellTextFrame> textFrames,
+        PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
-        XElement? textBody = sceneCell.LayoutTextBody;
-        if (textBody is null)
+        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, x, y, width, height, tableStyleTextStyle);
+        if (tableTextFrame is null)
         {
             return;
         }
 
+        textFrames.Add(tableTextFrame);
+        spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
+    }
+
+    private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, double x, double y, double width, double height, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    {
+        XElement? textBody = sceneCell.LayoutTextBody;
+        if (textBody is null)
+        {
+            return null;
+        }
+
         TextInsets insets = ToTextInsets(sceneCell.TextInsets);
-        var tableTextFrame = new PptxTableCellTextFrame(
+        return new PptxTableCellTextFrame(
             textBody,
             x,
             y,
@@ -455,7 +513,6 @@ internal sealed partial class PptxRenderer
             ReadTableCellVerticalAnchorValue(sceneCell),
             ToTextBodyPropertySource(sceneCell.VerticalAnchorSource),
             tableStyleTextStyle);
-        spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
 
     private static TextInsets ToTextInsets(PptxSceneTextInsets insets)
@@ -512,7 +569,7 @@ internal sealed partial class PptxRenderer
         return source switch
         {
             PptxSceneTableCellVerticalAnchorSource.CellProperties => PptxTextBodyPropertySource.TableCellProperties,
-            _ => PptxTextBodyPropertySource.TableCellStyle
+            _ => PptxTextBodyPropertySource.DefaultValue
         };
     }
 

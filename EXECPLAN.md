@@ -461,8 +461,9 @@ High-priority actions:
   semantic hydration in the renderer; `PptxRenderer.TextModel` and
   `PptxRenderer.TextLayout` still build much of the cascade from raw `XElement` sources; `PptxRenderer.Shapes`
   still passes source XML for legacy geometry/style fallback, but not for picture-fill package resolution;
-  `PptxRenderer.Tables` still synthesizes shape XML for table-cell text; image decoding/SVG parsing/PDF image
-  cache keys still live in rendering. Each future slice should move one of those fields into `PptxScene*` records,
+  `PptxRenderer.Tables` has since moved table-cell text onto typed table text-frame adapters, but those
+  adapters still consume raw paragraph/run XML as source evidence; image decoding/SVG parsing/PDF image cache
+  keys still live in rendering. Each future slice should move one of those fields into `PptxScene*` records,
   add a public snapshot or structural test that proves the ownership, then remove the renderer fallback.
 - [x] 2026-05-27: Replace the PPTX table-cell synthetic-shape text bridge with a typed scene text-frame adapter:
   `PptxRenderer.Tables` now builds a `PptxTableCellTextFrame` carrying the cell text body, bounds, insets, and
@@ -501,6 +502,19 @@ High-priority actions:
   rather than a new placement heuristic. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
   minimal` passed; focused non-slow `pptx-tables` passed (`9 passed, 0 failed, 0 skipped`); focused non-slow
   `pptx-model` passed (`17 passed, 0 failed, 1 skipped`); full console runner passed (`396 passed, 0 failed,
+  0 skipped`).
+- [x] 2026-05-28: Make PPTX table-cell text-frame body-property provenance inspectable at the shared text-model
+  boundary: `PptxRenderer.InspectTableTextFrameModels` now exposes table-cell text frames through the same
+  `PptxTextFrameModelSnapshot` schema used by shape text, while leaving `InspectTextFrameModels` shape-only so
+  existing model-count tests keep their meaning. `PptxRenderer.Tables` now builds a reusable
+  `PptxTableCellTextFrame` per cell and keeps those frames beside positioned text spans in `TableFrameLayout`.
+  The default table-cell vertical-anchor source now maps to `DefaultValue`, not `TableCellStyle`, because the
+  scene model only observed absent `a:tcPr @anchor`, not a table-style-owned anchor. The new
+  `PptxSyntheticTableTextFrameModelPreservesCellPropertySources` case locks explicit cell margins as
+  `TableCellProperties`, cell bodyPr margins as `DirectBodyPr`, explicit anchors as `TableCellProperties`,
+  and absent anchors as `DefaultValue`. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed; focused non-slow `pptx-tables` passed (`10 passed, 0 failed, 0 skipped`); the focused
+  single-test invocation also completed with the current runner's broad selection (`408 passed, 0 failed,
   0 skipped`).
 - [x] 2026-05-27: Carry line-chart marker styles into stroke legend keys:
   line and combo-line legends now keep the already-parsed per-series `ChartMarkerStyle` in `ChartLegendEntry`
@@ -6938,6 +6952,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   Restoring the existing typographic font-box path for table-cell anchors kept `pptx-tables` green while the
   new shape-text font-box regression remained green. This is an explicit surface distinction until public
   Office table probes justify a common rule.
+- Observation: Table-cell text-frame model provenance was weaker than the scene provenance after the inset
+  and anchor ownership slices.
+  Evidence: `PptxSceneTableCell` distinguished explicit `a:tcPr @anchor` from absent anchors and preserved
+  inset sources, but `PptxTextFrameModelSnapshot` had no table-cell inspection path and the table adapter
+  still mapped an absent anchor to `TableCellStyle`. The new table text-frame inspection test exposes that
+  boundary and locks absent anchors as `DefaultValue`.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7199,6 +7219,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   table cells. Existing table-cell tests encode separate evidence and failed when the new rule was applied
   globally, so the shared estimator now makes the surface distinction explicit instead of silently changing
   table-cell behavior.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Add a table-specific text-frame inspection entry point instead of broadening
+  `InspectTextFrameModels` to include table cells.
+  Rationale: Existing text-frame model tests use shape-only counts and placeholder behavior. A separate
+  `InspectTableTextFrameModels` method makes the table adapter boundary testable without changing the meaning
+  of shape text snapshots, and it gives future table-text migration a stable place to prove source ownership.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14641,6 +14667,23 @@ cell.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused `Table`
 invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
 console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: PPTX table-cell text-frame body-property provenance is now visible in the shared
+text model. `PptxRenderer.Tables` builds one reusable `PptxTableCellTextFrame` per layout cell and keeps those
+frames beside the positioned text spans already used for rendering. `PptxRenderer.InspectTableTextFrameModels`
+returns table-cell `PptxTextFrameModelSnapshot` records without changing the shape-only
+`InspectTextFrameModels` contract. The table vertical-anchor adapter now maps absent `a:tcPr @anchor` to
+`DefaultValue` instead of `TableCellStyle`, matching the scene-owned source evidence.
+
+This slice extends the plan despite the general trimming goal because it uncovered a real observability gap:
+the scene and adapter carried useful table-cell source data, but no public test could inspect the final
+text-frame model for table cells. The remaining long-term table gap is unchanged and now easier to attack:
+paragraph/run XML, first-line decisions, and table-style/default text cascades should move into typed
+cell text model records so table text no longer depends on renderer-local raw XML interpretation.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-tables` passed with `10` tests, `0` failures, and `0` skips; the focused single-test invocation also
+completed successfully with the runner's current broad selection, `408` tests, `0` failures, and `0` skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;

@@ -23,6 +23,20 @@ internal sealed partial class PptxRenderer
             .ToArray();
     }
 
+    internal static IReadOnlyList<PptxTextFrameModelSnapshot> InspectTableTextFrameModels(PptxDocument document, OoxPackage package, int slideIndex)
+    {
+        PptxRenderContext? context = TryLoadRenderContext(document, package, slideIndex, new Dictionary<string, PdfImageXObject?>(StringComparer.OrdinalIgnoreCase), diagnosticSink: null);
+        if (context is null)
+        {
+            return [];
+        }
+
+        return ReadSceneTableTextFrames(context)
+            .Select(tableFrame => BuildTextFrameModel(tableFrame, document, context.Theme, context.SlideNumber, context.InheritedXml))
+            .Select(ToSnapshot)
+            .ToArray();
+    }
+
     private static PptxTextFrameModelSnapshot ToSnapshot(PptxTextFrameModel frame)
     {
         return new PptxTextFrameModelSnapshot(
