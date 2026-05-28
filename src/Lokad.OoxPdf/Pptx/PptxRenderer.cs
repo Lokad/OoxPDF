@@ -42,7 +42,7 @@ internal sealed partial class PptxRenderer
 
             EmitUnsupportedFeatureDiagnostics(sceneSlide, slideXml, slide.PartName, slideIndex + 1, diagnosticSink);
             var graphics = new PdfGraphicsBuilder();
-            PptxRenderContext context = CreateRenderContext(package, document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
+            PptxRenderContext context = CreateRenderContext(document, theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
 
             RenderBackground(context, context.SceneSlide.MasterBackground, graphics, defaultWhenMissing: false);
             RenderBackground(context, context.SceneSlide.LayoutBackground, graphics, defaultWhenMissing: false);
@@ -84,11 +84,10 @@ internal sealed partial class PptxRenderer
             return null;
         }
 
-        return CreateRenderContext(package, document, scene.Theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
+        return CreateRenderContext(document, scene.Theme, slide, slideXml, sceneSlide, imageCache, diagnosticSink);
     }
 
     private static PptxRenderContext CreateRenderContext(
-        OoxPackage package,
         PptxDocument document,
         PptxTheme theme,
         PptxSlide slide,
@@ -97,8 +96,7 @@ internal sealed partial class PptxRenderer
         Dictionary<string, PdfImageXObject?> imageCache,
         Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        IReadOnlyDictionary<string, OoxRelationship> slideRelationships = sceneSlide.SlideRelationships;
-        return new PptxRenderContext(package, document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), slideRelationships, imageCache, diagnosticSink);
+        return new PptxRenderContext(document, theme, slide, slideXml, sceneSlide, BuildInheritedXmlSources(sceneSlide), imageCache, diagnosticSink);
     }
 
     private static IReadOnlyList<XDocument> BuildInheritedXmlSources(PptxSceneSlide sceneSlide)

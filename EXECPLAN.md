@@ -377,6 +377,15 @@ High-priority actions:
   semantics belong to typed chart records and Office-PDF-backed layout rules. Validation:
   `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
   (`119 passed, 0 failed, 0 skipped`); full console runner passed (`380 passed, 0 failed, 0 skipped`).
+- [x] 2026-05-28: Remove unused package and relationship handles from `PptxRenderContext`:
+  after chart-frame target resolution moved fully into `PptxSceneChart`, the render context still carried the
+  presentation package and slide relationship map even though no renderer consumed them. Those fields are now
+  gone, so normal rendering cannot accidentally reintroduce package traversal or slide-relationship repair
+  through the context boundary. The remaining `PptxSceneSlide.SlideRelationships` state stays in the scene for
+  inspection and model evidence, while draw-time resource access must pass through typed scene records.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+  `pptx-model` passed (`13 passed, 0 failed, 1 skipped`); focused non-slow `pptx-charts` passed
+  (`119 passed, 0 failed, 0 skipped`).
 - [x] 2026-05-28: Make chart axis text-style absence scene-authoritative when the scene axis is missing:
   `ReadSceneOrXmlChartTextStyle` no longer merges raw XML `c:txPr` text properties in a scene-backed path just
   because the caller has no `PptxSceneChartAxis`. The scene branch now uses chart-wide scene text style, optional
