@@ -981,8 +981,11 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneChartAxisTickMark MinorTickMarkKind,
     string MinorTickMark,
     int? LabelOffset,
+    string LabelOffsetValue,
     int? TickLabelSkip,
+    string TickLabelSkipValue,
     int? TickMarkSkip,
+    string TickMarkSkipValue,
     bool? NoMultiLevelLabels,
     string? NumberFormat,
     PptxSceneChartNumberFormat NumberFormatInfo,
@@ -2250,10 +2253,16 @@ internal sealed class PptxSceneBuilder
 
     private static int? ReadChartElementInt(XElement element, string childName)
     {
-        string? value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val");
+        (int? parsed, _) = ReadChartElementIntWithValue(element, childName);
+        return parsed;
+    }
+
+    private static (int? Value, string RawValue) ReadChartElementIntWithValue(XElement element, string childName)
+    {
+        string value = (string?)element.Element(ChartNamespace + childName)?.Attribute("val") ?? string.Empty;
         return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static bool? ReadChartPlotVaryColors(XElement plot)
@@ -2706,6 +2715,9 @@ internal sealed class PptxSceneBuilder
             (double? maximum, string maximumValue) = ReadChartAxisScalingValueWithValue(axis, "max");
             (double? majorUnit, string majorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "majorUnit");
             (double? minorUnit, string minorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "minorUnit");
+            (int? labelOffset, string labelOffsetValue) = ReadChartElementIntWithValue(axis, "lblOffset");
+            (int? tickLabelSkip, string tickLabelSkipValue) = ReadChartElementIntWithValue(axis, "tickLblSkip");
+            (int? tickMarkSkip, string tickMarkSkipValue) = ReadChartElementIntWithValue(axis, "tickMarkSkip");
             axes.Add(new PptxSceneChartAxis(
                 id,
                 ParseChartAxisKind(axis.Name.LocalName),
@@ -2746,9 +2758,12 @@ internal sealed class PptxSceneBuilder
                 majorTickMark,
                 ParseChartAxisTickMark(minorTickMark),
                 minorTickMark,
-                ReadChartElementInt(axis, "lblOffset"),
-                ReadChartElementInt(axis, "tickLblSkip"),
-                ReadChartElementInt(axis, "tickMarkSkip"),
+                labelOffset,
+                labelOffsetValue,
+                tickLabelSkip,
+                tickLabelSkipValue,
+                tickMarkSkip,
+                tickMarkSkipValue,
                 ReadOptionalOoxmlBooleanElement(axis, "noMultiLvlLbl"),
                 ReadChartAxisNumberFormat(axis),
                 ReadChartNumberFormat(axis),

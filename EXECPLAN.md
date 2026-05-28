@@ -12041,6 +12041,22 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML tokens for chart axis integer options. `PptxSceneChartAxis`
+now carries `LabelOffsetValue`, `TickLabelSkipValue`, and `TickMarkSkipValue` beside the existing parsed
+nullable integers, and the scene parser uses the shared raw-token integer reader for `c:lblOffset`,
+`c:tickLblSkip`, and `c:tickMarkSkip`. The existing axis numeric-token test now covers malformed/future
+axis integer values as well as the previously covered floating-point `crossesAt`, scaling, and unit values.
+
+This is deliberately behavior-neutral for rendering: category-axis layout still consumes the parsed integer
+when available and falls back to the existing Office-observed clamps/defaults. The long-term value is that
+axis layout policy no longer has to lose source evidence before it reaches the scene model. Remaining axis
+model gaps include raw-token preservation for series/index-style integer IDs where malformed OOXML should be
+diagnosable, and replacing category-axis label-offset/tick-skip reserve heuristics with Office-PDF structural
+evidence rather than constants.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current
