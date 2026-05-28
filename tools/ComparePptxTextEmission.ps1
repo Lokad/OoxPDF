@@ -17,7 +17,9 @@ param(
 
     [switch] $NoFail,
 
-    [string] $OutputJson
+    [string] $OutputJson,
+
+    [string] $OutputSummaryJson
 )
 
 $ErrorActionPreference = "Stop"
@@ -93,6 +95,97 @@ function OptionalGridRemainder($object, [string] $propertyName) {
     }
 
     return OfficeGridRemainder ([double]$value)
+}
+
+function Group-Count($items, [scriptblock] $keySelector) {
+    $groups = @{}
+    foreach ($item in $items) {
+        $key = & $keySelector $item
+        if ($null -eq $key -or [string]$key -eq "") {
+            $key = "(missing)"
+        }
+
+        $key = [string]$key
+        if ($groups.ContainsKey($key)) {
+            $groups[$key]++
+        }
+        else {
+            $groups[$key] = 1
+        }
+    }
+
+    return @(
+        foreach ($key in ($groups.Keys | Sort-Object)) {
+            [pscustomobject]@{
+                Key = $key
+                Count = $groups[$key]
+            }
+        }
+    )
+}
+
+function RoundedKey($value) {
+    if ($null -eq $value -or [string]$value -eq "") {
+        return "(missing)"
+    }
+
+    return ([Math]::Round([double]$value, 6)).ToString("0.######", [Globalization.CultureInfo]::InvariantCulture)
+}
+
+function BranchKey($row) {
+    $delta = $row.RefSecondaryFontDelta
+    if ($null -eq $delta -or [string]$delta -eq "") {
+        return "(missing)"
+    }
+
+    if ([Math]::Abs([double]$delta) -le 0.000001d) {
+        return "main-grid"
+    }
+
+    return "secondary-" + (RoundedKey $delta)
+}
+
+function OptionalDouble($row, [string] $propertyName) {
+    $value = OptionalValue $row $propertyName
+    if ($null -eq $value -or [string]$value -eq "") {
+        return $null
+    }
+
+    return [double]$value
+}
+
+function Group-BranchExtents($items) {
+    $groups = @{}
+    foreach ($item in $items) {
+        $key = BranchKey $item
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = New-Object System.Collections.Generic.List[object]
+        }
+
+        $groups[$key].Add($item)
+    }
+
+    return @(
+        foreach ($key in ($groups.Keys | Sort-Object)) {
+            $groupItems = @($groups[$key].ToArray())
+            $refBaseline = @($groupItems | ForEach-Object { OptionalDouble $_ "RefBaselineY" } | Where-Object { $null -ne $_ })
+            $candBaseline = @($groupItems | ForEach-Object { OptionalDouble $_ "CandBaselineY" } | Where-Object { $null -ne $_ })
+            $frameTop = @($groupItems | ForEach-Object { OptionalDouble $_ "CandFrameShapeTopY" } | Where-Object { $null -ne $_ })
+            $lineTop = @($groupItems | ForEach-Object { OptionalDouble $_ "CandLineTopY" } | Where-Object { $null -ne $_ })
+            [pscustomobject]@{
+                Key = $key
+                Count = $groupItems.Count
+                MinRefBaselineY = if ($refBaseline.Count -eq 0) { $null } else { [Math]::Round(($refBaseline | Measure-Object -Minimum).Minimum, 6) }
+                MaxRefBaselineY = if ($refBaseline.Count -eq 0) { $null } else { [Math]::Round(($refBaseline | Measure-Object -Maximum).Maximum, 6) }
+                MinCandidateBaselineY = if ($candBaseline.Count -eq 0) { $null } else { [Math]::Round(($candBaseline | Measure-Object -Minimum).Minimum, 6) }
+                MaxCandidateBaselineY = if ($candBaseline.Count -eq 0) { $null } else { [Math]::Round(($candBaseline | Measure-Object -Maximum).Maximum, 6) }
+                MinCandidateFrameTopY = if ($frameTop.Count -eq 0) { $null } else { [Math]::Round(($frameTop | Measure-Object -Minimum).Minimum, 6) }
+                MaxCandidateFrameTopY = if ($frameTop.Count -eq 0) { $null } else { [Math]::Round(($frameTop | Measure-Object -Maximum).Maximum, 6) }
+                MinCandidateLineTopY = if ($lineTop.Count -eq 0) { $null } else { [Math]::Round(($lineTop | Measure-Object -Minimum).Minimum, 6) }
+                MaxCandidateLineTopY = if ($lineTop.Count -eq 0) { $null } else { [Math]::Round(($lineTop | Measure-Object -Maximum).Maximum, 6) }
+            }
+        }
+    )
 }
 
 function RefX($op) {
@@ -320,11 +413,33 @@ foreach ($pair in $pairs) {
     })
 }
 
+$rowsArray = $rows.ToArray()
+
 if (HasValue $OutputJson) {
-    $rows | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputJson -Encoding UTF8
+    $rowsArray | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputJson -Encoding UTF8
 }
 
-$rows | Format-Table -AutoSize
+if (HasValue $OutputSummaryJson) {
+    $summary = [pscustomobject]@{
+        Total = $rowsArray.Count
+        StatusCounts = Group-Count $rowsArray { param($row) $row.Status }
+        FontBranchCounts = Group-Count $rowsArray { param($row) BranchKey $row }
+        FontBranchExtents = Group-BranchExtents $rowsArray
+        RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
+        ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
+        ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateFrameTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeTopY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateLineTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateLineIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineIndex) + "|" + (BranchKey $row) }
+        ByCandidateLineSpanCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineSpanCount) + "|" + (BranchKey $row) }
+        ByCandidateFrameHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeHeight) + "|" + (BranchKey $row) }
+        ByCandidateTextHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextHeight) + "|" + (BranchKey $row) }
+    }
+
+    $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputSummaryJson -Encoding UTF8
+}
+
+$rowsArray | Format-Table -AutoSize
 Write-Host "Text emission count: reference=$($referenceOps.Count), candidate=$($candidateRuns.Count), deltas=$failures"
 if ($MatchByPosition) {
     Write-Host "Matching: nearest text position"

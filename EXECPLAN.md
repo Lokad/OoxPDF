@@ -1086,8 +1086,19 @@ High-priority actions:
     compare indices `5..11`; all seven secondary rows have Office baseline-grid remainder `0.833333`, but five exact
     rows share that same remainder while sixteen exact rows sit at `0.583333`. The branch also aligns with source
     shape tops `135..153 pt`, while candidate line-top and shape-top values are themselves exactly on the 600-DPI
-    grid. This is a useful discriminator but still not a sufficient rule, so rendering remains unchanged and the next
-    step must include more frame/paragraph context than absolute baseline remainder alone.
+  grid. This is a useful discriminator but still not a sufficient rule, so rendering remains unchanged and the next
+  step must include more frame/paragraph context than absolute baseline remainder alone.
+  - [x] 2026-05-28: Add a public-safe branch summary mode to `tools/ComparePptxTextEmission.ps1`.
+    The comparer can now write `-OutputSummaryJson` with status counts, Office font-branch counts, branch extents,
+    and grouped correlations for layout font size, baseline/grid remainders, candidate frame top, candidate line top,
+    line index, line span count, frame height, and text height. Re-running the existing
+    `font-size-quantization-y-scan-21pt-fine` probe keeps the renderer unchanged and summarizes the evidence directly:
+    `21` exact rows remain at `21` counts, while the `secondary-0.024` branch has `7` rows with reference baseline
+    range `362.98..380.98`, candidate frame-top range `135..153`, and candidate line-top range `383.4..401.4`.
+    The summary also makes negative evidence explicit: line index, span count, frame height, text height, and
+    candidate frame/line grid remainders do not distinguish the branch in this probe. This strengthens the next
+    implementation constraint: a future `/Tf` rule must explain a page/text-matrix placement band from public evidence
+    rather than adding a per-size or per-Y lookup.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
