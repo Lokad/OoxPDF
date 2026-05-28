@@ -15439,3 +15439,16 @@ focused on structural state rather than ad hoc raw XML checks. Validation: `dotn
 --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-model` passed with
 `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `138` tests, `0` failures,
 and `0` skips.
+
+Follow-up, 2026-05-28: chart style entry namespace provenance is now visible through private-safe scene
+inspection. `PptxSceneChartStyleEntry` already kept the root-child namespace URI, but
+`PptxSceneNodeSnapshot` only exposed role names and source indexes; inspection now reports the namespace-URI
+sequence beside them, and the scene preservation regression verifies the Office chart-style namespace for each
+preserved role.
+
+This is another structural observability slice, not a chart-style rendering change. It avoids collapsing
+namespace-distinct style roles during private investigation and keeps later Office-backed precedence work from
+having to reopen raw `styleN.xml` just to distinguish local-name matches. Validation: `dotnet build
+Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow
+`pptx-model` passed with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with
+`138` tests, `0` failures, and `0` skips.

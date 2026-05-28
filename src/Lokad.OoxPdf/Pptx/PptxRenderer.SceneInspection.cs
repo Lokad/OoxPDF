@@ -81,6 +81,9 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<int> chartStyleEntrySourceIndexes = chartStyleEntries
             .Select(entry => entry.SourceIndex)
             .ToArray();
+        IReadOnlyList<string> chartStyleEntryNamespaceUris = chartStyleEntries
+            .Select(entry => entry.NamespaceUri)
+            .ToArray();
         IReadOnlyList<string> rejectedPointStyleIndexValues = ReadRejectedPointStyleIndexValues(node.Chart);
         IReadOnlyList<string> rejectedDataLabelOverrideIndexValues = ReadRejectedDataLabelOverrideIndexValues(node.Chart);
         return new PptxSceneNodeSnapshot(
@@ -196,6 +199,7 @@ internal sealed partial class PptxRenderer
             chartStyleEntryRoles.Count,
             chartStyleEntryRoles,
             chartStyleEntrySourceIndexes,
+            chartStyleEntryNamespaceUris,
             chartStyleEntries.Count(entry => HasChartShapeStyle(entry.ShapeStyle)),
             chartStyleEntries.Count(entry => entry.ShapeStyle?.Fill.HasFill == true ||
                 entry.ShapeStyle?.PatternFill.HasPattern == true ||

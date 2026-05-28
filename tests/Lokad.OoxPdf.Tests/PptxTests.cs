@@ -649,6 +649,9 @@ internal static class PptxTests
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[0]);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[1]);
         TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartStyleEntrySourceIndexes[2]);
+        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[0]);
+        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[1]);
+        TestAssert.Equal("http://schemas.microsoft.com/office/drawing/2012/chartStyle", slideSnapshot.SlideNodes[4].ChartStyleEntryNamespaceUris[2]);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartStyleShapeStyleCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleShapeFillCount);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
@@ -7342,6 +7345,7 @@ internal static class PptxTests
                 node.ChartStyleEntryCount,
                 node.ChartStyleEntryRoles,
                 node.ChartStyleEntrySourceIndexes,
+                node.ChartStyleEntryNamespaceUris,
                 node.ChartStyleShapeStyleCount,
                 node.ChartStyleShapeFillCount,
                 node.ChartStyleFillReferenceCount,

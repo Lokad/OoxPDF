@@ -139,6 +139,7 @@ internal sealed record PptxSceneNodeSnapshot(
     int ChartStyleEntryCount,
     IReadOnlyList<string> ChartStyleEntryRoles,
     IReadOnlyList<int> ChartStyleEntrySourceIndexes,
+    IReadOnlyList<string> ChartStyleEntryNamespaceUris,
     int ChartStyleShapeStyleCount,
     int ChartStyleShapeFillCount,
     int ChartStyleFillReferenceCount,
