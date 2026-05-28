@@ -13992,6 +13992,54 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartLegendPosition.Right, (PptxSceneChartLegendPosition)positionKind);
     }
 
+    public static void PptxChartRightLegendReserveUsesLegendTextStyle()
+    {
+        const string chartXmlTemplate = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:ser>
+                      <c:tx><c:v>Long Legend Series Name</c:v></c:tx>
+                      <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat>
+                      <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val>
+                    </c:ser>
+                  </c:lineChart>
+                </c:plotArea>
+                <c:legend>
+                  <c:legendPos val="r"/>
+                  <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="{0}"/></a:pPr></a:p></c:txPr>
+                </c:legend>
+              </c:chart>
+            </c:chartSpace>
+            """;
+        XDocument smallLegendChart = XDocument.Parse(string.Format(CultureInfo.InvariantCulture, chartXmlTemplate, "900"));
+        XDocument largeLegendChart = XDocument.Parse(string.Format(CultureInfo.InvariantCulture, chartXmlTemplate, "1800"));
+
+        System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartLegendTextStyle",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
+        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, null, smallLegendChart]) ?? throw new InvalidOperationException("Expected small legend style.");
+        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, null, largeLegendChart]) ?? throw new InvalidOperationException("Expected large legend style.");
+
+        Type frameType = typeof(PptxRenderer).GetNestedType(
+            "ChartFrameBox",
+            System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");
+        object frame = Activator.CreateInstance(frameType, [0d, 0d, 600d, 400d]) ?? throw new InvalidOperationException("Expected chart frame.");
+        System.Reflection.MethodInfo getPlotBox = typeof(PptxRenderer).GetMethod(
+            "GetCartesianNoTitleRightLegendPlotBox",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected right-legend plot-box resolver.");
+
+        object smallPlotBox = getPlotBox.Invoke(null, [frame, smallLegendChart, null, null, true, null, smallLegendStyle]) ?? throw new InvalidOperationException("Expected small legend plot box.");
+        object largePlotBox = getPlotBox.Invoke(null, [frame, largeLegendChart, null, null, true, null, largeLegendStyle]) ?? throw new InvalidOperationException("Expected large legend plot box.");
+        double smallWidth = (double)(smallPlotBox.GetType().GetProperty("Width")?.GetValue(smallPlotBox) ?? 0d);
+        double largeWidth = (double)(largePlotBox.GetType().GetProperty("Width")?.GetValue(largePlotBox) ?? 0d);
+
+        TestAssert.True(largeWidth < smallWidth, "Expected larger legend text style to reserve more right-legend width.");
+    }
+
     public static void PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

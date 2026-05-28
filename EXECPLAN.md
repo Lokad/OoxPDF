@@ -15125,3 +15125,13 @@ plot area should be solved together instead of tuned through unrelated constants
 
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Follow-up, 2026-05-28: right-legend plot reservation now consumes the resolved chart legend text style instead
+of forcing `LegendFallbackFontSize` at the layout boundary. Line/area/scatter no-title right-legend layout and
+bubble title/right-legend layout pass `ReadSceneOrXmlChartLegendTextStyle` into `ResolveRightLegendReserve`,
+which now measures entry text and marker/gap factors from the same font size/style used by legend rendering.
+A focused regression compares 9 pt and 18 pt legend text and verifies that the larger style reserves more
+right-side plot space. This still leaves the broader Office-PDF legend negotiation item open, but removes one
+hidden hard-coded text-style assumption from the reserve path. Validation: `dotnet build Lokad.OoxPdf.slnx
+--tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed with `134` tests, `0` failures,
+and `0` skips; full non-slow console runner passed with `407` tests, `0` failures, and `7` slow skips.

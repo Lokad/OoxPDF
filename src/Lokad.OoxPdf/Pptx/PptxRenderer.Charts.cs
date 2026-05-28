@@ -9547,20 +9547,21 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend, workbook, plotVisibleOnly, fontResolver);
+        ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml);
+        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend, legendTextStyle, workbook, plotVisibleOnly, fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, ChartTextStyle legendTextStyle, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         bool hasLineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is not null;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver)
+            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart, workbook, plotVisibleOnly, fontResolver, legendTextStyle)
             : hasTitle && hasRightLegend && hasLineChart
                 ? GetLineTitleRightLegendPlotBox(frame)
-            : GetDefaultChartPlotBox(frame);
+                : GetDefaultChartPlotBox(frame);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -9571,7 +9572,7 @@ internal sealed partial class PptxRenderer
         return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
     }
 
-    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver)
+    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
     {
         XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
@@ -9596,6 +9597,7 @@ internal sealed partial class PptxRenderer
         ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(
             frame,
             seriesNames,
+            legendTextStyle,
             includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area,
             fontResolver: fontResolver);
         var textMeasurer = new ChartTextMeasurer(fontResolver);
@@ -9711,26 +9713,27 @@ internal sealed partial class PptxRenderer
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend, workbook, fontResolver);
+        ChartTextStyle legendTextStyle = ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml);
+        ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend, legendTextStyle, workbook, fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend, ChartWorkbookData? workbook, PresentationFontResolver? fontResolver)
+    private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend, ChartTextStyle legendTextStyle, ChartWorkbookData? workbook, PresentationFontResolver? fontResolver)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
-            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart, workbook, fontResolver)
+            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart, workbook, fontResolver, legendTextStyle)
             : GetDefaultChartPlotBox(frame);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
     }
 
-    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, ChartWorkbookData? workbook, PresentationFontResolver? fontResolver)
+    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, ChartWorkbookData? workbook, PresentationFontResolver? fontResolver, ChartTextStyle legendTextStyle)
     {
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart, workbook);
-        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, includeAreaReserve: false, fontResolver: fontResolver);
+        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, legendTextStyle, includeAreaReserve: false, fontResolver: fontResolver);
 
         double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
         double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
@@ -9739,13 +9742,13 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, y, width, height);
     }
 
-    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, bool includeAreaReserve, PresentationFontResolver? fontResolver)
+    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, ChartTextStyle legendTextStyle, bool includeAreaReserve, PresentationFontResolver? fontResolver)
     {
-        double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
+        double legendFontSize = legendTextStyle.FontSize;
         var textMeasurer = new ChartTextMeasurer(fontResolver);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendFontSize));
+            : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendTextStyle));
         int maxLegendTextLength = seriesNames.Count == 0
             ? 0
             : seriesNames.Max(name => name.ActiveName.Length);
