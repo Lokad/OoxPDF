@@ -12298,19 +12298,24 @@ to use the existing normalized booleans; the long-term work remains to derive Of
 hidden-row/column, `plotVisOnly`, and over-maximum-label behavior from structural chart/workbook state rather
 than ad hoc renderer reads.
 
-While validating this slice, the exact slow `PptxSceneBuilderBuildsResolvedNodeLists` test failed on
-`UsesInheritedShapeBounds` for the selected `Hello` text frame. The non-slow model/chart/full gates pass, and
-the failure is on placeholder geometry diagnostics rather than chart options, but it is worth keeping as a
-separate open text-model cleanup: the slow fixture currently expects inherited placeholder geometry fallback
-even when the selected inherited placeholder chain supplies text-body participation without inherited shape
-bounds. That expectation should be split or backed by a smaller public placeholder-bounds fixture before
-using the slow scene-builder test as a universal regression gate.
+Revision note, 2026-05-28: Split the text-model placeholder geometry expectation that previously made the
+slow `PptxSceneBuilderBuildsResolvedNodeLists` fixture fail on `UsesInheritedShapeBounds` for the selected
+`Hello` text frame. That shape has direct `p:spPr` geometry, so the slow fixture now keeps asserting inherited
+placeholder participation and inherited text-body participation while explicitly preserving direct geometry
+ownership. The smaller public `PptxSyntheticSlidePlaceholderTextUsesInheritedBounds` fixture now owns the
+positive inherited-geometry fallback assertion for a slide placeholder with text but no direct shape bounds.
+This keeps the diagnostic coverage instead of deleting it, while separating placeholder style/body inheritance
+from placeholder geometry fallback.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `329` tests, `0`
-failures, and `7` slow skips. The exact slow `PptxSceneBuilderBuildsResolvedNodeLists` currently fails on
-the placeholder-geometry diagnostic noted above.
+failures, and `7` slow skips. Follow-up validation passed the solution build, targeted
+`PptxSyntheticSlidePlaceholderTextUsesInheritedBounds`, targeted
+`PptxSceneBuilderBuildsResolvedNodeLists`, focused non-slow `pptx-model` (`11` passed, `0` failed, `1`
+skipped), and the full non-slow console runner (`337` passed, `0` failed, `7` skipped) after the assertion
+split. One parallel targeted run attempted against the same test project hit a transient output-DLL file lock
+and was rerun serially.
 
 Revision note, 2026-05-28: Preserved raw OOXML tokens for chart axis integer options. `PptxSceneChartAxis`
 now carries `LabelOffsetValue`, `TickLabelSkipValue`, and `TickMarkSkipValue` beside the existing parsed

@@ -923,7 +923,7 @@ internal static class PptxTests
         PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
         TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
         TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
-        TestAssert.True(textFrame.UsesInheritedShapeBounds, "Expected text model to expose placeholder geometry fallback.");
+        TestAssert.True(!textFrame.UsesInheritedShapeBounds, "Expected direct text-box geometry to stay distinct from inherited placeholder style participation.");
         TestAssert.Equal(1, textFrame.Paragraphs.Count);
         TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
         TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
@@ -6970,6 +6970,15 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("/F1 39.96 Tf", pdf);
         AssertContainsTextMatrixAtX(pdf, 79.2d);
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxTextFrameModelSnapshot textFrame = PptxRenderer.InspectTextFrameModels(document, package, 0)
+            .Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Slide title")));
+        TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
+        TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
+        TestAssert.True(textFrame.UsesInheritedShapeBounds, "Expected text model to expose placeholder geometry fallback.");
     }
 
     public static void PptxSyntheticPngPictureRendersImageXObject()
