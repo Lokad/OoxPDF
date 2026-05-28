@@ -293,6 +293,12 @@ if ($manifest.expected.maxGraphicsOperationBoundsDelta -ne $null) {
     if ($manifest.expected.compareGraphicsOperationPathOperators -eq $true) {
         $compareGraphicsArgs.MatchPathOperators = $true
     }
+    if ($manifest.expected.compareGraphicsOperationPathCommandCoordinates -eq $true -or $manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta -ne $null) {
+        $compareGraphicsArgs.MatchPathCommandCoordinates = $true
+    }
+    if ($manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta -ne $null) {
+        $compareGraphicsArgs.PathCommandCoordinateTolerance = [double]$manifest.expected.maxGraphicsOperationPathCommandCoordinateDelta
+    }
 
     & (Join-Path $PSScriptRoot "ComparePdfGraphicsOperations.ps1") @compareGraphicsArgs
     if ($LASTEXITCODE -ne 0) {
@@ -405,6 +411,12 @@ if ($hasChartGraphicsStructureGlobalBoundsTolerance -or $hasChartGraphicsStructu
     }
     if ($manifest.expected.compareChartGraphicsStructurePathOperators -eq $true) {
         $compareChartArgs.MatchPathOperators = $true
+    }
+    if ($manifest.expected.compareChartGraphicsStructurePathCommandCoordinates -eq $true -or $manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta -ne $null) {
+        $compareChartArgs.MatchPathCommandCoordinates = $true
+    }
+    if ($manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta -ne $null) {
+        $compareChartArgs.PathCommandCoordinateTolerance = [double]$manifest.expected.maxChartGraphicsStructurePathCommandCoordinateDelta
     }
     if ($manifest.expected.compareChartGraphicsStructureStrokeColors -eq $true) {
         $compareChartArgs.MatchStrokeColor = $true

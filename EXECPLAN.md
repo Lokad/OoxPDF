@@ -1070,6 +1070,16 @@ High-priority actions:
   analytical offset-curve model. Validation: focused non-slow `pptx-shapes` passed (`16 passed, 0 failed, 0
   skipped`), and `pptx-ladder-06-curved-connector-transform-probe` run `20260527-210014` kept all four Office/candidate
   fills at `seg=250,line=244,curve=4,move=2,close=2`.
+- [x] 2026-05-28: Add an opt-in raw path-command coordinate gate before attempting further connector geometry
+  changes. `tools/ComparePdfGraphicsOperations.ps1` can now compare flattened path-command coordinates with
+  `-MatchPathCommandCoordinates` and `-PathCommandCoordinateTolerance`, and `tools/CheckVisualCase.ps1` wires this
+  through manifest fields `compareGraphicsOperationPathCommandCoordinates` and
+  `maxGraphicsOperationPathCommandCoordinateDelta` (plus chart-structure equivalents). The existing public curved
+  connector case remains unchanged and still passes, but the ignored latest artifact shows why the analytical
+  connector item must stay open: the four filled connector paths have exact Office/candidate counts
+  (`seg=250,line=244,curve=4,move=2,close=2`) while command-stream coordinates only pass at a very loose tolerance
+  (about `153 pt` max flattened coordinate delta on the current artifact). This gives future connector work a
+  structural PDF target beyond raster and count parity without introducing a renderer heuristic.
 - [ ] Track the remaining private page-17 text/font-size gap while preserving the closed clip history:
   this item started when private page 17 still had one missing high-level `W*` clip and dominant derived font-size
   differences: Office reported `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while the candidate reported

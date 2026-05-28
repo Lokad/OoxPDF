@@ -29,6 +29,10 @@ param(
 
     [switch] $MatchPathOperators,
 
+    [switch] $MatchPathCommandCoordinates,
+
+    [double] $PathCommandCoordinateTolerance = 0.25,
+
     [switch] $MatchStrokeColor,
 
     [switch] $MatchFillColor,
@@ -152,6 +156,43 @@ function GetBoundsTolerance($kind) {
     return $null
 }
 
+function MeasurePathCommandCoordinateDelta($reference, $candidate) {
+    if ($null -eq $reference.PathCommands -or $null -eq $candidate.PathCommands) {
+        return [pscustomobject]@{ Available = $false; MaxDelta = $null }
+    }
+
+    $referenceCommands = @($reference.PathCommands)
+    $candidateCommands = @($candidate.PathCommands)
+    $referenceValues = New-Object System.Collections.Generic.List[double]
+    $candidateValues = New-Object System.Collections.Generic.List[double]
+    $maxDelta = 0d
+
+    foreach ($command in $referenceCommands) {
+        foreach ($value in @($command.Values)) {
+            $referenceValues.Add([double]$value)
+        }
+    }
+
+    foreach ($command in $candidateCommands) {
+        foreach ($value in @($command.Values)) {
+            $candidateValues.Add([double]$value)
+        }
+    }
+
+    if ($referenceValues.Count -ne $candidateValues.Count) {
+        return [pscustomobject]@{ Available = $false; MaxDelta = $null }
+    }
+
+    for ($valueIndex = 0; $valueIndex -lt $referenceValues.Count; $valueIndex++) {
+        $delta = [Math]::Abs($referenceValues[$valueIndex] - $candidateValues[$valueIndex])
+        if ($delta -gt $maxDelta) {
+            $maxDelta = $delta
+        }
+    }
+
+    return [pscustomobject]@{ Available = $true; MaxDelta = [Math]::Round($maxDelta, 6) }
+}
+
 $referenceOps = Select-Ops (Read-JsonArray $Reference)
 $candidateOps = Select-Ops (Read-JsonArray $Candidate)
 
@@ -272,6 +313,10 @@ foreach ($pair in $pairs) {
         (IntValue $ref.CurveCount) -eq (IntValue $cand.CurveCount) -and
         (IntValue $ref.CloseCount) -eq (IntValue $cand.CloseCount))
     $pathOperatorsOk = (-not $MatchPathOperators) -or [string]$ref.PathOperators -eq [string]$cand.PathOperators
+    $pathCommandCoordinateDelta = MeasurePathCommandCoordinateDelta $ref $cand
+    $pathCommandCoordinatesOk = (-not $MatchPathCommandCoordinates) -or (
+        $pathCommandCoordinateDelta.Available -and
+        [double]$pathCommandCoordinateDelta.MaxDelta -le $PathCommandCoordinateTolerance)
     $strokeColorOk = (-not $MatchStrokeColor) -or (ColorEqual $ref.StrokeColor $cand.StrokeColor)
     $fillColorOk = (-not $MatchFillColor) -or (ColorEqual $ref.FillColor $cand.FillColor)
     $lineCapOk = (-not $MatchLineCap) -or (IntValue $ref.LineCap) -eq (IntValue $cand.LineCap)
@@ -300,7 +345,7 @@ foreach ($pair in $pairs) {
         [Math]::Abs($deltaPathRadius) -le $pathGeometryToleranceForKind -and
         ((-not $pathMinRadiusRelevant) -or ($pathMinRadiusAvailable -and [Math]::Abs($deltaPathMinRadius) -le $pathGeometryToleranceForKind)) -and
         ((-not $pathMaxRadiusRelevant) -or ($pathMaxRadiusAvailable -and [Math]::Abs($deltaPathMaxRadius) -le $pathGeometryToleranceForKind)))
-    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $strokeColorOk -and $fillColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
+    $status = if ($boundsOk -and $widthOk -and $kindOk -and $operatorOk -and $segmentCountOk -and $pathCommandCountsOk -and $pathOperatorsOk -and $pathCommandCoordinatesOk -and $strokeColorOk -and $fillColorOk -and $lineCapOk -and $lineJoinOk -and $textHashOk -and $pathGeometryOk) { "ok" } else { "delta" }
     if ($status -ne "ok") {
         $failures++
     }
@@ -322,6 +367,9 @@ foreach ($pair in $pairs) {
         SegmentCountOk = $segmentCountOk
         PathCommandCountsOk = $pathCommandCountsOk
         PathOperatorsOk = $pathOperatorsOk
+        MaxPathCommandCoordinateDelta = $pathCommandCoordinateDelta.MaxDelta
+        PathCommandCoordinateTolerance = if ($MatchPathCommandCoordinates) { $PathCommandCoordinateTolerance } else { $null }
+        PathCommandCoordinatesOk = $pathCommandCoordinatesOk
         RefStrokeColor = $ref.StrokeColor
         CandStrokeColor = $cand.StrokeColor
         StrokeColorOk = $strokeColorOk
