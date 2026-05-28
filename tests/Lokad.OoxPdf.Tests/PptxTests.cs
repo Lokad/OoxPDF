@@ -12370,6 +12370,42 @@ internal static class PptxTests
         TestAssert.Equal(0d, (double)(optionsType.GetProperty("FirstSliceAngle")?.GetValue(options) ?? double.NaN));
     }
 
+    public static void PptxChartDoughnutOptionsUseSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:doughnutChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:doughnutChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartPlot plot = chart.Plots[0];
+        TestAssert.True(plot.HoleSize is null, "Expected missing holeSize metadata to remain distinct from the effective renderer default.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedXmlFallback = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:doughnutChart>
+                <c:holeSize val="10"/>
+                <c:firstSliceAng val="270"/>
+              </c:doughnutChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "doughnutChart").Single();
+        System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartDoughnutOptions",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart doughnut option resolver.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null]) ?? throw new InvalidOperationException("Expected resolved doughnut options.");
+        Type optionsType = options.GetType();
+        object polarPoints = optionsType.GetProperty("PolarPoints")?.GetValue(options) ?? throw new InvalidOperationException("Expected polar point options.");
+
+        TestAssert.Equal(0.56d, (double)(optionsType.GetProperty("HoleSize")?.GetValue(options) ?? double.NaN));
+        TestAssert.Equal(0d, (double)(polarPoints.GetType().GetProperty("FirstSliceAngle")?.GetValue(polarPoints) ?? double.NaN));
+    }
+
     public static void PptxChartUnknownScatterStyleKeepsSceneLineConnectionDefault()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

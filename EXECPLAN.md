@@ -12143,6 +12143,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `336` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Consolidated doughnut-specific polar option resolution behind
+`ChartDoughnutPlotOptions`. Doughnut rendering now consumes the shared `ChartPolarPointOptions` plus the
+resolved hole-size ratio from one scene/XML boundary before layout, slice emission, data labels, and legends.
+The XML-only fallback remains intact, but supported scene doughnut charts no longer keep `holeSize` as a
+separate render-site scalar bridge beside the polar point contract.
+
+The new mismatch guard uses a scene doughnut chart with missing `holeSize` and missing `firstSliceAng` beside
+fallback XML requesting `holeSize=10` and `firstSliceAng=270`. The resolved options must keep the scene-owned
+defaults: `HoleSize=0.56` and first-slice `0` degrees. This keeps doughnut geometry inputs together for future
+Office-PDF-backed polar layout work.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `96` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `337` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved the raw OOXML boolean token for chart external workbook
 auto-update. `PptxSceneChartExternalData` now carries `AutoUpdateValue` beside the parsed nullable boolean,
 and scene inspection exposes `ChartExternalDataAutoUpdateValue`; the resolved-node fixture locks the existing
