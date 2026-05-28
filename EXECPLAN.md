@@ -15273,3 +15273,16 @@ Office-backed precedence across `colorsN.xml` variations, chart-style role refer
 overrides, markers, labels, axes, legends, and series/point surfaces still needs structural evidence before it
 should drive more paint decisions. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
 passed; focused non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: the XML-only chart area, plot area, and legend frame style readers now receive the
+chart source color map. `RenderChartAreaStyle`, `ReadSceneOrXmlChartAreaStyle`,
+`ReadSceneOrXmlChartPlotAreaStyle`, `ReadChartPlotAreaStyle`, and
+`ReadSceneOrXmlChartLegendLayout` no longer resolve `spPr` colors for those chart-frame surfaces through the
+default color map when a chart has a source-specific map. Layout helpers that need legend frame state carry the
+same map through bar, line, and bubble layout paths.
+
+This is still source-map propagation, not chart-style cascade resolution. The remaining direct renderer color
+gap is the automatic fallback palette path (`ChartPalette`/series default accents), which needs a slightly
+broader call-boundary cleanup because palette fallback feeds series, point, marker, legend-key, and data-label
+swatch defaults. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+non-slow `pptx-charts` passed with `136` tests, `0` failures, and `0` skips.
