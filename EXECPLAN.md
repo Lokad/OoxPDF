@@ -15419,3 +15419,8 @@ Office-backed chart text cascade as follow-up work. Validation: `dotnet build Lo
 --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-model` passed with `25`
 tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `138` tests, `0` failures,
 and `0` skips.
+
+Validation follow-up, 2026-05-28: after the chart style provenance, marker-default, body-property provenance, and
+chart text-body diagnostic slices above, the full non-slow console suite passed with `411` tests, `0` failures,
+and `7` slow skips by running `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v
+minimal -- --skip-slow`.
