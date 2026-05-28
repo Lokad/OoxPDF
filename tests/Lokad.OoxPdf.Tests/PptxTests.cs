@@ -11554,6 +11554,8 @@ internal static class PptxTests
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
               <c:chart><c:plotArea><c:pieChart>
                 <c:ser>
+                  <c:idx val="futureSeriesIndex"/>
+                  <c:order val="3"/>
                   <c:explosion val="futureSeriesExplosion"/>
                   <c:dPt><c:idx val="0"/><c:explosion val="35"/></c:dPt>
                   <c:dPt><c:idx val="1"/><c:explosion val="futurePointExplosion"/></c:dPt>
@@ -11564,6 +11566,10 @@ internal static class PptxTests
             """);
 
         PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected pie series.");
+        TestAssert.Equal(null, series.Index);
+        TestAssert.Equal("futureSeriesIndex", series.IndexValue);
+        TestAssert.Equal(3, series.Order ?? 0);
+        TestAssert.Equal("3", series.OrderValue);
         TestAssert.Equal(null, series.Explosion);
         TestAssert.Equal("futureSeriesExplosion", series.ExplosionValue);
         TestAssert.Equal(35d, series.PointStyles[0].Explosion ?? double.NaN);

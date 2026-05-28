@@ -832,7 +832,9 @@ internal enum PptxSceneChartManualLayoutMode
 
 internal sealed record PptxSceneChartSeries(
     int? Index,
+    string IndexValue,
     int? Order,
+    string OrderValue,
     string? Name,
     PptxSceneChartSeriesDataSources DataSources,
     IReadOnlyList<double> Values,
@@ -2287,10 +2289,14 @@ internal sealed class PptxSceneBuilder
         foreach (XElement seriesElement in plot.Elements(ChartNamespace + "ser"))
         {
             int seriesIndex = series.Count;
+            (int? index, string indexValue) = ReadChartElementIntWithValue(seriesElement, "idx");
+            (int? order, string orderValue) = ReadChartElementIntWithValue(seriesElement, "order");
             (double? explosion, string explosionValue) = ReadChartElementDoubleWithValue(seriesElement, "explosion");
             series.Add(new PptxSceneChartSeries(
-                ReadChartElementInt(seriesElement, "idx"),
-                ReadChartElementInt(seriesElement, "order"),
+                index,
+                indexValue,
+                order,
+                orderValue,
                 ReadChartSeriesName(seriesElement),
                 ReadChartSeriesDataSources(seriesElement),
                 ReadChartSeriesValues(seriesElement),

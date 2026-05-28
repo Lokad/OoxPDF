@@ -12057,6 +12057,22 @@ evidence rather than constants.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML tokens for chart series identity. `PptxSceneChartSeries`
+now carries `IndexValue` and `OrderValue` beside the parsed nullable `Index` and `Order`, and series parsing
+uses the same raw-token integer reader introduced for axis integer options. The existing chart numeric-token
+coverage now locks a malformed/future `c:idx` token and a valid `c:order` token without changing renderer
+behavior.
+
+This is another small scene-model ownership step: production rendering can continue using parsed integer
+identity where it exists, while future diagnostics and Office-aligned ordering work can still see the source
+token. Remaining long-term gaps are point-index surfaces that still require a parsed integer before entering
+the scene (`c:dPt/@idx`, `c:dLbl/@idx`, and cached point `@idx` values). Those are riskier because malformed
+indices currently decide whether a keyed override exists at all; they should be handled with an explicit
+typed key/diagnostic policy rather than by silently inventing an index.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Preserved raw PPTX chart plot numeric option tokens beside their normalized
 values in the scene model. `PptxSceneChartPlot` now carries source strings for `c:gapWidth`, `c:overlap`,
 `c:holeSize`, and `c:firstSliceAng`, while keeping the existing nullable parsed doubles for current
