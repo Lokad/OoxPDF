@@ -13197,6 +13197,24 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX unsupported text-orientation and text-vertical-overflow diagnostics now use
+scene-owned shape text-body provenance before falling back to raw XML for non-shape `a:bodyPr` owners.
+`PptxSceneTextBody` carries unsupported direct `a:bodyPr/@vert` and `@vertOverflow` flags, private-safe
+scene inspection exposes those flags, and `EmitUnsupportedFeatureDiagnostics` traverses scene slide nodes
+for shape text bodies instead of scanning every slide `a:bodyPr` as if all owners were equivalent.
+
+The non-shape fallback deliberately remains in place for table-cell text, chart text, and other DrawingML
+owners until those text bodies expose the same provenance in the scene model. This is a trimming-oriented
+cleanup that also records the next gap: diagnostics should keep moving owner-by-owner from broad XML scans
+to typed scene state, but only after each owner has an explicit model contract. The broad transparency
+diagnostic remains a larger follow-up because `a:alpha` spans supported shape/text/table/effect owners and
+unsupported owners under one raw predicate.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `21` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `97` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `396`
+tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Shape gradient diagnostics now preserve and consume scene-owned provenance
 instead of relying on raw shape XML scans. `PptxSceneGradientFill` distinguishes no gradient source,
 renderable gradient source, and unsupported gradient source; it also flags variable stop alpha as unsupported

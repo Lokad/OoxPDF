@@ -78,12 +78,12 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_PATTERN_FILL", "pattern fill");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextOrientation))
+        if (HasUnsupportedTextOrientation(sceneSlide, slideXml))
         {
             Emit("PPTX_UNSUPPORTED_TEXT_ORIENTATION", "vertical text");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "bodyPr").Any(HasUnsupportedTextVerticalOverflow))
+        if (HasUnsupportedTextVerticalOverflow(sceneSlide, slideXml))
         {
             Emit("PPTX_UNSUPPORTED_TEXT_OVERFLOW", "text vertical overflow");
         }
@@ -357,10 +357,62 @@ internal sealed partial class PptxRenderer
             !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool HasUnsupportedTextOrientation(PptxSceneSlide sceneSlide, XDocument slideXml)
+    {
+        return HasUnsupportedShapeTextOrientation(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextOrientation);
+    }
+
+    private static bool HasUnsupportedShapeTextOrientation(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.TextBody?.HasUnsupportedTextOrientation == true) ||
+                HasUnsupportedShapeTextOrientation(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnsupportedNonShapeTextOrientation(XElement bodyProperties)
+    {
+        return bodyProperties.Parent?.Name != PresentationNamespace + "txBody" &&
+            HasUnsupportedTextOrientation(bodyProperties);
+    }
+
     private static bool HasUnsupportedTextVerticalOverflow(XElement bodyProperties)
     {
         string? overflow = (string?)bodyProperties.Attribute("vertOverflow");
         return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static bool HasUnsupportedTextVerticalOverflow(PptxSceneSlide sceneSlide, XDocument slideXml)
+    {
+        return HasUnsupportedShapeTextVerticalOverflow(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(DrawingNamespace + "bodyPr").Any(IsUnsupportedNonShapeTextVerticalOverflow);
+    }
+
+    private static bool HasUnsupportedShapeTextVerticalOverflow(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.TextBody?.HasUnsupportedVerticalOverflow == true) ||
+                HasUnsupportedShapeTextVerticalOverflow(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsUnsupportedNonShapeTextVerticalOverflow(XElement bodyProperties)
+    {
+        return bodyProperties.Parent?.Name != PresentationNamespace + "txBody" &&
+            HasUnsupportedTextVerticalOverflow(bodyProperties);
     }
 
     private static bool IsUnsupportedPatternFill(XElement patternFill)

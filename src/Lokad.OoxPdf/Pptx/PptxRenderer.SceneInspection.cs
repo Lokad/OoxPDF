@@ -107,6 +107,8 @@ internal sealed partial class PptxRenderer
             node.TextBody is not null,
             textParagraphCount,
             textRunCount,
+            node.TextBody?.HasUnsupportedTextOrientation ?? false,
+            node.TextBody?.HasUnsupportedVerticalOverflow ?? false,
             node.Picture is not null,
             node.Picture?.Resource is not null,
             node.Picture?.Resource?.ContentType ?? string.Empty,

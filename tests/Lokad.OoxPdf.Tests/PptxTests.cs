@@ -7050,6 +7050,8 @@ internal static class PptxTests
                 node.HasTextBody,
                 node.TextParagraphCount,
                 node.TextRunCount,
+                node.TextHasUnsupportedOrientation,
+                node.TextHasUnsupportedVerticalOverflow,
                 node.HasPicture,
                 node.PictureRecolorKind,
                 node.HasTable,
@@ -17574,6 +17576,53 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_PATTERN_FILL"), "Unsupported shape patterns should be diagnostic-covered from scene-owned pattern provenance.");
+    }
+
+    public static void PptxUnsupportedTextDiagnosticsUseSceneTextBodyProperties()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp>
+                      <p:spPr><a:prstGeom prst="rect"/></p:spPr>
+                      <p:txBody>
+                        <a:bodyPr vert="futureVert" vertOverflow="ellipsis"/>
+                        <a:p><a:r><a:t>Text</a:t></a:r></a:p>
+                      </p:txBody>
+                    </p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxSceneTextBody textBody = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].TextBody
+                ?? throw new InvalidOperationException("Expected shape text body scene node.");
+            PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+
+            TestAssert.True(textBody.HasUnsupportedTextOrientation, "Expected unsupported shape text orientation state to remain scene-owned.");
+            TestAssert.True(textBody.HasUnsupportedVerticalOverflow, "Expected unsupported shape text overflow state to remain scene-owned.");
+            TestAssert.True(snapshot.TextHasUnsupportedOrientation, "Expected private-safe scene inspection to expose unsupported shape text orientation.");
+            TestAssert.True(snapshot.TextHasUnsupportedVerticalOverflow, "Expected private-safe scene inspection to expose unsupported shape text overflow.");
+        }
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Unsupported shape text orientation should be diagnostic-covered from scene-owned text-body provenance.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported shape text overflow should be diagnostic-covered from scene-owned text-body provenance.");
     }
 
     public static void PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag()

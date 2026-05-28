@@ -61,6 +61,8 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasTextBody,
     int TextParagraphCount,
     int TextRunCount,
+    bool TextHasUnsupportedOrientation,
+    bool TextHasUnsupportedVerticalOverflow,
     bool HasPicture,
     bool HasPictureResource,
     string PictureContentType,
@@ -1509,6 +1511,8 @@ internal readonly record struct PptxSceneImageRecolor(
 internal sealed record PptxSceneTextBody(
     XElement? BodyProperties,
     XElement? ListStyle,
+    bool HasUnsupportedTextOrientation,
+    bool HasUnsupportedVerticalOverflow,
     IReadOnlyList<PptxSceneTextParagraph> Paragraphs);
 
 internal sealed record PptxSceneTextParagraph(
@@ -5362,10 +5366,32 @@ internal sealed class PptxSceneBuilder
             .Where(textBody => textBody is not null)
             .Cast<XElement>()
             .ToArray();
+        XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxSceneTextBody(
-            textBody.Element(DrawingNamespace + "bodyPr"),
+            bodyProperties,
             textBody.Element(DrawingNamespace + "lstStyle"),
+            HasUnsupportedTextOrientation(bodyProperties),
+            HasUnsupportedTextVerticalOverflow(bodyProperties),
             textBody.Elements(DrawingNamespace + "p").Select(paragraph => ReadParagraph(paragraph, element, textBody, inheritedTextBodies, placeholderSources, theme, colorMap)).ToArray());
+    }
+
+    private static bool HasUnsupportedTextOrientation(XElement? bodyProperties)
+    {
+        string? orientation = (string?)bodyProperties?.Attribute("vert");
+        return !string.IsNullOrEmpty(orientation) &&
+            !orientation.Equals("horz", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("vert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("vert270", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("eaVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("mongolianVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("wordArtVert", StringComparison.OrdinalIgnoreCase) &&
+            !orientation.Equals("wordArtVertRtl", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool HasUnsupportedTextVerticalOverflow(XElement? bodyProperties)
+    {
+        string? overflow = (string?)bodyProperties?.Attribute("vertOverflow");
+        return overflow?.Equals("ellipsis", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     private static PptxSceneTextParagraph ReadParagraph(
