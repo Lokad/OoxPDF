@@ -37,6 +37,10 @@ internal sealed partial class PptxRenderer
         int textRunCount = node.TextBody?.Paragraphs.Sum(paragraph => paragraph.Runs.Count) ?? 0;
         int tableRowCount = node.Table?.Rows.Count ?? 0;
         int tableCellCount = node.Table?.Rows.Sum(row => row.Cells.Count) ?? 0;
+        IReadOnlyList<PptxSceneTableCell> tableCells = node.Table?.Rows
+            .SelectMany(row => row.Cells)
+            .ToArray() ?? [];
+        PptxSceneTableStyle tableStyle = node.Table?.Style ?? default;
         PptxSceneBounds? bounds = node.Bounds;
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
@@ -88,6 +92,19 @@ internal sealed partial class PptxRenderer
             node.Table is not null,
             tableRowCount,
             tableCellCount,
+            tableStyle.StyleId ?? string.Empty,
+            tableStyle.Name,
+            tableStyle.Accent,
+            tableStyle.IsSupported,
+            tableStyle.FirstRow,
+            tableStyle.LastRow,
+            tableStyle.FirstColumn,
+            tableStyle.LastColumn,
+            tableStyle.BandRow,
+            tableStyle.BandColumn,
+            tableCells.Count(cell => cell.StyleFill.HasFill),
+            tableCells.Count(cell => cell.StyleText.Color is not null),
+            tableCells.Count(cell => cell.StyleText.Bold),
             node.Chart is not null,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,

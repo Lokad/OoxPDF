@@ -3258,6 +3258,14 @@ High-priority actions:
   - [ ] Replace `PptxTableStyleResolver`'s supported-style formulas with a real Office table-style cascade:
     parse table style parts/theme style matrices, conditional formatting priority, `phClr` replacement, and
     unsupported-style diagnostics instead of expanding GUID-specific logic.
+    - [x] Expose table-style resolver provenance through private-safe scene inspection:
+      `PptxSceneNodeSnapshot` now carries the table style id, resolved built-in family/accent, support flag,
+      conditional-format booleans, and counts of cells that received resolver-derived fill, text color, and bold
+      effects. This keeps the current limited formula boundary visible to tests and future private diagnostics
+      without exposing table text or pretending the Office table-style cascade is complete. Validation:
+      `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`, focused `pptx-model` passed
+      (`13 passed, 0 failed, 0 skipped`), and focused non-slow `pptx-tables` passed (`8 passed, 0 failed,
+      0 skipped`).
   - [x] Route ordered table frame bounds through `PptxSceneNode.Bounds` and the active group transform instead
     of re-reading untransformed graphic-frame bounds. Public unit
     `PptxSyntheticGroupedTableUsesGroupTransform` locks grouped table placement at the PDF-operator level.

@@ -349,6 +349,15 @@ internal static class PptxTests
         TestAssert.Equal("Table", slideSnapshot.SlideNodes[2].Kind);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[2].TableRowCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableCellCount);
+        TestAssert.Equal("{93296810-A885-4BE3-A3E7-6D5BEEA58F35}", slideSnapshot.SlideNodes[2].TableStyleId);
+        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleIsSupported, "Expected scene inspection to expose table-style support state.");
+        TestAssert.Equal("Medium-Style-2", slideSnapshot.SlideNodes[2].TableStyleName);
+        TestAssert.Equal("accent6", slideSnapshot.SlideNodes[2].TableStyleAccent);
+        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleFirstRow, "Expected scene inspection to expose table first-row state.");
+        TestAssert.True(slideSnapshot.SlideNodes[2].TableStyleBandRow, "Expected scene inspection to expose table band-row state.");
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleFillCellCount);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextColorCellCount);
+        TestAssert.Equal(2, slideSnapshot.SlideNodes[2].TableStyleTextBoldCellCount);
         TestAssert.Equal("Chart", slideSnapshot.SlideNodes[4].Kind);
         TestAssert.Equal(3, slideSnapshot.SlideNodes[4].ChartPlotCount);
         TestAssert.Equal(2, slideSnapshot.SlideNodes[4].ChartAxisCount);
