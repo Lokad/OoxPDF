@@ -29,7 +29,7 @@ internal sealed class PdfImageXObject
 
     public byte[]? Alpha { get; }
 
-    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Bytes))[..16]}";
+    public string ResourceKey => resourceKey ??= $"{Width}x{Height}:{Filter}:{ColorSpace}:{BitsPerComponent}:{Bytes.Length}:{HashPrefix(Bytes)}:{Alpha?.Length ?? 0}:{(Alpha is null ? "none" : HashPrefix(Alpha))}";
 
     public static PdfImageXObject Jpeg(int width, int height, byte[] bytes, int componentCount = 3, int bitsPerComponent = 8)
     {
@@ -56,5 +56,10 @@ internal sealed class PdfImageXObject
         }
 
         return output.ToArray();
+    }
+
+    private static string HashPrefix(byte[] bytes)
+    {
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))[..16];
     }
 }

@@ -165,6 +165,24 @@ internal static class PdfWriterTests
         TestAssert.Contains("/Filter /DCTDecode", pdf);
     }
 
+    public static void WritesDistinctImageObjectsForDifferentSoftMasks()
+    {
+        byte[] rgb = [255, 0, 0, 0, 0, 255];
+        PdfImageXObject first = PdfImageXObject.RgbPng(2, 1, rgb, [255, 64]);
+        PdfImageXObject second = PdfImageXObject.RgbPng(2, 1, rgb, [64, 255]);
+        var page = new PdfPage(100, 100, string.Empty, [], [
+            new PdfImageResource("Im1", first),
+            new PdfImageResource("Im2", second)
+        ]);
+
+        string pdf = WritePdfText([page]);
+
+        TestAssert.Equal(4, CountOccurrences(pdf, "/Subtype /Image"));
+        TestAssert.Equal(2, CountOccurrences(pdf, "/SMask"));
+        TestAssert.Contains("/Im1 ", pdf);
+        TestAssert.Contains("/Im2 ", pdf);
+    }
+
     public static void WritesStitchedAxialShadingFunctionForMultipleStops()
     {
         var graphics = new PdfGraphicsBuilder();

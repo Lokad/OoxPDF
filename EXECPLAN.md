@@ -4685,6 +4685,13 @@ High-priority actions:
 - [x] PDF writer emits deterministic static PDFs with pages and drawing operators.
 - [x] PDF writer embeds TrueType/CID fonts and ToUnicode maps.
 - [x] PDF writer supports JPEG passthrough, PNG image XObjects, and alpha soft masks.
+  - [x] 2026-05-28: Include the soft-mask stream in `PdfImageXObject.ResourceKey` so image deduplication
+    cannot collapse two images that share identical RGB bytes but have different alpha masks. This fixes a
+    PDF-structure correctness bug at the resource layer rather than at PPTX image rendering. Validation:
+    focused `pdf` passed (`12 passed, 0 failed, 0 skipped`); full non-slow runner passed (`372 passed,
+    0 failed, 7 skipped`); private run `20260528-153658` stayed stable at 84/84 compared pages, zero
+    dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and the single
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic.
 - [x] CLI supports `convert input output`, `--diagnostics`, `--strict`, and exit codes `0`, `1`, `2`, and `3`.
 - [x] Visual validation can export Office reference PDFs for PPTX and DOCX.
 - [x] Visual validation can rasterize reference/candidate PDFs with PDFium.
