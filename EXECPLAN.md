@@ -13197,6 +13197,24 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX table-cell text-body diagnostics now use scene-owned cell state instead of
+depending on the raw slide-wide `a:bodyPr` fallback. `PptxSceneTableCell` records unsupported direct
+`a:txBody/a:bodyPr @vert` and `@vertOverflow` flags beside the raw cell text body, and
+`PptxRenderer.Diagnostics` now traverses both shape text bodies and table cells through `PptxSceneNode`
+before consulting XML for non-scene text-body owners.
+
+This is deliberately narrower than a table text-layout rewrite. Table cells still carry their raw
+`a:txBody` until the common text-frame model fully owns table-cell paragraphs, but unsupported table-cell
+orientation/vertical-overflow diagnostics no longer come from a broad owner predicate. The remaining raw
+fallback is for text-body-like owners not yet represented as shape or table scene text, such as chart and
+other embedded DrawingML text containers; those should be migrated only when their owning scene records carry
+equivalent typed facts.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `22` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-tables` passed
+with `9` tests, `0` failures, and `0` skips; full non-slow console runner passed with `397` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: PPTX unsupported text-orientation and text-vertical-overflow diagnostics now use
 scene-owned shape text-body provenance before falling back to raw XML for non-shape `a:bodyPr` owners.
 `PptxSceneTextBody` carries unsupported direct `a:bodyPr/@vert` and `@vertOverflow` flags, private-safe

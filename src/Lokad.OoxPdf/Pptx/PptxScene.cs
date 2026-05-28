@@ -1365,7 +1365,9 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneTableCellBorders Borders,
     PptxSceneFillStyle StyleFill,
     PptxSceneTableCellTextStyle StyleText,
-    XElement? TextBody);
+    XElement? TextBody,
+    bool HasUnsupportedTextOrientation,
+    bool HasUnsupportedVerticalOverflow);
 
 internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
 
@@ -4148,6 +4150,8 @@ internal sealed class PptxSceneBuilder
     {
         (PptxSceneTextInsets textInsets, PptxSceneTableCellTextInsetSources textInsetSources, PptxSceneTextInsetValues textInsetValues) = ReadTableCellTextInsetInfo(cell);
         (PptxSceneTableCellVerticalAnchor verticalAnchor, string? verticalAnchorValue, PptxSceneTableCellVerticalAnchorSource verticalAnchorSource) = ReadTableCellVerticalAnchorInfo(cell);
+        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
+        XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
@@ -4162,7 +4166,9 @@ internal sealed class PptxSceneBuilder
             ReadTableCellBorders(cell, theme, colorMap),
             PptxTableStyleResolver.ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
-            cell.Element(DrawingNamespace + "txBody"));
+            textBody,
+            HasUnsupportedTextOrientation(bodyProperties),
+            HasUnsupportedTextVerticalOverflow(bodyProperties));
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)

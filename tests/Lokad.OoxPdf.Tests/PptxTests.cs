@@ -17625,6 +17625,70 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported shape text overflow should be diagnostic-covered from scene-owned text-body provenance.");
     }
 
+    public static void PptxUnsupportedTableTextDiagnosticsUseSceneCellBodyProperties()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:nvGraphicFramePr>
+                        <p:cNvPr id="2" name="Table"/>
+                        <p:cNvGraphicFramePr/>
+                        <p:nvPr/>
+                      </p:nvGraphicFramePr>
+                      <p:xfrm>
+                        <a:off x="0" y="0"/>
+                        <a:ext cx="914400" cy="457200"/>
+                      </p:xfrm>
+                      <a:graphic>
+                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
+                          <a:tbl>
+                            <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
+                            <a:tr h="457200">
+                              <a:tc>
+                                <a:txBody>
+                                  <a:bodyPr vert="futureVert" vertOverflow="ellipsis"/>
+                                  <a:p><a:r><a:t>Cell</a:t></a:r></a:p>
+                                </a:txBody>
+                                <a:tcPr/>
+                              </a:tc>
+                            </a:tr>
+                          </a:tbl>
+                        </a:graphicData>
+                      </a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
+                ?? throw new InvalidOperationException("Expected table cell scene node.");
+
+            TestAssert.True(cell.HasUnsupportedTextOrientation, "Expected unsupported table-cell text orientation state to remain scene-owned.");
+            TestAssert.True(cell.HasUnsupportedVerticalOverflow, "Expected unsupported table-cell text overflow state to remain scene-owned.");
+        }
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_ORIENTATION"), "Unsupported table-cell text orientation should be diagnostic-covered from scene-owned table cell provenance.");
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_TEXT_OVERFLOW"), "Unsupported table-cell text overflow should be diagnostic-covered from scene-owned table cell provenance.");
+    }
+
     public static void PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
