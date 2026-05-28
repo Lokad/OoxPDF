@@ -126,6 +126,7 @@ internal sealed partial class PptxRenderer
             paragraph.Style.LineSpacing.UseNormalLineAdvance,
             paragraph.Style.Indent.MarginLeft,
             paragraph.Style.Indent.Hanging,
+            paragraph.Style.TabStops,
             paragraph.Runs.Select(ToSnapshot).ToArray());
     }
 

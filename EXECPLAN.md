@@ -922,6 +922,14 @@ High-priority actions:
   future Office-alignment work can distinguish unsupported source values from normalized layout behavior.
   Validation: focused non-slow `pptx-typography` passed (`82 passed, 0 failed, 2 skipped`); full non-slow
   console runner passed (`256 passed, 0 failed, 7 skipped`).
+- [x] Resolve inherited PPTX paragraph tab stops into the text model:
+  `ResolvedParagraphTextStyle.TabStops` now reads direct paragraph `a:pPr/a:tabLst` first, then the resolved
+  default/list-style paragraph properties, and `PptxTextParagraphModelSnapshot` exposes the resolved point
+  positions. The regression locks an inherited `a:lvl1pPr/a:tabLst` tab stop without changing standalone
+  `a:tab` element behavior, so future Office tab work can start from the paragraph model instead of adding
+  renderer-local XML scans or document-specific tab offsets. Validation: focused non-slow `pptx-typography`
+  passed (`98 passed, 0 failed, 2 skipped`); full non-slow console runner passed
+  (`402 passed, 0 failed, 7 skipped`).
 - [x] Extend the OOXML enum ladder to PPTX run-style tokens:
   `ResolvedRunTextStyle`, `PptxSceneRunStyle`, and `PptxTextRunModelSnapshot` now preserve raw DrawingML
   underline, strike, and capitalization values next to the existing booleans/rendering behavior. The synthetic
@@ -6973,6 +6981,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   vertical-anchor height estimation called `ReadFontSize`, `ReadTypeface`, and boolean parsers against that
   XML. The model now exposes the resolved end-paragraph style, and the end-paragraph vertical-anchor fixture
   asserts the resolved `72 pt` font size before layout runs.
+- Observation: PPTX tab stops were only partly model-owned.
+  Evidence: `ResolvedParagraphTextStyle` already carried `TabStops` and line layout consumed that model field,
+  but `ReadTabStops` only inspected direct `a:pPr/a:tabLst`; inherited `a:lvlNpPr/a:tabLst` from the resolved
+  list-style/default paragraph cascade was ignored. The model now reads the direct tab list before falling back
+  to resolved defaults, and inspection exposes the inherited tab-stop positions.
 
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
@@ -7247,6 +7260,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   should not rediscover font metrics from XML once the text model has enough context to resolve them. Carrying
   the resolved end-paragraph font size/typeface/bold/italic state keeps the model/layout boundary explicit
   without changing empty-paragraph rendering.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Resolve paragraph tab stops through the same direct-before-default paragraph style ladder used by
+  the rest of the PPTX text model.
+  Rationale: Tab expansion is layout behavior, but the authored tab-stop list is paragraph style state. Keeping
+  the resolved point positions in `PptxTextParagraphModelSnapshot` makes the PDF-level tab outcome traceable to
+  DrawingML structure and avoids compensating for inherited tabs with ad hoc span offsets during rendering.
   Date/Author: 2026-05-28 / Codex.
 - Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
   Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
@@ -14721,6 +14740,21 @@ records.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `97` tests, `0` failures, and `2` slow skips.
+
+Revision note, 2026-05-28: PPTX paragraph tab stops now resolve through the text model's paragraph style
+cascade. `ReadTabStops` prefers direct paragraph `a:pPr/a:tabLst`, falls back to the already resolved
+default/list-style paragraph properties, and `PptxTextParagraphModelSnapshot` exposes the resolved tab-stop
+positions in points. The new inherited-list-style test keeps this structural: it verifies the model-visible
+`144 pt` stop from `a:lvl1pPr/a:tabLst` rather than relying on a private deck coordinate.
+
+This closes a small but important half-migration. Layout was already consuming `paragraph.Style.TabStops`, but
+the model did not include inherited tab lists, which left future Office tab parity vulnerable to renderer-local
+offset heuristics. Remaining paragraph work is now tighter: bullet source/provenance, first-baseline source
+provenance, and paragraph spacing/default-run ladders still need the same model-first treatment.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `402` tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;

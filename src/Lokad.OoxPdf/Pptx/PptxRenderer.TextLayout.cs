@@ -1956,7 +1956,7 @@ internal sealed partial class PptxRenderer
             ReadParagraphSpacing(paragraphProperties, defaultParagraphProperties, "spcAft", fontSize),
             ApplyCompatibleLineSpacing(ReadLineSpacing(paragraphProperties, defaultParagraphProperties), compatibleLineSpacing).ScaleExplicit(lineSpacingScale),
             ReadParagraphIndent(paragraphProperties, defaultParagraphProperties),
-            ReadTabStops(paragraphProperties));
+            ReadTabStops(paragraphProperties, defaultParagraphProperties));
     }
 
     private static ResolvedRunTextStyle ResolveRunTextStyle(
@@ -2533,9 +2533,11 @@ internal sealed partial class PptxRenderer
                 : 0d;
     }
 
-    private static IReadOnlyList<double> ReadTabStops(XElement? paragraphProperties)
+    private static IReadOnlyList<double> ReadTabStops(XElement? paragraphProperties, XElement? defaultParagraphProperties)
     {
-        if (paragraphProperties?.Element(DrawingNamespace + "tabLst") is not { } tabList)
+        XElement? tabList = paragraphProperties?.Element(DrawingNamespace + "tabLst") ??
+            defaultParagraphProperties?.Element(DrawingNamespace + "tabLst");
+        if (tabList is null)
         {
             return Array.Empty<double>();
         }

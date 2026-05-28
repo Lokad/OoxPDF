@@ -4218,6 +4218,44 @@ internal static class PptxTests
         AssertContainsTextMatrixAtX(pdf, 144d);
     }
 
+    public static void PptxTextModelInheritsListStyleTabStops()
+    {
+        string slideXml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="914400"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>
+                      <a:lstStyle>
+                        <a:lvl1pPr><a:tabLst><a:tab pos="1828800"/></a:tabLst></a:lvl1pPr>
+                      </a:lstStyle>
+                      <a:p><a:pPr/><a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>A{TAB}B</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """.Replace("{TAB}", "\t", StringComparison.Ordinal);
+
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = slideXml
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs.Single();
+
+        TestAssert.Equal(1, paragraph.TabStops.Count);
+        TestAssert.Equal(144d, paragraph.TabStops[0]);
+    }
+
     public static void PptxSyntheticTextBoxTreatsNarrowNoBreakSpaceAsHiddenAdvance()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

@@ -275,6 +275,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     bool LineSpacingUseNormalLineAdvance,
     double MarginLeft,
     double HangingIndent,
+    IReadOnlyList<double> TabStops,
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);
 
 internal sealed record PptxTextRunModelSnapshot(
