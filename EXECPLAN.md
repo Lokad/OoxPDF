@@ -398,6 +398,14 @@ High-priority actions:
   Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
   `pptx-charts` passed (`116 passed, 0 failed, 0 skipped`); full non-slow console runner passed
   (`360 passed, 0 failed, 7 skipped`).
+- [x] 2026-05-28: Keep chart title/legend text-style XML lookup out of scene-backed rendering:
+  while auditing the remaining `ReadSceneOrXml*` chart bridges, `ReadSceneOrXmlChartTitleTextStyle` and
+  `ReadSceneOrXmlChartLegendTextStyle` still located fallback XML `c:title`/`c:legend` elements before
+  checking whether a scene chart existed. The scene branches did not consume those elements, but the lookups
+  themselves weakened the source boundary. The XML lookups are now confined to the XML-only compatibility
+  branches; scene-backed title and legend style resolve only from chart scene text style, chart-style role
+  defaults, and the typed scene title/legend overrides. This is behavior-neutral and records a small but useful
+  source-boundary cleanup for future chart bridge audits.
 - [x] 2026-05-28: Make value-axis XML scale fallback scene-aware:
   `ResolveXmlValueAxisForSource` now receives the chart scene and only searches the first raw XML `c:valAx`
   when no `PptxSceneChart` exists. Scene-backed missing-axis paths therefore stay missing for axis scale,

@@ -4814,9 +4814,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyle ReadSceneOrXmlChartTitleTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, bool isAutoTitle)
     {
-        XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
         if (sceneChart is null)
         {
+            XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
             return ResolveAutoChartTitleTextStyle(
                 ReadChartTextStyle(theme, chartXml, title, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize),
                 ChartTextStyleOverride.Empty,
@@ -5193,9 +5193,9 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyle ReadSceneOrXmlChartLegendTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
     {
-        XElement? legend = chartXml.Descendants(ChartNamespace + "legend").FirstOrDefault();
         if (sceneChart is null)
         {
+            XElement? legend = chartXml.Descendants(ChartNamespace + "legend").FirstOrDefault();
             return ReadChartTextStyle(theme, chartXml, legend, fallbackFontSize: PptxChartMetricRules.LegendFallbackFontSize);
         }
 
