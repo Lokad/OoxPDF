@@ -2256,14 +2256,24 @@ internal sealed partial class PptxRenderer
         return fragments;
     }
 
-    private static TextInsets ReadTextInsets(XElement textBody)
+    private static (TextInsets Insets, TextInsetSources Sources) ReadTextInsets(
+        XElement textBody,
+        XElement? inheritedTextBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        return new TextInsets(
-            ReadInset(bodyProperties, "lIns", 91440),
-            ReadInset(bodyProperties, "rIns", 91440),
-            ReadInset(bodyProperties, "tIns", 45720),
-            ReadInset(bodyProperties, "bIns", 45720));
+        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
+        (double left, PptxTextBodyPropertySource leftSource) = ReadInset(
+            bodyProperties, inheritedBodyProperties, "lIns", 91440);
+        (double right, PptxTextBodyPropertySource rightSource) = ReadInset(
+            bodyProperties, inheritedBodyProperties, "rIns", 91440);
+        (double top, PptxTextBodyPropertySource topSource) = ReadInset(
+            bodyProperties, inheritedBodyProperties, "tIns", 45720);
+        (double bottom, PptxTextBodyPropertySource bottomSource) = ReadInset(
+            bodyProperties, inheritedBodyProperties, "bIns", 45720);
+
+        return (
+            new TextInsets(left, right, top, bottom),
+            new TextInsetSources(leftSource, rightSource, topSource, bottomSource));
     }
 
     private static PptxTextOrientation ReadTextOrientation(XElement textBody, XElement? inheritedTextBody)
@@ -2431,6 +2441,27 @@ internal sealed partial class PptxRenderer
             ? long.Parse(attribute.Value, CultureInfo.InvariantCulture)
             : defaultEmu;
         return OoxUnits.EmuToPoints(emu);
+    }
+
+    private static (double Value, PptxTextBodyPropertySource Source) ReadInset(
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties,
+        string attributeName,
+        long defaultEmu)
+    {
+        if (bodyProperties?.Attribute(attributeName) is { } directAttribute)
+        {
+            long emu = long.Parse(directAttribute.Value, CultureInfo.InvariantCulture);
+            return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.DirectBodyPr);
+        }
+
+        if (inheritedBodyProperties?.Attribute(attributeName) is { } inheritedAttribute)
+        {
+            long emu = long.Parse(inheritedAttribute.Value, CultureInfo.InvariantCulture);
+            return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.InheritedBodyPr);
+        }
+
+        return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DefaultValue);
     }
 
     private static double ReadParagraphSpacing(

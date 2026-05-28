@@ -360,6 +360,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct PptxTextBodyProperties(
         TextInsets Insets,
+        TextInsetSources InsetSources,
         PptxTextOrientation Orientation,
         string? OrientationValue,
         PptxTextBodyPropertySource OrientationSource,
@@ -391,6 +392,12 @@ internal sealed partial class PptxRenderer
         TableCellStyle,
         DefaultValue
     }
+
+    private readonly record struct TextInsetSources(
+        PptxTextBodyPropertySource Left,
+        PptxTextBodyPropertySource Right,
+        PptxTextBodyPropertySource Top,
+        PptxTextBodyPropertySource Bottom);
 
     private sealed record PptxTextParagraphModel(
         XElement Source,

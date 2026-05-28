@@ -28,10 +28,18 @@ internal sealed partial class PptxRenderer
         return new PptxTextFrameModelSnapshot(
             frame.TextX,
             frame.TextWidth,
+            frame.Insets.Left,
+            frame.Insets.Right,
+            frame.Insets.Top,
+            frame.Insets.Bottom,
             frame.FontScale,
             frame.InheritedPlaceholderCount,
             frame.InheritedTextBody is not null,
             frame.UsesInheritedShapeBounds,
+            frame.BodyProperties.InsetSources.Left.ToString(),
+            frame.BodyProperties.InsetSources.Right.ToString(),
+            frame.BodyProperties.InsetSources.Top.ToString(),
+            frame.BodyProperties.InsetSources.Bottom.ToString(),
             frame.BodyProperties.Orientation.ToString(),
             frame.BodyProperties.OrientationValue,
             frame.BodyProperties.OrientationSource.ToString(),
@@ -299,6 +307,11 @@ internal sealed partial class PptxRenderer
         PptxTextBodyProperties bodyProperties = baseBodyProperties with
         {
             Insets = tableFrame.Insets,
+            InsetSources = new TextInsetSources(
+                PptxTextBodyPropertySource.TableCellStyle,
+                PptxTextBodyPropertySource.TableCellStyle,
+                PptxTextBodyPropertySource.TableCellStyle,
+                PptxTextBodyPropertySource.TableCellStyle),
             VerticalAnchor = tableFrame.VerticalAnchor,
             VerticalAnchorValue = tableFrame.VerticalAnchor switch
             {
@@ -454,14 +467,15 @@ internal sealed partial class PptxRenderer
     {
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
         PptxTextBodyPropertySource columnSource = ReadTextColumnsSource(textBody);
+        (TextInsets insets, TextInsetSources insetSources) = ReadTextInsets(textBody, inheritedTextBody);
         (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
         (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
         (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
         (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
         (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
-        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxTextBodyProperties(
-            ReadTextInsets(textBody),
+            insets,
+            insetSources,
             ParseTextOrientation(orientation),
             orientation,
             orientationSource,

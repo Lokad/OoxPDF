@@ -12040,6 +12040,25 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Inherited PPTX text-body insets now resolve structurally from the same
+shape -> inherited placeholder `a:bodyPr` chain as the other scalar body properties. `PptxTextBodyProperties`
+keeps per-edge inset source tags, `PptxTextFrameModelSnapshot` exposes both inset values and per-edge
+source tags, and private-safe frame-model JSON now reports those fields. The mixed placeholder fixture locks
+left/top/bottom inherited insets while preserving a direct right inset, so future work cannot collapse the
+four-edge cascade into a single direct/inherited/default decision.
+
+This removes another hard-coded direct-only bodyPr fallback and aligns OOXPDF with the structural lesson from
+`C:\Users\JoannesVermorel\code\pptx-renderer`, whose `ShapeRenderer.ts` resolves `lIns`, `rIns`, `tIns`, and
+`bIns` by trying the shape body properties first, then the layout/master placeholder body properties, then
+the OOXML defaults. Remaining bodyPr cascade gaps are now narrower and explicit: text columns (`numCol` /
+`spcCol`), autofit children (`normAutofit`, `spAutoFit`, `noAutofit`), `compatLnSpc`, and text-body `rot`
+are still read from the direct text body only and need the same source-tagged inheritance treatment before
+any further private-deck tuning.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `88` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

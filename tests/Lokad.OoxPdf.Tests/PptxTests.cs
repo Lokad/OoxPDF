@@ -2720,7 +2720,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
-                      <a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400">
+                      <a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400" lIns="182880" rIns="0" tIns="457200" bIns="0">
                         <a:normAutofit fontScale="80000" lnSpcReduction="12000"/>
                       </a:bodyPr>
                       <a:lstStyle/>
@@ -2736,6 +2736,14 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal(14.4d, frame.InsetLeft);
+        TestAssert.Equal(0d, frame.InsetRight);
+        TestAssert.Equal(36d, frame.InsetTop);
+        TestAssert.Equal(0d, frame.InsetBottom);
+        TestAssert.Equal("DirectBodyPr", frame.InsetLeftSource);
+        TestAssert.Equal("DirectBodyPr", frame.InsetRightSource);
+        TestAssert.Equal("DirectBodyPr", frame.InsetTopSource);
+        TestAssert.Equal("DirectBodyPr", frame.InsetBottomSource);
         TestAssert.Equal("Vertical270", frame.Orientation);
         TestAssert.Equal("vert270", frame.OrientationValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.OrientationSource);
@@ -2837,7 +2845,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="2" name="Layout Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip"/><a:lstStyle/><a:p/></p:txBody>
+                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip" lIns="914400" tIns="457200" bIns="0"/><a:lstStyle/><a:p/></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
@@ -2846,7 +2854,7 @@ internal static class PptxTests
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="3" name="Slide Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
-                    <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Inherited body properties</a:t></a:r></a:p></p:txBody>
+                    <p:txBody><a:bodyPr rIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Inherited body properties</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -2857,6 +2865,14 @@ internal static class PptxTests
         PptxDocument document = new PptxReader().Read(package);
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal(72d, frame.InsetLeft);
+        TestAssert.Equal(0d, frame.InsetRight);
+        TestAssert.Equal(36d, frame.InsetTop);
+        TestAssert.Equal(0d, frame.InsetBottom);
+        TestAssert.Equal("InheritedBodyPr", frame.InsetLeftSource);
+        TestAssert.Equal("DirectBodyPr", frame.InsetRightSource);
+        TestAssert.Equal("InheritedBodyPr", frame.InsetTopSource);
+        TestAssert.Equal("InheritedBodyPr", frame.InsetBottomSource);
         TestAssert.Equal("Vertical270", frame.Orientation);
         TestAssert.Equal("InheritedBodyPr", frame.OrientationSource);
         TestAssert.Equal("Bottom", frame.VerticalAnchor);
@@ -6134,10 +6150,18 @@ internal static class PptxTests
                 {
                     models[frameIndex].TextX,
                     models[frameIndex].TextWidth,
+                    models[frameIndex].InsetLeft,
+                    models[frameIndex].InsetRight,
+                    models[frameIndex].InsetTop,
+                    models[frameIndex].InsetBottom,
                     models[frameIndex].FontScale,
                     models[frameIndex].InheritedPlaceholderCount,
                     models[frameIndex].HasInheritedTextBody,
                     models[frameIndex].UsesInheritedShapeBounds,
+                    models[frameIndex].InsetLeftSource,
+                    models[frameIndex].InsetRightSource,
+                    models[frameIndex].InsetTopSource,
+                    models[frameIndex].InsetBottomSource,
                     models[frameIndex].OrientationSource,
                     models[frameIndex].VerticalAnchorSource,
                     models[frameIndex].AnchorCenterSource,
