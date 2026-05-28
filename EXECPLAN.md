@@ -3587,6 +3587,11 @@ High-priority actions:
   paths are converged onto shared text-frame layout.
 - [ ] Port `pptx-renderer` bullet and numbering behavior: bullet suppression for metadata placeholders,
   `buChar`, `buAutoNum`, `buFont`, `buClr`, `buSz`, hanging indents, and inherited bullet defaults.
+  2026-05-28 progress: shape-text bullet layout now consumes the resolved paragraph style cascade for
+  marker text and bullet style, so `a:lstStyle`/inherited default bullet markers participate in layout
+  instead of only locally declared paragraph `a:pPr` markers. A synthetic layout test locks inherited
+  `lvl1pPr/a:buChar` emission. Keep this item open for metadata-placeholder bullet suppression and for
+  avoiding future chart/table text bullet logic that bypasses the shared text-frame cascade.
 - [ ] Port `pptx-renderer` table text behavior: cell text style inheritance, table style overrides,
   vertical alignment, margins, merged cells, and per-cell text diagnostics.
   - [x] Add the first table scene record: `PptxSceneTable` now carries raw grid column widths and row heights,

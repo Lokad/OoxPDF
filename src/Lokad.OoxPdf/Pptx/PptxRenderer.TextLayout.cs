@@ -818,7 +818,8 @@ internal sealed partial class PptxRenderer
                 continue;
             }
 
-            string? bulletText = ReadBulletText(paragraph.Properties, ref autoNumberValue);
+            XElement? bulletProperties = paragraph.ResolvedStyleCascade.ResolveDefaultProperties();
+            string? bulletText = ReadBulletText(bulletProperties, ref autoNumberValue);
             bool bulletPending = bulletText is not null;
             double effectiveTextWidth = columnWrapWidth;
             double bulletX = columnStartX + PptxTextMetricRules.ClampNonNegative(paragraphStyle.Indent.MarginLeft + paragraphStyle.Indent.Hanging);
@@ -876,7 +877,7 @@ internal sealed partial class PptxRenderer
 
                 if (bulletPending)
                 {
-                    BulletStyle bulletStyle = ReadBulletStyle(paragraph.Properties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
+                    BulletStyle bulletStyle = ReadBulletStyle(bulletProperties, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
