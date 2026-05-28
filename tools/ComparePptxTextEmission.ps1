@@ -331,6 +331,8 @@ foreach ($pair in $pairs) {
             CandBaselineFromShapeTop = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "BaselineFromShapeTop" }
             CandLineBottomFromShapeBottom = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineBottomFromShapeBottom" }
             CandLineAdvance = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "LineAdvance" }
+            CandGlyphCount = if ($null -eq $candidate) { $null } else { OptionalValue $candidate "GlyphCount" }
+            CandFirstAdjustmentAfterOrigin = if ($null -eq $candidate) { $null } else { OptionalRoundedDouble $candidate "FirstAdjustmentAfterOrigin" }
             RefText = if ($IncludeText -and $null -ne $reference) { RefText $reference } else { $null }
             CandText = if ($IncludeText -and $null -ne $candidate) { CandText $candidate } else { $null }
         })
@@ -408,6 +410,8 @@ foreach ($pair in $pairs) {
         CandBaselineFromShapeTop = OptionalRoundedDouble $candidate "BaselineFromShapeTop"
         CandLineBottomFromShapeBottom = OptionalRoundedDouble $candidate "LineBottomFromShapeBottom"
         CandLineAdvance = OptionalRoundedDouble $candidate "LineAdvance"
+        CandGlyphCount = OptionalValue $candidate "GlyphCount"
+        CandFirstAdjustmentAfterOrigin = OptionalRoundedDouble $candidate "FirstAdjustmentAfterOrigin"
         RefText = if ($IncludeText) { RefText $reference } else { $null }
         CandText = if ($IncludeText) { CandText $candidate } else { $null }
     })
@@ -427,14 +431,24 @@ if (HasValue $OutputSummaryJson) {
         FontBranchExtents = Group-BranchExtents $rowsArray
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
+        ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }
+        BySpanIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandSpanIndex) + "|" + (BranchKey $row) }
         ByRefBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.RefBaselineY600Remainder) + "|" + (BranchKey $row) }
         ByCandidateBaselineRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateFrameXAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeX) + "|" + (BranchKey $row) }
         ByCandidateFrameTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeTopY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateFrameWidthAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeWidth) + "|" + (BranchKey $row) }
+        ByCandidateTextWidthAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextWidth) + "|" + (BranchKey $row) }
         ByCandidateLineTopRemainderAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopY600Remainder) + "|" + (BranchKey $row) }
+        ByCandidateLineTopFromShapeTopAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopFromShapeTop) + "|" + (BranchKey $row) }
+        ByCandidateLineTopFromTextTopAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineTopFromTextTop) + "|" + (BranchKey $row) }
+        ByCandidateBaselineFromShapeTopAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandBaselineFromShapeTop) + "|" + (BranchKey $row) }
         ByCandidateLineIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineIndex) + "|" + (BranchKey $row) }
         ByCandidateLineSpanCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLineSpanCount) + "|" + (BranchKey $row) }
         ByCandidateFrameHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameShapeHeight) + "|" + (BranchKey $row) }
         ByCandidateTextHeightAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandFrameTextHeight) + "|" + (BranchKey $row) }
+        ByCandidateGlyphCountAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandGlyphCount")) + "|" + (BranchKey $row) }
+        ByCandidateFirstAdjustmentAndBranch = Group-Count $rowsArray { param($row) (RoundedKey (OptionalValue $row "CandFirstAdjustmentAfterOrigin")) + "|" + (BranchKey $row) }
     }
 
     $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutputSummaryJson -Encoding UTF8

@@ -1031,16 +1031,14 @@ High-priority actions:
   analytical offset-curve model. Validation: focused non-slow `pptx-shapes` passed (`16 passed, 0 failed, 0
   skipped`), and `pptx-ladder-06-curved-connector-transform-probe` run `20260527-210014` kept all four Office/candidate
   fills at `seg=250,line=244,curve=4,move=2,close=2`.
-- [ ] Close the remaining private page-17 slide-clip and derived font-size gaps:
-  after the page/background and raster-picture clipping passes, private page 17 is still down to one missing
-  high-level `W*` clip and still
-  differs on derived/fractional font sizes: Office reports `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while
-  candidate reports `9,10,12,13,14,16,18`. The fractional-font public guard covers explicit `a:rPr sz`, so the
-  remaining work must split two independent issues instead of applying another narrow page-specific patch:
-  the source slide has whole-point `a:rPr/@sz` values and no `normAutofit`, while Office's PDF export applies a
-  repeatable text-emission quantization before writing `/Tf`; a separate non-picture graphics-structure gap still
-  accounts for the missing even-odd clip. Public image evidence rules out normal stretched raster pictures as the
-  remaining source.
+- [ ] Track the remaining private page-17 text/font-size gap while preserving the closed clip history:
+  this item started when private page 17 still had one missing high-level `W*` clip and dominant derived font-size
+  differences: Office reported `9,9.024,9.96,12,12.96,12.984,14.04,15.96,18`, while the candidate reported
+  `9,10,12,13,14,16,18`. Subsequent public-backed clipping and font-grid work closed the graphics count and the
+  dominant `10/13/14/16` quantization mismatch; the still-open private signal is now only the secondary Office
+  `/Tf +0.024 pt` branch (`9.024` and `12.984`) plus ordinary small text-position deltas. Keep future changes tied
+  to public-safe font-emission probes rather than a private slide-specific rule. Public image evidence already rules
+  out normal stretched raster pictures as the former clip source.
   - [x] 2026-05-28 private acceptance baseline after the chart-style/effect slices:
     private run `artifacts/private-visual/lokad-value-based/20260528-102720` compared all 84 pages with zero
     dimension mismatches; page 17 remained dimension-matched at MAE `2.785230`, RMSE `18.891917`, changed16
@@ -1053,6 +1051,14 @@ High-priority actions:
     dimension mismatches, deck MAE `7.536827`, max page MAE `16.412422`, changed16 `0.101039`, and only
     `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. This remained behavior-neutral against the previous private baseline,
     so the still-open page-17 work remains the public-safe text/font emission branch rather than a new regression.
+  - [x] 2026-05-28 private acceptance baseline after chart axis source-boundary cleanup:
+    private run `artifacts/private-visual/lokad-value-based/20260528-112714` compared all 84 pages with zero
+    dimension mismatches, deck MAE `7.536827`, max page MAE `16.412422`, changed16 `0.101039`, and only
+    `PPTX_UNSUPPORTED_IMAGE_RECOLOR`. Page 17 remains stable at MAE `2.785230`, changed16 `0.044118`, changed32
+    `0.034128`, SSIM `0.923374`, and foreground histogram correlation `0.999944`. Page-filtered PDF inspection now
+    has exact high-level graphics parity (`f:4,f*:14,S:4,W*:68` on both sides) and 44 text operations on both sides;
+    the only font-size branch left is Office's secondary `9.024`/`12.984` versus the candidate's dominant
+    `9`/`12.96` grid.
 - [x] 2026-05-27: Close the remaining private page-17 graphics-operator clip gap with an Office-like
   stroke-phase slide clip:
   public `pptx-ladder-05-basic-shapes` showed the same pattern as the private slide: Office emits a slide-sized
@@ -1168,19 +1174,27 @@ High-priority actions:
     compare indices `5..11`; all seven secondary rows have Office baseline-grid remainder `0.833333`, but five exact
     rows share that same remainder while sixteen exact rows sit at `0.583333`. The branch also aligns with source
     shape tops `135..153 pt`, while candidate line-top and shape-top values are themselves exactly on the 600-DPI
-  grid. This is a useful discriminator but still not a sufficient rule, so rendering remains unchanged and the next
-  step must include more frame/paragraph context than absolute baseline remainder alone.
+    grid. This is a useful discriminator but still not a sufficient rule, so rendering remains unchanged and the next
+    step must include more frame/paragraph context than absolute baseline remainder alone.
   - [x] 2026-05-28: Add a public-safe branch summary mode to `tools/ComparePptxTextEmission.ps1`.
     The comparer can now write `-OutputSummaryJson` with status counts, Office font-branch counts, branch extents,
     and grouped correlations for layout font size, Office/candidate baseline grid remainders, candidate frame top,
     candidate line top, line index, line span count, frame height, and text height. Re-running the existing
     `font-size-quantization-y-scan-21pt-fine` probe keeps the renderer unchanged and summarizes the evidence directly:
-  `21` exact rows remain at `21` counts, while the `secondary-0.024` branch has `7` rows with reference baseline
-  range `362.98..380.98`, candidate frame-top range `135..153`, and candidate line-top range `383.4..401.4`.
+    `21` exact rows remain at `21` counts, while the `secondary-0.024` branch has `7` rows with reference baseline
+    range `362.98..380.98`, candidate frame-top range `135..153`, and candidate line-top range `383.4..401.4`.
     The summary also makes negative evidence explicit: line index, span count, frame height, text height, candidate
-    baseline remainder, and candidate frame/line grid remainders do not distinguish the branch in this probe. This strengthens the next
-  implementation constraint: a future `/Tf` rule must explain a page/text-matrix placement band from public evidence
-  rather than adding a per-size or per-Y lookup.
+    baseline remainder, and candidate frame/line grid remainders do not distinguish the branch in this probe. This
+    strengthens the next implementation constraint: a future `/Tf` rule must explain a page/text-matrix placement
+    band from public evidence rather than adding a per-size or per-Y lookup.
+  - [x] 2026-05-28: Extend the public-safe branch summary with more frame and glyph context before deriving the
+    secondary `/Tf` rule. `tools/ComparePptxTextEmission.ps1` now groups branch counts by paragraph index, span
+    index, frame X/width, text width, line top from shape/text top, baseline from shape top, glyph count, and first
+    adjustment after origin. Re-running `font-size-quantization-y-scan-21pt-fine` keeps the exact same 21 main-grid
+    rows and 7 secondary rows; frame X, frame width, text width, line offsets, paragraph/span indices, and glyph count
+    are identical across both branches, while only one secondary row has a nonzero first adjustment. This narrows the
+    long-term rule toward Office's absolute page/text-matrix quantization and away from width, single-line layout,
+    paragraph/span identity, glyph cardinality, or first-glyph kerning as sufficient explanations.
   - [x] 2026-05-28: Carry the actual emitted baseline into the PPTX PDF text-emission context. The internal
     `PptxPdfTextEmissionContext` already carried layout font size, frame geometry, insets, wrap/autofit mode,
     line identity, line top, line advance, and line max font size; it now also carries bottom-origin `BaselineY`,
