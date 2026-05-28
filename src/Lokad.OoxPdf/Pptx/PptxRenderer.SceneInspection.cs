@@ -113,6 +113,8 @@ internal sealed partial class PptxRenderer
             node.TextBody?.HasUnsupportedVerticalOverflow ?? false,
             node.Picture is not null,
             node.Picture?.Resource is not null,
+            node.Picture?.HasVideo ?? false,
+            node.Picture?.HasAudio ?? false,
             node.Picture?.Resource?.ContentType ?? string.Empty,
             node.Picture?.Alpha ?? 1d,
             node.Picture?.AlphaValue ?? string.Empty,

@@ -14523,6 +14523,24 @@ runner invocation covering unknown graphic frames, unsupported-feature diagnosti
 transparency completed successfully; full non-slow console runner passed with `398` tests, `0` failures, and
 `7` slow skips.
 
+Revision note, 2026-05-28: PPTX video/audio unsupported-feature diagnostics now consult scene-owned picture
+media provenance before falling back to raw slide XML. `PptxScenePicture` records whether a `p:pic` owns
+video or audio markup, private-safe scene inspection exposes `PictureHasVideo` and `PictureHasAudio`, and the
+diagnostic emitter traverses scene picture nodes first. The regression deliberately removes all media markup
+from the XML fallback passed to `EmitUnsupportedFeatureDiagnostics` and still expects video/audio diagnostics,
+so the behavior is locked to the scene boundary rather than to an incidental XML rescan.
+
+The XML fallback remains for compatibility and for future non-picture media owners, but it should not grow
+new narrow owner-name checks. Long term, transition, timing, OLE, and any non-picture media provenance should
+become typed slide/node metadata in the scene model, then diagnostics should consume those fields with raw XML
+only as a compatibility path. This continues the structural-alignment direction: diagnostics report what the
+normalized OOXML scene says is present, instead of rediscovering features independently inside the renderer.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused
+`PptxUnsupportedMediaDiagnosticsUseScenePictureState` invocation ran the console suite and passed with
+`406` tests, `0` failures, and `0` skips; full non-slow console runner passed with `399` tests, `0` failures,
+and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

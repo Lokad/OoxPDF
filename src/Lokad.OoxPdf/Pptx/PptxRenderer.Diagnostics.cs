@@ -41,13 +41,15 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_ANIMATION", "animation");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "video").Any() ||
+        if (HasVideo(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(PresentationNamespace + "video").Any() ||
             slideXml.Descendants(DrawingNamespace + "videoFile").Any())
         {
             Emit("PPTX_UNSUPPORTED_VIDEO", "video");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "audio").Any() ||
+        if (HasAudio(sceneSlide.SlideNodes) ||
+            slideXml.Descendants(PresentationNamespace + "audio").Any() ||
             slideXml.Descendants(DrawingNamespace + "audioFile").Any())
         {
             Emit("PPTX_UNSUPPORTED_AUDIO", "audio");
@@ -182,6 +184,34 @@ internal sealed partial class PptxRenderer
         {
             if ((node.Shape is not null && IsUnsupportedCalloutPreset(node.Shape.Preset)) ||
                 HasUnsupportedCallout(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasVideo(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.Picture?.HasVideo == true ||
+                HasVideo(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasAudio(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if (node.Picture?.HasAudio == true ||
+                HasAudio(node.Children))
             {
                 return true;
             }

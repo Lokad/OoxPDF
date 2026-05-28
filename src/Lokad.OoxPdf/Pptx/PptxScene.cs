@@ -67,6 +67,8 @@ internal sealed record PptxSceneNodeSnapshot(
     bool TextHasUnsupportedVerticalOverflow,
     bool HasPicture,
     bool HasPictureResource,
+    bool PictureHasVideo,
+    bool PictureHasAudio,
     string PictureContentType,
     double PictureAlpha,
     string PictureAlphaValue,
@@ -671,6 +673,8 @@ internal sealed record PptxScenePicture(
     double Alpha,
     string? AlphaValue,
     PptxSceneImageRecolor Recolor,
+    bool HasVideo,
+    bool HasAudio,
     PptxScenePictureTile Tile);
 
 internal sealed record PptxSceneImageResource(
@@ -2255,7 +2259,21 @@ internal sealed class PptxSceneBuilder
             ReadPictureAlpha(picture),
             ReadPictureAlphaValue(picture),
             ReadImageRecolor(picture, theme, colorMap),
+            HasPictureVideo(picture),
+            HasPictureAudio(picture),
             ReadPictureTile(picture));
+    }
+
+    private static bool HasPictureVideo(XElement picture)
+    {
+        return picture.Descendants(PresentationNamespace + "video").Any() ||
+            picture.Descendants(DrawingNamespace + "videoFile").Any();
+    }
+
+    private static bool HasPictureAudio(XElement picture)
+    {
+        return picture.Descendants(PresentationNamespace + "audio").Any() ||
+            picture.Descendants(DrawingNamespace + "audioFile").Any();
     }
 
     private static PptxSceneChart ReadChart(

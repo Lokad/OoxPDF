@@ -17479,6 +17479,62 @@ internal static class PptxTests
         TestAssert.True(diagnostics.All(d => d.Severity == OoxPdfSeverity.Warning && d.SlideIndex == 1), "Unsupported PPTX diagnostics should be slide-scoped warnings.");
     }
 
+    public static void PptxUnsupportedMediaDiagnosticsUseScenePictureState()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:pic>
+                      <p:nvPicPr><p:cNvPr id="2" name="Video"/><p:cNvPicPr/><p:nvPr><p:video/></p:nvPr></p:nvPicPr>
+                      <p:blipFill><a:blip><a:videoFile/></a:blip></p:blipFill>
+                    </p:pic>
+                    <p:pic>
+                      <p:nvPicPr><p:cNvPr id="3" name="Audio"/><p:cNvPicPr/><p:nvPr><p:audio/></p:nvPr></p:nvPicPr>
+                      <p:blipFill><a:blip><a:audioFile/></a:blip></p:blipFill>
+                    </p:pic>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[0];
+        TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasVideo == true), "Expected video provenance to be owned by the scene picture.");
+        TestAssert.True(sceneSlide.SlideNodes.Any(node => node.Picture?.HasAudio == true), "Expected audio provenance to be owned by the scene picture.");
+
+        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
+        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.PictureHasVideo), "Expected video provenance to be visible in scene inspection.");
+        TestAssert.True(snapshot.Slides[0].SlideNodes.Any(node => node.PictureHasAudio), "Expected audio provenance to be visible in scene inspection.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutMedia = XDocument.Parse("""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutMedia, "/ppt/slides/slide1.xml", 1, sink]);
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id));
+        TestAssert.Contains("PPTX_UNSUPPORTED_AUDIO", ids);
+        TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", ids);
+    }
+
     public static void PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
