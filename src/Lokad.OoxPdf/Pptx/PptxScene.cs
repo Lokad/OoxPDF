@@ -45,8 +45,12 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasPicture,
     bool HasPictureResource,
     string PictureContentType,
+    double PictureAlpha,
+    string PictureAlphaValue,
     bool HasShapePictureFillResource,
     string ShapePictureFillContentType,
+    double ShapePictureFillAlpha,
+    string ShapePictureFillAlphaValue,
     string PictureRecolorKind,
     string PictureRecolorKindValue,
     double? PictureRecolorBrightness,
@@ -551,6 +555,8 @@ internal readonly record struct PptxSceneShapePictureFill(
     PptxSceneImageResource? Resource,
     PptxSceneRect Crop,
     PptxSceneRect Fill,
+    double Alpha,
+    string? AlphaValue,
     PptxScenePictureTile Tile);
 
 internal readonly record struct PptxSceneGlow(
@@ -621,6 +627,7 @@ internal sealed record PptxScenePicture(
     PptxSceneRect Crop,
     PptxSceneRect Fill,
     double Alpha,
+    string? AlphaValue,
     PptxSceneImageRecolor Recolor,
     PptxScenePictureTile Tile);
 
@@ -2101,6 +2108,7 @@ internal sealed class PptxSceneBuilder
             ReadPictureCrop(picture),
             ReadPictureFill(picture),
             ReadPictureAlpha(picture),
+            ReadPictureAlphaValue(picture),
             ReadImageRecolor(picture, theme),
             ReadPictureTile(picture));
     }
@@ -4207,6 +4215,8 @@ internal sealed class PptxSceneBuilder
                 ReadImageResource(package, targetPartName),
                 ReadPictureCrop(shapeProperties!),
                 ReadPictureFill(shapeProperties!),
+                ReadPictureAlpha(shapeProperties!),
+                ReadPictureAlphaValue(shapeProperties!),
                 ReadPictureTile(shapeProperties!));
     }
 
@@ -4668,9 +4678,7 @@ internal sealed class PptxSceneBuilder
 
     internal static double ReadPictureAlpha(XElement picture)
     {
-        XElement? blip = picture
-            .Element(PresentationNamespace + "blipFill")
-            ?.Element(DrawingNamespace + "blip");
+        XElement? blip = ReadPictureBlip(picture);
         XElement? alphaModFix = blip?.Element(DrawingNamespace + "alphaModFix");
         if (alphaModFix?.Attribute("amt") is { } amount &&
             int.TryParse(amount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedAmount))
@@ -4679,6 +4687,21 @@ internal sealed class PptxSceneBuilder
         }
 
         return 1d;
+    }
+
+    internal static string? ReadPictureAlphaValue(XElement picture)
+    {
+        XElement? blip = ReadPictureBlip(picture);
+        return (string?)blip
+            ?.Element(DrawingNamespace + "alphaModFix")
+            ?.Attribute("amt");
+    }
+
+    private static XElement? ReadPictureBlip(XElement picture)
+    {
+        XElement? blipFill = picture.Element(PresentationNamespace + "blipFill") ??
+            picture.Element(DrawingNamespace + "blipFill");
+        return blipFill?.Element(DrawingNamespace + "blip");
     }
 
     internal static PptxSceneImageRecolor ReadImageRecolor(XElement picture, PptxTheme theme)

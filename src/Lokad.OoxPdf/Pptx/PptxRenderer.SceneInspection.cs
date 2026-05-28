@@ -43,6 +43,7 @@ internal sealed partial class PptxRenderer
         PptxSceneTableStyle tableStyle = node.Table?.Style ?? default;
         PptxSceneBounds? bounds = node.Bounds;
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
+        PptxSceneShapePictureFill shapePictureFill = node.Shape?.PictureFill ?? default;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
         IReadOnlyList<PptxSceneChartPlot> chartPlots = node.Chart?.Plots ?? [];
@@ -79,8 +80,12 @@ internal sealed partial class PptxRenderer
             node.Picture is not null,
             node.Picture?.Resource is not null,
             node.Picture?.Resource?.ContentType ?? string.Empty,
-            node.Shape?.PictureFill.Resource is not null,
-            node.Shape?.PictureFill.Resource?.ContentType ?? string.Empty,
+            node.Picture?.Alpha ?? 1d,
+            node.Picture?.AlphaValue ?? string.Empty,
+            shapePictureFill.Resource is not null,
+            shapePictureFill.Resource?.ContentType ?? string.Empty,
+            shapePictureFill.HasPicture ? shapePictureFill.Alpha : 1d,
+            shapePictureFill.AlphaValue ?? string.Empty,
             recolor?.Kind.ToString() ?? string.Empty,
             recolor?.KindValue ?? string.Empty,
             recolor?.Kind == PptxSceneImageRecolorKind.Luminance ? recolor?.Brightness : null,

@@ -205,7 +205,8 @@ internal sealed partial class PptxRenderer
             out string? pictureFillName,
             out PdfImageXObject? pictureFillImage,
             out CropRect pictureFillCrop,
-            out FillRect pictureFillRect);
+            out FillRect pictureFillRect,
+            out double pictureFillAlpha);
         PptxSceneCustomGeometry? sceneCustomGeometry = customGeometryOverride is { HasGeometry: true } ? customGeometryOverride : null;
         XElement? customGeometry = hasCustomGeometry && sceneCustomGeometry is null ? shapeProperties.Element(DrawingNamespace + "custGeom") : null;
 
@@ -502,6 +503,13 @@ internal sealed partial class PptxRenderer
             double imageY = y + fillRect.Bottom * height;
             double imageWidth = Math.Max(0.001d, width * (1d - fillRect.Left - fillRect.Right));
             double imageHeight = Math.Max(0.001d, height * (1d - fillRect.Top - fillRect.Bottom));
+            bool transparentPictureFill = pictureFillAlpha < 0.999d;
+            if (transparentPictureFill)
+            {
+                graphics.SaveState();
+                graphics.SetAlpha(pictureFillAlpha, 1d);
+            }
+
             bool clippedToShape = preset != "rect";
             if (clippedToShape)
             {
@@ -512,6 +520,11 @@ internal sealed partial class PptxRenderer
             DrawImageFill(graphics, pictureFillName, imageX, imageY, imageWidth, imageHeight, crop);
 
             if (clippedToShape)
+            {
+                graphics.RestoreState();
+            }
+
+            if (transparentPictureFill)
             {
                 graphics.RestoreState();
             }
@@ -1564,12 +1577,14 @@ internal sealed partial class PptxRenderer
         out string? name,
         out PdfImageXObject? image,
         out CropRect crop,
-        out FillRect fillRect)
+        out FillRect fillRect,
+        out double alpha)
     {
         name = null;
         image = null;
         crop = default;
         fillRect = default;
+        alpha = 1d;
         if (images is null || pictureFillOverride is null || !CanRenderPictureFillPreset(ReadPreset(shapeProperties)))
         {
             return false;
@@ -1597,6 +1612,7 @@ internal sealed partial class PptxRenderer
 
         crop = resolvedPictureFill.Crop;
         fillRect = resolvedPictureFill.Fill;
+        alpha = resolvedPictureFill.Alpha;
         name = "Im" + imageIndex++;
         return true;
     }
@@ -2365,7 +2381,7 @@ internal sealed partial class PptxRenderer
     private static ShapePictureFill? ToShapePictureFill(PptxSceneShapePictureFill fill)
     {
         return fill.HasPicture
-            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, fill.Resource, ToCropRect(fill.Crop), ToFillRect(fill.Fill))
+            ? new ShapePictureFill(fill.RelationshipId, fill.TargetPartName, fill.Resource, ToCropRect(fill.Crop), ToFillRect(fill.Fill), fill.Alpha)
             : null;
     }
 

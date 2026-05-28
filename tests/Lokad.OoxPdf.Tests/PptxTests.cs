@@ -1128,6 +1128,31 @@ internal static class PptxTests
         TestAssert.Equal("-25400", tile.OffsetYValue ?? string.Empty);
     }
 
+    public static void PptxImageAlphaPreservesRawOoxmlTokens()
+    {
+        XElement slidePicture = XElement.Parse("""
+            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:blipFill>
+                <a:blip><a:alphaModFix amt="37500"/></a:blip>
+              </p:blipFill>
+            </p:pic>
+            """);
+        TestAssert.Equal(0.375d, PptxSceneBuilder.ReadPictureAlpha(slidePicture));
+        TestAssert.Equal("37500", PptxSceneBuilder.ReadPictureAlphaValue(slidePicture) ?? string.Empty);
+
+        XElement shapePictureFill = XElement.Parse("""
+            <p:spPr xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                    xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <a:blipFill>
+                <a:blip><a:alphaModFix amt="62500"/></a:blip>
+              </a:blipFill>
+            </p:spPr>
+            """);
+        TestAssert.Equal(0.625d, PptxSceneBuilder.ReadPictureAlpha(shapePictureFill));
+        TestAssert.Equal("62500", PptxSceneBuilder.ReadPictureAlphaValue(shapePictureFill) ?? string.Empty);
+    }
+
     public static void PptxPlaceholderMatchingPrefersExactThenIndex()
     {
         XNamespace p = "http://schemas.openxmlformats.org/presentationml/2006/main";

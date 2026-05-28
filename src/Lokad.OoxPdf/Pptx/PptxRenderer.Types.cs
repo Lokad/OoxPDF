@@ -1350,7 +1350,8 @@ internal sealed partial class PptxRenderer
         string? TargetPartName,
         PptxSceneImageResource? Resource,
         CropRect Crop,
-        FillRect Fill);
+        FillRect Fill,
+        double Alpha);
 
     private readonly record struct Glow(RgbColor Color, double Alpha, double Radius);
 
