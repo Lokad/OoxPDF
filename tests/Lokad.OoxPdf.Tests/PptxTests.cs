@@ -7469,7 +7469,7 @@ internal static class PptxTests
         TestAssert.Equal("accent2", slide.SlideColorMap["accent2"]);
     }
 
-    public static void PptxThemeColorMapResolvesSceneTextRunColors()
+    public static void PptxThemeColorMapResolvesSceneTextAndShapeColors()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
         {
@@ -7500,6 +7500,7 @@ internal static class PptxTests
                       <a:dk1><a:srgbClr val="000000"/></a:dk1>
                       <a:lt1><a:srgbClr val="FFFFFF"/></a:lt1>
                       <a:accent5><a:srgbClr val="112233"/></a:accent5>
+                      <a:accent6><a:srgbClr val="445566"/></a:accent6>
                     </a:clrScheme>
                     <a:fontScheme name="ColorMapText"><a:majorFont/><a:minorFont/></a:fontScheme>
                   </a:themeElements>
@@ -7509,10 +7510,14 @@ internal static class PptxTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
-                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm></p:spPr>
+                    <p:spPr>
+                      <a:xfrm><a:off x="0" y="0"/><a:ext cx="914400" cy="914400"/></a:xfrm>
+                      <a:solidFill><a:schemeClr val="bg1"/></a:solidFill>
+                      <a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>
+                    </p:spPr>
                     <p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:rPr><a:t>Mapped</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
-                  <p:clrMapOvr><a:overrideClrMapping bg1="accent5"/></p:clrMapOvr>
+                  <p:clrMapOvr><a:overrideClrMapping bg1="accent5" tx1="accent6"/></p:clrMapOvr>
                 </p:sld>
                 """
         });
@@ -7521,9 +7526,12 @@ internal static class PptxTests
         OoxPackage package = OoxPackage.Open(stream);
         PptxDocument document = new PptxReader().Read(package);
         PptxScene scene = new PptxSceneBuilder().Build(document, package);
-        PptxSceneRunStyle style = scene.Slides[0].SlideNodes[0].TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
+        PptxSceneNode node = scene.Slides[0].SlideNodes[0];
+        PptxSceneRunStyle style = node.TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
 
         TestAssert.Equal(new RgbColor(17, 34, 51), style.Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), node.Shape!.Fill.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), node.Shape.Line.Color);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()

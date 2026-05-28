@@ -2007,7 +2007,7 @@ internal sealed class PptxSceneBuilder
                 kind == PptxSceneNodeKind.UnknownGraphicFrame && IsSmartArtGraphicFrame(child),
                 ReadHyperlinkClick(nonVisualProperties),
                 ReadBounds(child),
-                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, package, relationships) : null,
+                kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector ? ReadShape(child, theme, colorMap, package, relationships) : null,
                 ReadTextBody(child, placeholderSources, theme, colorMap),
                 kind == PptxSceneNodeKind.Picture ? ReadPicture(child, theme, package, relationships) : null,
                 kind == PptxSceneNodeKind.Table ? ReadTable(child, theme) : null,
@@ -4110,11 +4110,12 @@ internal sealed class PptxSceneBuilder
     private static PptxSceneShape ReadShape(
         XElement shape,
         PptxTheme theme,
+        PptxColorMap colorMap,
         OoxPackage package,
         IReadOnlyDictionary<string, OoxRelationship> relationships)
     {
         XElement? shapeProperties = shape.Element(PresentationNamespace + "spPr");
-        PptxSceneLineStyle line = TryReadShapeLine(shape, shapeProperties, theme, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
+        PptxSceneLineStyle line = TryReadShapeLine(shape, shapeProperties, theme, colorMap, out RgbColor lineColor, out double lineWidth, out double lineAlpha)
             ? new PptxSceneLineStyle(
                 true,
                 lineColor,
@@ -4139,20 +4140,25 @@ internal sealed class PptxSceneBuilder
             ReadPresetAdjustments(shapeProperties),
             shapeProperties?.Element(DrawingNamespace + "custGeom") is not null,
             ReadCustomGeometry(shapeProperties),
-            TryReadShapeFill(shape, shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+            TryReadShapeFill(shape, shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
                 ? new PptxSceneFillStyle(true, fillColor, fillAlpha)
                 : default,
-            TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
-            TryReadShapePatternFill(shapeProperties, theme, out PptxScenePatternFill patternFill) ? patternFill : default,
+            TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill gradientFill) ? gradientFill : new PptxSceneGradientFill(false, 0d, []),
+            TryReadShapePatternFill(shapeProperties, theme, colorMap, out PptxScenePatternFill patternFill) ? patternFill : default,
             ReadShapePictureFill(shapeProperties, package, relationships),
-            TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
-            TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
+            TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
+            TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
     }
 
     internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)
+    {
+        return TryReadShapeGradientFill(shapeProperties, theme, PptxColorMap.Default, out fill);
+    }
+
+    internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientFill fill)
     {
         XElement? gradientFill = shapeProperties?.Element(DrawingNamespace + "gradFill");
         XElement? gradientStopList = gradientFill?.Element(DrawingNamespace + "gsLst");
@@ -4164,7 +4170,7 @@ internal sealed class PptxSceneBuilder
 
         PptxSceneGradientStop[] stops = gradientStopList
             .Elements(DrawingNamespace + "gs")
-            .Select(stop => TryReadGradientStop(stop, theme, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
+            .Select(stop => TryReadGradientStop(stop, theme, colorMap, out PptxSceneGradientStop parsed) ? parsed : (PptxSceneGradientStop?)null)
             .Where(stop => stop is not null)
             .Select(stop => stop!.Value)
             .OrderBy(stop => stop.Offset)
@@ -4181,9 +4187,9 @@ internal sealed class PptxSceneBuilder
         return true;
     }
 
-    private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, out PptxSceneGradientStop stop)
+    private static bool TryReadGradientStop(XElement gradientStop, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGradientStop stop)
     {
-        if (!TryReadSolidColorWithAlpha(gradientStop, theme, out RgbColor color, out double alpha))
+        if (!TryReadSolidColorWithAlpha(gradientStop, theme, colorMap, out RgbColor color, out double alpha))
         {
             stop = default;
             return false;
@@ -4394,6 +4400,11 @@ internal sealed class PptxSceneBuilder
 
     internal static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, out PptxSceneGlow glow)
     {
+        return TryReadGlow(shapeProperties, theme, PptxColorMap.Default, out glow);
+    }
+
+    internal static bool TryReadGlow(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneGlow glow)
+    {
         XElement? glowElement = shapeProperties
             ?.Element(DrawingNamespace + "effectLst")
             ?.Element(DrawingNamespace + "glow");
@@ -4406,7 +4417,7 @@ internal sealed class PptxSceneBuilder
         XElement? colorElement = glowElement.Elements().FirstOrDefault(element =>
             element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
         if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+            TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
             double radius = OoxUnits.EmuToPoints(ReadLong(glowElement, "rad", 0));
             glow = new PptxSceneGlow(
@@ -4423,6 +4434,11 @@ internal sealed class PptxSceneBuilder
 
     internal static bool TryReadOuterShadow(XElement? shapeProperties, PptxTheme theme, out PptxSceneOuterShadow shadow)
     {
+        return TryReadOuterShadow(shapeProperties, theme, PptxColorMap.Default, out shadow);
+    }
+
+    internal static bool TryReadOuterShadow(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxSceneOuterShadow shadow)
+    {
         XElement? outerShadow = shapeProperties
             ?.Element(DrawingNamespace + "effectLst")
             ?.Element(DrawingNamespace + "outerShdw");
@@ -4435,7 +4451,7 @@ internal sealed class PptxSceneBuilder
         XElement? colorElement = outerShadow.Elements().FirstOrDefault(element =>
             element.Name.LocalName is "srgbClr" or "schemeClr" or "prstClr");
         if (colorElement is not null &&
-            TryReadImageRecolorColor(colorElement, theme, out RgbColor color))
+            TryReadImageRecolorColor(colorElement, theme, colorMap, out RgbColor color))
         {
             double alpha = ReadAlpha(new XElement(DrawingNamespace + "solidFill", new XElement(colorElement)));
             double distance = OoxUnits.EmuToPoints(ReadLong(outerShadow, "dist", 0));
@@ -4453,7 +4469,7 @@ internal sealed class PptxSceneBuilder
         return false;
     }
 
-    private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, out PptxScenePatternFill fill)
+    private static bool TryReadShapePatternFill(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out PptxScenePatternFill fill)
     {
         XElement? patternFill = shapeProperties?.Element(DrawingNamespace + "pattFill");
         string? preset = (string?)patternFill?.Attribute("prst");
@@ -4463,10 +4479,10 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, out RgbColor foregroundColor, out _)
+        RgbColor foreground = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "fgClr"), theme, colorMap, out RgbColor foregroundColor, out _)
             ? foregroundColor
             : new RgbColor(0, 0, 0);
-        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, out RgbColor backgroundColor, out _)
+        RgbColor background = TryReadSolidColorWithAlpha(patternFill.Element(DrawingNamespace + "bgClr"), theme, colorMap, out RgbColor backgroundColor, out _)
             ? backgroundColor
             : new RgbColor(255, 255, 255);
         fill = new PptxScenePatternFill(true, preset!, foreground, background, 1d);
@@ -4480,7 +4496,7 @@ internal sealed class PptxSceneBuilder
              preset.Contains("DnDiag", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool TryReadShapeFill(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double alpha)
+    private static bool TryReadShapeFill(XElement shape, XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
     {
         if (shapeProperties?.Element(DrawingNamespace + "noFill") is not null)
         {
@@ -4489,22 +4505,22 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        if (TryReadSolidColorWithAlpha(shapeProperties, theme, out color, out alpha))
+        if (TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out color, out alpha))
         {
             return true;
         }
 
         PptxFormatSchemeReference fillReference = PptxFormatSchemeResolver.ResolveFillReference(shape, theme);
         if (fillReference.Style is not null &&
-            TryReadSolidColorWithAlpha(fillReference.Style, theme, fillReference.Reference, out color, out alpha))
+            TryReadSolidColorWithAlpha(fillReference.Style, theme, colorMap, fillReference.Reference, out color, out alpha))
         {
             return true;
         }
 
-        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, out color, out alpha);
+        return fillReference.Index > 0 && TryReadSolidColorWithAlpha(fillReference.Reference, theme, colorMap, out color, out alpha);
     }
 
-    private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, out RgbColor color, out double lineWidth, out double alpha)
+    private static bool TryReadShapeLine(XElement shape, XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double lineWidth, out double alpha)
     {
         XElement? explicitLine = shapeProperties?.Element(DrawingNamespace + "ln");
         if (explicitLine?.Element(DrawingNamespace + "noFill") is not null)
@@ -4518,7 +4534,7 @@ internal sealed class PptxSceneBuilder
         double? styleLineWidth = TryReadStyleLineWidth(shape, theme, out double inheritedLineWidth)
             ? inheritedLineWidth
             : null;
-        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, out color, out lineWidth, out alpha, styleLineWidth))
+        if (shapeProperties is not null && explicitLine is not null && TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, styleLineWidth))
         {
             return true;
         }
@@ -4532,7 +4548,7 @@ internal sealed class PptxSceneBuilder
             return false;
         }
 
-        if (TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle line))
+        if (TryReadThemeLineReference(lineReference, theme, colorMap, out PptxSceneLineStyle line))
         {
             color = line.Color;
             lineWidth = line.Width;
@@ -4567,10 +4583,16 @@ internal sealed class PptxSceneBuilder
                 PptxFormatSchemeResolver.ReadIndex(lineReference),
                 null),
             theme,
+            PptxColorMap.Default,
             out line);
     }
 
     private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, out PptxSceneLineStyle line)
+    {
+        return TryReadThemeLineReference(lineReference, theme, PptxColorMap.Default, out line);
+    }
+
+    private static bool TryReadThemeLineReference(PptxFormatSchemeReference lineReference, PptxTheme theme, PptxColorMap colorMap, out PptxSceneLineStyle line)
     {
         XElement? lineStyle = lineReference.Style;
         if (lineStyle is null &&
@@ -4582,7 +4604,7 @@ internal sealed class PptxSceneBuilder
 
         if (lineStyle is null ||
             lineStyle.Element(DrawingNamespace + "noFill") is not null ||
-            !TryReadSolidColorWithAlpha(lineStyle, theme, lineReference.Reference, out RgbColor color, out double alpha))
+            !TryReadSolidColorWithAlpha(lineStyle, theme, colorMap, lineReference.Reference, out RgbColor color, out double alpha))
         {
             line = default;
             return false;
@@ -4622,11 +4644,23 @@ internal sealed class PptxSceneBuilder
         out double alpha,
         double? fallbackLineWidth = null)
     {
+        return TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
+    }
+
+    private static bool TryReadLineWithAlpha(
+        XElement shapeProperties,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        out RgbColor color,
+        out double lineWidth,
+        out double alpha,
+        double? fallbackLineWidth = null)
+    {
         XElement? line = shapeProperties.Element(DrawingNamespace + "ln");
         lineWidth = line?.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : fallbackLineWidth ?? 1d;
-        return TryReadSolidColorWithAlpha(line, theme, out color, out alpha);
+        return TryReadSolidColorWithAlpha(line, theme, colorMap, out color, out alpha);
     }
 
     private static bool TryReadPresetDash(XElement? shapeProperties, double lineWidth, out IReadOnlyList<double> dashPattern)
@@ -4896,6 +4930,11 @@ internal sealed class PptxSceneBuilder
 
     private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, out RgbColor color)
     {
+        return TryReadImageRecolorColor(colorElement, theme, PptxColorMap.Default, out color);
+    }
+
+    private static bool TryReadImageRecolorColor(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
+    {
         if (colorElement.Name == DrawingNamespace + "prstClr")
         {
             string? preset = (string?)colorElement.Attribute("val");
@@ -4909,7 +4948,7 @@ internal sealed class PptxSceneBuilder
         }
 
         XElement wrapper = new(DrawingNamespace + "solidFill", new XElement(colorElement));
-        return TryReadSolidColorWithAlpha(wrapper, theme, out color, out _);
+        return TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out color, out _);
     }
 
     private static PptxSceneRect ReadPercentageRectangle(XElement element)
@@ -5266,6 +5305,11 @@ internal sealed class PptxSceneBuilder
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
     {
         return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out alpha);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
+    {
+        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, placeholderColorContainer, out color, out alpha);
     }
 
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)

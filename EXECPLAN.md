@@ -3656,6 +3656,12 @@ High-priority actions:
   bare `XElement`/`XDocument` values, so default properties copied from layout/master placeholders do not yet
   carry their owning color map. Validation: focused non-slow `pptx-model` passed (`17` passed, `0` failed,
   `1` skipped).
+  2026-05-28 progress: direct scene shape parsing now passes the current source `PptxColorMap` through
+  explicit solid fills, fill/line format-scheme references, explicit lines, theme line references, gradients,
+  supported pattern fills, glow, and outer shadow, while the renderer-facing helper overloads keep their
+  default-map behavior. Keep this item open: table/chart/image recolor and direct renderer paths still need the
+  effective map, and inherited placeholder style maps still require source-aware style ownership. Validation:
+  focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
