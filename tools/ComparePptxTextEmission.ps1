@@ -253,6 +253,82 @@ function Group-BranchExtents($items) {
     )
 }
 
+function Measure-NumericRange($items, [string] $propertyName) {
+    $values = @($items | ForEach-Object { OptionalDouble $_ $propertyName } | Where-Object { $null -ne $_ })
+    if ($values.Count -eq 0) {
+        return $null
+    }
+
+    return [pscustomobject]@{
+        Count = $values.Count
+        Min = [Math]::Round(($values | Measure-Object -Minimum).Minimum, 6)
+        Max = [Math]::Round(($values | Measure-Object -Maximum).Maximum, 6)
+    }
+}
+
+function Group-BranchNumericRanges($items, [hashtable] $fields) {
+    $branches = @($items | ForEach-Object { BranchKey $_ } | Sort-Object -Unique)
+    return @(
+        foreach ($fieldName in ($fields.Keys | Sort-Object)) {
+            $propertyName = [string]$fields[$fieldName]
+            [pscustomobject]@{
+                Field = $fieldName
+                Property = $propertyName
+                Branches = @(
+                    foreach ($branch in $branches) {
+                        $branchItems = @($items | Where-Object { (BranchKey $_) -eq $branch })
+                        $range = Measure-NumericRange $branchItems $propertyName
+                        [pscustomobject]@{
+                            Branch = $branch
+                            Count = if ($null -eq $range) { 0 } else { $range.Count }
+                            Min = if ($null -eq $range) { $null } else { $range.Min }
+                            Max = if ($null -eq $range) { $null } else { $range.Max }
+                        }
+                    }
+                )
+            }
+        }
+    )
+}
+
+function Find-BranchRangeSeparators($items, [hashtable] $fields) {
+    $mainItems = @($items | Where-Object { (BranchKey $_) -eq "main-grid" })
+    $secondaryBranches = @($items |
+        ForEach-Object { BranchKey $_ } |
+        Where-Object { $_ -ne "main-grid" -and $_ -ne "(missing)" } |
+        Sort-Object -Unique)
+
+    return @(
+        foreach ($fieldName in ($fields.Keys | Sort-Object)) {
+            $propertyName = [string]$fields[$fieldName]
+            $mainRange = Measure-NumericRange $mainItems $propertyName
+            if ($null -eq $mainRange) {
+                continue
+            }
+
+            foreach ($branch in $secondaryBranches) {
+                $branchItems = @($items | Where-Object { (BranchKey $_) -eq $branch })
+                $branchRange = Measure-NumericRange $branchItems $propertyName
+                if ($null -eq $branchRange) {
+                    continue
+                }
+
+                $overlaps = $mainRange.Min -le $branchRange.Max -and $branchRange.Min -le $mainRange.Max
+                [pscustomobject]@{
+                    Field = $fieldName
+                    Property = $propertyName
+                    Branch = $branch
+                    MainMin = $mainRange.Min
+                    MainMax = $mainRange.Max
+                    BranchMin = $branchRange.Min
+                    BranchMax = $branchRange.Max
+                    RangesOverlap = $overlaps
+                }
+            }
+        }
+    )
+}
+
 function RefX($op) {
     if ($UseEffectiveMatrix -and (HasValue $op.EffectiveX)) {
         return [double]$op.EffectiveX
@@ -499,11 +575,29 @@ if (HasValue $OutputJson) {
 }
 
 if (HasValue $OutputSummaryJson) {
+    $numericBranchFields = [ordered]@{
+        CandidateBaselineFromPageTop = "CandBaselineFromPageTop"
+        CandidateBaselineFromShapeTop = "CandBaselineFromShapeTop"
+        CandidateBaselineY = "CandidateBaselineY"
+        CandidateFrameHeight = "CandFrameShapeHeight"
+        CandidateFrameTopY = "CandFrameShapeTopY"
+        CandidateLineTopFromShapeTop = "CandLineTopFromShapeTop"
+        CandidateLineTopFromTextTop = "CandLineTopFromTextTop"
+        CandidateLineTopY = "CandLineTopY"
+        CandidateTextHeight = "CandFrameTextHeight"
+        CandidateTextWidth = "CandFrameTextWidth"
+        RefBaselineFromCandidateShapeTop = "RefBaselineFromCandidateShapeTop"
+        RefBaselineFromPageTop = "RefBaselineFromPageTop"
+        RefBaselineY = "RefBaselineY"
+    }
+
     $summary = [pscustomobject]@{
         Total = $rowsArray.Count
         StatusCounts = Group-Count $rowsArray { param($row) $row.Status }
         FontBranchCounts = Group-Count $rowsArray { param($row) BranchKey $row }
         FontBranchExtents = Group-BranchExtents $rowsArray
+        FontBranchNumericRanges = Group-BranchNumericRanges $rowsArray $numericBranchFields
+        FontBranchRangeSeparators = Find-BranchRangeSeparators $rowsArray $numericBranchFields
         RefSecondaryFontDeltas = Group-Count $rowsArray { param($row) RoundedKey $row.RefSecondaryFontDelta }
         ByLayoutFontSizeAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandLayoutFontSize) + "|" + (BranchKey $row) }
         ByParagraphIndexAndBranch = Group-Count $rowsArray { param($row) (RoundedKey $row.CandParagraphIndex) + "|" + (BranchKey $row) }

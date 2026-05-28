@@ -1215,6 +1215,16 @@ High-priority actions:
     report instead of reopening text layout or adding a hidden Y lookup. Validation: `dotnet build Lokad.OoxPdf.slnx
     --tl:off --nologo -v minimal` passed; focused non-slow `pptx-typography` passed with `90` tests, `0` failures,
     and `2` slow skips.
+  - [x] 2026-05-28: Add branch range-overlap diagnostics before implementing the secondary `/Tf` rule.
+    `tools/ComparePptxTextEmission.ps1 -OutputSummaryJson` now emits `FontBranchNumericRanges` and
+    `FontBranchRangeSeparators` for the numeric frame/line/baseline context fields already carried by glyph-run
+    inspection. Regenerating summaries for `font-size-quantization-y-scan-21pt-fine` and `wrap13b` shows the
+    important negative result directly: every tested numeric range for the `secondary-0.024` branch still overlaps
+    the main-grid branch, including top-origin and bottom-origin baselines, frame top/height, line top, line offsets,
+    text box size, and reference baseline-from-shape-top. That keeps renderer behavior unchanged and rules out the
+    tempting but brittle "apply +0.024 in this Y band" implementation. The next probe needs a stronger structural
+    discriminator, likely by varying page size or Office text-matrix/page-coordinate quantization while holding local
+    text layout constant.
 - [x] 2026-05-27: Extend public-safe PPTX text-emission comparison diagnostics with derived frame/line geometry
   instead of adding another `/Tf` rule. `Lokad.OoxPdf.PptxInspect` now writes top-origin line offsets from the shape
   and text frame (`LineTopFromShapeTop`, `LineTopFromTextTop`, `BaselineFromShapeTop`, and
