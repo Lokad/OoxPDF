@@ -2417,6 +2417,12 @@ High-priority actions:
     Diagnostics follow the same boundary: uniform stop alpha is supported, while variable stop alpha remains
     warned instead of approximated. Validation: focused `pptx-charts` passed `52/52`; focused
     `pptx-shapes` passed `16/16`.
+  - [x] 2026-05-28 Consume direct glow and outer-shadow effects on chart shape rectangles:
+    `RenderChartShapeStyle` now renders preserved direct `PptxSceneGlow` and `PptxSceneOuterShadow` for chart
+    area, plot area, title, legend, and data-label rectangles through the same rectangle fill primitives used
+    by ordinary shapes. This only consumes directly modeled effects; theme style-reference inheritance and
+    richer transparency groups remain open. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+    minimal` passed, and focused non-slow `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
   - [ ] Add a real PDF soft-mask or equivalent transparency-function backend before rendering non-uniform
     per-stop gradient alpha. The current PDF axial shading model is RGB-only, so varying stop alpha must
     remain structurally represented but not approximated by averaged or stop-flattened opacity.

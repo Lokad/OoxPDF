@@ -4021,6 +4021,16 @@ internal sealed partial class PptxRenderer
 
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
     {
+        if (ToGlow(style.Glow) is { } glow)
+        {
+            DrawGlow(graphics, "rect", x, y, width, height, glow);
+        }
+
+        if (ToOuterShadow(style.OuterShadow) is { } outerShadow)
+        {
+            DrawOuterShadow(graphics, "rect", x, y, width, height, outerShadow);
+        }
+
         if (style.GradientFill is { } gradientFill)
         {
             DrawLinearGradientFill(graphics, gradientFill, x, y, width, height);
