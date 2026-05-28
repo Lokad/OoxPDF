@@ -121,6 +121,8 @@ internal sealed record PptxSceneNodeSnapshot(
     int ChartDataLabelsDefinedCount,
     int ChartDataLabelOverrideCount,
     int ChartDataLabelManualLayoutCount,
+    int ChartTextBodyOrientationCount,
+    int ChartTextBodyVerticalOverflowCount,
     bool HasChartColorStyle,
     string ChartColorStylePartName,
     string ChartColorStyleMethod,

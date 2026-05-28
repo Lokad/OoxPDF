@@ -68,6 +68,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartSeries> chartSeries = chartPlots
             .SelectMany(plot => plot.Series)
             .ToArray();
+        IReadOnlyList<PptxSceneChartTextBodyProperties> chartTextBodyProperties = ReadChartTextBodyProperties(node.Chart);
         IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
             node.Chart?.ColorStyle.Declarations ?? [];
         IReadOnlyList<string> chartColorDeclarationKinds = chartColorDeclarations
@@ -177,6 +178,8 @@ internal sealed partial class PptxRenderer
                 chartSeries.Count(series => series.DataLabels.Layout.HasLayout) +
                 chartPlots.Sum(plot => plot.DataLabels.Overrides.Count(label => label.Layout.HasLayout)) +
                 chartSeries.Sum(series => series.DataLabels.Overrides.Count(label => label.Layout.HasLayout)),
+            chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.OrientationValue)),
+            chartTextBodyProperties.Count(properties => !string.IsNullOrWhiteSpace(properties.VerticalOverflowValue)),
             node.Chart?.ColorStyle.IsDefined ?? false,
             node.Chart?.ColorStyle.PartName ?? string.Empty,
             node.Chart?.ColorStyle.Method ?? string.Empty,
@@ -252,6 +255,47 @@ internal sealed partial class PptxRenderer
             legendLayout?.Height,
             node.Kind == PptxSceneNodeKind.Group,
             node.Children.Select(ToSnapshot).ToArray());
+    }
+
+    private static IReadOnlyList<PptxSceneChartTextBodyProperties> ReadChartTextBodyProperties(PptxSceneChart? chart)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        var properties = new List<PptxSceneChartTextBodyProperties>
+        {
+            chart.Title.TextBodyProperties,
+            chart.Legend.TextBodyProperties
+        };
+
+        foreach (PptxSceneChartAxis axis in chart.Axes)
+        {
+            properties.Add(axis.Title.TextBodyProperties);
+        }
+
+        foreach (PptxSceneChartPlot plot in chart.Plots)
+        {
+            AddChartDataLabelTextBodyProperties(properties, plot.DataLabels);
+            foreach (PptxSceneChartSeries series in plot.Series)
+            {
+                AddChartDataLabelTextBodyProperties(properties, series.DataLabels);
+            }
+        }
+
+        return properties;
+    }
+
+    private static void AddChartDataLabelTextBodyProperties(
+        List<PptxSceneChartTextBodyProperties> properties,
+        PptxSceneChartDataLabels labels)
+    {
+        properties.Add(labels.TextBodyProperties);
+        foreach (PptxSceneChartDataLabelOverride labelOverride in labels.Overrides)
+        {
+            properties.Add(labelOverride.TextBodyProperties);
+        }
     }
 
     private static bool HasChartShapeStyle(PptxSceneChartShapeStyle? style)

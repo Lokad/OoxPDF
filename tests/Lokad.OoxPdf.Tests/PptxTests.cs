@@ -7328,6 +7328,8 @@ internal static class PptxTests
                 node.ChartDataLabelsDefinedCount,
                 node.ChartDataLabelOverrideCount,
                 node.ChartDataLabelManualLayoutCount,
+                node.ChartTextBodyOrientationCount,
+                node.ChartTextBodyVerticalOverflowCount,
                 node.HasChartColorStyle,
                 node.ChartColorStyleMethod,
                 node.ChartColorStyleColorCount,
@@ -18454,6 +18456,9 @@ internal static class PptxTests
         PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
         TestAssert.Equal("futureVert", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.OrientationValue ?? string.Empty);
         TestAssert.Equal("ellipsis", sceneSlide.SlideNodes[0].Chart?.Title.TextBodyProperties.VerticalOverflowValue ?? string.Empty);
+        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+        TestAssert.Equal(1, snapshot.ChartTextBodyOrientationCount);
+        TestAssert.Equal(1, snapshot.ChartTextBodyVerticalOverflowCount);
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         XDocument slideXmlWithoutBodyProperties = XDocument.Parse("""

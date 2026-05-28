@@ -15424,3 +15424,18 @@ Validation follow-up, 2026-05-28: after the chart style provenance, marker-defau
 chart text-body diagnostic slices above, the full non-slow console suite passed with `411` tests, `0` failures,
 and `7` slow skips by running `dotnet run --no-build --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v
 minimal -- --skip-slow`.
+
+Follow-up, 2026-05-28: chart text-body `vert` and `vertOverflow` provenance is now visible through private-safe
+scene inspection as aggregate chart text-body orientation and vertical-overflow counts. `PptxSceneNodeSnapshot`
+adds `ChartTextBodyOrientationCount` and `ChartTextBodyVerticalOverflowCount`, and scene inspection counts title,
+legend, axis-title, plot data-label, series data-label, and per-label override text-body records without exposing
+private chart text or XML. The diagnostic regression now also verifies that a chart title carrying unsupported
+chart text orientation and overflow is visible through the same inspection surface.
+
+This does not change chart text rendering or replace the still-open shared chart text-frame model. It closes an
+observability gap created by the prior diagnostic slice: private investigations can now confirm that chart text
+bodyPr tokens reached the scene model without opening private OOXML, which keeps future Office-PDF alignment work
+focused on structural state rather than ad hoc raw XML checks. Validation: `dotnet build Lokad.OoxPdf.slnx
+--tl:off --nologo -v minimal` passed with `0` warnings and `0` errors; focused non-slow `pptx-model` passed with
+`25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `138` tests, `0` failures,
+and `0` skips.
