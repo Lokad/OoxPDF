@@ -13033,6 +13033,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `108` tests, `0` failures, and `0` skips; full non-slow console runner passed with `350` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Chart axis-source selection now treats a scene-backed absence of typed axes as
+authoritative instead of repairing it from raw chart XML. `ReadSceneOrXmlChartValueAxesForPlot` still returns
+XML axes for XML-only compatibility, but once a `PptxSceneChart` exists, an empty typed value-axis set returns
+no value-axis sources. `ReadSceneOrXmlChartCategoryAxisForPlot` likewise returns an empty axis source when the
+scene has no typed category/date axes rather than borrowing an unmatched XML category axis.
+
+The new regression builds a typed line-chart scene with no axes and pairs it with deliberately mismatched raw
+chart XML that does contain category and value axes. The scene-backed path keeps the missing axes visible as a
+model gap, while the XML-only path still reads the fallback axes. This removes another silent bridge that could
+hide scene-builder incompleteness before Office-PDF axis layout and structural PDF alignment work.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes` passed; focused non-slow `pptx-charts` passed
+with `109` tests, `0` failures, and `0` skips; full non-slow console runner passed with `351` tests,
+`0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

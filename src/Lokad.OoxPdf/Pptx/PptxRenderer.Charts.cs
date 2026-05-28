@@ -254,6 +254,11 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartAxes(sceneChart, scenePlot, PptxSceneChartAxisKind.Value);
         if (sceneAxes.Count == 0)
         {
+            if (sceneChart is not null)
+            {
+                return [];
+            }
+
             return xmlAxes
                 .Select(axis => new ChartAxisSource(null, axis))
                 .ToArray();
@@ -281,6 +286,11 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartAxis> sceneAxes = ReadSceneChartCategoryAxes(sceneChart, scenePlot);
         if (sceneAxes.Count == 0)
         {
+            if (sceneChart is not null)
+            {
+                return new ChartAxisSource(null, null);
+            }
+
             XElement? xmlAxis = xmlAxes.FirstOrDefault();
             return new ChartAxisSource(null, xmlAxis);
         }
