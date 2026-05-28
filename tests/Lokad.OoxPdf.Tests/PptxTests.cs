@@ -13133,6 +13133,44 @@ internal static class PptxTests
         TestAssert.Equal("1200000", ChartTextBodyRotationValue(xmlBody));
     }
 
+    public static void PptxChartTitlePreservesTextBodyPropertiesAtRendererBoundary()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>Scene title</a:t></a:r></a:p></c:rich></c:tx><c:txPr><a:bodyPr rot="5400000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:title>
+                <c:plotArea>
+                  <c:lineChart>
+                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  </c:lineChart>
+                </c:plotArea>
+              </c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+
+        XDocument mismatchedChartXml = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart>
+                <c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:t>XML title</a:t></a:r></a:p></c:rich></c:tx><c:txPr><a:bodyPr rot="-1200000"/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr></a:p></c:txPr></c:title>
+                <c:plotArea/>
+              </c:chart>
+            </c:chartSpace>
+            """);
+        System.Reflection.MethodInfo readTitleBody = typeof(PptxRenderer).GetMethod(
+            "ReadSceneOrXmlChartTitleTextBodyProperties",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected renderer title text-body bridge.");
+
+        object sceneBody = readTitleBody.Invoke(null, [chart, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected scene chart title body properties.");
+        object xmlBody = readTitleBody.Invoke(null, [null, mismatchedChartXml]) ?? throw new InvalidOperationException("Expected XML-only chart title body properties.");
+
+        TestAssert.Equal(90d, ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
+        TestAssert.Equal("5400000", ChartTextBodyRotationValue(sceneBody));
+        TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
+        TestAssert.Equal("-1200000", ChartTextBodyRotationValue(xmlBody));
+    }
+
     public static void PptxChartMissingSceneAxesDoNotFallBackToMismatchedXmlAxes()
     {
         PptxSceneChart chart = BuildSingleChartScene("""

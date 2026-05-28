@@ -2862,6 +2862,12 @@ High-priority actions:
     still reads the XML fallback. Legend text is not rotated yet; this closes the renderer-boundary
     information-loss gap so later Office-backed legend text-frame work does not need to re-scan `c:legend`
     at the drawing site. Validation: focused non-slow `pptx-charts` passed (`125 passed, 0 failed, 0 skipped`).
+  - [x] Carry preserved chart-title `txPr/a:bodyPr @rot` through the renderer layout bridge:
+    `ChartLayout` now includes `TitleTextBodyProperties`, populated from the typed scene title when a
+    `PptxSceneChart` exists and from XML only for the no-scene compatibility path. A regression locks a
+    scene title at `5400000` against mismatched XML at `-1200000`, keeping the source boundary explicit.
+    Title text is still rendered with the existing unrotated placement until Office-PDF evidence defines the
+    title text-frame transform and reserve model.
   - [x] Render explicit manual-layout scene-owned axis titles instead of only preserving them:
     `PptxSceneChartAxis.Title` now owns text, rich-text runs, overlay, manual layout, shape style, and text
     style, and supported native chart rendering consumes explicit manual-layout axis-title boxes, including
