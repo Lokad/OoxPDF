@@ -22,6 +22,9 @@ internal sealed record PptxSceneSlideSnapshot(
     bool HasMasterBackground,
     bool HasLayoutBackground,
     bool HasSlideBackground,
+    bool HasTransition,
+    bool HasTiming,
+    bool HasOleObject,
     IReadOnlyDictionary<string, string> MasterColorMap,
     IReadOnlyDictionary<string, string> LayoutColorMap,
     IReadOnlyDictionary<string, string> SlideColorMap,
@@ -470,6 +473,9 @@ internal sealed record PptxSceneSlide(
     PptxSceneBackground MasterBackground,
     PptxSceneBackground LayoutBackground,
     PptxSceneBackground SlideBackground,
+    bool HasTransition,
+    bool HasTiming,
+    bool HasOleObject,
     IReadOnlyList<PptxSceneNode> MasterNodes,
     IReadOnlyList<PptxSceneNode> LayoutNodes,
     IReadOnlyList<PptxSceneNode> SlideNodes);
@@ -1961,6 +1967,9 @@ internal sealed class PptxSceneBuilder
                     default,
                     default,
                     default,
+                    false,
+                    false,
+                    false,
                     [],
                     [],
                     []));
@@ -1999,6 +2008,9 @@ internal sealed class PptxSceneBuilder
                 ReadBackground(masterXml, theme, masterColorMap),
                 ReadBackground(layoutXml, theme, layoutColorMap),
                 ReadBackground(slideXml, theme, slideColorMap),
+                HasSlideTransition(slideXml),
+                HasSlideTiming(slideXml),
+                HasSlideOleObject(slideXml),
                 masterXml is null ? [] : ReadNodes(masterXml, [], theme, masterColorMap, package, masterRelationships),
                 layoutXml is null ? [] : ReadNodes(layoutXml, layoutSources, theme, layoutColorMap, package, layoutRelationships),
                 ReadNodes(slideXml, slideSources, theme, slideColorMap, package, slideRelationships)));
@@ -2011,6 +2023,21 @@ internal sealed class PptxSceneBuilder
     {
         using Stream stream = part.OpenRead();
         return SafeXml.Load(stream);
+    }
+
+    private static bool HasSlideTransition(XDocument slideXml)
+    {
+        return slideXml.Descendants(PresentationNamespace + "transition").Any();
+    }
+
+    private static bool HasSlideTiming(XDocument slideXml)
+    {
+        return slideXml.Descendants(PresentationNamespace + "timing").Any();
+    }
+
+    private static bool HasSlideOleObject(XDocument slideXml)
+    {
+        return slideXml.Descendants(PresentationNamespace + "oleObj").Any();
     }
 
     private static PptxColorMap ReadMasterColorMap(XDocument? xml)

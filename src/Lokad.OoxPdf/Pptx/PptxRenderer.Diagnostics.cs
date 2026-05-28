@@ -31,12 +31,14 @@ internal sealed partial class PptxRenderer
                 Fallback: "Ignored"));
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "transition").Any())
+        if (sceneSlide.HasTransition ||
+            slideXml.Descendants(PresentationNamespace + "transition").Any())
         {
             Emit("PPTX_UNSUPPORTED_TRANSITION", "transition");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "timing").Any())
+        if (sceneSlide.HasTiming ||
+            slideXml.Descendants(PresentationNamespace + "timing").Any())
         {
             Emit("PPTX_UNSUPPORTED_ANIMATION", "animation");
         }
@@ -55,7 +57,8 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_AUDIO", "audio");
         }
 
-        if (slideXml.Descendants(PresentationNamespace + "oleObj").Any())
+        if (sceneSlide.HasOleObject ||
+            slideXml.Descendants(PresentationNamespace + "oleObj").Any())
         {
             Emit("PPTX_UNSUPPORTED_OLE_OBJECT", "OLE object");
         }

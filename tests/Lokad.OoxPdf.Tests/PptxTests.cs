@@ -17535,6 +17535,58 @@ internal static class PptxTests
         TestAssert.Contains("PPTX_UNSUPPORTED_VIDEO", ids);
     }
 
+    public static void PptxUnsupportedDynamicDiagnosticsUseSceneSlideState()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:oleObj/></p:spTree></p:cSld>
+                  <p:transition/>
+                  <p:timing/>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+        PptxScene scene = new PptxSceneBuilder().Build(document, package);
+        PptxSceneSlide sceneSlide = scene.Slides[0];
+        TestAssert.True(sceneSlide.HasTransition, "Expected transition provenance to be owned by the scene slide.");
+        TestAssert.True(sceneSlide.HasTiming, "Expected timing provenance to be owned by the scene slide.");
+        TestAssert.True(sceneSlide.HasOleObject, "Expected OLE object provenance to be owned by the scene slide.");
+
+        PptxSceneSnapshot snapshot = PptxRenderer.InspectScene(document, package);
+        TestAssert.True(snapshot.Slides[0].HasTransition, "Expected transition provenance to be visible in scene inspection.");
+        TestAssert.True(snapshot.Slides[0].HasTiming, "Expected timing provenance to be visible in scene inspection.");
+        TestAssert.True(snapshot.Slides[0].HasOleObject, "Expected OLE object provenance to be visible in scene inspection.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutDynamicFeatures = XDocument.Parse("""
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutDynamicFeatures, "/ppt/slides/slide1.xml", 1, sink]);
+
+        string ids = string.Join("|", diagnostics.Select(d => d.Id));
+        TestAssert.Contains("PPTX_UNSUPPORTED_ANIMATION", ids);
+        TestAssert.Contains("PPTX_UNSUPPORTED_OLE_OBJECT", ids);
+        TestAssert.Contains("PPTX_UNSUPPORTED_TRANSITION", ids);
+    }
+
     public static void PptxUnsupportedTransparencyDiagnosticsUseSceneShapeState()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

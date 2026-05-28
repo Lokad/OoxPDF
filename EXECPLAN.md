@@ -14541,6 +14541,26 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `406` tests, `0` failures, and `0` skips; full non-slow console runner passed with `399` tests, `0` failures,
 and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX transition, timing/animation, and OLE unsupported-feature diagnostics now
+also consume scene-owned slide metadata first. `PptxSceneSlide` records `HasTransition`, `HasTiming`, and
+`HasOleObject` while building the scene from the already-loaded slide XML; private-safe scene inspection
+exposes the same flags; and diagnostics consult those fields before the compatibility XML fallback. The
+regression strips transition/timing/OLE markup from the fallback XML passed to the diagnostic emitter and
+still requires all three diagnostics, so this closes the last raw-only dynamic-feature checks that were easy
+to lift without inventing rendering behavior.
+
+This remains diagnostics-first by design. OOXPDF should continue to ignore dynamic Office features in static
+PDF output unless a future feature has a clear PDF representation, but the ignore decision now follows the
+normalized scene inventory rather than one-off XML scans in the diagnostic layer. If comments, notes,
+ActiveX, richer OLE payload identity, or non-picture media variants are added later, they should follow the
+same pattern: typed scene metadata, private-safe inspection flags, then diagnostic consumption from the typed
+boundary.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused
+`PptxUnsupportedDynamicDiagnosticsUseSceneSlideState` invocation ran the console suite and passed with
+`407` tests, `0` failures, and `0` skips; full non-slow console runner passed with `400` tests, `0` failures,
+and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the
