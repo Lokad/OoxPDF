@@ -12055,6 +12055,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `97` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `338` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Threaded chart point-index provenance through the renderer's private indexed
+vectors. `ChartIndexedNumberPoint` and `ChartIndexedTextPoint` now retain `HasParsedIndex` for scene-backed
+points, XML-only cache reads, compact fallback vectors, and workbook sidecar points. Raw-vector tests now
+lock both a parsed sparse point index and a malformed `idx` token that keeps the current ordinal fallback
+while marking it as fallback-derived.
+
+Rendering remains behavior-compatible: dense vectors still use the resolved integer point index, and malformed
+raw `idx` tokens still occupy their historical ordinal slot. The structural improvement is that future
+Office-PDF-aligned point-key policy can be implemented at the render-vector boundary instead of having to
+guess whether an integer was sourced from OOXML, synthesized from cache order, or produced by workbook
+range order.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `97` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `338` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Consolidated bar-chart renderer option resolution behind `ChartBarPlotOptions`.
 The bar renderer path now resolves grouping, bar direction, `varyColors`, `gapWidth`, and `overlap` once at
 the scene/XML boundary and then passes the typed option record through primary bars, secondary/combo bars,

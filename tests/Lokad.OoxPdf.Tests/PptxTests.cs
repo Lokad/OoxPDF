@@ -13197,7 +13197,8 @@ internal static class PptxTests
                 <c:numCache>
                   <c:formatCode>General</c:formatCode>
                   <c:ptCount val="4"/>
-                  <c:pt idx="1"><c:v>100</c:v></c:pt>
+                  <c:pt idx="2"><c:v>100</c:v></c:pt>
+                  <c:pt idx="futureNumber"><c:v>200</c:v></c:pt>
                 </c:numCache>
               </c:numRef>
             </c:val>
@@ -13205,9 +13206,12 @@ internal static class PptxTests
         object numberVector = readNumberVector.Invoke(null, [values, workbook]) ?? throw new InvalidOperationException("Expected raw number vector.");
         object[] cacheNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("Points")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookNumberPoints = ((System.Collections.IEnumerable?)numberVector.GetType().GetProperty("WorkbookPoints")?.GetValue(numberVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheNumberPoints.Length == 1, "Expected raw vector rendering points to stay bound to the chart cache.");
-        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 1, "Expected raw numeric cache point index to survive.");
+        TestAssert.True(cacheNumberPoints.Length == 2, "Expected raw vector rendering points to stay bound to the chart cache.");
+        TestAssert.True((int?)cacheNumberPoints[0].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[0]) == 2, "Expected raw numeric cache point index to survive.");
+        TestAssert.True((bool?)cacheNumberPoints[0].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheNumberPoints[0]) == true, "Expected raw numeric cache point to mark parsed indices.");
         TestAssert.Equal(100d, (double?)cacheNumberPoints[0].GetType().GetProperty("Value")?.GetValue(cacheNumberPoints[0]) ?? 0d);
+        TestAssert.True((int?)cacheNumberPoints[1].GetType().GetProperty("Index")?.GetValue(cacheNumberPoints[1]) == 1, "Expected malformed raw numeric cache point index to keep the ordinal fallback.");
+        TestAssert.True((bool?)cacheNumberPoints[1].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheNumberPoints[1]) == false, "Expected malformed raw numeric cache point to mark fallback indices.");
         TestAssert.True(workbookNumberPoints.Length == 3, "Expected raw numeric vector to keep workbook sidecar points without promoting them to renderable cache points.");
         TestAssert.Equal("1.4", (string?)workbookNumberPoints[2].GetType().GetProperty("Text")?.GetValue(workbookNumberPoints[2]) ?? string.Empty);
 
@@ -13219,7 +13223,8 @@ internal static class PptxTests
                     <c:f>Sheet1!$A$2:$A$4</c:f>
                     <c:strCache>
                       <c:ptCount val="4"/>
-                      <c:pt idx="1"><c:v>Cached</c:v></c:pt>
+                      <c:pt idx="2"><c:v>Cached</c:v></c:pt>
+                      <c:pt idx="futureCategory"><c:v>Fallback</c:v></c:pt>
                     </c:strCache>
                   </c:strRef>
                 </c:cat>
@@ -13229,8 +13234,11 @@ internal static class PptxTests
         object categoryVector = readCategoryVector.Invoke(null, [chart, workbook]) ?? throw new InvalidOperationException("Expected raw category vector.");
         object[] cacheTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("Points")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
         object[] workbookTextPoints = ((System.Collections.IEnumerable?)categoryVector.GetType().GetProperty("WorkbookPoints")?.GetValue(categoryVector))?.Cast<object>().ToArray() ?? [];
-        TestAssert.True(cacheTextPoints.Length == 1, "Expected raw category rendering points to stay bound to the chart cache.");
+        TestAssert.True(cacheTextPoints.Length == 2, "Expected raw category rendering points to stay bound to the chart cache.");
         TestAssert.Equal("Cached", (string?)cacheTextPoints[0].GetType().GetProperty("Text")?.GetValue(cacheTextPoints[0]) ?? string.Empty);
+        TestAssert.True((bool?)cacheTextPoints[0].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheTextPoints[0]) == true, "Expected raw text cache point to mark parsed indices.");
+        TestAssert.True((int?)cacheTextPoints[1].GetType().GetProperty("Index")?.GetValue(cacheTextPoints[1]) == 1, "Expected malformed raw text cache point index to keep the ordinal fallback.");
+        TestAssert.True((bool?)cacheTextPoints[1].GetType().GetProperty("HasParsedIndex")?.GetValue(cacheTextPoints[1]) == false, "Expected malformed raw text cache point to mark fallback indices.");
         TestAssert.True(workbookTextPoints.Length == 3, "Expected raw category vector to keep workbook sidecar text points.");
         TestAssert.Equal("West", (string?)workbookTextPoints[2].GetType().GetProperty("Text")?.GetValue(workbookTextPoints[2]) ?? string.Empty);
     }
