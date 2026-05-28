@@ -888,6 +888,9 @@ internal static class PptxTests
         TestAssert.Contains("shape.lstStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Contains("inherited.txStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
         TestAssert.Contains("defaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerNames));
+        TestAssert.Contains("ShapeListStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
+        TestAssert.Contains("InheritedTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
+        TestAssert.Contains("DefaultTextStyle", string.Join("|", textFrame.Paragraphs[0].CascadeLayerKinds));
         TestAssert.Equal("Center", textFrame.Paragraphs[0].Alignment);
         TestAssert.Equal(26d, textFrame.Paragraphs[0].FontSize);
         TestAssert.Equal("Text", textFrame.Paragraphs[0].Runs[0].Kind);
@@ -5968,6 +5971,7 @@ internal static class PptxTests
                         paragraph.CascadeLevelName,
                         paragraph.ResolvedCascadeSourceCount,
                         paragraph.CascadeLayerNames,
+                        paragraph.CascadeLayerKinds,
                         runs = paragraph.Runs.Select(run => new
                         {
                             run.Kind,

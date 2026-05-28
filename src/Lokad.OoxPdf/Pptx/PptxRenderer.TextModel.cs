@@ -51,6 +51,7 @@ internal sealed partial class PptxRenderer
             paragraph.Cascade.LevelName,
             paragraph.Cascade.Sources.Count(source => source is not null),
             paragraph.Cascade.Layers.Select(layer => layer.Name).ToArray(),
+            paragraph.Cascade.Layers.Select(layer => layer.Kind.ToString()).ToArray(),
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.AlignmentValue,
             paragraph.Style.FontSize,
@@ -537,15 +538,25 @@ internal sealed partial class PptxRenderer
     {
         var layers = new List<PptxParagraphStyleLayer>
         {
-            new("shape.lstStyle", textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
+            new(
+                "shape.lstStyle",
+                PptxParagraphStyleLayerKind.ShapeListStyle,
+                textBody.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName))
         };
         layers.AddRange(inheritedPlaceholders
             .Select((placeholder, index) => new PptxParagraphStyleLayer(
                 $"placeholder[{index}].lstStyle",
+                PptxParagraphStyleLayerKind.InheritedPlaceholderListStyle,
                 placeholder.Element(PresentationNamespace + "txBody")?.Element(DrawingNamespace + "lstStyle")?.Element(DrawingNamespace + levelName)))
             .Reverse());
-        layers.Add(new PptxParagraphStyleLayer("inherited.txStyle", FindInheritedTextStyle(shape, placeholderSources, levelName)));
-        layers.Add(new PptxParagraphStyleLayer("defaultTextStyle", FindDefaultTextStyle(placeholderSources, levelName)));
+        layers.Add(new PptxParagraphStyleLayer(
+            "inherited.txStyle",
+            PptxParagraphStyleLayerKind.InheritedTextStyle,
+            FindInheritedTextStyle(shape, placeholderSources, levelName)));
+        layers.Add(new PptxParagraphStyleLayer(
+            "defaultTextStyle",
+            PptxParagraphStyleLayerKind.DefaultTextStyle,
+            FindDefaultTextStyle(placeholderSources, levelName)));
         return new PptxParagraphStyleCascade(levelName, layers);
     }
 

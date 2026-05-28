@@ -124,6 +124,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     string CascadeLevelName,
     int ResolvedCascadeSourceCount,
     IReadOnlyList<string> CascadeLayerNames,
+    IReadOnlyList<string> CascadeLayerKinds,
     string Alignment,
     string? AlignmentValue,
     double FontSize,

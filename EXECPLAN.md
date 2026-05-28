@@ -1362,6 +1362,11 @@ High-priority actions:
   `shape.lstStyle`, inherited placeholder list styles, inherited text styles, and `defaultTextStyle` are now
   observable before merge. This mirrors the useful `pptx-renderer` pattern of making cascade layers testable
   instead of keeping anonymous XML fallback lists.
+- [x] Add typed categories to paragraph cascade layer diagnostics:
+  `PptxParagraphStyleLayer` now carries stable layer kinds (`ShapeListStyle`,
+  `InheritedPlaceholderListStyle`, `InheritedTextStyle`, `DefaultTextStyle`) alongside the descriptive layer names,
+  and `InspectTextFrameModels` exposes `CascadeLayerKinds`. This keeps current behavior unchanged while giving the
+  future seven-level resolver a non-stringly inspection surface for structural parity checks.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape

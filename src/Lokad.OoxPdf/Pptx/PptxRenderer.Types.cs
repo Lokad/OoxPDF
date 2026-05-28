@@ -379,8 +379,17 @@ internal sealed partial class PptxRenderer
         public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
     }
 
+    private enum PptxParagraphStyleLayerKind
+    {
+        ShapeListStyle,
+        InheritedPlaceholderListStyle,
+        InheritedTextStyle,
+        DefaultTextStyle
+    }
+
     private sealed record PptxParagraphStyleLayer(
         string Name,
+        PptxParagraphStyleLayerKind Kind,
         XElement? Source);
 
     private sealed record PptxTextRunModel(
