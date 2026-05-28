@@ -1640,6 +1640,11 @@ High-priority actions:
   fallback inputs.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
+  2026-05-28 progress: `PptxParagraphStyleCascade` now owns the Office-order merge that produces paragraph
+  default properties, so the text model no longer reconstructs default paragraph XML directly from `Sources`.
+  Keep this item open: scene inspection still has a duplicate `ResolveDefaultParagraphProperties` chain, run
+  style resolution still consumes direct/default XML pairs rather than a run cascade resolver, and theme font/color
+  fallback remains distributed across resolver helpers.
 - [x] Port the listed `pptx-renderer` text edge-case tests as .NET unit/visual coverage:
   the named behaviors are now represented by focused OOXPDF tests or public visual probes: hyperlink color and
   shape `fontRef` color precedence, table text/style overrides, no-fill/outline text, `kern` thresholds, tabs,

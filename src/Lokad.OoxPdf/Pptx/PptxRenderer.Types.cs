@@ -435,6 +435,11 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxParagraphStyleLayer> Layers)
     {
         public IReadOnlyList<XElement?> Sources => Layers.Select(layer => layer.Source).ToArray();
+
+        public XElement? ResolveDefaultProperties()
+        {
+            return MergeParagraphProperties(Sources.ToArray());
+        }
     }
 
     private enum PptxParagraphStyleLayerKind
