@@ -46,6 +46,8 @@ internal static class FontTests
         TestAssert.True(font.GlyphCount > 0, "Expected a positive glyph count from maxp.");
         TestAssert.True(font.Os2.WeightClass > 0, "Expected a positive OS/2 weight class.");
         TestAssert.True(font.Os2.WindowsAscender > 0, "Expected a positive OS/2 Windows ascender.");
+        TestAssert.True(font.Os2.StrikeoutSize > 0, "Expected a positive OS/2 strikeout size.");
+        TestAssert.True(font.Os2.StrikeoutPosition > 0, "Expected a positive OS/2 strikeout position.");
         TestAssert.True(font.Post.UnderlineThickness != 0, "Expected a non-zero post underline thickness.");
         TestAssert.True(font.TableTags.Contains("cmap"), "Expected cmap table.");
         ushort glyph = font.MapCodePoint('A');

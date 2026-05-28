@@ -1297,6 +1297,15 @@ High-priority actions:
 - [ ] Continue replacing text constants with formula-owned measurements, starting with baseline/line-box
   offsets and highlight/strike geometry, and lock each rule with Office-PDF text-operation or rectangle
   probes before broad visual MAE gates.
+- [x] 2026-05-28: Replace PPTX strikeout rectangle constants with font-owned OS/2 metrics:
+  the OpenType reader now preserves `yStrikeoutSize` and `yStrikeoutPosition`, and PPTX strikeout rendering uses
+  those font metrics for rectangle thickness and baseline-relative placement, with the previous ratios retained
+  only as a malformed-font fallback. This aligns strikeout with the existing underline path, which already uses
+  `post` table metrics, and removes another decoration-specific font-size heuristic from PDF emission.
+  Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` and
+  `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow`
+  passed (`92 passed, 0 failed, 2 skipped`); the full console suite also passed
+  (`359 passed, 0 failed, 0 skipped`).
 - [x] Replace the current `TextRun`-backed layout spans with glyph-position spans that own decoded Unicode,
   font resource, glyph ids, glyph advances, kerning adjustments, and hidden-control advances before PDF
   `TJ` array construction:

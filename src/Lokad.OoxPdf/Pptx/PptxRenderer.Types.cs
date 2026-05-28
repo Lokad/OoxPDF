@@ -952,9 +952,25 @@ internal sealed partial class PptxRenderer
 
         public static double SyntheticBoldStrokeWidth(double fontSize) => Math.Max(0d, fontSize * SyntheticBoldStrokeWidthRatio);
 
-        public static double StrikeY(double baselineY, double fontSize) => baselineY + fontSize * StrikePositionFallback;
+        public static double StrikeY(PdfEmbeddedFont embedded, double baselineY, double fontSize)
+        {
+            double fontScale = fontSize / embedded.Font.UnitsPerEm;
+            double strikeoutSize = embedded.Font.Os2.StrikeoutSize * fontScale;
+            double strikeoutPosition = embedded.Font.Os2.StrikeoutPosition * fontScale;
+            if (strikeoutSize <= 0d || strikeoutPosition <= 0d)
+            {
+                return baselineY + fontSize * StrikePositionFallback;
+            }
 
-        public static double StrikeThickness(double fontSize) => Math.Max(MinimumStrokeWidth, fontSize * StrikeThicknessFallback);
+            return baselineY + strikeoutPosition - strikeoutSize / 2d;
+        }
+
+        public static double StrikeThickness(PdfEmbeddedFont embedded, double fontSize)
+        {
+            double fontScale = fontSize / embedded.Font.UnitsPerEm;
+            double strikeoutSize = embedded.Font.Os2.StrikeoutSize * fontScale;
+            return Math.Max(MinimumStrokeWidth, strikeoutSize > 0d ? strikeoutSize : fontSize * StrikeThicknessFallback);
+        }
 
         public static double HighlightDescent(PdfEmbeddedFont embedded, double fontSize, double fontScale)
         {

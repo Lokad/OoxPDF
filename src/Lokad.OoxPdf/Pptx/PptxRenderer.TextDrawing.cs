@@ -47,7 +47,7 @@ internal sealed partial class PptxRenderer
                 TextDecorationRectangle? underlineRectangle = run.Underline && TryGetUnderlineRectangle(rendered.Font, glyphRun, out TextDecorationRectangle underline)
                     ? underline
                     : null;
-                TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike)
+                TextDecorationRectangle? strikeRectangle = run.Strike && TryGetStrikeRectangle(rendered.Font, glyphRun, out TextDecorationRectangle strike)
                     ? strike
                     : null;
 
@@ -789,7 +789,7 @@ internal sealed partial class PptxRenderer
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike))
+                if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
                     graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
                 }
@@ -839,7 +839,7 @@ internal sealed partial class PptxRenderer
             if (run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);
-                if (TryGetStrikeRectangle(glyphRun, out TextDecorationRectangle strike))
+                if (TryGetStrikeRectangle(embedded, glyphRun, out TextDecorationRectangle strike))
                 {
                     graphics.FillRectangle(strike.X, strike.Y, strike.Width, strike.Height);
                 }
@@ -1130,14 +1130,14 @@ internal sealed partial class PptxRenderer
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && underlineThickness > 0d;
     }
 
-    private static bool TryGetStrikeRectangle(TextGlyphRun glyphRun, out TextDecorationRectangle rectangle)
+    private static bool TryGetStrikeRectangle(PdfEmbeddedFont embedded, TextGlyphRun glyphRun, out TextDecorationRectangle rectangle)
     {
         TextRun run = glyphRun.Source;
         rectangle = new TextDecorationRectangle(
             glyphRun.X,
-            PptxTextMetricRules.StrikeY(glyphRun.BaselineY, run.FontSize),
+            PptxTextMetricRules.StrikeY(embedded, glyphRun.BaselineY, run.FontSize),
             glyphRun.Width,
-            PptxTextMetricRules.StrikeThickness(run.FontSize));
+            PptxTextMetricRules.StrikeThickness(embedded, run.FontSize));
         return glyphRun.Width > PptxTextMetricRules.TextStateTolerance && rectangle.Height > 0d;
     }
 
