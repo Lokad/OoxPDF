@@ -2422,7 +2422,9 @@ High-priority actions:
     area, plot area, title, legend, and data-label rectangles through the same rectangle fill primitives used
     by ordinary shapes. This only consumes directly modeled effects; theme style-reference inheritance and
     richer transparency groups remain open. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
-    minimal` passed, and focused non-slow `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
+    minimal` passed, focused non-slow `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`), and private
+    run `artifacts/private-visual/lokad-value-based/20260528-102720` compared 84/84 pages with zero dimension
+    mismatches, deck MAE `7.536827`, changed16 `0.101039`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
   - [ ] Add a real PDF soft-mask or equivalent transparency-function backend before rendering non-uniform
     per-stop gradient alpha. The current PDF axial shading model is RGB-only, so varying stop alpha must
     remain structurally represented but not approximated by averaged or stop-flattened opacity.
