@@ -8558,7 +8558,7 @@ internal sealed partial class PptxRenderer
         }
         else
         {
-            PptxSceneChartGrouping grouping = ReadSceneOrXmlChartGrouping(plot, plotElement, PptxSceneChartGrouping.Standard);
+            PptxSceneChartGrouping grouping = ReadSceneOrXmlCartesianRightLegendGrouping(sceneChart, plot, chartXml, plotElement, plotKind);
             bool stacked = IsStackedChartGrouping(grouping);
             bool percentStacked = IsPercentStackedChartGrouping(grouping);
             IReadOnlyList<ChartIndexedNumberVector> seriesVectors = ReadSceneOrXmlChartSeriesVectors(plot, plotElement);
@@ -8600,6 +8600,16 @@ internal sealed partial class PptxRenderer
         double width = Math.Max(1d, frame.Width - leftInset - rightLegendReserve.Width);
         double height = frame.Height * heightRatio;
         return new ChartPlotBox(x, y, width, height);
+    }
+
+    private static PptxSceneChartGrouping ReadSceneOrXmlCartesianRightLegendGrouping(PptxSceneChart? sceneChart, PptxSceneChartPlot? plot, XDocument chartXml, XElement plotElement, PptxSceneChartPlotKind plotKind)
+    {
+        return plotKind switch
+        {
+            PptxSceneChartPlotKind.Area => ReadSceneOrXmlChartAreaOptions(sceneChart, plot, chartXml, plotElement, PptxSceneChartGrouping.Standard).Grouping,
+            PptxSceneChartPlotKind.Line => ReadSceneOrXmlChartLineOptions(sceneChart, plot, chartXml, plotElement, PptxSceneChartGrouping.Standard).Grouping,
+            _ => ReadSceneOrXmlChartGrouping(plot, plotElement, PptxSceneChartGrouping.Standard)
+        };
     }
 
     private static bool HasSceneOrXmlExplicitValueAxisScale(PptxSceneChartAxis? axis, XElement? valueAxis)

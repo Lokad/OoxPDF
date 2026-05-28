@@ -12109,6 +12109,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `333` tests, `0`
 failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Routed line/area right-legend grouping resolution through the existing typed
+option records. The no-title right-legend plot-box path now asks `ChartLinePlotOptions` or
+`ChartAreaPlotOptions` for the active grouping before estimating stacked/percent-stacked value-axis labels,
+instead of independently re-reading `c:grouping` through a local scalar bridge. The defensive unknown-plot
+fallback remains in place for XML-only compatibility.
+
+This does not solve the broader right-legend plot-area negotiation gap. It removes a narrower source of drift:
+the same chart family option contract now feeds both rendering and the right-legend reserve heuristic, which
+is necessary before replacing that heuristic with Office-PDF-derived legend/axis/plot geometry.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `96` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `337` tests, `0`
+failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Consolidated scatter-chart renderer option resolution behind
 `ChartScatterPlotOptions`. Native scatter rendering now resolves `scatterStyle`, the derived connect-lines
 policy, and per-series smooth flags at one scene/XML boundary before emitting connected paths or markers.
