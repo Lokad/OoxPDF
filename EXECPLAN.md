@@ -2891,6 +2891,17 @@ High-priority actions:
     rule against the Office PDF clusters, with X only partly aligned and Y sign/basis disagreements across the
     four labels. Keep the next renderer change blocked on a multi-document Office-derived coordinate model,
     not on a four-label frame-relative shortcut.
+    2026-05-29 update: added a second public Office-authored pie data-label leader-line probe,
+    `pptx-ladder-11-chart-pie-data-label-leader-lines-offset-probe`, with a different chart frame and manual
+    COM label coordinates. `tools/NewChartProbeFixtures.ps1 -DataLabelsOnly` now emits this fixture plus its
+    ignored COM sidecar so coordinate-basis work can compare multiple Office geometries instead of fitting the
+    original four-label sample. The new probe passes its loose visual/structural gates in run
+    `20260529-013658`; the refreshed original leader-line probe and Cartesian legend-key probe also pass in
+    runs `20260529-013716` and `20260529-013729`. The offset summary reports text clusters `4/4`, max cluster
+    bounds delta `453.645pt`, manual-layout records `4`, COM label records `4`, and leader-line counts `0/4`.
+    This extends the negative evidence: Office may emit no visible connectors for a custom-layout pie even
+    when `HasLeaderLines` is true, so the eventual rule must combine final label boxes, clipping, and
+    Office-visible connector routing rather than trimming candidate leader lines by a fixed count.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
@@ -2902,6 +2913,10 @@ High-priority actions:
     four connectors nearest indices `3`, `2`, `0`, and `1`. This makes the remaining gate content-aware: do
     not reduce candidate leader lines by a count-only or quadrant-only heuristic; derive visibility from the
     final Office-aligned label boxes and then assert the surviving connector against the matched label index.
+    2026-05-29 update: the offset-frame public probe adds a second visibility case where Office emits zero
+    classified data-label leader-line structures while the candidate still emits four. This keeps the open
+    cardinality rule explicitly multi-fixture: one public custom-layout probe is `1/4`, the offset-frame probe
+    is `0/4`, and neither supports a hard-coded "draw one" or "draw none" shortcut.
 - [x] 2026-05-24: Make chart legend-entry name construction scene-first. Bar/combo and line legend entries
   now consume `PptxSceneChartPlot.Series[].Name` before falling back to raw `c:ser` XML, with the existing
   `Series N` default preserved for unnamed series. Focused model/chart tests passed after a transient
