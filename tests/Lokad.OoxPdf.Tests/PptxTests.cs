@@ -2738,16 +2738,22 @@ internal static class PptxTests
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Vertical270", frame.Orientation);
         TestAssert.Equal("vert270", frame.OrientationValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.OrientationSource);
         TestAssert.Equal("Bottom", frame.VerticalAnchor);
         TestAssert.Equal("b", frame.VerticalAnchorValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.VerticalAnchorSource);
         TestAssert.Equal(true, frame.AnchorCenter);
         TestAssert.Equal("1", frame.AnchorCenterValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.AnchorCenterSource);
         TestAssert.Equal("None", frame.WrapMode);
         TestAssert.Equal("none", frame.WrapValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.WrapSource);
         TestAssert.Equal("Ellipsis", frame.VerticalOverflow);
         TestAssert.Equal("ellipsis", frame.VerticalOverflowValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.VerticalOverflowSource);
         TestAssert.Equal(3, frame.ColumnCount);
         TestAssert.Equal(72d, frame.ColumnSpacing);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
         TestAssert.Equal(0.8d, frame.FontScale);
     }
 
@@ -6060,6 +6066,12 @@ internal static class PptxTests
                     models[frameIndex].InheritedPlaceholderCount,
                     models[frameIndex].HasInheritedTextBody,
                     models[frameIndex].UsesInheritedShapeBounds,
+                    models[frameIndex].OrientationSource,
+                    models[frameIndex].VerticalAnchorSource,
+                    models[frameIndex].AnchorCenterSource,
+                    models[frameIndex].WrapSource,
+                    models[frameIndex].VerticalOverflowSource,
+                    models[frameIndex].ColumnSource,
                     paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new
                     {
                         paragraph.Level,

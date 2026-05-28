@@ -110,16 +110,22 @@ internal sealed record PptxTextFrameModelSnapshot(
     bool UsesInheritedShapeBounds,
     string Orientation,
     string? OrientationValue,
+    string OrientationSource,
     string VerticalAnchor,
     string? VerticalAnchorValue,
+    string VerticalAnchorSource,
     bool? AnchorCenter,
     string? AnchorCenterValue,
+    string AnchorCenterSource,
     string WrapMode,
     string? WrapValue,
+    string WrapSource,
     string VerticalOverflow,
     string? VerticalOverflowValue,
+    string VerticalOverflowSource,
     int ColumnCount,
     double ColumnSpacing,
+    string ColumnSource,
     IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
 
 internal sealed record PptxTextParagraphModelSnapshot(

@@ -362,21 +362,35 @@ internal sealed partial class PptxRenderer
         TextInsets Insets,
         PptxTextOrientation Orientation,
         string? OrientationValue,
+        PptxTextBodyPropertySource OrientationSource,
         TextVerticalAnchor VerticalAnchor,
         string? VerticalAnchorValue,
+        PptxTextBodyPropertySource VerticalAnchorSource,
         bool? AnchorCenter,
         string? AnchorCenterValue,
+        PptxTextBodyPropertySource AnchorCenterSource,
         PptxTextWrapMode WrapMode,
         string? WrapValue,
+        PptxTextBodyPropertySource WrapSource,
         PptxTextVerticalOverflow VerticalOverflow,
         string? VerticalOverflowValue,
+        PptxTextBodyPropertySource VerticalOverflowSource,
         int ColumnCount,
         double ColumnSpacing,
+        PptxTextBodyPropertySource ColumnSource,
         double FontScale,
         double LineSpacingScale,
         bool CompatibleLineSpacing,
         double? RotationDegrees,
         double? ExplicitWrapWidth);
+
+    private enum PptxTextBodyPropertySource
+    {
+        DirectBodyPr,
+        InheritedBodyPr,
+        TableCellStyle,
+        DefaultValue
+    }
 
     private sealed record PptxTextParagraphModel(
         XElement Source,

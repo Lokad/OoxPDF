@@ -34,16 +34,22 @@ internal sealed partial class PptxRenderer
             frame.UsesInheritedShapeBounds,
             frame.BodyProperties.Orientation.ToString(),
             frame.BodyProperties.OrientationValue,
+            frame.BodyProperties.OrientationSource.ToString(),
             frame.BodyProperties.VerticalAnchor.ToString(),
             frame.BodyProperties.VerticalAnchorValue,
+            frame.BodyProperties.VerticalAnchorSource.ToString(),
             frame.BodyProperties.AnchorCenter,
             frame.BodyProperties.AnchorCenterValue,
+            frame.BodyProperties.AnchorCenterSource.ToString(),
             frame.BodyProperties.WrapMode.ToString(),
             frame.BodyProperties.WrapValue,
+            frame.BodyProperties.WrapSource.ToString(),
             frame.BodyProperties.VerticalOverflow.ToString(),
             frame.BodyProperties.VerticalOverflowValue,
+            frame.BodyProperties.VerticalOverflowSource.ToString(),
             frame.BodyProperties.ColumnCount,
             frame.BodyProperties.ColumnSpacing,
+            frame.BodyProperties.ColumnSource.ToString(),
             frame.Paragraphs.Select(ToSnapshot).ToArray());
     }
 
@@ -300,8 +306,10 @@ internal sealed partial class PptxRenderer
                 TextVerticalAnchor.Bottom => "b",
                 _ => "t"
             },
+            VerticalAnchorSource = PptxTextBodyPropertySource.TableCellStyle,
             VerticalOverflow = PptxTextVerticalOverflow.Clip,
             VerticalOverflowValue = "clip",
+            VerticalOverflowSource = PptxTextBodyPropertySource.TableCellStyle,
             ExplicitWrapWidth = Math.Max(1d, tableFrame.Width - tableFrame.Insets.Left)
         };
 
@@ -445,31 +453,67 @@ internal sealed partial class PptxRenderer
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
     {
         (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
-        string? orientation = ReadTextOrientationValue(textBody, inheritedTextBody);
-        string? verticalAnchor = ReadTextBodyAttribute(textBody, "anchor");
-        string? anchorCenter = ReadTextBodyAttribute(textBody, "anchorCtr");
-        string? wrap = ReadTextBodyAttribute(textBody, "wrap");
-        string? verticalOverflow = ReadTextBodyAttribute(textBody, "vertOverflow");
+        PptxTextBodyPropertySource columnSource = ReadTextColumnsSource(textBody);
+        (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
+        (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: false);
+        (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: false);
+        (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: false);
+        (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: false);
         XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
         return new PptxTextBodyProperties(
             ReadTextInsets(textBody),
             ParseTextOrientation(orientation),
             orientation,
+            orientationSource,
             ParseTextVerticalAnchor(verticalAnchor),
             verticalAnchor,
+            verticalAnchorSource,
             OoxBoolean.ParseOptionalAttribute(bodyPr, "anchorCtr"),
             anchorCenter,
+            anchorCenterSource,
             ParseTextWrapMode(wrap),
             wrap,
+            wrapSource,
             ParseTextVerticalOverflow(verticalOverflow),
             verticalOverflow,
+            verticalOverflowSource,
             columnCount,
             columnSpacing,
+            columnSource,
             ReadNormAutofitFontScale(textBody),
             ReadNormAutofitLineSpacingScale(textBody),
             HasCompatibleLineSpacing(textBody),
             ReadTextBodyRotationDegrees(textBody),
             ExplicitWrapWidth: null);
+    }
+
+    private static (string? Value, PptxTextBodyPropertySource Source) ReadTextBodyAttributeWithSource(
+        XElement textBody,
+        XElement? inheritedTextBody,
+        string attributeName,
+        bool inherit)
+    {
+        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
+        if (bodyPr?.Attribute(attributeName) is { } directAttribute)
+        {
+            return (directAttribute.Value, PptxTextBodyPropertySource.DirectBodyPr);
+        }
+
+        XElement? inheritedBodyPr = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
+        if (inherit && inheritedBodyPr?.Attribute(attributeName) is { } inheritedAttribute)
+        {
+            return (inheritedAttribute.Value, PptxTextBodyPropertySource.InheritedBodyPr);
+        }
+
+        return (null, PptxTextBodyPropertySource.DefaultValue);
+    }
+
+    private static PptxTextBodyPropertySource ReadTextColumnsSource(XElement textBody)
+    {
+        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
+        return bodyPr?.Attribute("numCol") is not null || bodyPr?.Attribute("spcCol") is not null
+            ? PptxTextBodyPropertySource.DirectBodyPr
+            : PptxTextBodyPropertySource.DefaultValue;
     }
 
     private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)
