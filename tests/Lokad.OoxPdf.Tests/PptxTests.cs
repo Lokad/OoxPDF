@@ -14846,9 +14846,10 @@ internal static class PptxTests
                 <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
                 <c:dLbls>
                   <c:txPr><a:bodyPr rot="3600000"/><a:lstStyle/><a:p/></c:txPr>
+                  <c:leaderLines><c:spPr><a:ln w="38100"><a:solidFill><a:srgbClr val="112233"/></a:solidFill></a:ln></c:spPr></c:leaderLines>
                   <c:showVal/>
                   <c:showPercent val="0"/>
-                  <c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="-1200000"/><a:lstStyle/><a:p/></c:txPr><c:showVal val="0"/><c:showLegendKey/></c:dLbl>
+                  <c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="-1200000"/><a:lstStyle/><a:p/></c:txPr><c:leaderLines><c:spPr><a:ln w="25400"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:showVal val="0"/><c:showLegendKey/></c:dLbl>
                 </c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
@@ -14860,7 +14861,7 @@ internal static class PptxTests
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:barChart>
-                <c:dLbls><c:txPr><a:bodyPr rot="600000"/><a:lstStyle/><a:p/></c:txPr><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="2400000"/><a:lstStyle/><a:p/></c:txPr><c:showVal/><c:showLegendKey val="0"/></c:dLbl></c:dLbls>
+                <c:dLbls><c:txPr><a:bodyPr rot="600000"/><a:lstStyle/><a:p/></c:txPr><c:leaderLines><c:spPr><a:ln w="12700"><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:showVal val="0"/><c:showLegendKey val="1"/><c:dLbl><c:idx val="0"/><c:txPr><a:bodyPr rot="2400000"/><a:lstStyle/><a:p/></c:txPr><c:leaderLines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill></a:ln></c:spPr></c:leaderLines><c:showVal/><c:showLegendKey val="0"/></c:dLbl></c:dLbls>
               </c:barChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "barChart").Single();
@@ -14889,6 +14890,10 @@ internal static class PptxTests
         object sceneShowLegendKey = ChartDataLabelFlagOption(sceneOptions, "showLegendKey");
         TestAssert.True(!ChartBooleanOptionValue(sceneShowLegendKey), "Expected missing scene showLegendKey to use the renderer default false, not fallback XML.");
         TestAssert.True(!ChartBooleanOptionIsDefined(sceneShowLegendKey), "Expected missing scene showLegendKey to remain distinct from explicit false.");
+        object sceneLeaderLines = ChartDataLabelLeaderLines(sceneOptions);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(sceneLeaderLines), "Expected scene-backed data-label leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(17, 34, 51), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(sceneLeaderLines)));
+        TestAssert.Equal(3d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(sceneLeaderLines)));
         object sceneBody = ChartDataLabelTextBodyProperties(sceneOptions);
         TestAssert.Equal(60d, ChartTextBodyRotationDegrees(sceneBody) ?? 0d);
         TestAssert.Equal("3600000", ChartTextBodyRotationValue(sceneBody));
@@ -14900,6 +14905,10 @@ internal static class PptxTests
         object sceneOverrideShowLegendKey = ChartDataLabelFlagOption(sceneOverride, "showLegendKey");
         TestAssert.True(ChartBooleanOptionValue(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(sceneOverrideShowLegendKey), "Expected scene-backed override shorthand showLegendKey presence to remain explicit.");
+        object sceneOverrideLeaderLines = ChartDataLabelLeaderLines(sceneOverride);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(sceneOverrideLeaderLines), "Expected scene-backed data-label override leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(68, 85, 102), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(sceneOverrideLeaderLines)));
+        TestAssert.Equal(2d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(sceneOverrideLeaderLines)));
         object sceneOverrideBody = ChartDataLabelTextBodyProperties(sceneOverride);
         TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(sceneOverrideBody) ?? 0d);
         TestAssert.Equal("-1200000", ChartTextBodyRotationValue(sceneOverrideBody));
@@ -14911,6 +14920,10 @@ internal static class PptxTests
         object resolvedSceneShowPercent = ChartDataLabelFlagOption(resolvedSceneOptions, "showPercent");
         TestAssert.True(!ChartBooleanOptionValue(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to inherit base showPercent=0.");
         TestAssert.True(ChartBooleanOptionIsDefined(resolvedSceneShowPercent), "Expected resolved scene-backed missing override showPercent to retain base explicit state.");
+        object resolvedSceneLeaderLines = ChartDataLabelLeaderLines(resolvedSceneOptions);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(resolvedSceneLeaderLines), "Expected resolved scene-backed leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(68, 85, 102), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(resolvedSceneLeaderLines)));
+        TestAssert.Equal(2d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(resolvedSceneLeaderLines)));
         object resolvedSceneBody = ChartDataLabelTextBodyProperties(resolvedSceneOptions);
         TestAssert.Equal(-20d, ChartTextBodyRotationDegrees(resolvedSceneBody) ?? 0d);
         TestAssert.Equal("-1200000", ChartTextBodyRotationValue(resolvedSceneBody));
@@ -14924,6 +14937,10 @@ internal static class PptxTests
         TestAssert.True(ChartBooleanOptionValue(xmlShowLegendKey), "Expected XML showLegendKey=1 to resolve true.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlShowLegendKey), "Expected XML showLegendKey=1 presence to remain explicit.");
         TestAssert.Equal("1", ChartBooleanOptionRawValue(xmlShowLegendKey));
+        object xmlLeaderLines = ChartDataLabelLeaderLines(xmlOptions);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(xmlLeaderLines), "Expected XML-backed data-label leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(171, 205, 239), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(xmlLeaderLines)));
+        TestAssert.Equal(1d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(xmlLeaderLines)));
         object xmlBody = ChartDataLabelTextBodyProperties(xmlOptions);
         TestAssert.Equal(10d, ChartTextBodyRotationDegrees(xmlBody) ?? 0d);
         TestAssert.Equal("600000", ChartTextBodyRotationValue(xmlBody));
@@ -14935,6 +14952,10 @@ internal static class PptxTests
         TestAssert.True(!ChartBooleanOptionValue(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 to resolve false.");
         TestAssert.True(ChartBooleanOptionIsDefined(xmlOverrideShowLegendKey), "Expected XML override showLegendKey=0 presence to remain explicit.");
         TestAssert.Equal("0", ChartBooleanOptionRawValue(xmlOverrideShowLegendKey));
+        object xmlOverrideLeaderLines = ChartDataLabelLeaderLines(xmlOverride);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(xmlOverrideLeaderLines), "Expected XML-backed data-label override leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(254, 220, 186), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(xmlOverrideLeaderLines)));
+        TestAssert.Equal(0.5d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(xmlOverrideLeaderLines)));
         object xmlOverrideBody = ChartDataLabelTextBodyProperties(xmlOverride);
         TestAssert.Equal(40d, ChartTextBodyRotationDegrees(xmlOverrideBody) ?? 0d);
         TestAssert.Equal("2400000", ChartTextBodyRotationValue(xmlOverrideBody));
@@ -14943,6 +14964,10 @@ internal static class PptxTests
         TestAssert.True(!ChartBooleanOptionValue(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 to replace base showLegendKey=1.");
         TestAssert.True(ChartBooleanOptionIsDefined(resolvedXmlShowLegendKey), "Expected resolved XML override showLegendKey=0 presence to remain explicit.");
         TestAssert.Equal("0", ChartBooleanOptionRawValue(resolvedXmlShowLegendKey));
+        object resolvedXmlLeaderLines = ChartDataLabelLeaderLines(resolvedXmlOptions);
+        TestAssert.True(ChartDataLabelLeaderLinesIsDefined(resolvedXmlLeaderLines), "Expected resolved XML-backed leader-line source to remain defined.");
+        TestAssert.Equal(new RgbColor(254, 220, 186), ChartSeriesStrokeColor(ChartDataLabelLeaderLinesStroke(resolvedXmlLeaderLines)));
+        TestAssert.Equal(0.5d, ChartSeriesStrokeWidth(ChartDataLabelLeaderLinesStroke(resolvedXmlLeaderLines)));
         object resolvedXmlBody = ChartDataLabelTextBodyProperties(resolvedXmlOptions);
         TestAssert.Equal(40d, ChartTextBodyRotationDegrees(resolvedXmlBody) ?? 0d);
         TestAssert.Equal("2400000", ChartTextBodyRotationValue(resolvedXmlBody));
@@ -18942,6 +18967,24 @@ internal static class PptxTests
     private static object ChartDataLabelTextBodyProperties(object options)
     {
         return ChartTextBodyProperties(options);
+    }
+
+    private static object ChartDataLabelLeaderLines(object options)
+    {
+        return options.GetType().GetProperty("LeaderLines")?.GetValue(options)
+            ?? throw new InvalidOperationException("Expected chart data-label leader lines.");
+    }
+
+    private static bool ChartDataLabelLeaderLinesIsDefined(object leaderLines)
+    {
+        return (bool)(leaderLines.GetType().GetProperty("IsDefined")?.GetValue(leaderLines)
+            ?? throw new InvalidOperationException("Expected chart data-label leader-line defined state."));
+    }
+
+    private static object ChartDataLabelLeaderLinesStroke(object leaderLines)
+    {
+        return leaderLines.GetType().GetProperty("Stroke")?.GetValue(leaderLines)
+            ?? throw new InvalidOperationException("Expected chart data-label leader-line stroke.");
     }
 
     private static object ChartTextBodyProperties(object options)

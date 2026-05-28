@@ -2774,6 +2774,15 @@ High-priority actions:
     label-option resolver. Per-label polar leader lines can now override chart-wide or series-wide leader-line
     stroke style without re-scanning XML at draw time. Validation: focused scene-builder and native line/pie
     render tests passed after one transient parallel build-file lock was rerun serially.
+  - [x] 2026-05-28 lock data-label leader-line source boundaries at the renderer option resolver:
+    the existing `PptxChartDataLabelOptionsPreserveRawBooleanState` regression now carries mismatched
+    scene-backed and raw-XML `c:leaderLines` strokes through plot-level labels, per-label overrides, and
+    resolved point options. This proves the renderer keeps scene-owned leader-line style authoritative when
+    a scene plot exists, while XML-only fallback still reads its own stroke style. It closes a coverage gap
+    around the already-implemented `ChartDataLabelOptions.LeaderLines` payload without changing production
+    behavior. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+    non-slow `pptx-charts` passed (`139 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`413 passed, 0 failed, 7 skipped`).
   - [x] Consume chart-style role text defaults for scene-backed data labels:
     the scene-backed data-label option boundary now merges chart-level text defaults, the preserved
     `cs:dataLabel` chart-style role, and direct `c:dLbls/txPr` text in that order before label rendering.
