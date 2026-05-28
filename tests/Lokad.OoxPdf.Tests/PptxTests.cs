@@ -7498,6 +7498,12 @@ internal static class PptxTests
                   <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
                 </Relationships>
                 """,
+            ["ppt/charts/_rels/chart1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdColors" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                </Relationships>
+                """,
             ["ppt/presentation.xml"] = BasicPresentation(),
             ["ppt/theme/theme1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
@@ -7643,6 +7649,15 @@ internal static class PptxTests
                     </c:legend>
                   </c:chart>
                 </c:chartSpace>
+                """,
+            ["ppt/charts/colors1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:colorStyle xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                               meth="cycle" id="5">
+                  <a:schemeClr val="bg1"/>
+                  <a:schemeClr val="tx1"/>
+                </cs:colorStyle>
                 """
         });
 
@@ -7695,6 +7710,10 @@ internal static class PptxTests
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].TextStyle.Color ?? default);
         TestAssert.Equal(new RgbColor(68, 85, 102), chart.Axes[0].Title.ShapeStyle.Fill.Color);
         TestAssert.Equal(new RgbColor(17, 34, 51), chart.Axes[0].Title.TextStyle.Color ?? default);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Colors[0]);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Colors[1]);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Declarations[0].Color ?? default);
+        TestAssert.Equal(new RgbColor(68, 85, 102), chart.ColorStyle.Declarations[1].Color ?? default);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()

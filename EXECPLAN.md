@@ -3687,6 +3687,14 @@ High-priority actions:
   color-style/style-part cascade semantics, direct renderer-only color paths, built-in table style aliases, and
   inherited placeholder style maps. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
   passed; focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped).
+  2026-05-28 progress: chart color-style part parsing now resolves root palette entries and typed
+  declaration records through the chart source `PptxColorMap`, so `colorsN.xml` scheme aliases such as
+  `bg1`/`tx1` follow the owning slide/layout/master map instead of the default Office alias map. This is only
+  source-map propagation for the already scene-owned color-style part; keep the item open for the actual
+  chart-style/color-style cascade, variation-branch selection and precedence, direct renderer-only color paths,
+  built-in table style aliases, and inherited placeholder style maps. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed (`17` passed,
+  `0` failed, `1` skipped); focused non-slow `pptx-charts` passed (`128` passed, `0` failed, `0` skipped).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

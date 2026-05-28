@@ -2199,7 +2199,7 @@ internal sealed class PptxSceneBuilder
             : ReadChartExternalData(package, chartPart.Name, chartXml);
         PptxSceneChartColorStyle colorStyle = chartPart is null
             ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], 0, [], null)
-            : ReadChartColorStyle(package, chartPart.Name, theme);
+            : ReadChartColorStyle(package, chartPart.Name, theme, colorMap);
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
             : ReadChartStylePart(package, chartPart.Name, theme);
@@ -3621,7 +3621,7 @@ internal sealed class PptxSceneBuilder
             autoUpdateValue);
     }
 
-    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme)
+    private static PptxSceneChartColorStyle ReadChartColorStyle(OoxPackage package, string chartPartName, PptxTheme theme, PptxColorMap colorMap)
     {
         OoxRelationship? colorRelationship = package.GetRelationships(chartPartName)
             .FirstOrDefault(relationship => !relationship.IsExternal &&
@@ -3639,12 +3639,12 @@ internal sealed class PptxSceneBuilder
         }
 
         XDocument document = LoadXml(colorPart);
-        IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme);
+        IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme, colorMap);
         var colors = new List<RgbColor>();
         foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
         {
             var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-            if (TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out _))
+            if (TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out _))
             {
                 colors.Add(color);
             }
@@ -3661,7 +3661,7 @@ internal sealed class PptxSceneBuilder
             document);
     }
 
-    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleDeclarations(XDocument document, PptxTheme theme)
+    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleDeclarations(XDocument document, PptxTheme theme, PptxColorMap colorMap)
     {
         if (document.Root is null)
         {
@@ -3671,7 +3671,7 @@ internal sealed class PptxSceneBuilder
         var declarations = new List<PptxSceneChartColorDeclaration>();
         foreach (XElement colorElement in document.Root.Elements().Where(IsDrawingColorElement))
         {
-            declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, variationIndex: null));
+            declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex: null));
         }
 
         int variationIndex = 0;
@@ -3679,7 +3679,7 @@ internal sealed class PptxSceneBuilder
         {
             foreach (XElement colorElement in variation.Descendants().Where(IsDrawingColorElement))
             {
-                declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, variationIndex));
+                declarations.Add(ReadChartColorStyleDeclaration(colorElement, theme, colorMap, variationIndex));
             }
 
             variationIndex++;
@@ -3688,10 +3688,10 @@ internal sealed class PptxSceneBuilder
         return declarations;
     }
 
-    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, int? variationIndex)
+    private static PptxSceneChartColorDeclaration ReadChartColorStyleDeclaration(XElement colorElement, PptxTheme theme, PptxColorMap colorMap, int? variationIndex)
     {
         var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
-        bool isResolved = TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out double alpha);
+        bool isResolved = TryReadSolidColorWithAlpha(wrapper, theme, colorMap, out RgbColor color, out double alpha);
         return new PptxSceneChartColorDeclaration(
             colorElement.Name.LocalName,
             (string?)colorElement.Attribute("val") ?? string.Empty,
