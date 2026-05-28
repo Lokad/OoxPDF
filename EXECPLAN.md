@@ -1637,9 +1637,12 @@ High-priority actions:
   fallback inputs.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
-- [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
-  `fontRef` color precedence, table text overrides, gradient/no-fill/outline text, `kern` thresholds,
-  tabs, repeated spaces, absolute line-height wrappers, `normAutofit`, and end-paragraph run sizing.
+- [x] Port the listed `pptx-renderer` text edge-case tests as .NET unit/visual coverage:
+  the named behaviors are now represented by focused OOXPDF tests or public visual probes: hyperlink color and
+  shape `fontRef` color precedence, table text/style overrides, no-fill/outline text, `kern` thresholds, tabs,
+  repeated spaces, absolute `spcPts` line spacing, `normAutofit` font-scale/line-spacing reduction, and
+  end-paragraph run sizing. The run-level gradient text case is intentionally diagnostic-covered rather than
+  claimed supported; the separate gradient-text backlog remains open until PDF text-gradient rendering exists.
 - [x] Cover unsupported PPTX gradient text fill explicitly:
   a targeted synthetic test now proves `a:rPr/a:gradFill` remains diagnostic-covered and does not get mistaken
   for the supported shape/background linear-gradient path. The current renderer still falls back to black text for
