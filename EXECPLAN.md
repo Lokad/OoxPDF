@@ -3280,6 +3280,14 @@ High-priority actions:
     semantics, overlay interactions, and non-bar/line family plot boxes remain open. Validation: focused
     unknown-target test passed; focused non-slow `pptx-charts` passed with `63` tests, `0` failures, and `0`
     skips.
+  - [x] 2026-05-28: Expose plot-area manual-layout records through scene inspection. The renderer already
+    preserved typed plot-area layout target/mode/value metadata, but `PptxSceneSnapshot` exposed only legend
+    manual layout, leaving structural tools unable to audit plot-area layout ownership without reaching into the
+    live scene model. The snapshot now carries plot-area `x/y/w/h`, raw `layoutTarget`, typed target kind, and
+    raw/typed x/y/w/h modes. This is instrumentation for the remaining `inner`/`outer` and overlay semantics, not
+    a geometry rule change. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed;
+    focused non-slow `pptx-model` passed (`25` passed, `1` slow skip), and focused non-slow `pptx-charts`
+    passed (`136` passed, `0` failures).
 - [x] 2026-05-24: Extend scene-owned chart data-label metadata beyond value/percent visibility. The scene
   model now preserves category-name, series-name, and leader-line flags plus label position, separator, and
   number-format metadata from plot/series `c:dLbls`; current renderers still consume only the already-rendered

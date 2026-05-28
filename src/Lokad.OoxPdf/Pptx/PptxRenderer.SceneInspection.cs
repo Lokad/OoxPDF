@@ -63,6 +63,7 @@ internal sealed partial class PptxRenderer
         PptxSceneShapePictureFill shapePictureFill = node.Shape?.PictureFill ?? default;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
+        PptxSceneChartManualLayout? plotAreaLayout = node.Chart?.PlotAreaLayout;
         IReadOnlyList<PptxSceneChartPlot> chartPlots = node.Chart?.Plots ?? [];
         IReadOnlyList<PptxSceneChartSeries> chartSeries = chartPlots
             .SelectMany(plot => plot.Series)
@@ -214,6 +215,21 @@ internal sealed partial class PptxRenderer
             node.Chart?.Options.ShowDataLabelsOverMaximum,
             node.Chart?.Options.ShowDataLabelsOverMaximumValue ?? string.Empty,
             node.Chart?.Options.DisplayBlanksAs ?? string.Empty,
+            plotAreaLayout?.HasLayout ?? false,
+            plotAreaLayout?.X,
+            plotAreaLayout?.Y,
+            plotAreaLayout?.Width,
+            plotAreaLayout?.Height,
+            plotAreaLayout?.LayoutTarget ?? string.Empty,
+            plotAreaLayout?.LayoutTargetKind.ToString() ?? string.Empty,
+            plotAreaLayout?.XMode ?? string.Empty,
+            plotAreaLayout?.XModeKind.ToString() ?? string.Empty,
+            plotAreaLayout?.YMode ?? string.Empty,
+            plotAreaLayout?.YModeKind.ToString() ?? string.Empty,
+            plotAreaLayout?.WidthMode ?? string.Empty,
+            plotAreaLayout?.WidthModeKind.ToString() ?? string.Empty,
+            plotAreaLayout?.HeightMode ?? string.Empty,
+            plotAreaLayout?.HeightModeKind.ToString() ?? string.Empty,
             legend?.IsDefined ?? false,
             legend?.Position ?? string.Empty,
             legend?.Overlay,
