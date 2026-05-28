@@ -2089,6 +2089,21 @@ High-priority actions:
     `artifacts/private-visual/lokad-value-based/20260527-032914` stayed at 84/84 compared pages, zero
     dimension mismatches, deck MAE `7.702155`, changed16 `0.103230`, slide 17 dimension-matched at MAE
     `2.977426`, changed16 `0.046559`, SSIM `0.918284`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - [x] 2026-05-28 reconciliation: make the extents implementation match the indexed-vector plan.
+    A code audit found that the plan already described dense indexed bar/line/area value-axis extents, but
+    the live helpers still compacted `ChartIndexedNumberVector` series into primitive `double?` arrays before
+    calculating clustered min/max and stacked category totals. `GetBarChartValueExtents`,
+    `GetLineChartValueExtents`, and `GetAreaChartValueExtents` now densify to
+    `ChartIndexedNumberPoint?` records and route through point-preserving clustered/stacked extent helpers.
+    This preserves source indices, blank/non-numeric cache state, and workbook sidecar reachability at the
+    scaling boundary. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, and
+    focused non-slow `pptx-charts` passed (`109 passed, 0 failed, 0 skipped`).
+  - [ ] 2026-05-28 gap from the same audit: migrate the remaining bar/line/area render-geometry loops off
+    primitive dense values. `RenderBarChart`, `RenderLineChart`, `RenderAreaChart`, and their stacked/helper
+    loops still call or accept `DensifyChartSeries`/`IReadOnlyList<IReadOnlyList<double?>>` even though the
+    long-term plan requires source-indexed point records through geometry, data-label, and chart text/layout
+    decisions. Preserve current visual behavior while moving one family at a time to
+    `ChartIndexedNumberPoint?` and deriving primitive values only at the local coordinate calculation.
   - [x] Render pie/doughnut slices from source-indexed positive points instead of compacted values:
     polar slice construction now builds `ChartIndexedPieSlice` records from `ChartIndexedNumberVector`, so
     point fills, strokes, explosions, palette fallback, and visible data-label overrides resolve by OOXML
