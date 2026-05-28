@@ -552,14 +552,71 @@ internal sealed partial class PptxRenderer
     private static PptxTextFlowParagraph BuildTextFlowParagraph(PptxTextParagraphModel paragraph, bool attachSpacesToFollowingWord)
     {
         var runs = new List<PptxTextFlowRun>(paragraph.Runs.Count);
+        PptxTextFlowRun? previousDrawableRun = null;
         bool hideLeadingSpacesAfterBoundary = false;
         foreach (PptxTextRunModel run in paragraph.Runs)
         {
             PptxTextFlowRun flowRun = BuildTextFlowRun(run, paragraph.Style.DefaultRunProperties, attachSpacesToFollowingWord);
-            runs.Add(flowRun with { Segments = HideSpacesAfterBoundaryPunctuation(flowRun.Segments, ref hideLeadingSpacesAfterBoundary) });
+            bool hideLeadingSpacesAfterStyleBoundary =
+                previousDrawableRun is not null &&
+                StartsWithDrawableRegularSpace(flowRun.Segments) &&
+                !CanCoalesceFlowRunStyles(previousDrawableRun.Style, flowRun.Style);
+            if (hideLeadingSpacesAfterStyleBoundary)
+            {
+                hideLeadingSpacesAfterBoundary = true;
+            }
+
+            PptxTextFlowRun rewritten = flowRun with { Segments = HideSpacesAfterBoundaryPunctuation(flowRun.Segments, ref hideLeadingSpacesAfterBoundary) };
+            runs.Add(rewritten);
+            if (HasDrawableText(rewritten.Segments))
+            {
+                previousDrawableRun = rewritten;
+            }
         }
 
         return new PptxTextFlowParagraph(paragraph, paragraph.Style, runs.ToArray());
+    }
+
+    private static bool StartsWithDrawableRegularSpace(IReadOnlyList<PptxTextFlowSegment> segments)
+    {
+        foreach (PptxTextFlowSegment segment in segments)
+        {
+            if (!segment.Draw)
+            {
+                continue;
+            }
+
+            return segment.Kind == PptxTextFlowSegmentKind.Text &&
+                segment.Text.Length != 0 &&
+                segment.AdvanceText.Length != 0 &&
+                segment.Text[0] == ' ' &&
+                segment.AdvanceText[0] == ' ';
+        }
+
+        return false;
+    }
+
+    private static bool HasDrawableText(IReadOnlyList<PptxTextFlowSegment> segments)
+    {
+        return segments.Any(static segment => segment.Draw && segment.Kind == PptxTextFlowSegmentKind.Text && segment.Text.Length != 0);
+    }
+
+    private static bool CanCoalesceFlowRunStyles(ResolvedRunTextStyle left, ResolvedRunTextStyle right)
+    {
+        return Math.Abs(left.FontSize - right.FontSize) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.CharacterSpacing - right.CharacterSpacing) < PptxTextMetricRules.CoordinateTolerance &&
+            Math.Abs(left.BaselineOffset - right.BaselineOffset) < PptxTextMetricRules.CoordinateTolerance &&
+            left.Color.Equals(right.Color) &&
+            Math.Abs(left.Alpha - right.Alpha) < PptxTextMetricRules.TextStateTolerance &&
+            TextOutlinesEqual(left.Outline, right.Outline) &&
+            left.Bold == right.Bold &&
+            left.Italic == right.Italic &&
+            left.Underline == right.Underline &&
+            string.Equals(left.UnderlineValue, right.UnderlineValue, StringComparison.OrdinalIgnoreCase) &&
+            left.Strike == right.Strike &&
+            string.Equals(left.StrikeValue, right.StrikeValue, StringComparison.OrdinalIgnoreCase) &&
+            left.KerningEnabled == right.KerningEnabled &&
+            string.Equals(left.Typeface, right.Typeface, StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<PptxTextFlowSegment> HideSpacesAfterBoundaryPunctuation(IReadOnlyList<PptxTextFlowSegment> segments, ref bool hideLeadingSpaces)

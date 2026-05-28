@@ -6670,6 +6670,65 @@ internal static class PptxTests
         TestAssert.True(following.FontSize > 0d, "Expected the following run to remain present in text flow.");
     }
 
+    public static void PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="5486400" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr lIns="0" rIns="0" tIns="0" bIns="0"/>
+                      <a:lstStyle/>
+                      <a:p>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha</a:t></a:r>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t xml:space="preserve"> beta</a:t></a:r>
+                      </a:p>
+                      <a:p>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t xml:space="preserve">Alpha </a:t></a:r>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>beta</a:t></a:r>
+                      </a:p>
+                      <a:p>
+                        <a:r><a:rPr sz="1800"><a:latin typeface="Arial"/></a:rPr><a:t>Alpha</a:t></a:r>
+                        <a:r><a:rPr sz="1800" b="1"><a:latin typeface="Arial"/></a:rPr><a:t xml:space="preserve"> beta</a:t></a:r>
+                      </a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFlowRunSnapshot[] flowRuns = PptxRenderer.InspectTextFlow(document, package, 0)
+            .Frames
+            .SelectMany(frame => frame.Paragraphs)
+            .SelectMany(paragraph => paragraph.Runs)
+            .ToArray();
+
+        PptxTextFlowRunSnapshot sameStyleLeadingSpace = flowRuns.First(run => run.SourceText == " beta" && Math.Abs(run.FontSize - 18d) < 0.01d);
+        TestAssert.Equal(" beta", string.Concat(sameStyleLeadingSpace.Segments.Where(segment => segment.Draw).Select(segment => segment.Text)));
+        TestAssert.True(!sameStyleLeadingSpace.Segments.Any(segment => segment.Kind == "HiddenAdvance"), "Expected same-style split runs to avoid hidden leading-space advance.");
+
+        PptxTextFlowRunSnapshot styleBoundaryLeadingSpace = flowRuns.Last(run => run.SourceText == " beta");
+        TestAssert.True(styleBoundaryLeadingSpace.Segments.Any(segment => segment.Kind == "HiddenAdvance" && segment.AdvanceText == " "), "Expected style-boundary leading space to become measured hidden advance.");
+        TestAssert.True(styleBoundaryLeadingSpace.Segments.Any(segment => segment.Kind == "Text" && segment.Text == "beta"), "Expected style-boundary visible text to start after the hidden leading space.");
+
+        PptxTextGlyphRunSnapshot[] glyphRuns = PptxRenderer.InspectTextGlyphRuns(document, package, 0).ToArray();
+        PptxTextGlyphRunSnapshot boldBeta = glyphRuns.Single(run => run.ParagraphIndex == 2 && run.Text == "beta");
+        PptxTextGlyphRunSnapshot precedingAlpha = glyphRuns.Single(run => run.ParagraphIndex == 2 && run.Text == "Alpha");
+        TestAssert.True(boldBeta.X > precedingAlpha.X + precedingAlpha.Width, "Expected style-boundary glyph run to start after the hidden leading-space advance.");
+        TestAssert.True(!glyphRuns.Any(run => run.ParagraphIndex == 2 && run.Text == " beta"), "Expected emitted glyph runs to omit the style-boundary leading space.");
+    }
+
     public static void PptxTypographyTextHyphenBoundariesRemainSeparateSpans()
     {
         string input = Path.GetFullPath(Path.Combine(

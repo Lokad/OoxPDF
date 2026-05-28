@@ -12567,6 +12567,34 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX text flow now models Office's leading-space behavior at style-changing run
+boundaries. A public synthetic probe with three paragraphs showed that Office coalesces same-style split
+runs whether the regular space is at the end of the first run or the start of the second, but when the second
+run starts with a regular space and changes emphasis, Office advances by the space and starts the next PDF
+text operation at the visible text. OOXPDF now represents that boundary space as a `HiddenAdvance` flow
+segment before glyph positioning, so the PDF text operation starts at the Office-aligned X position without
+hard-coding private document coordinates.
+
+This deliberately does not apply to highlight-only boundaries. A focused typography gate caught that
+overgeneralization: highlighted text has its own text-operation/highlight coalescing path, and hiding the
+leading space there removed visible line-layout text in a public fixture. The current rule is therefore tied
+to emission-style changes such as bold/italic/underline/strike/font/spacing/color/outline differences, while
+highlight-only behavior remains on the existing highlight-specific path. The private slide evidence that
+triggered this work is now explained generically as a run beginning with a regular space after a style change,
+not as a slide-specific right-edge correction.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxTextLeadingSpaceAfterStyleBoundaryUsesHiddenAdvance` passed; focused non-slow `pptx-typography` passed
+with `95` tests, `0` failures,
+and `2` slow skips; full non-slow console runner passed with `370` tests, `0` failures, and `7` slow skips.
+Public PDF text-operation comparison for
+`artifacts/tmp/pptx-leading-space-run-probe/pptx-leading-space-run-probe.pptx` now passes with equal text
+operation count (`4` vs `4`), decoded text equality, and the style-boundary operation at X `123.04` vs
+Office X `123.02` under a `1 pt` position tolerance. Private validation run `20260528-144351` compared
+84/84 pages with zero dimension mismatches, deck MAE `6.715278`, changed16 `0.093542`, and only
+`PPTX_UNSUPPORTED_IMAGE_RECOLOR`; against run `20260528-141612`, page 48 improved by MAE `1.152454`, while
+private page 17 and page 56 metrics were unchanged.
+
 Revision note, 2026-05-28: Extended the private-safe PPTX text inspection schema with resolved frame,
 paragraph, and line-layout JSON while keeping text omitted by default. Middle-anchored shape text with
 default line spacing now estimates visible lines from the resolved font's OS/2 Windows ascender plus
