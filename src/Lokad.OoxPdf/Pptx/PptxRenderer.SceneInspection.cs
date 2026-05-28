@@ -41,6 +41,11 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
+        IReadOnlyList<PptxSceneChartColorDeclaration> chartColorDeclarations =
+            node.Chart?.ColorStyle.Declarations ?? [];
+        IReadOnlyList<string> chartColorDeclarationKinds = chartColorDeclarations
+            .Select(declaration => declaration.Kind)
+            .ToArray();
         IReadOnlyList<string> chartStyleEntryRoles = node.Chart?.StylePart.Entries
             .Select(entry => entry.Role)
             .ToArray() ?? [];
@@ -86,6 +91,9 @@ internal sealed partial class PptxRenderer
             node.Chart?.ColorStyle.Method ?? string.Empty,
             node.Chart?.ColorStyle.Id ?? string.Empty,
             node.Chart?.ColorStyle.Colors.Count ?? 0,
+            chartColorDeclarations.Count,
+            chartColorDeclarations.Count(declaration => declaration.IsResolved),
+            chartColorDeclarationKinds,
             node.Chart?.StylePart.IsDefined ?? false,
             node.Chart?.StylePart.PartName ?? string.Empty,
             node.Chart?.StylePart.Id ?? string.Empty,

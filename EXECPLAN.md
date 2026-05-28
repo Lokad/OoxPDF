@@ -12577,6 +12577,24 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `0` failures, and `0` skips; full non-slow console runner passed with `345` tests, `0` failures, and `7`
 slow skips.
 
+Revision note, 2026-05-28: Promoted chart color-style declarations into typed scene data.
+`PptxSceneChartColorStyle` now carries a `Declarations` sidecar with each DrawingML color declaration kind,
+raw `val`, resolution state, resolved RGB when available, and alpha. The renderer-facing palette remains
+unchanged, so this is a structural addition rather than an opportunistic color behavior change. Scene
+inspection now reports declaration counts, resolved declaration counts, and declaration kinds without exposing
+raw XML.
+
+This closes the raw-declaration observability gap found in the previous inspection slice. The next long-term
+color-style step is not more snapshot plumbing; it is the Office cascade itself: typed handling of
+`colorsN.xml` variation branches, chart-style role color references, and the exact precedence that maps those
+structures to series, points, markers, labels, axes, and legends.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted
+`PptxScenePreservesChartColorStyleDeclarations` passed; targeted slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-charts` passed with `105` tests,
+`0` failures, and `0` skips; full non-slow console runner passed with `346` tests, `0` failures, and `7`
+slow skips.
+
 Revision note, 2026-05-28: Exposed rejected keyed chart overrides through private-safe scene inspection.
 `PptxSceneNodeSnapshot` now reports aggregate rejected `c:dPt` and `c:dLbl` index-token counts and raw
 index tokens for chart nodes, fed from the scene-owned sidecars instead of a second XML scan. This turns

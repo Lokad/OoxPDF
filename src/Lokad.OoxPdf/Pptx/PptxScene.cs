@@ -66,6 +66,9 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartColorStyleMethod,
     string ChartColorStyleId,
     int ChartColorStyleColorCount,
+    int ChartColorStyleDeclarationCount,
+    int ChartColorStyleResolvedDeclarationCount,
+    IReadOnlyList<string> ChartColorStyleDeclarationKinds,
     bool HasChartStylePart,
     string ChartStylePartName,
     string ChartStylePartId,
@@ -644,7 +647,15 @@ internal readonly record struct PptxSceneChartColorStyle(
     string Method,
     string Id,
     IReadOnlyList<RgbColor> Colors,
+    IReadOnlyList<PptxSceneChartColorDeclaration> Declarations,
     XDocument? ColorStyleXml);
+
+internal readonly record struct PptxSceneChartColorDeclaration(
+    string Kind,
+    string Value,
+    bool IsResolved,
+    RgbColor? Color,
+    double Alpha);
 
 internal sealed record PptxSceneChartStyle(
     bool IsDefined,
@@ -2061,7 +2072,7 @@ internal sealed class PptxSceneBuilder
             ? default
             : ReadChartExternalData(package, chartPart.Name, chartXml);
         PptxSceneChartColorStyle colorStyle = chartPart is null
-            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], null)
+            ? new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], [], null)
             : ReadChartColorStyle(package, chartPart.Name, theme);
         PptxSceneChartStyle stylePart = chartPart is null
             ? new PptxSceneChartStyle(false, null, string.Empty, null, [])
@@ -3315,16 +3326,17 @@ internal sealed class PptxSceneBuilder
                 relationship.ResolvedTarget is not null);
         if (colorRelationship?.ResolvedTarget is null)
         {
-            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], null);
+            return new PptxSceneChartColorStyle(false, null, string.Empty, string.Empty, [], [], null);
         }
 
         OoxPart? colorPart = package.GetPart(colorRelationship.ResolvedTarget);
         if (colorPart is null)
         {
-            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], null);
+            return new PptxSceneChartColorStyle(false, colorRelationship.ResolvedTarget, string.Empty, string.Empty, [], [], null);
         }
 
         XDocument document = LoadXml(colorPart);
+        IReadOnlyList<PptxSceneChartColorDeclaration> declarations = ReadChartColorStyleDeclarations(document, theme);
         var colors = new List<RgbColor>();
         foreach (XElement colorElement in document.Root?.Elements().Where(element => element.Name.Namespace == DrawingNamespace) ?? [])
         {
@@ -3341,7 +3353,41 @@ internal sealed class PptxSceneBuilder
             (string?)document.Root?.Attribute("meth") ?? string.Empty,
             (string?)document.Root?.Attribute("id") ?? string.Empty,
             colors,
+            declarations,
             document);
+    }
+
+    private static IReadOnlyList<PptxSceneChartColorDeclaration> ReadChartColorStyleDeclarations(XDocument document, PptxTheme theme)
+    {
+        if (document.Root is null)
+        {
+            return [];
+        }
+
+        var declarations = new List<PptxSceneChartColorDeclaration>();
+        foreach (XElement colorElement in document.Root.Descendants().Where(IsDrawingColorElement))
+        {
+            var wrapper = new XElement(DrawingNamespace + "solidFill", new XElement(colorElement));
+            bool isResolved = TryReadSolidColorWithAlpha(wrapper, theme, out RgbColor color, out double alpha);
+            declarations.Add(new PptxSceneChartColorDeclaration(
+                colorElement.Name.LocalName,
+                (string?)colorElement.Attribute("val") ?? string.Empty,
+                isResolved,
+                isResolved ? color : null,
+                isResolved ? alpha : 1d));
+        }
+
+        return declarations;
+    }
+
+    private static bool IsDrawingColorElement(XElement element)
+    {
+        if (element.Name.Namespace != DrawingNamespace)
+        {
+            return false;
+        }
+
+        return element.Name.LocalName is "srgbClr" or "schemeClr" or "scrgbClr" or "prstClr" or "sysClr" or "hslClr";
     }
 
     private static PptxSceneChartStyle ReadChartStylePart(OoxPackage package, string chartPartName, PptxTheme theme)

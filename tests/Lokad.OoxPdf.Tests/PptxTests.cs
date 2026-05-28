@@ -486,6 +486,10 @@ internal static class PptxTests
         TestAssert.Equal("cycle", slide.SlideNodes[4].Chart?.ColorStyle.Method ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.ColorStyle.Id ?? string.Empty);
         TestAssert.Equal(new RgbColor(1, 2, 3), slide.SlideNodes[4].Chart?.ColorStyle.Colors[0] ?? default);
+        TestAssert.Equal(1, slide.SlideNodes[4].Chart?.ColorStyle.Declarations.Count ?? 0);
+        TestAssert.Equal("srgbClr", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Kind ?? string.Empty);
+        TestAssert.Equal("010203", slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].Value ?? string.Empty);
+        TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.Declarations[0].IsResolved == true, "Expected typed chart color-style declaration resolution state.");
         TestAssert.True(slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml is not null, "Expected chart color-style XML ownership in the scene model.");
         TestAssert.Equal("10", (string?)slide.SlideNodes[4].Chart?.ColorStyle.ColorStyleXml?.Root?.Attribute("id") ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].HasChartColorStyle, "Expected scene inspection to expose chart color-style ownership without XML contents.");
@@ -493,6 +497,9 @@ internal static class PptxTests
         TestAssert.Equal("cycle", slideSnapshot.SlideNodes[4].ChartColorStyleMethod);
         TestAssert.Equal("10", slideSnapshot.SlideNodes[4].ChartColorStyleId);
         TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleColorCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartColorStyleResolvedDeclarationCount);
+        TestAssert.Equal("srgbClr", slideSnapshot.SlideNodes[4].ChartColorStyleDeclarationKinds[0]);
         TestAssert.True(slide.SlideNodes[4].Chart?.StylePart.IsDefined == true, "Expected chart style-part ownership in the scene model.");
         TestAssert.Equal("/ppt/charts/style1.xml", slide.SlideNodes[4].Chart?.StylePart.PartName ?? string.Empty);
         TestAssert.Equal("10", slide.SlideNodes[4].Chart?.StylePart.Id ?? string.Empty);
@@ -6337,6 +6344,9 @@ internal static class PptxTests
                 node.HasChartColorStyle,
                 node.ChartColorStyleMethod,
                 node.ChartColorStyleColorCount,
+                node.ChartColorStyleDeclarationCount,
+                node.ChartColorStyleResolvedDeclarationCount,
+                node.ChartColorStyleDeclarationKinds,
                 node.HasChartStylePart,
                 node.ChartStyleEntryCount,
                 node.ChartStyleEntryRoles,
@@ -14966,6 +14976,53 @@ internal static class PptxTests
         TestAssert.Equal(string.Empty, snapshot.ChartRejectedDataLabelOverrideIndexValues[2]);
     }
 
+    public static void PptxScenePreservesChartColorStyleDeclarations()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml, new Dictionary<string, byte[]>
+        {
+            ["ppt/charts/_rels/chart1.xml.rels"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.microsoft.com/office/2011/relationships/chartColorStyle" Target="colors1.xml"/>
+                </Relationships>
+                """),
+            ["ppt/charts/colors1.xml"] = TestFixtures.Utf8("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <cs:colorStyle xmlns:cs="http://schemas.microsoft.com/office/drawing/2012/chartStyle"
+                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                               meth="cycle" id="77">
+                  <a:srgbClr val="FF00CC"/>
+                  <a:schemeClr val="accent1"/>
+                </cs:colorStyle>
+                """)
+        });
+        PptxSceneChart chart = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Chart
+            ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneNodeSnapshot snapshot = PptxRenderer.InspectScene(document, package).Slides[0].SlideNodes[0];
+
+        TestAssert.Equal(2, chart.ColorStyle.Declarations.Count);
+        TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[0].Kind);
+        TestAssert.Equal("FF00CC", chart.ColorStyle.Declarations[0].Value);
+        TestAssert.Equal(new RgbColor(255, 0, 204), chart.ColorStyle.Declarations[0].Color ?? default);
+        TestAssert.Equal("schemeClr", chart.ColorStyle.Declarations[1].Kind);
+        TestAssert.Equal("accent1", chart.ColorStyle.Declarations[1].Value);
+        TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
+        TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
+        TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
+        TestAssert.Equal(2, snapshot.ChartColorStyleDeclarationCount);
+        TestAssert.Equal(1, snapshot.ChartColorStyleResolvedDeclarationCount);
+        TestAssert.Equal("srgbClr", snapshot.ChartColorStyleDeclarationKinds[0]);
+        TestAssert.Equal("schemeClr", snapshot.ChartColorStyleDeclarationKinds[1]);
+    }
+
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
     {
         string input = Path.Combine(
@@ -15075,9 +15132,11 @@ internal static class PptxTests
         return new PptxSceneBuilder().Build(document, package);
     }
 
-    private static (PptxDocument Document, OoxPackage Package) BuildSingleChartPackage(string chartXml)
+    private static (PptxDocument Document, OoxPackage Package) BuildSingleChartPackage(
+        string chartXml,
+        IReadOnlyDictionary<string, byte[]>? additionalParts = null)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var parts = new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
             ["_rels/.rels"] = TestFixtures.Utf8(PackageRelationship()),
@@ -15104,7 +15163,16 @@ internal static class PptxTests
                 </p:sld>
                 """),
             ["ppt/charts/chart1.xml"] = TestFixtures.Utf8(chartXml)
-        });
+        };
+        if (additionalParts is not null)
+        {
+            foreach (KeyValuePair<string, byte[]> part in additionalParts)
+            {
+                parts[part.Key] = part.Value;
+            }
+        }
+
+        string input = TestFixtures.WriteTempPackage(".pptx", parts);
 
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
