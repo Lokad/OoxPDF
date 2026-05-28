@@ -2796,11 +2796,14 @@ High-priority actions:
     horizontal-bar category/value permutations, scatter/bubble explicit titles, overlay/reserve interaction,
     rich rotated multi-run titles, and chart-style-inherited title defaults, then feed those observations back
     into plot-box reservation rather than widening the title-position tolerance.
-  - [ ] Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise supported
-    chart branches: the first rendering slice suppresses the old blanket unsupported-layout warning once a
-    branch succeeds, but a malformed or incomplete axis title can still be skipped if the axis kind/position is
-    unknown. Add a public synthetic probe and targeted diagnostic for that case instead of reintroducing the
-    broad "default titles are never rendered" warning.
+  - [x] 2026-05-28 Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise
+    supported chart branches: successful native chart rendering now emits
+    `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION` when a default axis title cannot be rendered because the
+    axis kind or position is unsupported or missing, without reintroducing the old blanket
+    `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` warning for valid supported titles. A synthetic chart test locks
+    the malformed missing-position case, and focused non-slow `pptx-charts` passed (`119 passed, 0 failed,
+    0 skipped`). The full non-slow console runner passed (`373 passed, 0 failed, 7 skipped`), and the public
+    default-axis-title visual probe still passed at `20260528-160815`.
   - [x] 2026-05-27: Preserve chart-style role text defaults structurally. `PptxSceneChartStyleEntry.TextStyle`
     now decodes role-local `fontRef` and `defRPr` into the existing chart text-style override shape:
     major/minor theme font family, font size, font color/alpha, bold, and italic. This does not yet apply
