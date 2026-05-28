@@ -141,6 +141,7 @@ internal sealed record PptxTextRunModelSnapshot(
     double FontSize,
     double CharacterSpacing,
     string? Typeface,
+    string ColorSource,
     bool HasHyperlinkClick,
     string? HyperlinkClickId,
     bool Underline,

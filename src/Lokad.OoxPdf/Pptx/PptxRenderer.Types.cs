@@ -286,6 +286,7 @@ internal sealed partial class PptxRenderer
         double CharacterSpacing,
         double BaselineOffset,
         RgbColor Color,
+        PptxRunTextColorSource ColorSource,
         double Alpha,
         TextOutline? Outline,
         RgbColor? Highlight,
@@ -300,6 +301,18 @@ internal sealed partial class PptxRenderer
         string? CapsValue,
         bool KerningEnabled,
         string? Typeface);
+
+    private enum PptxRunTextColorSource
+    {
+        RunNoFill,
+        RunSolidFill,
+        TableTextStyle,
+        ThemeHyperlink,
+        ShapeFontRef,
+        DefaultNoFill,
+        DefaultSolidFill,
+        FallbackBlack
+    }
 
     private sealed record PptxTextFrameModel(
         XElement Shape,

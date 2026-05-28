@@ -1372,6 +1372,11 @@ High-priority actions:
   `paragraph.defRPr` layers, and text-frame model snapshots expose run cascade source counts, names, and stable
   layer kinds. This makes the direct run `rPr` versus inherited paragraph default `defRPr` split testable without
   changing run-style resolution or PDF emission.
+- [x] Name run text-color fallback sources in resolved styles:
+  `ResolvedRunTextStyle` now records whether color came from direct no-fill/solid fill, table text style,
+  theme hyperlink color, shape `fontRef`, inherited default no-fill/solid fill, or fallback black. Text-frame
+  model snapshots and color-precedence tests expose this source, turning the existing fallback chain into
+  inspectable structural state for future Office-parity work.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape

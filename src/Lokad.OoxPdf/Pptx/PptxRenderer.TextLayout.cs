@@ -1989,41 +1989,50 @@ internal sealed partial class PptxRenderer
             : nominalFontSize;
         double alpha = 1d;
         RgbColor color;
+        PptxRunTextColorSource colorSource;
         if (HasTextNoFill(runProperties))
         {
             color = new RgbColor(0, 0, 0);
+            colorSource = PptxRunTextColorSource.RunNoFill;
             alpha = 0d;
         }
         else if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
+            colorSource = PptxRunTextColorSource.RunSolidFill;
             alpha = runAlpha;
         }
         else if (tableStyleTextStyle.Color is { } tableTextColor && !HasTextFill(runProperties))
         {
             color = tableTextColor;
+            colorSource = PptxRunTextColorSource.TableTextStyle;
         }
         else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", out RgbColor hyperlinkColor))
         {
             color = hyperlinkColor;
+            colorSource = PptxRunTextColorSource.ThemeHyperlink;
         }
         else if (shapeFontColor is { } fontRefColor)
         {
             color = fontRefColor;
+            colorSource = PptxRunTextColorSource.ShapeFontRef;
         }
         else if (HasTextNoFill(defaultRunProperties))
         {
             color = new RgbColor(0, 0, 0);
+            colorSource = PptxRunTextColorSource.DefaultNoFill;
             alpha = 0d;
         }
         else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
+            colorSource = PptxRunTextColorSource.DefaultSolidFill;
             alpha = defaultAlpha;
         }
         else
         {
             color = new RgbColor(0, 0, 0);
+            colorSource = PptxRunTextColorSource.FallbackBlack;
         }
 
         string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
@@ -2043,6 +2052,7 @@ internal sealed partial class PptxRenderer
             ReadCharacterSpacing(runProperties, defaultRunProperties),
             baselineOffset,
             color,
+            colorSource,
             alpha,
             TryReadTextOutline(runProperties, defaultRunProperties, theme, out TextOutline outline) ? outline : null,
             TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,

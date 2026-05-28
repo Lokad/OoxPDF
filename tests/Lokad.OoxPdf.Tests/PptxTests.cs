@@ -2563,6 +2563,7 @@ internal static class PptxTests
             .Single(run => run.Text == "Link");
         TestAssert.True(linkRun.HasHyperlinkClick, "Expected the text model to preserve hyperlink-click source state before color resolution.");
         TestAssert.Equal("rIdHyper", linkRun.HyperlinkClickId ?? string.Empty);
+        TestAssert.Equal("ThemeHyperlink", linkRun.ColorSource);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0 0 1 rg", pdf);
@@ -4496,6 +4497,17 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output);
 
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
+                .SelectMany(frame => frame.Paragraphs)
+                .SelectMany(paragraph => paragraph.Runs)
+                .Single(textRun => textRun.Text == "Styled color");
+            TestAssert.Equal("ShapeFontRef", run.ColorSource);
+        }
+
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 1 1 rg", pdf);
     }
@@ -4566,6 +4578,17 @@ internal static class PptxTests
 
         OoxPdfConverter.Convert(input, output);
 
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
+                .SelectMany(frame => frame.Paragraphs)
+                .SelectMany(paragraph => paragraph.Runs)
+                .Single(textRun => textRun.Text == "Font ref");
+            TestAssert.Equal("ShapeFontRef", run.ColorSource);
+        }
+
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 1 1 rg", pdf);
     }
@@ -4601,6 +4624,17 @@ internal static class PptxTests
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
         OoxPdfConverter.Convert(input, output);
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxTextRunModelSnapshot run = PptxRenderer.InspectTextFrameModels(document, package, 0)
+                .SelectMany(frame => frame.Paragraphs)
+                .SelectMany(paragraph => paragraph.Runs)
+                .Single(textRun => textRun.Text == "Explicit color");
+            TestAssert.Equal("RunSolidFill", run.ColorSource);
+        }
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
@@ -5988,6 +6022,7 @@ internal static class PptxTests
                             run.FontSize,
                             run.CharacterSpacing,
                             run.Typeface,
+                            run.ColorSource,
                             run.Underline,
                             highlighted = run.Highlight is not null
                         })
