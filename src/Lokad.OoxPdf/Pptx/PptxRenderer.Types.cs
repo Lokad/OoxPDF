@@ -318,6 +318,8 @@ internal sealed partial class PptxRenderer
         XElement Shape,
         XElement TextBody,
         XElement? InheritedTextBody,
+        int InheritedPlaceholderCount,
+        bool UsesInheritedShapeBounds,
         PptxTheme Theme,
         PptxTextBodyProperties BodyProperties,
         ShapeBounds Bounds,

@@ -29,6 +29,9 @@ internal sealed partial class PptxRenderer
             frame.TextX,
             frame.TextWidth,
             frame.FontScale,
+            frame.InheritedPlaceholderCount,
+            frame.InheritedTextBody is not null,
+            frame.UsesInheritedShapeBounds,
             frame.BodyProperties.Orientation.ToString(),
             frame.BodyProperties.OrientationValue,
             frame.BodyProperties.VerticalAnchor.ToString(),
@@ -131,9 +134,11 @@ internal sealed partial class PptxRenderer
         XElement? inheritedPlaceholder = inheritedPlaceholders.LastOrDefault();
         XElement? inheritedTextBody = inheritedPlaceholder?.Element(PresentationNamespace + "txBody");
         ShapeBounds? bounds = shapeProperties is null ? null : ReadBounds(shapeProperties);
-        bounds ??= inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties
-            ? ReadBounds(inheritedProperties)
-            : null;
+        bool usesInheritedShapeBounds = bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is not null;
+        if (bounds is null && inheritedPlaceholder?.Element(PresentationNamespace + "spPr") is { } inheritedProperties)
+        {
+            bounds = ReadBounds(inheritedProperties);
+        }
         if (bounds is null || textBody is null)
         {
             return null;
@@ -242,6 +247,8 @@ internal sealed partial class PptxRenderer
             shape,
             textBody,
             inheritedTextBody,
+            inheritedPlaceholders.Count,
+            usesInheritedShapeBounds,
             theme,
             bodyProperties,
             bounds.Value,
@@ -378,6 +385,8 @@ internal sealed partial class PptxRenderer
             textBody,
             textBody,
             InheritedTextBody: null,
+            InheritedPlaceholderCount: 0,
+            UsesInheritedShapeBounds: false,
             theme,
             bodyProperties,
             bounds,

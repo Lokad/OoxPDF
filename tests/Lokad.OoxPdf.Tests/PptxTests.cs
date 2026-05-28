@@ -881,6 +881,9 @@ internal static class PptxTests
 
         IReadOnlyList<PptxTextFrameModelSnapshot> textFrames = PptxRenderer.InspectTextFrameModels(document, package, 0);
         PptxTextFrameModelSnapshot textFrame = textFrames.Single(frame => frame.Paragraphs.Any(paragraph => paragraph.Runs.Any(run => run.Text == "Hello")));
+        TestAssert.True(textFrame.InheritedPlaceholderCount >= 1, "Expected text model to expose inherited placeholder participation.");
+        TestAssert.True(textFrame.HasInheritedTextBody, "Expected text model to expose inherited placeholder text body participation.");
+        TestAssert.True(textFrame.UsesInheritedShapeBounds, "Expected text model to expose placeholder geometry fallback.");
         TestAssert.Equal(1, textFrame.Paragraphs.Count);
         TestAssert.Equal(1, textFrame.Paragraphs[0].Level);
         TestAssert.Equal("lvl2pPr", textFrame.Paragraphs[0].CascadeLevelName);
@@ -6002,6 +6005,9 @@ internal static class PptxTests
                     models[frameIndex].TextX,
                     models[frameIndex].TextWidth,
                     models[frameIndex].FontScale,
+                    models[frameIndex].InheritedPlaceholderCount,
+                    models[frameIndex].HasInheritedTextBody,
+                    models[frameIndex].UsesInheritedShapeBounds,
                     paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new
                     {
                         paragraph.Level,

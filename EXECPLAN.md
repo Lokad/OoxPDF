@@ -1377,6 +1377,11 @@ High-priority actions:
   theme hyperlink color, shape `fontRef`, inherited default no-fill/solid fill, or fallback black. Text-frame
   model snapshots and color-precedence tests expose this source, turning the existing fallback chain into
   inspectable structural state for future Office-parity work.
+- [x] Expose text-frame placeholder and geometry provenance:
+  `PptxTextFrameModel` and snapshots now carry inherited placeholder counts, whether an inherited text body
+  participated in bodyPr resolution, and whether text bounds fell back to inherited placeholder geometry. This
+  keeps placeholder geometry/bodyPr inheritance observable before layout without changing how bounds or body
+  properties are currently resolved.
 - [ ] Extend the cascade model from paragraph defaults to a full named seven-level resolver with separate
   paragraph, run, bodyPr, placeholder geometry, and theme font/color fallback stages.
 - [ ] Port `pptx-renderer` text edge-case tests as .NET unit/visual cases for hyperlink color, shape
