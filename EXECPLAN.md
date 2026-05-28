@@ -2299,6 +2299,14 @@ High-priority actions:
     names silently become chart text. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
     passed, focused non-slow `pptx-charts` passed (`133 passed, 0 failed, 0 skipped`), and full non-slow
     console runner passed (`406 passed, 0 failed, 7 skipped`).
+  - [x] 2026-05-28 thread workbook and `plotVisOnly` into right-legend plot-box sizing:
+    the no-title/right-legend Cartesian helper still computed placement-side value extents from raw cached
+    series vectors, and the bubble title/right-legend helper still read series-name records without workbook
+    sidecars. Line, area, scatter, and bubble layout now receive the same workbook and visibility policy used
+    by rendering, so early plot-box decisions no longer re-open a cache-only side channel. Validation:
+    `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed, focused non-slow `pptx-charts`
+    passed (`133 passed, 0 failed, 0 skipped`), and full non-slow console runner passed
+    (`406 passed, 0 failed, 7 skipped`).
   - [x] Start the renderer indexed-vector adapter without changing chart output:
     `PptxRenderer.Charts` now converts scene/workbook numeric values, scatter X/Y/bubble values, and category
     labels into `ChartIndexedNumberVector` / `ChartIndexedTextVector` records before compacting them back to
