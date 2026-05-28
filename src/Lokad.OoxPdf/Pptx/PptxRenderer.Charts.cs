@@ -7347,9 +7347,9 @@ internal sealed partial class PptxRenderer
 
     private static double ResolveSceneOrXmlCategoryAxisLabelOffsetScale(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        int offset = sceneAxis?.LabelOffset ??
-            ReadChartElementInt(axis, "lblOffset") ??
-            PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
+        int offset = sceneAxis is not null
+            ? sceneAxis.LabelOffset ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset
+            : ReadChartElementInt(axis, "lblOffset") ?? PptxChartMetricRules.CategoryAxisDefaultLabelOffset;
 
         offset = Math.Clamp(
             offset,
@@ -7361,9 +7361,9 @@ internal sealed partial class PptxRenderer
 
     private static int ResolveSceneOrXmlCategoryAxisTickLabelSkip(PptxSceneChartAxis? sceneAxis, XElement? axis)
     {
-        int skip = sceneAxis?.TickLabelSkip ??
-            ReadChartElementInt(axis, "tickLblSkip") ??
-            PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
+        int skip = sceneAxis is not null
+            ? sceneAxis.TickLabelSkip ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip
+            : ReadChartElementInt(axis, "tickLblSkip") ?? PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip;
 
         return Math.Max(PptxChartMetricRules.CategoryAxisDefaultTickLabelSkip, skip);
     }

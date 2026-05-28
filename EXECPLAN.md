@@ -12982,6 +12982,25 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 passed with `91` tests, `0` failures, and `2` slow skips; full non-slow console runner passed with `347`
 tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Chart category-axis label policy now treats a present typed scene axis as
+authoritative for `lblOffset` and `tickLblSkip` resolution. Previously, `ResolveSceneOrXmlCategoryAxisLabelOffsetScale`
+and `ResolveSceneOrXmlCategoryAxisTickLabelSkip` still re-read fallback XML when the scene axis existed but
+its parsed numeric value was absent, which meant an invalid/future scene token could silently import a
+mismatched XML value at render time. Scene-backed paths now use the Office default for missing/unparseable
+scene values; XML-only paths still parse XML.
+
+This is a small but important `ReadSceneOrXml*` cleanup: the typed scene already preserves raw
+`LabelOffsetValue` and `TickLabelSkipValue`, so the renderer should not repair an incomplete scene axis by
+consulting another XML source. The new regression intentionally pairs unparseable scene tokens with numeric
+fallback XML and verifies that only the XML-only path consumes the fallback values. Remaining chart cleanup
+should continue this pattern for other nullable scene-owned layout scalars before replacing broader chart
+layout heuristics with Office-PDF-derived structural rules.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxChartCategoryAxisLabelPolicyUsesSceneAuthoritativeDefaults` passed; focused non-slow `pptx-charts`
+passed with `106` tests, `0` failures, and `0` skips; full non-slow console runner passed with `348`
+tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

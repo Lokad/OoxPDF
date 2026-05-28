@@ -12424,6 +12424,54 @@ internal static class PptxTests
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Gap, (PptxSceneChartDisplayBlanksAs)(optionsType.GetProperty("DisplayBlanksAs")?.GetValue(options) ?? default(PptxSceneChartDisplayBlanksAs)));
     }
 
+    public static void PptxChartCategoryAxisLabelPolicyUsesSceneAuthoritativeDefaults()
+    {
+        PptxSceneChart chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:barChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:barChart>
+                <c:catAx>
+                  <c:axId val="10"/><c:axPos val="b"/><c:lblOffset val="futureOffset"/><c:tickLblSkip val="futureSkip"/><c:crossAx val="20"/>
+                </c:catAx>
+                <c:valAx><c:axId val="20"/><c:axPos val="l"/><c:crossAx val="10"/></c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """) ?? throw new InvalidOperationException("Expected chart scene.");
+        PptxSceneChartAxis sceneAxis = chart.Axes.Single(axis => axis.AxisKind == PptxSceneChartAxisKind.Category);
+        TestAssert.True(sceneAxis.LabelOffset is null, "Expected unparseable scene label offset to stay distinct from an authored value.");
+        TestAssert.True(sceneAxis.TickLabelSkip is null, "Expected unparseable scene tick-label skip to stay distinct from an authored value.");
+
+        XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+        XElement mismatchedAxis = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:catAx><c:axId val="10"/><c:lblOffset val="200"/><c:tickLblSkip val="3"/></c:catAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """).Descendants(c + "catAx").Single();
+        System.Reflection.MethodInfo resolveLabelOffset = typeof(PptxRenderer).GetMethod(
+            "ResolveSceneOrXmlCategoryAxisLabelOffsetScale",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis label-offset resolver.");
+        System.Reflection.MethodInfo resolveTickLabelSkip = typeof(PptxRenderer).GetMethod(
+            "ResolveSceneOrXmlCategoryAxisTickLabelSkip",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected category-axis tick-label-skip resolver.");
+
+        double sceneOffsetScale = (double)resolveLabelOffset.Invoke(null, [sceneAxis, mismatchedAxis])!;
+        int sceneSkip = (int)resolveTickLabelSkip.Invoke(null, [sceneAxis, mismatchedAxis])!;
+        double xmlOnlyOffsetScale = (double)resolveLabelOffset.Invoke(null, [null, mismatchedAxis])!;
+        int xmlOnlySkip = (int)resolveTickLabelSkip.Invoke(null, [null, mismatchedAxis])!;
+
+        TestAssert.Equal(1d, sceneOffsetScale);
+        TestAssert.Equal(1, sceneSkip);
+        TestAssert.Equal(2d, xmlOnlyOffsetScale);
+        TestAssert.Equal(3, xmlOnlySkip);
+    }
+
     public static void PptxChartScatterOptionsUseSceneAuthoritativeDefaults()
     {
         PptxSceneChart chart = BuildSingleChartScene("""
