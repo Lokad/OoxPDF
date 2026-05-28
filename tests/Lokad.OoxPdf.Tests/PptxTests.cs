@@ -11609,6 +11609,35 @@ internal static class PptxTests
         TestAssert.Equal("-1", axis.MinorUnitValue);
     }
 
+    public static void PptxScenePreservesChartManualLayoutNumericOptionTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:layout><c:manualLayout>
+                  <c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/>
+                  <c:x val="futureX"/><c:y val="0.2"/><c:w val="futureW"/><c:h val="0.4"/>
+                </c:manualLayout></c:layout>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartManualLayout layout = chart?.PlotAreaLayout ?? throw new InvalidOperationException("Expected chart scene.");
+        TestAssert.True(layout.HasLayout, "Expected plot-area manual layout to be preserved.");
+        TestAssert.Equal(null, layout.X);
+        TestAssert.Equal("futureX", layout.XValue);
+        TestAssert.Equal(0.2d, layout.Y ?? double.NaN);
+        TestAssert.Equal("0.2", layout.YValue);
+        TestAssert.Equal(null, layout.Width);
+        TestAssert.Equal("futureW", layout.WidthValue);
+        TestAssert.Equal(0.4d, layout.Height ?? double.NaN);
+        TestAssert.Equal("0.4", layout.HeightValue);
+    }
+
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

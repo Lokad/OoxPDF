@@ -12088,6 +12088,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `87` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `328` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw PPTX chart manual-layout factor tokens in the shared layout model.
+`PptxSceneChartManualLayout` now carries source strings for `c:x`, `c:y`, `c:w`, and `c:h` beside the parsed
+nullable factors. This applies to plot-area, title, legend, chart-wide data-label, and per-label manual
+layouts because they all use the same parser; the remaining renderer fallback parser was kept in sync so it
+does not lose tokens when it has to materialize a temporary manual-layout record.
+
+This does not change chart box placement. Parsed factors still drive the current renderer behavior, while
+malformed or future factor tokens still normalize to missing factors. The improvement is structural: future
+Office-PDF-backed plot-box, title-box, legend-box, and data-label-box alignment can inspect whether the OOXML
+factor was absent or present-but-unhandled before replacing the existing broad layout ratios and fallback
+geometry.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `329` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: The PPTX vertical-anchor text-height estimator now consumes resolved
 `PptxTextBodyProperties` instead of re-reading only the local `a:bodyPr`. `EstimateTextHeight` applies the
 model-owned `normAutofit @fontScale`, `@lnSpcReduction` line-spacing scale, inherited `compatLnSpc`, and

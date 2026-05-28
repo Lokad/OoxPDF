@@ -3635,12 +3635,20 @@ internal sealed partial class PptxRenderer
         string yMode = ReadManualLayoutValue(manualLayout, "yMode");
         string widthMode = ReadManualLayoutValue(manualLayout, "wMode");
         string heightMode = ReadManualLayoutValue(manualLayout, "hMode");
+        (double? x, string xValue) = ReadManualLayoutFactorWithValue(manualLayout, "x");
+        (double? y, string yValue) = ReadManualLayoutFactorWithValue(manualLayout, "y");
+        (double? width, string widthValue) = ReadManualLayoutFactorWithValue(manualLayout, "w");
+        (double? height, string heightValue) = ReadManualLayoutFactorWithValue(manualLayout, "h");
         return new PptxSceneChartManualLayout(
             true,
-            ReadManualLayoutFactor(manualLayout, "x"),
-            ReadManualLayoutFactor(manualLayout, "y"),
-            ReadManualLayoutFactor(manualLayout, "w"),
-            ReadManualLayoutFactor(manualLayout, "h"),
+            x,
+            xValue,
+            y,
+            yValue,
+            width,
+            widthValue,
+            height,
+            heightValue,
             PptxSceneBuilder.ParseChartManualLayoutTarget(layoutTarget),
             layoutTarget,
             PptxSceneBuilder.ParseChartManualLayoutMode(xMode),
@@ -3655,10 +3663,16 @@ internal sealed partial class PptxRenderer
 
     private static double? ReadManualLayoutFactor(XElement manualLayout, string elementName)
     {
-        string? value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val");
+        (double? parsed, _) = ReadManualLayoutFactorWithValue(manualLayout, elementName);
+        return parsed;
+    }
+
+    private static (double? Value, string RawValue) ReadManualLayoutFactorWithValue(XElement manualLayout, string elementName)
+    {
+        string value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static string ReadManualLayoutValue(XElement manualLayout, string elementName)

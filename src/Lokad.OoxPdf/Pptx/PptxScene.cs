@@ -798,9 +798,13 @@ internal readonly record struct PptxSceneChartTextStyleOverride(
 internal readonly record struct PptxSceneChartManualLayout(
     bool HasLayout,
     double? X,
+    string XValue,
     double? Y,
+    string YValue,
     double? Width,
+    string WidthValue,
     double? Height,
+    string HeightValue,
     PptxSceneChartManualLayoutTarget LayoutTargetKind,
     string LayoutTarget,
     PptxSceneChartManualLayoutMode XModeKind,
@@ -2852,10 +2856,10 @@ internal sealed class PptxSceneBuilder
             return default;
         }
 
-        double? x = ReadChartManualLayoutFactor(manualLayout, "x");
-        double? y = ReadChartManualLayoutFactor(manualLayout, "y");
-        double? width = ReadChartManualLayoutFactor(manualLayout, "w");
-        double? height = ReadChartManualLayoutFactor(manualLayout, "h");
+        (double? x, string xValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "x");
+        (double? y, string yValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "y");
+        (double? width, string widthValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "w");
+        (double? height, string heightValue) = ReadChartManualLayoutFactorWithValue(manualLayout, "h");
         string layoutTarget = ReadChartElementValue(manualLayout, "layoutTarget");
         string xMode = ReadChartElementValue(manualLayout, "xMode");
         string yMode = ReadChartElementValue(manualLayout, "yMode");
@@ -2864,9 +2868,13 @@ internal sealed class PptxSceneBuilder
         return new PptxSceneChartManualLayout(
             true,
             x,
+            xValue,
             y,
+            yValue,
             width,
+            widthValue,
             height,
+            heightValue,
             ParseChartManualLayoutTarget(layoutTarget),
             layoutTarget,
             ParseChartManualLayoutMode(xMode),
@@ -2881,10 +2889,16 @@ internal sealed class PptxSceneBuilder
 
     private static double? ReadChartManualLayoutFactor(XElement manualLayout, string elementName)
     {
-        string? value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val");
+        (double? parsed, _) = ReadChartManualLayoutFactorWithValue(manualLayout, elementName);
+        return parsed;
+    }
+
+    private static (double? Value, string RawValue) ReadChartManualLayoutFactorWithValue(XElement manualLayout, string elementName)
+    {
+        string value = (string?)manualLayout.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static PptxSceneLineStyle ReadChartGridlineLine(XElement? gridlines, PptxTheme theme)
