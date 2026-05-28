@@ -1222,48 +1222,12 @@ internal sealed partial class PptxRenderer
 
     private static XElement? FindInheritedTextStyle(XElement shape, IReadOnlyList<XDocument> placeholderSources, string levelName)
     {
-        string? placeholderType = (string?)shape
-            .Element(PresentationNamespace + "nvSpPr")
-            ?.Element(PresentationNamespace + "nvPr")
-            ?.Element(PresentationNamespace + "ph")
-            ?.Attribute("type");
-        string styleName = placeholderType switch
-        {
-            "title" or "ctrTitle" => "titleStyle",
-            "body" or "subTitle" => "bodyStyle",
-            _ => "otherStyle"
-        };
-
-        foreach (XDocument source in placeholderSources)
-        {
-            XElement? style = source.Root?
-                .Element(PresentationNamespace + "txStyles")
-                ?.Element(PresentationNamespace + styleName);
-            XElement? level = style?.Element(DrawingNamespace + levelName) ??
-                style?.Element(DrawingNamespace + "defPPr");
-            if (level is not null)
-            {
-                return level;
-            }
-        }
-
-        return null;
+        return PptxTextStyleInheritance.FindInheritedTextStyle(shape, placeholderSources, levelName);
     }
 
     private static XElement? FindDefaultTextStyle(IReadOnlyList<XDocument> placeholderSources, string levelName)
     {
-        foreach (XDocument source in placeholderSources)
-        {
-            XElement? defaultTextStyle = source.Root?.Element(PresentationNamespace + "defaultTextStyle");
-            XElement? level = defaultTextStyle?.Element(DrawingNamespace + levelName) ??
-                defaultTextStyle?.Element(DrawingNamespace + "defPPr");
-            if (level is not null)
-            {
-                return level;
-            }
-        }
-
-        return null;
+        return PptxTextStyleInheritance.FindDefaultTextStyle(placeholderSources, levelName);
     }
 
     private static IEnumerable<PptxTextFlowSegment> SplitFlowSegments(string text, bool attachSpacesToFollowingWord)
