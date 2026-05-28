@@ -7205,16 +7205,6 @@ internal sealed partial class PptxRenderer
             : PptxChartMetricRules.AxisNiceHorizontalValueTickTargetCount;
     }
 
-    private static double MeasureChartTextWidth(string text, ChartTextStyle style, PresentationFontResolver? fontResolver)
-    {
-        return new ChartTextMeasurer(fontResolver).Measure(text, style);
-    }
-
-    private static double MeasureChartTextWidth(string text, double fontSize, string? fontFamily = null, bool bold = false, bool italic = false, PresentationFontResolver? fontResolver = null)
-    {
-        return new ChartTextMeasurer(fontResolver).Measure(text, fontSize, fontFamily, bold, italic);
-    }
-
     private sealed class ChartTextMeasurer
     {
         private readonly TextAdvanceEstimator estimator;
@@ -8808,11 +8798,12 @@ internal sealed partial class PptxRenderer
     {
         ChartTextStyle style = ReadSceneOrXmlChartTextStyle(theme, sceneChart, sceneAxis, chartXml, valueAxis, fallbackFontSize: PptxChartMetricRules.ValueAxisFallbackFontSize, chartStyleRole: "valueAxis");
         double fontSize = style.FontSize;
+        var textMeasurer = new ChartTextMeasurer(null);
         IReadOnlyList<double> tickValues = GetChartAxisTickValues(extents, units.MajorUnit, includeEndpoints: true, PptxChartMetricRules.AxisNiceTickTargetCount);
         double maxLabelWidth = tickValues
             .Select(value => FormatSceneOrXmlChartAxisLabel(value, sceneAxis, valueAxis, defaultNumberFormat))
             .DefaultIfEmpty("0")
-            .Max(label => MeasureChartTextWidth(label, fontSize));
+            .Max(label => textMeasurer.Measure(label, fontSize));
         double labelWidth = Math.Max(
             fontSize * PptxChartMetricRules.ValueAxisMinimumLabelWidthFactor,
             maxLabelWidth + fontSize * PptxChartMetricRules.ValueAxisLabelPaddingFactor);
@@ -9539,6 +9530,7 @@ internal sealed partial class PptxRenderer
             frame,
             seriesNames,
             includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area);
+        var textMeasurer = new ChartTextMeasurer(null);
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
@@ -9565,7 +9557,7 @@ internal sealed partial class PptxRenderer
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => MeasureChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => textMeasurer.Measure(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);
@@ -9590,7 +9582,7 @@ internal sealed partial class PptxRenderer
                     .ToArray();
                 maxValueLabelWidth = tickLabels.Length == 0
                     ? 0d
-                    : tickLabels.Max(label => MeasureChartTextWidth(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
+                    : tickLabels.Max(label => textMeasurer.Measure(label, PptxChartMetricRules.ValueAxisFallbackFontSize));
                 maxValueLabelLength = tickLabels.Length == 0
                     ? 0
                     : tickLabels.Max(label => label.Length);
@@ -9682,9 +9674,10 @@ internal sealed partial class PptxRenderer
     private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, bool includeAreaReserve)
     {
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
+        var textMeasurer = new ChartTextMeasurer(null);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
-            : seriesNames.Max(name => MeasureChartTextWidth(name.ActiveName, legendFontSize));
+            : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendFontSize));
         int maxLegendTextLength = seriesNames.Count == 0
             ? 0
             : seriesNames.Max(name => name.ActiveName.Length);
