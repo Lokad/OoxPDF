@@ -4548,6 +4548,8 @@ internal static class PptxTests
         TestAssert.Equal("\uF0A7", paragraph.BulletResolvedCharacter);
         TestAssert.Equal("Wingdings", paragraph.BulletFontTypeface);
         TestAssert.Equal("2", paragraph.BulletFontCharset);
+        TestAssert.Equal("Wingdings", paragraph.BulletResolvedFontTypeface);
+        TestAssert.Equal("Direct", paragraph.BulletFontTypefaceSource);
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextSpanLayoutSnapshot bullet = layout.Frames

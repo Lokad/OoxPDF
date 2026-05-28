@@ -460,6 +460,8 @@ internal sealed partial class PptxRenderer
         int? AutoNumberStartAt,
         string? FontTypeface,
         string? FontCharset,
+        string? ResolvedFontTypeface,
+        PptxThemeTypefaceSource FontTypefaceSource,
         RgbColor? Color,
         PptxParagraphBulletSizeKind SizeKind,
         string? SizeValue);

@@ -3703,6 +3703,13 @@ High-priority actions:
   -v minimal` passed; focused non-slow `pptx-charts` passed (`128` passed, `0` failed, `0` skipped); focused
   non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped); full console runner passed (`396`
   passed, `0` failed, `0` skipped).
+  2026-05-28 progress: bullet font selection is now source-bearing at the paragraph model boundary.
+  `PptxParagraphBulletModel` preserves the requested `a:buFont @typeface`, resolved typeface, and
+  `PptxThemeTypefaceSource`, and `ReadBulletStyle` consumes that typed result instead of resolving the theme
+  font during layout. Keep this item open for chart renderer consumption, shared chart run cascades, symbol
+  font diagnostics, and glyph fallback staging. Validation: focused non-slow `pptx-typography` passed
+  (`98` passed, `0` failed, `2` slow skips); full non-slow console runner passed
+  (`402` passed, `0` failed, `7` slow skips).
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
   2026-05-28 progress: solid color parsing is now centralized in `PptxColorResolver` and shared by the
@@ -14882,6 +14889,20 @@ This is a small cleanup, but it matters for the long-term boundary: empty paragr
 typed model fields for visibility, manual breaks, end-paragraph style, empty spacing, and layout
 participation. Remaining text-layout XML reads are now concentrated in text-model construction and run/source
 parsing rather than in layout's geometry decisions.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner
+passed with `402` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: PPTX bullet font selection now uses the source-bearing theme-font resolver before
+layout. `PptxParagraphBulletModel` records raw `a:buFont @typeface`, raw `@charset`, the resolved typeface,
+and the `PptxThemeTypefaceSource`; `ReadBulletStyle` receives that model record directly. The symbol-bullet
+fixture now asserts `Wingdings` plus `Direct` source before verifying the mapped glyph span.
+
+This does not close the whole theme-font item. Chart text still has flattened renderer consumption, symbol
+font policy is not yet a diagnostics stage, and glyph fallback still happens downstream. It does remove the
+bullet-specific plain `ResolveTypeface` call from layout, keeping another text surface aligned with the
+source-bearing run-style model.
 
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-typography` passed with `98` tests, `0` failures, and `2` slow skips; full non-slow console runner

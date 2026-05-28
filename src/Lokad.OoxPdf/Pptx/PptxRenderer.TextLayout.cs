@@ -874,7 +874,7 @@ internal sealed partial class PptxRenderer
 
                 if (bulletPending)
                 {
-                    BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, frame.Theme, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
+                    BulletStyle bulletStyle = ReadBulletStyle(paragraph.Bullet, runStyle.FontSize, runStyle.Color, runStyle.Typeface);
                     maxFontSize = Math.Max(maxFontSize, bulletStyle.FontSize);
                     double bulletWidth = PptxTextMetricRules.MinimumWidth(effectiveTextWidth - (bulletX - columnStartX));
                     double bulletEndX = bulletX + advanceEstimator.Measure(bulletText!, bulletStyle.FontSize, bulletStyle.Typeface, runStyle.Bold, runStyle.Italic, runStyle.CharacterSpacing);
@@ -2892,9 +2892,8 @@ internal sealed partial class PptxRenderer
         return upper ? result : result.ToLowerInvariant();
     }
 
-    private static BulletStyle ReadBulletStyle(PptxParagraphBulletModel bullet, PptxTheme theme, double textFontSize, RgbColor textColor, string? textTypeface)
+    private static BulletStyle ReadBulletStyle(PptxParagraphBulletModel bullet, double textFontSize, RgbColor textColor, string? textTypeface)
     {
-        string? typeface = theme.ResolveTypeface(bullet.FontTypeface);
         RgbColor color = bullet.Color ?? textColor;
         double fontSize = textFontSize;
         if (bullet.SizeKind == PptxParagraphBulletSizeKind.Percent &&
@@ -2908,7 +2907,7 @@ internal sealed partial class PptxRenderer
             fontSize = Math.Max(0.1d, sizePoints / 100d);
         }
 
-        return new BulletStyle(fontSize, color, typeface ?? textTypeface);
+        return new BulletStyle(fontSize, color, bullet.ResolvedFontTypeface ?? textTypeface);
     }
 
     private static XElement? FindBulletProperty(XElement? paragraphProperties, string localName)

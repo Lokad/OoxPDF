@@ -278,6 +278,8 @@ internal sealed record PptxTextParagraphModelSnapshot(
     string? BulletAutoNumberStartAtValue,
     string? BulletFontTypeface,
     string? BulletFontCharset,
+    string? BulletResolvedFontTypeface,
+    string BulletFontTypefaceSource,
     string? BulletColor,
     string BulletSizeKind,
     string? BulletSizeValue,
