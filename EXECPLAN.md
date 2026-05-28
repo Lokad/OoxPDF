@@ -15300,3 +15300,16 @@ marker defaults, explicit XML/scene overrides, and structural PDF evidence for O
 still need to be modeled before more paint decisions should move out of local fallback logic. Validation:
 `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
 with `136` tests, `0` failures, and `0` skips.
+
+Follow-up, 2026-05-28: chart color-style variation groups are now preserved as typed scene state instead of
+only as a flat declaration count. `PptxSceneChartColorStyle` keeps `PptxSceneChartColorVariation` entries with
+their variation index, declarations, and resolved colors while retaining the existing flat declaration list and
+public snapshot counts. The existing color-style preservation regression now asserts the grouped variation
+state directly.
+
+This deliberately does not consume `colorsN.xml` variations for rendering yet. It removes a future source of
+heuristics first: Office color-style variation semantics can now be investigated and mapped from structured
+scene evidence instead of reverse-engineering groups from declaration indexes after the fact. Validation:
+`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed
+with `25` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `136` tests,
+`0` failures, and `0` skips.

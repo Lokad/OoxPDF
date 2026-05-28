@@ -17841,6 +17841,11 @@ internal static class PptxTests
         TestAssert.Equal("srgbClr", chart.ColorStyle.Declarations[2].Kind);
         TestAssert.Equal("112233", chart.ColorStyle.Declarations[2].Value);
         TestAssert.Equal(0, chart.ColorStyle.Declarations[2].VariationIndex ?? -1);
+        TestAssert.Equal(1, chart.ColorStyle.Variations.Count);
+        TestAssert.Equal(0, chart.ColorStyle.Variations[0].Index);
+        TestAssert.Equal(1, chart.ColorStyle.Variations[0].Declarations.Count);
+        TestAssert.Equal("112233", chart.ColorStyle.Variations[0].Declarations[0].Value);
+        TestAssert.Equal(new RgbColor(17, 34, 51), chart.ColorStyle.Variations[0].Colors[0]);
         TestAssert.True(chart.ColorStyle.Declarations[0].IsResolved, "Expected direct RGB color-style declaration to resolve.");
         TestAssert.True(!chart.ColorStyle.Declarations[1].IsResolved, "Expected unresolved scheme color-style declaration to remain observable.");
         TestAssert.Equal(1, chart.ColorStyle.Colors.Count);
