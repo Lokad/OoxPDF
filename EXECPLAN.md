@@ -15034,15 +15034,17 @@ helpers. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minima
 `pptx-charts` passed with `133` tests, `0` failures, and `0` skips; full non-slow console runner passed with
 `406` tests, `0` failures, and `7` slow skips.
 
-Follow-up, 2026-05-28: bar-chart plot reservation now carries the renderer `PresentationFontResolver` into
-its value-axis label strip measurements. `GetBarChartLayout`, `GetBarChartPlotLayout`,
+Follow-up, 2026-05-28: chart plot reservation now carries the renderer `PresentationFontResolver` into
+text-measurement reserves. `GetBarChartLayout`, `GetBarChartPlotLayout`,
 `AdjustBarChartPlotBoxForVisibleValueAxes`, `AdjustBarChartPlotBoxForStackedValueAxisLabels`, and
 `EstimateVerticalValueAxisLabelStripWidth` no longer force a default font measurer when the render context
-already has the document/custom font boundary. The remaining default-measurer reservation paths are
-line/area/scatter right-legend reserve sizing and bubble title/right-legend reserve sizing. Validation:
-`dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts`
-passed with `133` tests, `0` failures, and `0` skips; full non-slow console runner passed with `406` tests,
-`0` failures, and `7` slow skips.
+already has the document/custom font boundary. The same boundary now reaches line/area/scatter
+right-legend reserve sizing and bubble title/right-legend reserve sizing through `GetLineChartLayout`,
+`GetLineChartPlotLayout`, `GetCartesianNoTitleRightLegendPlotBox`, `GetBubbleChartLayout`,
+`GetBubbleChartPlotLayout`, and `ResolveRightLegendReserve`; there are no remaining `new ChartTextMeasurer(null)`
+reservation paths in `PptxRenderer.Charts`. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+minimal` passed; focused non-slow `pptx-charts` passed with `133` tests, `0` failures, and `0` skips; full
+non-slow console runner passed with `406` tests, `0` failures, and `7` slow skips.
 
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;

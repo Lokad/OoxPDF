@@ -1336,7 +1336,7 @@ internal sealed partial class PptxRenderer
                 XElement? valueAxisForScale = ResolveXmlValueAxisForSource(sceneChart, valueAxis, chartXml);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxisForScale, GetLineChartValueExtents(lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked), lineOptions.PercentStacked, useNearMaximumHeadroom: !lineOptions.PercentStacked);
                 ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxisForScale, theme, valueExtents, lineOptions.PercentStacked);
-                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart, fontResolver);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 RenderLineChart(graphics, theme, chartPalette, chartLayout.PlotAreaBox, plotBox, lineSeriesVectors, lineOptions.Stacked, lineOptions.PercentStacked, seriesStrokes, markerStyles, lineOptions.SmoothSeries, valueAxisOptions.MajorGridlines, valueAxisOptions.MinorGridlines, valueAxisOptions.GridlineStyle, axesStyle, plotAreaStyle, valueExtents, valueAxisOptions.Units, valueAxisOptions.CrossingValue, valueAxisOptions.Reversed, lineOptions.DisplayBlanksAs);
@@ -1380,7 +1380,7 @@ internal sealed partial class PptxRenderer
                 ChartAreaPlotOptions areaOptions = ReadSceneOrXmlChartAreaOptions(sceneChart, areaPlot, chartXml, areaChart, PptxSceneChartGrouping.Standard);
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(areaPlot, areaChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(areaPlot, areaChart, theme, ChartSeriesInheritedStrokeWidth);
-                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart, fontResolver);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, areaPlot, chartXml, areaChart).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, areaPlot, chartXml, areaChart);
@@ -1437,7 +1437,7 @@ internal sealed partial class PptxRenderer
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(scatterPlot, scatterChart, theme);
                 IReadOnlyList<ChartMarkerStyle> markerStyles = ReadSceneOrXmlMarkerStyles(scatterPlot, scatterChart, theme);
-                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart);
+                ChartLayout chartLayout = GetLineChartLayout(document, theme, bounds, chartXml, sceneChart, fontResolver);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, scatterPlot, chartXml, scatterChart);
                 ChartAxisSource xValueAxis = valueAxes.Count > 0 ? valueAxes[0] : default;
@@ -1473,7 +1473,7 @@ internal sealed partial class PptxRenderer
             {
                 IReadOnlyList<ChartSeriesFill?> seriesFills = ReadSceneOrXmlSeriesFills(bubblePlot, bubbleChart, theme);
                 IReadOnlyList<ChartSeriesStroke?> seriesStrokes = ReadSceneOrXmlSeriesStrokes(bubblePlot, bubbleChart, theme);
-                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, bubblePlot, bubbleChart);
+                ChartLayout chartLayout = GetBubbleChartLayout(document, theme, bounds, chartXml, sceneChart, bubblePlot, bubbleChart, fontResolver);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
                 ChartPlotBox plotBox = chartLayout.PlotBox;
                 IReadOnlyList<ChartAxisSource> valueAxes = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, bubblePlot, chartXml, bubbleChart);
@@ -9479,23 +9479,23 @@ internal sealed partial class PptxRenderer
         RenderInChartPlotAreaClip(graphics, plotBox, () => StrokeLineChartPointSegment(graphics, points, smooth));
     }
 
-    private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartLayout GetLineChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PresentationFontResolver? fontResolver = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend);
+        ChartPlotLayout plotLayout = GetLineChartPlotLayout(frame, chartXml, sceneChart, title, legend, fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend)
+    private static ChartPlotLayout GetLineChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, string? title, ChartLegendLayout legend, PresentationFontResolver? fontResolver)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         bool hasLineChart = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line) is not null;
         ChartPlotBox defaultPlotBox = !hasTitle && hasRightLegend
-            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart)
+            ? GetCartesianNoTitleRightLegendPlotBox(frame, chartXml, sceneChart, fontResolver)
             : hasTitle && hasRightLegend && hasLineChart
                 ? GetLineTitleRightLegendPlotBox(frame)
             : GetDefaultChartPlotBox(frame);
@@ -9509,7 +9509,7 @@ internal sealed partial class PptxRenderer
         return GetChartPlotBoxPreset(frame, ChartPlotBoxPreset.LineTitleRightLegend);
     }
 
-    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart)
+    private static ChartPlotBox GetCartesianNoTitleRightLegendPlotBox(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PresentationFontResolver? fontResolver)
     {
         XElement? plotElement = ReadSceneOrXmlFirstChartPlotElement(sceneChart, chartXml, PptxSceneChartPlotKind.Line);
         PptxSceneChartPlotKind plotKind = PptxSceneChartPlotKind.Line;
@@ -9534,8 +9534,9 @@ internal sealed partial class PptxRenderer
         ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(
             frame,
             seriesNames,
-            includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area);
-        var textMeasurer = new ChartTextMeasurer(null);
+            includeAreaReserve: plotKind == PptxSceneChartPlotKind.Area,
+            fontResolver: fontResolver);
+        var textMeasurer = new ChartTextMeasurer(fontResolver);
 
         double maxValueLabelWidth = 0d;
         int maxValueLabelLength = 0;
@@ -9642,32 +9643,32 @@ internal sealed partial class PptxRenderer
             valueAxis.Element(ChartNamespace + "majorUnit") is not null;
     }
 
-    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
+    private static ChartLayout GetBubbleChartLayout(PptxDocument document, PptxTheme theme, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, PresentationFontResolver? fontResolver = null)
     {
         ChartFrameBox frame = GetChartFrameBox(document, bounds);
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         PptxSceneChartTextBodyProperties titleTextBodyProperties = ReadSceneOrXmlChartTitleTextBodyProperties(sceneChart, chartXml);
         ChartLegendLayout legend = ReadSceneOrXmlChartLegendLayout(theme, sceneChart, chartXml);
-        ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend);
+        ChartPlotLayout plotLayout = GetBubbleChartPlotLayout(frame, chartXml, sceneChart, bubblePlot, bubbleChart, title, legend, fontResolver);
         return new ChartLayout(frame, plotLayout.PlotAreaBox, plotLayout.PlotBox, plotLayout.ManualLayoutTargetKind is not null, title, titleTextBodyProperties, legend);
     }
 
-    private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend)
+    private static ChartPlotLayout GetBubbleChartPlotLayout(ChartFrameBox frame, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, string? title, ChartLegendLayout legend, PresentationFontResolver? fontResolver)
     {
         bool hasTitle = !string.IsNullOrWhiteSpace(title);
         bool hasRightLegend = legend.Visible && !legend.Overlay && legend.PositionKind == PptxSceneChartLegendPosition.Right;
         ChartPlotBox defaultPlotBox = hasTitle && hasRightLegend
-            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart)
+            ? GetBubbleTitleRightLegendPlotBox(frame, bubblePlot, bubbleChart, fontResolver)
             : GetDefaultChartPlotBox(frame);
         return TryReadSceneOrXmlManualPlotLayout(sceneChart, chartXml, frame, defaultPlotBox, out ChartPlotLayout manualPlotLayout)
             ? manualPlotLayout
             : ChartPlotLayout.FromPlotBox(defaultPlotBox);
     }
 
-    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart)
+    private static ChartPlotBox GetBubbleTitleRightLegendPlotBox(ChartFrameBox frame, PptxSceneChartPlot? bubblePlot, XElement bubbleChart, PresentationFontResolver? fontResolver)
     {
         IReadOnlyList<ChartSeriesNameRecord> seriesNames = ReadSceneOrXmlChartSeriesNameRecords(bubblePlot, bubbleChart);
-        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, includeAreaReserve: false);
+        ChartRightLegendReserve rightLegendReserve = ResolveRightLegendReserve(frame, seriesNames, includeAreaReserve: false, fontResolver: fontResolver);
 
         double x = frame.X + frame.Width * PptxChartMetricRules.LineTitleRightLegendPlotBoxXRatio;
         double y = frame.Y + frame.Height * PptxChartMetricRules.LineTitleRightLegendPlotBoxYRatio;
@@ -9676,10 +9677,10 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBox(x, y, width, height);
     }
 
-    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, bool includeAreaReserve)
+    private static ChartRightLegendReserve ResolveRightLegendReserve(ChartFrameBox frame, IReadOnlyList<ChartSeriesNameRecord> seriesNames, bool includeAreaReserve, PresentationFontResolver? fontResolver)
     {
         double legendFontSize = PptxChartMetricRules.LegendFallbackFontSize;
-        var textMeasurer = new ChartTextMeasurer(null);
+        var textMeasurer = new ChartTextMeasurer(fontResolver);
         double maxLegendTextWidth = seriesNames.Count == 0
             ? 0d
             : seriesNames.Max(name => textMeasurer.Measure(name.ActiveName, legendFontSize));
