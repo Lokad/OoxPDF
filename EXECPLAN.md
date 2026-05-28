@@ -12041,6 +12041,21 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved the raw `c:numFmt/@sourceLinked` token through the chart scene model
+and renderer number-format bridge. `PptxSceneChartNumberFormat` and the renderer-local `ChartNumberFormat`
+now carry `SourceLinkedValue` beside the existing parsed `SourceLinked` boolean, so plot data labels,
+per-point data-label overrides, and axis number formats no longer collapse `0`, `1`, `true`, or future
+lexical forms into only a normalized flag before the workbook-aware formatting layer exists.
+
+This is deliberately behavior-neutral. Current axis and data-label rendering still uses the existing
+format-code path and the previous boolean semantics; the new field keeps structural OOXML evidence alive for
+the later Office-PDF-backed decision about precedence between workbook styles, cache `formatCode`, explicit
+chart/axis/data-label `numFmt`, `sourceLinked`, locale sections, and date-system state.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips; full non-slow console runner passed with
+`329` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved raw OOXML tokens for chart axis integer options. `PptxSceneChartAxis`
 now carries `LabelOffsetValue`, `TickLabelSkipValue`, and `TickMarkSkipValue` beside the existing parsed
 nullable integers, and the scene parser uses the shared raw-token integer reader for `c:lblOffset`,

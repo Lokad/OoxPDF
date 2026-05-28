@@ -5899,13 +5899,14 @@ internal sealed partial class PptxRenderer
                 FormatCode: (string?)numberFormat.Attribute("formatCode") ?? string.Empty,
                 SourceLinked: numberFormat.Attribute("sourceLinked") is { } sourceLinked
                     ? IsOoxmlTrue(sourceLinked.Value)
-                    : null);
+                    : null,
+                SourceLinkedValue: (string?)numberFormat.Attribute("sourceLinked") ?? string.Empty);
     }
 
     private static ChartNumberFormat ToChartNumberFormat(PptxSceneChartNumberFormat numberFormat)
     {
         return numberFormat.IsDefined
-            ? new ChartNumberFormat(numberFormat.IsDefined, numberFormat.FormatCode, numberFormat.SourceLinked)
+            ? new ChartNumberFormat(numberFormat.IsDefined, numberFormat.FormatCode, numberFormat.SourceLinked, numberFormat.SourceLinkedValue)
             : default;
     }
 
@@ -9913,7 +9914,7 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct ChartDataLabelOverride(bool? ShowValue, bool? ShowPercent, bool? ShowCategoryName, bool? ShowSeriesName, bool? ShowLeaderLines, bool? ShowLegendKey, bool? ShowBubbleSize, ChartDataLabelLeaderLines LeaderLines, string CustomText, IReadOnlyList<ChartTextRunOverride> CustomTextRuns, PptxSceneChartDataLabelPosition PositionKind, string Position, string Separator, string NumberFormat, ChartNumberFormat NumberFormatInfo, PptxSceneChartManualLayout Layout, ChartTextStyleOverride TextStyle, ChartShapeStyle ShapeStyle);
 
-    private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked);
+    private readonly record struct ChartNumberFormat(bool IsDefined, string FormatCode, bool? SourceLinked, string SourceLinkedValue);
 
     private readonly record struct ChartSeriesNameRecord(
         string ActiveName,

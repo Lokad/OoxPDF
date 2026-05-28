@@ -11836,7 +11836,7 @@ internal static class PptxTests
                 </c:lineChart>
                 <c:catAx>
                   <c:axId val="10"/>
-                  <c:numFmt formatCode="m/d/yy" sourceLinked="1"/>
+                  <c:numFmt formatCode="m/d/yy" sourceLinked="true"/>
                 </c:catAx>
                 <c:valAx>
                   <c:axId val="20"/>
@@ -11851,6 +11851,7 @@ internal static class PptxTests
         TestAssert.True(labels.NumberFormatInfo.IsDefined, "Expected plot data-label number format metadata to be explicit.");
         TestAssert.Equal("#,##0.00", labels.NumberFormatInfo.FormatCode);
         TestAssert.True(labels.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive data-label parsing.");
+        TestAssert.Equal("0", labels.NumberFormatInfo.SourceLinkedValue);
 
         PptxSceneChartDataLabelOverride label = labels.Overrides[0];
         TestAssert.Equal(1, label.Index);
@@ -11859,23 +11860,26 @@ internal static class PptxTests
         TestAssert.True(label.NumberFormatInfo.IsDefined, "Expected per-label number format metadata to be explicit.");
         TestAssert.Equal("0%", label.NumberFormatInfo.FormatCode);
         TestAssert.True(label.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive data-label override parsing.");
+        TestAssert.Equal("1", label.NumberFormatInfo.SourceLinkedValue);
 
         PptxSceneChartAxis categoryAxis = chart.Axes.First(axis => axis.Kind == "catAx");
         TestAssert.Equal("m/d/yy", categoryAxis.NumberFormat ?? string.Empty);
         TestAssert.True(categoryAxis.NumberFormatInfo.IsDefined, "Expected category-axis number format metadata to be explicit.");
         TestAssert.Equal("m/d/yy", categoryAxis.NumberFormatInfo.FormatCode);
         TestAssert.True(categoryAxis.NumberFormatInfo.SourceLinked == true, "Expected sourceLinked=true to survive category-axis parsing.");
+        TestAssert.Equal("true", categoryAxis.NumberFormatInfo.SourceLinkedValue);
 
         PptxSceneChartAxis valueAxis = chart.Axes.First(axis => axis.Kind == "valAx");
         TestAssert.Equal("0.0%", valueAxis.NumberFormat ?? string.Empty);
         TestAssert.True(valueAxis.NumberFormatInfo.IsDefined, "Expected value-axis number format metadata to be explicit.");
         TestAssert.Equal("0.0%", valueAxis.NumberFormatInfo.FormatCode);
         TestAssert.True(valueAxis.NumberFormatInfo.SourceLinked == false, "Expected sourceLinked=false to survive value-axis parsing.");
+        TestAssert.Equal("0", valueAxis.NumberFormatInfo.SourceLinkedValue);
 
         Type numberFormatType = typeof(PptxRenderer).GetNestedType(
             "ChartNumberFormat",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected renderer chart number-format bridge.");
-        object typedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "#,##0.00", false]) ?? throw new InvalidOperationException("Expected typed number format.");
+        object typedNumberFormat = Activator.CreateInstance(numberFormatType, [true, "#,##0.00", false, "0"]) ?? throw new InvalidOperationException("Expected typed number format.");
         System.Reflection.MethodInfo formatDataLabelValue = typeof(PptxRenderer).GetMethod(
             "FormatChartDataLabelValue",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,

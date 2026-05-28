@@ -755,7 +755,8 @@ internal sealed record PptxSceneChartDataLabelOverride(
 internal readonly record struct PptxSceneChartNumberFormat(
     bool IsDefined,
     string FormatCode,
-    bool? SourceLinked);
+    bool? SourceLinked,
+    string SourceLinkedValue);
 
 internal readonly record struct PptxSceneChartLeaderLines(
     bool IsDefined,
@@ -2226,7 +2227,8 @@ internal sealed class PptxSceneBuilder
             : new PptxSceneChartNumberFormat(
                 IsDefined: true,
                 FormatCode: (string?)numberFormat.Attribute("formatCode") ?? string.Empty,
-                SourceLinked: ReadOptionalOoxmlBooleanAttribute(numberFormat, "sourceLinked"));
+                SourceLinked: ReadOptionalOoxmlBooleanAttribute(numberFormat, "sourceLinked"),
+                SourceLinkedValue: (string?)numberFormat.Attribute("sourceLinked") ?? string.Empty);
     }
 
     private static PptxSceneChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
