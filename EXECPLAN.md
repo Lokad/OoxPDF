@@ -12106,6 +12106,19 @@ than forcing every chart type through the Cartesian render contract.
 Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
 `pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Split bubble-chart value-axis resolution into a family-specific typed option
+record. `ChartBubbleValueAxisOptions` now carries bubble/scatter-style value-axis units, including the
+existing nice-tick defaulting rule, plus gridline stroke style. Bubble rendering and bubble value-axis labels
+consume that record instead of resolving x/y units and y-gridline style as separate local bridge calls.
+
+This avoids forcing bubble axes through the percent-stacked Cartesian option contract while still reducing
+renderer-local axis decision scatter. Plain scatter still only needs value extents today, and radar still has
+its own polar axis layout path; those should get separate boundaries only if the renderer starts combining
+more axis policy than a single unit lookup.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Routed the primary and extra bar-chart value-axis paths through
 `ChartValueAxisRenderOptions`. Bar rendering now uses the typed axis contract for percent-stacked units,
 crossing values, reversal, gridline visibility/style, category-axis crossing placement, value-axis labels,
