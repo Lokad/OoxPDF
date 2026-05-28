@@ -15898,12 +15898,12 @@ internal static class PptxTests
     {
         PptxSceneChart chart = BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea>
                 <c:lineChart>
                   <c:marker val="1"/>
                   <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
-                  <c:ser><c:marker><c:symbol val="plus"/><c:size val="9"/></c:marker><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:ser><c:marker><c:symbol val="plus"/><c:size val="9"/><c:spPr><a:solidFill><a:srgbClr val="112233"/></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln></c:spPr></c:marker><c:val><c:numLit><c:pt idx="0"><c:v>3</c:v></c:pt></c:numLit></c:val></c:ser>
                 </c:lineChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
@@ -15913,10 +15913,10 @@ internal static class PptxTests
         XNamespace c = "http://schemas.openxmlformats.org/drawingml/2006/chart";
         XElement mismatchedXmlFallback = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:lineChart>
                 <c:marker val="0"/>
-                <c:ser><c:marker><c:symbol val="none"/><c:size val="4"/></c:marker></c:ser>
+                <c:ser><c:marker><c:symbol val="none"/><c:size val="4"/><c:spPr><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill></a:ln></c:spPr></c:marker></c:ser>
               </c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "lineChart").Single();
@@ -15932,14 +15932,17 @@ internal static class PptxTests
         TestAssert.Equal("plus", ChartMarkerStyleSymbol(sceneStyles[1]));
         TestAssert.True(ChartMarkerStyleIsDefined(sceneStyles[1]), "Expected explicit series marker XML to remain explicit at the renderer option boundary.");
         TestAssert.Equal("9", ChartMarkerStyleSizeValue(sceneStyles[1]) ?? string.Empty);
+        TestAssert.Equal(new RgbColor(17, 34, 51), ChartSeriesFillColor(ChartMarkerStyleFill(sceneStyles[1])));
+        TestAssert.Equal(new RgbColor(68, 85, 102), ChartSeriesStrokeColor(ChartMarkerStyleStroke(sceneStyles[1])));
+        TestAssert.Equal(3d, ChartSeriesStrokeWidth(ChartMarkerStyleStroke(sceneStyles[1])));
 
         XElement xmlOnly = XDocument.Parse("""
             <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea><c:lineChart>
                 <c:marker val="1"/>
                 <c:ser/>
-                <c:ser><c:marker><c:symbol val="square"/><c:size val="8"/></c:marker></c:ser>
+                <c:ser><c:marker><c:symbol val="square"/><c:size val="8"/><c:spPr><a:solidFill><a:srgbClr val="ABCDEF"/></a:solidFill><a:ln w="12700"><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill></a:ln></c:spPr></c:marker></c:ser>
               </c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "lineChart").Single();
@@ -15950,6 +15953,9 @@ internal static class PptxTests
         TestAssert.Equal("square", ChartMarkerStyleSymbol(xmlStyles[1]));
         TestAssert.True(ChartMarkerStyleIsDefined(xmlStyles[1]), "Expected XML-only explicit marker to preserve definition state.");
         TestAssert.Equal("8", ChartMarkerStyleSizeValue(xmlStyles[1]) ?? string.Empty);
+        TestAssert.Equal(new RgbColor(171, 205, 239), ChartSeriesFillColor(ChartMarkerStyleFill(xmlStyles[1])));
+        TestAssert.Equal(new RgbColor(254, 220, 186), ChartSeriesStrokeColor(ChartMarkerStyleStroke(xmlStyles[1])));
+        TestAssert.Equal(1d, ChartSeriesStrokeWidth(ChartMarkerStyleStroke(xmlStyles[1])));
     }
 
     public static void PptxSyntheticLineAndPieChartsRenderNativeCharts()
@@ -18975,6 +18981,18 @@ internal static class PptxTests
     {
         return (bool)(marker.GetType().GetProperty("IsDefined")?.GetValue(marker)
             ?? throw new InvalidOperationException("Expected chart marker defined state."));
+    }
+
+    private static object ChartMarkerStyleFill(object marker)
+    {
+        return marker.GetType().GetProperty("Fill")?.GetValue(marker)
+            ?? throw new InvalidOperationException("Expected chart marker fill.");
+    }
+
+    private static object ChartMarkerStyleStroke(object marker)
+    {
+        return marker.GetType().GetProperty("Stroke")?.GetValue(marker)
+            ?? throw new InvalidOperationException("Expected chart marker stroke.");
     }
 
     private static RgbColor ChartSeriesFillColor(object fill)

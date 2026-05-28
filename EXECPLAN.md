@@ -428,6 +428,15 @@ High-priority actions:
   does the same for `ReadSceneOrXmlSeriesPointFills` and `ReadSceneOrXmlSeriesPointStrokes`, using mismatched
   `c:dPt` indices so point-level overrides cannot silently borrow fallback XML. This preserves the long-term
   invariant before more chart-style/default work is attempted.
+- [x] 2026-05-28: Extend chart marker-style source-boundary coverage:
+  the existing `ReadSceneOrXmlMarkerStyles` regression already proved marker symbol, size, and explicit/missing
+  marker ownership, but it did not prove that marker fill and marker-outline stroke also remain scene-owned when
+  fallback XML disagrees. The guard now gives the typed scene marker one fill/stroke pair and the XML fallback a
+  different pair, then verifies scene-backed marker styles keep the scene colors and width while XML-only
+  compatibility still reads the fallback colors and width. This did not require a production change, but it
+  closes a coverage gap in the remaining chart bridge audit. Validation: `dotnet build Lokad.OoxPdf.slnx
+  --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed (`139 passed, 0 failed, 0 skipped`);
+  full non-slow console runner passed (`413 passed, 0 failed, 7 skipped`).
 - [x] 2026-05-28: Make value-axis XML scale fallback scene-aware:
   `ResolveXmlValueAxisForSource` now receives the chart scene and only searches the first raw XML `c:valAx`
   when no `PptxSceneChart` exists. Scene-backed missing-axis paths therefore stay missing for axis scale,
