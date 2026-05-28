@@ -11847,7 +11847,7 @@ internal static class PptxTests
                           xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                           id="78">
                   <cs:legend>
-                    <cs:defRPr sz="1150">
+                    <cs:defRPr sz="1150" u="sng" strike="sngStrike">
                       <a:solidFill><a:srgbClr val="2468AC"/></a:solidFill>
                       <a:latin typeface="Arial"/>
                     </cs:defRPr>
@@ -11862,6 +11862,8 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.141 0.408 0.675 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 11\.52 Tf"), "Expected chart-style legend role font size to drive legend rendering when c:legend has no direct txPr.");
+        int decorationRectangleCount = Regex.Matches(pdf, @"0\.141 0\.408 0\.675 rg\s+[0-9.]+ [0-9.]+ [0-9.]+ [0-9.]+ re f\*").Count;
+        TestAssert.True(decorationRectangleCount >= 2, "Expected chart-style legend role underline and strike to emit filled decoration rectangles through the common text renderer.");
     }
 
     public static void PptxSyntheticChartStyleDataLabelDefaultsDriveDataLabelRendering()
