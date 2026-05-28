@@ -12079,6 +12079,20 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 as part of a full run with `351` tests, `0` failures, and `0` skips; focused non-slow `pptx-charts` passed
 with `103` tests, `0` failures, and `0` skips.
 
+Revision note, 2026-05-28: Extended `ChartValueAxisRenderOptions` to the ordinary area-chart branch. Area
+rendering now uses the same typed value-axis contract for percent-stacked units, axis reversal, crossing
+value, gridline visibility, gridline stroke style, and value-axis label units/reversal that line charts use.
+This removes another group of inline scene/XML bridge reads from the active chart render path without changing
+plot geometry or Office metric assumptions.
+
+The remaining value-axis option debt is now concentrated in bar/combo-bar, combo-line secondary-axis paths,
+bubble/scatter axis unit resolution, radar, and layout-estimation helpers. Those branches have extra
+family-specific defaults, so they should move through the same boundary only when the branch-specific
+fallback behavior is locked by tests instead of generalized by assumption.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `103` tests, `0` failures, and `0` skips.
+
 Revision note, 2026-05-28: Made PPTX chart cache-point index fallback observable in the scene model.
 `PptxSceneChartNumberPoint` and `PptxSceneChartStringPoint` now carry `HasParsedIndex` beside the resolved
 integer index and raw `idx` token. Valid sparse cache points remain marked parsed, while missing or malformed

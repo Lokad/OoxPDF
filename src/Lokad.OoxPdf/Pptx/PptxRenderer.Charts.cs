@@ -1278,9 +1278,7 @@ internal sealed partial class PptxRenderer
                 ChartAxisSource valueAxis = ReadSceneOrXmlChartValueAxesForPlot(sceneChart, areaPlot, chartXml, areaChart).FirstOrDefault();
                 ChartAxisSource categoryAxis = ReadSceneOrXmlChartCategoryAxisForPlot(sceneChart, areaPlot, chartXml, areaChart);
                 ChartValueExtents valueExtents = ReadPercentStackedAwareValueAxisExtents(valueAxis.SceneAxis, valueAxis.XmlAxis, GetAreaChartValueExtents(areaSeriesVectors, areaOptions.Stacked, areaOptions.PercentStacked), areaOptions.PercentStacked, useNearMaximumHeadroom: areaOptions.Stacked && !areaOptions.PercentStacked, nearMaximumHeadroomRatio: PptxChartMetricRules.AreaChartStackedAxisNearMaximumHeadroomRatio);
-                ChartAxisUnits axisUnits = ResolvePercentStackedAxisUnits(ReadSceneOrXmlChartValueAxisUnits(valueAxis.SceneAxis, valueAxis.XmlAxis), areaOptions.PercentStacked);
-                bool valueAxisReversed = ReadSceneOrXmlValueAxisReversed(valueAxis.SceneAxis, valueAxis.XmlAxis);
-                ChartGridlineStyle gridlineStyle = ReadSceneOrXmlChartGridlineStyle(valueAxis.SceneAxis, valueAxis.XmlAxis, theme);
+                ChartValueAxisRenderOptions valueAxisOptions = ReadSceneOrXmlChartValueAxisRenderOptions(valueAxis.SceneAxis, valueAxis.XmlAxis, theme, valueExtents, areaOptions.PercentStacked);
                 ChartAxesStyle axesStyle = ReadSceneOrXmlChartAxesStyle(sceneChart, areaPlot, chartXml, theme, areaChart);
                 ChartShapeStyle plotAreaStyle = ReadSceneOrXmlChartPlotAreaStyle(sceneChart, chartXml, theme);
                 RenderChartAreaStyle(graphics, document, bounds, chartXml, sceneChart, theme);
@@ -1295,15 +1293,15 @@ internal sealed partial class PptxRenderer
                     areaOptions.PercentStacked,
                     seriesFills,
                     seriesStrokes,
-                    ReadSceneOrXmlMajorGridlines(valueAxis.SceneAxis, valueAxis.XmlAxis),
-                    ReadSceneOrXmlMinorGridlines(valueAxis.SceneAxis, valueAxis.XmlAxis),
-                    gridlineStyle,
+                    valueAxisOptions.MajorGridlines,
+                    valueAxisOptions.MinorGridlines,
+                    valueAxisOptions.GridlineStyle,
                     axesStyle,
                     plotAreaStyle,
                     valueExtents,
-                    axisUnits,
-                    ReadSceneOrXmlValueAxisCrossingValue(valueAxis.SceneAxis, valueAxis.XmlAxis, valueExtents),
-                    valueAxisReversed,
+                    valueAxisOptions.Units,
+                    valueAxisOptions.CrossingValue,
+                    valueAxisOptions.Reversed,
                     areaOptions.DisplayBlanksAs);
                 if (axesStyle.CategoryAxisVisible && IsSceneOrXmlChartAxisLabelVisible(categoryAxis.SceneAxis, categoryAxis.XmlAxis))
                 {
@@ -1312,7 +1310,7 @@ internal sealed partial class PptxRenderer
 
                 if (axesStyle.ValueAxisVisible && IsSceneOrXmlChartAxisLabelVisible(valueAxis.SceneAxis, valueAxis.XmlAxis))
                 {
-                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, axisUnits, valueAxisReversed, horizontalBars: false, defaultNumberFormat: areaOptions.PercentStacked ? "0%" : null));
+                    fonts.AddRange(RenderChartValueAxisLabels(document, theme, graphics, plotBox, chartXml, sceneChart, valueAxis.XmlAxis, valueAxis.SceneAxis, valueExtents, valueAxisOptions.Units, valueAxisOptions.Reversed, horizontalBars: false, defaultNumberFormat: areaOptions.PercentStacked ? "0%" : null));
                 }
 
                 fonts.AddRange(RenderChartLegend(graphics, chartLayout.Frame, plotBox, BuildFillLegendEntries(theme, chartPalette, areaPlot, areaChart, seriesFills, seriesStrokes, workbook: workbook), chartLayout.Legend, ReadSceneOrXmlChartLegendTextStyle(theme, sceneChart, chartXml)));
