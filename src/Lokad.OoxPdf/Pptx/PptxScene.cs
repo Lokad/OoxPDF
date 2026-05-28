@@ -48,6 +48,10 @@ internal sealed record PptxSceneNodeSnapshot(
     bool ShapeLineNoFill,
     int ShapeLineReferenceIndex,
     bool ShapeLineReferenceResolved,
+    bool ShapeHasEffectList,
+    bool ShapeHasEffectDag,
+    int ShapeUnsupportedEffectCount,
+    IReadOnlyList<string> ShapeUnsupportedEffectNames,
     bool HasTextBody,
     int TextParagraphCount,
     int TextRunCount,
@@ -500,6 +504,7 @@ internal sealed record PptxSceneShape(
     PptxSceneShapePictureFill PictureFill,
     PptxSceneGlow Glow,
     PptxSceneOuterShadow OuterShadow,
+    PptxSceneShapeEffectFamily Effects,
     PptxSceneLineStyle Line,
     PptxSceneLineEnd HeadEnd,
     PptxSceneLineEnd TailEnd);
@@ -587,6 +592,11 @@ internal readonly record struct PptxSceneOuterShadow(
     double Alpha,
     double OffsetX,
     double OffsetY);
+
+internal readonly record struct PptxSceneShapeEffectFamily(
+    bool HasEffectList,
+    bool HasEffectDag,
+    IReadOnlyList<string> UnsupportedEffectNames);
 
 internal readonly record struct PptxSceneLineStyle(
     bool HasLine,
@@ -2604,8 +2614,7 @@ internal sealed class PptxSceneBuilder
 
     private static bool IsUnsupportedChartEffect(XElement effect)
     {
-        return effect.Name != DrawingNamespace + "outerShdw" &&
-            effect.Name != DrawingNamespace + "glow";
+        return IsUnsupportedDirectEffect(effect);
     }
 
     private static string ReadChartElementValue(XElement element, string childName)
@@ -4416,9 +4425,30 @@ internal sealed class PptxSceneBuilder
             ReadShapePictureFill(shapeProperties, package, relationships),
             TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
             TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default,
+            ReadShapeEffects(shapeProperties),
             line,
             ReadLineEnd(shapeProperties, "headEnd"),
             ReadLineEnd(shapeProperties, "tailEnd"));
+    }
+
+    private static PptxSceneShapeEffectFamily ReadShapeEffects(XElement? shapeProperties)
+    {
+        XElement? effectList = shapeProperties?.Element(DrawingNamespace + "effectLst");
+        XElement? effectDag = shapeProperties?.Element(DrawingNamespace + "effectDag");
+        IReadOnlyList<string> unsupportedEffects = effectList is null
+            ? []
+            : effectList
+                .Elements()
+                .Where(IsUnsupportedDirectEffect)
+                .Select(effect => effect.Name.LocalName)
+                .ToArray();
+        return new PptxSceneShapeEffectFamily(effectList is not null, effectDag is not null, unsupportedEffects);
+    }
+
+    private static bool IsUnsupportedDirectEffect(XElement effect)
+    {
+        return effect.Name != DrawingNamespace + "outerShdw" &&
+            effect.Name != DrawingNamespace + "glow";
     }
 
     internal static bool TryReadShapeGradientFill(XElement? shapeProperties, PptxTheme theme, out PptxSceneGradientFill fill)

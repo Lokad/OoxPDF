@@ -13197,6 +13197,22 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved ordinary-shape effect-family provenance in the PPTX scene model.
+`PptxSceneShape` now carries an `Effects` sidecar that records direct `a:effectLst` presence,
+`a:effectDag` presence, and unsupported direct effect element names while continuing to parse supported
+`glow` and `outerShdw` effects into their existing typed records. Private-safe scene inspection exposes the
+shape effect-list/effectDag flags and unsupported effect count/names without logging document text or media.
+
+This is intentionally behavior-neutral. Rendering still draws only the supported glow/outer-shadow paths,
+but unsupported shape effects are no longer only discoverable by scanning raw slide XML after the scene is
+built. The next structural cleanup is to move PPTX unsupported-effect diagnostics onto scene-owned shape and
+chart effect-family records, keeping raw XML as source evidence rather than as the primary diagnostic model.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused `pptx-model`
+including the slow rich scene-builder fixture passed with `18` tests, `0` failures, and `0` skips; focused
+non-slow `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; full non-slow console runner
+passed with `389` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved explicit PPTX shape `a:noFill` provenance in the scene model.
 `PptxSceneShape` now carries `NoFill` separately from `Fill.HasFill`, and `PptxSceneNodeSnapshot` plus the
 private-safe layout diagnostic expose `ShapeNoFill`. This closes a structural ambiguity where explicit
