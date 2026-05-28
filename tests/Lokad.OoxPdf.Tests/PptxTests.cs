@@ -1387,8 +1387,10 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.133 g", pdf);
         TestAssert.Contains("72 324.5 m", pdf);
-        TestAssert.Contains("213.5 323.5 l", pdf);
+        TestAssert.Contains("212.667 323.5 l", pdf);
         TestAssert.Contains("216 324 m", pdf);
+        TestAssert.Contains("212 326 l", pdf);
+        TestAssert.Contains("212 322 l", pdf);
         TestAssert.Contains("1 -0 -0 -1 0 864 cm", pdf);
         TestAssert.Contains("216 468 m 216 396 l S", pdf);
         TestAssert.Contains("0.184 0.522 0.416 rg", pdf);

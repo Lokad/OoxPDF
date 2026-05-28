@@ -5987,8 +5987,15 @@ paths, and ExecPlan references together.
     `4.841984`, changed16 `0.071019` to `0.061900`, SSIM `0.741392` to `0.748935`, and foreground histogram
     correlation `0.976023` to `0.998505`. Deck-wide MAE improved on 36 pages, was neutral on 44, and had
     four tiny `~0.01` MAE regressions to watch.
-  - [ ] Continue slide-56 text-list parity: bold list emphasis and red arrow callouts still differ from the
-    Office PDF, so isolate those as public typography and line/arrow fixtures rather than treating the slide
+  - [x] Align the slide-56 red callout connectors at the PDF path-structure level. Straight lines with
+    `tailEnd type="triangle"` now emit one filled compound path for the shaft plus triangle marker, using
+    Office-like marker proportions derived from the resolved line width. The existing public arrow fixture
+    now locks the wider triangle coordinates. Private run `20260528-133829` improved page 56 from MAE
+    `4.841984` to `4.832328`, changed16 `0.061900` to `0.061755`, and SSIM `0.748935` to `0.749210`; deck-wide
+    MAE improved on 21 pages with no regressions. Candidate page-56 graphics counts now match the Office
+    counts for the relevant operators: `f:2; f*:10; S:14; W*:60`.
+  - [ ] Continue slide-56 text-list parity: bold list emphasis and right-side 18 pt text splitting still
+    differ from the Office PDF, so isolate those as public typography fixtures rather than treating the slide
     as resolved.
 - [ ] Private-deck sweep loop: iterate over all `lokad-value-based` slides, keep a public-safe issue inventory,
   and for each visible problem add a minimal synthetic public case before implementing the generic fix.

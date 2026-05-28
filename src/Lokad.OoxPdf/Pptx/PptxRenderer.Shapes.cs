@@ -14,6 +14,9 @@ internal sealed partial class PptxRenderer
     private const double OfficeArrowheadLengthFactor = 4.423333d;
     private const double OfficeTriangleTailMinimumLength = 5d;
     private const double OfficeTriangleTailLengthFactor = 3.5d;
+    private const double OfficeStraightTriangleLineEndLengthFactor = 4d;
+    private const double OfficeStraightTriangleLineEndHalfWidthFactor = 2d;
+    private const double OfficeStraightTriangleLineEndOverlapFactor = 2d / 3d;
 
     private static void RenderBackground(PptxRenderContext context, PptxSceneBackground background, PdfGraphicsBuilder graphics, bool defaultWhenMissing)
     {
@@ -1732,40 +1735,45 @@ internal sealed partial class PptxRenderer
         double nx = -uy;
         double ny = ux;
         double half = lineWidth / 2d;
-        double arrowLength = lineWidth * 3d;
-        double arrowHalfWidth = lineWidth * 1.5d;
-        double startX = headArrow ? x1 + ux * (arrowLength - half) : x1;
-        double startY = headArrow ? y1 + uy * (arrowLength - half) : y1;
-        double endX = tailArrow ? x2 - ux * (arrowLength - half) : x2;
-        double endY = tailArrow ? y2 - uy * (arrowLength - half) : y2;
+        double arrowLength = lineWidth * OfficeStraightTriangleLineEndLengthFactor;
+        double arrowHalfWidth = lineWidth * OfficeStraightTriangleLineEndHalfWidthFactor;
+        double shaftInset = Math.Max(0d, arrowLength - lineWidth * OfficeStraightTriangleLineEndOverlapFactor);
+        double startX = headArrow ? x1 + ux * shaftInset : x1;
+        double startY = headArrow ? y1 + uy * shaftInset : y1;
+        double endX = tailArrow ? x2 - ux * shaftInset : x2;
+        double endY = tailArrow ? y2 - uy * shaftInset : y2;
 
-        graphics.FillPolygon(
-        [
-            (startX + nx * half, startY + ny * half),
-            (endX + nx * half, endY + ny * half),
-            (endX - nx * half, endY - ny * half),
-            (startX - nx * half, startY - ny * half)
-        ]);
+        graphics.MoveTo(startX + nx * half, startY + ny * half);
+        graphics.LineTo(endX + nx * half, endY + ny * half);
+        graphics.LineTo(endX - nx * half, endY - ny * half);
+        graphics.LineTo(startX - nx * half, startY - ny * half);
+        graphics.ClosePath();
 
         if (headArrow)
         {
-            FillTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
+            AppendTriangle(graphics, x1, y1, x1 + ux * arrowLength, y1 + uy * arrowLength, nx, ny, arrowHalfWidth);
         }
 
         if (tailArrow)
         {
-            FillTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
+            AppendTriangle(graphics, x2, y2, x2 - ux * arrowLength, y2 - uy * arrowLength, nx, ny, arrowHalfWidth);
         }
+
+        graphics.FillCurrentPath();
     }
 
     private static void FillTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)
     {
-        graphics.FillPolygon(
-        [
-            (tipX, tipY),
-            (baseX + nx * halfWidth, baseY + ny * halfWidth),
-            (baseX - nx * halfWidth, baseY - ny * halfWidth)
-        ]);
+        AppendTriangle(graphics, tipX, tipY, baseX, baseY, nx, ny, halfWidth);
+        graphics.FillCurrentPath();
+    }
+
+    private static void AppendTriangle(PdfGraphicsBuilder graphics, double tipX, double tipY, double baseX, double baseY, double nx, double ny, double halfWidth)
+    {
+        graphics.MoveTo(tipX, tipY);
+        graphics.LineTo(baseX + nx * halfWidth, baseY + ny * halfWidth);
+        graphics.LineTo(baseX - nx * halfWidth, baseY - ny * halfWidth);
+        graphics.ClosePath();
     }
 
     private static void FillOfficeArrowedLine(PdfGraphicsBuilder graphics, double x1, double y1, double x2, double y2, double lineWidth, bool headArrow, bool tailArrow)
