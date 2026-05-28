@@ -15,9 +15,19 @@ internal sealed partial class PptxRenderer
         return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, out color, out alpha);
     }
 
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color, out double alpha)
+    {
+        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, out color, out alpha);
+    }
+
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
     {
         return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, placeholderColorContainer, out color, out alpha);
+    }
+
+    private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, PptxColorMap colorMap, XElement? placeholderColorContainer, out RgbColor color, out double alpha)
+    {
+        return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, colorMap, placeholderColorContainer, out color, out alpha);
     }
 
     private static double ReadAlpha(XElement? colorContainer)
@@ -44,5 +54,17 @@ internal sealed partial class PptxRenderer
         double? fallbackLineWidth = null)
     {
         return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, PptxColorMap.Default, out color, out lineWidth, out alpha, fallbackLineWidth);
+    }
+
+    private static bool TryReadLineWithAlpha(
+        XElement shapeProperties,
+        PptxTheme theme,
+        PptxColorMap colorMap,
+        out RgbColor color,
+        out double lineWidth,
+        out double alpha,
+        double? fallbackLineWidth = null)
+    {
+        return PptxLineStyleReader.TryReadLineWithAlpha(shapeProperties, theme, colorMap, out color, out lineWidth, out alpha, fallbackLineWidth);
     }
 }

@@ -7834,7 +7834,7 @@ internal static class PptxTests
                       <a:tbl>
                         <a:tblPr firstRow="1"><a:tableStyleId>{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}</a:tableStyleId></a:tblPr>
                         <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
-                        <a:tr h="914400"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:lnL><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:lnL></a:tcPr></a:tc></a:tr>
+                        <a:tr h="914400"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill></a:rPr><a:t>CellMapped</a:t></a:r></a:p></a:txBody><a:tcPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:lnL><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:lnL></a:tcPr></a:tc></a:tr>
                       </a:tbl>
                     </a:graphicData></a:graphic>
                   </p:graphicFrame>
@@ -7981,6 +7981,9 @@ internal static class PptxTests
         PptxSceneRunStyle style = node.TextBody!.Paragraphs[0].Runs[0].ResolvedStyle;
 
         TestAssert.Equal(new RgbColor(17, 34, 51), style.Color);
+        IReadOnlyList<PptxTextRunSnapshot> textRuns = PptxRenderer.InspectTextRuns(document, package, 0);
+        TestAssert.Equal(new RgbColor(17, 34, 51), textRuns.Single(run => run.Text == "Mapped").Color);
+        TestAssert.Equal(new RgbColor(17, 34, 51), textRuns.Single(run => run.Text == "CellMapped").Color);
         TestAssert.Equal(new RgbColor(17, 34, 51), node.Shape!.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), node.Shape.Line.Color);
         PptxSceneTableCell cell = scene.Slides[0].SlideNodes[1].Table!.Rows[0].Cells[0];

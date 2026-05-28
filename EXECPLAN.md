@@ -3917,6 +3917,19 @@ High-priority actions:
   `pptx-model` passed (`25 passed, 0 failed, 1 skipped`); focused non-slow `pptx-tables` passed
   (`10 passed, 0 failed, 0 skipped`); focused non-slow `pptx-charts` passed
   (`136 passed, 0 failed, 0 skipped`).
+  2026-05-28 progress: direct PPTX text rendering now receives the source `PptxColorMap` instead of resolving
+  text colors through renderer-local default aliases. The source map is threaded through slide/master/layout
+  render dispatch, text layout/model inspection, table-cell text frames, run/default-run solid fills,
+  hyperlink theme colors, text outlines, paragraph bullet colors, and shape `fontRef` fallback colors. The
+  color-map regression now asserts both regular shape text and table-cell text through `InspectTextRuns`, so
+  the renderer/model path is covered in addition to scene parsing. Keep this item open: inherited placeholder
+  default text styles still pass around bare XML without the owning source map, and chart-style/color-style
+  cascade ordering remains a separate Office-alignment problem. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model` passed
+  (`25 passed, 0 failed, 1 skipped`); focused non-slow `pptx-typography` passed
+  (`99 passed, 0 failed, 2 skipped`); focused non-slow `pptx-tables` passed
+  (`10 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+  (`409 passed, 0 failed, 7 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

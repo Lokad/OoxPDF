@@ -31,8 +31,8 @@ internal sealed partial class PptxRenderer
         }
 
         return context.InheritedSources
-            .SelectMany(source => ReadTextSpans(context, source.Xml, includePlaceholders: false, placeholderSources: []))
-            .Concat(ReadTextSpans(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
+            .SelectMany(source => ReadTextSpans(context, source, includePlaceholders: false, placeholderSources: []))
+            .Concat(ReadTextSpans(context, context.SlideSource, includePlaceholders: true, context.InheritedXml))
             .Concat(ReadSceneTableTextSpans(context))
             .ToArray();
     }
@@ -46,7 +46,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextLayoutModel inheritedLayout = BuildTextLayoutModelForSources(context.InheritedSources, context);
-        PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
+        PptxTextLayoutModel slideLayout = BuildTextLayoutModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextLayoutModel(inheritedLayout.Frames.Concat(slideLayout.Frames).ToArray()));
     }
 
@@ -59,7 +59,7 @@ internal sealed partial class PptxRenderer
         }
 
         PptxTextFlowModel inheritedFlow = BuildTextFlowModelForSources(context.InheritedSources, context);
-        PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideXml, includePlaceholders: true, context.InheritedXml);
+        PptxTextFlowModel slideFlow = BuildTextFlowModel(context, context.SlideSource, includePlaceholders: true, context.InheritedXml);
         return ToSnapshot(new PptxTextFlowModel(inheritedFlow.Frames.Concat(slideFlow.Frames).ToArray()));
     }
 
@@ -70,7 +70,7 @@ internal sealed partial class PptxRenderer
         var frames = new List<PptxTextFrameLayout>();
         foreach (PptxRenderSource source in sources)
         {
-            frames.AddRange(BuildTextLayoutModel(context, source.Xml, includePlaceholders: false, placeholderSources: []).Frames);
+            frames.AddRange(BuildTextLayoutModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
         }
 
         return new PptxTextLayoutModel(frames);
@@ -83,7 +83,7 @@ internal sealed partial class PptxRenderer
         var frames = new List<PptxTextFlowFrame>();
         foreach (PptxRenderSource source in sources)
         {
-            frames.AddRange(BuildTextFlowModel(context, source.Xml, includePlaceholders: false, placeholderSources: []).Frames);
+            frames.AddRange(BuildTextFlowModel(context, source, includePlaceholders: false, placeholderSources: []).Frames);
         }
 
         return new PptxTextFlowModel(frames);
@@ -253,9 +253,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneShapeTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, renderPlaceholders: false);
-        AddSceneShapeTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, renderPlaceholders: false);
-        AddSceneShapeTextSpans(context.SceneSlide.SlideNodes, context, textSpans, renderPlaceholders: true);
+        AddSceneShapeTextSpans(context.SceneSlide.MasterNodes, context, textSpans, context.MasterColorMap, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, context.LayoutColorMap, renderPlaceholders: false);
+        AddSceneShapeTextSpans(context.SceneSlide.SlideNodes, context, textSpans, context.SlideColorMap, renderPlaceholders: true);
         return textSpans;
     }
 
@@ -263,6 +263,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxPositionedTextSpan> textSpans,
+        PptxColorMap colorMap,
         bool renderPlaceholders)
     {
         foreach (PptxSceneNode node in nodes)
@@ -271,7 +272,7 @@ internal sealed partial class PptxRenderer
             {
                 if (renderPlaceholders || !node.IsPlaceholder)
                 {
-                    textSpans.AddRange(ReadTextSpansForSceneNode(node, context, renderPlaceholders));
+                    textSpans.AddRange(ReadTextSpansForSceneNode(node, context, colorMap, renderPlaceholders));
                 }
 
                 continue;
@@ -279,33 +280,34 @@ internal sealed partial class PptxRenderer
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneShapeTextSpans(node.Children, context, textSpans, renderPlaceholders);
+                AddSceneShapeTextSpans(node.Children, context, textSpans, colorMap, renderPlaceholders);
             }
         }
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpans(
         PptxRenderContext context,
-        XDocument slideXml,
+        PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, slideXml, includePlaceholders, placeholderSources));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(context, source, includePlaceholders, placeholderSources));
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
         PptxRenderContext context,
-        XDocument slideXml,
+        PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextLayoutModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver);
+        return BuildTextLayoutModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources, context.FontResolver);
     }
 
     private static PptxTextLayoutModel BuildTextLayoutModel(
         XDocument slideXml,
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
@@ -313,7 +315,7 @@ internal sealed partial class PptxRenderer
     {
         var advanceEstimator = new TextAdvanceEstimator(fontResolver);
         var frames = new List<PptxTextFrameLayout>();
-        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources);
+        IReadOnlyList<PptxTextFrameModel> frameModels = BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources);
         foreach (PptxTextFrameModel frameModel in frameModels)
         {
             frames.Add(BuildTextFrameLayout(frameModel, document, advanceEstimator));
@@ -351,22 +353,23 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextFlowModel BuildTextFlowModel(
         PptxRenderContext context,
-        XDocument slideXml,
+        PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFlowModel(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+        return BuildTextFlowModel(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources);
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(
         XDocument slideXml,
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFlowModel(BuildTextFrameModels(slideXml, document, theme, slideNumber, includePlaceholders, placeholderSources), document);
+        return BuildTextFlowModel(BuildTextFrameModels(slideXml, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources), document);
     }
 
     private static PptxTextFlowModel BuildTextFlowModel(IReadOnlyList<PptxTextFrameModel> frames, PptxDocument document)
@@ -1172,11 +1175,11 @@ internal sealed partial class PptxRenderer
         return transform;
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, bool includePlaceholders)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForSceneNode(PptxSceneNode node, PptxRenderContext context, PptxColorMap colorMap, bool includePlaceholders)
     {
         return node.TextBody is null
             ? []
-            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
+            : ReadTextSpansForShape(node.Source, context.Document, context.Theme, colorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
@@ -1184,13 +1187,14 @@ internal sealed partial class PptxRenderer
         PptxRenderContext context,
         bool includePlaceholders)
     {
-        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
+        return ReadTextSpansForShape(shape, context.Document, context.Theme, context.SlideColorMap, context.SlideNumber, includePlaceholders, context.InheritedXml, context.FontResolver);
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForShape(
         XElement shape,
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
@@ -1213,7 +1217,7 @@ internal sealed partial class PptxRenderer
             new XElement(PresentationNamespace + "sld",
                 new XElement(PresentationNamespace + "cSld",
                     new XElement(PresentationNamespace + "spTree", current))));
-        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, slideNumber, includePlaceholders, placeholderSources, fontResolver));
+        return FlattenTextLayoutToSpans(BuildTextLayoutModel(slide, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources, fontResolver));
     }
 
     private static IReadOnlyList<PptxPositionedTextSpan> ReadTextSpansForTableCellTextFrame(PptxTableCellTextFrame tableFrame, PptxRenderContext context)
@@ -1903,6 +1907,7 @@ internal sealed partial class PptxRenderer
         PptxRunStyleCascade cascade,
         RgbColor? shapeFontColor,
         PptxTheme theme,
+        PptxColorMap colorMap,
         double fontScale,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
@@ -1911,6 +1916,7 @@ internal sealed partial class PptxRenderer
             cascade.ResolvedDefaultProperties,
             shapeFontColor,
             theme,
+            colorMap,
             fontScale,
             tableStyleTextStyle);
     }
@@ -1920,6 +1926,7 @@ internal sealed partial class PptxRenderer
         XElement? defaultRunProperties,
         RgbColor? shapeFontColor,
         PptxTheme theme,
+        PptxColorMap colorMap,
         double fontScale,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
@@ -1937,7 +1944,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.RunNoFill;
             alpha = 0d;
         }
-        else if (TryReadSolidColorWithAlpha(runProperties, theme, out RgbColor runColor, out double runAlpha))
+        else if (TryReadSolidColorWithAlpha(runProperties, theme, colorMap, out RgbColor runColor, out double runAlpha))
         {
             color = runColor;
             colorSource = PptxRunTextColorSource.RunSolidFill;
@@ -1948,7 +1955,7 @@ internal sealed partial class PptxRenderer
             color = tableTextColor;
             colorSource = PptxRunTextColorSource.TableTextStyle;
         }
-        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", out RgbColor hyperlinkColor))
+        else if (HasHyperlinkClick(runProperties) && theme.TryResolveColor("hlink", colorMap, out RgbColor hyperlinkColor))
         {
             color = hyperlinkColor;
             colorSource = PptxRunTextColorSource.ThemeHyperlink;
@@ -1964,7 +1971,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.DefaultNoFill;
             alpha = 0d;
         }
-        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, out RgbColor defaultColor, out double defaultAlpha))
+        else if (TryReadSolidColorWithAlpha(defaultRunProperties, theme, colorMap, out RgbColor defaultColor, out double defaultAlpha))
         {
             color = defaultColor;
             colorSource = PptxRunTextColorSource.DefaultSolidFill;
@@ -1995,7 +2002,7 @@ internal sealed partial class PptxRenderer
             color,
             colorSource,
             alpha,
-            TryReadTextOutline(runProperties, defaultRunProperties, theme, out TextOutline outline) ? outline : null,
+            TryReadTextOutline(runProperties, defaultRunProperties, theme, colorMap, out TextOutline outline) ? outline : null,
             TryReadHighlightColor(runProperties, out RgbColor highlightColor) ? highlightColor : null,
             HasHyperlinkClick(runProperties),
             ReadHyperlinkClickId(runProperties),
@@ -2023,13 +2030,13 @@ internal sealed partial class PptxRenderer
             runProperties?.Element(DrawingNamespace + "gradFill") is not null;
     }
 
-    private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, out TextOutline outline)
+    private static bool TryReadTextOutline(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
     {
-        return TryReadTextOutline(runProperties, theme, out outline) ||
-            TryReadTextOutline(defaultRunProperties, theme, out outline);
+        return TryReadTextOutline(runProperties, theme, colorMap, out outline) ||
+            TryReadTextOutline(defaultRunProperties, theme, colorMap, out outline);
     }
 
-    private static bool TryReadTextOutline(XElement? runProperties, PptxTheme theme, out TextOutline outline)
+    private static bool TryReadTextOutline(XElement? runProperties, PptxTheme theme, PptxColorMap colorMap, out TextOutline outline)
     {
         outline = default;
         XElement? line = runProperties?.Element(DrawingNamespace + "ln");
@@ -2041,7 +2048,7 @@ internal sealed partial class PptxRenderer
         double? width = line.Attribute("w") is { } widthAttribute
             ? OoxUnits.EmuToPoints(long.Parse(widthAttribute.Value, CultureInfo.InvariantCulture))
             : null;
-        if (!TryReadSolidColorWithAlpha(line, theme, out RgbColor color, out double alpha))
+        if (!TryReadSolidColorWithAlpha(line, theme, colorMap, out RgbColor color, out double alpha))
         {
             return false;
         }

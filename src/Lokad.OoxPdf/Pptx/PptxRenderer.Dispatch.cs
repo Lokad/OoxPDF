@@ -14,6 +14,7 @@ internal sealed partial class PptxRenderer
         List<PdfImageResource> images,
         List<PdfFontResource> chartFonts,
         string? sourcePartName,
+        PptxColorMap sourceColorMap,
         ref int imageIndex,
         GroupTransform transform,
         bool renderPlaceholders)
@@ -47,6 +48,7 @@ internal sealed partial class PptxRenderer
                             context,
                             graphics,
                             fonts,
+                            sourceColorMap,
                             renderPlaceholders);
                     }
 
@@ -77,7 +79,7 @@ internal sealed partial class PptxRenderer
                     break;
                 case PptxSceneNodeKind.Table:
                     BeginSlideNodeClip(context, graphics);
-                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform);
+                    IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform, sourceColorMap);
                     DrawTextSpansWithFonts(tableTextSpans, graphics, fonts);
                     EndSlideNodeClip(graphics);
                     break;
@@ -98,6 +100,7 @@ internal sealed partial class PptxRenderer
                         images,
                         chartFonts,
                         sourcePartName,
+                        sourceColorMap,
                         ref imageIndex,
                         transform.Combine(ToGroupTransform(node.GroupTransform)),
                         renderPlaceholders);
@@ -148,6 +151,7 @@ internal sealed partial class PptxRenderer
         PptxRenderContext context,
         PdfGraphicsBuilder graphics,
         IReadOnlyDictionary<string, RenderedFont> fonts,
+        PptxColorMap sourceColorMap,
         bool renderPlaceholders)
     {
         if (node.TextBody is null)
@@ -155,7 +159,7 @@ internal sealed partial class PptxRenderer
             return;
         }
 
-        DrawTextSpansWithFonts(ReadTextSpansForSceneNode(node, context, renderPlaceholders), graphics, fonts);
+        DrawTextSpansWithFonts(ReadTextSpansForSceneNode(node, context, sourceColorMap, renderPlaceholders), graphics, fonts);
     }
 
     private static void RenderUnsupportedGraphicFrame(PptxSceneNode node, PptxRenderContext context, string? sourcePartName)

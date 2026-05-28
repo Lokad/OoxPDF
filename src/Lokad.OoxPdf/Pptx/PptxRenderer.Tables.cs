@@ -32,9 +32,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxPositionedTextSpan> ReadSceneTableTextSpans(PptxRenderContext context)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
-        AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity);
-        AddSceneTableTextSpans(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity);
+        AddSceneTableTextSpans(context.SceneSlide.MasterNodes, context, textSpans, GroupTransform.Identity, context.MasterColorMap);
+        AddSceneTableTextSpans(context.SceneSlide.LayoutNodes, context, textSpans, GroupTransform.Identity, context.LayoutColorMap);
+        AddSceneTableTextSpans(context.SceneSlide.SlideNodes, context, textSpans, GroupTransform.Identity, context.SlideColorMap);
 
         return textSpans;
     }
@@ -42,9 +42,9 @@ internal sealed partial class PptxRenderer
     private static IReadOnlyList<PptxTableCellTextFrame> ReadSceneTableTextFrames(PptxRenderContext context)
     {
         var textFrames = new List<PptxTableCellTextFrame>();
-        AddSceneTableTextFrames(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity);
-        AddSceneTableTextFrames(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity);
-        AddSceneTableTextFrames(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity);
+        AddSceneTableTextFrames(context.SceneSlide.MasterNodes, context, textFrames, GroupTransform.Identity, context.MasterColorMap);
+        AddSceneTableTextFrames(context.SceneSlide.LayoutNodes, context, textFrames, GroupTransform.Identity, context.LayoutColorMap);
+        AddSceneTableTextFrames(context.SceneSlide.SlideNodes, context, textFrames, GroupTransform.Identity, context.SlideColorMap);
 
         return textFrames;
     }
@@ -53,19 +53,20 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxPositionedTextSpan> textSpans,
-        GroupTransform transform)
+        GroupTransform transform,
+        PptxColorMap colorMap)
     {
         foreach (PptxSceneNode node in nodes)
         {
             if (node.Kind == PptxSceneNodeKind.Table)
             {
-                textSpans.AddRange(ReadTableFrameTextSpans(context, node, transform));
+                textSpans.AddRange(ReadTableFrameTextSpans(context, node, transform, colorMap));
                 continue;
             }
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneTableTextSpans(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)));
+                AddSceneTableTextSpans(node.Children, context, textSpans, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap);
             }
         }
     }
@@ -74,7 +75,8 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneNode> nodes,
         PptxRenderContext context,
         List<PptxTableCellTextFrame> textFrames,
-        GroupTransform transform)
+        GroupTransform transform,
+        PptxColorMap colorMap)
     {
         foreach (PptxSceneNode node in nodes)
         {
@@ -83,32 +85,32 @@ internal sealed partial class PptxRenderer
                 ShapeBounds? bounds = node.Bounds is { } rawBounds
                     ? transform.Apply(ToShapeBounds(rawBounds))
                     : null;
-                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false)?.TextFrames ?? [];
+                IReadOnlyList<PptxTableCellTextFrame> tableTextFrames = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap)?.TextFrames ?? [];
                 textFrames.AddRange(tableTextFrames);
                 continue;
             }
 
             if (node.Kind == PptxSceneNodeKind.Group)
             {
-                AddSceneTableTextFrames(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)));
+                AddSceneTableTextFrames(node.Children, context, textFrames, transform.Combine(ToGroupTransform(node.GroupTransform)), colorMap);
             }
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> ReadTableFrameTextSpans(PptxRenderContext context, PptxSceneNode node, GroupTransform transform)
+    private static IReadOnlyList<PptxPositionedTextSpan> ReadTableFrameTextSpans(PptxRenderContext context, PptxSceneNode node, GroupTransform transform, PptxColorMap colorMap)
     {
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false)?.TextSpans ?? [];
+        return BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: false, colorMap)?.TextSpans ?? [];
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform, PptxColorMap colorMap)
     {
         ShapeBounds? bounds = node.Bounds is { } rawBounds
             ? transform.Apply(ToShapeBounds(rawBounds))
             : null;
-        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: true);
+        TableFrameLayout? layout = BuildTableFrameLayout(context, bounds, node.Table, emitUnsupportedStyleDiagnostic: true, colorMap);
         if (layout is null)
         {
             return [];
@@ -118,7 +120,7 @@ internal sealed partial class PptxRenderer
         return layout.TextSpans;
     }
 
-    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic)
+    private static TableFrameLayout? BuildTableFrameLayout(PptxRenderContext context, ShapeBounds? bounds, PptxSceneTable? sceneTable, bool emitUnsupportedStyleDiagnostic, PptxColorMap colorMap)
     {
         var textSpans = new List<PptxPositionedTextSpan>();
         var textFrames = new List<PptxTableCellTextFrame>();
@@ -236,7 +238,7 @@ internal sealed partial class PptxRenderer
                 }
 
                 AddTableCellBorders(explicitBorders, sceneCell.Borders, cellX, cellBottom, columnWidth, cellHeight);
-                AddTableCellTextSpans(context, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, sceneCell.StyleText);
+                AddTableCellTextSpans(context, sceneCell, cellX, cellBottom, columnWidth, cellHeight, textSpans, textFrames, colorMap, sceneCell.StyleText);
                 cellX += columnWidth;
                 columnIndex += columnSpan;
             }
@@ -475,9 +477,10 @@ internal sealed partial class PptxRenderer
         double height,
         List<PptxPositionedTextSpan> spans,
         List<PptxTableCellTextFrame> textFrames,
+        PptxColorMap colorMap,
         PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
-        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, x, y, width, height, tableStyleTextStyle);
+        PptxTableCellTextFrame? tableTextFrame = BuildTableCellTextFrame(sceneCell, x, y, width, height, colorMap, tableStyleTextStyle);
         if (tableTextFrame is null)
         {
             return;
@@ -487,7 +490,7 @@ internal sealed partial class PptxRenderer
         spans.AddRange(ReadTextSpansForTableCellTextFrame(tableTextFrame, context));
     }
 
-    private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, double x, double y, double width, double height, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
+    private static PptxTableCellTextFrame? BuildTableCellTextFrame(PptxSceneTableCell sceneCell, double x, double y, double width, double height, PptxColorMap colorMap, PptxSceneTableCellTextStyle tableStyleTextStyle = default)
     {
         XElement? textBody = sceneCell.LayoutTextBody;
         if (textBody is null)
@@ -512,6 +515,7 @@ internal sealed partial class PptxRenderer
             ToTextVerticalAnchor(sceneCell.VerticalAnchor),
             ReadTableCellVerticalAnchorValue(sceneCell),
             ToTextBodyPropertySource(sceneCell.VerticalAnchorSource),
+            colorMap,
             tableStyleTextStyle);
     }
 

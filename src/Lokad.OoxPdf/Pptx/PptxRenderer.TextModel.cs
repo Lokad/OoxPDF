@@ -17,8 +17,8 @@ internal sealed partial class PptxRenderer
         }
 
         return context.InheritedSources
-            .SelectMany(source => BuildTextFrameModels(context, source.Xml, includePlaceholders: false, placeholderSources: []))
-            .Concat(BuildTextFrameModels(context, context.SlideXml, includePlaceholders: true, context.InheritedXml))
+            .SelectMany(source => BuildTextFrameModels(context, source, includePlaceholders: false, placeholderSources: []))
+            .Concat(BuildTextFrameModels(context, context.SlideSource, includePlaceholders: true, context.InheritedXml))
             .Select(ToSnapshot)
             .ToArray();
     }
@@ -170,17 +170,18 @@ internal sealed partial class PptxRenderer
 
     private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
         PptxRenderContext context,
-        XDocument slideXml,
+        PptxRenderSource source,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
     {
-        return BuildTextFrameModels(slideXml, context.Document, context.Theme, context.SlideNumber, includePlaceholders, placeholderSources);
+        return BuildTextFrameModels(source.Xml, context.Document, context.Theme, source.ColorMap, context.SlideNumber, includePlaceholders, placeholderSources);
     }
 
     private static IReadOnlyList<PptxTextFrameModel> BuildTextFrameModels(
         XDocument slideXml,
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
@@ -188,7 +189,7 @@ internal sealed partial class PptxRenderer
         var frames = new List<PptxTextFrameModel>();
         foreach (XElement shape in slideXml.Descendants(PresentationNamespace + "sp"))
         {
-            PptxTextFrameModel? frame = BuildTextFrameModel(shape, document, theme, slideNumber, includePlaceholders, placeholderSources);
+            PptxTextFrameModel? frame = BuildTextFrameModel(shape, document, theme, colorMap, slideNumber, includePlaceholders, placeholderSources);
             if (frame is not null)
             {
                 frames.Add(frame);
@@ -202,6 +203,7 @@ internal sealed partial class PptxRenderer
         XElement shape,
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         bool includePlaceholders,
         IReadOnlyList<XDocument> placeholderSources)
@@ -296,7 +298,7 @@ internal sealed partial class PptxRenderer
                 textHeight,
                 document.SlideHeightPoints);
         }
-        RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, out RgbColor fontColor)
+        RgbColor? shapeFontColor = TryReadShapeFontColor(shape, theme, colorMap, out RgbColor fontColor)
             ? fontColor
             : null;
         bool useOfficeBaselineFloor = TextFrameUsesOfficeBaselineFloor(shape, bodyProperties);
@@ -306,6 +308,7 @@ internal sealed partial class PptxRenderer
             inheritedPlaceholders,
             placeholderSources,
             theme,
+            colorMap,
             slideNumber,
             fontScale,
             lineSpacingScale,
@@ -475,6 +478,7 @@ internal sealed partial class PptxRenderer
             inheritedPlaceholders: [],
             placeholderSources,
             theme,
+            tableFrame.ColorMap,
             slideNumber,
             fontScale,
             lineSpacingScale,
@@ -693,6 +697,7 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<XElement> inheritedPlaceholders,
         IReadOnlyList<XDocument> placeholderSources,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         double fontScale,
         double lineSpacingScale,
@@ -712,8 +717,8 @@ internal sealed partial class PptxRenderer
             XElement? defaultParagraphProperties = cascade.ResolveDefaultProperties();
             ResolvedParagraphTextStyle paragraphStyle = ResolveParagraphTextStyle(paragraph, paragraphProperties, defaultParagraphProperties, fontScale, lineSpacingScale, compatibleLineSpacing);
             PptxParagraphStyleCascade resolvedStyleCascade = BuildResolvedParagraphStyleCascade(cascade, paragraphProperties);
-            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme);
-            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, slideNumber, fontScale, tableStyleTextStyle);
+            PptxParagraphBulletModel bullet = BuildParagraphBulletModel(resolvedStyleCascade.ResolveDefaultProperties(), theme, colorMap);
+            IReadOnlyList<PptxTextRunModel> runs = BuildRunModels(paragraph, paragraphStyle, resolvedStyleCascade, shapeFontColor, theme, colorMap, slideNumber, fontScale, tableStyleTextStyle);
             XElement? endParagraphProperties = paragraph.Element(DrawingNamespace + "endParaRPr");
             ResolvedEndParagraphTextStyle endParagraphStyle = ResolveEndParagraphTextStyle(endParagraphProperties, paragraphStyle.DefaultRunProperties, fontScale);
             paragraphs.Add(new PptxTextParagraphModel(
@@ -739,7 +744,7 @@ internal sealed partial class PptxRenderer
         return paragraphs;
     }
 
-    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme)
+    private static PptxParagraphBulletModel BuildParagraphBulletModel(XElement? paragraphProperties, PptxTheme theme, PptxColorMap colorMap)
     {
         if (paragraphProperties is null || paragraphProperties.Element(DrawingNamespace + "buNone") is not null)
         {
@@ -753,7 +758,7 @@ internal sealed partial class PptxRenderer
         string? fontTypeface = (string?)bulletFont?.Attribute("typeface");
         string? fontCharset = (string?)bulletFont?.Attribute("charset");
         PptxThemeTypefaceResolution fontResolution = theme.ResolveTypefaceWithSource(fontTypeface);
-        RgbColor? color = bulletColor is not null && TryReadSolidColor(bulletColor, theme, out RgbColor resolvedColor)
+        RgbColor? color = bulletColor is not null && PptxColorResolver.TryReadSolidColor(bulletColor, theme, colorMap, out RgbColor resolvedColor)
             ? resolvedColor
             : null;
         PptxParagraphBulletSizeKind sizeKind = PptxParagraphBulletSizeKind.Text;
@@ -918,6 +923,7 @@ internal sealed partial class PptxRenderer
         PptxParagraphStyleCascade resolvedParagraphStyleCascade,
         RgbColor? shapeFontColor,
         PptxTheme theme,
+        PptxColorMap colorMap,
         int slideNumber,
         double fontScale,
         PptxSceneTableCellTextStyle tableStyleTextStyle)
@@ -935,7 +941,7 @@ internal sealed partial class PptxRenderer
                     breakProperties,
                     breakCascade,
                     "\n",
-                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
+                    ResolveRunTextStyle(breakCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
                 continue;
             }
 
@@ -952,7 +958,7 @@ internal sealed partial class PptxRenderer
                 runProperties,
                 textRunCascade,
                 ReadTextElementText(child, slideNumber),
-                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, fontScale, tableStyleTextStyle)));
+                ResolveRunTextStyle(textRunCascade, shapeFontColor, theme, colorMap, fontScale, tableStyleTextStyle)));
         }
 
         return runs;

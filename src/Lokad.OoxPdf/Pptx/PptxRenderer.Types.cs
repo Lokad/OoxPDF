@@ -369,6 +369,7 @@ internal sealed partial class PptxRenderer
         TextVerticalAnchor VerticalAnchor,
         string? VerticalAnchorValue,
         PptxTextBodyPropertySource VerticalAnchorSource,
+        PptxColorMap ColorMap,
         PptxSceneTableCellTextStyle TextStyle);
 
     private readonly record struct PptxTextBodyProperties(
