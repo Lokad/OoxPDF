@@ -12072,6 +12072,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `86` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `327` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw PPTX chart axis numeric tokens beside normalized axis values in
+the scene model. `PptxSceneChartAxis` now records raw source strings for `c:crossesAt`, scaling `c:min` and
+`c:max`, and `c:majorUnit` / `c:minorUnit`. The regression locks the important mixed case: malformed future
+tokens remain observable, a valid maximum still parses, and an invalid non-positive minor unit keeps its raw
+source token while continuing to normalize to no explicit unit for current rendering.
+
+This is a prerequisite for Office-aligned chart-axis layout, not a new axis policy. The current renderer
+still consumes the parsed nullable doubles and its existing defaults when values are missing or invalid. The
+structural gain is that future replacements for axis tick, crossing, scale, and gridline heuristics can
+differentiate absent OOXML from present-but-unhandled OOXML without reopening chart XML or guessing from the
+final tick set.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `87` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `328` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: The PPTX vertical-anchor text-height estimator now consumes resolved
 `PptxTextBodyProperties` instead of re-reading only the local `a:bodyPr`. `EstimateTextHeight` applies the
 model-owned `normAutofit @fontScale`, `@lnSpcReduction` line-spacing scale, inherited `compatLnSpc`, and

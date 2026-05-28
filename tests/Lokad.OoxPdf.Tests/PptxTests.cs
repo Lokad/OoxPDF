@@ -11572,6 +11572,43 @@ internal static class PptxTests
         TestAssert.Equal("futurePointExplosion", series.PointStyles[1].ExplosionValue);
     }
 
+    public static void PptxScenePreservesChartAxisNumericOptionTokens()
+    {
+        PptxSceneChart? chart = BuildSingleChartScene("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+                <c:lineChart>
+                  <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt></c:numLit></c:val></c:ser>
+                  <c:axId val="10"/><c:axId val="20"/>
+                </c:lineChart>
+                <c:catAx><c:axId val="10"/><c:crossAx val="20"/></c:catAx>
+                <c:valAx>
+                  <c:axId val="20"/>
+                  <c:scaling><c:min val="futureMin"/><c:max val="42.5"/></c:scaling>
+                  <c:crossAx val="10"/>
+                  <c:crossesAt val="futureCross"/>
+                  <c:majorUnit val="futureMajor"/>
+                  <c:minorUnit val="-1"/>
+                </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        PptxSceneChartAxis axis = chart?.Axes.First(item => item.AxisKind == PptxSceneChartAxisKind.Value)
+            ?? throw new InvalidOperationException("Expected value axis.");
+        TestAssert.Equal(null, axis.CrossesAt);
+        TestAssert.Equal("futureCross", axis.CrossesAtValue);
+        TestAssert.Equal(null, axis.Minimum);
+        TestAssert.Equal("futureMin", axis.MinimumValue);
+        TestAssert.Equal(42.5d, axis.Maximum ?? double.NaN);
+        TestAssert.Equal("42.5", axis.MaximumValue);
+        TestAssert.Equal(null, axis.MajorUnit);
+        TestAssert.Equal("futureMajor", axis.MajorUnitValue);
+        TestAssert.Equal(null, axis.MinorUnit);
+        TestAssert.Equal("-1", axis.MinorUnitValue);
+    }
+
     public static void PptxScenePreservesChartNumericPointIndicesAndBlanks()
     {
         PptxSceneChart? chart = BuildSingleChartScene("""

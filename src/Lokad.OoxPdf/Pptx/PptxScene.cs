@@ -946,6 +946,7 @@ internal sealed record PptxSceneChartAxis(
     PptxSceneChartAxisCrosses CrossesKind,
     string Crosses,
     double? CrossesAt,
+    string CrossesAtValue,
     PptxSceneChartAxisCrossBetween CrossBetweenKind,
     string CrossBetween,
     PptxSceneChartAxisOrientation OrientationKind,
@@ -954,9 +955,13 @@ internal sealed record PptxSceneChartAxis(
     bool? IsDeleted,
     bool HasScaling,
     double? Minimum,
+    string MinimumValue,
     double? Maximum,
+    string MaximumValue,
     double? MajorUnit,
+    string MajorUnitValue,
     double? MinorUnit,
+    string MinorUnitValue,
     bool HasMajorGridlines,
     bool HasMinorGridlines,
     PptxSceneLineStyle Line,
@@ -2692,6 +2697,11 @@ internal sealed class PptxSceneBuilder
             string tickLabelPosition = (string?)axis.Element(ChartNamespace + "tickLblPos")?.Attribute("val") ?? string.Empty;
             string majorTickMark = ReadChartElementValue(axis, "majorTickMark");
             string minorTickMark = ReadChartElementValue(axis, "minorTickMark");
+            (double? crossesAt, string crossesAtValue) = ReadChartElementDoubleWithValue(axis, "crossesAt");
+            (double? minimum, string minimumValue) = ReadChartAxisScalingValueWithValue(axis, "min");
+            (double? maximum, string maximumValue) = ReadChartAxisScalingValueWithValue(axis, "max");
+            (double? majorUnit, string majorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "majorUnit");
+            (double? minorUnit, string minorUnitValue) = ReadChartAxisUnitValueWithValue(axis, "minorUnit");
             axes.Add(new PptxSceneChartAxis(
                 id,
                 ParseChartAxisKind(axis.Name.LocalName),
@@ -2701,7 +2711,8 @@ internal sealed class PptxSceneBuilder
                 (string?)axis.Element(ChartNamespace + "crossAx")?.Attribute("val") ?? string.Empty,
                 ParseChartAxisCrosses(crosses),
                 crosses,
-                ReadChartElementDouble(axis, "crossesAt"),
+                crossesAt,
+                crossesAtValue,
                 ParseChartAxisCrossBetween(crossBetween),
                 crossBetween,
                 orientationKind,
@@ -2709,10 +2720,14 @@ internal sealed class PptxSceneBuilder
                 orientationKind == PptxSceneChartAxisOrientation.MaximumMinimum,
                 ReadOptionalOoxmlBooleanElement(axis, "delete"),
                 axis.Element(ChartNamespace + "scaling") is not null,
-                ReadChartAxisScalingValue(axis, "min"),
-                ReadChartAxisScalingValue(axis, "max"),
-                ReadChartAxisUnitValue(axis, "majorUnit"),
-                ReadChartAxisUnitValue(axis, "minorUnit"),
+                minimum,
+                minimumValue,
+                maximum,
+                maximumValue,
+                majorUnit,
+                majorUnitValue,
+                minorUnit,
+                minorUnitValue,
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "majorGridlines")),
                 IsChartGridlineVisible(axis.Element(ChartNamespace + "minorGridlines")),
                 ReadChartAxisLine(axis, theme),
@@ -2886,21 +2901,33 @@ internal sealed class PptxSceneBuilder
 
     private static double? ReadChartAxisScalingValue(XElement axis, string elementName)
     {
-        string? value = (string?)axis
+        (double? parsed, _) = ReadChartAxisScalingValueWithValue(axis, elementName);
+        return parsed;
+    }
+
+    private static (double? Value, string RawValue) ReadChartAxisScalingValueWithValue(XElement axis, string elementName)
+    {
+        string value = (string?)axis
             .Element(ChartNamespace + "scaling")
             ?.Element(ChartNamespace + elementName)
-            ?.Attribute("val");
+            ?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static double? ReadChartAxisUnitValue(XElement axis, string elementName)
     {
-        string? value = (string?)axis.Element(ChartNamespace + elementName)?.Attribute("val");
+        (double? parsed, _) = ReadChartAxisUnitValueWithValue(axis, elementName);
+        return parsed;
+    }
+
+    private static (double? Value, string RawValue) ReadChartAxisUnitValueWithValue(XElement axis, string elementName)
+    {
+        string value = (string?)axis.Element(ChartNamespace + elementName)?.Attribute("val") ?? string.Empty;
         return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed) && parsed > 0d
-            ? parsed
-            : null;
+            ? (parsed, value)
+            : (null, value);
     }
 
     private static bool IsChartGridlineVisible(XElement? gridlines)
