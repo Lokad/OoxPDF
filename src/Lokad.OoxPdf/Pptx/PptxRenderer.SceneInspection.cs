@@ -41,6 +41,8 @@ internal sealed partial class PptxRenderer
         PptxSceneImageRecolor? recolor = node.Picture?.Recolor;
         PptxSceneChartLegend? legend = node.Chart?.Legend;
         PptxSceneChartManualLayout? legendLayout = legend?.Layout;
+        IReadOnlyList<string> rejectedPointStyleIndexValues = ReadRejectedPointStyleIndexValues(node.Chart);
+        IReadOnlyList<string> rejectedDataLabelOverrideIndexValues = ReadRejectedDataLabelOverrideIndexValues(node.Chart);
         return new PptxSceneNodeSnapshot(
             node.Kind.ToString(),
             node.IsPlaceholder,
@@ -76,6 +78,10 @@ internal sealed partial class PptxRenderer
             node.Chart is not null,
             node.Chart?.Plots.Count ?? 0,
             node.Chart?.Axes.Count ?? 0,
+            rejectedPointStyleIndexValues.Count,
+            rejectedPointStyleIndexValues,
+            rejectedDataLabelOverrideIndexValues.Count,
+            rejectedDataLabelOverrideIndexValues,
             node.Chart?.ExternalData.IsDefined ?? false,
             node.Chart?.ExternalData.RelationshipId ?? string.Empty,
             node.Chart?.ExternalData.TargetPartName ?? string.Empty,
@@ -105,5 +111,30 @@ internal sealed partial class PptxRenderer
             legendLayout?.Height,
             node.Kind == PptxSceneNodeKind.Group,
             node.Children.Select(ToSnapshot).ToArray());
+    }
+
+    private static IReadOnlyList<string> ReadRejectedPointStyleIndexValues(PptxSceneChart? chart)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        return chart.Plots
+            .SelectMany(plot => plot.Series)
+            .SelectMany(series => series.RejectedPointStyleIndexValues)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadRejectedDataLabelOverrideIndexValues(PptxSceneChart? chart)
+    {
+        if (chart is null)
+        {
+            return [];
+        }
+
+        return chart.Plots
+            .SelectMany(plot => plot.DataLabels.RejectedOverrideIndexValues)
+            .ToArray();
     }
 }

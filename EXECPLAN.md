@@ -12560,6 +12560,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `104` tests, `0` failures, and `0` skips; full non-slow console runner passed
 with `345` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Exposed rejected keyed chart overrides through private-safe scene inspection.
+`PptxSceneNodeSnapshot` now reports aggregate rejected `c:dPt` and `c:dLbl` index-token counts and raw
+index tokens for chart nodes, fed from the scene-owned sidecars instead of a second XML scan. This turns
+the previous internal-only preservation into an inspection-visible diagnostic surface that private slide
+summaries can use without exposing chart text, values, or document content.
+
+This remains behavior-neutral. Rejected keyed overrides still do not render, and accepted non-negative keys
+still follow the existing point-style/data-label override paths. The long-term semantic question stays
+properly isolated: any future Office-PDF evidence about malformed or negative keys can now be evaluated
+from the same scene snapshot boundary used for other raw-token preservation work.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `104` tests, `0` failures, and `0` skips; full non-slow console runner passed
+with `345` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Kept chart series `smooth` decisions as typed boolean options at the renderer
 boundary. `ChartLinePlotOptions` and `ChartScatterPlotOptions` now carry `ChartBooleanOption` records for
 per-series smooth state instead of bare booleans, preserving the effective value, raw token, and whether the

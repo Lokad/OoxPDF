@@ -14900,7 +14900,7 @@ internal static class PptxTests
 
     public static void PptxScenePreservesRejectedChartKeyedOverrideIndices()
     {
-        PptxSceneChart chart = BuildSingleChartScene("""
+        const string chartXml = """
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart><c:plotArea>
@@ -14921,7 +14921,8 @@ internal static class PptxTests
                 </c:pieChart>
               </c:plotArea></c:chart>
             </c:chartSpace>
-            """) ?? throw new InvalidOperationException("Expected chart scene.");
+            """;
+        PptxSceneChart chart = BuildSingleChartScene(chartXml) ?? throw new InvalidOperationException("Expected chart scene.");
 
         PptxSceneChartSeries series = chart.Plots[0].Series[0];
         TestAssert.Equal(1, series.PointStyles.Count);
@@ -14935,6 +14936,16 @@ internal static class PptxTests
         TestAssert.Equal("-1", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[0]);
         TestAssert.Equal("futureLabel", chart.Plots[0].DataLabels.RejectedOverrideIndexValues[1]);
         TestAssert.Equal(string.Empty, chart.Plots[0].DataLabels.RejectedOverrideIndexValues[2]);
+
+        PptxSceneNodeSnapshot snapshot = BuildSingleChartSceneSnapshot(chartXml);
+        TestAssert.Equal(3, snapshot.ChartRejectedPointStyleIndexCount);
+        TestAssert.Equal("-1", snapshot.ChartRejectedPointStyleIndexValues[0]);
+        TestAssert.Equal("futurePoint", snapshot.ChartRejectedPointStyleIndexValues[1]);
+        TestAssert.Equal(string.Empty, snapshot.ChartRejectedPointStyleIndexValues[2]);
+        TestAssert.Equal(3, snapshot.ChartRejectedDataLabelOverrideIndexCount);
+        TestAssert.Equal("-1", snapshot.ChartRejectedDataLabelOverrideIndexValues[0]);
+        TestAssert.Equal("futureLabel", snapshot.ChartRejectedDataLabelOverrideIndexValues[1]);
+        TestAssert.Equal(string.Empty, snapshot.ChartRejectedDataLabelOverrideIndexValues[2]);
     }
 
     public static void PptxPercentStackedColumnChartUsesPercentValueAxis()
@@ -15030,6 +15041,24 @@ internal static class PptxTests
 
     private static PptxSceneChart? BuildSingleChartScene(string chartXml)
     {
+        return BuildSingleChartPackageScene(chartXml).Slides[0].SlideNodes[0].Chart;
+    }
+
+    private static PptxSceneNodeSnapshot BuildSingleChartSceneSnapshot(string chartXml)
+    {
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        PptxSceneSnapshot scene = PptxRenderer.InspectScene(document, package);
+        return scene.Slides[0].SlideNodes[0];
+    }
+
+    private static PptxScene BuildSingleChartPackageScene(string chartXml)
+    {
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        return new PptxSceneBuilder().Build(document, package);
+    }
+
+    private static (PptxDocument Document, OoxPackage Package) BuildSingleChartPackage(string chartXml)
+    {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
         {
             ["[Content_Types].xml"] = TestFixtures.Utf8(BasicContentTypes()),
@@ -15062,8 +15091,7 @@ internal static class PptxTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream);
         PptxDocument document = new PptxReader().Read(package);
-        PptxScene scene = new PptxSceneBuilder().Build(document, package);
-        return scene.Slides[0].SlideNodes[0].Chart;
+        return (document, package);
     }
 
     private static bool ChartBooleanOptionValue(object option)
