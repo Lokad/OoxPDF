@@ -31,6 +31,8 @@ keep diagnostics honest when a feature is still missing.
   multi-case comparisons, and `-ShowBounds` prints reference/candidate bounds for singleton structural
   buckets when edge-level plot-box evidence is needed. `-ByRegion` splits the summary by chart-local
   `RegionIndex` when the graphics/text classifiers can attach structures to plot-box-derived regions.
+- `tools/SummarizeChartDataLabelLayout.ps1`: focused public PDF structure summary for chart data-label text
+  and leader-line layout gaps.
 - `tools/Lokad.OoxPdf.VisualDiff`: PNG comparison tool.
 - `tools/Lokad.OoxPdf.PdfiumRasterizer`: local PDFium P/Invoke rasterizer.
 - `tools/Lokad.OoxPdf.PdfInspect`: dependency-free PDF object/stream inspection tool.
@@ -2506,6 +2508,14 @@ High-priority actions:
     boxes outside the frame. Investigate whether data-label `x`/`y` factors are relative to chart frame,
     plot area, default label anchor, text box, or an extension-owned layout coordinate, then lock the rule
     with text-operation and leader-line structural checks before adding a cardinality gate.
+    2026-05-28 update: added `tools/SummarizeChartDataLabelLayout.ps1` so this gap can be measured from
+    Office/candidate PDF structures instead of visual inspection. On public run `20260528-125303`, the
+    summary reports `DataLabelText` reference/candidate counts `8/4`, max nearest text bounds delta
+    `492.681pt`, `DataLabelLeaderLineCandidate` counts `1/4`, and nearest leader-line bounds delta
+    `82.054pt`. The Office-authored chart XML stores per-label `c:manualLayout` `x`/`y` values without
+    explicit modes, including negative factors; those factors came from COM `DataLabel.Left`/`Top` writes
+    and are not behaving like ordinary absolute plot-box factor boxes. Keep the next renderer change tied to
+    this public structural evidence, not to a per-fixture coordinate constant.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
