@@ -71,8 +71,72 @@ function Format-Bounds($item) {
         [Math]::Round([double]$item.MaxY, 2)
 }
 
+function New-BoundsItem([double] $minX, [double] $minY, [double] $maxX, [double] $maxY, [string] $textHash) {
+    return [pscustomobject]@{
+        MinX = $minX
+        MinY = $minY
+        MaxX = $maxX
+        MaxY = $maxY
+        TextHash = $textHash
+    }
+}
+
 function Select-Kind($items, [string] $kind) {
     return ,@($items | Where-Object { [string]$_.Kind -eq $kind } | Sort-Object -Property PageNumber, MinY, MinX, TextLength)
+}
+
+function Group-TextClusters($items, [double] $baselineTolerance = 2.0, [double] $maxGap = 120.0) {
+    $rows = New-Object System.Collections.Generic.List[object]
+    $ordered = @($items | Sort-Object -Property PageNumber, MinY, MinX)
+    $clusters = New-Object System.Collections.Generic.List[object]
+
+    function Is-ClusterNeighbor($left, $right, [double] $baselineTolerance, [double] $maxGap) {
+        if ([int]$left.PageNumber -ne [int]$right.PageNumber) {
+            return $false
+        }
+
+        $dx = [Math]::Abs((CenterX $left) - (CenterX $right))
+        $dy = [Math]::Abs((CenterY $left) - (CenterY $right))
+        $sameLine = $dy -le $baselineTolerance -and $dx -le $maxGap
+        $stackedLine = $dx -le 70.0 -and $dy -le 35.0
+        return $sameLine -or $stackedLine
+    }
+
+    foreach ($item in $ordered) {
+        $targetCluster = $null
+        foreach ($cluster in $clusters) {
+            foreach ($member in $cluster) {
+                if (Is-ClusterNeighbor $member $item $baselineTolerance $maxGap) {
+                    $targetCluster = $cluster
+                    break
+                }
+            }
+
+            if ($null -ne $targetCluster) {
+                break
+            }
+        }
+
+        if ($null -eq $targetCluster) {
+            $targetCluster = New-Object System.Collections.Generic.List[object]
+            $clusters.Add($targetCluster)
+        }
+
+        $targetCluster.Add($item)
+    }
+
+    foreach ($clusterItems in $clusters) {
+        $minX = ($clusterItems | Measure-Object -Property MinX -Minimum).Minimum
+        $minY = ($clusterItems | Measure-Object -Property MinY -Minimum).Minimum
+        $maxX = ($clusterItems | Measure-Object -Property MaxX -Maximum).Maximum
+        $maxY = ($clusterItems | Measure-Object -Property MaxY -Maximum).Maximum
+        $hashes = @($clusterItems | Sort-Object -Property MinY, MinX | ForEach-Object {
+            if ($_.PSObject.Properties.Name -contains "TextHash") { [string]$_.TextHash } else { "" }
+        }) -join "+"
+        $rows.Add((New-BoundsItem ([double]$minX) ([double]$minY) ([double]$maxX) ([double]$maxY) $hashes))
+    }
+
+    return ,@($rows.ToArray() | Sort-Object -Property MinY, MinX)
 }
 
 function Child-Val($node, [string] $name) {
@@ -221,27 +285,36 @@ $candidateText = Read-JsonArray $CandidateChartTextStructures
 
 $referenceLabels = Select-Kind $referenceText "DataLabelText"
 $candidateLabels = Select-Kind $candidateText "DataLabelText"
+$referenceLabelClusters = Group-TextClusters $referenceLabels
+$candidateLabelClusters = Group-TextClusters $candidateLabels
 $referenceLeaderLines = Select-Kind $referenceGraphics "DataLabelLeaderLineCandidate"
 $candidateLeaderLines = Select-Kind $candidateGraphics "DataLabelLeaderLineCandidate"
 $chartManualLayouts = Read-ChartLabelManualLayouts $ChartXml
 
 $labelMatches = Match-Nearest $referenceLabels $candidateLabels "DataLabelText"
+$labelClusterMatches = Match-Nearest $referenceLabelClusters $candidateLabelClusters "DataLabelTextCluster"
 $leaderLineMatches = Match-Nearest $referenceLeaderLines $candidateLeaderLines "DataLabelLeaderLineCandidate"
 
 $summary = [pscustomobject]@{
     DataLabelTextReferenceCount = $referenceLabels.Count
     DataLabelTextCandidateCount = $candidateLabels.Count
     DataLabelTextMaxNearestBoundsDelta = if ($labelMatches.Count -eq 0) { $null } else { ($labelMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
+    DataLabelTextClusterReferenceCount = $referenceLabelClusters.Count
+    DataLabelTextClusterCandidateCount = $candidateLabelClusters.Count
+    DataLabelTextClusterMaxNearestBoundsDelta = if ($labelClusterMatches.Count -eq 0) { $null } else { ($labelClusterMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     DataLabelLeaderLineReferenceCount = $referenceLeaderLines.Count
     DataLabelLeaderLineCandidateCount = $candidateLeaderLines.Count
     DataLabelLeaderLineMaxNearestBoundsDelta = if ($leaderLineMatches.Count -eq 0) { $null } else { ($leaderLineMatches | Where-Object { $null -ne $_.BoundsDelta } | Measure-Object -Property BoundsDelta -Maximum).Maximum }
     ChartManualLayoutCount = $chartManualLayouts.Count
     ChartManualLayouts = $chartManualLayouts
+    DataLabelTextReferenceClusters = $referenceLabelClusters
+    DataLabelTextCandidateClusters = $candidateLabelClusters
     DataLabelTextMatches = $labelMatches
+    DataLabelTextClusterMatches = $labelClusterMatches
     DataLabelLeaderLineMatches = $leaderLineMatches
 }
 
-$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount
+$summary | Format-List DataLabelTextReferenceCount, DataLabelTextCandidateCount, DataLabelTextMaxNearestBoundsDelta, DataLabelTextClusterReferenceCount, DataLabelTextClusterCandidateCount, DataLabelTextClusterMaxNearestBoundsDelta, DataLabelLeaderLineReferenceCount, DataLabelLeaderLineCandidateCount, DataLabelLeaderLineMaxNearestBoundsDelta, ChartManualLayoutCount
 
 if ($chartManualLayouts.Count -gt 0) {
     Write-Host ""
@@ -253,6 +326,12 @@ if ($labelMatches.Count -gt 0) {
     Write-Host ""
     Write-Host "Data-label text nearest matches:"
     $labelMatches | Format-Table -AutoSize Kind, ReferenceIndex, CandidateIndex, BoundsDelta, CenterDeltaX, CenterDeltaY, ReferenceBounds, CandidateBounds
+}
+
+if ($labelClusterMatches.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Data-label text-cluster nearest matches:"
+    $labelClusterMatches | Format-Table -AutoSize Kind, ReferenceIndex, CandidateIndex, BoundsDelta, CenterDeltaX, CenterDeltaY, ReferenceBounds, CandidateBounds
 }
 
 if ($leaderLineMatches.Count -gt 0) {

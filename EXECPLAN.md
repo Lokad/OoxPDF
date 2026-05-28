@@ -2578,6 +2578,14 @@ High-priority actions:
     reference/candidate counts `8/8`, while still leaving `DataLabelLeaderLineCandidate` ungated. This prevents
     regressions back to combined polar label strings without pretending the unresolved manual-layout geometry
     is solved.
+    2026-05-28 update: tested and rejected the simple "omitted data-label layout modes are absolute factors"
+    hypothesis on the same public probe. That experiment moved lower labels farther outside the chart and
+    failed the `DataLabelText` structural gate in run `20260528-152413`, so the renderer change was reverted.
+    The durable conclusion is negative but useful: the missing rule is not a toggle between absolute plot-box
+    factors and current auto-label offsets. The summary tool now also groups split `DataLabelText` operations
+    into public-safe label clusters, reporting reference/candidate cluster counts `4/4` and max nearest
+    cluster bounds delta `262.481pt` on run `20260528-151601`; this keeps future coordinate-basis work focused
+    on whole labels instead of individual category/percent text fragments.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
@@ -4619,6 +4627,14 @@ High-priority actions:
   the visual run `20260528-120756` passed with the required `PPTX_UNSUPPORTED_IMAGE_RECOLOR` diagnostic,
   MAE `0.582500`, changed16 `0.020000`, and SSIM `0.992915`. This does not close the strategy item: the
   long-term target remains decoded-pixel or PDF-structural recolor, not permanent JPEG passthrough.
+  2026-05-28 backend audit: `PdfImageXObject` and `PdfDocumentWriter` already support soft masks and raw
+  PDF color-space strings, but the exposed image constructors are RGB Flate streams and DCT passthrough.
+  A three-component JPEG duotone cannot be made Office-equivalent by wrapping the compressed RGB DCT stream in
+  a different color space, because Office's current decoded-RGB recolor path derives luma per pixel before
+  mapping dark/light duotone colors. The long-term implementation path should therefore be a real
+  dependency-free JPEG decoder boundary or an explicitly proven PDF-level transform over decoded samples, not
+  a renderer-local color-space shortcut. Keep the public limitation rung as the guardrail until that backend
+  exists.
 - [x] 2026-05-24: Re-ran package and private PPTX acceptance after moving solid shape fill into the scene
   model. `dotnet pack` succeeded and private run
   `artifacts/private-visual/lokad-value-based/20260524-104526` produced 84/84 compared pages, zero dimension
