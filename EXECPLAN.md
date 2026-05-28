@@ -13235,6 +13235,26 @@ focused non-slow `pptx-charts` passed with `129` tests, `0` failures, and `0` sk
 `pptx-shapes` passed with `18` tests, `0` failures, and `0` skips; full non-slow console runner passed with
 `390` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Closed the chart-owned effect provenance gap for series and per-point shape
+properties. `PptxSceneChartSeries` and `PptxSceneChartPointStyle` now carry `PptxSceneChartEffectFamily`
+records read from their `c:spPr` elements, so chart area, plot area, title, legend, chart-style entries, data
+labels, series, and individual point styles all expose unsupported effect-list/effectDag provenance through
+typed scene state. Unsupported-effect diagnostics now traverse plot -> series -> data labels -> point styles
+instead of stopping at broad chart shape styles.
+
+This remains a provenance/diagnostic step, not an effect renderer. It removes a partial-coverage trap created
+by the previous cleanup: diagnostics had become scene-owned, but some chart effect sources were still invisible
+to the scene. The next long-term effect work should stop at explicit semantic boundaries: either implement
+Office-like rendering for each DrawingML effect family or keep unsupported effect families as typed provenance
+with honest diagnostics, rather than reintroducing XML scans or narrow chart-family checks.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxUnsupportedEffectDiagnosticsUseSceneChartSeriesEffects`,
+`PptxUnsupportedEffectDiagnosticsUseSceneChartPointEffects`, and `PptxSceneBuilderBuildsResolvedNodeLists`
+passed; focused non-slow `pptx-charts` passed with `131` tests, `0` failures, and `0` skips; focused non-slow
+`pptx-model` passed with `17` tests, `0` failures, and `1` slow skip; full non-slow console runner passed
+with `392` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved explicit PPTX shape `a:noFill` provenance in the scene model.
 `PptxSceneShape` now carries `NoFill` separately from `Fill.HasFill`, and `PptxSceneNodeSnapshot` plus the
 private-safe layout diagnostic expose `ShapeNoFill`. This closes a structural ambiguity where explicit

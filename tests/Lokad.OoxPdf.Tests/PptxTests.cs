@@ -179,11 +179,11 @@ internal static class PptxTests
                       <c:order val="3"/>
                       <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>Revenue</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:dLbls><c:showVal val="1"/><c:showCatName val="0"/><c:dLblPos val="t"/><c:separator> + </c:separator></c:dLbls>
-                      <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln></c:spPr>
+                      <c:spPr><a:solidFill><a:srgbClr val="AA5500"><a:alpha val="70000"/></a:srgbClr></a:solidFill><a:ln w="38100"><a:solidFill><a:srgbClr val="003366"/></a:solidFill></a:ln><a:effectLst><a:reflection/></a:effectLst></c:spPr>
                       <c:marker><c:symbol val="diamond"/><c:size val="7"/><c:spPr><a:solidFill><a:srgbClr val="00AA55"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="5500AA"><a:alpha val="50000"/></a:srgbClr></a:solidFill></a:ln></c:spPr></c:marker>
                       <c:explosion val="12"/>
                       <c:smooth val="1"/>
-                      <c:dPt><c:idx val="1"/><c:explosion val="18"/><c:spPr><a:solidFill><a:srgbClr val="CC8844"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="224466"/></a:solidFill></a:ln></c:spPr></c:dPt>
+                      <c:dPt><c:idx val="1"/><c:explosion val="18"/><c:spPr><a:solidFill><a:srgbClr val="CC8844"/></a:solidFill><a:ln w="25400"><a:solidFill><a:srgbClr val="224466"/></a:solidFill></a:ln><a:effectDag/></c:spPr></c:dPt>
                       <c:cat><c:strLit><c:pt idx="0"><c:v>North</c:v></c:pt><c:pt idx="1"><c:v>South</c:v></c:pt></c:strLit></c:cat>
                       <c:val><c:numLit><c:pt idx="0"><c:v>12.5</c:v></c:pt><c:pt idx="1"><c:v>14</c:v></c:pt></c:numLit></c:val>
                     </c:ser>
@@ -743,6 +743,8 @@ internal static class PptxTests
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.HasLine == true, "Expected chart series line in the scene model.");
         TestAssert.Equal(new RgbColor(0, 51, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Color ?? default);
         TestAssert.Equal(3d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Line.Width ?? 0d);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Effects.HasEffectList == true, "Expected chart series effect-list provenance in the scene model.");
+        TestAssert.Equal("reflection", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Effects.UnsupportedEffectNames[0] ?? string.Empty);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.IsDefined == true, "Expected explicit chart marker ownership in the scene model.");
         TestAssert.Equal("diamond", slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.Symbol ?? string.Empty);
         TestAssert.Equal(PptxSceneChartMarkerSymbol.Diamond, slide.SlideNodes[4].Chart?.Plots[0].Series[0].Marker.SymbolKind);
@@ -755,6 +757,7 @@ internal static class PptxTests
         TestAssert.Equal(1, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Index ?? -1);
         TestAssert.Equal(new RgbColor(204, 136, 68), slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Fill.Color ?? default);
         TestAssert.Equal(new RgbColor(34, 68, 102), slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Line.Color ?? default);
+        TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Effects.HasEffectDag == true, "Expected chart point effectDag provenance in the scene model.");
         TestAssert.Equal(18d, slide.SlideNodes[4].Chart?.Plots[0].Series[0].PointStyles[0].Explosion ?? 0d);
         TestAssert.True(slide.SlideNodes[4].Chart?.Plots[0].Series[0].Smooth == true, "Expected chart series smooth flag in the scene model.");
         TestAssert.Equal("1", slide.SlideNodes[4].Chart?.Plots[0].Series[0].SmoothValue ?? string.Empty);
@@ -17484,6 +17487,86 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart effects should be diagnostic-covered from scene-owned chart effect provenance.");
+    }
+
+    public static void PptxUnsupportedEffectDiagnosticsUseSceneChartSeriesEffects()
+    {
+        IReadOnlyList<OoxPdfDiagnostic> diagnostics = ConvertSingleChartAndCollectDiagnostics("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:lineChart>
+                <c:ser>
+                  <c:spPr><a:effectLst><a:reflection/></a:effectLst></c:spPr>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:lineChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart series effects should be diagnostic-covered from scene-owned series effect provenance.");
+    }
+
+    public static void PptxUnsupportedEffectDiagnosticsUseSceneChartPointEffects()
+    {
+        IReadOnlyList<OoxPdfDiagnostic> diagnostics = ConvertSingleChartAndCollectDiagnostics("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea><c:barChart>
+                <c:ser>
+                  <c:dPt><c:idx val="0"/><c:spPr><a:effectDag/></c:spPr></c:dPt>
+                  <c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val>
+                </c:ser>
+              </c:barChart></c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart point effects should be diagnostic-covered from scene-owned point effect provenance.");
+    }
+
+    private static IReadOnlyList<OoxPdfDiagnostic> ConvertSingleChartAndCollectDiagnostics(string chartXml)
+    {
+        string contentTypes = BasicContentTypes().Replace(
+            "</Types>",
+            """
+              <Override PartName="/ppt/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/>
+            </Types>
+            """);
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = contentTypes,
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/_rels/slide1.xml.rels"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdChart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
+                </Relationships>
+                """,
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <p:cSld><p:spTree>
+                    <p:graphicFrame>
+                      <p:nvGraphicFramePr><p:cNvPr id="2" name="Chart"/><p:nvPr/></p:nvGraphicFramePr>
+                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2286000"/></p:xfrm>
+                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rIdChart"/></a:graphicData></a:graphic>
+                    </p:graphicFrame>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """,
+            ["ppt/charts/chart1.xml"] = chartXml
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+        return diagnostics;
     }
 
     private static PptxSceneChart? BuildSingleChartScene(string chartXml)

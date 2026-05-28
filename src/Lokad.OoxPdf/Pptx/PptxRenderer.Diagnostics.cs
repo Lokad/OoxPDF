@@ -248,7 +248,20 @@ internal sealed partial class PptxRenderer
             HasUnsupportedEffect(chart.Title.ShapeStyle) ||
             HasUnsupportedEffect(chart.Legend.ShapeStyle) ||
             chart.StylePart.Entries.Any(entry => HasUnsupportedEffect(entry.ShapeStyle)) ||
-            chart.Plots.Any(plot => HasUnsupportedEffect(plot.DataLabels));
+            chart.Plots.Any(HasUnsupportedEffect);
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChartPlot plot)
+    {
+        return HasUnsupportedEffect(plot.DataLabels) ||
+            plot.Series.Any(HasUnsupportedEffect);
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChartSeries series)
+    {
+        return HasUnsupportedEffect(series.Effects) ||
+            HasUnsupportedEffect(series.DataLabels) ||
+            series.PointStyles.Any(point => HasUnsupportedEffect(point.Effects));
     }
 
     private static bool HasUnsupportedEffect(PptxSceneChartDataLabels labels)
@@ -259,8 +272,13 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedEffect(PptxSceneChartShapeStyle style)
     {
-        return style.Effects.HasEffectDag ||
-            style.Effects.UnsupportedEffectNames?.Count > 0;
+        return HasUnsupportedEffect(style.Effects);
+    }
+
+    private static bool HasUnsupportedEffect(PptxSceneChartEffectFamily effects)
+    {
+        return effects.HasEffectDag ||
+            effects.UnsupportedEffectNames?.Count > 0;
     }
 
     private static bool IsUnsupportedCustomGeometry(XElement customGeometry)

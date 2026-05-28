@@ -1032,6 +1032,7 @@ internal sealed record PptxSceneChartSeries(
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
+    PptxSceneChartEffectFamily Effects,
     PptxSceneChartMarker Marker,
     IReadOnlyList<PptxSceneChartPointStyle> PointStyles,
     IReadOnlyList<string> RejectedPointStyleIndexValues,
@@ -1118,6 +1119,7 @@ internal sealed record PptxSceneChartPointStyle(
     PptxSceneFillStyle Fill,
     PptxScenePatternFill PatternFill,
     PptxSceneLineStyle Line,
+    PptxSceneChartEffectFamily Effects,
     double? Explosion,
     string ExplosionValue);
 
@@ -2681,6 +2683,7 @@ internal sealed class PptxSceneBuilder
             (int? yValuePointCount, string yValuePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "yVal");
             (int? bubbleSizePointCount, string bubbleSizePointCountValue) = ReadChartSeriesPointCountWithValue(seriesElement, "bubbleSize");
             (bool? smooth, string smoothValue) = ReadChartSeriesSmooth(seriesElement);
+            XElement? shapeProperties = seriesElement.Element(ChartNamespace + "spPr");
             series.Add(new PptxSceneChartSeries(
                 index,
                 indexValue,
@@ -2716,6 +2719,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartSeriesFill(seriesElement, theme, colorMap),
                 ReadChartSeriesPatternFill(seriesElement, theme, colorMap),
                 ReadChartSeriesLine(seriesElement, theme, colorMap),
+                ReadChartEffects(shapeProperties),
                 ReadChartMarker(seriesElement, theme, colorMap, plotKind, chartMarkersEnabled, seriesIndex),
                 ReadChartPointStyles(seriesElement, theme, colorMap),
                 ReadRejectedChartNonNegativeIndexValues(seriesElement, "dPt"),
@@ -2852,6 +2856,7 @@ internal sealed class PptxSceneBuilder
                 ReadChartPointFill(shapeProperties, theme, colorMap),
                 ReadChartPointPatternFill(shapeProperties, theme, colorMap),
                 ReadChartLine(shapeProperties, theme, colorMap),
+                ReadChartEffects(shapeProperties),
                 explosion,
                 explosionValue));
         }
