@@ -2961,6 +2961,7 @@ internal sealed partial class PptxRenderer
         var advanceEstimator = new TextAdvanceEstimator();
         bool allowWrapping = TextBodyAllowsWrapping(bodyProperties);
         bool attachSpacesToFollowingWord = HasNoAutoFit(bodyProperties);
+        bool useWindowsFontBoxForDefaultLineSpacing = bodyProperties.VerticalAnchorSource != PptxTextBodyPropertySource.TableCellStyle;
         bool hasEstimatedParagraph = false;
         foreach (PptxTextParagraphModel paragraph in paragraphs)
         {
@@ -2970,13 +2971,19 @@ internal sealed partial class PptxRenderer
             {
                 if (ParagraphHasLayoutContent(paragraph.Source))
                 {
+                    XElement? endRunProperties = paragraph.Source.Element(DrawingNamespace + "endParaRPr");
                     double emptyFontSize = ReadEndParagraphFontSize(paragraph, paragraphStyle.FontSize, bodyProperties.FontScale);
                     if (hasEstimatedParagraph)
                     {
                         height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcBef", emptyFontSize);
                     }
 
-                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, emptyFontSize, null, bold: false, italic: false, advanceEstimator);
+                    string? emptyTypeface = ReadTypeface(endRunProperties) ?? ReadTypeface(paragraphStyle.DefaultRunProperties);
+                    bool emptyBold = ParseOptionalBoolAttribute(endRunProperties, "b") ||
+                        (endRunProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(paragraphStyle.DefaultRunProperties, "b"));
+                    bool emptyItalic = ParseOptionalBoolAttribute(endRunProperties, "i") ||
+                        (endRunProperties?.Attribute("i") is null && ParseOptionalBoolAttribute(paragraphStyle.DefaultRunProperties, "i"));
+                    height += ReadEstimatedAnchorEmptyLineAdvance(lineSpacing, emptyFontSize, emptyTypeface, emptyBold, emptyItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
                     height += ReadParagraphSpacing(paragraph.Properties, paragraph.DefaultProperties, "spcAft", emptyFontSize);
                     hasEstimatedParagraph = true;
                 }
@@ -3002,7 +3009,7 @@ internal sealed partial class PptxRenderer
                 ResolvedRunTextStyle runStyle = flowRun.Style;
                 if (flowRun.Source.Kind == PptxTextRunKind.Break)
                 {
-                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
+                    height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
                     maxFontSize = 0d;
                     lineTypeface = null;
                     lineBold = false;
@@ -3033,7 +3040,7 @@ internal sealed partial class PptxRenderer
                         lineWidth > PptxTextMetricRules.TextStateTolerance &&
                         lineWidth + advance > textWidth)
                     {
-                        height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
+                        height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
                         maxFontSize = fontSize;
                         lineTypeface = runStyle.Typeface;
                         lineBold = runStyle.Bold;
@@ -3062,7 +3069,7 @@ internal sealed partial class PptxRenderer
 
             if (hasLineContent || maxFontSize > PptxTextMetricRules.TextStateTolerance)
             {
-                height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, advanceEstimator);
+                height += ReadEstimatedAnchorLineAdvance(lineSpacing, ResolveLineFontSize(maxFontSize, paragraphFontSize), lineTypeface, lineBold, lineItalic, useWindowsFontBoxForDefaultLineSpacing, advanceEstimator);
             }
 
             height += paragraphStyle.SpacingAfter;
@@ -3078,6 +3085,7 @@ internal sealed partial class PptxRenderer
         string? typeface,
         bool bold,
         bool italic,
+        bool useWindowsFontBoxForDefaultLineSpacing,
         TextAdvanceEstimator advanceEstimator)
     {
         if (lineSpacing.IsExplicit)
@@ -3091,7 +3099,9 @@ internal sealed partial class PptxRenderer
             return ReadLineAdvance(lineSpacing, fontSize);
         }
 
-        double metricUnits = font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
+        double metricUnits = useWindowsFontBoxForDefaultLineSpacing
+            ? font.Os2.WindowsAscender + font.Os2.WindowsDescender
+            : font.Os2.TypographicAscender - font.Os2.TypographicDescender + font.Os2.TypographicLineGap;
         double metricRatio = metricUnits / font.UnitsPerEm;
         if (metricRatio <= PptxTextMetricRules.MinimumFontLineBoxMetricRatio ||
             metricRatio > PptxTextMetricRules.MaximumFontLineBoxMetricRatio)
@@ -3100,6 +3110,39 @@ internal sealed partial class PptxRenderer
         }
 
         return fontSize * metricRatio;
+    }
+
+    private static double ReadEstimatedAnchorEmptyLineAdvance(
+        LineSpacing lineSpacing,
+        double fontSize,
+        string? typeface,
+        bool bold,
+        bool italic,
+        bool useWindowsFontBoxForDefaultLineSpacing,
+        TextAdvanceEstimator advanceEstimator)
+    {
+        double paragraphAdvance = ReadLineAdvance(lineSpacing, fontSize);
+        if (lineSpacing.IsExplicit || !useWindowsFontBoxForDefaultLineSpacing)
+        {
+            return paragraphAdvance;
+        }
+
+        OpenTypeFont? font = advanceEstimator.ResolveOpenTypeFont(typeface, bold, italic);
+        if (font is null || font.UnitsPerEm == 0)
+        {
+            return paragraphAdvance;
+        }
+
+        double metricUnits = font.Os2.WindowsAscender + font.Os2.WindowsDescender;
+        double metricRatio = metricUnits / font.UnitsPerEm;
+        if (metricRatio <= PptxTextMetricRules.MinimumFontLineBoxMetricRatio ||
+            metricRatio > PptxTextMetricRules.MaximumFontLineBoxMetricRatio)
+        {
+            return paragraphAdvance;
+        }
+
+        double fontBoxAdvance = fontSize * metricRatio;
+        return (paragraphAdvance + fontBoxAdvance) / 2d;
     }
 
 }

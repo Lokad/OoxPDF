@@ -220,6 +220,11 @@ internal sealed record PptxTextParagraphModelSnapshot(
     string Alignment,
     string? AlignmentValue,
     double FontSize,
+    double SpacingBefore,
+    double SpacingAfter,
+    double LineSpacingValue,
+    string LineSpacingKind,
+    bool LineSpacingUseNormalLineAdvance,
     double MarginLeft,
     double HangingIndent,
     IReadOnlyList<PptxTextRunModelSnapshot> Runs);

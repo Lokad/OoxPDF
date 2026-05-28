@@ -29,9 +29,185 @@ if (slideFilter is not null)
 }
 
 var records = new List<PptxGlyphRunRecord>();
+var frameRecords = new List<PptxTextFrameRecord>();
+var paragraphRecords = new List<PptxTextParagraphRecord>();
+var lineRecords = new List<PptxTextLineRecord>();
 foreach (PptxSlide slide in slides)
 {
     int slideNumber = slide.Index + 1;
+    IReadOnlyList<PptxTextFrameModelSnapshot> frameModels = PptxRenderer.InspectTextFrameModels(document, package, slide.Index);
+    for (int frameIndex = 0; frameIndex < frameModels.Count; frameIndex++)
+    {
+        PptxTextFrameModelSnapshot frame = frameModels[frameIndex];
+        frameRecords.Add(new PptxTextFrameRecord(
+            slideNumber,
+            frameIndex,
+            Round(frame.TextX),
+            Round(frame.TextWidth),
+            Round(frame.TextHeight),
+            Round(frame.VerticalOffset),
+            Round(frame.InsetLeft),
+            Round(frame.InsetRight),
+            Round(frame.InsetTop),
+            Round(frame.InsetBottom),
+            frame.InsetLeftValue,
+            frame.InsetRightValue,
+            frame.InsetTopValue,
+            frame.InsetBottomValue,
+            frame.InsetLeftSource,
+            frame.InsetRightSource,
+            frame.InsetTopSource,
+            frame.InsetBottomSource,
+            Round(frame.FontScale),
+            frame.FontScaleValue,
+            frame.FontScaleSource,
+            Round(frame.LineSpacingScale),
+            frame.LineSpacingReductionValue,
+            frame.LineSpacingScaleSource,
+            frame.CompatibleLineSpacing,
+            frame.CompatibleLineSpacingSource,
+            RoundNullable(frame.RotationDegrees),
+            frame.RotationValue,
+            frame.RotationDegreesSource,
+            frame.InheritedPlaceholderCount,
+            frame.HasInheritedTextBody,
+            frame.UsesInheritedShapeBounds,
+            frame.Orientation,
+            frame.OrientationValue,
+            frame.OrientationSource,
+            frame.VerticalAnchor,
+            frame.VerticalAnchorValue,
+            frame.VerticalAnchorSource,
+            frame.AnchorCenter,
+            frame.AnchorCenterValue,
+            frame.AnchorCenterSource,
+            frame.WrapMode,
+            frame.WrapValue,
+            frame.WrapSource,
+            frame.VerticalOverflow,
+            frame.VerticalOverflowValue,
+            frame.VerticalOverflowSource,
+            frame.ColumnCount,
+            Round(frame.ColumnSpacing),
+            frame.ColumnSource,
+            frame.ColumnCountSource,
+            frame.ColumnSpacingSource,
+            frame.ColumnCountValue,
+            frame.ColumnSpacingValue,
+            frame.AutofitModeValue,
+            frame.AutofitModeSource,
+            frame.Paragraphs.Count,
+            frame.Paragraphs.Sum(paragraph => paragraph.Runs.Count),
+            frame.Paragraphs.Sum(paragraph => paragraph.Runs.Sum(run => run.Text.Length))));
+        for (int paragraphIndex = 0; paragraphIndex < frame.Paragraphs.Count; paragraphIndex++)
+        {
+            PptxTextParagraphModelSnapshot paragraph = frame.Paragraphs[paragraphIndex];
+            paragraphRecords.Add(new PptxTextParagraphRecord(
+                slideNumber,
+                frameIndex,
+                paragraphIndex,
+                paragraph.Level,
+                paragraph.CascadeLevelName,
+                paragraph.ResolvedCascadeSourceCount,
+                paragraph.CascadeLayerNames,
+                paragraph.CascadeLayerKinds,
+                paragraph.ResolvedStyleSourceCount,
+                paragraph.ResolvedStyleLayerNames,
+                paragraph.ResolvedStyleLayerKinds,
+                paragraph.Alignment,
+                paragraph.AlignmentValue,
+                Round(paragraph.FontSize),
+                Round(paragraph.SpacingBefore),
+                Round(paragraph.SpacingAfter),
+                Round(paragraph.LineSpacingValue),
+                paragraph.LineSpacingKind,
+                paragraph.LineSpacingUseNormalLineAdvance,
+                Round(paragraph.MarginLeft),
+                Round(paragraph.HangingIndent),
+                paragraph.Runs.Count,
+                paragraph.Runs.Sum(run => run.Text.Length),
+                paragraph.Runs.Select((run, runIndex) => new PptxTextRunRecord(
+                    runIndex,
+                    run.Kind,
+                    includeText ? run.Text : null,
+                    run.Text.Length,
+                    run.ResolvedCascadeSourceCount,
+                    run.CascadeLayerNames,
+                    run.CascadeLayerKinds,
+                    Round(run.FontSize),
+                    Round(run.CharacterSpacing),
+                    run.Typeface,
+                    run.ColorSource,
+                    run.HasHyperlinkClick,
+                    run.HyperlinkClickId,
+                    run.Underline,
+                    run.UnderlineValue,
+                    run.Strike,
+                    run.StrikeValue,
+                    run.CapsValue,
+                    FormatColor(run.Highlight))).ToArray()));
+        }
+    }
+
+    PptxTextLayoutSnapshot textLayout = PptxRenderer.InspectTextLayout(document, package, slide.Index);
+    for (int frameIndex = 0; frameIndex < textLayout.Frames.Count; frameIndex++)
+    {
+        PptxTextFrameLayoutSnapshot frame = textLayout.Frames[frameIndex];
+        for (int paragraphIndex = 0; paragraphIndex < frame.Paragraphs.Count; paragraphIndex++)
+        {
+            PptxTextParagraphLayoutSnapshot paragraph = frame.Paragraphs[paragraphIndex];
+            for (int lineIndex = 0; lineIndex < paragraph.Lines.Count; lineIndex++)
+            {
+                PptxTextLineLayoutSnapshot line = paragraph.Lines[lineIndex];
+                lineRecords.Add(new PptxTextLineRecord(
+                    slideNumber,
+                    frameIndex,
+                    paragraphIndex,
+                    lineIndex,
+                    paragraph.Level,
+                    Round(line.TopY),
+                    Round(line.BaselineY),
+                    Round(line.Advance),
+                    Round(line.BaselineOffset),
+                    Round(line.MaxFontSize),
+                    line.LineSpacingKind,
+                    line.BaselineMetric.Source,
+                    line.BaselineMetric.Typeface,
+                    line.BaselineMetric.Bold,
+                    line.BaselineMetric.Italic,
+                    Round(line.BaselineMetric.FontSize),
+                    Round(line.BaselineMetric.Ratio),
+                    line.BaselineMetric.UnitsPerEm,
+                    line.BaselineMetric.WindowsAscender,
+                    line.BaselineMetric.WindowsDescender,
+                    line.BaselineMetric.TypographicAscender,
+                    line.BaselineMetric.TypographicDescender,
+                    line.BaselineMetric.TypographicLineGap,
+                    Round(line.StartX),
+                    Round(line.EndX),
+                    Round(line.NaturalEndX),
+                    line.Alignment,
+                    line.Spans.Count,
+                    line.Spans.Sum(span => span.Text.Length),
+                    line.Spans.Sum(span => span.GlyphSpan.GlyphCount),
+                    line.Spans.Select((span, spanIndex) => new PptxTextSpanRecord(
+                        spanIndex,
+                        includeText ? span.Text : null,
+                        span.Text.Length,
+                        Round(span.X),
+                        Round(span.Y),
+                        Round(span.Width),
+                        Round(span.FontSize),
+                        span.GlyphSpan.Typeface,
+                        Round(span.GlyphSpan.LeadingAdjustment),
+                        Round(span.GlyphSpan.NaturalWidth),
+                        Round(span.GlyphSpan.LayoutWidth),
+                        span.GlyphSpan.GlyphCount,
+                        Round(span.GlyphSpan.FirstAdjustmentAfterOrigin))).ToArray()));
+            }
+        }
+    }
+
     foreach (PptxTextGlyphRunSnapshot run in PptxRenderer.InspectTextGlyphRuns(document, package, slide.Index))
     {
         records.Add(new PptxGlyphRunRecord(
@@ -102,11 +278,20 @@ var options = new JsonSerializerOptions
 };
 string outputPath = Path.Combine(outputDirectory, "glyph-runs.json");
 File.WriteAllText(outputPath, JsonSerializer.Serialize(records, options), Encoding.UTF8);
+string frameOutputPath = Path.Combine(outputDirectory, "text-frame-models.json");
+File.WriteAllText(frameOutputPath, JsonSerializer.Serialize(frameRecords, options), Encoding.UTF8);
+string paragraphOutputPath = Path.Combine(outputDirectory, "text-paragraph-models.json");
+File.WriteAllText(paragraphOutputPath, JsonSerializer.Serialize(paragraphRecords, options), Encoding.UTF8);
+string lineOutputPath = Path.Combine(outputDirectory, "text-layout-lines.json");
+File.WriteAllText(lineOutputPath, JsonSerializer.Serialize(lineRecords, options), Encoding.UTF8);
 
 Console.WriteLine(FormattableString.Invariant($"PPTX: {inputPath}"));
 Console.WriteLine(FormattableString.Invariant($"Slides: {document.Slides.Count}"));
 Console.WriteLine(FormattableString.Invariant($"Glyph runs: {records.Count}"));
 Console.WriteLine(FormattableString.Invariant($"Output: {outputPath}"));
+Console.WriteLine(FormattableString.Invariant($"Frame output: {frameOutputPath}"));
+Console.WriteLine(FormattableString.Invariant($"Paragraph output: {paragraphOutputPath}"));
+Console.WriteLine(FormattableString.Invariant($"Layout output: {lineOutputPath}"));
 
 return 0;
 
@@ -209,5 +394,161 @@ internal sealed record PptxGlyphRunRecord(
     double LineMaxFontSize,
     double LayoutFontSize,
     double PdfFontSize,
+    int GlyphCount,
+    double FirstAdjustmentAfterOrigin);
+
+internal sealed record PptxTextFrameRecord(
+    int Slide,
+    int FrameIndex,
+    double TextX,
+    double TextWidth,
+    double TextHeight,
+    double VerticalOffset,
+    double InsetLeft,
+    double InsetRight,
+    double InsetTop,
+    double InsetBottom,
+    string? InsetLeftValue,
+    string? InsetRightValue,
+    string? InsetTopValue,
+    string? InsetBottomValue,
+    string InsetLeftSource,
+    string InsetRightSource,
+    string InsetTopSource,
+    string InsetBottomSource,
+    double FontScale,
+    string? FontScaleValue,
+    string FontScaleSource,
+    double LineSpacingScale,
+    string? LineSpacingReductionValue,
+    string LineSpacingScaleSource,
+    bool CompatibleLineSpacing,
+    string CompatibleLineSpacingSource,
+    double? RotationDegrees,
+    string? RotationValue,
+    string RotationDegreesSource,
+    int InheritedPlaceholderCount,
+    bool HasInheritedTextBody,
+    bool UsesInheritedShapeBounds,
+    string Orientation,
+    string? OrientationValue,
+    string OrientationSource,
+    string VerticalAnchor,
+    string? VerticalAnchorValue,
+    string VerticalAnchorSource,
+    bool? AnchorCenter,
+    string? AnchorCenterValue,
+    string AnchorCenterSource,
+    string WrapMode,
+    string? WrapValue,
+    string WrapSource,
+    string VerticalOverflow,
+    string? VerticalOverflowValue,
+    string VerticalOverflowSource,
+    int ColumnCount,
+    double ColumnSpacing,
+    string ColumnSource,
+    string ColumnCountSource,
+    string ColumnSpacingSource,
+    string? ColumnCountValue,
+    string? ColumnSpacingValue,
+    string AutofitModeValue,
+    string AutofitModeSource,
+    int ParagraphCount,
+    int RunCount,
+    int TextLength);
+
+internal sealed record PptxTextParagraphRecord(
+    int Slide,
+    int FrameIndex,
+    int ParagraphIndex,
+    int Level,
+    string CascadeLevelName,
+    int ResolvedCascadeSourceCount,
+    IReadOnlyList<string> CascadeLayerNames,
+    IReadOnlyList<string> CascadeLayerKinds,
+    int ResolvedStyleSourceCount,
+    IReadOnlyList<string> ResolvedStyleLayerNames,
+    IReadOnlyList<string> ResolvedStyleLayerKinds,
+    string Alignment,
+    string? AlignmentValue,
+    double FontSize,
+    double SpacingBefore,
+    double SpacingAfter,
+    double LineSpacingValue,
+    string LineSpacingKind,
+    bool LineSpacingUseNormalLineAdvance,
+    double MarginLeft,
+    double HangingIndent,
+    int RunCount,
+    int TextLength,
+    IReadOnlyList<PptxTextRunRecord> Runs);
+
+internal sealed record PptxTextRunRecord(
+    int RunIndex,
+    string Kind,
+    string? Text,
+    int TextLength,
+    int ResolvedCascadeSourceCount,
+    IReadOnlyList<string> CascadeLayerNames,
+    IReadOnlyList<string> CascadeLayerKinds,
+    double FontSize,
+    double CharacterSpacing,
+    string? Typeface,
+    string ColorSource,
+    bool HasHyperlinkClick,
+    string? HyperlinkClickId,
+    bool Underline,
+    string? UnderlineValue,
+    bool Strike,
+    string? StrikeValue,
+    string? CapsValue,
+    string? HighlightColor);
+
+internal sealed record PptxTextLineRecord(
+    int Slide,
+    int FrameIndex,
+    int ParagraphIndex,
+    int LineIndex,
+    int Level,
+    double TopY,
+    double BaselineY,
+    double Advance,
+    double BaselineOffset,
+    double MaxFontSize,
+    string LineSpacingKind,
+    string BaselineMetricSource,
+    string? BaselineMetricTypeface,
+    bool BaselineMetricBold,
+    bool BaselineMetricItalic,
+    double BaselineMetricFontSize,
+    double BaselineMetricRatio,
+    int BaselineMetricUnitsPerEm,
+    int BaselineMetricWindowsAscender,
+    int BaselineMetricWindowsDescender,
+    int BaselineMetricTypographicAscender,
+    int BaselineMetricTypographicDescender,
+    int BaselineMetricTypographicLineGap,
+    double StartX,
+    double EndX,
+    double NaturalEndX,
+    string Alignment,
+    int SpanCount,
+    int TextLength,
+    int GlyphCount,
+    IReadOnlyList<PptxTextSpanRecord> Spans);
+
+internal sealed record PptxTextSpanRecord(
+    int SpanIndex,
+    string? Text,
+    int TextLength,
+    double X,
+    double Y,
+    double Width,
+    double FontSize,
+    string? Typeface,
+    double LeadingAdjustment,
+    double NaturalWidth,
+    double LayoutWidth,
     int GlyphCount,
     double FirstAdjustmentAfterOrigin);

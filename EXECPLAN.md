@@ -3921,6 +3921,26 @@ High-priority actions:
 
 ## Progress
 
+- [x] 2026-05-28: Extended the private-safe PPTX text inspector from glyph runs alone to the resolved text
+  frame model, paragraph model, and line layout model. `tools/Lokad.OoxPdf.PptxInspect` now writes
+  `text-frame-models.json`, `text-paragraph-models.json`, and `text-layout-lines.json` beside
+  `glyph-runs.json`; the new files preserve body-property sources, spacing sources, line-box metrics,
+  span widths, and glyph counts while omitting text unless `--include-text` is explicitly supplied. This
+  closes the schema blind spot found while investigating the private slide-17 typography path: future private
+  evidence can distinguish frame anchoring, paragraph spacing, line metrics, and glyph segmentation without
+  copying private strings into the repository.
+- [x] 2026-05-28: Replaced the visible-line middle-anchor height estimate with an Office-PDF-backed font-box
+  rule. Public COM-authored probes show Office centers visible default-line-spacing text using the resolved
+  font's OS/2 Windows ascender plus descender line box rather than the CSS-like 1.2x fallback or the
+  OpenType typographic ascender/descender/line-gap box. `EstimateTextHeight` now resolves the run font and
+  uses that Windows font box for visible lines; a synthetic Arial regression locks the rule in the public
+  test suite. A trailing empty paragraph still has a small residual, so the current empty-paragraph midpoint
+  rule is documented as temporary evidence rather than a final Office formula.
+- [ ] 2026-05-28: Continue the slide-17 typography path at the glyph-advance/segmentation layer. The private
+  affected middle-anchored frame is now vertically close to Office, but the rightmost text segment still shows
+  a PDF text-operation length and X-position difference. Treat that as a generic glyph grouping/advance issue:
+  build a public Office-authored synthetic fixture that isolates emphasized trailing runs and line-end
+  segmentation before changing the renderer again.
 - [x] 2026-05-27: Retired the renderer-local PPTX background XML fallback. `RenderBackground` now consumes the
   scene-owned `PptxSceneBackground` record for master, layout, and slide backgrounds, preserving default white
   slide fallback while keeping unsupported background forms as scene/model debt rather than renderer-side XML
@@ -4644,6 +4664,20 @@ High-priority actions:
 Private evidence is intentionally anonymized. Do not copy private text, screenshots, filenames, or
 document-specific business content into public notes.
 
+- Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260528-141612` after the text-height
+  estimator and schema-inspection pass:
+  - 84/84 pages compared with zero dimension mismatches.
+  - Mean absolute error: `6.731583`; max mean absolute error: `15.165670`; mean changed-pixel ratio at
+    threshold 16: `0.093688`.
+  - Diagnostics remain limited to one `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
+  - Private-safe inspection of the affected middle-anchored text frame found 3 paragraphs, 4 runs, and
+    40 text code units. The frame model reported `TextHeight=347.862047`, `VerticalOffset=141.516766`,
+    and line baselines at `296.748162` and `275.148162` using OS/2 `usWinAscent` metrics. Compared with
+    Office PDF text operations on the same page, the vertical text drift is now about `0.35 pt`, down from
+    roughly `2.09 pt` before the font-box rule.
+  - The remaining local mismatch is no longer the frame vertical anchor: the rightmost same-line text segment
+    still differs by about `3.63 pt` horizontally and by decoded text-operation length. This is recorded as a
+    generic glyph advance/segmentation follow-up, not as private-content tuning.
 - Private PPTX rerun `artifacts/private-visual/lokad-value-based/20260527-223838` after the chart enum/fallback
   boundary cleanups:
   - 84/84 pages compared with zero dimension mismatches.
@@ -5203,6 +5237,16 @@ document-specific business content into public notes.
 
 - [ ] Text layout: preserve spaces, tabs, line breaks, soft line breaks, kerning-like advances, font
   fallback, mixed run spacing, character spacing, superscript/subscript, and baseline offsets.
+- [ ] Text layout: replace the temporary default-spacing empty-paragraph middle-anchor estimate with a
+  structural Office rule. Public Office probes show visible lines use the resolved OS/2 Windows font box,
+  while a trailing empty paragraph sits between the normal paragraph advance and the same font box. The
+  current midpoint is an evidence-preserving approximation only; collect more public probes across fonts,
+  `endParaRPr`, explicit `lnSpc`, and empty-paragraph counts before promoting a final rule.
+- [ ] Text layout: isolate emphasized trailing-run segmentation and glyph-advance differences with a public
+  synthetic Office fixture. Private evidence shows the affected frame is now vertically aligned, but a final
+  same-line segment still differs in PDF text-operation length and horizontal start. Do not solve this with a
+  private string or a hand-listed punctuation/run exception; derive the rule from public text matrices,
+  decoded operations, and glyph-span widths.
 - [ ] Text frames: overflow behavior beyond hard clipping, autofit, shrink-to-fit, multi-column text, text
   rotation, and text inside arbitrary shapes.
 - [ ] Fonts: select bold/italic faces instead of drawing approximations; support fallback fonts, embedded
@@ -6262,6 +6306,24 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Surprises & Discoveries
 
+- Observation: Public COM-authored middle-anchor probes split visible and empty paragraph behavior.
+  Evidence: A two-line Arial 18 pt text box with no trailing empty paragraph matches Office within about
+  `0.05 pt` when the estimator uses OS/2 Windows ascender plus descender. The same probe with a trailing
+  empty paragraph overshoots if the empty line uses the full font box and underfits if it uses normal
+  paragraph advance, leaving a small residual midpoint behavior that still needs a broader public probe
+  family.
+- Observation: The private slide-17 issue has moved from vertical frame placement to right-edge glyph
+  segmentation/advance.
+  Evidence: The affected private frame now emits the two visible baselines within about `0.35 pt` of Office,
+  while the final same-line segment remains horizontally offset and carries a different PDF text-operation
+  length. That means more vertical-anchor tuning would be the wrong long-term move.
+- Observation: Shape text frames and table-cell text frames currently need distinct default-spacing font-box
+  metrics for middle anchoring.
+  Evidence: Applying the new OS/2 Windows font-box rule globally broke public table-cell anchoring tests.
+  Restoring the existing typographic font-box path for table-cell anchors kept `pptx-tables` green while the
+  new shape-text font-box regression remained green. This is an explicit surface distinction until public
+  Office table probes justify a common rule.
+
 - Observation: The dependency-free console test runner does not support a `--filter` option even though it
   supports capability groups and slow-test switches.
   Evidence: Running `dotnet run --project tests\Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --filter
@@ -6490,6 +6552,30 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Decision Log
 
+- Decision: Use resolved OS/2 Windows ascender plus descender as the Office-aligned visible-line height for
+  middle-anchor estimation under default line spacing.
+  Rationale: Public Office PDF probes match this structural font-table rule closely, and the same font-box
+  metrics are already observable through the text layout model. This avoids another private-deck coordinate
+  adjustment and keeps anchoring tied to resolved font state.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Keep the empty-paragraph middle-anchor rule explicitly temporary and evidence-bounded.
+  Rationale: Public trailing-empty probes do not yet justify a clean Office formula; using a named compromise
+  is better than baking a narrow private-slide adjustment into the renderer. The backlog now requires a
+  public probe matrix before this can be considered complete.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Keep table-cell vertical anchoring on the prior typographic font-box metric while shape text uses
+  the new OS/2 Windows font-box metric for visible default-spaced lines.
+  Rationale: The public Office probe that motivated the Windows font-box rule covered shape text frames, not
+  table cells. Existing table-cell tests encode separate evidence and failed when the new rule was applied
+  globally, so the shared estimator now makes the surface distinction explicit instead of silently changing
+  table-cell behavior.
+  Date/Author: 2026-05-28 / Codex.
+- Decision: Extend `PptxInspect` with frame/paragraph/layout schemas instead of overloading glyph-run JSON.
+  Rationale: The slide-17 investigation needed frame bodyPr sources, paragraph spacing, line-box metrics, and
+  glyph counts together. Separate private-safe schema files keep those layers inspectable without exposing
+  private text by default and without weakening the existing glyph-run contract.
+  Date/Author: 2026-05-28 / Codex.
+
 - Decision: Remove renderer-local XML fallback once the scene already owns an equivalent typed record.
   Rationale: The scene builder and renderer background fallback used the same solid-color-and-alpha resolver.
   Keeping both paths lets incomplete scene records be silently repaired during PDF emission, which works
@@ -6660,6 +6746,12 @@ Office-PDF-inspected, visually gated when close, and free of private content.
 
 ## Outcomes & Retrospective
 
+- 2026-05-28: The middle-anchor slice produced a structural improvement rather than a private coordinate
+  patch. Visible default-spaced text now uses resolved font-table metrics for anchoring, the private-safe
+  inspector exposes the model layers needed to audit schema issues, and the affected private frame is
+  vertically close to Office. The remaining gap is deliberately narrower: explain trailing empty-paragraph
+  height and same-line emphasized-run glyph segmentation from public Office PDF structure.
+
 - The project is past the initial vertical slice: the library, CLI, console tests, public visual validation,
   private-case validation, PDF inspection, and package output are all in place. Current work is fidelity and
   architecture, not bootstrapping.
@@ -6736,7 +6828,23 @@ dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj --tl:off --nologo -v minimal --
 Current expected test result:
 
 ```text
-226 passed, 0 failed, 7 skipped with --skip-slow
+369 passed, 0 failed, 7 skipped with --skip-slow
+```
+
+Latest PPTX text-frame model and middle-anchor validation:
+
+```text
+dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal: passed.
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-model --skip-slow:
+14 passed, 0 failed, 1 skipped.
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-typography --skip-slow:
+94 passed, 0 failed, 2 skipped.
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --group pptx-tables --skip-slow:
+9 passed, 0 failed, 0 skipped.
+dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow:
+369 passed, 0 failed, 7 skipped.
+Private run lokad-value-based / 20260528-141612: 84/84 compared pages, 0 dimension mismatches,
+deck MAE 6.731583, changed16 0.093688, only PPTX_UNSUPPORTED_IMAGE_RECOLOR.
 ```
 
 Latest public bubble-chart validation:
@@ -12458,6 +12566,23 @@ Office-observed PDF structure instead of from broad ratios in `PptxChartMetricRu
 
 Validation: focused non-slow `pptx-charts` passed with `83` tests, `0` failures, and `0` skips; full
 non-slow console runner passed with `318` tests, `0` failures, and `7` slow skips.
+
+Revision note, 2026-05-28: Extended the private-safe PPTX text inspection schema with resolved frame,
+paragraph, and line-layout JSON while keeping text omitted by default. Middle-anchored shape text with
+default line spacing now estimates visible lines from the resolved font's OS/2 Windows ascender plus
+descender, matching public Office probes for non-table text frames. Table-cell anchoring deliberately keeps
+the prior typographic font-box metric because the table-cell public tests encode a different surface rule and
+failed when the new shape-text rule was applied globally. Private-safe evidence from the affected middle-
+anchored frame now shows the vertical text drift reduced to about `0.35 pt`; the remaining private gap is a
+right-edge glyph advance/segmentation mismatch that must be isolated with public Office fixtures before any
+renderer change.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `14` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `94` tests, `0` failures, and `2` slow skips; focused non-slow `pptx-tables` passed with `9`
+tests, `0` failures, and `0` skips; full non-slow console runner passed with `369` tests, `0` failures, and
+`7` slow skips. Private run `20260528-141612` compared 84/84 pages with zero dimension mismatches, deck MAE
+`6.731583`, changed16 `0.093688`, and only `PPTX_UNSUPPORTED_IMAGE_RECOLOR`.
 
 Revision note, 2026-05-28: PPTX inherited placeholder text-body properties now merge across the full
 placeholder chain instead of using only the nearest inherited placeholder `txBody`. `BuildEffectiveInheritedTextBody`

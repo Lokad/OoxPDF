@@ -97,6 +97,11 @@ internal sealed partial class PptxRenderer
             paragraph.Style.Alignment.ToString(),
             paragraph.Style.AlignmentValue,
             paragraph.Style.FontSize,
+            paragraph.Style.SpacingBefore,
+            paragraph.Style.SpacingAfter,
+            paragraph.Style.LineSpacing.Value,
+            paragraph.Style.LineSpacing.IsAbsolute ? "Absolute" : paragraph.Style.LineSpacing.IsExplicit ? "Multiple" : "Default",
+            paragraph.Style.LineSpacing.UseNormalLineAdvance,
             paragraph.Style.Indent.MarginLeft,
             paragraph.Style.Indent.Hanging,
             paragraph.Runs.Select(ToSnapshot).ToArray());
