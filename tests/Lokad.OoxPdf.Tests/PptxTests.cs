@@ -7832,7 +7832,7 @@ internal static class PptxTests
                     <p:xfrm><a:off x="914400" y="0"/><a:ext cx="914400" cy="914400"/></p:xfrm>
                     <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">
                       <a:tbl>
-                        <a:tblPr/>
+                        <a:tblPr firstRow="1"><a:tableStyleId>{9D7B26C5-4107-4FEC-AEDC-1716B250A1EF}</a:tableStyleId></a:tblPr>
                         <a:tblGrid><a:gridCol w="914400"/></a:tblGrid>
                         <a:tr h="914400"><a:tc><a:txBody><a:bodyPr/><a:lstStyle/><a:p/></a:txBody><a:tcPr><a:solidFill><a:schemeClr val="bg1"/></a:solidFill><a:lnL><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:lnL></a:tcPr></a:tc></a:tr>
                       </a:tbl>
@@ -7986,6 +7986,8 @@ internal static class PptxTests
         PptxSceneTableCell cell = scene.Slides[0].SlideNodes[1].Table!.Rows[0].Cells[0];
         TestAssert.Equal(new RgbColor(17, 34, 51), cell.Fill.Color);
         TestAssert.Equal(new RgbColor(68, 85, 102), cell.Borders.Left.Line.Color);
+        TestAssert.Equal(new RgbColor(68, 85, 102), cell.StyleFill.Color);
+        TestAssert.Equal(new RgbColor(255, 255, 255), cell.StyleText.Color ?? default);
         PptxSceneImageRecolor recolor = scene.Slides[0].SlideNodes[2].Picture!.Recolor;
         TestAssert.Equal(new RgbColor(17, 34, 51), recolor.Dark);
         TestAssert.Equal(new RgbColor(68, 85, 102), recolor.Light);

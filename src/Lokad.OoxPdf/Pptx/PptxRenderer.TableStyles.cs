@@ -4,9 +4,14 @@ internal static class PptxTableStyleResolver
 {
     public static PptxSceneFillStyle ReadCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
     {
+        return ReadCellFill(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, PptxColorMap.Default);
+    }
+
+    public static PptxSceneFillStyle ReadCellFill(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, PptxColorMap colorMap)
+    {
         double alpha = 1d;
         if (!tableStyle.IsSupported ||
-            !theme.TryResolveColor(tableStyle.Accent, out RgbColor accent))
+            !theme.TryResolveColor(tableStyle.Accent, colorMap, out RgbColor accent))
         {
             return default;
         }
@@ -30,7 +35,7 @@ internal static class PptxTableStyleResolver
 
         if (string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal))
         {
-            if (tableStyle.FirstRow && rowIndex == 0 && theme.TryResolveColor("dk1", out RgbColor dark))
+            if (tableStyle.FirstRow && rowIndex == 0 && theme.TryResolveColor("dk1", colorMap, out RgbColor dark))
             {
                 return new PptxSceneFillStyle(true, dark, alpha);
             }
@@ -88,6 +93,11 @@ internal static class PptxTableStyleResolver
 
     public static PptxSceneTableCellTextStyle ReadCellTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme)
     {
+        return ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme, PptxColorMap.Default);
+    }
+
+    public static PptxSceneTableCellTextStyle ReadCellTextStyle(PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount, PptxTheme theme, PptxColorMap colorMap)
+    {
         bool bold = false;
         RgbColor? color = null;
         bool supportedStyle = tableStyle.IsSupported &&
@@ -103,7 +113,7 @@ internal static class PptxTableStyleResolver
             columnIndex == columnCount - 1;
         if (supportedStyle &&
             firstRow &&
-            theme.TryResolveColor("lt1", out RgbColor firstRowColor))
+            theme.TryResolveColor("lt1", colorMap, out RgbColor firstRowColor))
         {
             color = firstRowColor;
             bold = true;
@@ -115,7 +125,7 @@ internal static class PptxTableStyleResolver
             if ((string.Equals(tableStyle.Name, "Medium-Style-2", StringComparison.Ordinal) ||
                     string.Equals(tableStyle.Name, "Dark-Style-1", StringComparison.Ordinal)) &&
                 (lastRow || lastCol) &&
-                theme.TryResolveColor("lt1", out RgbColor conditionalColor))
+                theme.TryResolveColor("lt1", colorMap, out RgbColor conditionalColor))
             {
                 color = conditionalColor;
             }

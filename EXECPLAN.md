@@ -3907,6 +3907,16 @@ High-priority actions:
   `pptx-charts` passed (`136 passed, 0 failed, 0 skipped`); focused non-slow `pptx-model` passed
   (`25 passed, 0 failed, 1 skipped`); full non-slow console runner passed
   (`409 passed, 0 failed, 7 skipped`).
+  2026-05-28 progress: built-in table-style fill accents now resolve through the table source
+  `PptxColorMap` instead of the default alias map. The color-map scene regression now gives the table a
+  supported built-in style whose accent is `tx1` and asserts that the resolved style fill follows the slide
+  override to `accent6`; it also locks the current first-row text style color as a direct `lt1` theme slot
+  rather than treating that absolute scheme component as a remapped placeholder alias. Keep this item open for
+  direct renderer-only color paths, inherited placeholder style maps, and chart-style/color-style cascade
+  ordering. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+  `pptx-model` passed (`25 passed, 0 failed, 1 skipped`); focused non-slow `pptx-tables` passed
+  (`10 passed, 0 failed, 0 skipped`); focused non-slow `pptx-charts` passed
+  (`136 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
