@@ -1141,6 +1141,7 @@ internal sealed partial class PptxRenderer
         public const double CategoryAxisHorizontalBaselineRatio = 0.217d;
         public const double CategoryAxisVerticalWidthFactor = 1.35d;
         public const double CategoryAxisVerticalTopOffsetFactor = 1.18d;
+        public const double CategoryAxisVerticalTopSideOffsetFactor = 0.70d;
         public const double CategoryAxisMajorTickLength = 4d;
         public const double AxisLabelClipTopOffsetFactor = 0.25d;
         public const double AxisLabelClipHeightFactor = 1.6d;
@@ -1164,7 +1165,14 @@ internal sealed partial class PptxRenderer
         public const double TitleWidthRatio = 0.84d;
         public const double TitleHeightFactor = 1.4d;
         public const double DefaultAxisTitleBandBaselineRatio = 0.23d;
-        public const double DefaultAxisTitleSideBaselineRatio = 0.25d;
+        public const double DefaultAxisTitleSideBaselineRatio = 0.28d;
+        public const double DefaultAxisTitleTopBandBaselineRatio = 0.485d;
+        public const double DefaultAxisTitleLeftSideBaselineRatio = 0.50d;
+        public const double DefaultAxisTitleRightSideBaselineRatio = 0.67d;
+        public const double DefaultAxisTitlePlotSideReserveRatio = 0.089d;
+        public const double DefaultAxisTitlePlotOppositeSideReserveRatio = 0.020d;
+        public const double DefaultAxisTitlePlotBandReserveRatio = 0.126d;
+        public const double DefaultAxisTitlePlotOppositeBandReserveRatio = 0.030d;
         public const double LegendLineHeightFactor = 1.45d;
         public const double LegendSideStrokeLineHeightFactor = 1.5433333333333332d;
         public const double LegendMarkerSizeFactor = 0.55d;

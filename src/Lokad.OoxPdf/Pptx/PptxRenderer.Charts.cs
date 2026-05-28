@@ -1271,7 +1271,7 @@ internal sealed partial class PptxRenderer
                     double? categoryLabelAxisY = horizontalBars
                         ? null
                         : ChartValueToPlotCoordinate(valueExtents, valueAxisOptions.CrossingValue, plotBox.Y, plotBox.Height, valueAxisOptions.Reversed);
-                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis)));
+                    fonts.AddRange(RenderChartCategoryLabels(document, theme, graphics, plotBox, chartXml, sceneChart, categoryAxis.SceneAxis, categoryAxis.XmlAxis, ReadSceneOrXmlCategoryLabelVector(barPlot, barChart, workbook, plotVisibleOnly), horizontalBars, categoryLabelAxisY, categoryLabelsOnTickMarks: ResolveSceneOrXmlCategoryAxisLabelsOnTickMarks(valueSceneAxis, valueAxis), categoryLabelsTopSide: ResolveSceneOrXmlCategoryAxisTopSide(categoryAxis.SceneAxis, categoryAxis.XmlAxis, defaultTopSide: false)));
                 }
 
                 if (axesStyle.ValueAxisVisible)
@@ -4583,7 +4583,7 @@ internal sealed partial class PptxRenderer
         if (positionKind == PptxSceneChartAxisPosition.Top)
         {
             double topReserve = Math.Max(0d, frame.Y + frame.Height - plotBox.Y - plotBox.Height);
-            baselineY = plotBox.Y + plotBox.Height + topReserve * PptxChartMetricRules.DefaultAxisTitleBandBaselineRatio;
+            baselineY = plotBox.Y + plotBox.Height + topReserve * PptxChartMetricRules.DefaultAxisTitleTopBandBaselineRatio;
             boxY = Math.Max(plotBox.Y + plotBox.Height, baselineY - titleHeight);
         }
         else
@@ -4631,10 +4631,14 @@ internal sealed partial class PptxRenderer
         double sideReserve = rightSide
             ? Math.Max(0d, frame.X + frame.Width - plotBox.X - plotBox.Width)
             : Math.Max(0d, plotBox.X - frame.X);
+        double sideBaselineRatio = rightSide
+            ? PptxChartMetricRules.DefaultAxisTitleRightSideBaselineRatio
+            : PptxChartMetricRules.DefaultAxisTitleLeftSideBaselineRatio;
         double baselineX = rightSide
-            ? plotBox.X + plotBox.Width + sideReserve * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio
-            : frame.X + sideReserve * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio;
-        double baselineY = plotBox.Y + plotBox.Height / 2d - textWidth / 2d;
+            ? plotBox.X + plotBox.Width + sideReserve * sideBaselineRatio
+            : frame.X + sideReserve * sideBaselineRatio;
+        double baselineY = plotBox.Y + plotBox.Height / 2d
+            - textWidth * PptxChartMetricRules.DefaultAxisTitleSideBaselineRatio;
         double boxX = Math.Max(frame.X, Math.Min(frame.X + frame.Width - titleHeight, baselineX - titleHeight * 0.5d));
         double boxY = Math.Max(frame.Y, Math.Min(frame.Y + frame.Height - textWidth, baselineY));
         RenderChartShapeStyle(graphics, boxX, boxY, titleHeight, textWidth, shapeStyle);
@@ -4653,7 +4657,7 @@ internal sealed partial class PptxRenderer
             frame.Height,
             style,
             TextAlignment.Left);
-        double rotation = rightSide ? 90d : -90d;
+        double rotation = -90d;
         for (int i = 0; i < runs.Count; i++)
         {
             TextRun run = runs[i];
@@ -4719,6 +4723,47 @@ internal sealed partial class PptxRenderer
             : plotArea.Elements()
                 .Where(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Ax", StringComparison.Ordinal))
                 .ToArray();
+    }
+
+    private static ChartAxisTitleReserveSides ReadSceneOrXmlDefaultAxisTitleReserveSides(PptxSceneChart? sceneChart, XDocument chartXml)
+    {
+        var reserveSides = new ChartAxisTitleReserveSides();
+        if (sceneChart is not null)
+        {
+            foreach (PptxSceneChartAxis axis in sceneChart.Axes)
+            {
+                if (axis.IsDeleted == true ||
+                    string.IsNullOrWhiteSpace(axis.Title.Text) ||
+                    axis.Title.Layout.HasLayout ||
+                    !IsRenderableDefaultChartAxisTitle(axis.AxisKind, axis.PositionKind))
+                {
+                    continue;
+                }
+
+                reserveSides = reserveSides.With(axis.PositionKind);
+            }
+
+            return reserveSides;
+        }
+
+        foreach (XElement axis in ReadChartAxisElements(chartXml))
+        {
+            XElement? title = axis.Element(ChartNamespace + "title");
+            string? text = ReadChartText(title?.Element(ChartNamespace + "tx"));
+            PptxSceneChartAxisKind axisKind = PptxSceneBuilder.ParseChartAxisKind(axis.Name.LocalName);
+            PptxSceneChartAxisPosition positionKind = PptxSceneBuilder.ParseChartAxisPosition((string?)axis.Element(ChartNamespace + "axPos")?.Attribute("val"));
+            if (title is null ||
+                string.IsNullOrWhiteSpace(text) ||
+                ReadManualLayout(title).HasLayout ||
+                !IsRenderableDefaultChartAxisTitle(axisKind, positionKind))
+            {
+                continue;
+            }
+
+            reserveSides = reserveSides.With(positionKind);
+        }
+
+        return reserveSides;
     }
 
     private static bool HasSceneOrXmlPolarChart(PptxSceneChart? sceneChart, XDocument chartXml)
@@ -6859,7 +6904,7 @@ internal sealed partial class PptxRenderer
         return string.IsNullOrEmpty(options.Separator) ? ", " : options.Separator;
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null, bool categoryLabelsOnTickMarks = false)
+    private static IReadOnlyList<PdfFontResource> RenderChartCategoryLabels(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ChartPlotBox plotBox, XDocument chartXml, PptxSceneChart? sceneChart, PptxSceneChartAxis? sceneAxis, XElement? categoryAxis, ChartIndexedTextVector labelVector, bool horizontalBars, double? verticalAxisY = null, bool categoryLabelsOnTickMarks = false, bool categoryLabelsTopSide = false)
     {
         IReadOnlyList<ChartIndexedTextPoint?> labels = labelVector.DensePoints();
         if (labels.Count == 0)
@@ -6908,7 +6953,9 @@ internal sealed partial class PptxRenderer
                     : plotBox.X + slotWidth * (i + 0.5d);
                 x = labelCenterX - width / 2d;
                 double axisY = verticalAxisY ?? plotBox.Y;
-                y = axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
+                y = categoryLabelsTopSide
+                    ? axisY + height * PptxChartMetricRules.CategoryAxisVerticalTopSideOffsetFactor * labelOffsetScale
+                    : axisY - height * PptxChartMetricRules.CategoryAxisVerticalTopOffsetFactor * labelOffsetScale;
                 alignment = TextAlignment.Center;
             }
 
@@ -7887,6 +7934,27 @@ internal sealed partial class PptxRenderer
         };
     }
 
+    private static bool ResolveSceneOrXmlCategoryAxisTopSide(PptxSceneChartAxis? sceneAxis, XElement? axis, bool defaultTopSide)
+    {
+        if (sceneAxis is not null)
+        {
+            return sceneAxis.PositionKind switch
+            {
+                PptxSceneChartAxisPosition.Top => true,
+                PptxSceneChartAxisPosition.Bottom => false,
+                _ => defaultTopSide
+            };
+        }
+
+        string? position = (string?)axis?.Element(ChartNamespace + "axPos")?.Attribute("val");
+        return PptxSceneBuilder.ParseChartAxisPosition(position) switch
+        {
+            PptxSceneChartAxisPosition.Top => true,
+            PptxSceneChartAxisPosition.Bottom => false,
+            _ => defaultTopSide
+        };
+    }
+
     private static bool IsChartAxisDeleted(XElement? axis)
     {
         XElement? delete = axis?.Element(ChartNamespace + "delete");
@@ -8278,6 +8346,7 @@ internal sealed partial class PptxRenderer
 
         defaultPlotBox = AdjustBarChartPlotBoxForVisibleValueAxes(theme, defaultPlotBox, frame, chartXml, sceneChart, horizontalBars);
         defaultPlotBox = AdjustBarChartPlotBoxForStackedValueAxisLabels(theme, defaultPlotBox, frame, chartXml, sceneChart, barPlot, barChart, barOptions);
+        defaultPlotBox = AdjustBarChartPlotBoxForDefaultAxisTitles(defaultPlotBox, frame, chartXml, sceneChart, horizontalBars, hasTitle, hasLegend);
         if (ignoreManualPlotLayout)
         {
             return ChartPlotLayout.FromPlotBox(defaultPlotBox);
@@ -8474,6 +8543,45 @@ internal sealed partial class PptxRenderer
         double right = frame.X + frame.Width - requiredRightReserve;
         double width = Math.Max(1d, right - x);
         return new ChartPlotBox(x, plotBox.Y, width, plotBox.Height);
+    }
+
+    private static ChartPlotBox AdjustBarChartPlotBoxForDefaultAxisTitles(
+        ChartPlotBox plotBox,
+        ChartFrameBox frame,
+        XDocument chartXml,
+        PptxSceneChart? sceneChart,
+        bool horizontalBars,
+        bool hasChartTitle,
+        bool hasLegend)
+    {
+        if (horizontalBars || hasChartTitle || hasLegend)
+        {
+            return plotBox;
+        }
+
+        ChartAxisTitleReserveSides reserveSides = ReadSceneOrXmlDefaultAxisTitleReserveSides(sceneChart, chartXml);
+        if (!reserveSides.HasHorizontalTitle || !reserveSides.HasVerticalTitle)
+        {
+            return plotBox;
+        }
+
+        double leftReserve = frame.Width * (reserveSides.Left
+            ? PptxChartMetricRules.DefaultAxisTitlePlotSideReserveRatio
+            : PptxChartMetricRules.DefaultAxisTitlePlotOppositeSideReserveRatio);
+        double rightReserve = frame.Width * (reserveSides.Right
+            ? PptxChartMetricRules.DefaultAxisTitlePlotSideReserveRatio
+            : PptxChartMetricRules.DefaultAxisTitlePlotOppositeSideReserveRatio);
+        double bottomReserve = frame.Height * (reserveSides.Bottom
+            ? PptxChartMetricRules.DefaultAxisTitlePlotBandReserveRatio
+            : PptxChartMetricRules.DefaultAxisTitlePlotOppositeBandReserveRatio);
+        double topReserve = frame.Height * (reserveSides.Top
+            ? PptxChartMetricRules.DefaultAxisTitlePlotBandReserveRatio
+            : PptxChartMetricRules.DefaultAxisTitlePlotOppositeBandReserveRatio);
+        double x = frame.X + leftReserve;
+        double y = frame.Y + bottomReserve;
+        double width = Math.Max(1d, frame.Width - leftReserve - rightReserve);
+        double height = Math.Max(1d, frame.Height - bottomReserve - topReserve);
+        return new ChartPlotBox(x, y, width, height);
     }
 
     private static ChartPlotBox AdjustBarChartPlotBoxForStackedValueAxisLabels(
@@ -10677,6 +10785,25 @@ internal sealed partial class PptxRenderer
         public static ChartPlotLayout FromPlotBox(ChartPlotBox plotBox)
         {
             return new ChartPlotLayout(new ChartLayoutBox(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height), plotBox, null);
+        }
+    }
+
+    private readonly record struct ChartAxisTitleReserveSides(bool Left, bool Right, bool Bottom, bool Top)
+    {
+        public bool HasHorizontalTitle => Bottom || Top;
+
+        public bool HasVerticalTitle => Left || Right;
+
+        public ChartAxisTitleReserveSides With(PptxSceneChartAxisPosition positionKind)
+        {
+            return positionKind switch
+            {
+                PptxSceneChartAxisPosition.Left => this with { Left = true },
+                PptxSceneChartAxisPosition.Right => this with { Right = true },
+                PptxSceneChartAxisPosition.Bottom => this with { Bottom = true },
+                PptxSceneChartAxisPosition.Top => this with { Top = true },
+                _ => this
+            };
         }
     }
 

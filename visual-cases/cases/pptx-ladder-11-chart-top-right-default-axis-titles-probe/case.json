@@ -9,10 +9,20 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 18.0,
+    "maxMeanAbsoluteError": 19.0,
     "maxChangedPixelRatioAtThreshold16": 0.22,
-    "compareChartTextStructureKinds": ["AxisTitleText"],
+    "compareChartGraphicsStructureKinds": [
+      "HorizontalLine",
+      "PlotAreaClipBoxCandidate",
+      "VerticalLine"
+    ],
+    "maxChartGraphicsStructureBoundsDelta": 1.0,
+    "maxChartGraphicsStructureLineWidthDelta": 0.25,
+    "compareChartTextStructureKinds": [
+      "AxisTitleText",
+      "CategoryAxisTickLabel"
+    ],
     "compareChartTextStructureTextHash": true,
-    "maxChartTextStructurePositionDelta": 45.0
+    "maxChartTextStructurePositionDelta": 8.0
   }
 }

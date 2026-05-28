@@ -2824,6 +2824,17 @@ High-priority actions:
       tolerance. Validation: the new visual run `20260528-162233` passed, the existing default and horizontal
       bar default-axis-title visual probes still passed at `20260528-162303`, and focused non-slow
       `pptx-charts` passed (`119 passed, 0 failed, 0 skipped`).
+    - [x] 2026-05-28 Derive default axis-title plot reservation from axis-title sides for no-title/no-legend
+      clustered column charts: the bar/column layout path now reads scene/XML default title positions, reserves
+      the title side and the opposite band/side separately, and places top-side category labels from the top
+      category axis instead of using the bottom-axis formula. This closed the top/right probe's plot-box
+      structural gap from roughly `39 pt` to less than `0.7 pt`; the top/right manifest now gates
+      `HorizontalLine`, `VerticalLine`, `PlotAreaClipBoxCandidate`, `AxisTitleText`, and
+      `CategoryAxisTickLabel` with tight structural tolerances. The raster ceiling is deliberately `19`
+      because Office coalesces the bar fills and right-side value labels differently; that remains a
+      filled-region/text-operation structural gap, not a plot-reservation gap. Validation: default, horizontal
+      bar, and top/right default-axis-title visual probes passed at `20260528-163611` /
+      `20260528-163638`; `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed.
   - [x] 2026-05-28 Keep default-axis-title diagnostics honest for structurally incomplete axes inside otherwise
     supported chart branches: successful native chart rendering now emits
     `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_AXIS_POSITION` when a default axis title cannot be rendered because the
