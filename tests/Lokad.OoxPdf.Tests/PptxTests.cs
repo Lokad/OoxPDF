@@ -9657,6 +9657,16 @@ internal static class PptxTests
         });
         string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
 
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxSceneTableCell cell = new PptxSceneBuilder().Build(document, package).Slides[0].SlideNodes[0].Table?.Rows[0].Cells[0]
+                ?? throw new InvalidOperationException("Expected table cell scene node.");
+
+            TestAssert.Equal(1, cell.LeadingEmptyTextParagraphCount);
+        }
+
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);

@@ -1367,7 +1367,8 @@ internal readonly record struct PptxSceneTableCell(
     PptxSceneTableCellTextStyle StyleText,
     XElement? TextBody,
     bool HasUnsupportedTextOrientation,
-    bool HasUnsupportedVerticalOverflow);
+    bool HasUnsupportedVerticalOverflow,
+    int LeadingEmptyTextParagraphCount);
 
 internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
 
@@ -4168,7 +4169,43 @@ internal sealed class PptxSceneBuilder
             PptxTableStyleResolver.ReadCellTextStyle(tableStyle, rowIndex, columnIndex, rowCount, columnCount, theme),
             textBody,
             HasUnsupportedTextOrientation(bodyProperties),
-            HasUnsupportedTextVerticalOverflow(bodyProperties));
+            HasUnsupportedTextVerticalOverflow(bodyProperties),
+            CountLeadingEmptyTableCellTextParagraphs(textBody));
+    }
+
+    private static int CountLeadingEmptyTableCellTextParagraphs(XElement? textBody)
+    {
+        if (textBody is null)
+        {
+            return 0;
+        }
+
+        XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
+        if (!paragraphs.Any(ParagraphHasVisibleTextContent))
+        {
+            return 0;
+        }
+
+        int count = 0;
+        foreach (XElement paragraph in paragraphs)
+        {
+            if (ParagraphHasVisibleTextContent(paragraph))
+            {
+                return count;
+            }
+
+            count++;
+        }
+
+        return 0;
+    }
+
+    private static bool ParagraphHasVisibleTextContent(XElement paragraph)
+    {
+        return paragraph.Elements().Any(child =>
+            child.Name == DrawingNamespace + "r" ||
+            child.Name == DrawingNamespace + "fld" ||
+            child.Name == DrawingNamespace + "br");
     }
 
     internal static bool IsMergedTableCellContinuation(XElement cell)

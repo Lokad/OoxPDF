@@ -14468,6 +14468,25 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 with `109` tests, `0` failures, and `0` skips; full non-slow console runner passed with `351` tests,
 `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX table-cell leading-empty paragraph pruning is now scene-owned.
+`PptxSceneTableCell.LeadingEmptyTextParagraphCount` records how many leading empty `a:p` elements should be
+skipped when the cell later contains visible paragraph content, and the table renderer applies that typed
+count instead of rescanning raw `a:txBody` children for `a:r`, `a:fld`, or `a:br`. The redundant
+`ReadFirstTableCellFontSize` XML helper was removed because it no longer had a renderer call site.
+
+This is deliberately narrower than full table text-model unification. Table cells still carry raw
+`a:txBody` into `PptxTableCellTextFrame`, and the common paragraph/run model does not yet own table text
+layout the way shape text increasingly does. The value of this slice is that one more visible rendering
+decision is now captured in the scene, inspectable in tests, and no longer hidden as a table-local XML
+heuristic inside the renderer. The long-term gap remains to make table cell text consume the same resolved
+text-frame model as ordinary shapes, including paragraph properties, runs, body properties, and inherited
+defaults.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `22` tests, `0` failures, and `1` skip; focused non-slow `pptx-tables` passed with
+`9` tests, `0` failures, and `0` skips; full non-slow console runner passed with `397` tests, `0` failures,
+and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

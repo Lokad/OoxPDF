@@ -438,7 +438,7 @@ internal sealed partial class PptxRenderer
         }
 
         TextInsets insets = ToTextInsets(sceneCell.TextInsets);
-        XElement tableTextBody = BuildTableCellTextBody(textBody);
+        XElement tableTextBody = BuildTableCellTextBody(textBody, sceneCell.LeadingEmptyTextParagraphCount);
         var tableTextFrame = new PptxTableCellTextFrame(
             tableTextBody,
             x,
@@ -492,28 +492,22 @@ internal sealed partial class PptxRenderer
         };
     }
 
-    private static XElement BuildTableCellTextBody(XElement textBody)
+    private static XElement BuildTableCellTextBody(XElement textBody, int leadingEmptyParagraphCount)
     {
         var textBodyCopy = new XElement(textBody.Name, textBody.Attributes(), textBody.Elements().Select(element => new XElement(element)));
-        PruneLeadingEmptyTableParagraphs(textBodyCopy);
+        PruneLeadingEmptyTableParagraphs(textBodyCopy, leadingEmptyParagraphCount);
         return textBodyCopy;
     }
 
-    private static void PruneLeadingEmptyTableParagraphs(XElement textBody)
+    private static void PruneLeadingEmptyTableParagraphs(XElement textBody, int leadingEmptyParagraphCount)
     {
-        XElement[] paragraphs = textBody.Elements(DrawingNamespace + "p").ToArray();
-        if (!paragraphs.Any(ParagraphHasVisibleContent))
+        if (leadingEmptyParagraphCount <= 0)
         {
             return;
         }
 
-        foreach (XElement paragraph in paragraphs)
+        foreach (XElement paragraph in textBody.Elements(DrawingNamespace + "p").Take(leadingEmptyParagraphCount).ToArray())
         {
-            if (ParagraphHasVisibleContent(paragraph))
-            {
-                return;
-            }
-
             paragraph.Remove();
         }
     }
@@ -521,24 +515,6 @@ internal sealed partial class PptxRenderer
     private static long PointsToEmu(double points)
     {
         return (long)Math.Round(points / OoxUnits.PointsPerInch * OoxUnits.EmusPerInch);
-    }
-
-    private static double ReadFirstTableCellFontSize(XElement textBody)
-    {
-        foreach (XElement runProperties in textBody
-            .Elements(DrawingNamespace + "p")
-            .Elements()
-            .Where(IsTextRunElement)
-            .Elements(DrawingNamespace + "rPr"))
-        {
-            if (runProperties.Attribute("sz") is { } size &&
-                int.TryParse(size.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int centipoints))
-            {
-                return Math.Max(1d, centipoints / 100d);
-            }
-        }
-
-        return 12d;
     }
 
     private readonly record struct TableBorderLine(double X1, double Y1, double X2, double Y2, double LineWidth, RgbColor Color, double Alpha);
