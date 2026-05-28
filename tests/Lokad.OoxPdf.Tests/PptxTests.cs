@@ -420,6 +420,11 @@ internal static class PptxTests
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.Rows[0].Cells[0].ColumnSpan ?? 0);
         TestAssert.Equal(1, slide.SlideNodes[2].Table?.Rows[0].Cells[0].RowSpan ?? 0);
         TestAssert.Equal(14.4d, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsets.Left ?? 0d);
+        TestAssert.Equal(PptxSceneTableCellTextInsetSource.CellProperties, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsetSources.Left ?? PptxSceneTableCellTextInsetSource.Default);
+        TestAssert.Equal("182880", slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsetValues.Left ?? string.Empty);
+        TestAssert.Equal(PptxSceneTableCellTextInsetSource.BodyProperties, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsetSources.Top ?? PptxSceneTableCellTextInsetSource.Default);
+        TestAssert.Equal("45720", slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsetValues.Top ?? string.Empty);
+        TestAssert.Equal(PptxSceneTableCellTextInsetSource.Default, slide.SlideNodes[2].Table?.Rows[0].Cells[0].TextInsetSources.Right ?? PptxSceneTableCellTextInsetSource.CellProperties);
         TestAssert.Equal(PptxSceneTableCellVerticalAnchor.Middle, slide.SlideNodes[2].Table?.Rows[0].Cells[0].VerticalAnchor ?? PptxSceneTableCellVerticalAnchor.Top);
         TestAssert.Equal("ctr", slide.SlideNodes[2].Table?.Rows[0].Cells[0].VerticalAnchorValue ?? string.Empty);
         TestAssert.True(slide.SlideNodes[2].Table?.Rows[0].Cells[0].Fill.HasFill == true, "Expected direct table-cell fill in the scene model.");

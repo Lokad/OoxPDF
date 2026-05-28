@@ -3724,6 +3724,14 @@ High-priority actions:
   text-frame/body-property model state, and table-cell text still has direct `bodyPr`/`tcPr` readers without
   the same source-tagged model/provenance surface as shape text. Those two gaps are the long-term structural
   work here, not another pass over already-closed scalar body-property inheritance.
+  2026-05-28 progress: table-cell text insets now preserve source-tagged provenance in the scene model:
+  each resolved edge records whether it came from table-cell `tcPr` margins, cell text-body `bodyPr` insets,
+  or the Office default, plus the raw token when present. This keeps table text diagnostics from having to
+  rediscover `bodyPr`/`tcPr` precedence in renderer code. Keep this item open for unsupported text diagnostics
+  that still scan raw slide XML, and for converging full table-cell text body-property handling onto the same
+  source-rich resolver used by shape text. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v
+  minimal` passed; focused non-slow `pptx-model` passed (`17` passed, `0` failed, `1` skipped); focused
+  non-slow `pptx-tables` passed (`9` passed, `0` failed, `0` skipped).
 - [x] Port `pptx-renderer` line-height behavior into the PPTX text model/layout:
   `spcPct`, `spcPts`, paragraph before/after spacing, `normAutofit @lnSpcReduction`, manual-break line
   wrappers, compatible line spacing, and trailing/empty `endParaRPr` line-height effects are covered by focused
@@ -3783,6 +3791,12 @@ High-priority actions:
       focused `PptxSceneBuilderBuildsResolvedNodeLists` passed (`1 passed, 0 failed, 0 skipped`); focused
       non-slow `pptx-tables` passed (`7 passed, 0 failed, 0 skipped`); full non-slow console runner passed
       (`256 passed, 0 failed, 7 skipped`).
+    - [x] Preserve table-cell text inset provenance in the scene model: `PptxSceneTableCell` now stores
+      per-edge source labels and raw values for `tcPr` margins versus `txBody/bodyPr` insets versus defaults,
+      while retaining the same resolved `TextInsets` values consumed by ordered table rendering. Validation:
+      `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-model`
+      passed (`17` passed, `0` failed, `1` skipped); focused non-slow `pptx-tables` passed (`9` passed, `0`
+      failed, `0` skipped).
     - [x] Move built-in table-style descriptors into `PptxSceneTable`: style id, supported style family/accent,
       and conditional-format flags are now scene-owned inputs for table fills, text defaults, and default grid
     behavior. The Office table-style cascade itself remains a future typed resolver.

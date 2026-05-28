@@ -1311,6 +1311,8 @@ internal readonly record struct PptxSceneTableCell(
     int RowSpan,
     bool IsMergedContinuation,
     PptxSceneTextInsets TextInsets,
+    PptxSceneTableCellTextInsetSources TextInsetSources,
+    PptxSceneTextInsetValues TextInsetValues,
     PptxSceneTableCellVerticalAnchor VerticalAnchor,
     string? VerticalAnchorValue,
     PptxSceneFillStyle Fill,
@@ -1320,6 +1322,19 @@ internal readonly record struct PptxSceneTableCell(
     XElement? TextBody);
 
 internal readonly record struct PptxSceneTableCellTextStyle(RgbColor? Color, bool Bold);
+
+internal readonly record struct PptxSceneTableCellTextInsetSources(
+    PptxSceneTableCellTextInsetSource Left,
+    PptxSceneTableCellTextInsetSource Right,
+    PptxSceneTableCellTextInsetSource Top,
+    PptxSceneTableCellTextInsetSource Bottom);
+
+internal enum PptxSceneTableCellTextInsetSource
+{
+    Default,
+    BodyProperties,
+    CellProperties
+}
 
 internal readonly record struct PptxSceneTableCellBorders(
     PptxSceneTableCellBorder Left,
@@ -1333,6 +1348,8 @@ internal readonly record struct PptxSceneTableCellBorders(
 internal readonly record struct PptxSceneTableCellBorder(bool IsSpecified, PptxSceneLineStyle Line);
 
 internal readonly record struct PptxSceneTextInsets(double Left, double Right, double Top, double Bottom);
+
+internal readonly record struct PptxSceneTextInsetValues(string? Left, string? Right, string? Top, string? Bottom);
 
 internal enum PptxSceneTableCellVerticalAnchor
 {
@@ -4027,11 +4044,14 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneTableCell ReadTableCell(XElement cell, PptxTheme theme, PptxColorMap colorMap, PptxSceneTableStyle tableStyle, int rowIndex, int columnIndex, int rowCount, int columnCount)
     {
+        (PptxSceneTextInsets textInsets, PptxSceneTableCellTextInsetSources textInsetSources, PptxSceneTextInsetValues textInsetValues) = ReadTableCellTextInsetInfo(cell);
         return new PptxSceneTableCell(
             ReadTableCellColumnSpan(cell),
             ReadTableCellRowSpan(cell),
             IsMergedTableCellContinuation(cell),
-            ReadTableCellTextInsets(cell),
+            textInsets,
+            textInsetSources,
+            textInsetValues,
             ReadTableCellVerticalAnchor(cell),
             ReadTableCellVerticalAnchorValue(cell),
             ReadTableCellFill(cell, theme, colorMap),
@@ -4066,27 +4086,63 @@ internal sealed class PptxSceneBuilder
 
     internal static PptxSceneTextInsets ReadTableCellTextInsets(XElement cell)
     {
-        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
-        XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
-        PptxSceneTextInsets bodyInsets = new(
-            ReadInset(bodyProperties, "lIns", 91440),
-            ReadInset(bodyProperties, "rIns", 91440),
-            ReadInset(bodyProperties, "tIns", 45720),
-            ReadInset(bodyProperties, "bIns", 45720));
-        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
-        return new PptxSceneTextInsets(
-            ReadTableCellMargin(cellProperties, "marL", bodyInsets.Left),
-            ReadTableCellMargin(cellProperties, "marR", bodyInsets.Right),
-            ReadTableCellMargin(cellProperties, "marT", bodyInsets.Top),
-            ReadTableCellMargin(cellProperties, "marB", bodyInsets.Bottom));
+        return ReadTableCellTextInsetInfo(cell).Insets;
     }
 
-    private static double ReadTableCellMargin(XElement? cellProperties, string attributeName, double fallback)
+    private static (PptxSceneTextInsets Insets, PptxSceneTableCellTextInsetSources Sources, PptxSceneTextInsetValues Values) ReadTableCellTextInsetInfo(XElement cell)
     {
-        return cellProperties?.Attribute(attributeName) is { } margin &&
-            long.TryParse(margin.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emus)
-                ? OoxUnits.EmuToPoints(emus)
-                : fallback;
+        XElement? textBody = cell.Element(DrawingNamespace + "txBody");
+        XElement? bodyProperties = textBody?.Element(DrawingNamespace + "bodyPr");
+        XElement? cellProperties = cell.Element(DrawingNamespace + "tcPr");
+        (double left, PptxSceneTableCellTextInsetSource leftSource, string? leftValue) =
+            ReadTableCellTextInset(bodyProperties, cellProperties, "lIns", "marL", 91440);
+        (double right, PptxSceneTableCellTextInsetSource rightSource, string? rightValue) =
+            ReadTableCellTextInset(bodyProperties, cellProperties, "rIns", "marR", 91440);
+        (double top, PptxSceneTableCellTextInsetSource topSource, string? topValue) =
+            ReadTableCellTextInset(bodyProperties, cellProperties, "tIns", "marT", 45720);
+        (double bottom, PptxSceneTableCellTextInsetSource bottomSource, string? bottomValue) =
+            ReadTableCellTextInset(bodyProperties, cellProperties, "bIns", "marB", 45720);
+        return (
+            new PptxSceneTextInsets(left, right, top, bottom),
+            new PptxSceneTableCellTextInsetSources(leftSource, rightSource, topSource, bottomSource),
+            new PptxSceneTextInsetValues(leftValue, rightValue, topValue, bottomValue));
+    }
+
+    private static (double Value, PptxSceneTableCellTextInsetSource Source, string? RawValue) ReadTableCellTextInset(
+        XElement? bodyProperties,
+        XElement? cellProperties,
+        string bodyAttributeName,
+        string cellAttributeName,
+        long defaultEmu)
+    {
+        (double bodyValue, PptxSceneTableCellTextInsetSource bodySource, string? bodyRawValue) =
+            ReadTableCellBodyInset(bodyProperties, bodyAttributeName, defaultEmu);
+        if (cellProperties?.Attribute(cellAttributeName) is { } cellAttribute)
+        {
+            double cellValue = long.TryParse(cellAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long cellEmus)
+                ? OoxUnits.EmuToPoints(cellEmus)
+                : bodyValue;
+            return (cellValue, PptxSceneTableCellTextInsetSource.CellProperties, cellAttribute.Value);
+        }
+
+        return (bodyValue, bodySource, bodyRawValue);
+    }
+
+    private static (double Value, PptxSceneTableCellTextInsetSource Source, string? RawValue) ReadTableCellBodyInset(
+        XElement? bodyProperties,
+        string attributeName,
+        long defaultEmu)
+    {
+        double defaultValue = OoxUnits.EmuToPoints(defaultEmu);
+        if (bodyProperties?.Attribute(attributeName) is { } bodyAttribute)
+        {
+            double value = long.TryParse(bodyAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long bodyEmus)
+                ? OoxUnits.EmuToPoints(bodyEmus)
+                : defaultValue;
+            return (value, PptxSceneTableCellTextInsetSource.BodyProperties, bodyAttribute.Value);
+        }
+
+        return (defaultValue, PptxSceneTableCellTextInsetSource.Default, null);
     }
 
     private static double ReadInset(XElement? element, string attributeName, long defaultEmu)
