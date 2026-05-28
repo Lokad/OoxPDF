@@ -4661,7 +4661,9 @@ internal static class PptxTests
 
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.Equal("Microsoft YaHei", frame.Paragraphs[0].Runs[0].Typeface);
+        TestAssert.Equal("MajorEastAsian", frame.Paragraphs[0].Runs[0].TypefaceSource);
         TestAssert.Equal("Tahoma", frame.Paragraphs[0].Runs[2].Typeface);
+        TestAssert.Equal("MinorComplexScript", frame.Paragraphs[0].Runs[2].TypefaceSource);
     }
 
     public static void PptxSyntheticTextBoxUsesDistinctFontResourcesForStyles()

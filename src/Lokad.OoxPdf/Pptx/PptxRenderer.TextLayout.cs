@@ -2042,7 +2042,7 @@ internal sealed partial class PptxRenderer
             colorSource = PptxRunTextColorSource.FallbackBlack;
         }
 
-        string? typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
+        PptxThemeTypefaceResolution typeface = ReadRunTypeface(runProperties, defaultRunProperties, theme);
         bool bold = ParseOptionalBoolAttribute(runProperties, "b") ||
             (runProperties?.Attribute("b") is null && tableStyleTextStyle.Bold) ||
             (runProperties?.Attribute("b") is null && ParseOptionalBoolAttribute(defaultRunProperties, "b"));
@@ -2073,7 +2073,8 @@ internal sealed partial class PptxRenderer
             strikeValue,
             capsValue,
             IsKerningEnabled(runProperties, defaultRunProperties, fontSize),
-            typeface);
+            typeface.Source,
+            typeface.Typeface);
     }
 
     private static bool HasTextNoFill(XElement? runProperties)
@@ -2127,9 +2128,9 @@ internal sealed partial class PptxRenderer
             ?.Attribute(RelationshipsNamespace + "id");
     }
 
-    private static string? ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)
+    private static PptxThemeTypefaceResolution ReadRunTypeface(XElement? runProperties, XElement? defaultRunProperties, PptxTheme theme)
     {
-        return theme.ResolveTypeface(ReadTypeface(runProperties) ?? ReadTypeface(defaultRunProperties));
+        return theme.ResolveTypefaceWithSource(ReadTypeface(runProperties) ?? ReadTypeface(defaultRunProperties));
     }
 
     private static string? ReadTypeface(XElement? runProperties)

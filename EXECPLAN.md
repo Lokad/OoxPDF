@@ -3528,6 +3528,11 @@ High-priority actions:
   passed (`96 passed, 0 failed, 2 skipped`) after the cascade-boundary slices.
 - [ ] Port `pptx-renderer` theme font resolution: major/minor Latin, East Asian, complex script, and symbol
   font fallback must be explicit diagnostics-bearing stages before glyph mapping.
+  2026-05-28 progress: `PptxTheme.ResolveTypefaceWithSource` now returns a source-bearing typeface result
+  for direct, default-minor, major/minor Latin, East Asian, complex-script, and Latin-fallback branches, and
+  text run model snapshots expose `TypefaceSource`. Keep this item open: bullet and chart text paths still
+  mostly consume plain resolved typeface strings, symbol/bullet font policy is not represented as a diagnostic
+  stage, and glyph fallback remains downstream in font mapping rather than a theme-font stage.
 - [ ] Port `pptx-renderer` color resolver coverage: color maps, theme colors, `phClr`, scheme colors,
   preset colors, HSL/scrgb colors, alpha/lum/tint/shade modifiers, and fallback colors.
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`

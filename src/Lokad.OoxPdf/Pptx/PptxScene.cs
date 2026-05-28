@@ -240,6 +240,7 @@ internal sealed record PptxTextRunModelSnapshot(
     double FontSize,
     double CharacterSpacing,
     string? Typeface,
+    string TypefaceSource,
     string ColorSource,
     bool HasHyperlinkClick,
     string? HyperlinkClickId,

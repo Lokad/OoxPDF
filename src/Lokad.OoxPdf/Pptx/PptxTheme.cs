@@ -142,16 +142,25 @@ internal sealed class PptxTheme
 
     public string? ResolveTypeface(string? typeface)
     {
+        return ResolveTypefaceWithSource(typeface).Typeface;
+    }
+
+    public PptxThemeTypefaceResolution ResolveTypefaceWithSource(string? typeface)
+    {
         return typeface switch
         {
-            "+mj-lt" => MajorLatinFont,
-            "+mj-ea" => MajorEastAsianFont ?? MajorLatinFont,
-            "+mj-cs" => MajorComplexScriptFont ?? MajorLatinFont,
-            "+mn-lt" => MinorLatinFont,
-            "+mn-ea" => MinorEastAsianFont ?? MinorLatinFont,
-            "+mn-cs" => MinorComplexScriptFont ?? MinorLatinFont,
-            null or "" => MinorLatinFont,
-            _ => typeface
+            "+mj-lt" => new(typeface, MajorLatinFont, PptxThemeTypefaceSource.MajorLatin),
+            "+mj-ea" when MajorEastAsianFont is not null => new(typeface, MajorEastAsianFont, PptxThemeTypefaceSource.MajorEastAsian),
+            "+mj-ea" => new(typeface, MajorLatinFont, PptxThemeTypefaceSource.MajorEastAsianFallbackLatin),
+            "+mj-cs" when MajorComplexScriptFont is not null => new(typeface, MajorComplexScriptFont, PptxThemeTypefaceSource.MajorComplexScript),
+            "+mj-cs" => new(typeface, MajorLatinFont, PptxThemeTypefaceSource.MajorComplexScriptFallbackLatin),
+            "+mn-lt" => new(typeface, MinorLatinFont, PptxThemeTypefaceSource.MinorLatin),
+            "+mn-ea" when MinorEastAsianFont is not null => new(typeface, MinorEastAsianFont, PptxThemeTypefaceSource.MinorEastAsian),
+            "+mn-ea" => new(typeface, MinorLatinFont, PptxThemeTypefaceSource.MinorEastAsianFallbackLatin),
+            "+mn-cs" when MinorComplexScriptFont is not null => new(typeface, MinorComplexScriptFont, PptxThemeTypefaceSource.MinorComplexScript),
+            "+mn-cs" => new(typeface, MinorLatinFont, PptxThemeTypefaceSource.MinorComplexScriptFallbackLatin),
+            null or "" => new(typeface, MinorLatinFont, PptxThemeTypefaceSource.DefaultMinorLatin),
+            _ => new(typeface, typeface, PptxThemeTypefaceSource.Direct)
         };
     }
 
@@ -202,4 +211,25 @@ internal sealed class PptxTheme
             _ => schemeColor
         };
     }
+}
+
+internal readonly record struct PptxThemeTypefaceResolution(
+    string? RequestedTypeface,
+    string? Typeface,
+    PptxThemeTypefaceSource Source);
+
+internal enum PptxThemeTypefaceSource
+{
+    Direct,
+    DefaultMinorLatin,
+    MajorLatin,
+    MajorEastAsian,
+    MajorEastAsianFallbackLatin,
+    MajorComplexScript,
+    MajorComplexScriptFallbackLatin,
+    MinorLatin,
+    MinorEastAsian,
+    MinorEastAsianFallbackLatin,
+    MinorComplexScript,
+    MinorComplexScriptFallbackLatin
 }

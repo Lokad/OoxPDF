@@ -301,6 +301,7 @@ internal sealed partial class PptxRenderer
         string? StrikeValue,
         string? CapsValue,
         bool KerningEnabled,
+        PptxThemeTypefaceSource TypefaceSource,
         string? Typeface);
 
     private enum PptxRunTextColorSource
