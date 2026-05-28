@@ -14042,9 +14042,12 @@ internal static class PptxTests
 
         System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartLegendTextStyle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, null, smallLegendChart]) ?? throw new InvalidOperationException("Expected small legend style.");
-        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, null, largeLegendChart]) ?? throw new InvalidOperationException("Expected large legend style.");
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
+        object smallLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, smallLegendChart]) ?? throw new InvalidOperationException("Expected small legend style.");
+        object largeLegendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, largeLegendChart]) ?? throw new InvalidOperationException("Expected large legend style.");
 
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
@@ -14090,8 +14093,11 @@ internal static class PptxTests
 
         System.Reflection.MethodInfo readLegendTextStyle = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartLegendTextStyle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
-        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, null, smallAxisChart]) ?? throw new InvalidOperationException("Expected legend style.");
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static,
+            binder: null,
+            [typeof(PptxTheme), typeof(PptxColorMap), typeof(PptxSceneChart), typeof(XDocument)],
+            modifiers: null) ?? throw new InvalidOperationException("Expected chart legend text-style bridge.");
+        object legendStyle = readLegendTextStyle.Invoke(null, [PptxTheme.Empty, PptxColorMap.Default, null, smallAxisChart]) ?? throw new InvalidOperationException("Expected legend style.");
         Type frameType = typeof(PptxRenderer).GetNestedType(
             "ChartFrameBox",
             System.Reflection.BindingFlags.NonPublic) ?? throw new InvalidOperationException("Expected chart frame box.");

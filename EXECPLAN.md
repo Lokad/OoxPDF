@@ -3944,6 +3944,14 @@ High-priority actions:
   and the broader chart-style/color-style cascade ordering. Validation: `dotnet build
   Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
   (`136 passed, 0 failed, 0 skipped`).
+  2026-05-28 progress: native chart rendering now carries the chart/source `PptxColorMap` through
+  `TryRenderChart` into default axis-title fallback rendering, legend text style resolution, and the
+  line/bubble right-legend reserve calculations that depend on legend text measurement. Scene chart text-style
+  defaults also use `sceneChart.ColorMap`, eliminating another renderer-local default-alias path. Keep this
+  item open for series/point/marker style fallback readers, data-label fallback text and shapes, direct
+  XML axis-label text styles when no scene chart is available, and the broader chart-style/color-style cascade
+  ordering. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+  non-slow `pptx-charts` passed (`136 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a
