@@ -277,6 +277,48 @@ function Looks-LikeAbovePlotChartTitle($op, $plotBox, [double]$tolerance) {
         $x -le ($maxX + $plotWidth * 0.25d)
 }
 
+function Is-RotatedText($op) {
+    $b = if ($op.EffectiveB -ne $null) { [double]$op.EffectiveB } elseif ($op.B -ne $null) { [double]$op.B } else { 0d }
+    $c = if ($op.EffectiveC -ne $null) { [double]$op.EffectiveC } elseif ($op.C -ne $null) { [double]$op.C } else { 0d }
+    return [Math]::Abs($b) -ge 0.5d -or [Math]::Abs($c) -ge 0.5d
+}
+
+function Looks-LikeAxisTitle($op, $plotBox, [double]$tolerance, [bool]$horizontalValueAxisChart) {
+    if ($null -eq $plotBox) {
+        return $false
+    }
+
+    $text = TextValue $op
+    $fontSize = if ($op.FontSize -ne $null) { [double]$op.FontSize } else { 0d }
+    if ($text.Trim().Length -le 3 -or $fontSize -lt 10.5d) {
+        return $false
+    }
+
+    $x = TextX $op
+    $y = TextY $op
+    $minX = [double]$plotBox.MinX
+    $minY = [double]$plotBox.MinY
+    $maxX = [double]$plotBox.MaxX
+    $maxY = [double]$plotBox.MaxY
+    $insideX = $x -ge ($minX - $tolerance) -and $x -le ($maxX + $tolerance)
+    $insideY = $y -ge ($minY - $tolerance) -and $y -le ($maxY + $tolerance)
+    $axisBandY = $y -ge ($minY - ($tolerance * 3d)) -and $y -le ($maxY + ($tolerance * 3d))
+    $axisBandX = $x -ge ($minX - ($tolerance * 3d)) -and $x -le ($maxX + ($tolerance * 3d))
+    $farBelowOrAbove = $y -lt ($minY - ($tolerance * 2.5d)) -or $y -gt ($maxY + ($tolerance * 2.5d))
+    $farLeftOrRight = $x -lt ($minX - ($tolerance * 2d)) -or $x -gt ($maxX + ($tolerance * 2d))
+
+    if (Is-RotatedText $op) {
+        return $farLeftOrRight -and $axisBandY
+    }
+
+    if ($horizontalValueAxisChart) {
+        return ($insideY -and $farLeftOrRight) -or ($insideX -and $farBelowOrAbove)
+    }
+
+    return ($insideX -and $farBelowOrAbove) -or ($insideY -and $farLeftOrRight) -or
+        ($axisBandX -and $farBelowOrAbove)
+}
+
 function Find-RadarSpokeGeometry($structures) {
     $spoke = @($structures | Where-Object {
         $_.Kind -eq "RadarSpokeGroupCandidate" -and
@@ -400,11 +442,16 @@ function Classify-Text($op, $plotBox, $structures, $polarNumericLabels, [double]
         return "DataLabelText"
     }
 
+    $horizontalValueAxisChart = Is-HorizontalValueAxisChart $structures
+    if (Looks-LikeAxisTitle $op $plotBox $tolerance $horizontalValueAxisChart) {
+        return "AxisTitleText"
+    }
+
     if ($insideX -and $insideY) {
         return "DataLabelText"
     }
 
-    if (Is-HorizontalValueAxisChart $structures) {
+    if ($horizontalValueAxisChart) {
         if ($x -lt ($minX - $tolerance) -and $axisLabelY) {
             return "CategoryAxisTickLabel"
         }
