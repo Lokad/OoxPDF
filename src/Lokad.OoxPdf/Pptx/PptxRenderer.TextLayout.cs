@@ -2270,24 +2270,25 @@ internal sealed partial class PptxRenderer
         return fragments;
     }
 
-    private static (TextInsets Insets, TextInsetSources Sources) ReadTextInsets(
+    private static (TextInsets Insets, TextInsetSources Sources, TextInsetValues Values) ReadTextInsets(
         XElement textBody,
         XElement? inheritedTextBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
         XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
-        (double left, PptxTextBodyPropertySource leftSource) = ReadInset(
+        (double left, PptxTextBodyPropertySource leftSource, string? leftValue) = ReadInset(
             bodyProperties, inheritedBodyProperties, "lIns", 91440);
-        (double right, PptxTextBodyPropertySource rightSource) = ReadInset(
+        (double right, PptxTextBodyPropertySource rightSource, string? rightValue) = ReadInset(
             bodyProperties, inheritedBodyProperties, "rIns", 91440);
-        (double top, PptxTextBodyPropertySource topSource) = ReadInset(
+        (double top, PptxTextBodyPropertySource topSource, string? topValue) = ReadInset(
             bodyProperties, inheritedBodyProperties, "tIns", 45720);
-        (double bottom, PptxTextBodyPropertySource bottomSource) = ReadInset(
+        (double bottom, PptxTextBodyPropertySource bottomSource, string? bottomValue) = ReadInset(
             bodyProperties, inheritedBodyProperties, "bIns", 45720);
 
         return (
             new TextInsets(left, right, top, bottom),
-            new TextInsetSources(leftSource, rightSource, topSource, bottomSource));
+            new TextInsetSources(leftSource, rightSource, topSource, bottomSource),
+            new TextInsetValues(leftValue, rightValue, topValue, bottomValue));
     }
 
     private static PptxTextOrientation ReadTextOrientation(XElement textBody, XElement? inheritedTextBody)
@@ -2352,60 +2353,79 @@ internal sealed partial class PptxRenderer
 
     private static double? ParseTextBodyRotationDegrees(string? rotation)
     {
-        return rotation is null
-            ? null
-            : long.Parse(rotation, CultureInfo.InvariantCulture) / 60000d;
+        return rotation is not null &&
+            long.TryParse(rotation, NumberStyles.Integer, CultureInfo.InvariantCulture, out long rotationValue)
+                ? rotationValue / 60000d
+                : null;
     }
 
     private static (
         int Count,
         double Spacing,
         PptxTextBodyPropertySource CountSource,
-        PptxTextBodyPropertySource SpacingSource) ReadTextColumns(XElement textBody, XElement? inheritedTextBody)
+        PptxTextBodyPropertySource SpacingSource,
+        string? CountValue,
+        string? SpacingValue) ReadTextColumns(XElement textBody, XElement? inheritedTextBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
         XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
-        (int count, PptxTextBodyPropertySource countSource) = ReadTextColumnCount(bodyProperties, inheritedBodyProperties);
-        (double spacing, PptxTextBodyPropertySource spacingSource) = ReadTextColumnSpacing(bodyProperties, inheritedBodyProperties);
-        return (count, spacing, countSource, spacingSource);
+        (int count, PptxTextBodyPropertySource countSource, string? countValue) = ReadTextColumnCount(bodyProperties, inheritedBodyProperties);
+        (double spacing, PptxTextBodyPropertySource spacingSource, string? spacingValue) = ReadTextColumnSpacing(bodyProperties, inheritedBodyProperties);
+        return (count, spacing, countSource, spacingSource, countValue, spacingValue);
     }
 
-    private static (int Count, PptxTextBodyPropertySource Source) ReadTextColumnCount(
+    private static (int Count, PptxTextBodyPropertySource Source, string? Value) ReadTextColumnCount(
         XElement? bodyProperties,
         XElement? inheritedBodyProperties)
     {
-        if (bodyProperties?.Attribute("numCol") is { } directAttribute &&
-            int.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int directCount))
+        if (bodyProperties?.Attribute("numCol") is { } directAttribute)
         {
-            return (Math.Clamp(directCount, 1, 16), PptxTextBodyPropertySource.DirectBodyPr);
+            if (int.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int directCount))
+            {
+                return (Math.Clamp(directCount, 1, 16), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
+            }
+
+            return (1, PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
         }
 
-        if (inheritedBodyProperties?.Attribute("numCol") is { } inheritedAttribute &&
-            int.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int inheritedCount))
+        if (inheritedBodyProperties?.Attribute("numCol") is { } inheritedAttribute)
         {
-            return (Math.Clamp(inheritedCount, 1, 16), PptxTextBodyPropertySource.InheritedBodyPr);
+            if (int.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int inheritedCount))
+            {
+                return (Math.Clamp(inheritedCount, 1, 16), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
+            }
+
+            return (1, PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
         }
 
-        return (1, PptxTextBodyPropertySource.DefaultValue);
+        return (1, PptxTextBodyPropertySource.DefaultValue, null);
     }
 
-    private static (double Spacing, PptxTextBodyPropertySource Source) ReadTextColumnSpacing(
+    private static (double Spacing, PptxTextBodyPropertySource Source, string? Value) ReadTextColumnSpacing(
         XElement? bodyProperties,
         XElement? inheritedBodyProperties)
     {
-        if (bodyProperties?.Attribute("spcCol") is { } directAttribute &&
-            long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long directSpacing))
+        if (bodyProperties?.Attribute("spcCol") is { } directAttribute)
         {
-            return (Math.Max(0d, OoxUnits.EmuToPoints(directSpacing)), PptxTextBodyPropertySource.DirectBodyPr);
+            if (long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long directSpacing))
+            {
+                return (Math.Max(0d, OoxUnits.EmuToPoints(directSpacing)), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
+            }
+
+            return (0d, PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
         }
 
-        if (inheritedBodyProperties?.Attribute("spcCol") is { } inheritedAttribute &&
-            long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long inheritedSpacing))
+        if (inheritedBodyProperties?.Attribute("spcCol") is { } inheritedAttribute)
         {
-            return (Math.Max(0d, OoxUnits.EmuToPoints(inheritedSpacing)), PptxTextBodyPropertySource.InheritedBodyPr);
+            if (long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long inheritedSpacing))
+            {
+                return (Math.Max(0d, OoxUnits.EmuToPoints(inheritedSpacing)), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
+            }
+
+            return (0d, PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
         }
 
-        return (0d, PptxTextBodyPropertySource.DefaultValue);
+        return (0d, PptxTextBodyPropertySource.DefaultValue, null);
     }
 
     private static double NormalizeRotationDegrees(double rotationDegrees)
@@ -2414,35 +2434,45 @@ internal sealed partial class PptxRenderer
         return normalized < 0d ? normalized + 360d : normalized;
     }
 
-    private static (double Scale, PptxTextBodyPropertySource Source) ReadNormAutofitFontScale(
+    private static (double Scale, PptxTextBodyPropertySource Source, string? Value) ReadNormAutofitFontScale(
         XElement? autofit,
         PptxTextBodyPropertySource autofitSource)
     {
         if (autofit?.Name.LocalName != "normAutofit" ||
             autofit.Attribute("fontScale") is not { } fontScale)
         {
-            return (1d, PptxTextBodyPropertySource.DefaultValue);
+            return (1d, PptxTextBodyPropertySource.DefaultValue, null);
+        }
+
+        if (!int.TryParse(fontScale.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int fontScaleValue))
+        {
+            return (1d, autofitSource, fontScale.Value);
         }
 
         double scale = Math.Clamp(
-            int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d,
+            fontScaleValue / 100000d,
             PptxTextMetricRules.MinimumAutofitScale,
             PptxTextMetricRules.MaximumAutofitScale);
-        return (scale, autofitSource);
+        return (scale, autofitSource, fontScale.Value);
     }
 
-    private static (double Scale, PptxTextBodyPropertySource Source) ReadNormAutofitLineSpacingScale(
+    private static (double Scale, PptxTextBodyPropertySource Source, string? Value) ReadNormAutofitLineSpacingScale(
         XElement? autofit,
         PptxTextBodyPropertySource autofitSource)
     {
         if (autofit?.Name.LocalName != "normAutofit" ||
             autofit.Attribute("lnSpcReduction") is not { } reduction)
         {
-            return (1d, PptxTextBodyPropertySource.DefaultValue);
+            return (1d, PptxTextBodyPropertySource.DefaultValue, null);
         }
 
-        double reductionRatio = Math.Clamp(int.Parse(reduction.Value, CultureInfo.InvariantCulture) / 100000d, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
-        return (1d - reductionRatio, autofitSource);
+        if (!int.TryParse(reduction.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int reductionValue))
+        {
+            return (1d, autofitSource, reduction.Value);
+        }
+
+        double reductionRatio = Math.Clamp(reductionValue / 100000d, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
+        return (1d - reductionRatio, autofitSource, reduction.Value);
     }
 
     private static bool HasCompatibleLineSpacing(XElement textBody)
@@ -2495,7 +2525,7 @@ internal sealed partial class PptxRenderer
         return OoxUnits.EmuToPoints(emu);
     }
 
-    private static (double Value, PptxTextBodyPropertySource Source) ReadInset(
+    private static (double Value, PptxTextBodyPropertySource Source, string? RawValue) ReadInset(
         XElement? bodyProperties,
         XElement? inheritedBodyProperties,
         string attributeName,
@@ -2503,17 +2533,25 @@ internal sealed partial class PptxRenderer
     {
         if (bodyProperties?.Attribute(attributeName) is { } directAttribute)
         {
-            long emu = long.Parse(directAttribute.Value, CultureInfo.InvariantCulture);
-            return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.DirectBodyPr);
+            if (long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu))
+            {
+                return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
+            }
+
+            return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DirectBodyPr, directAttribute.Value);
         }
 
         if (inheritedBodyProperties?.Attribute(attributeName) is { } inheritedAttribute)
         {
-            long emu = long.Parse(inheritedAttribute.Value, CultureInfo.InvariantCulture);
-            return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.InheritedBodyPr);
+            if (long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long emu))
+            {
+                return (OoxUnits.EmuToPoints(emu), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
+            }
+
+            return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.InheritedBodyPr, inheritedAttribute.Value);
         }
 
-        return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DefaultValue);
+        return (OoxUnits.EmuToPoints(defaultEmu), PptxTextBodyPropertySource.DefaultValue, null);
     }
 
     private static double ReadParagraphSpacing(

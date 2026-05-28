@@ -34,13 +34,20 @@ internal sealed partial class PptxRenderer
             frame.Insets.Right,
             frame.Insets.Top,
             frame.Insets.Bottom,
+            frame.BodyProperties.InsetValues.Left,
+            frame.BodyProperties.InsetValues.Right,
+            frame.BodyProperties.InsetValues.Top,
+            frame.BodyProperties.InsetValues.Bottom,
             frame.FontScale,
+            frame.BodyProperties.FontScaleValue,
             frame.BodyProperties.FontScaleSource.ToString(),
             frame.BodyProperties.LineSpacingScale,
+            frame.BodyProperties.LineSpacingReductionValue,
             frame.BodyProperties.LineSpacingScaleSource.ToString(),
             frame.BodyProperties.CompatibleLineSpacing,
             frame.BodyProperties.CompatibleLineSpacingSource.ToString(),
             frame.BodyProperties.RotationDegrees,
+            frame.BodyProperties.RotationValue,
             frame.BodyProperties.RotationDegreesSource.ToString(),
             frame.InheritedPlaceholderCount,
             frame.InheritedTextBody is not null,
@@ -69,6 +76,8 @@ internal sealed partial class PptxRenderer
             frame.BodyProperties.ColumnSource.ToString(),
             frame.BodyProperties.ColumnCountSource.ToString(),
             frame.BodyProperties.ColumnSpacingSource.ToString(),
+            frame.BodyProperties.ColumnCountValue,
+            frame.BodyProperties.ColumnSpacingValue,
             frame.BodyProperties.AutofitModeValue,
             frame.BodyProperties.AutofitModeSource.ToString(),
             frame.Paragraphs.Select(ToSnapshot).ToArray());
@@ -478,13 +487,13 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
     {
-        (int columnCount, double columnSpacing, PptxTextBodyPropertySource columnCountSource, PptxTextBodyPropertySource columnSpacingSource) =
+        (int columnCount, double columnSpacing, PptxTextBodyPropertySource columnCountSource, PptxTextBodyPropertySource columnSpacingSource, string? columnCountValue, string? columnSpacingValue) =
             ReadTextColumns(textBody, inheritedTextBody);
         PptxTextBodyPropertySource columnSource = MergeTextBodyPropertySources(columnCountSource, columnSpacingSource);
-        (TextInsets insets, TextInsetSources insetSources) = ReadTextInsets(textBody, inheritedTextBody);
+        (TextInsets insets, TextInsetSources insetSources, TextInsetValues insetValues) = ReadTextInsets(textBody, inheritedTextBody);
         (XElement? autofit, string autofitMode, PptxTextBodyPropertySource autofitModeSource) = ReadTextAutofit(textBody, inheritedTextBody);
-        (double fontScale, PptxTextBodyPropertySource fontScaleSource) = ReadNormAutofitFontScale(autofit, autofitModeSource);
-        (double lineSpacingScale, PptxTextBodyPropertySource lineSpacingScaleSource) = ReadNormAutofitLineSpacingScale(autofit, autofitModeSource);
+        (double fontScale, PptxTextBodyPropertySource fontScaleSource, string? fontScaleValue) = ReadNormAutofitFontScale(autofit, autofitModeSource);
+        (double lineSpacingScale, PptxTextBodyPropertySource lineSpacingScaleSource, string? lineSpacingReductionValue) = ReadNormAutofitLineSpacingScale(autofit, autofitModeSource);
         (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
         (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
         (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
@@ -495,6 +504,7 @@ internal sealed partial class PptxRenderer
         return new PptxTextBodyProperties(
             insets,
             insetSources,
+            insetValues,
             ParseTextOrientation(orientation),
             orientation,
             orientationSource,
@@ -515,15 +525,20 @@ internal sealed partial class PptxRenderer
             columnSource,
             columnCountSource,
             columnSpacingSource,
+            columnCountValue,
+            columnSpacingValue,
             autofitMode,
             autofitModeSource,
             fontScale,
+            fontScaleValue,
             fontScaleSource,
             lineSpacingScale,
+            lineSpacingReductionValue,
             lineSpacingScaleSource,
             compatibleLineSpacing is not null && OoxBoolean.IsTrue(compatibleLineSpacing),
             compatibleLineSpacingSource,
             ParseTextBodyRotationDegrees(rotation),
+            rotation,
             rotationSource,
             ExplicitWrapWidth: null);
     }

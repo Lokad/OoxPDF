@@ -2740,6 +2740,10 @@ internal static class PptxTests
         TestAssert.Equal(0d, frame.InsetRight);
         TestAssert.Equal(36d, frame.InsetTop);
         TestAssert.Equal(0d, frame.InsetBottom);
+        TestAssert.Equal("182880", frame.InsetLeftValue ?? string.Empty);
+        TestAssert.Equal("0", frame.InsetRightValue ?? string.Empty);
+        TestAssert.Equal("457200", frame.InsetTopValue ?? string.Empty);
+        TestAssert.Equal("0", frame.InsetBottomValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.InsetLeftSource);
         TestAssert.Equal("DirectBodyPr", frame.InsetRightSource);
         TestAssert.Equal("DirectBodyPr", frame.InsetTopSource);
@@ -2764,15 +2768,20 @@ internal static class PptxTests
         TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnCountSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
+        TestAssert.Equal("3", frame.ColumnCountValue ?? string.Empty);
+        TestAssert.Equal("914400", frame.ColumnSpacingValue ?? string.Empty);
         TestAssert.Equal("normAutofit", frame.AutofitModeValue);
         TestAssert.Equal("DirectBodyPr", frame.AutofitModeSource);
         TestAssert.Equal(0.8d, frame.FontScale);
+        TestAssert.Equal("80000", frame.FontScaleValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.FontScaleSource);
         TestAssert.Equal(0.88d, frame.LineSpacingScale);
+        TestAssert.Equal("12000", frame.LineSpacingReductionValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.LineSpacingScaleSource);
         TestAssert.Equal(true, frame.CompatibleLineSpacing);
         TestAssert.Equal("DirectBodyPr", frame.CompatibleLineSpacingSource);
         TestAssert.Equal(90d, frame.RotationDegrees ?? double.NaN);
+        TestAssert.Equal("5400000", frame.RotationValue ?? string.Empty);
         TestAssert.Equal("DirectBodyPr", frame.RotationDegreesSource);
     }
 
@@ -2814,6 +2823,62 @@ internal static class PptxTests
         TestAssert.Equal("futureWrap", frame.WrapValue ?? string.Empty);
         TestAssert.Equal("Unknown", frame.VerticalOverflow);
         TestAssert.Equal("futureOverflow", frame.VerticalOverflowValue ?? string.Empty);
+    }
+
+    public static void PptxTextModelPreservesInvalidNumericBodyPropertyTokens()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree><p:sp>
+                    <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
+                    <p:txBody>
+                      <a:bodyPr numCol="futureColumns" spcCol="futureSpacing" lIns="futureLeft" rIns="futureRight" tIns="futureTop" bIns="futureBottom" rot="futureRotation">
+                        <a:normAutofit fontScale="futureScale" lnSpcReduction="futureReduction"/>
+                      </a:bodyPr>
+                      <a:lstStyle/>
+                      <a:p><a:r><a:rPr sz="1800"/><a:t>Invalid numeric body properties</a:t></a:r></a:p>
+                    </p:txBody>
+                  </p:sp></p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+
+        using FileStream stream = File.OpenRead(input);
+        OoxPackage package = OoxPackage.Open(stream);
+        PptxDocument document = new PptxReader().Read(package);
+
+        PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
+        TestAssert.Equal(7.2d, frame.InsetLeft);
+        TestAssert.Equal(7.2d, frame.InsetRight);
+        TestAssert.Equal(3.6d, frame.InsetTop);
+        TestAssert.Equal(3.6d, frame.InsetBottom);
+        TestAssert.Equal("futureLeft", frame.InsetLeftValue ?? string.Empty);
+        TestAssert.Equal("futureRight", frame.InsetRightValue ?? string.Empty);
+        TestAssert.Equal("futureTop", frame.InsetTopValue ?? string.Empty);
+        TestAssert.Equal("futureBottom", frame.InsetBottomValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.InsetLeftSource);
+        TestAssert.Equal(1, frame.ColumnCount);
+        TestAssert.Equal(0d, frame.ColumnSpacing);
+        TestAssert.Equal("futureColumns", frame.ColumnCountValue ?? string.Empty);
+        TestAssert.Equal("futureSpacing", frame.ColumnSpacingValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnCountSource);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
+        TestAssert.Equal(1d, frame.FontScale);
+        TestAssert.Equal("futureScale", frame.FontScaleValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.FontScaleSource);
+        TestAssert.Equal(1d, frame.LineSpacingScale);
+        TestAssert.Equal("futureReduction", frame.LineSpacingReductionValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.LineSpacingScaleSource);
+        TestAssert.Equal(null, frame.RotationDegrees);
+        TestAssert.Equal("futureRotation", frame.RotationValue ?? string.Empty);
+        TestAssert.Equal("DirectBodyPr", frame.RotationDegreesSource);
     }
 
     public static void PptxTextModelInheritsPlaceholderBodyProperties()
@@ -2882,6 +2947,10 @@ internal static class PptxTests
         TestAssert.Equal(0d, frame.InsetBottom);
         TestAssert.Equal(180d, frame.TextHeight);
         TestAssert.True(frame.VerticalOffset > 162d, "Expected inherited normAutofit scale to affect bottom-anchor height estimation.");
+        TestAssert.Equal("914400", frame.InsetLeftValue ?? string.Empty);
+        TestAssert.Equal("0", frame.InsetRightValue ?? string.Empty);
+        TestAssert.Equal("457200", frame.InsetTopValue ?? string.Empty);
+        TestAssert.Equal("0", frame.InsetBottomValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.InsetLeftSource);
         TestAssert.Equal("DirectBodyPr", frame.InsetRightSource);
         TestAssert.Equal("InheritedBodyPr", frame.InsetTopSource);
@@ -2901,15 +2970,20 @@ internal static class PptxTests
         TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
         TestAssert.Equal("InheritedBodyPr", frame.ColumnCountSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
+        TestAssert.Equal("2", frame.ColumnCountValue ?? string.Empty);
+        TestAssert.Equal("914400", frame.ColumnSpacingValue ?? string.Empty);
         TestAssert.Equal("normAutofit", frame.AutofitModeValue);
         TestAssert.Equal("InheritedBodyPr", frame.AutofitModeSource);
         TestAssert.Equal(0.8d, frame.FontScale);
+        TestAssert.Equal("80000", frame.FontScaleValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.FontScaleSource);
         TestAssert.Equal(0.88d, frame.LineSpacingScale);
+        TestAssert.Equal("12000", frame.LineSpacingReductionValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.LineSpacingScaleSource);
         TestAssert.Equal(true, frame.CompatibleLineSpacing);
         TestAssert.Equal("InheritedBodyPr", frame.CompatibleLineSpacingSource);
         TestAssert.Equal(90d, frame.RotationDegrees ?? double.NaN);
+        TestAssert.Equal("5400000", frame.RotationValue ?? string.Empty);
         TestAssert.Equal("InheritedBodyPr", frame.RotationDegreesSource);
     }
 
@@ -6184,13 +6258,20 @@ internal static class PptxTests
                     models[frameIndex].InsetRight,
                     models[frameIndex].InsetTop,
                     models[frameIndex].InsetBottom,
+                    models[frameIndex].InsetLeftValue,
+                    models[frameIndex].InsetRightValue,
+                    models[frameIndex].InsetTopValue,
+                    models[frameIndex].InsetBottomValue,
                     models[frameIndex].FontScale,
+                    models[frameIndex].FontScaleValue,
                     models[frameIndex].FontScaleSource,
                     models[frameIndex].LineSpacingScale,
+                    models[frameIndex].LineSpacingReductionValue,
                     models[frameIndex].LineSpacingScaleSource,
                     models[frameIndex].CompatibleLineSpacing,
                     models[frameIndex].CompatibleLineSpacingSource,
                     models[frameIndex].RotationDegrees,
+                    models[frameIndex].RotationValue,
                     models[frameIndex].RotationDegreesSource,
                     models[frameIndex].InheritedPlaceholderCount,
                     models[frameIndex].HasInheritedTextBody,
@@ -6207,6 +6288,8 @@ internal static class PptxTests
                     models[frameIndex].ColumnSource,
                     models[frameIndex].ColumnCountSource,
                     models[frameIndex].ColumnSpacingSource,
+                    models[frameIndex].ColumnCountValue,
+                    models[frameIndex].ColumnSpacingValue,
                     models[frameIndex].AutofitModeValue,
                     models[frameIndex].AutofitModeSource,
                     paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new

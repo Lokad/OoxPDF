@@ -12059,6 +12059,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `88` tests, `0` failures, and `2` slow skips.
 
+Revision note, 2026-05-28: PPTX text-body numeric properties now preserve their raw source tokens in the
+text-frame model instead of reducing future or malformed values to silent defaults. `PptxTextBodyProperties`
+and `PptxTextFrameModelSnapshot` now carry raw values for `lIns`/`rIns`/`tIns`/`bIns`, `numCol`, `spcCol`,
+`normAutofit @fontScale`, `normAutofit @lnSpcReduction`, and `rot` beside the normalized values and source
+tags. The private-safe frame-model JSON includes those fields so private slide diagnostics can identify
+schema drift without logging slide text or screenshots.
+
+This intentionally does not claim new Office rendering semantics for invalid numbers. The current renderer
+keeps its previous default/clamp behavior for malformed or future numeric tokens, but the raw token and its
+direct/inherited source now survive inspection. That closes the bodyPr token-loss gap called out after the
+estimator work and leaves future Office-aligned numeric semantics as a measured follow-up, not a hidden
+heuristic.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `89` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-28: Inherited PPTX text-body insets now resolve structurally from the same
 shape -> inherited placeholder `a:bodyPr` chain as the other scalar body properties. `PptxTextBodyProperties`
 keeps per-edge inset source tags, `PptxTextFrameModelSnapshot` exposes both inset values and per-edge

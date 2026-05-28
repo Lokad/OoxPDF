@@ -361,6 +361,7 @@ internal sealed partial class PptxRenderer
     private readonly record struct PptxTextBodyProperties(
         TextInsets Insets,
         TextInsetSources InsetSources,
+        TextInsetValues InsetValues,
         PptxTextOrientation Orientation,
         string? OrientationValue,
         PptxTextBodyPropertySource OrientationSource,
@@ -381,15 +382,20 @@ internal sealed partial class PptxRenderer
         PptxTextBodyPropertySource ColumnSource,
         PptxTextBodyPropertySource ColumnCountSource,
         PptxTextBodyPropertySource ColumnSpacingSource,
+        string? ColumnCountValue,
+        string? ColumnSpacingValue,
         string AutofitModeValue,
         PptxTextBodyPropertySource AutofitModeSource,
         double FontScale,
+        string? FontScaleValue,
         PptxTextBodyPropertySource FontScaleSource,
         double LineSpacingScale,
+        string? LineSpacingReductionValue,
         PptxTextBodyPropertySource LineSpacingScaleSource,
         bool CompatibleLineSpacing,
         PptxTextBodyPropertySource CompatibleLineSpacingSource,
         double? RotationDegrees,
+        string? RotationValue,
         PptxTextBodyPropertySource RotationDegreesSource,
         double? ExplicitWrapWidth);
 
@@ -406,6 +412,12 @@ internal sealed partial class PptxRenderer
         PptxTextBodyPropertySource Right,
         PptxTextBodyPropertySource Top,
         PptxTextBodyPropertySource Bottom);
+
+    private readonly record struct TextInsetValues(
+        string? Left,
+        string? Right,
+        string? Top,
+        string? Bottom);
 
     private sealed record PptxTextParagraphModel(
         XElement Source,
