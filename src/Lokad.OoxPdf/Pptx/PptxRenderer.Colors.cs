@@ -10,6 +10,11 @@ internal sealed partial class PptxRenderer
         return PptxColorResolver.TryReadSolidColor(element, theme, out color);
     }
 
+    private static bool TryReadSolidColor(XElement? element, PptxTheme theme, PptxColorMap colorMap, out RgbColor color)
+    {
+        return PptxColorResolver.TryReadSolidColor(element, theme, colorMap, out color);
+    }
+
     private static bool TryReadSolidColorWithAlpha(XElement? element, PptxTheme theme, out RgbColor color, out double alpha)
     {
         return PptxColorResolver.TryReadSolidColorWithAlpha(element, theme, out color, out alpha);

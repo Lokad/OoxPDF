@@ -3952,6 +3952,14 @@ High-priority actions:
   XML axis-label text styles when no scene chart is available, and the broader chart-style/color-style cascade
   ordering. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
   non-slow `pptx-charts` passed (`136 passed, 0 failed, 0 skipped`).
+  2026-05-28 progress: native chart series, point, polar-point, doughnut-point, and marker fallback readers
+  now receive the chart/source `PptxColorMap` for solid fills, pattern foreground/background colors, line
+  colors, and marker shape styles. The renderer color wrapper now exposes the existing color-map-aware solid
+  resolver, so chart style extraction no longer needs to bypass through default aliases for these paths. Keep
+  this item open for data-label fallback text and shapes, direct XML axis-label text styles when no scene chart
+  is available, and the broader chart-style/color-style cascade ordering. Validation: `dotnet build
+  Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow `pptx-charts` passed
+  (`136 passed, 0 failed, 0 skipped`).
 - [ ] Port `pptx-renderer` format-scheme fill/line resolution: `fillRef`, `lnRef`, style lists, `phClr`
   replacement, and default shape style resolution should be model-visible.
   2026-05-28 progress: shape `fillRef`/`lnRef` lookup now flows through `PptxFormatSchemeResolver` and a

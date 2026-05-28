@@ -14947,7 +14947,7 @@ internal static class PptxTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartPolarPointOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart polar-point option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null]) ?? throw new InvalidOperationException("Expected resolved polar point options.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null]) ?? throw new InvalidOperationException("Expected resolved polar point options.");
         Type optionsType = options.GetType();
         object pointExplosions = optionsType.GetProperty("PointExplosions")?.GetValue(options) ?? throw new InvalidOperationException("Expected point explosion options.");
 
@@ -14983,7 +14983,7 @@ internal static class PptxTests
         System.Reflection.MethodInfo readOptions = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlChartDoughnutOptions",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected chart doughnut option resolver.");
-        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null]) ?? throw new InvalidOperationException("Expected resolved doughnut options.");
+        object options = readOptions.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null]) ?? throw new InvalidOperationException("Expected resolved doughnut options.");
         Type optionsType = options.GetType();
         object polarPoints = optionsType.GetProperty("PolarPoints")?.GetValue(options) ?? throw new InvalidOperationException("Expected polar point options.");
 
@@ -15694,10 +15694,10 @@ internal static class PptxTests
             "ReadSceneOrXmlSeriesStrokes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series stroke resolver.");
 
-        object sceneFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene fills.")).Cast<object>().Single();
-        object sceneStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, null])) ?? throw new InvalidOperationException("Expected scene strokes.")).Cast<object>().Single();
-        object xmlFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML fills.")).Cast<object>().Single();
-        object xmlStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, null])) ?? throw new InvalidOperationException("Expected XML strokes.")).Cast<object>().Single();
+        object sceneFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene fills.")).Cast<object>().Single();
+        object sceneStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null])) ?? throw new InvalidOperationException("Expected scene strokes.")).Cast<object>().Single();
+        object xmlFill = (((System.Collections.IEnumerable?)readFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML fills.")).Cast<object>().Single();
+        object xmlStroke = (((System.Collections.IEnumerable?)readStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default, null])) ?? throw new InvalidOperationException("Expected XML strokes.")).Cast<object>().Single();
 
         TestAssert.Equal(new RgbColor(17, 34, 51), ChartSeriesFillColor(sceneFill));
         TestAssert.Equal(new RgbColor(68, 85, 102), ChartSeriesStrokeColor(sceneStroke));
@@ -15753,10 +15753,10 @@ internal static class PptxTests
             "ReadSceneOrXmlSeriesPointStrokes",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected series point stroke resolver.");
 
-        object scenePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene point fills.")).Cast<object>().Single();
-        object scenePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene point strokes.")).Cast<object>().Single();
-        object xmlPointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML point fills.")).Cast<object>().Single();
-        object xmlPointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML point strokes.")).Cast<object>().Single();
+        object scenePointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene point fills.")).Cast<object>().Single();
+        object scenePointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene point strokes.")).Cast<object>().Single();
+        object xmlPointFills = (((System.Collections.IEnumerable?)readPointFills.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML point fills.")).Cast<object>().Single();
+        object xmlPointStrokes = (((System.Collections.IEnumerable?)readPointStrokes.Invoke(null, [null, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML point strokes.")).Cast<object>().Single();
 
         object sceneFill = ChartDictionaryValue(scenePointFills, 1);
         object sceneStroke = ChartDictionaryValue(scenePointStrokes, 1);
@@ -15834,7 +15834,7 @@ internal static class PptxTests
         System.Reflection.MethodInfo readStyles = typeof(PptxRenderer).GetMethod(
             "ReadSceneOrXmlMarkerStyles",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected marker-style resolver.");
-        object[] sceneStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected scene marker styles.")).Cast<object>().ToArray();
+        object[] sceneStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [plot, mismatchedXmlFallback, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected scene marker styles.")).Cast<object>().ToArray();
         TestAssert.Equal(2, sceneStyles.Length);
         TestAssert.Equal("diamond", ChartMarkerStyleSymbol(sceneStyles[0]));
         TestAssert.True(!ChartMarkerStyleIsDefined(sceneStyles[0]), "Expected auto line marker to remain distinct from explicit series marker XML.");
@@ -15854,7 +15854,7 @@ internal static class PptxTests
               </c:lineChart></c:plotArea></c:chart>
             </c:chartSpace>
             """).Descendants(c + "lineChart").Single();
-        object[] xmlStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [null, xmlOnly, PptxTheme.Empty])) ?? throw new InvalidOperationException("Expected XML marker styles.")).Cast<object>().ToArray();
+        object[] xmlStyles = (((System.Collections.IEnumerable?)readStyles.Invoke(null, [null, xmlOnly, PptxTheme.Empty, PptxColorMap.Default])) ?? throw new InvalidOperationException("Expected XML marker styles.")).Cast<object>().ToArray();
         TestAssert.Equal(2, xmlStyles.Length);
         TestAssert.Equal("diamond", ChartMarkerStyleSymbol(xmlStyles[0]));
         TestAssert.True(!ChartMarkerStyleIsDefined(xmlStyles[0]), "Expected XML-only auto marker to remain distinct from explicit series marker XML.");
