@@ -14594,6 +14594,22 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
 console runner passed with `400` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: PPTX first-line baseline fallback font size now lives on the text paragraph model.
+`PptxTextParagraphModel` records `FirstLineFallbackFontSize` during text-model construction from the same
+resolved paragraph style that already applied the first-run/default-run/font-scale rule; inspection exposes the
+field; autofit scaling scales it with the rest of the paragraph text metrics; and `ReadFirstLineBaselineOffset`
+now consumes the typed field instead of re-reading `paragraph.Source` at layout time.
+
+This preserves the existing Office-like behavior for paragraphs whose first structural child is a manual break
+while closing the layout XML scan identified in the prior note. The remaining long-term gap is more precise
+provenance, not another numeric fallback: if Office evidence later distinguishes first `a:br`, first run `rPr`,
+paragraph default run properties, inherited defaults, and absent text differently, the model should carry a
+small explicit first-baseline source record rather than hiding that decision inside layout.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; the focused `LineBreak`
+invocation ran the console suite and passed with `407` tests, `0` failures, and `0` skips; full non-slow
+console runner passed with `400` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

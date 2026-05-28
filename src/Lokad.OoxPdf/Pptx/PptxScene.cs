@@ -253,6 +253,7 @@ internal sealed record PptxTextParagraphModelSnapshot(
     bool HasEndParagraphProperties,
     bool HasVisibleContent,
     bool HasManualLineBreak,
+    double FirstLineFallbackFontSize,
     string CascadeLevelName,
     int ResolvedCascadeSourceCount,
     IReadOnlyList<string> CascadeLayerNames,

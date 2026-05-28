@@ -522,6 +522,7 @@ internal sealed partial class PptxRenderer
     {
         return paragraph with
         {
+            FirstLineFallbackFontSize = paragraph.FirstLineFallbackFontSize * ratio,
             Style = ScaleParagraphStyle(paragraph.Style, ratio),
             Runs = paragraph.Runs.Select(run => run with { Style = ScaleRunStyle(run.Style, ratio) }).ToArray()
         };
@@ -2609,7 +2610,7 @@ internal sealed partial class PptxRenderer
     private static double ReadFirstLineBaselineOffset(PptxTextParagraphModel paragraph, LineSpacing lineSpacing, TextAdvanceEstimator advanceEstimator, bool useOfficeBaselineFloor)
     {
         PptxTextRunModel? firstRun = paragraph.Runs.FirstOrDefault(run => run.Kind != PptxTextRunKind.Break);
-        double fontSize = firstRun?.Style.NominalFontSize ?? ReadFirstParagraphFontSize(paragraph.Source, paragraph.Style.DefaultRunProperties);
+        double fontSize = firstRun?.Style.NominalFontSize ?? paragraph.FirstLineFallbackFontSize;
         return paragraph.HasManualLineBreak
             ? ManualBreakBaselineOffset(fontSize, lineSpacing, useOfficeBaselineFloor)
             : LineBaselineOffset(fontSize, lineSpacing, firstRun?.Style, advanceEstimator, useOfficeBaselineFloor);

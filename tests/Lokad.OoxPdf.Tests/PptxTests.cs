@@ -3709,6 +3709,7 @@ internal static class PptxTests
         PptxTextFrameModelSnapshot frame = PptxRenderer.InspectTextFrameModels(document, package, 0).Single();
         TestAssert.True(frame.Paragraphs[0].HasVisibleContent, "Expected the text model to preserve paragraph-visible-content state.");
         TestAssert.True(frame.Paragraphs[0].HasManualLineBreak, "Expected the text model to preserve manual line-break state.");
+        TestAssert.True(Math.Abs(frame.Paragraphs[0].FirstLineFallbackFontSize - 18d) < 0.01d, "Expected the text model to preserve the first-line fallback font size.");
 
         PptxTextLayoutSnapshot layout = PptxRenderer.InspectTextLayout(document, package, 0);
         PptxTextLineLayoutSnapshot[] lines = layout.Frames
