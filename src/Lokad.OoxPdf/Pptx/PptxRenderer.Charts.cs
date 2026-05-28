@@ -83,11 +83,12 @@ internal sealed partial class PptxRenderer
 
         ChartWorkbookData? chartWorkbook = ReadEmbeddedChartWorkbookData(sceneChart?.ExternalData ?? default);
 
+        PptxColorMap chartColorMap = sceneChart?.ColorMap ?? context.SlideColorMap;
         if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, fonts, context.FontResolver))
         {
             EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
+            fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
+            fonts.AddRange(RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, chartWorkbook, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
             return;
         }
 
@@ -97,8 +98,8 @@ internal sealed partial class PptxRenderer
             if (TryRenderChart(graphics, context.Document, context.Theme, resolvedChartPalette, bounds.Value, resolvedChartXml, sceneChart, workbook: null, fonts, context.FontResolver))
             {
                 EmitUnrenderedDefaultChartAxisTitleDiagnostics(resolvedChartXml, sceneChart, context.DiagnosticSink, chartPartName, context.SlideNumber);
-                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
-                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
+                fonts.AddRange(RenderManualChartAxisTitles(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, context.FontResolver, context.DiagnosticSink, chartPartName, context.SlideNumber, emitDefaultLayoutDiagnostics: false));
+                fonts.AddRange(RenderChartTitle(context.Document, context.Theme, chartColorMap, graphics, bounds.Value, resolvedChartXml, sceneChart, workbook: null, ReadSceneOrXmlChartPlotVisibleOnly(sceneChart, resolvedChartXml), context.FontResolver));
                 return;
             }
         }
@@ -4117,27 +4118,32 @@ internal sealed partial class PptxRenderer
 
     private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme)
     {
+        return ReadChartShapeStyle(shapeProperties, theme, PptxColorMap.Default);
+    }
+
+    private static ChartShapeStyle ReadChartShapeStyle(XElement? shapeProperties, PptxTheme theme, PptxColorMap colorMap)
+    {
         if (shapeProperties is null)
         {
             return ChartShapeStyle.Empty;
         }
 
         bool noFill = shapeProperties.Element(DrawingNamespace + "noFill") is not null;
-        ChartSeriesFill? fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, out RgbColor fillColor, out double fillAlpha)
+        ChartSeriesFill? fill = !noFill && TryReadSolidColorWithAlpha(shapeProperties, theme, colorMap, out RgbColor fillColor, out double fillAlpha)
             ? new ChartSeriesFill(fillColor, fillAlpha)
             : null;
-        GradientFill? gradientFill = !noFill && PptxSceneBuilder.TryReadShapeGradientFill(shapeProperties, theme, out PptxSceneGradientFill sceneGradientFill)
+        GradientFill? gradientFill = !noFill && PptxSceneBuilder.TryReadShapeGradientFill(shapeProperties, theme, colorMap, out PptxSceneGradientFill sceneGradientFill)
             ? ToGradientFill(sceneGradientFill)
             : null;
-        ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
+        ChartSeriesStroke? stroke = TryReadLineWithAlpha(shapeProperties, theme, colorMap, out RgbColor strokeColor, out double lineWidth, out double strokeAlpha)
             ? new ChartSeriesStroke(strokeColor, strokeAlpha, lineWidth)
             : null;
         return new ChartShapeStyle(
             fill,
             gradientFill,
             stroke,
-            PptxSceneBuilder.TryReadGlow(shapeProperties, theme, out PptxSceneGlow glow) ? glow : default,
-            PptxSceneBuilder.TryReadOuterShadow(shapeProperties, theme, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
+            PptxSceneBuilder.TryReadGlow(shapeProperties, theme, colorMap, out PptxSceneGlow glow) ? glow : default,
+            PptxSceneBuilder.TryReadOuterShadow(shapeProperties, theme, colorMap, out PptxSceneOuterShadow outerShadow) ? outerShadow : default);
     }
 
     private static void RenderChartShapeStyle(PdfGraphicsBuilder graphics, double x, double y, double width, double height, ChartShapeStyle style)
@@ -4227,7 +4233,7 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver fontResolver)
+    private static IReadOnlyList<PdfFontResource> RenderChartTitle(PptxDocument document, PptxTheme theme, PptxColorMap colorMap, PdfGraphicsBuilder graphics, ShapeBounds bounds, XDocument chartXml, PptxSceneChart? sceneChart, ChartWorkbookData? workbook, bool plotVisibleOnly, PresentationFontResolver fontResolver)
     {
         string? title = ReadSceneOrXmlChartTitleText(sceneChart, chartXml);
         if (string.IsNullOrWhiteSpace(title))
@@ -4252,7 +4258,7 @@ internal sealed partial class PptxRenderer
         }
 
         bool isAutoTitle = IsAutoGeneratedChartTitle(sceneChart);
-        ChartTextStyle style = ReadSceneOrXmlChartTitleTextStyle(theme, sceneChart, chartXml, isAutoTitle);
+        ChartTextStyle style = ReadSceneOrXmlChartTitleTextStyle(theme, colorMap, sceneChart, chartXml, isAutoTitle);
         double fontSize = style.FontSize;
         double titleBaselineRatio = !titleManualLayoutApplied && HasSceneOrXmlPolarChart(sceneChart, chartXml)
             ? PptxChartMetricRules.PolarTitleBaselineYRatio
@@ -4261,14 +4267,14 @@ internal sealed partial class PptxRenderer
         double baselineY = titleManualLayoutApplied
             ? fallbackBaselineY
             : ResolveChartTitleBaselineY(document, theme, bounds, chartXml, sceneChart, workbook, plotVisibleOnly, fallbackBaselineY, fontSize, fontResolver);
-        RenderChartShapeStyle(graphics, x, y, width, height, ReadSceneOrXmlChartTitleShapeStyle(theme, sceneChart, chartXml));
+        RenderChartShapeStyle(graphics, x, y, width, height, ReadSceneOrXmlChartTitleShapeStyle(theme, colorMap, sceneChart, chartXml));
         double titleX = x + width * PptxChartMetricRules.TitleXInsetRatio;
         double titleWidth = width * PptxChartMetricRules.TitleWidthRatio;
         double titleHeight = fontSize * PptxChartMetricRules.TitleHeightFactor;
         var runs = new List<TextRun>();
         AddChartRichTextRuns(
             runs,
-            ReadSceneOrXmlChartTitleTextRuns(theme, sceneChart, chartXml),
+            ReadSceneOrXmlChartTitleTextRuns(theme, colorMap, sceneChart, chartXml),
             title.Trim(),
             titleX,
             baselineY,
@@ -4284,16 +4290,17 @@ internal sealed partial class PptxRenderer
         return RenderTextRuns(runs, graphics, "CT", fontResolver);
     }
 
-    private static ChartShapeStyle ReadSceneOrXmlChartTitleShapeStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    private static ChartShapeStyle ReadSceneOrXmlChartTitleShapeStyle(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
     {
         return sceneChart is null
-            ? ReadChartShapeStyle(chartXml.Descendants(ChartNamespace + "title").FirstOrDefault()?.Element(ChartNamespace + "spPr"), theme)
+            ? ReadChartShapeStyle(chartXml.Descendants(ChartNamespace + "title").FirstOrDefault()?.Element(ChartNamespace + "spPr"), theme, colorMap)
             : ToChartShapeStyle(sceneChart.Title.ShapeStyle);
     }
 
     private static IReadOnlyList<PdfFontResource> RenderManualChartAxisTitles(
         PptxDocument document,
         PptxTheme theme,
+        PptxColorMap colorMap,
         PdfGraphicsBuilder graphics,
         ShapeBounds bounds,
         XDocument chartXml,
@@ -4368,13 +4375,13 @@ internal sealed partial class PptxRenderer
                 graphics,
                 frame,
                 text,
-                ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme)),
+                ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(title.Element(ChartNamespace + "tx"), theme, colorMap)),
                 layout,
-                ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme),
+                ReadChartShapeStyle(title.Element(ChartNamespace + "spPr"), theme, colorMap),
                 ReadChartTextBodyProperties(title),
-                ReadChartTextStyleFromTxPr(chartXml.Root, theme),
+                ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap),
                 ChartTextStyleOverride.Empty,
-                ReadChartTextStyleFromTxPr(title, theme),
+                ReadChartTextStyleFromTxPr(title, theme, colorMap),
                 fontResolver));
         }
 
@@ -4836,18 +4843,18 @@ internal sealed partial class PptxRenderer
         return sceneChart?.Title.IsAutoGenerated == true;
     }
 
-    private static ChartTextStyle ReadSceneOrXmlChartTitleTextStyle(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml, bool isAutoTitle)
+    private static ChartTextStyle ReadSceneOrXmlChartTitleTextStyle(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml, bool isAutoTitle)
     {
         if (sceneChart is null)
         {
             XElement? title = chartXml.Descendants(ChartNamespace + "title").FirstOrDefault();
             return ResolveAutoChartTitleTextStyle(
-                ReadChartTextStyle(theme, chartXml, title, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize),
+                ReadChartTextStyle(theme, colorMap, chartXml, title, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize),
                 ChartTextStyleOverride.Empty,
                 isAutoTitle);
         }
 
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, sceneChart.ColorMap, fallbackFontSize: PptxChartMetricRules.TitleFallbackFontSize);
         style = MergeChartTextStyle(style, ToChartTextStyleOverride(sceneChart.TextStyle));
         style = MergeChartTextStyle(style, ReadChartStyleRoleTextStyle(sceneChart.StylePart, "title"));
         ChartTextStyleOverride titleStyle = ToChartTextStyleOverride(sceneChart.Title.TextStyle);
@@ -4896,7 +4903,7 @@ internal sealed partial class PptxRenderer
         return ReadChartTextBodyProperties(title);
     }
 
-    private static IReadOnlyList<ChartTextRunOverride> ReadSceneOrXmlChartTitleTextRuns(PptxTheme theme, PptxSceneChart? sceneChart, XDocument chartXml)
+    private static IReadOnlyList<ChartTextRunOverride> ReadSceneOrXmlChartTitleTextRuns(PptxTheme theme, PptxColorMap colorMap, PptxSceneChart? sceneChart, XDocument chartXml)
     {
         if (sceneChart is not null)
         {
@@ -4912,7 +4919,7 @@ internal sealed partial class PptxRenderer
             .Descendants(ChartNamespace + "title")
             .FirstOrDefault()
             ?.Element(ChartNamespace + "tx");
-        return ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(titleText, theme));
+        return ToChartTextRuns(PptxSceneBuilder.ReadChartTextRuns(titleText, theme, colorMap));
     }
 
     private static string? ReadChartTitleText(XDocument chartXml)
@@ -6406,9 +6413,14 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, XDocument chartXml, XElement? element, double fallbackFontSize)
     {
-        ChartTextStyle style = CreateDefaultChartTextStyle(theme, fallbackFontSize);
-        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme));
-        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme));
+        return ReadChartTextStyle(theme, PptxColorMap.Default, chartXml, element, fallbackFontSize);
+    }
+
+    private static ChartTextStyle ReadChartTextStyle(PptxTheme theme, PptxColorMap colorMap, XDocument chartXml, XElement? element, double fallbackFontSize)
+    {
+        ChartTextStyle style = CreateDefaultChartTextStyle(theme, colorMap, fallbackFontSize);
+        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(chartXml.Root, theme, colorMap));
+        style = MergeChartTextStyle(style, ReadChartTextStyleFromTxPr(element, theme, colorMap));
         return style;
     }
 
@@ -6436,7 +6448,12 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyle CreateDefaultChartTextStyle(PptxTheme theme, double fallbackFontSize)
     {
-        RgbColor fallbackColor = theme.TryResolveColor("tx1", out RgbColor themeText)
+        return CreateDefaultChartTextStyle(theme, PptxColorMap.Default, fallbackFontSize);
+    }
+
+    private static ChartTextStyle CreateDefaultChartTextStyle(PptxTheme theme, PptxColorMap colorMap, double fallbackFontSize)
+    {
+        RgbColor fallbackColor = theme.TryResolveColor("tx1", colorMap, out RgbColor themeText)
             ? themeText
             : new RgbColor(0, 0, 0);
         PptxThemeTypefaceResolution typeface = ResolveChartThemeTypeface(theme);
@@ -6488,6 +6505,11 @@ internal sealed partial class PptxRenderer
 
     private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme)
     {
+        return ReadChartTextStyleFromTxPr(parent, theme, PptxColorMap.Default);
+    }
+
+    private static ChartTextStyleOverride ReadChartTextStyleFromTxPr(XElement? parent, PptxTheme theme, PptxColorMap colorMap)
+    {
         XElement? defRunProperties = parent?
             .Element(ChartNamespace + "txPr")?
             .Elements(DrawingNamespace + "p")
@@ -6516,7 +6538,7 @@ internal sealed partial class PptxRenderer
             fontSize = sizeHundredths / 100d;
         }
 
-        RgbColor? color = TryReadSolidColorWithAlpha(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, out RgbColor parsedColor, out double alpha)
+        RgbColor? color = TryReadSolidColorWithAlpha(defRunProperties.Element(DrawingNamespace + "solidFill"), theme, colorMap, out RgbColor parsedColor, out double alpha)
             ? parsedColor
             : null;
         bool? bold = defRunProperties.Attribute("b") is { } boldAttribute
