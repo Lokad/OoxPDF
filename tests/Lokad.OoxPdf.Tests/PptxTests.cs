@@ -2720,7 +2720,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
                     <p:txBody>
-                      <a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400" lIns="182880" rIns="0" tIns="457200" bIns="0">
+                      <a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="ellipsis" numCol="3" spcCol="914400" lIns="182880" rIns="0" tIns="457200" bIns="0" compatLnSpc="1">
                         <a:normAutofit fontScale="80000" lnSpcReduction="12000"/>
                       </a:bodyPr>
                       <a:lstStyle/>
@@ -2764,7 +2764,14 @@ internal static class PptxTests
         TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnCountSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
+        TestAssert.Equal("normAutofit", frame.AutofitModeValue);
+        TestAssert.Equal("DirectBodyPr", frame.AutofitModeSource);
         TestAssert.Equal(0.8d, frame.FontScale);
+        TestAssert.Equal("DirectBodyPr", frame.FontScaleSource);
+        TestAssert.Equal(0.88d, frame.LineSpacingScale);
+        TestAssert.Equal("DirectBodyPr", frame.LineSpacingScaleSource);
+        TestAssert.Equal(true, frame.CompatibleLineSpacing);
+        TestAssert.Equal("DirectBodyPr", frame.CompatibleLineSpacingSource);
     }
 
     public static void PptxTextModelKeepsUnknownBodyPropertyEnumsObservable()
@@ -2847,7 +2854,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="2" name="Layout Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip" lIns="914400" tIns="457200" bIns="0" numCol="2"/><a:lstStyle/><a:p/></p:txBody>
+                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip" lIns="914400" tIns="457200" bIns="0" numCol="2" compatLnSpc="1"><a:normAutofit fontScale="80000" lnSpcReduction="12000"/></a:bodyPr><a:lstStyle/><a:p/></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
@@ -2890,6 +2897,14 @@ internal static class PptxTests
         TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
         TestAssert.Equal("InheritedBodyPr", frame.ColumnCountSource);
         TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
+        TestAssert.Equal("normAutofit", frame.AutofitModeValue);
+        TestAssert.Equal("InheritedBodyPr", frame.AutofitModeSource);
+        TestAssert.Equal(0.8d, frame.FontScale);
+        TestAssert.Equal("InheritedBodyPr", frame.FontScaleSource);
+        TestAssert.Equal(0.88d, frame.LineSpacingScale);
+        TestAssert.Equal("InheritedBodyPr", frame.LineSpacingScaleSource);
+        TestAssert.Equal(true, frame.CompatibleLineSpacing);
+        TestAssert.Equal("InheritedBodyPr", frame.CompatibleLineSpacingSource);
     }
 
     public static void PptxTextModelPreservesRunStyleTokens()
@@ -6162,6 +6177,11 @@ internal static class PptxTests
                     models[frameIndex].InsetTop,
                     models[frameIndex].InsetBottom,
                     models[frameIndex].FontScale,
+                    models[frameIndex].FontScaleSource,
+                    models[frameIndex].LineSpacingScale,
+                    models[frameIndex].LineSpacingScaleSource,
+                    models[frameIndex].CompatibleLineSpacing,
+                    models[frameIndex].CompatibleLineSpacingSource,
                     models[frameIndex].InheritedPlaceholderCount,
                     models[frameIndex].HasInheritedTextBody,
                     models[frameIndex].UsesInheritedShapeBounds,
@@ -6177,6 +6197,8 @@ internal static class PptxTests
                     models[frameIndex].ColumnSource,
                     models[frameIndex].ColumnCountSource,
                     models[frameIndex].ColumnSpacingSource,
+                    models[frameIndex].AutofitModeValue,
+                    models[frameIndex].AutofitModeSource,
                     paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new
                     {
                         paragraph.Level,

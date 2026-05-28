@@ -109,6 +109,11 @@ internal sealed record PptxTextFrameModelSnapshot(
     double InsetTop,
     double InsetBottom,
     double FontScale,
+    string FontScaleSource,
+    double LineSpacingScale,
+    string LineSpacingScaleSource,
+    bool CompatibleLineSpacing,
+    string CompatibleLineSpacingSource,
     int InheritedPlaceholderCount,
     bool HasInheritedTextBody,
     bool UsesInheritedShapeBounds,
@@ -136,6 +141,8 @@ internal sealed record PptxTextFrameModelSnapshot(
     string ColumnSource,
     string ColumnCountSource,
     string ColumnSpacingSource,
+    string AutofitModeValue,
+    string AutofitModeSource,
     IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
 
 internal sealed record PptxTextParagraphModelSnapshot(

@@ -12076,6 +12076,25 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `88` tests, `0` failures, and `2` slow skips.
 
+Revision note, 2026-05-28: PPTX text autofit mode and stored `normAutofit` scales now resolve through the
+text-body inheritance chain. `PptxTextBodyProperties` records the active autofit child (`spAutoFit`,
+`noAutofit`, `normAutofit`, or absent), its source, `fontScale` and `lnSpcReduction`-derived line-spacing
+scale sources, and inherited `compatLnSpc`; text-flow layout now consumes this model state instead of
+re-reading only the local `a:bodyPr` for `spAutoFit`/`noAutofit`. The mixed placeholder body-property test
+locks inherited `normAutofit` and inherited compatible line spacing beside direct slide-level overrides.
+
+This removes another direct-XML heuristic from the active layout path while preserving the existing Office-fit
+semantics: `normAutofit @fontScale` and `@lnSpcReduction` are honored when stored, `spAutoFit` still uses the
+current bounded fitting rules, and `noAutofit` still drives the existing wrap-token behavior. A separate
+vertical-anchor estimator gap remains: `EstimateTextHeight` still recomputes from local text-body XML and does
+not apply direct or inherited model-level `normAutofit` scale, line-spacing reduction, or inherited wrap/
+compatible-line-spacing state. That estimator should be moved onto `PptxTextBodyProperties` before any further
+vertical-anchor tuning.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `88` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

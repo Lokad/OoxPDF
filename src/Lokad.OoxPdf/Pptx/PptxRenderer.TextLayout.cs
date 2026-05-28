@@ -319,7 +319,7 @@ internal sealed partial class PptxRenderer
     {
         PptxTextFlowFrame flowFrame = BuildTextFlowFrame(frameModel, document);
         PptxTextFrameLayout layout = BuildTextFrameLayout(flowFrame, document, advanceEstimator);
-        if (HasShapeAutoFit(frameModel.TextBody) && UsesRotatedFrameAutoFit(frameModel.Orientation))
+        if (HasShapeAutoFit(frameModel.BodyProperties) && UsesRotatedFrameAutoFit(frameModel.Orientation))
         {
             PptxTextFrameLayout unwrappedLayout = BuildTextFrameLayout(flowFrame, document, advanceEstimator, allowWrapping: false);
             if (TextLayoutOverflows(unwrappedLayout, flowFrame.Box))
@@ -331,7 +331,7 @@ internal sealed partial class PptxRenderer
             return unwrappedLayout;
         }
 
-        if (HasShapeAutoFit(frameModel.TextBody) &&
+        if (HasShapeAutoFit(frameModel.BodyProperties) &&
             frameModel.Orientation == PptxTextOrientation.Horizontal &&
             TextLayoutOverflowsHorizontally(layout, flowFrame.Box, PptxTextMetricRules.ShapeAutoFitWrapTolerance(ResolveLayoutMaxFontSize(layout), flowFrame.Box.TextWidth)))
         {
@@ -382,43 +382,57 @@ internal sealed partial class PptxRenderer
             frame.TextClipHeight,
             frame.RotationCenterX,
             frame.RotationCenterY);
-        bool attachSpacesToFollowingWord = HasNoAutoFit(frame.TextBody);
+        bool attachSpacesToFollowingWord = HasNoAutoFit(frame.BodyProperties);
         return new PptxTextFlowFrame(frame, box, frame.Paragraphs.Select(paragraph => BuildTextFlowParagraph(paragraph, attachSpacesToFollowingWord)).ToArray());
     }
 
-    private static bool HasShapeAutoFit(XElement textBody)
+    private static bool HasShapeAutoFit(PptxTextBodyProperties bodyProperties)
     {
-        return textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Element(DrawingNamespace + "spAutoFit") is not null;
+        return bodyProperties.AutofitModeValue == "spAutoFit";
     }
 
-    private static bool HasNoAutoFit(XElement textBody)
+    private static bool HasNoAutoFit(PptxTextBodyProperties bodyProperties)
     {
-        return textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Element(DrawingNamespace + "noAutofit") is not null;
+        return bodyProperties.AutofitModeValue == "noAutofit";
     }
 
-    private static string ReadTextAutofitMode(XElement textBody)
+    private static (XElement? Element, string Mode, PptxTextBodyPropertySource Source) ReadTextAutofit(
+        XElement textBody,
+        XElement? inheritedTextBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        if (bodyProperties?.Element(DrawingNamespace + "spAutoFit") is not null)
+        if (TryReadTextAutofit(bodyProperties) is { } directAutofit)
         {
-            return "spAutoFit";
+            return (directAutofit.Element, directAutofit.Mode, PptxTextBodyPropertySource.DirectBodyPr);
         }
 
-        if (bodyProperties?.Element(DrawingNamespace + "noAutofit") is not null)
+        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
+        if (TryReadTextAutofit(inheritedBodyProperties) is { } inheritedAutofit)
         {
-            return "noAutofit";
+            return (inheritedAutofit.Element, inheritedAutofit.Mode, PptxTextBodyPropertySource.InheritedBodyPr);
         }
 
-        if (bodyProperties?.Element(DrawingNamespace + "normAutofit") is not null)
+        return (null, string.Empty, PptxTextBodyPropertySource.DefaultValue);
+    }
+
+    private static (XElement Element, string Mode)? TryReadTextAutofit(XElement? bodyProperties)
+    {
+        if (bodyProperties?.Element(DrawingNamespace + "spAutoFit") is { } shapeAutofit)
         {
-            return "normAutofit";
+            return (shapeAutofit, "spAutoFit");
         }
 
-        return string.Empty;
+        if (bodyProperties?.Element(DrawingNamespace + "noAutofit") is { } noAutofit)
+        {
+            return (noAutofit, "noAutofit");
+        }
+
+        if (bodyProperties?.Element(DrawingNamespace + "normAutofit") is { } normalAutofit)
+        {
+            return (normalAutofit, "normAutofit");
+        }
+
+        return null;
     }
 
     private static bool TextBodyAllowsWrapping(XElement textBody)
@@ -693,7 +707,7 @@ internal sealed partial class PptxRenderer
                 lineState.Frame.Model.Insets.Bottom,
                 lineState.Frame.Model.BodyProperties.WrapMode.ToString(),
                 lineState.Frame.Model.BodyProperties.WrapValue,
-                ReadTextAutofitMode(lineState.Frame.Model.TextBody),
+                lineState.Frame.Model.BodyProperties.AutofitModeValue,
                 lineState.Frame.Model.TextX,
                 lineState.Frame.Model.TextWidth,
                 lineState.Frame.Model.TextWrapWidth,
@@ -891,14 +905,14 @@ internal sealed partial class PptxRenderer
                         continue;
                     }
 
-                    double wrapTolerance = HasShapeAutoFit(frame.TextBody)
+                    double wrapTolerance = HasShapeAutoFit(frame.BodyProperties)
                         ? PptxTextMetricRules.ShapeAutoFitWrapTolerance(fragmentFontSize, effectiveTextWidth)
-                        : !HasNoAutoFit(frame.TextBody) ||
+                        : !HasNoAutoFit(frame.BodyProperties) ||
                         IsWordJustifiedAlignment(paragraphStyle.Alignment) ||
                         paragraphStyle.Alignment == TextAlignment.Distributed
                         ? PptxTextMetricRules.CoordinateTolerance
                         : PptxTextMetricRules.CoordinateTolerance;
-                    if (isFinalShortWordSegment && HasShapeAutoFit(frame.TextBody))
+                    if (isFinalShortWordSegment && HasShapeAutoFit(frame.BodyProperties))
                     {
                         wrapTolerance = PptxTextMetricRules.FinalWordWrapTolerance(fragmentFontSize, effectiveTextWidth);
                     }
@@ -2403,31 +2417,35 @@ internal sealed partial class PptxRenderer
         return normalized < 0d ? normalized + 360d : normalized;
     }
 
-    private static double ReadNormAutofitFontScale(XElement textBody)
+    private static (double Scale, PptxTextBodyPropertySource Source) ReadNormAutofitFontScale(
+        XElement? autofit,
+        PptxTextBodyPropertySource autofitSource)
     {
-        XElement? normAutofit = textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Element(DrawingNamespace + "normAutofit");
-        if (normAutofit?.Attribute("fontScale") is not { } fontScale)
+        if (autofit?.Name.LocalName != "normAutofit" ||
+            autofit.Attribute("fontScale") is not { } fontScale)
         {
-            return 1d;
+            return (1d, PptxTextBodyPropertySource.DefaultValue);
         }
 
-        return Math.Clamp(int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d, PptxTextMetricRules.MinimumAutofitScale, PptxTextMetricRules.MaximumAutofitScale);
+        double scale = Math.Clamp(
+            int.Parse(fontScale.Value, CultureInfo.InvariantCulture) / 100000d,
+            PptxTextMetricRules.MinimumAutofitScale,
+            PptxTextMetricRules.MaximumAutofitScale);
+        return (scale, autofitSource);
     }
 
-    private static double ReadNormAutofitLineSpacingScale(XElement textBody)
+    private static (double Scale, PptxTextBodyPropertySource Source) ReadNormAutofitLineSpacingScale(
+        XElement? autofit,
+        PptxTextBodyPropertySource autofitSource)
     {
-        XElement? normAutofit = textBody
-            .Element(DrawingNamespace + "bodyPr")
-            ?.Element(DrawingNamespace + "normAutofit");
-        if (normAutofit?.Attribute("lnSpcReduction") is not { } reduction)
+        if (autofit?.Name.LocalName != "normAutofit" ||
+            autofit.Attribute("lnSpcReduction") is not { } reduction)
         {
-            return 1d;
+            return (1d, PptxTextBodyPropertySource.DefaultValue);
         }
 
         double reductionRatio = Math.Clamp(int.Parse(reduction.Value, CultureInfo.InvariantCulture) / 100000d, 0d, PptxTextMetricRules.MaximumLineSpacingReduction);
-        return 1d - reductionRatio;
+        return (1d - reductionRatio, autofitSource);
     }
 
     private static bool HasCompatibleLineSpacing(XElement textBody)

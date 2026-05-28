@@ -381,9 +381,14 @@ internal sealed partial class PptxRenderer
         PptxTextBodyPropertySource ColumnSource,
         PptxTextBodyPropertySource ColumnCountSource,
         PptxTextBodyPropertySource ColumnSpacingSource,
+        string AutofitModeValue,
+        PptxTextBodyPropertySource AutofitModeSource,
         double FontScale,
+        PptxTextBodyPropertySource FontScaleSource,
         double LineSpacingScale,
+        PptxTextBodyPropertySource LineSpacingScaleSource,
         bool CompatibleLineSpacing,
+        PptxTextBodyPropertySource CompatibleLineSpacingSource,
         double? RotationDegrees,
         double? ExplicitWrapWidth);
 

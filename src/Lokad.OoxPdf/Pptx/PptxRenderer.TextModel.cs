@@ -33,6 +33,11 @@ internal sealed partial class PptxRenderer
             frame.Insets.Top,
             frame.Insets.Bottom,
             frame.FontScale,
+            frame.BodyProperties.FontScaleSource.ToString(),
+            frame.BodyProperties.LineSpacingScale,
+            frame.BodyProperties.LineSpacingScaleSource.ToString(),
+            frame.BodyProperties.CompatibleLineSpacing,
+            frame.BodyProperties.CompatibleLineSpacingSource.ToString(),
             frame.InheritedPlaceholderCount,
             frame.InheritedTextBody is not null,
             frame.UsesInheritedShapeBounds,
@@ -60,6 +65,8 @@ internal sealed partial class PptxRenderer
             frame.BodyProperties.ColumnSource.ToString(),
             frame.BodyProperties.ColumnCountSource.ToString(),
             frame.BodyProperties.ColumnSpacingSource.ToString(),
+            frame.BodyProperties.AutofitModeValue,
+            frame.BodyProperties.AutofitModeSource.ToString(),
             frame.Paragraphs.Select(ToSnapshot).ToArray());
     }
 
@@ -471,11 +478,15 @@ internal sealed partial class PptxRenderer
             ReadTextColumns(textBody, inheritedTextBody);
         PptxTextBodyPropertySource columnSource = MergeTextBodyPropertySources(columnCountSource, columnSpacingSource);
         (TextInsets insets, TextInsetSources insetSources) = ReadTextInsets(textBody, inheritedTextBody);
+        (XElement? autofit, string autofitMode, PptxTextBodyPropertySource autofitModeSource) = ReadTextAutofit(textBody, inheritedTextBody);
+        (double fontScale, PptxTextBodyPropertySource fontScaleSource) = ReadNormAutofitFontScale(autofit, autofitModeSource);
+        (double lineSpacingScale, PptxTextBodyPropertySource lineSpacingScaleSource) = ReadNormAutofitLineSpacingScale(autofit, autofitModeSource);
         (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
         (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
         (string? anchorCenter, PptxTextBodyPropertySource anchorCenterSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchorCtr", inherit: true);
         (string? wrap, PptxTextBodyPropertySource wrapSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "wrap", inherit: true);
         (string? verticalOverflow, PptxTextBodyPropertySource verticalOverflowSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vertOverflow", inherit: true);
+        (string? compatibleLineSpacing, PptxTextBodyPropertySource compatibleLineSpacingSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "compatLnSpc", inherit: true);
         return new PptxTextBodyProperties(
             insets,
             insetSources,
@@ -499,9 +510,14 @@ internal sealed partial class PptxRenderer
             columnSource,
             columnCountSource,
             columnSpacingSource,
-            ReadNormAutofitFontScale(textBody),
-            ReadNormAutofitLineSpacingScale(textBody),
-            HasCompatibleLineSpacing(textBody),
+            autofitMode,
+            autofitModeSource,
+            fontScale,
+            fontScaleSource,
+            lineSpacingScale,
+            lineSpacingScaleSource,
+            compatibleLineSpacing is not null && OoxBoolean.IsTrue(compatibleLineSpacing),
+            compatibleLineSpacingSource,
             ReadTextBodyRotationDegrees(textBody),
             ExplicitWrapWidth: null);
     }
