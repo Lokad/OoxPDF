@@ -50,6 +50,26 @@ internal static class PdfWriterTests
         TestAssert.Contains(" c", pdf);
     }
 
+    public static void WritesGrayColorOperatorsForEqualRgbChannels()
+    {
+        var graphics = new PdfGraphicsBuilder();
+        graphics.SetFillRgb(128, 128, 128);
+        graphics.FillRectangle(10, 20, 30, 40);
+        graphics.SetStrokeRgb(0, 0, 0);
+        graphics.StrokeRectangle(10, 20, 30, 40);
+        graphics.DrawGlyphText("F1", 12, 20, 30, 255, 255, 255, "0041", textRenderingMode: 1, strokeRed: 128, strokeGreen: 128, strokeBlue: 128, strokeWidth: 0.5d);
+
+        string pdf = WritePdfText(new[] { new PdfPage(200, 200, graphics.ToString()) });
+
+        TestAssert.Contains("0.502 g", pdf);
+        TestAssert.Contains("0 G", pdf);
+        TestAssert.Contains("1 g", pdf);
+        TestAssert.Contains("0.502 G", pdf);
+        TestAssert.DoesNotContain("0.502 0.502 0.502 rg", pdf);
+        TestAssert.DoesNotContain("0 0 0 RG", pdf);
+        TestAssert.DoesNotContain("1 1 1 rg", pdf);
+    }
+
     public static void WritesEvenOddClippingOperators()
     {
         var graphics = new PdfGraphicsBuilder();

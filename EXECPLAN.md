@@ -5922,6 +5922,17 @@ paths, and ExecPlan references together.
     integer sizes, plus Office's even-odd clipping/fill operators around text regions. The explicit OOXML
     fractional-size path and text-frame `W*` clipping path now have public guards; keep the connector/group/picture
     inventory intact, and steer the next public fixture toward the remaining filled-region `f*` structure.
+  - [x] Close one PDF-level structural color gap from the slide-17 evidence: equal-channel fills, strokes, and
+    glyph text colors now emit PDF gray operators (`g`/`G`) instead of RGB triplets, matching Office's neutral
+    fill/stroke structure without private-specific logic. Public writer and PPTX structural assertions were
+    updated, `dotnet run --project tests/Lokad.OoxPdf.Tests --tl:off --nologo -v minimal -- --skip-slow`
+    passed with 364 tests, and private rerun `artifacts/private-visual/lokad-value-based/20260528-130438`
+    kept slide 17 visually unchanged at MAE `2.785230`, changed16 `0.044118`, SSIM `0.923374` while reducing
+    neutral color operator drift in the page-filtered PDF inspection.
+  - [ ] Continue the remaining public-safe slide-17 PDF-structure probe from the 2026-05-28 inspection: after
+    gray operator alignment, the next residuals are fractional Office font-size variants that the candidate
+    still rounds away in some inherited/autofit paths, plus ordering/segment-count differences around filled
+    clipped regions. Build public fixtures for those structural cases before touching private-deck behavior.
 - [ ] Private slide 15 visible remaining problem: weird mirror artifact in rendering. Inspect transforms,
   flips, and group/image drawing order, then create public transform fixtures if coverage is missing.
   - [x] Add a public synthetic `rot=180deg` plus `flipV` text-box fixture and normalize single-flip shape

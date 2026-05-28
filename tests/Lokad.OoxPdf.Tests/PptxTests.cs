@@ -1221,7 +1221,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 1 1 rg", pdf);
+        TestAssert.Contains("1 g", pdf);
         TestAssert.Contains("0 0 720 540 re f", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("72 396 144 72 re f*", pdf);
@@ -1230,7 +1230,7 @@ internal static class PptxTests
         TestAssert.Contains(" c", pdf);
         TestAssert.Contains("72 252 m 216 180 l S", pdf);
         TestAssert.Contains("371.52 180 m", pdf);
-        TestAssert.Contains("0.933 0.933 0.933 rg", pdf);
+        TestAssert.Contains("0.933 g", pdf);
         TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
         TestAssert.Contains(" re W n", pdf);
     }
@@ -1279,7 +1279,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.133 0.133 0.133 rg", pdf);
+        TestAssert.Contains("0.133 g", pdf);
         TestAssert.Contains("72 324.5 m", pdf);
         TestAssert.Contains("213.5 323.5 l", pdf);
         TestAssert.Contains("216 324 m", pdf);
@@ -1367,7 +1367,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.4 0.4 0.4 rg", pdf);
+        TestAssert.Contains("0.4 g", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain("144 360 180 324 216 324 c\r\nS", pdf);
     }
@@ -1402,7 +1402,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.867 0.867 0.867 rg", pdf);
+        TestAssert.Contains("0.867 g", pdf);
         TestAssert.Contains("h\r\nf", pdf);
         TestAssert.DoesNotContain("111.765 468 144 435.765 144 396 c\r\nS", pdf);
     }
@@ -1479,7 +1479,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.376 0.376 0.376 rg", pdf);
+        TestAssert.Contains("0.376 g", pdf);
         TestAssert.Contains(" c\r\n", pdf);
         TestAssert.True(Regex.Matches(pdf, " c\r\n").Count >= 4, "Expected Office-like arrow-tail filled connector paths to retain four cubic segments.");
         TestAssert.Contains("h\r\nf", pdf);
@@ -1611,7 +1611,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0.267 0.267 0.267 RG", pdf);
+        TestAssert.Contains("0.267 G", pdf);
         TestAssert.Contains(" c", pdf);
         TestAssert.DoesNotContain("72 396 72 72 re S", pdf);
     }
@@ -4213,7 +4213,7 @@ internal static class PptxTests
         TestAssert.Contains("/F1 30 Tf", pdf);
         TestAssert.Contains("1 0 0 rg", pdf);
         TestAssert.Contains("/F1 24 Tf", pdf);
-        TestAssert.Contains("0 0 0 rg", pdf);
+        TestAssert.Contains("0 g", pdf);
     }
 
     public static void PptxSyntheticTextBoxUsesPerRunFontResources()
@@ -5028,7 +5028,7 @@ internal static class PptxTests
         }
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 1 1 rg", pdf);
+        TestAssert.Contains("1 g", pdf);
     }
 
     public static void PptxSyntheticShapeFontRefColorOverridesDefaultTextStyle()
@@ -5109,7 +5109,7 @@ internal static class PptxTests
         }
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 1 1 rg", pdf);
+        TestAssert.Contains("1 g", pdf);
     }
 
     public static void PptxSyntheticExplicitRunColorOverridesShapeFontRefColor()
@@ -5159,7 +5159,7 @@ internal static class PptxTests
         TestAssert.Contains("1 0 0 rg", pdf);
         int redTextColor = pdf.IndexOf("1 0 0 rg", StringComparison.Ordinal);
         TestAssert.True(redTextColor >= 0, "Expected explicit run color in the PDF text stream.");
-        TestAssert.True(pdf.IndexOf("1 1 1 rg", redTextColor, StringComparison.Ordinal) < 0, "Explicit run color should override shape fontRef color after the page background has been painted.");
+        TestAssert.True(pdf.IndexOf("1 g", redTextColor, StringComparison.Ordinal) < 0, "Explicit run color should override shape fontRef color after the page background has been painted.");
     }
 
     public static void PptxSyntheticTextBoxRendersTextHighlight()
@@ -6897,8 +6897,8 @@ internal static class PptxTests
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("1 0 0 rg", pdf);
-        TestAssert.Contains("0.651 0.651 0.651 rg", pdf);
-        TestAssert.Contains("0.067 0.067 0.067 rg", pdf);
+        TestAssert.Contains("0.651 g", pdf);
+        TestAssert.Contains("0.067 g", pdf);
     }
 
     public static void PptxSyntheticThemeCanLoadFromSlideMaster()
@@ -6965,7 +6965,7 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("1 1 1 rg", pdf);
+        TestAssert.Contains("1 g", pdf);
     }
 
     public static void PptxSyntheticLayoutAndMasterShapesRender()
@@ -8357,7 +8357,7 @@ internal static class PptxTests
         string pdf = File.ReadAllText(output, Encoding.ASCII);
         TestAssert.Contains("0.851 0.918 0.827 rg", pdf);
         TestAssert.Contains("72 396 144 72 re f", pdf);
-        TestAssert.Contains("0 0 0 RG", pdf);
+        TestAssert.Contains("0 G", pdf);
         TestAssert.Contains("/Subtype /Type0", pdf);
         TestAssert.Contains(" TJ", pdf);
     }
@@ -8603,7 +8603,7 @@ internal static class PptxTests
         TestAssert.Contains("0.2 0.4 0.6 rg", pdf);
         TestAssert.Contains("0.761 0.827 0.89 rg", pdf);
         TestAssert.Contains("0.886 0.918 0.949 rg", pdf);
-        TestAssert.Contains("1 1 1 rg", pdf);
+        TestAssert.Contains("1 g", pdf);
         TestAssert.True(Regex.Matches(pdf, "0\\.2 0\\.4 0\\.6 rg").Count >= 3, "Expected header cells and first-column body cell to use the accent fill.");
         TestAssert.Contains("/GS40000F100000S gs", pdf);
         TestAssert.Contains("0.078 0.161 0.239 rg", pdf);
@@ -9073,7 +9073,7 @@ internal static class PptxTests
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains("0.071 0.204 0.337 RG", pdf);
         TestAssert.Contains("0.067 0.133 0.2 rg", pdf);
-        TestAssert.Contains("0.933 0.933 0.933 rg", pdf);
+        TestAssert.Contains("0.933 g", pdf);
         TestAssert.Contains("0.184 0.522 0.416 RG", pdf);
         TestAssert.Contains(" re W* n", pdf);
         TestAssert.Contains("BT", pdf);
@@ -9455,9 +9455,9 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output);
 
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 0 0 RG", pdf);
+        TestAssert.Contains("0 G", pdf);
         TestAssert.Contains("0.75 w", pdf);
-        TestAssert.DoesNotContain("0.851 0.851 0.851 RG", pdf);
+        TestAssert.DoesNotContain("0.851 G", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){3}S"),
             "Major value gridlines should be emitted as one multi-segment stroked path that includes the maximum tick and excludes the axis baseline.");
     }
@@ -13983,7 +13983,7 @@ internal static class PptxTests
         TestAssert.Contains("0.188 0.063 0.125 RG", pdf);
         TestAssert.Contains("0.973 0.902 0.816 rg", pdf);
         TestAssert.Contains("0.063 0.125 0.188 RG", pdf);
-        TestAssert.Contains("0.267 0.267 0.267 RG", pdf);
+        TestAssert.Contains("0.267 G", pdf);
         TestAssert.Contains("0 1 1 rg", pdf);
         TestAssert.Contains("93.6 352.8 144 108 re f", pdf);
         TestAssert.Contains("93.6 374.4 m", pdf);
@@ -13994,12 +13994,12 @@ internal static class PptxTests
         TestAssert.Contains("1 0 0 RG", pdf);
         TestAssert.Contains("BT", pdf);
         TestAssert.True(pdf.Split("BT", StringSplitOptions.None).Length >= 7, "Chart title, axes, legend, and data labels should emit chart text objects.");
-        TestAssert.Contains("0.922 0.922 0.922 RG", pdf);
+        TestAssert.Contains("0.922 G", pdf);
         TestAssert.DoesNotContain("0 0.667 0 RG", pdf);
         TestAssert.Contains("0.667 0 0.667 RG", pdf);
         TestAssert.Contains("8 8 re f", pdf);
         TestAssert.Contains("0.667 0.333 0 RG", pdf);
-        TestAssert.Contains("0.333 0.333 0.333 RG", pdf);
+        TestAssert.Contains("0.333 G", pdf);
         TestAssert.Contains("0 0 0.667 rg", pdf);
         TestAssert.Contains("0 0.667 0.667 RG", pdf);
         TestAssert.Contains(" c", pdf);

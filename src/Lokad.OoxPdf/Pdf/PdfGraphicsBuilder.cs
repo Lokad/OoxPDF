@@ -17,11 +17,21 @@ internal sealed class PdfGraphicsBuilder
 
     public void SetFillRgb(byte red, byte green, byte blue)
     {
+        if (TryAppendFillGray(red, green, blue))
+        {
+            return;
+        }
+
         builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
     }
 
     public void SetStrokeRgb(byte red, byte green, byte blue)
     {
+        if (TryAppendStrokeGray(red, green, blue))
+        {
+            return;
+        }
+
         builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" RG");
     }
 
@@ -324,10 +334,18 @@ internal sealed class PdfGraphicsBuilder
         double strokeWidth)
     {
         builder.AppendLine("BT");
-        builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+        if (!TryAppendFillGray(red, green, blue))
+        {
+            builder.Append(C(red)).Append(' ').Append(C(green)).Append(' ').Append(C(blue)).AppendLine(" rg");
+        }
+
         if (textRenderingMode is 1 or 2)
         {
-            builder.Append(C(strokeRed)).Append(' ').Append(C(strokeGreen)).Append(' ').Append(C(strokeBlue)).AppendLine(" RG");
+            if (!TryAppendStrokeGray(strokeRed, strokeGreen, strokeBlue))
+            {
+                builder.Append(C(strokeRed)).Append(' ').Append(C(strokeGreen)).Append(' ').Append(C(strokeBlue)).AppendLine(" RG");
+            }
+
             builder.Append(N(strokeWidth)).AppendLine(" w");
             builder.Append(textRenderingMode.ToString(CultureInfo.InvariantCulture)).AppendLine(" Tr");
         }
@@ -450,6 +468,28 @@ internal sealed class PdfGraphicsBuilder
     private static string C(byte value)
     {
         return (value / 255d).ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private bool TryAppendFillGray(byte red, byte green, byte blue)
+    {
+        if (red != green || red != blue)
+        {
+            return false;
+        }
+
+        builder.Append(C(red)).AppendLine(" g");
+        return true;
+    }
+
+    private bool TryAppendStrokeGray(byte red, byte green, byte blue)
+    {
+        if (red != green || red != blue)
+        {
+            return false;
+        }
+
+        builder.Append(C(red)).AppendLine(" G");
+        return true;
     }
 
     private static string N(double value)
