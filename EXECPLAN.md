@@ -1759,6 +1759,14 @@ High-priority actions:
   non-slow `pptx-typography` passed (`99 passed, 0 failed, 2 skipped`); focused non-slow `pptx-model` passed
   (`25 passed, 0 failed, 1 skipped`); full non-slow console runner passed
   (`409 passed, 0 failed, 7 skipped`).
+  2026-05-29 progress: scene paragraph-property merging now overlays child elements instead of replacing them
+  wholesale. This preserves lower-priority `a:defRPr` attributes such as master body-style `b="1"` while higher
+  layers supply only their own tokens, for example a layout placeholder `i="1"` or `sz="2600"`. The fix keeps
+  scene inspection aligned with the renderer's structural merge direction and removes a null edge in chart
+  style effect-reference snapshot counting. Keep this item open: the merge is still XML-structural rather than
+  a fully named seven-stage resolver. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal`
+  passed; focused `PptxSceneBuilderBuildsResolvedNodeLists` passed; full non-slow console runner passed
+  (`414 passed, 0 failed, 7 skipped`).
 - [x] Port the listed `pptx-renderer` text edge-case tests as .NET unit/visual coverage:
   the named behaviors are now represented by focused OOXPDF tests or public visual probes: hyperlink color and
   shape `fontRef` color precedence, table text/style overrides, no-fill/outline text, `kern` thresholds, tabs,
@@ -2974,6 +2982,15 @@ High-priority actions:
     Diagnostics follow the same boundary: uniform stop alpha is supported, while variable stop alpha remains
     warned instead of approximated. Validation: focused `pptx-charts` passed `52/52`; focused
     `pptx-shapes` passed `16/16`.
+  - [x] 2026-05-29: Route unsupported chart shape-style gradients through scene-owned diagnostics instead of
+    relying on raw slide XML scans. `PPTX_UNSUPPORTED_GRADIENT_FILL` now walks chart area, plot area, title,
+    legend, chart-style part entries, and data-label shape styles, so variable per-stop alpha in chart-owned
+    `a:gradFill` remains explicitly unsupported until the PDF backend can express it with a soft mask or
+    equivalent transparency function. This closes a source-boundary gap without approximating non-uniform stop
+    alpha. Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+    `PptxUnsupportedGradientDiagnosticsUseSceneChartShapeStyleGradient` passed; focused non-slow `pptx-charts`
+    passed (`140 passed, 0 failed, 0 skipped`); full non-slow console runner passed
+    (`414 passed, 0 failed, 7 skipped`).
   - [x] 2026-05-28 Consume direct glow and outer-shadow effects on chart shape rectangles:
     `RenderChartShapeStyle` now renders preserved direct `PptxSceneGlow` and `PptxSceneOuterShadow` for chart
     area, plot area, title, legend, and data-label rectangles through the same rectangle fill primitives used

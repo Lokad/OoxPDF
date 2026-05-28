@@ -18527,6 +18527,62 @@ internal static class PptxTests
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported shape gradients should be diagnostic-covered from scene-owned gradient provenance.");
     }
 
+    public static void PptxUnsupportedGradientDiagnosticsUseSceneChartShapeStyleGradient()
+    {
+        const string chartXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:spPr>
+                <a:gradFill>
+                  <a:gsLst>
+                    <a:gs pos="0"><a:srgbClr val="FF0000"><a:alpha val="35000"/></a:srgbClr></a:gs>
+                    <a:gs pos="100000"><a:srgbClr val="0000FF"><a:alpha val="85000"/></a:srgbClr></a:gs>
+                  </a:gsLst>
+                  <a:lin ang="0"/>
+                </a:gradFill>
+              </c:spPr>
+              <c:chart><c:plotArea>
+                <c:spPr>
+                  <a:gradFill>
+                    <a:gsLst>
+                      <a:gs pos="0"><a:srgbClr val="00FF00"><a:alpha val="100000"/></a:srgbClr></a:gs>
+                      <a:gs pos="100000"><a:srgbClr val="000000"><a:alpha val="25000"/></a:srgbClr></a:gs>
+                    </a:gsLst>
+                    <a:lin ang="5400000"/>
+                  </a:gradFill>
+                </c:spPr>
+                <c:lineChart>
+                  <c:ser><c:val><c:numLit><c:pt idx="0"><c:v>1</c:v></c:pt></c:numLit></c:val></c:ser>
+                </c:lineChart>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """;
+        (PptxDocument document, OoxPackage package) = BuildSingleChartPackage(chartXml);
+        PptxSceneSlide sceneSlide = new PptxSceneBuilder().Build(document, package).Slides[0];
+        PptxSceneChart chart = sceneSlide.SlideNodes[0].Chart
+            ?? throw new InvalidOperationException("Expected chart scene node.");
+
+        TestAssert.True(chart.ChartAreaStyle.GradientFill?.HasUnsupportedGradient == true, "Expected chart-area variable-alpha gradient state to remain scene-owned.");
+        TestAssert.True(chart.PlotAreaStyle.GradientFill?.HasUnsupportedGradient == true, "Expected plot-area variable-alpha gradient state to remain scene-owned.");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        XDocument slideXmlWithoutGradients = XDocument.Parse("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <p:cSld><p:spTree/></p:cSld>
+            </p:sld>
+            """);
+        System.Reflection.MethodInfo emitDiagnostics = typeof(PptxRenderer).GetMethod(
+            "EmitUnsupportedFeatureDiagnostics",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static) ?? throw new InvalidOperationException("Expected unsupported feature diagnostic emitter.");
+        Action<OoxPdfDiagnostic> sink = diagnostics.Add;
+        emitDiagnostics.Invoke(null, [sceneSlide, slideXmlWithoutGradients, "/ppt/slides/slide1.xml", 1, sink]);
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_GRADIENT_FILL"), "Unsupported chart shape-style gradients should be diagnostic-covered from scene-owned gradient provenance.");
+    }
+
     public static void PptxUnsupportedPatternDiagnosticsUseSceneShapePattern()
     {
         string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>

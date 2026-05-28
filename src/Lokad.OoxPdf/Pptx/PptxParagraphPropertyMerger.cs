@@ -35,8 +35,14 @@ internal static class PptxParagraphPropertyMerger
 
             foreach (XElement child in source.Elements())
             {
-                merged.Element(child.Name)?.Remove();
-                merged.Add(new XElement(child));
+                XElement? existing = merged.Element(child.Name);
+                if (existing is null)
+                {
+                    merged.Add(new XElement(child));
+                    continue;
+                }
+
+                OverlaySceneChildElement(existing, child);
             }
         }
 
@@ -90,7 +96,7 @@ internal static class PptxParagraphPropertyMerger
         }
     }
 
-    private static void MergeElementInto(XElement target, XElement source)
+    private static void OverlaySceneChildElement(XElement target, XElement source)
     {
         foreach (XAttribute attribute in source.Attributes())
         {
@@ -99,8 +105,14 @@ internal static class PptxParagraphPropertyMerger
 
         foreach (XElement child in source.Elements())
         {
-            target.Elements(child.Name).Remove();
-            target.Add(new XElement(child));
+            XElement? existing = target.Element(child.Name);
+            if (existing is null)
+            {
+                target.Add(new XElement(child));
+                continue;
+            }
+
+            existing.ReplaceWith(new XElement(child));
         }
     }
 }

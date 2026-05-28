@@ -247,22 +247,56 @@ internal sealed partial class PptxRenderer
 
     private static bool HasUnsupportedGradientFill(PptxSceneSlide sceneSlide, XDocument slideXml)
     {
-        return HasUnsupportedShapeGradientFill(sceneSlide.SlideNodes) ||
+        return HasUnsupportedSceneGradientFill(sceneSlide.SlideNodes) ||
             slideXml.Descendants(DrawingNamespace + "gradFill").Any(IsUnsupportedNonShapeGradientFill);
     }
 
-    private static bool HasUnsupportedShapeGradientFill(IReadOnlyList<PptxSceneNode> nodes)
+    private static bool HasUnsupportedSceneGradientFill(IReadOnlyList<PptxSceneNode> nodes)
     {
         foreach (PptxSceneNode node in nodes)
         {
             if ((node.Shape is { GradientFill.HasUnsupportedGradient: true }) ||
-                HasUnsupportedShapeGradientFill(node.Children))
+                HasUnsupportedChartGradientFill(node.Chart) ||
+                HasUnsupportedSceneGradientFill(node.Children))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool HasUnsupportedChartGradientFill(PptxSceneChart? chart)
+    {
+        return chart is not null &&
+            (HasUnsupportedChartGradientFill(chart.ChartAreaStyle) ||
+                HasUnsupportedChartGradientFill(chart.PlotAreaStyle) ||
+                HasUnsupportedChartGradientFill(chart.Title.ShapeStyle) ||
+                HasUnsupportedChartGradientFill(chart.Legend.ShapeStyle) ||
+                chart.StylePart.Entries.Any(entry => HasUnsupportedChartGradientFill(entry.ShapeStyle)) ||
+                chart.Plots.Any(HasUnsupportedChartGradientFill));
+    }
+
+    private static bool HasUnsupportedChartGradientFill(PptxSceneChartPlot plot)
+    {
+        return HasUnsupportedChartGradientFill(plot.DataLabels) ||
+            plot.Series.Any(HasUnsupportedChartGradientFill);
+    }
+
+    private static bool HasUnsupportedChartGradientFill(PptxSceneChartSeries series)
+    {
+        return HasUnsupportedChartGradientFill(series.DataLabels);
+    }
+
+    private static bool HasUnsupportedChartGradientFill(PptxSceneChartDataLabels labels)
+    {
+        return HasUnsupportedChartGradientFill(labels.ShapeStyle) ||
+            labels.Overrides.Any(label => HasUnsupportedChartGradientFill(label.ShapeStyle));
+    }
+
+    private static bool HasUnsupportedChartGradientFill(PptxSceneChartShapeStyle style)
+    {
+        return style.GradientFill?.HasUnsupportedGradient == true;
     }
 
     private static bool IsUnsupportedNonShapeGradientFill(XElement gradientFill)

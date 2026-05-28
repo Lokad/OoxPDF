@@ -209,7 +209,7 @@ internal sealed partial class PptxRenderer
             chartStyleEntries.Count(entry => entry.EffectReferenceIndex is not null),
             chartStyleEntries.Count(entry => entry.EffectReferenceEffects.HasEffectList ||
                 entry.EffectReferenceEffects.HasEffectDag ||
-                entry.EffectReferenceEffects.UnsupportedEffectNames.Count > 0),
+                entry.EffectReferenceEffects.UnsupportedEffectNames?.Count > 0),
             chartStyleEntries.Count(entry => !string.IsNullOrWhiteSpace(entry.FontReferenceIndex)),
             rejectedPointStyleIndexValues.Count,
             rejectedPointStyleIndexValues,
