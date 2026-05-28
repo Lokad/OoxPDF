@@ -1,7 +1,8 @@
 param(
     [switch] $DoughnutOnly,
     [switch] $SparseOnly,
-    [switch] $DataLabelsOnly
+    [switch] $DataLabelsOnly,
+    [switch] $AxisTitlesOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -325,6 +326,96 @@ function Configure-SparseProbeChart($Chart, [int]$ChartType) {
     $series.Item(2).Format.Fill.ForeColor.RGB = Rgb 237 125 49
 }
 
+function New-DefaultAxisTitleProbe($PowerPoint, $Cases) {
+    $output = Join-Path $Cases "pptx-ladder-11-chart-default-axis-titles-probe.pptx"
+    $presentation = $null
+    $workbook = $null
+    $worksheet = $null
+
+    try {
+        $presentation = $PowerPoint.Presentations.Add($true)
+        $slide = $presentation.Slides.Add(1, 12)
+        $slide.Background.Fill.ForeColor.RGB = Rgb 255 255 255
+
+        $chartShape = $slide.Shapes.AddChart(51, 120, 66, 540, 366)
+        $chart = $chartShape.Chart
+        [void]($chart.HasTitle = $false)
+        [void]($chart.HasLegend = $false)
+        [void]($chart.ChartData.Activate())
+
+        $workbook = $chart.ChartData.Workbook
+        $worksheet = $workbook.Worksheets.Item(1)
+        $worksheet.Cells.Clear()
+        $worksheet.Cells.Item(1, 1).Value = "Category"
+        $worksheet.Cells.Item(1, 2).Value = "Primary"
+        $worksheet.Cells.Item(1, 3).Value = "Secondary"
+        $worksheet.Cells.Item(2, 1).Value = "North"
+        $worksheet.Cells.Item(2, 2).Value = 42.0
+        $worksheet.Cells.Item(2, 3).Value = 35.0
+        $worksheet.Cells.Item(3, 1).Value = "South"
+        $worksheet.Cells.Item(3, 2).Value = 68.0
+        $worksheet.Cells.Item(3, 3).Value = 44.0
+        $worksheet.Cells.Item(4, 1).Value = "West"
+        $worksheet.Cells.Item(4, 2).Value = 31.0
+        $worksheet.Cells.Item(4, 3).Value = 52.0
+        $worksheet.Cells.Item(5, 1).Value = "East"
+        $worksheet.Cells.Item(5, 2).Value = 55.0
+        $worksheet.Cells.Item(5, 3).Value = 39.0
+
+        [void]($chart.SetSourceData("=Sheet1!`$A`$1:`$C`$5"))
+        [void]($chart.ChartType = 51)
+
+        $categoryAxis = $chart.Axes(1, 1)
+        [void]($categoryAxis.HasTitle = $true)
+        $categoryAxis.AxisTitle.Text = "Category Axis"
+        $categoryAxis.AxisTitle.Format.TextFrame2.TextRange.Font.Size = 12
+        $categoryAxis.TickLabels.Font.Size = 9
+        $categoryAxis.TickLabels.Font.Color = Rgb 89 89 89
+
+        $valueAxis = $chart.Axes(2, 1)
+        [void]($valueAxis.HasTitle = $true)
+        $valueAxis.AxisTitle.Text = "Value Axis"
+        $valueAxis.AxisTitle.Format.TextFrame2.TextRange.Font.Size = 12
+        $valueAxis.TickLabels.Font.Size = 9
+        $valueAxis.TickLabels.Font.Color = Rgb 89 89 89
+
+        try {
+            [void]($workbook.Application.CalculateFull())
+            [void]($chart.Refresh())
+        }
+        catch {
+            # Some Office builds do not expose chart refresh for embedded hosts;
+            # saved chart caches are still verified by the visual harness.
+        }
+
+        if (Test-Path -LiteralPath $output) {
+            Remove-Item -LiteralPath $output -Force
+        }
+
+        [void]($presentation.SaveAs($output, 24))
+        Release-ComObject $worksheet
+        $worksheet = $null
+        Close-ChartWorkbook $workbook
+        $workbook = $null
+
+        [void]($presentation.Close())
+        $presentation = $null
+    }
+    finally {
+        if ($worksheet -ne $null) { Release-ComObject $worksheet }
+        if ($workbook -ne $null) { Close-ChartWorkbook $workbook }
+        if ($presentation -ne $null) {
+            try { [void]($presentation.Close()) }
+            catch {
+                # PowerPoint can already have torn down a failed presentation.
+            }
+        }
+        Release-ComObject $presentation
+    }
+
+    return $output
+}
+
 function New-SparseBlankChartProbe($PowerPoint, $Cases) {
     $output = Join-Path $Cases "pptx-ladder-11-chart-sparse-blank-points-probe.pptx"
     $presentation = $null
@@ -549,7 +640,12 @@ $presentation = $null
 try {
     $powerPoint = New-Object -ComObject PowerPoint.Application
 
-    if ($DataLabelsOnly) {
+    if ($AxisTitlesOnly) {
+        $output = New-DefaultAxisTitleProbe `
+            -PowerPoint $powerPoint `
+            -Cases $cases
+    }
+    elseif ($DataLabelsOnly) {
         $output = New-PieDataLabelLeaderLineProbe `
             -PowerPoint $powerPoint `
             -Cases $cases
@@ -743,7 +839,7 @@ try {
     $presentation = $null
     }
 
-    if (-not $SparseOnly -and -not $DataLabelsOnly) {
+    if (-not $SparseOnly -and -not $DataLabelsOnly -and -not $AxisTitlesOnly) {
     $output = New-DoughnutLegendProbe `
         -PowerPoint $powerPoint `
         -Cases $cases `

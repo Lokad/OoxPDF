@@ -2758,6 +2758,17 @@ High-priority actions:
     default category/value axis-title placement is still open. This is distinct from tick-label styling and
     should be solved with Office-PDF-backed placement evidence for horizontal and rotated axis-title boxes,
     overlay/reserve interaction, and chart-style inherited defaults, not with frame-relative text nudges.
+    - [x] 2026-05-28 Add public Office-backed default axis-title evidence:
+      `pptx-ladder-11-chart-default-axis-titles-probe` now exercises a cached clustered-column chart with
+      default category and value axis titles. The visual case requires
+      `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT`, allows that diagnostic, and keeps raster/graphics gates loose
+      enough to pass while preserving Office's reference placement for future tightening. Validation run
+      `20260528-154703` passed at MAE `6.577098`, changed16 `0.065429`, with two expected axis-title layout
+      diagnostics and dimension-matched output.
+    - [ ] Split chart text classification for axis titles before tightening this probe:
+      the probe exposed that `ClassifyPdfChartText.ps1` currently buckets default axis-title text into
+      `CategoryAxisTickLabel`/`ValueAxisTickLabel`. That is useful evidence, but the long-term gate should compare
+      `AxisTitleText` separately so omitted titles are not hidden as tick-label cardinality noise.
   - [x] 2026-05-28 Make default-placement axis-title omission diagnostic-covered:
     supported native charts already render explicit manual-layout axis titles, but default-placement axis
     titles still need an Office layout model before they can be drawn structurally. The renderer now emits
@@ -6481,6 +6492,11 @@ Office-PDF-inspected, visually gated when close, and free of private content.
   available to rendering or inspection as axis-owned scene data.
   Evidence: `PptxSceneChartAxis` preserved tick label style and number format but had no title record; the
   scene-builder fixture now locks category-axis and value-axis titles through `PptxSceneChartAxis.Title`.
+- Observation: Default-placement axis titles are now present in a public cached Office probe, but the PDF text
+  classifier does not yet treat them as axis-title text. Evidence: the 2026-05-28 default-axis-title visual run
+  classified the horizontal category title as `CategoryAxisTickLabel` and the rotated value title as
+  `ValueAxisTickLabel`, so the case intentionally gates raster/graphics plus the required
+  `PPTX_UNSUPPORTED_CHART_AXIS_TITLE_LAYOUT` diagnostic until `AxisTitleText` classification exists.
 - Observation: Chart legends already had typed position, overlay, visibility, and text style, but not the
   sibling layout and shape properties Office can use to place and frame a legend.
   Evidence: `PptxSceneChartLegend` now preserves `c:layout/c:manualLayout` and `c:spPr` fill/stroke data, and
