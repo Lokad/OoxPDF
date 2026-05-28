@@ -12056,6 +12056,32 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-charts` passed with `88` tests, `0` failures, and `0` skips; full non-slow console runner passed with
 `329` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Preserved raw OOXML tokens for top-level chart boolean options.
+`PptxSceneChartOptions` now carries `Date1904Value`, `RoundedCornersValue`, `PlotVisibleOnlyValue`, and
+`ShowDataLabelsOverMaximumValue` beside the existing nullable booleans, and private-safe scene inspection
+reports those raw tokens as well. The scene-builder fixture now locks mixed lexical forms (`true`, `false`,
+`0`, and `1`) so future chart-date, plot-visibility, and data-label policy work can distinguish source
+lexemes from normalized flags without re-reading chart XML.
+
+This is still metadata preservation, not a semantic change. Current rendering and workbook hydration continue
+to use the existing normalized booleans; the long-term work remains to derive Office-compatible date-system,
+hidden-row/column, `plotVisOnly`, and over-maximum-label behavior from structural chart/workbook state rather
+than ad hoc renderer reads.
+
+While validating this slice, the exact slow `PptxSceneBuilderBuildsResolvedNodeLists` test failed on
+`UsesInheritedShapeBounds` for the selected `Hello` text frame. The non-slow model/chart/full gates pass, and
+the failure is on placeholder geometry diagnostics rather than chart options, but it is worth keeping as a
+separate open text-model cleanup: the slow fixture currently expects inherited placeholder geometry fallback
+even when the selected inherited placeholder chain supplies text-body participation without inherited shape
+bounds. That expectation should be split or backed by a smaller public placeholder-bounds fixture before
+using the slow scene-builder test as a universal regression gate.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-charts` passed with `88` tests, `0` failures, and `0` skips; focused non-slow `pptx-model` passed with
+`11` tests, `0` failures, and `1` slow skip; full non-slow console runner passed with `329` tests, `0`
+failures, and `7` slow skips. The exact slow `PptxSceneBuilderBuildsResolvedNodeLists` currently fails on
+the placeholder-geometry diagnostic noted above.
+
 Revision note, 2026-05-28: Preserved raw OOXML tokens for chart axis integer options. `PptxSceneChartAxis`
 now carries `LabelOffsetValue`, `TickLabelSkipValue`, and `TickMarkSkipValue` beside the existing parsed
 nullable integers, and the scene parser uses the shared raw-token integer reader for `c:lblOffset`,

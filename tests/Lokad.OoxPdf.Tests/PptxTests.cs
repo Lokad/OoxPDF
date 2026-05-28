@@ -156,13 +156,13 @@ internal static class PptxTests
             ["ppt/charts/chart1.xml"] = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <c:date1904 val="1"/>
+                  <c:date1904 val="true"/>
                   <c:roundedCorners val="0"/>
                   <c:style val="10"/>
                   <c:spPr><a:pattFill prst="pct25"><a:fgClr><a:srgbClr val="224466"/></a:fgClr><a:bgClr><a:srgbClr val="F1E2D3"/></a:bgClr></a:pattFill><a:ln w="12700"><a:solidFill><a:srgbClr val="445566"/></a:solidFill></a:ln><a:effectLst><a:outerShdw dist="12700" dir="0"><a:srgbClr val="010203"><a:alpha val="50000"/></a:srgbClr></a:outerShdw></a:effectLst></c:spPr>
                   <c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1100" b="1" i="1"><a:solidFill><a:srgbClr val="101112"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr>
                   <c:chart>
-                  <c:plotVisOnly val="0"/>
+                  <c:plotVisOnly val="false"/>
                   <c:dispBlanksAs val="span"/>
                   <c:showDLblsOverMax val="1"/>
                   <c:title><c:tx><c:rich><a:p xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:r><a:rPr sz="1250" b="1"><a:solidFill><a:srgbClr val="223344"/></a:solidFill></a:rPr><a:t>Scene </a:t></a:r><a:r><a:rPr i="1"><a:latin typeface="Aptos"/></a:rPr><a:t>Chart</a:t></a:r></a:p></c:rich></c:tx><c:layout><c:manualLayout><c:layoutTarget val="outer"/><c:xMode val="factor"/><c:yMode val="factor"/><c:wMode val="factor"/><c:hMode val="factor"/><c:x val="0.08"/><c:y val="0.04"/><c:w val="0.55"/><c:h val="0.12"/></c:manualLayout></c:layout><c:overlay val="1"/><c:spPr><a:solidFill><a:srgbClr val="FEDCBA"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="0F1E2D"/></a:solidFill></a:ln><a:effectLst><a:glow rad="25400"><a:srgbClr val="0A0B0C"><a:alpha val="40000"/></a:srgbClr></a:glow></a:effectLst></c:spPr><c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1300" b="1" i="0"><a:solidFill><a:srgbClr val="1122AA"/></a:solidFill><a:latin typeface="Arial"/></a:defRPr></a:pPr></a:p></c:txPr></c:title>
@@ -460,13 +460,21 @@ internal static class PptxTests
         TestAssert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", slideSnapshot.SlideNodes[4].ChartExternalDataContentType);
         TestAssert.True(slide.SlideNodes[4].Chart?.ExternalData.AutoUpdate == false, "Expected chart external-data auto-update flag in the scene model.");
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.Date1904 == true, "Expected chart date-system flag ownership in the scene model.");
+        TestAssert.Equal("true", slide.SlideNodes[4].Chart?.Options.Date1904Value ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartDate1904 == true, "Expected scene inspection to expose chart date-system policy.");
+        TestAssert.Equal("true", slideSnapshot.SlideNodes[4].ChartDate1904Value);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.RoundedCorners == false, "Expected chart rounded-corners flag ownership in the scene model.");
+        TestAssert.Equal("0", slide.SlideNodes[4].Chart?.Options.RoundedCornersValue ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartRoundedCorners == false, "Expected scene inspection to expose chart rounded-corners policy.");
+        TestAssert.Equal("0", slideSnapshot.SlideNodes[4].ChartRoundedCornersValue);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.PlotVisibleOnly == false, "Expected plot-visible-only flag ownership in the scene model.");
+        TestAssert.Equal("false", slide.SlideNodes[4].Chart?.Options.PlotVisibleOnlyValue ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartPlotVisibleOnly == false, "Expected scene inspection to expose chart plot-visible-only policy.");
+        TestAssert.Equal("false", slideSnapshot.SlideNodes[4].ChartPlotVisibleOnlyValue);
         TestAssert.True(slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximum == true, "Expected show-data-labels-over-maximum flag ownership in the scene model.");
+        TestAssert.Equal("1", slide.SlideNodes[4].Chart?.Options.ShowDataLabelsOverMaximumValue ?? string.Empty);
         TestAssert.True(slideSnapshot.SlideNodes[4].ChartShowDataLabelsOverMaximum == true, "Expected scene inspection to expose chart over-maximum data-label policy.");
+        TestAssert.Equal("1", slideSnapshot.SlideNodes[4].ChartShowDataLabelsOverMaximumValue);
         TestAssert.Equal(PptxSceneChartDisplayBlanksAs.Span, slide.SlideNodes[4].Chart?.Options.DisplayBlanksAsKind);
         TestAssert.Equal("span", slide.SlideNodes[4].Chart?.Options.DisplayBlanksAs ?? string.Empty);
         TestAssert.Equal("span", slideSnapshot.SlideNodes[4].ChartDisplayBlanksAs);

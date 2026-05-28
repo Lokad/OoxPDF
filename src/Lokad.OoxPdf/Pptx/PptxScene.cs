@@ -68,9 +68,13 @@ internal sealed record PptxSceneNodeSnapshot(
     bool HasChartExternalDataResource,
     string ChartExternalDataContentType,
     bool? ChartDate1904,
+    string ChartDate1904Value,
     bool? ChartRoundedCorners,
+    string ChartRoundedCornersValue,
     bool? ChartPlotVisibleOnly,
+    string ChartPlotVisibleOnlyValue,
     bool? ChartShowDataLabelsOverMaximum,
+    string ChartShowDataLabelsOverMaximumValue,
     string ChartDisplayBlanksAs,
     bool HasChartLegend,
     string ChartLegendPosition,
@@ -598,9 +602,13 @@ internal readonly record struct PptxSceneChartExternalData(
 
 internal readonly record struct PptxSceneChartOptions(
     bool? Date1904,
+    string Date1904Value,
     bool? RoundedCorners,
+    string RoundedCornersValue,
     bool? PlotVisibleOnly,
+    string PlotVisibleOnlyValue,
     bool? ShowDataLabelsOverMaximum,
+    string ShowDataLabelsOverMaximumValue,
     PptxSceneChartDisplayBlanksAs DisplayBlanksAsKind,
     string DisplayBlanksAs);
 
@@ -2042,11 +2050,19 @@ internal sealed class PptxSceneBuilder
         XElement? chartSpace = chartXml?.Root;
         XElement? chart = chartSpace?.Element(ChartNamespace + "chart");
         string displayBlanksAs = chart is null ? string.Empty : ReadChartElementValue(chart, "dispBlanksAs");
+        (bool? date1904, string date1904Value) = ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "date1904");
+        (bool? roundedCorners, string roundedCornersValue) = ReadOptionalOoxmlBooleanElementWithValue(chartSpace, "roundedCorners");
+        (bool? plotVisibleOnly, string plotVisibleOnlyValue) = ReadOptionalOoxmlBooleanElementWithValue(chart, "plotVisOnly");
+        (bool? showDataLabelsOverMaximum, string showDataLabelsOverMaximumValue) = ReadOptionalOoxmlBooleanElementWithValue(chart, "showDLblsOverMax");
         return new PptxSceneChartOptions(
-            chartSpace is null ? null : ReadOptionalOoxmlBooleanElement(chartSpace, "date1904"),
-            chartSpace is null ? null : ReadOptionalOoxmlBooleanElement(chartSpace, "roundedCorners"),
-            chart is null ? null : ReadOptionalOoxmlBooleanElement(chart, "plotVisOnly"),
-            chart is null ? null : ReadOptionalOoxmlBooleanElement(chart, "showDLblsOverMax"),
+            date1904,
+            date1904Value,
+            roundedCorners,
+            roundedCornersValue,
+            plotVisibleOnly,
+            plotVisibleOnlyValue,
+            showDataLabelsOverMaximum,
+            showDataLabelsOverMaximumValue,
             ParseChartDisplayBlanksAs(displayBlanksAs),
             displayBlanksAs);
     }
@@ -2217,6 +2233,14 @@ internal sealed class PptxSceneBuilder
     {
         XElement? element = parent.Element(ChartNamespace + elementName);
         return element is null ? null : IsOoxmlBooleanElementEnabled(element);
+    }
+
+    private static (bool? Value, string RawValue) ReadOptionalOoxmlBooleanElementWithValue(XElement? parent, string elementName)
+    {
+        XElement? element = parent?.Element(ChartNamespace + elementName);
+        return element is null
+            ? (null, string.Empty)
+            : (IsOoxmlBooleanElementEnabled(element), (string?)element.Attribute("val") ?? string.Empty);
     }
 
     private static PptxSceneChartNumberFormat ReadChartNumberFormat(XElement parent)
