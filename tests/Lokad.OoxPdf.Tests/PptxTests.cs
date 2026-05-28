@@ -2762,6 +2762,8 @@ internal static class PptxTests
         TestAssert.Equal(3, frame.ColumnCount);
         TestAssert.Equal(72d, frame.ColumnSpacing);
         TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnCountSource);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
         TestAssert.Equal(0.8d, frame.FontScale);
     }
 
@@ -2845,7 +2847,7 @@ internal static class PptxTests
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="2" name="Layout Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
                     <p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="2743200" cy="1828800"/></a:xfrm><a:prstGeom prst="rect"/></p:spPr>
-                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip" lIns="914400" tIns="457200" bIns="0"/><a:lstStyle/><a:p/></p:txBody>
+                    <p:txBody><a:bodyPr vert="vert270" anchor="b" anchorCtr="1" wrap="none" vertOverflow="clip" lIns="914400" tIns="457200" bIns="0" numCol="2"/><a:lstStyle/><a:p/></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sldLayout>
                 """,
@@ -2854,7 +2856,7 @@ internal static class PptxTests
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
                   <p:cSld><p:spTree><p:sp>
                     <p:nvSpPr><p:cNvPr id="3" name="Slide Body"/><p:nvPr><p:ph type="body" idx="1"/></p:nvPr></p:nvSpPr>
-                    <p:txBody><a:bodyPr rIns="0"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Inherited body properties</a:t></a:r></a:p></p:txBody>
+                    <p:txBody><a:bodyPr rIns="0" spcCol="914400"/><a:lstStyle/><a:p><a:r><a:rPr sz="1800"/><a:t>Inherited body properties</a:t></a:r></a:p></p:txBody>
                   </p:sp></p:spTree></p:cSld>
                 </p:sld>
                 """
@@ -2883,6 +2885,11 @@ internal static class PptxTests
         TestAssert.Equal("InheritedBodyPr", frame.WrapSource);
         TestAssert.Equal("Clip", frame.VerticalOverflow);
         TestAssert.Equal("InheritedBodyPr", frame.VerticalOverflowSource);
+        TestAssert.Equal(2, frame.ColumnCount);
+        TestAssert.Equal(72d, frame.ColumnSpacing);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnSource);
+        TestAssert.Equal("InheritedBodyPr", frame.ColumnCountSource);
+        TestAssert.Equal("DirectBodyPr", frame.ColumnSpacingSource);
     }
 
     public static void PptxTextModelPreservesRunStyleTokens()
@@ -6168,6 +6175,8 @@ internal static class PptxTests
                     models[frameIndex].WrapSource,
                     models[frameIndex].VerticalOverflowSource,
                     models[frameIndex].ColumnSource,
+                    models[frameIndex].ColumnCountSource,
+                    models[frameIndex].ColumnSpacingSource,
                     paragraphs = models[frameIndex].Paragraphs.Select(paragraph => new
                     {
                         paragraph.Level,

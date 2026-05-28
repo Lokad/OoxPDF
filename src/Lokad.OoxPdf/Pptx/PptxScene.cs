@@ -134,6 +134,8 @@ internal sealed record PptxTextFrameModelSnapshot(
     int ColumnCount,
     double ColumnSpacing,
     string ColumnSource,
+    string ColumnCountSource,
+    string ColumnSpacingSource,
     IReadOnlyList<PptxTextParagraphModelSnapshot> Paragraphs);
 
 internal sealed record PptxTextParagraphModelSnapshot(

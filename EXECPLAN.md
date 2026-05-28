@@ -12059,6 +12059,23 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
 passed with `88` tests, `0` failures, and `2` slow skips.
 
+Revision note, 2026-05-28: PPTX text columns now follow the inherited text-body cascade instead of reading
+only the local `a:bodyPr`. `ReadTextColumns` resolves `numCol` and `spcCol` independently from direct
+body properties, inherited placeholder body properties, then OOXML defaults; `PptxTextBodyProperties` and
+`PptxTextFrameModelSnapshot` expose separate `ColumnCountSource` and `ColumnSpacingSource` tags while
+retaining the older aggregate `ColumnSource` for compatibility. The placeholder body-property fixture now
+locks a mixed case where column count is inherited and column spacing is direct.
+
+This is a visible layout change when inherited placeholders carry multi-column settings, not just a
+diagnostic extension. It also narrows the remaining bodyPr inheritance backlog to child autofit modes
+(`normAutofit`, `spAutoFit`, `noAutofit`), `compatLnSpc`, and text-body `rot`. Column raw-token preservation
+for invalid future values remains a separate enum/token ladder; this slice intentionally preserves the prior
+clamp/default behavior for malformed direct or inherited numeric values.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused non-slow
+`pptx-model` passed with `11` tests, `0` failures, and `1` slow skip; focused non-slow `pptx-typography`
+passed with `88` tests, `0` failures, and `2` slow skips.
+
 Revision note, 2026-05-27: Preserved JPEG frame metadata and used it when declaring PDF image XObjects.
 `JpegInfo` now retains the SOF marker, bits per component, and component count in addition to dimensions;
 PPTX and DOCX JPEG embedding pass those fields into `PdfImageXObject`; and the PDF writer now emits the

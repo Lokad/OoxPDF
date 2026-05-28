@@ -379,6 +379,8 @@ internal sealed partial class PptxRenderer
         int ColumnCount,
         double ColumnSpacing,
         PptxTextBodyPropertySource ColumnSource,
+        PptxTextBodyPropertySource ColumnCountSource,
+        PptxTextBodyPropertySource ColumnSpacingSource,
         double FontScale,
         double LineSpacingScale,
         bool CompatibleLineSpacing,

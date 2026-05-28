@@ -58,6 +58,8 @@ internal sealed partial class PptxRenderer
             frame.BodyProperties.ColumnCount,
             frame.BodyProperties.ColumnSpacing,
             frame.BodyProperties.ColumnSource.ToString(),
+            frame.BodyProperties.ColumnCountSource.ToString(),
+            frame.BodyProperties.ColumnSpacingSource.ToString(),
             frame.Paragraphs.Select(ToSnapshot).ToArray());
     }
 
@@ -465,8 +467,9 @@ internal sealed partial class PptxRenderer
 
     private static PptxTextBodyProperties ReadTextBodyProperties(XElement textBody, XElement? inheritedTextBody)
     {
-        (int columnCount, double columnSpacing) = ReadTextColumns(textBody);
-        PptxTextBodyPropertySource columnSource = ReadTextColumnsSource(textBody);
+        (int columnCount, double columnSpacing, PptxTextBodyPropertySource columnCountSource, PptxTextBodyPropertySource columnSpacingSource) =
+            ReadTextColumns(textBody, inheritedTextBody);
+        PptxTextBodyPropertySource columnSource = MergeTextBodyPropertySources(columnCountSource, columnSpacingSource);
         (TextInsets insets, TextInsetSources insetSources) = ReadTextInsets(textBody, inheritedTextBody);
         (string? orientation, PptxTextBodyPropertySource orientationSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "vert", inherit: true);
         (string? verticalAnchor, PptxTextBodyPropertySource verticalAnchorSource) = ReadTextBodyAttributeWithSource(textBody, inheritedTextBody, "anchor", inherit: true);
@@ -494,6 +497,8 @@ internal sealed partial class PptxRenderer
             columnCount,
             columnSpacing,
             columnSource,
+            columnCountSource,
+            columnSpacingSource,
             ReadNormAutofitFontScale(textBody),
             ReadNormAutofitLineSpacingScale(textBody),
             HasCompatibleLineSpacing(textBody),
@@ -522,12 +527,31 @@ internal sealed partial class PptxRenderer
         return (null, PptxTextBodyPropertySource.DefaultValue);
     }
 
-    private static PptxTextBodyPropertySource ReadTextColumnsSource(XElement textBody)
+    private static PptxTextBodyPropertySource MergeTextBodyPropertySources(
+        PptxTextBodyPropertySource first,
+        PptxTextBodyPropertySource second)
     {
-        XElement? bodyPr = textBody.Element(DrawingNamespace + "bodyPr");
-        return bodyPr?.Attribute("numCol") is not null || bodyPr?.Attribute("spcCol") is not null
-            ? PptxTextBodyPropertySource.DirectBodyPr
-            : PptxTextBodyPropertySource.DefaultValue;
+        if (first == second)
+        {
+            return first;
+        }
+
+        if (first == PptxTextBodyPropertySource.DirectBodyPr || second == PptxTextBodyPropertySource.DirectBodyPr)
+        {
+            return PptxTextBodyPropertySource.DirectBodyPr;
+        }
+
+        if (first == PptxTextBodyPropertySource.InheritedBodyPr || second == PptxTextBodyPropertySource.InheritedBodyPr)
+        {
+            return PptxTextBodyPropertySource.InheritedBodyPr;
+        }
+
+        if (first == PptxTextBodyPropertySource.TableCellStyle || second == PptxTextBodyPropertySource.TableCellStyle)
+        {
+            return PptxTextBodyPropertySource.TableCellStyle;
+        }
+
+        return PptxTextBodyPropertySource.DefaultValue;
     }
 
     private static TextInsets ReadPresetTextRectInsets(XElement shape, double width, double height)

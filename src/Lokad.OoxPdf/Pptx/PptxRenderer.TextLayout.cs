@@ -2346,18 +2346,55 @@ internal sealed partial class PptxRenderer
             : long.Parse(rotation.Value, CultureInfo.InvariantCulture) / 60000d;
     }
 
-    private static (int Count, double Spacing) ReadTextColumns(XElement textBody)
+    private static (
+        int Count,
+        double Spacing,
+        PptxTextBodyPropertySource CountSource,
+        PptxTextBodyPropertySource SpacingSource) ReadTextColumns(XElement textBody, XElement? inheritedTextBody)
     {
         XElement? bodyProperties = textBody.Element(DrawingNamespace + "bodyPr");
-        int count = bodyProperties?.Attribute("numCol") is { } countAttribute &&
-            int.TryParse(countAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedCount)
-                ? Math.Clamp(parsedCount, 1, 16)
-                : 1;
-        double spacing = bodyProperties?.Attribute("spcCol") is { } spacingAttribute &&
-            long.TryParse(spacingAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsedSpacing)
-                ? Math.Max(0d, OoxUnits.EmuToPoints(parsedSpacing))
-                : 0d;
-        return (count, spacing);
+        XElement? inheritedBodyProperties = inheritedTextBody?.Element(DrawingNamespace + "bodyPr");
+        (int count, PptxTextBodyPropertySource countSource) = ReadTextColumnCount(bodyProperties, inheritedBodyProperties);
+        (double spacing, PptxTextBodyPropertySource spacingSource) = ReadTextColumnSpacing(bodyProperties, inheritedBodyProperties);
+        return (count, spacing, countSource, spacingSource);
+    }
+
+    private static (int Count, PptxTextBodyPropertySource Source) ReadTextColumnCount(
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties)
+    {
+        if (bodyProperties?.Attribute("numCol") is { } directAttribute &&
+            int.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int directCount))
+        {
+            return (Math.Clamp(directCount, 1, 16), PptxTextBodyPropertySource.DirectBodyPr);
+        }
+
+        if (inheritedBodyProperties?.Attribute("numCol") is { } inheritedAttribute &&
+            int.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int inheritedCount))
+        {
+            return (Math.Clamp(inheritedCount, 1, 16), PptxTextBodyPropertySource.InheritedBodyPr);
+        }
+
+        return (1, PptxTextBodyPropertySource.DefaultValue);
+    }
+
+    private static (double Spacing, PptxTextBodyPropertySource Source) ReadTextColumnSpacing(
+        XElement? bodyProperties,
+        XElement? inheritedBodyProperties)
+    {
+        if (bodyProperties?.Attribute("spcCol") is { } directAttribute &&
+            long.TryParse(directAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long directSpacing))
+        {
+            return (Math.Max(0d, OoxUnits.EmuToPoints(directSpacing)), PptxTextBodyPropertySource.DirectBodyPr);
+        }
+
+        if (inheritedBodyProperties?.Attribute("spcCol") is { } inheritedAttribute &&
+            long.TryParse(inheritedAttribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long inheritedSpacing))
+        {
+            return (Math.Max(0d, OoxUnits.EmuToPoints(inheritedSpacing)), PptxTextBodyPropertySource.InheritedBodyPr);
+        }
+
+        return (0d, PptxTextBodyPropertySource.DefaultValue);
     }
 
     private static double NormalizeRotationDegrees(double rotationDegrees)
