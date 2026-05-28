@@ -13255,6 +13255,24 @@ passed; focused non-slow `pptx-charts` passed with `131` tests, `0` failures, an
 `pptx-model` passed with `17` tests, `0` failures, and `1` slow skip; full non-slow console runner passed
 with `392` tests, `0` failures, and `7` slow skips.
 
+Revision note, 2026-05-28: Moved PPTX custom-geometry and callout unsupported diagnostics onto scene-owned
+shape state. `PptxSceneCustomGeometry` now preserves `HasUnsupportedGeometry` separately from parsed renderable
+paths, so a partly renderable custom geometry with one valid path and one unsupported command remains
+diagnostic-visible instead of being collapsed to a successfully parsed path list. Private-safe scene inspection
+now exposes shape custom-geometry presence and unsupported-geometry flags, and callout diagnostics traverse
+scene shape presets rather than raw `a:prstGeom` descendants.
+
+This deliberately keeps the diagnostic scope to slide-owned scene nodes, matching the old slide-XML diagnostic
+scope instead of newly warning on layout/master template geometry. It also leaves custom-geometry rendering
+unchanged: the renderer still uses the typed path model for supported commands and should only grow by adding
+Office-evidenced command semantics or explicit unsupported provenance, not by reintroducing broad XML scans.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; focused
+`PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag`, `PptxUnsupportedFeaturesEmitDiagnostics`,
+and `PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-shapes` passed with `18` tests,
+`0` failures, and `0` skips; focused non-slow `pptx-model` passed with `18` tests, `0` failures, and `1` slow
+skip; full non-slow console runner passed with `393` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Preserved explicit PPTX shape `a:noFill` provenance in the scene model.
 `PptxSceneShape` now carries `NoFill` separately from `Fill.HasFill`, and `PptxSceneNodeSnapshot` plus the
 private-safe layout diagnostic expose `ShapeNoFill`. This closes a structural ambiguity where explicit

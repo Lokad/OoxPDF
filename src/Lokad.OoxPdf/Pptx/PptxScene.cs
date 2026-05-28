@@ -42,6 +42,8 @@ internal sealed record PptxSceneNodeSnapshot(
     bool FlipVertical,
     bool HasShape,
     string ShapePreset,
+    bool ShapeHasCustomGeometry,
+    bool ShapeHasUnsupportedCustomGeometry,
     bool ShapeNoFill,
     int ShapeFillReferenceIndex,
     bool ShapeFillReferenceResolved,
@@ -511,6 +513,7 @@ internal sealed record PptxSceneShape(
 
 internal sealed record PptxSceneCustomGeometry(
     bool HasGeometry,
+    bool HasUnsupportedGeometry,
     IReadOnlyList<PptxSceneCustomGuide> Guides,
     IReadOnlyList<PptxSceneCustomPath> Paths);
 
@@ -4536,8 +4539,16 @@ internal sealed class PptxSceneBuilder
         XElement? customGeometry = shapeProperties?.Element(DrawingNamespace + "custGeom");
         if (customGeometry is null)
         {
-            return new PptxSceneCustomGeometry(false, [], []);
+            return new PptxSceneCustomGeometry(false, false, [], []);
         }
+
+        XElement? pathList = customGeometry.Element(DrawingNamespace + "pathLst");
+        XElement[] rawPaths = pathList?.Elements(DrawingNamespace + "path").ToArray() ?? [];
+        bool hasUnsupportedGeometry = pathList is null ||
+            rawPaths.Length == 0 ||
+            rawPaths.Any(path =>
+                !path.Elements().Any() ||
+                path.Elements().Any(command => ReadCustomCommand(command) is null));
 
         IReadOnlyList<PptxSceneCustomGuide> guides = customGeometry
             .Element(DrawingNamespace + "gdLst")
@@ -4555,7 +4566,7 @@ internal sealed class PptxSceneBuilder
             .Where(path => path.Commands.Count > 0)
             .ToArray() ?? [];
 
-        return new PptxSceneCustomGeometry(paths.Count > 0, guides, paths);
+        return new PptxSceneCustomGeometry(paths.Count > 0, hasUnsupportedGeometry, guides, paths);
     }
 
     private static PptxSceneCustomPath ReadCustomPath(XElement path)

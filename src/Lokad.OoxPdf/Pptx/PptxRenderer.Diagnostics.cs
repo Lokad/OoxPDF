@@ -108,13 +108,12 @@ internal sealed partial class PptxRenderer
             Emit("PPTX_UNSUPPORTED_EFFECT", "effect");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "custGeom").Any(IsUnsupportedCustomGeometry))
+        if (HasUnsupportedCustomGeometry(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_CUSTOM_GEOMETRY", "custom geometry");
         }
 
-        if (slideXml.Descendants(DrawingNamespace + "prstGeom").Any(geometry =>
-                IsUnsupportedCalloutPreset((string?)geometry.Attribute("prst"))))
+        if (HasUnsupportedCallout(sceneSlide))
         {
             Emit("PPTX_UNSUPPORTED_CALLOUT", "callout shape");
         }
@@ -168,6 +167,25 @@ internal sealed partial class PptxRenderer
     {
         return preset?.Contains("Callout", StringComparison.OrdinalIgnoreCase) == true &&
             !string.Equals(preset, "wedgeRectCallout", StringComparison.Ordinal);
+    }
+
+    private static bool HasUnsupportedCallout(PptxSceneSlide sceneSlide)
+    {
+        return HasUnsupportedCallout(sceneSlide.SlideNodes);
+    }
+
+    private static bool HasUnsupportedCallout(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is not null && IsUnsupportedCalloutPreset(node.Shape.Preset)) ||
+                HasUnsupportedCallout(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsUnsupportedGradientFill(XElement gradientFill)
@@ -281,20 +299,23 @@ internal sealed partial class PptxRenderer
             effects.UnsupportedEffectNames?.Count > 0;
     }
 
-    private static bool IsUnsupportedCustomGeometry(XElement customGeometry)
+    private static bool HasUnsupportedCustomGeometry(PptxSceneSlide sceneSlide)
     {
-        XElement? pathList = customGeometry.Element(DrawingNamespace + "pathLst");
-        return pathList is null ||
-            !pathList.Elements(DrawingNamespace + "path").Any() ||
-            pathList.Elements(DrawingNamespace + "path").Any(path =>
-                !path.Elements().Any() ||
-                path.Elements().Any(command =>
-                    command.Name != DrawingNamespace + "moveTo" &&
-                    command.Name != DrawingNamespace + "lnTo" &&
-                    command.Name != DrawingNamespace + "cubicBezTo" &&
-                    command.Name != DrawingNamespace + "quadBezTo" &&
-                    command.Name != DrawingNamespace + "arcTo" &&
-                    command.Name != DrawingNamespace + "close"));
+        return HasUnsupportedCustomGeometry(sceneSlide.SlideNodes);
+    }
+
+    private static bool HasUnsupportedCustomGeometry(IReadOnlyList<PptxSceneNode> nodes)
+    {
+        foreach (PptxSceneNode node in nodes)
+        {
+            if ((node.Shape is not null && node.Shape.CustomGeometry.HasUnsupportedGeometry) ||
+                HasUnsupportedCustomGeometry(node.Children))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool HasUnsupportedTextOrientation(XElement bodyProperties)

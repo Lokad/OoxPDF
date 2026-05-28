@@ -88,6 +88,8 @@ internal sealed partial class PptxRenderer
             bounds?.FlipVertical ?? false,
             node.Shape is not null,
             node.Shape?.Preset ?? string.Empty,
+            node.Shape?.HasCustomGeometry ?? false,
+            node.Shape?.CustomGeometry.HasUnsupportedGeometry ?? false,
             node.Shape?.NoFill ?? false,
             node.Shape?.FillReference.Index ?? 0,
             node.Shape?.FillReference.Style is not null,

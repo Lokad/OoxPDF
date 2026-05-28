@@ -974,6 +974,7 @@ internal static class PptxTests
         TestAssert.Equal("2500", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.LeftValue ?? string.Empty);
         TestAssert.Equal("7500", slide.SlideNodes[5].Children[0].Shape?.PictureFill.Fill.RightValue ?? string.Empty);
         TestAssert.True(slide.LayoutNodes[0].Shape?.CustomGeometry.HasGeometry == true, "Expected layout custom geometry in the scene model.");
+        TestAssert.True(slide.LayoutNodes[0].Shape?.CustomGeometry.HasUnsupportedGeometry == false, "Expected supported custom geometry to remain non-diagnostic in the scene model.");
         TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Guides[0].Name ?? string.Empty);
         TestAssert.Equal(PptxSceneCustomCommandKind.LineTo, slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Kind);
         TestAssert.Equal("xMid", slide.LayoutNodes[0].Shape?.CustomGeometry.Paths[0].Commands[1].Points[0].X);
@@ -7034,6 +7035,8 @@ internal static class PptxTests
                 node.FlipHorizontal,
                 node.FlipVertical,
                 node.ShapePreset,
+                node.ShapeHasCustomGeometry,
+                node.ShapeHasUnsupportedCustomGeometry,
                 node.ShapeNoFill,
                 node.ShapeLineNoFill,
                 node.ShapeHasEffectList,
@@ -17487,6 +17490,49 @@ internal static class PptxTests
         OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
 
         TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_EFFECT"), "Unsupported chart effects should be diagnostic-covered from scene-owned chart effect provenance.");
+    }
+
+    public static void PptxUnsupportedCustomGeometryDiagnosticsUseSceneUnsupportedFlag()
+    {
+        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = BasicContentTypes(),
+            ["_rels/.rels"] = PackageRelationship(),
+            ["ppt/_rels/presentation.xml.rels"] = PresentationRelationship(),
+            ["ppt/presentation.xml"] = BasicPresentation(),
+            ["ppt/slides/slide1.xml"] = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                  <p:cSld><p:spTree>
+                    <p:sp><p:spPr>
+                      <a:custGeom>
+                        <a:pathLst>
+                          <a:path><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="21600" y="21600"/></a:lnTo></a:path>
+                          <a:path><a:unknownPathCommand/></a:path>
+                        </a:pathLst>
+                      </a:custGeom>
+                    </p:spPr></p:sp>
+                  </p:spTree></p:cSld>
+                </p:sld>
+                """
+        });
+        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+        var diagnostics = new List<OoxPdfDiagnostic>();
+
+        using (FileStream stream = File.OpenRead(input))
+        {
+            OoxPackage package = OoxPackage.Open(stream);
+            PptxDocument document = new PptxReader().Read(package);
+            PptxScene scene = new PptxSceneBuilder().Build(document, package);
+            PptxSceneShape shape = scene.Slides[0].SlideNodes[0].Shape ?? throw new InvalidOperationException("Expected shape scene node.");
+            TestAssert.True(shape.CustomGeometry.HasGeometry, "Expected the supported custom path to remain parsed.");
+            TestAssert.True(shape.CustomGeometry.HasUnsupportedGeometry, "Expected unsupported custom path provenance to remain scene-owned.");
+        }
+
+        OoxPdfConverter.Convert(input, output, new OoxPdfOptions { DiagnosticSink = diagnostics.Add });
+
+        TestAssert.True(diagnostics.Any(d => d.Id == "PPTX_UNSUPPORTED_CUSTOM_GEOMETRY"), "Unsupported custom geometry should be diagnostic-covered from scene-owned geometry provenance.");
     }
 
     public static void PptxUnsupportedEffectDiagnosticsUseSceneChartSeriesEffects()
