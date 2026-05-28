@@ -3764,7 +3764,7 @@ internal sealed partial class PptxRenderer
         return true;
     }
 
-    private static bool TryBuildManualLayoutBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartLayoutBox defaultBox, out ChartLayoutBox box, bool clampToFrame = true)
+    private static bool TryBuildManualLayoutBox(PptxSceneChartManualLayout layout, ChartFrameBox frame, ChartLayoutBox defaultBox, out ChartLayoutBox box, bool clampToFrame = true, bool missingPositionModesAreFactor = false)
     {
         box = default;
         if (!layout.HasLayout)
@@ -3774,10 +3774,10 @@ internal sealed partial class PptxRenderer
 
         ChartPlotBoxRatios defaults = GetLayoutBoxRatios(frame, defaultBox);
         double left = layout.X is { } x
-            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(x, layout.XModeKind, defaultBox.X, frame.X, frame.Width), clampToFrame)
+            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(x, layout.XModeKind, layout.XMode, defaultBox.X, frame.X, frame.Width, missingPositionModesAreFactor), clampToFrame)
             : defaults.Left;
         double top = layout.Y is { } y
-            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(y, layout.YModeKind, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height), clampToFrame)
+            ? ClampManualLayoutRatio(ResolveManualLayoutStartRatio(y, layout.YModeKind, layout.YMode, frame.Y + frame.Height - defaultBox.Y - defaultBox.Height, 0d, frame.Height, missingPositionModesAreFactor), clampToFrame)
             : defaults.Top;
         double width = layout.Width is { } layoutWidth
             ? Math.Clamp(layoutWidth, 0.02d, 1d)
@@ -3828,9 +3828,9 @@ internal sealed partial class PptxRenderer
         return new ChartPlotBoxRatios(left, top, width, height);
     }
 
-    private static double ResolveManualLayoutStartRatio(double value, PptxSceneChartManualLayoutMode mode, double defaultStart, double frameStart, double frameLength)
+    private static double ResolveManualLayoutStartRatio(double value, PptxSceneChartManualLayoutMode mode, string modeValue, double defaultStart, double frameStart, double frameLength, bool missingModeIsFactor)
     {
-        if (IsManualLayoutFactorMode(mode) && frameLength > 0d)
+        if (IsManualLayoutFactorMode(mode, modeValue, missingModeIsFactor) && frameLength > 0d)
         {
             return (defaultStart - frameStart) / frameLength + value;
         }
@@ -3846,6 +3846,11 @@ internal sealed partial class PptxRenderer
     private static bool IsManualLayoutFactorMode(PptxSceneChartManualLayoutMode mode)
     {
         return mode == PptxSceneChartManualLayoutMode.Factor;
+    }
+
+    private static bool IsManualLayoutFactorMode(PptxSceneChartManualLayoutMode mode, string modeValue, bool missingModeIsFactor)
+    {
+        return IsManualLayoutFactorMode(mode) || (missingModeIsFactor && string.IsNullOrEmpty(modeValue));
     }
 
     private static PptxSceneChartManualLayout ReadManualLayout(XElement parent)
@@ -5499,7 +5504,7 @@ internal sealed partial class PptxRenderer
         }
 
         ChartFrameBox frame = new(plotBox.X, plotBox.Y, plotBox.Width, plotBox.Height);
-        return TryBuildManualLayoutBox(options.Layout, frame, defaultBox, out ChartLayoutBox manualBox, clampToFrame: false)
+        return TryBuildManualLayoutBox(options.Layout, frame, defaultBox, out ChartLayoutBox manualBox, clampToFrame: false, missingPositionModesAreFactor: true)
             ? manualBox
             : defaultBox;
     }

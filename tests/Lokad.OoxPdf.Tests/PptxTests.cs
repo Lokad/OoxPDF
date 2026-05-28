@@ -13908,7 +13908,7 @@ internal static class PptxTests
         TestAssert.Contains("0.067 0.133 0.2 RG", pdf);
         TestAssert.Contains("79.2 357.525 28.8 13.5 re f", pdf);
         TestAssert.Contains("0.8 0.933 1 rg", pdf);
-        TestAssert.Contains("156.96 421.92 14.4 8.64 re f", pdf);
+        TestAssert.Contains("214.56 373.995 14.4 8.64 re f", pdf);
         TestAssert.Contains("0.4 0 0.8 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 9 Tf"), "Expected per-label custom data label text style to drive font size.");
         TestAssert.Contains("0.071 0.204 0.337 rg", pdf);
@@ -13917,7 +13917,7 @@ internal static class PptxTests
         TestAssert.True(Regex.IsMatch(pdf, @"/CT[0-9]+ 11\.52 Tf"), "Expected first rich-text title run to use its run font size.");
         TestAssert.Contains("0.396 0.263 0.129 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CL[0-9]+ 6\.96 Tf"), "Expected chart legend txPr font size to drive legend rendering.");
-        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 421\.92 Tm"), "Expected explicit data-label manualLayout to drive the custom label box baseline.");
+        TestAssert.True(Regex.IsMatch(pdf, @"1 0 0 1 [0-9.]+ 373\.995 Tm"), "Expected explicit data-label manualLayout to drive the custom label box baseline.");
         TestAssert.Contains("0.671 0.804 0.937 rg", pdf);
         TestAssert.True(Regex.IsMatch(pdf, @"/CLD[0-9]+ 8\.52 Tf"), "Expected first custom rich-text data-label run to use its run font size.");
         TestAssert.True(Regex.IsMatch(pdf, @"<[0-9A-F]{4}> <005A>") &&

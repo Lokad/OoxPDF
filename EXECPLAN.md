@@ -2476,6 +2476,22 @@ High-priority actions:
     where data labels could parse chart style parts but not use them. A synthetic chart with no direct
     `c:dLbls/txPr` locks chart-style data-label color and font size in PDF output. Validation: the non-slow
     console runner passed with the new test included (`312 passed, 0 failed, 0 skipped`).
+  - [x] 2026-05-28 scope missing chart data-label manual-layout position modes to factor semantics:
+    per-label `c:manualLayout` boxes now treat omitted `xMode`/`yMode` as factor offsets only at the
+    data-label box boundary, preserving existing plot-area/title/legend manual-layout behavior until those
+    surfaces have their own Office evidence. This follows the public leader-line probe's Office-authored
+    label XML, where custom label positions omit modes, but it also exposed the next gap: OOXPDF still uses
+    the wrong coordinate basis for polar manual label boxes. The public probe stayed inside its loose visual
+    gate but changed from MAE `3.321775` to `3.600656`, and the structural classifier still reports
+    `DataLabelLeaderLineCandidate` counts reference/candidate `1/4`. Do not gate leader-line cardinality
+    until label-box coordinate ownership is fixed. Validation: focused non-slow `pptx-charts` passed
+    (`117 passed, 0 failed, 0 skipped`); visual probe run `20260528-115632` passed with the open leader-line
+    count mismatch intentionally ungated.
+  - [ ] Resolve the polar data-label manual-layout coordinate basis before changing leader-line visibility:
+    Office positions the same four custom pie labels near the chart sides while OOXPDF still derives some
+    boxes outside the frame. Investigate whether data-label `x`/`y` factors are relative to chart frame,
+    plot area, default label anchor, text box, or an extension-owned layout coordinate, then lock the rule
+    with text-operation and leader-line structural checks before adding a cardinality gate.
   - [ ] Derive Office leader-line visibility and cardinality from the final label-layout model before gating:
     the first renderer consumption pass deliberately draws all visible polar labels that request leader lines,
     while Office emits only one visible connector in the current public custom-layout probe. Structural report
