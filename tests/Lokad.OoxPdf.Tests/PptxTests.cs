@@ -236,6 +236,8 @@ internal static class PptxTests
                   <cs:chartStyle/>
                   <cs:gridlineMajor>
                     <cs:lnRef idx="1"/>
+                    <cs:fillRef idx="2"/>
+                    <cs:effectRef idx="1"/>
                     <cs:spPr><a:ln w="12700" cap="rnd" cmpd="thickThin"><a:solidFill><a:srgbClr val="102030"><a:alpha val="80000"/></a:srgbClr></a:solidFill><a:prstDash val="dash"/><a:bevel/></a:ln></cs:spPr>
                   </cs:gridlineMajor>
                   <cs:gridlineMinor>
@@ -512,9 +514,14 @@ internal static class PptxTests
         TestAssert.Equal("gridlineMajor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[0]);
         TestAssert.Equal("gridlineMinor", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[1]);
         TestAssert.Equal("title", slideSnapshot.SlideNodes[4].ChartStyleEntryRoles[2]);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFillReferenceCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleEffectReferenceCount);
+        TestAssert.Equal(1, slideSnapshot.SlideNodes[4].ChartStyleFontReferenceCount);
         PptxSceneChartStyleEntry majorGridlineStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "gridlineMajor") ?? default;
         TestAssert.Equal("gridlineMajor", majorGridlineStyle.Role ?? string.Empty);
         TestAssert.Equal(1, majorGridlineStyle.LineReferenceIndex ?? 0);
+        TestAssert.Equal(2, majorGridlineStyle.FillReferenceIndex ?? 0);
+        TestAssert.Equal(1, majorGridlineStyle.EffectReferenceIndex ?? 0);
         TestAssert.True(majorGridlineStyle.Line.HasLine, "Expected chart style-part line-reference ownership in the scene model.");
         TestAssert.Equal(new RgbColor(171, 193, 35), majorGridlineStyle.Line.Color);
         TestAssert.Equal(2d, majorGridlineStyle.Line.Width);
@@ -533,6 +540,7 @@ internal static class PptxTests
         TestAssert.Equal(2, majorGridlineStyle.ShapeLine.Join);
         PptxSceneChartStyleEntry titleStyle = slide.SlideNodes[4].Chart?.StylePart.Entries.FirstOrDefault(entry => entry.Role == "title") ?? default;
         TestAssert.Equal("title", titleStyle.Role ?? string.Empty);
+        TestAssert.Equal("major", titleStyle.FontReferenceIndex);
         TestAssert.Equal("Arial", titleStyle.TextStyle.FontFamily ?? string.Empty);
         TestAssert.Equal(14d, titleStyle.TextStyle.FontSize ?? 0d);
         TestAssert.Equal(new RgbColor(51, 102, 153), titleStyle.TextStyle.Color ?? default);
@@ -6352,6 +6360,9 @@ internal static class PptxTests
                 node.HasChartStylePart,
                 node.ChartStyleEntryCount,
                 node.ChartStyleEntryRoles,
+                node.ChartStyleFillReferenceCount,
+                node.ChartStyleEffectReferenceCount,
+                node.ChartStyleFontReferenceCount,
                 node.HasGroupTransform
             };
 

@@ -75,6 +75,9 @@ internal sealed record PptxSceneNodeSnapshot(
     string ChartStylePartId,
     int ChartStyleEntryCount,
     IReadOnlyList<string> ChartStyleEntryRoles,
+    int ChartStyleFillReferenceCount,
+    int ChartStyleEffectReferenceCount,
+    int ChartStyleFontReferenceCount,
     int ChartRejectedPointStyleIndexCount,
     IReadOnlyList<string> ChartRejectedPointStyleIndexValues,
     int ChartRejectedDataLabelOverrideIndexCount,
@@ -670,6 +673,9 @@ internal sealed record PptxSceneChartStyle(
 internal readonly record struct PptxSceneChartStyleEntry(
     string Role,
     int? LineReferenceIndex,
+    int? FillReferenceIndex,
+    int? EffectReferenceIndex,
+    string FontReferenceIndex,
     PptxSceneLineStyle Line,
     PptxSceneLineStyle ShapeLine,
     PptxSceneChartTextStyleOverride TextStyle);
@@ -3462,6 +3468,20 @@ internal sealed class PptxSceneBuilder
                 .FirstOrDefault(element => element.Name.LocalName == "lnRef");
             int lineReferenceIndexValue = lineReference is null ? 0 : ParseOptionalIntAttribute(lineReference, "idx", 0);
             int? lineReferenceIndex = lineReferenceIndexValue > 0 ? lineReferenceIndexValue : null;
+            XElement? fillReference = roleElement
+                .Elements()
+                .FirstOrDefault(element => element.Name.LocalName == "fillRef");
+            int fillReferenceIndexValue = fillReference is null ? 0 : ParseOptionalIntAttribute(fillReference, "idx", 0);
+            int? fillReferenceIndex = fillReferenceIndexValue > 0 ? fillReferenceIndexValue : null;
+            XElement? effectReference = roleElement
+                .Elements()
+                .FirstOrDefault(element => element.Name.LocalName == "effectRef");
+            int effectReferenceIndexValue = effectReference is null ? 0 : ParseOptionalIntAttribute(effectReference, "idx", 0);
+            int? effectReferenceIndex = effectReferenceIndexValue > 0 ? effectReferenceIndexValue : null;
+            string fontReferenceIndex = (string?)roleElement
+                .Elements()
+                .FirstOrDefault(element => element.Name.LocalName == "fontRef")
+                ?.Attribute("idx") ?? string.Empty;
             PptxSceneLineStyle line = lineReferenceIndex is not null &&
                 lineReference is not null &&
                 TryReadThemeLineReference(lineReference, theme, out PptxSceneLineStyle resolvedLine)
@@ -3474,6 +3494,9 @@ internal sealed class PptxSceneBuilder
                 theme);
             PptxSceneChartTextStyleOverride textStyle = ReadChartStyleRoleTextStyle(roleElement, theme);
             if (lineReference is null &&
+                fillReference is null &&
+                effectReference is null &&
+                string.IsNullOrWhiteSpace(fontReferenceIndex) &&
                 !shapeLine.HasLine &&
                 !HasChartTextStyleOverride(textStyle))
             {
@@ -3483,6 +3506,9 @@ internal sealed class PptxSceneBuilder
             entries.Add(new PptxSceneChartStyleEntry(
                 roleElement.Name.LocalName,
                 lineReferenceIndex,
+                fillReferenceIndex,
+                effectReferenceIndex,
+                fontReferenceIndex,
                 line,
                 shapeLine,
                 textStyle));

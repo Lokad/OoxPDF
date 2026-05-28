@@ -12611,6 +12611,21 @@ Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed
 `0` failures, and `0` skips; full non-slow console runner passed with `346` tests, `0` failures, and `7`
 slow skips.
 
+Revision note, 2026-05-28: Preserved chart-style role references beyond line defaults.
+`PptxSceneChartStyleEntry` now records role-local `fillRef`, `effectRef`, and raw `fontRef` indices alongside
+the existing `lnRef`, shape-line, and text defaults. `PptxSceneNodeSnapshot` also reports aggregate fill,
+effect, and font-reference counts for private-safe scene inspection. Rendering remains unchanged; these
+references are source evidence for the future chart-style cascade, not new heuristic styling.
+
+This closes another structural gap between the chart style part and the renderer boundary. The remaining
+chart-style work is semantic: resolving how Office combines these references with `colorsN.xml` root colors,
+variation branches, role defaults, and explicit chart XML overrides for each rendered chart surface.
+
+Validation: `dotnet build Lokad.OoxPdf.slnx --tl:off --nologo -v minimal` passed; targeted slow
+`PptxSceneBuilderBuildsResolvedNodeLists` passed; focused non-slow `pptx-model` passed with `11` tests,
+`0` failures, and `1` slow skip; focused non-slow `pptx-charts` passed with `105` tests, `0` failures, and
+`0` skips; full non-slow console runner passed with `346` tests, `0` failures, and `7` slow skips.
+
 Revision note, 2026-05-28: Exposed rejected keyed chart overrides through private-safe scene inspection.
 `PptxSceneNodeSnapshot` now reports aggregate rejected `c:dPt` and `c:dLbl` index-token counts and raw
 index tokens for chart nodes, fed from the scene-owned sidecars instead of a second XML scan. This turns
